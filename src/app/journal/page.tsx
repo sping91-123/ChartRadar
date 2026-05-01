@@ -1,21 +1,41 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { History, Plus, Rows3, ScanSearch, Trash2 } from "lucide-react";
+import Link from "next/link";
+import {
+  Cloud,
+  CloudOff,
+  History,
+  Loader2,
+  Plus,
+  Rows3,
+  ScanSearch,
+  Trash2,
+  UploadCloud
+} from "lucide-react";
 import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
 import { TabMenu } from "@/components/TabMenu";
 import {
   appendJournalEntry,
+  journalStorageKey,
   loadJournalEntries,
   saveJournalEntries,
   type JournalEntry
 } from "@/lib/journal";
+import {
+  createRemoteJournalEntry,
+  deleteRemoteJournalEntry,
+  loadRemoteJournalEntries,
+  migrateLocalJournalEntries
+} from "@/lib/remoteJournal";
+import { getSupabaseSession, type SupabaseSession } from "@/lib/supabase";
+
 const promptChips = [
-  "왜 들어가고 싶었는가",
-  "무엇이 실제로 깨졌는가",
-  "손절 기준은 지켰는가",
-  "다음엔 무엇 하나만 고칠까"
+  "왜 들어가고 싶었는가?",
+  "무엇이 실제로 깨졌는가?",
+  "손절 기준은 지켰는가?",
+  "다음엔 무엇 하나만 고칠까?"
 ];
 const filters = ["전체", "차트 저장", "직접 기록"] as const;
 
@@ -114,35 +134,103 @@ function SectionList({
 }
 
 export default function JournalPage() {
-  const [entries, setEntries] = useState<JournalEntry[]>(loadJournalEntries);
+  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [localEntries, setLocalEntries] = useState<JournalEntry[]>([]);
+  const [session, setSession] = useState<SupabaseSession | null>(null);
   const [title, setTitle] = useState("");
-  const [bias, setBias] = useState("관찰");
+  const [bias, setBias] = useState("관망");
   const [note, setNote] = useState("");
   const [activeFilter, setActiveFilter] = useState<(typeof filters)[number]>("전체");
+  const [isLoadingRemote, setIsLoadingRemote] = useState(false);
+  const [syncMessage, setSyncMessage] = useState("");
 
   useEffect(() => {
-    saveJournalEntries(entries);
-  }, [entries]);
+    const savedLocal = loadJournalEntries();
+    const savedSession = getSupabaseSession();
+    setLocalEntries(savedLocal);
+    setEntries(savedLocal);
+    setSession(savedSession);
 
-  function addEntry() {
+    if (!savedSession) return;
+
+    setIsLoadingRemote(true);
+    loadRemoteJournalEntries(savedSession.accessToken)
+      .then((remoteEntries) => {
+        setEntries(remoteEntries);
+      })
+      .catch((error) => {
+        setSyncMessage(error instanceof Error ? error.message : "서버 복기장을 불러오지 못했습니다.");
+      })
+      .finally(() => setIsLoadingRemote(false));
+  }, []);
+
+  function persistLocal(nextEntries: JournalEntry[]) {
+    setEntries(nextEntries);
+    setLocalEntries(nextEntries);
+    saveJournalEntries(nextEntries);
+  }
+
+  async function addEntry() {
     const cleanTitle = title.trim();
     const cleanNote = note.trim();
     if (!cleanTitle && !cleanNote) return;
 
-    setEntries(
-      appendJournalEntry({
-        title: cleanTitle || "복기 메모",
-        bias,
-        note: cleanNote,
-        source: "manual"
-      })
-    );
+    const payload = {
+      title: cleanTitle || "복기 메모",
+      bias,
+      note: cleanNote,
+      source: "manual" as const
+    };
+
+    if (session) {
+      try {
+        const created = await createRemoteJournalEntry(session.accessToken, payload);
+        setEntries((current) => [created, ...current]);
+        setSyncMessage("서버 복기장에 저장했습니다.");
+      } catch (error) {
+        setSyncMessage(error instanceof Error ? error.message : "서버 저장에 실패했습니다.");
+        return;
+      }
+    } else {
+      persistLocal(appendJournalEntry(payload));
+    }
+
     setTitle("");
     setNote("");
   }
 
-  function removeEntry(id: string) {
-    setEntries((current) => current.filter((entry) => entry.id !== id));
+  async function removeEntry(id: string) {
+    if (session) {
+      try {
+        await deleteRemoteJournalEntry(session.accessToken, id);
+        setEntries((current) => current.filter((entry) => entry.id !== id));
+        setSyncMessage("서버 복기장에서 삭제했습니다.");
+      } catch (error) {
+        setSyncMessage(error instanceof Error ? error.message : "삭제에 실패했습니다.");
+      }
+      return;
+    }
+
+    persistLocal(entries.filter((entry) => entry.id !== id));
+  }
+
+  async function migrateLocalEntries() {
+    if (!session || !localEntries.length) return;
+    setIsLoadingRemote(true);
+    setSyncMessage("");
+
+    try {
+      await migrateLocalJournalEntries(session.accessToken, localEntries);
+      const remoteEntries = await loadRemoteJournalEntries(session.accessToken);
+      setEntries(remoteEntries);
+      setLocalEntries([]);
+      window.localStorage.removeItem(journalStorageKey);
+      setSyncMessage("로컬 복기 기록을 서버 복기장으로 옮겼습니다.");
+    } catch (error) {
+      setSyncMessage(error instanceof Error ? error.message : "로컬 기록 이전에 실패했습니다.");
+    } finally {
+      setIsLoadingRemote(false);
+    }
   }
 
   const filteredEntries = useMemo(() => {
@@ -165,9 +253,50 @@ export default function JournalPage() {
             <div>
               <h2 className="text-lg font-bold text-white">매매 복기</h2>
               <p className="mt-1 text-sm leading-6 text-slate-400">
-                결과보다 원칙을 지켰는지 기록하는 공간입니다. 데이터는 이 브라우저에만 저장됩니다.
+                결과보다 원칙을 지켰는지 기록하는 공간입니다. 로그인하면 기록이 서버에 저장되어 나중에 모바일 앱에서도 이어갈 수 있습니다.
               </p>
             </div>
+          </div>
+
+          <div className="mt-5 rounded-lg border border-white/10 bg-black/20 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-md border ${session ? "border-signal-success/25 bg-signal-success/10 text-signal-success" : "border-signal-warning/25 bg-signal-warning/10 text-signal-warning"}`}>
+                  {session ? <Cloud size={18} aria-hidden /> : <CloudOff size={18} aria-hidden />}
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white">
+                    {session ? "서버 복기장 연결됨" : "현재는 이 브라우저에만 저장됩니다"}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-slate-400">
+                    {session
+                      ? "Supabase 계정에 연결되어 복기 기록을 서버에 저장합니다."
+                      : "구글/카카오 로그인을 연결하면 기기 변경, 모바일 앱 출시 후에도 기록을 이어갈 수 있습니다."}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {!session ? (
+                  <Link
+                    href="/login"
+                    className="inline-flex min-h-10 items-center justify-center rounded-md bg-accent-blue px-3 text-sm font-black text-slate-950 hover:bg-sky-300"
+                  >
+                    로그인 연결
+                  </Link>
+                ) : localEntries.length ? (
+                  <button
+                    type="button"
+                    onClick={migrateLocalEntries}
+                    disabled={isLoadingRemote}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-accent-blue px-3 text-sm font-black text-slate-950 hover:bg-sky-300 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isLoadingRemote ? <Loader2 className="animate-spin" size={16} aria-hidden /> : <UploadCloud size={16} aria-hidden />}
+                    로컬 기록 서버로 옮기기
+                  </button>
+                ) : null}
+              </div>
+            </div>
+            {syncMessage ? <p className="mt-3 text-xs leading-5 text-slate-400">{syncMessage}</p> : null}
           </div>
 
           <div className="mt-5 grid gap-3">
@@ -178,7 +307,7 @@ export default function JournalPage() {
               className="min-h-12 rounded-md border border-surface-line bg-surface-cardSoft px-4 text-base text-white outline-none placeholder:text-slate-600 focus:border-accent-blue"
             />
             <div className="grid grid-cols-3 gap-2">
-              {["롱", "숏", "관찰"].map((item) => (
+              {["롱", "숏", "관망"].map((item) => (
                 <button
                   key={item}
                   type="button"
@@ -242,7 +371,12 @@ export default function JournalPage() {
           </div>
 
           <div className="mt-6 space-y-3">
-            {filteredEntries.length ? (
+            {isLoadingRemote ? (
+              <div className="flex items-center gap-2 rounded-md border border-white/10 bg-black/20 p-4 text-sm text-slate-300">
+                <Loader2 className="animate-spin text-accent-blue" size={17} aria-hidden />
+                서버 복기장을 불러오는 중입니다.
+              </div>
+            ) : filteredEntries.length ? (
               filteredEntries.map((entry) => {
                 const chartNote = entry.source === "chart" ? parseChartNote(entry.note) : null;
 
@@ -251,7 +385,7 @@ export default function JournalPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <SourceBadge entry={entry} />
-                        <h3 className="mt-1 text-base font-bold text-white">{entry.title}</h3>
+                        <h3 className="mt-2 text-base font-bold text-white">{entry.title}</h3>
                         {entry.verdict ? <p className="mt-2 text-sm font-semibold text-slate-200">{entry.verdict}</p> : null}
                         <p className="mt-1 text-xs text-slate-500">
                           {new Intl.DateTimeFormat("ko-KR", {
@@ -307,10 +441,10 @@ export default function JournalPage() {
             ) : (
               <div className="rounded-md border border-white/10 bg-black/20 p-4">
                 <p className="text-sm leading-6 text-slate-300">
-                  아직 저장된 복기가 없습니다. 좋은 매매보다 지킨 매매를 먼저 기록하는 쪽이 이 도구와 더 잘 맞습니다.
+                  아직 저장된 복기가 없습니다. 좋은 매매보다 지킨 매매를 먼저 기록하세요.
                 </p>
                 <p className="mt-2 text-xs leading-5 text-slate-500">
-                  첫 기록은 짧아도 됩니다. 추격이었는지, 손절 기준이 있었는지만 남겨도 다음 판단이 훨씬 선명해집니다.
+                  첫 기록은 짧아도 됩니다. 추격했는지, 손절 기준이 있었는지만 남겨도 다음 판단이 훨씬 선명해집니다.
                 </p>
               </div>
             )}

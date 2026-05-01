@@ -24,6 +24,8 @@ import {
   type ReasonTone
 } from "@/lib/marketAnalysis";
 import { appendJournalEntry } from "@/lib/journal";
+import { createRemoteJournalEntry } from "@/lib/remoteJournal";
+import { getSupabaseSession } from "@/lib/supabase";
 
 const symbols = ["BTCUSDT.P", "ETHUSDT.P", "SOLUSDT.P", "XRPUSDT.P", "DOGEUSDT.P"];
 const dailyFreeReadouts = 5;
@@ -705,7 +707,7 @@ export function LiveMarketChart() {
     window.setTimeout(() => setCopied(false), 1600);
   }
 
-  function saveAnalysisToJournal() {
+  async function saveAnalysisToJournal() {
     if (!analysis || !activeAnalysis) return;
 
     const noteParts = [
@@ -723,7 +725,7 @@ export function LiveMarketChart() {
       ...(analysis.opportunityFlags.length ? analysis.opportunityFlags.map((item) => `- ${item}`) : ["- 없음"])
     ];
 
-    appendJournalEntry({
+    const payload = {
       title: `${symbol} ${activeTimeframe} 판독 저장`,
       bias: analysis.bias === "long" ? "롱" : analysis.bias === "short" ? "숏" : "관찰",
       note: noteParts.join("\n"),
@@ -731,9 +733,23 @@ export function LiveMarketChart() {
       symbol,
       timeframe: activeTimeframe,
       verdict: analysis.verdict
-    });
+    } as const;
 
-    setSavedMessage("현재 판독을 복기에 저장했습니다.");
+    const session = getSupabaseSession();
+    if (session) {
+      try {
+        await createRemoteJournalEntry(session.accessToken, payload);
+        setSavedMessage("현재 판독을 서버 복기에 저장했습니다.");
+        window.setTimeout(() => setSavedMessage(""), 1800);
+        return;
+      } catch {
+        setSavedMessage("서버 저장에 실패해 이 브라우저 복기에 저장했습니다.");
+      }
+    }
+
+    appendJournalEntry(payload);
+
+    if (!session) setSavedMessage("현재 판독을 복기에 저장했습니다.");
     window.setTimeout(() => setSavedMessage(""), 1800);
   }
 

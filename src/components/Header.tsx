@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Home, ShieldCheck } from "lucide-react";
+import { AuthStatus } from "@/components/AuthStatus";
 
 export function Header() {
   return (
@@ -29,6 +30,7 @@ export function Header() {
             <Home size={13} aria-hidden />
             코털스 홈
           </Link>
+          <AuthStatus />
           <Link
             href="/pro"
             className="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold text-slate-200 hover:border-accent-blue/50 hover:text-white"
