@@ -1,0 +1,1467 @@
+//@version=6
+indicator("Coters [v2.42] ", overlay=true, max_lines_count=500, max_bars_back=2000, max_boxes_count=500, max_labels_count=500)
+
+// =============================================================================
+// [PART 0] GLOBAL DEFINITIONS (TYPES & METHODS & FUNCTIONS)
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// [0-1] FVG Definitions
+// -----------------------------------------------------------------------------
+type fvg
+    float max
+    float min
+    bool isbull
+    int t = time
+    string timeframe
+    bool is_ifvg = false
+
+f_detect_optimized(float thresholdPer, bool auto) =>
+    cumVal = ta.cum((high - low) / low)
+    threshold = auto ? cumVal / math.max(bar_index, 1) : thresholdPer / 100
+    bull_fvg = low > high[2] and close[1] > high[2] and (low - high[2]) / high[2] > threshold
+    bear_fvg = high < low[2] and close[1] < low[2] and (low[2] - high) / high > threshold
+
+    float res_max = na
+    float res_min = na
+    int res_time = na
+
+    if bull_fvg
+        res_max := low
+        res_min := high[2]
+        res_time := time
+    else if bear_fvg
+        res_max := low[2]
+        res_min := high
+        res_time := time
+
+    [bull_fvg, bear_fvg, res_max, res_min, res_time]
+
+// -----------------------------------------------------------------------------
+// [0-2] Sweep (Liquidity) Definitions
+// -----------------------------------------------------------------------------
+type piv
+    float prc
+    int   bix
+    bool  brk
+    bool  mit
+    bool  tak
+    bool  wic
+    line  lin
+
+type boxBr
+    box  bx
+    line ln
+    bool br
+    int  dr
+
+method isSet(float piv) => bool out = not na(piv)
+method p(piv piv, float val) => float out = (100 / piv.prc * val) - 100
+
+method l(piv get, color c, string s='sd') =>
+    style = switch s
+        'dt' => line.style_dotted
+        'ds' => line.style_dashed
+        =>      line.style_solid
+    get.lin := line.new(get.bix, get.prc, bar_index, get.prc, color=c, style=style)
+
+method br(piv get, color c3, color c, int d) =>
+    y1 = d == 1 ? high : get.prc
+    y2 = d == 1 ? get.prc : low
+    boxBr.new(
+      box.new(bar_index -1, y1, bar_index +1, y2
+      , border_color = na
+      , bgcolor=c3)
+      , line.new(bar_index , y1, bar_index, y2, color=c, width=3)
+      , false
+      , d)
+
+var line[] _lnDotArr = array.new_line(0)
+lnDot(y, c) =>
+    ln = line.new(bar_index, y, bar_index+3, y, color=c, style=line.style_dotted)
+    array.push(_lnDotArr, ln)
+    if array.size(_lnDotArr) > 30
+        line.delete(array.shift(_lnDotArr))
+    ln
+
+// -----------------------------------------------------------------------------
+// [0-3] POC & Value Area Calculation Function
+// -----------------------------------------------------------------------------
+f_get_vp_data(int lookback_len, int num_bars) =>
+    float result_poc = na
+    float result_vah = na
+    float result_val = na
+    if barstate.islast
+        float highest_p = high[0]
+        float lowest_p  = low[0]
+        int loops = math.min(lookback_len, bar_index)
+        if loops > 0
+            for i = 0 to loops - 1
+                highest_p := math.max(highest_p, high[i])
+                lowest_p  := math.min(lowest_p, low[i])
+            float interval = math.max((highest_p - lowest_p) / math.max(num_bars - 1, 1), 1e-10)
+            a_vols = array.new_float(num_bars, 0.0)
+
+            for i = 0 to loops - 1
+                float h = high[i]
+                float l = low[i]
+                float v = volume[i]
+                if not na(v)
+                    int start_idx = int((l - lowest_p) / interval)
+                    int end_idx   = int((h - lowest_p) / interval)
+                    start_idx := math.max(0, start_idx)
+                    end_idx   := math.min(num_bars - 1, end_idx)
+                    if start_idx <= end_idx
+                        float vol_per_bin = v / (end_idx - start_idx + 1)
+                        for j = start_idx to end_idx
+                            array.set(a_vols, j, array.get(a_vols, j) + vol_per_bin)
+
+            float max_v = array.max(a_vols)
+            int max_i   = array.indexof(a_vols, max_v)
+            result_poc := lowest_p + (max_i * interval)
+
+            float total_vol = array.sum(a_vols)
+            float target_vol = total_vol * 0.70
+            float current_vol = max_v
+            int upper_i = max_i
+            int lower_i = max_i
+
+            while current_vol < target_vol and (upper_i < num_bars - 1 or lower_i > 0)
+                float vol_up = upper_i < num_bars - 1 ? array.get(a_vols, upper_i + 1) : -1.0
+                float vol_dn = lower_i > 0 ? array.get(a_vols, lower_i - 1) : -1.0
+
+                if vol_up >= vol_dn and vol_up >= 0
+                    upper_i += 1
+                    current_vol += vol_up
+                else if vol_dn > vol_up and vol_dn >= 0
+                    lower_i -= 1
+                    current_vol += vol_dn
+                else
+                    break
+
+            result_vah := lowest_p + (upper_i * interval)
+            result_val := lowest_p + (lower_i * interval)
+
+    [result_poc, result_vah, result_val]
+
+// =============================================================================
+// [PART 1] INPUTS & SETTINGS
+// =============================================================================
+
+groupA   = "Settings (Basic)"
+zigLen   = input.int(5, "ZigZag Length", group=groupA, display=display.none, tooltip="최근 N개의 캔들 고점/저점을 '종가'가 뚫어야 인정 (노이즈 제거)")
+zzLineWidth = input.int(2, "ZigZag Line Width", minval=1, group=groupA, display=display.none)
+zzUpCol    = input.color(color.new(color.aqua, 0), "ZigZag Up Color",   group=groupA, display=display.none)
+zzDownCol  = input.color(color.new(color.fuchsia, 0), "ZigZag Down Color", group=groupA, display=display.none)
+showZZ   = input.bool(true, "Show Zigzag",  group=groupA, display=display.none)
+showMSB  = input.bool(true, "Show MSB Line/Label", group=groupA, display=display.none)
+fibFac   = input.float(0.2, "Fib Factor", minval=0, maxval=1, step=0.01, group=groupA, display=display.none)
+showLabel= input.bool(true, "Show HH/LL Labels", group=groupA, display=display.none)
+labelGap = input.float(0.0, "Label Gap (%)", step=0.1, group=groupA, display=display.none)
+txtSize  = input.string(size.small, "Text Size", options=[size.tiny, size.small, size.normal, size.large, size.huge], group=groupA, display=display.none)
+delBoxes = input.bool(true, "Delete Old/Broken Boxes", group=groupA, display=display.none)
+msbExtend = input.int(10, "MSB/OB Right Extend (bars)", minval=1, maxval=100, group=groupA, display=display.none, tooltip="MSB 라인 및 OB/BB 박스의 오른쪽 연장 바 수 (기본 10)")
+
+groupB = "Colors OB/BB"
+buObCol   = input.color(color.new(color.green, 70), "Bu-OB Fill", group=groupB, display=display.none)
+buObEdge  = input.color(color.green, "Bu-OB Border", group=groupB, display=display.none)
+beObCol   = input.color(color.new(color.red, 70), "Be-OB Fill", group=groupB, display=display.none)
+beObEdge  = input.color(color.red, "Be-OB Border", group=groupB, display=display.none)
+buBbCol   = input.color(color.new(color.green, 70), "Bu-BB Fill", group=groupB, display=display.none)
+buBbEdge  = input.color(color.green, "Bu-BB Border", group=groupB, display=display.none)
+beBbCol   = input.color(color.new(color.red, 70), "Be-BB Fill", group=groupB, display=display.none)
+beBbEdge  = input.color(color.red, "Be-BB Border", group=groupB, display=display.none)
+useVolFilter = input.bool(true, "Use Volume/Candle Filter", group=groupB, tooltip="거래량/장대봉 필터 사용")
+volMult      = input.float(1.5, "Volume Multiplier", minval=1.0, step=0.1, group=groupB)
+
+groupC = "Bias / Killzone"
+biasThreshold = input.float(3.0, "Bias Threshold", minval=1.0, maxval=6.0, step=0.5, group=groupC, display=display.none, tooltip="LONG/SHORT Bias 판정 임계값. 비트코인 3.0 권장")
+htfTF     = input.timeframe("240", "HTF for Bias", group=groupC, display=display.none)
+po3Range  = input.float(0.2, "PO3 Near-Open Range (%)", minval=0.05, maxval=2.0, step=0.05, group=groupC, display=display.none, tooltip="일봉 Open 기준 +-N% 이내를 PO3 중립 구간으로 판정. 비트코인 0.2% 권장")
+emaLen    = input.int(200, "HTF EMA", minval=50, group=groupC, display=display.none)
+kzBoost   = input.bool(true, "Killzone Boost", group=groupC, display=display.none)
+sessAsia  = input.session("2000-2200:23456", "Asia KZ (NY Time)",    group=groupC, display=display.none, tooltip="아시아 세션 킬존 (NY 기준 20:00~22:00, 월~금)")
+sessLon   = input.session("0200-0500:23456", "London KZ (NY Time)",  group=groupC, display=display.none, tooltip="런던 세션 킬존 (NY 기준 02:00~05:00, 월~금)")
+sessNY    = input.session("0700-1200:23456", "NewYork KZ (NY Time)", group=groupC, display=display.none, tooltip="뉴욕 세션 킬존 (NY 기준 07:00~12:00, 월~금)")
+useAsiaKZ = input.bool(false, "Use Asia KZ", group=groupC, display=display.none, tooltip="아시아 세션을 킬존에 포함할지 여부. 암호화폐 거래자 권장")
+time_source = input.string("Real Time", title="시간 소스", options=["Chart Time", "Real Time"], group=groupC)
+showKZbg  = input.bool(false, "Show Killzone Background", group=groupC, display=display.none)
+showWeeklyOpen = input.bool(true,  "Show Weekly Open", group=groupC, display=display.none, tooltip="주봉 오픈 레벨을 수평선으로 표시합니다")
+wOpenCol       = input.color(color.new(#FF9800, 0), "Weekly Open Color", group=groupC, display=display.none)
+killzone_color = input.color(color.new(color.red, 80), title="Killzone Color", group=groupC, display=display.none)
+
+groupConfirm = "Signal Confirmation"
+useConfirmedHTF = input.bool(true, "Use Confirmed HTF Values", group=groupConfirm, tooltip="켜면 MTF MSB/CHoCH/FVG/EMA/OTE 판단에 닫힌 상위 시간대 봉 기준 값을 사용합니다. 앱/AI 판단용 기본값으로 권장합니다.")
+confirmRealtimeSignals = input.bool(true, "Confirm CHoCH/CISD On Bar Close", group=groupConfirm, tooltip="켜면 현재 진행 중인 봉의 wick 변화로 생긴 CHoCH/CISD 라벨과 알림을 봉 마감 전까지 보류합니다.")
+useCloseForMSB = input.bool(true, "Use Close For MSB Break", group=groupConfirm, tooltip="켜면 MSB는 종가 돌파로만 인정합니다. 끄면 wick 돌파도 MSB로 인정합니다.")
+useStructureDecay = input.bool(true, "4H Structure Score Age Decay", group=groupConfirm, tooltip="켜면 4H MSB가 막 전환된 직후 구조 점수 가중치를 낮추고, 시간이 지나며 점진적으로 풀가중치에 도달합니다.")
+structureDecayBars = input.int(10, "Decay Full Weight Bars (4H)", minval=3, maxval=50, group=groupConfirm, tooltip="4H MSB 변경 후 몇 개의 4H 봉이 지나야 구조 점수 ±2.0이 모두 반영되는지 설정합니다.")
+
+f_confirm_int(int value) =>
+    useConfirmedHTF ? value[1] : value
+
+f_confirm_float(float value) =>
+    useConfirmedHTF ? value[1] : value
+
+f_confirm_bool(bool value) =>
+    useConfirmedHTF ? value[1] : value
+
+f_dir_score(int dir, float weight) =>
+    na(dir) ? 0.0 : dir == 1 ? weight : dir == -1 ? -weight : 0.0
+
+f_dir_text(int dir) =>
+    na(dir) ? "unknown" : dir == 1 ? "bullish" : dir == -1 ? "bearish" : "neutral"
+
+f_bool_json(bool value) =>
+    value ? "true" : "false"
+
+f_num_json(float value) =>
+    na(value) ? "null" : str.tostring(value, "#.####")
+
+// FVG Inputs
+fvg_enabled  = input.bool(true,  "FVG 사용",       group = "FVG")
+ifvg_enabled = input.bool(false, "iFVG 전환 표시", group = "FVG", tooltip = "FVG가 완전 관통되면 박스 색상이 바뀌어 iFVG 구간으로 표시됩니다.")
+fvg_mit_mode = input.string("Wick Touch", "Mitigation Mode", options=["Body Close", "Wick Touch"], group = "FVG Settings")
+tf1_enabled = input.bool(true, "Timeframe 15분", inline = '15m', group = 'FVG TIMEFRAMES')
+tf2_enabled = input.bool(true, "Timeframe 1시간", inline = '1h', group = 'FVG TIMEFRAMES')
+tf3_enabled = input.bool(true, "Timeframe 4시간", inline = '4h', group = 'FVG TIMEFRAMES')
+tf4_enabled = input.bool(true, "Timeframe 1일", inline = '1d', group = 'FVG TIMEFRAMES')
+thresholdPer = input.float(0, 'Threshold %', minval = 0, maxval = 100, step = .1, inline = 'threshold', group = 'FVG Settings')
+auto = input(false, 'Auto', inline = 'threshold', group = 'FVG Settings')
+showLast = input.int(0, 'Unmitigated Levels', minval = 0, group = 'FVG Settings')
+mitigationLevels = input.bool(false, 'Mitigation Levels', group = 'FVG Settings')
+extend = input.int(20, 'Extend', minval = 0, inline = 'extend', group = 'FVG Style')
+bullCss     = input.color(color.new(#089981, 70), 'Bullish FVG',  group = 'FVG Style')
+bearCss     = input.color(color.new(#f23645, 70), 'Bearish FVG',  group = 'FVG Style')
+ifvgBullCss = input.color(color.new(#1565C0, 60), 'Bullish iFVG', group = 'FVG Style', tooltip = "FVG 관통 후 지지 전환 구간")
+ifvgBearCss = input.color(color.new(#E65100, 60), 'Bearish iFVG', group = 'FVG Style', tooltip = "FVG 관통 후 저항 전환 구간")
+
+// Sweep Inputs
+sweep_enabled = input.bool(true, "Liquidity Sweeps 사용", group = "Liquidity Sweeps")
+len    = input.int(5, 'Swings', minval=1, group='Liquidity Sweeps')
+opt    = input.string('Only Wicks', 'options', options=['Only Wicks', 'Only Outbreaks & Retest', 'Wicks + Outbreaks & Retest'], group='Liquidity Sweeps')
+colBl  = input.color(color.rgb(14, 60, 185), 'Bull ', group='Liquidity Sweeps', inline='c1')
+colBr  = input.color(color.rgb(229, 238, 103), 'Bear' , group='Liquidity Sweeps', inline='c2')
+colBl2 = input.color(color.rgb(58, 40, 221, 50),  ''  , group='Liquidity Sweeps', inline='c1')
+colBr2 = input.color(color.rgb(240, 243, 59, 50),  ''  , group='Liquidity Sweeps', inline='c2')
+extend_sweep = input.bool(true, 'Extend', group='Sweep Area')
+maxB   = input.int(300, 'Max bars', minval=1, maxval=5000, group='Sweep Area')
+colBl3 = input.color(color.rgb(31, 45, 245, 74), 'Bull ', group='Sweep Area')
+colBr3 = input.color(color.rgb(228, 225, 45, 74), 'Bear' , group='Sweep Area')
+
+// EMA Inputs
+groupC_1 = "EMA"
+showEma  = input.bool(true, "Show EMA Line", group=groupC_1, display=display.none)
+emaCol      = input.color(color.yellow, "Ema Color", group=groupC_1, display=display.none)
+emaSmooth   = input.string("SMA", "EMA Smooth Mode", options=["SMA","EMA","None"], group=groupC_1, display=display.none, tooltip="HTF EMA 스무딩 방식. SMA=기존, EMA=더 빠른 반응, None=원본 그대로")
+
+groupD = "Filter"
+filterMode = input.string("Show All", "Opposite Signals", options=["Hide","Fade","Show All"], group=groupD, display=display.none)
+fadePct    = input.int(80, "Fade Opacity 0-100", minval=0, maxval=100, group=groupD, display=display.none)
+showBB     = input.bool(false,  "Show BB", group=groupD, display=display.none)
+showMB     = input.bool(false, "Show MB", group=groupD, display=display.none)
+
+groupE = "OTE Box"
+showOTE    = input.bool(true, "Show OTE Box (0.62-0.79)", group=groupE, display=display.none)
+oteRange   = input.int(20, "OTE 4H Range Length", minval=5, maxval=100, group=groupE, display=display.none)
+oteBiasOnly= input.bool(false, "OTE only in Bias dir", group=groupE, display=display.none)
+oteLeft    = input.int(60, "Box extend left (bars)", minval=10, maxval=500, group=groupE, display=display.none)
+oteRight   = input.int(200,"Box extend right (bars)", minval=50, maxval=2000, group=groupE, display=display.none)
+oteLongCol = input.color(color.new(color.teal,   85), "OTE Long Fill", group=groupE, display=display.none)
+oteShortCol= input.color(color.new(color.purple, 85), "OTE Short Fill", group=groupE, display=display.none)
+
+groupE_1 = "Alert"
+buob_alert_enabled  = input.bool(true, "매수OB 진입 알람",   group=groupE_1, display=display.none)
+ob_entry_label      = input.bool(false,  "OB 진입 레이블 표시", group=groupE_1, display=display.none, tooltip="OB 박스 안으로 가격이 처음 진입할 때 차트에 레이블 표시")
+beob_alert_enabled  = input.bool(true, "매도OB 진입 알람",   group=groupE_1, display=display.none)
+showCISD            = input.bool(true,  "CISD 레이블 표시", group=groupE_1, display=display.none, tooltip="OB 박스 지지/저항 중 CHoCH 발생 시 ⚡CISD 시그널 표시")
+cisd_alert_enabled  = input.bool(true,  "CISD 발생 알람",   group=groupE_1, display=display.none)
+bubb_alert_enabled  = input.bool(false, "매수BB 진입 알람",  group=groupE_1, display=display.none)
+bebb_alert_enabled  = input.bool(false, "매도BB 진입 알람",  group=groupE_1, display=display.none)
+msb1_alert_enabled  = input.bool(true, "1분 MSB변경 알람",   group=groupE_1, display=display.none)
+msb5_alert_enabled  = input.bool(true, "5분 MSB변경 알람",   group=groupE_1, display=display.none)
+msb15_alert_enabled = input.bool(true, "15분 MSB변경 알람",  group=groupE_1, display=display.none)
+msb1h_alert_enabled = input.bool(true, "1시간 MSB변경 알람", group=groupE_1, display=display.none)
+msb4h_alert_enabled = input.bool(true, "4시간 MSB변경 알람", group=groupE_1, display=display.none)
+msb1d_alert_enabled = input.bool(true, "일봉 MSB변경 알람",  group=groupE_1, display=display.none)
+choch_alert_enabled = input.bool(false, "CHoCH 변경 알람", group=groupE_1, display=display.none, tooltip="MSB 없이 CHoCH만 변경됐을 때 알람. CISD와 별개로 순수 CHoCH 전환 감지")
+sweepDecayBars      = input.int(20, "Sweep Score 유지 바 수", minval=5, maxval=100, group=groupE_1, display=display.none, tooltip="Sweep 발생 후 Bias 점수에 반영되는 최대 바 수. 이후 자동 소멸")
+poc_alert_enabled = input.bool(false, "POC 근접 알림",    group=groupE_1, display=display.none, tooltip="현재가가 POC 레벨에서 설정% 이내로 접근 시 알림")
+poc_alert_pct     = input.float(0.1,  "POC 알림 범위 (%)", minval=0.01, maxval=2.0, step=0.01, group=groupE_1, display=display.none)
+
+// Panel & POC Inputs
+groupPanel = "Panel Mode"
+showBiasPanel = input.bool(true, "Show Bias Panel", group=groupPanel, display=display.none)
+showTFPanel = input.bool(true, "Show TF MSB Panel", group=groupPanel, display=display.none)
+screenCorner = input.string("bottom_left", "Screen Corner", options=["top_right","top_left","bottom_right","bottom_left"], group=groupPanel, display=display.none)
+biasBgAlpha = input.int(20, "Bias BG alpha (0-100)", minval=0, maxval=100, group=groupPanel, display=display.none)
+tfBgAlpha   = input.int(35, "TF BG alpha (0-100)", minval=0, maxval=100, group=groupPanel, display=display.none)
+biasTextSizeInp = input.string("small", "Bias Text Size", options=["tiny", "small", "normal", "large"], group=groupPanel, display=display.none)
+tfTextSizeInp   = input.string("small",  "TF Text Size",   options=["tiny", "small", "normal"], group=groupPanel, display=display.none)
+
+groupAppState = "App State Export"
+showAppStatePanel = input.bool(false, "Show App State Panel", group=groupAppState, tooltip="웹앱/AI 연동 전에 핵심 판단값을 차트에서 확인하기 위한 상태 패널입니다.")
+appStateAlertEnabled = input.bool(false, "App State JSON Alert", group=groupAppState, tooltip="켜면 마지막 봉에서 앱 연동용 JSON 스타일 상태 메시지를 알림으로 보냅니다. TradingView 알림 생성 시 Any alert() function call을 사용하세요.")
+appStateAlertOnClose = input.bool(true, "App State Alert On Bar Close Only", group=groupAppState, tooltip="켜면 봉 마감 기준으로만 상태 JSON 알림을 보냅니다.")
+appStateCorner = input.string("top_right", "App State Corner", options=["top_right","top_left","bottom_right","bottom_left"], group=groupAppState)
+
+vp_num_bars = input.int(150, 'Precision', minval=10, maxval=500, group='POC Settings: Design')
+line_width  = input.int(2, 'Line Width', minval=1, group='POC Settings: Design')
+line_length = input.int(300, 'Line 길이', minval=1, group='POC Settings: Design')
+text_size   = input.string(size.small, 'Text Size', options=[size.tiny, size.small, size.normal], group='POC Settings: Design')
+gap_step    = input.int(12, 'Label Spacing Gap', minval=5, group='POC Settings: Design')
+
+grp0 = "POC Settings: TF 1m (Session)"
+tf0_show = input.bool(true, "Show 1m POC", group=grp0)
+tf0_tf   = input.timeframe("1", "Timeframe", group=grp0)
+tf0_lookback = input.int(720, "Lookback (Bars)", group=grp0)
+tf0_color = input.color(color.white, "Color", group=grp0)
+
+grp1 = "POC Settings: TF 15m (3 Days)"
+tf1_show = input.bool(true, "Show 15m POC", group=grp1)
+tf1_show_va = input.bool(true, "Show 15m VAH/VAL", group=grp1, tooltip="15분봉 기준 가치영역 고점/저점 (점선)")
+tf1_tf   = input.timeframe("15", "Timeframe", group=grp1)
+tf1_lookback = input.int(288, "Lookback (Bars)", group=grp1)
+tf1_color = input.color(color.red, "Color", group=grp1)
+
+grp2 = "POC Settings: TF 1H (2 Weeks)"
+tf2_show = input.bool(true, "Show 1H POC", group=grp2)
+tf2_show_va = input.bool(false, "Show 1H VAH/VAL", group=grp2, tooltip="1시간봉 기준 가치영역 고점/저점 (점선)")
+tf2_tf   = input.timeframe("60", "Timeframe", group=grp2)
+tf2_lookback = input.int(336, "Lookback (Bars)", group=grp2)
+tf2_color = input.color(color.orange, "Color", group=grp2)
+
+grp3 = "POC Settings: TF 4H (2 Months)"
+tf3_show = input.bool(true, "Show 4H POC", group=grp3)
+tf3_show_va = input.bool(false, "Show 4H VAH/VAL", group=grp3, tooltip="4시간봉 기준 가치영역 고점/저점 (점선)")
+tf3_tf   = input.timeframe("240", "Timeframe", group=grp3)
+tf3_lookback = input.int(360, "Lookback (Bars)", group=grp3)
+tf3_color = input.color(color.yellow, "Color", group=grp3)
+
+// =============================================================================
+// [PART 2] CORE CALCULATIONS (ZigZag, Logics)
+// =============================================================================
+
+var int market = 1
+var int choch_dir = 1
+
+var float[] hiPts = array.new_float(0)
+var int[]   hiIdx = array.new_int(0)
+var float[] loPts = array.new_float(0)
+var int[]   loIdx = array.new_int(0)
+var box[] buObBoxes = array.new_box(0)
+var box[] beObBoxes = array.new_box(0)
+var line[] _buCeLines = array.new_line(0)
+var line[] _beCeLines = array.new_line(0)
+var box[] buBbBoxes = array.new_box(0)
+var box[] beBbBoxes = array.new_box(0)
+var alert_messages = array.new<string>()
+
+var oldBullBoxes = array.new<box>()
+var oldBearBoxes = array.new<box>()
+var bool _sweepBullFired = false
+var bool _sweepBearFired = false
+
+// ZigZag Logic
+toUp   = close >= ta.highest(close, zigLen)
+toDown = close <= ta.lowest(close, zigLen)
+trend  = 1
+trend  := nz(trend[1], 1)
+trend  := trend == 1 and toDown ? -1 : trend == -1 and toUp ? 1 : trend
+
+var int trendUpBar   = na
+var int trendDownBar = na
+
+if ta.change(trend) != 0
+    if trend == 1
+        int downLen    = na(trendDownBar) ? zigLen : math.min(bar_index - trendDownBar + 1, 500)
+        int scanDown   = math.max(downLen, 1)
+        float lowVal   = low
+        int   lowIndex = bar_index
+        for k = 0 to scanDown - 1
+            if low[k] < lowVal
+                lowVal   := low[k]
+                lowIndex := bar_index - k
+        array.push(loPts, lowVal),  array.push(loIdx, lowIndex)
+        if array.size(loPts) > 50
+            array.shift(loPts), array.shift(loIdx)
+        trendUpBar := bar_index
+
+    if trend == -1
+        int upLen      = na(trendUpBar) ? zigLen : math.min(bar_index - trendUpBar + 1, 500)
+        int scanUp     = math.max(upLen, 1)
+        float highVal  = high
+        int   highIndex = bar_index
+        for k = 0 to scanUp - 1
+            if high[k] > highVal
+                highVal   := high[k]
+                highIndex := bar_index - k
+        array.push(hiPts, highVal), array.push(hiIdx, highIndex)
+        if array.size(hiPts) > 50
+            array.shift(hiPts), array.shift(hiIdx)
+        trendDownBar := bar_index
+
+getHigh(ind) =>
+    sz = array.size(hiPts)
+    idx = sz - 1 - ind
+    float prc = idx >= 0 ? array.get(hiPts, idx) : na
+    int   bix = idx >= 0 ? array.get(hiIdx, idx) : na
+    [prc, bix]
+
+getLow(ind) =>
+    sz = array.size(loPts)
+    idx = sz - 1 - ind
+    float prc = idx >= 0 ? array.get(loPts, idx) : na
+    int   bix = idx >= 0 ? array.get(loIdx, idx) : na
+    [prc, bix]
+
+[h0, h0i] = getHigh(0)
+[h1, h1i] = getHigh(1)
+[l0, l0i] = getLow(0)
+[l1, l1i] = getLow(1)
+
+gapPct = labelGap / 100
+
+if ta.change(trend) != 0 and showZZ
+    bool isOutside = not na(h0i) and not na(l0i) and h0i == l0i
+    if trend == 1
+        if not na(h0i) and not na(l0i)
+            line.new(h0i, h0, l0i, l0, color=zzDownCol, width=zzLineWidth)
+        if showLabel and not na(l0i) and not isOutside
+            txt = l0 > l1 ? "HL" : "LL"
+            labelY = l0 * (1 - gapPct)
+            label.new(l0i, labelY, txt, xloc.bar_index, yloc.price, color=color.new(color.white, 100), style=label.style_none, textcolor=color.red, size=txtSize)
+    if trend == -1
+        if not na(l0i) and not na(h0i)
+            line.new(l0i, l0, h0i, h0, color=zzUpCol, width=zzLineWidth)
+        if showLabel and not na(h0i)
+            txt = isOutside ? "Outside" : (h0 > h1 ? "HH" : "LH")
+            labelY = h0 * (1 + gapPct)
+            label.new(h0i, labelY, txt, xloc.bar_index, yloc.price, color=color.new(color.white, 100), style=label.style_none, textcolor=isOutside ? color.gray : color.green, size=txtSize)
+
+// =============================================================================
+// [v2.42] MSB & CHoCH
+// =============================================================================
+market := nz(market[1], 1)
+choch_dir := nz(choch_dir[1], market)
+
+float msbBullBreakSource = useCloseForMSB ? close : high
+float msbBearBreakSource = useCloseForMSB ? close : low
+bool msb_bull_break = market == -1 and not na(h0) and msbBullBreakSource > h0
+bool msb_bear_break = market == 1  and not na(l0) and msbBearBreakSource < l0
+
+if msb_bull_break
+    market := 1
+else if msb_bear_break
+    market := -1
+
+mChanged = ta.change(market) != 0
+
+if mChanged
+    choch_dir := market
+else
+    bool instant_bear_choch = choch_dir == 1  and not na(l0) and low < l0
+    bool instant_bull_choch = choch_dir == -1 and not na(h0) and high > h0
+    if instant_bear_choch
+        choch_dir := -1
+    else if instant_bull_choch
+        choch_dir := 1
+
+chochChanged = ta.change(choch_dir) != 0
+bool chochOnly = chochChanged and not mChanged
+bool signalBarConfirmed = not confirmRealtimeSignals or barstate.isconfirmed
+bool chochOnlyForSignal = chochOnly and signalBarConfirmed
+
+// =============================================================================
+// [PART 3] DATA FETCHING
+// =============================================================================
+wOpen = request.security(syminfo.tickerid, "W", open, lookahead=barmerge.lookahead_off)
+
+_get1m() =>
+    [p, h, l] = f_get_vp_data(tf0_lookback, vp_num_bars)
+    [f_confirm_int(market), f_confirm_int(choch_dir), p]
+[sec1_msb, sec1_choch, poc0_val] = request.security(syminfo.tickerid, "1", _get1m(), lookahead=barmerge.lookahead_off)
+
+_get5m() => [f_confirm_int(market), f_confirm_int(choch_dir)]
+[sec5_msb, sec5_choch] = request.security(syminfo.tickerid, "5", _get5m(), lookahead=barmerge.lookahead_off)
+
+_get15m() =>
+    [b, be, mx, mn, ts] = f_detect_optimized(thresholdPer, auto)
+    [p, h, l] = f_get_vp_data(tf1_lookback, vp_num_bars)
+    [f_confirm_int(market), f_confirm_int(choch_dir), p, h, l, f_confirm_bool(b), f_confirm_bool(be), f_confirm_float(mx), f_confirm_float(mn), f_confirm_int(ts)]
+[sec15_msb, sec15_choch, poc1_val, vah1_val, val1_val, fvg15_b, fvg15_be, fvg15_n_max, fvg15_n_min, fvg15_n_t] = request.security(syminfo.tickerid, "15", _get15m(), lookahead=barmerge.lookahead_off)
+
+_get1h() =>
+    [b, be, mx, mn, ts] = f_detect_optimized(thresholdPer, auto)
+    [p, h, l] = f_get_vp_data(tf2_lookback, vp_num_bars)
+    [f_confirm_int(market), f_confirm_int(choch_dir), p, h, l, f_confirm_bool(b), f_confirm_bool(be), f_confirm_float(mx), f_confirm_float(mn), f_confirm_int(ts)]
+[sec60_msb, sec60_choch, poc2_val, vah2_val, val2_val, fvg1h_b, fvg1h_be, fvg1h_n_max, fvg1h_n_min, fvg1h_n_t] = request.security(syminfo.tickerid, "60", _get1h(), lookahead=barmerge.lookahead_off)
+
+_get4h() =>
+    [b, be, mx, mn, ts] = f_detect_optimized(thresholdPer, auto)
+    ema_v    = ta.ema(close, emaLen)
+    h4_hi_v  = ta.highest(high, oteRange)
+    h4_lo_v  = ta.lowest(low, oteRange)
+    [p, h, l] = f_get_vp_data(tf3_lookback, vp_num_bars)
+    int msbAge4h = bar_index - nz(ta.valuewhen(ta.change(market) != 0, bar_index, 0), bar_index)
+    [f_confirm_int(market), f_confirm_int(choch_dir), p, h, l, f_confirm_bool(b), f_confirm_bool(be), f_confirm_float(mx), f_confirm_float(mn), f_confirm_int(ts), f_confirm_float(ema_v), f_confirm_float(h4_hi_v), f_confirm_float(h4_lo_v), f_confirm_int(msbAge4h)]
+[sec240_msb, sec240_choch, poc3_val, vah3_val, val3_val, fvg4h_b, fvg4h_be, fvg4h_n_max, fvg4h_n_min, fvg4h_n_t, htfEMA, h4_high_20, h4_low_20, sec240_msbAge] = request.security(syminfo.tickerid, "240", _get4h(), lookahead=barmerge.lookahead_off)
+
+_get1d() =>
+    [b, be, mx, mn, ts] = f_detect_optimized(thresholdPer, auto)
+    [f_confirm_int(market), f_confirm_int(choch_dir), f_confirm_bool(b), f_confirm_bool(be), f_confirm_float(mx), f_confirm_float(mn), f_confirm_int(ts), open]
+[secD_msb, secD_choch, fvg1d_b, fvg1d_be, fvg1d_n_max, fvg1d_n_min, fvg1d_n_t, dOpen] = request.security(syminfo.tickerid, "1D", _get1d(), lookahead=barmerge.lookahead_off)
+
+// =============================================================================
+// [PART 4] DISPLAY & LOGIC EXECUTION
+// =============================================================================
+
+smoothedHtfEMA = emaSmooth == "SMA" ? ta.sma(htfEMA, 14) : emaSmooth == "EMA" ? ta.ema(htfEMA, 14) : htfEMA
+plot(showEma ? smoothedHtfEMA : na, "EMA 200", color=emaCol, linewidth=2)
+
+oteSpan = math.max(h4_high_20 - h4_low_20, 1e-10)
+ote_50  = h4_low_20 + oteSpan * 0.5
+oteL_lo = h4_low_20 + oteSpan * 0.21
+oteL_hi = h4_low_20 + oteSpan * 0.38
+oteS_lo = h4_low_20 + oteSpan * 0.62
+oteS_hi = h4_low_20 + oteSpan * 0.79
+inLongOTE  = low <= oteL_hi and high >= oteL_lo
+inShortOTE = high >= oteS_hi and low <= oteS_lo
+
+check_time        = (time_source == "Real Time" and barstate.islast) ? timenow : time
+is_asia_session   = useAsiaKZ and not na(time(timeframe.period, sessAsia, "America/New_York"))
+is_london_session = not na(time(timeframe.period, sessLon, "America/New_York"))
+is_ny_session     = not na(time(timeframe.period, sessNY,  "America/New_York"))
+in_killzone       = is_asia_session or is_london_session or is_ny_session
+string _kzSessionName = is_asia_session ? "Asia" : is_london_session ? "London" : is_ny_session ? "NY" : ""
+killzone_started  = in_killzone and not in_killzone[1]
+killzone_ended    = not in_killzone and in_killzone[1]
+
+alertcondition(killzone_started, "KZ 진입", "킬존 시작 (Asia/London/NY 중 하나)")
+alertcondition(killzone_ended,   "KZ 종료", "킬존 종료")
+if killzone_started
+    alert("킬존 시작: " + _kzSessionName, alert.freq_once_per_bar)
+if killzone_ended
+    alert("킬존 종료: " + _kzSessionName, alert.freq_once_per_bar)
+bgcolor(showKZbg and in_killzone ? killzone_color : na, title="킬존 배경")
+
+var line wOpenLine = na
+var label wOpenLabel = na
+if showWeeklyOpen
+    if barstate.islast
+        if not na(wOpenLine)
+            line.delete(wOpenLine)
+        if not na(wOpenLabel)
+            label.delete(wOpenLabel)
+        wOpenLine := line.new(bar_index, wOpen, bar_index + 50, wOpen, color=wOpenCol, width=1, style=line.style_dashed, extend=extend.left)
+        wOpenLabel := label.new(bar_index + 52, wOpen, "W.Open", color=color.new(color.white,100), style=label.style_none, textcolor=wOpenCol, size=size.tiny)
+else
+    if not na(wOpenLine)
+        line.delete(wOpenLine)
+        wOpenLine := na
+    if not na(wOpenLabel)
+        label.delete(wOpenLabel)
+        wOpenLabel := na
+
+// =============================================================================
+// [v2.42] BIAS Score
+// =============================================================================
+float _po3Fac = po3Range / 100
+int _htfMarket = sec240_msb
+
+bullSweepCondition = (low < l1) and (close > l1) and (market == 1)
+bearSweepCondition = (high > h1) and (close < h1) and (market == -1)
+
+float structureDecayFactor = useStructureDecay and not na(sec240_msbAge) ? math.min(1.0, math.max(0.25, sec240_msbAge / float(structureDecayBars))) : 1.0
+float structureScore = f_dir_score(_htfMarket, 2.0 * structureDecayFactor)
+
+float po3Score = 0.0
+if _htfMarket == 1
+    if close < dOpen
+        po3Score := 1.5
+    else if close > dOpen and close < dOpen * (1 + _po3Fac)
+        po3Score := 0.5
+    else
+        po3Score := -1.0
+else if _htfMarket == -1
+    if close > dOpen
+        po3Score := -1.5
+    else if close < dOpen and close > dOpen * (1 - _po3Fac)
+        po3Score := -0.5
+    else
+        po3Score := 1.0
+
+var float _activeSweepScore = 0.0
+var int   _sweepScoreBar    = 0
+
+if _sweepBullFired
+    _activeSweepScore := 2.0
+    _sweepScoreBar    := bar_index
+    _sweepBullFired   := false
+else if _sweepBearFired
+    _activeSweepScore := -2.0
+    _sweepScoreBar    := bar_index
+    _sweepBearFired   := false
+else if bullSweepCondition
+    _activeSweepScore := 2.0
+    _sweepScoreBar    := bar_index
+else if bearSweepCondition
+    _activeSweepScore := -2.0
+    _sweepScoreBar    := bar_index
+
+if mChanged
+    _activeSweepScore := 0.0
+else if _activeSweepScore != 0.0 and (bar_index - _sweepScoreBar) > sweepDecayBars
+    _activeSweepScore := 0.0
+
+float triggerScore = 0.0
+if _activeSweepScore != 0.0
+    triggerScore := _activeSweepScore
+else if market == 1 and inLongOTE
+    triggerScore := 1.5
+else if market == -1 and inShortOTE
+    triggerScore := -1.5
+
+float mtfAlignScore = 0.0
+mtfAlignScore += f_dir_score(sec15_msb, 0.5)
+mtfAlignScore += f_dir_score(sec60_msb, 0.5)
+mtfAlignScore += f_dir_score(secD_msb, 0.5)
+
+biasRaw = structureScore + po3Score + triggerScore + mtfAlignScore
+
+float _kzStrength  = math.abs(biasRaw) >= 2.0 ? 1.0 : 0.5
+float kzBoostScore = in_killzone and kzBoost and biasRaw != 0.0 ? math.sign(biasRaw) * _kzStrength : 0.0
+
+biasVal    = biasRaw + kzBoostScore
+longBias   = biasVal >= biasThreshold
+shortBias  = biasVal <= -biasThreshold
+
+dropBox(arr, str) =>
+    if delBoxes
+        box.delete(array.shift(arr))
+    else
+        if str == "bull"
+            array.push(oldBullBoxes, array.shift(arr))
+            while array.size(oldBullBoxes) > 30
+                box.delete(array.shift(oldBullBoxes))
+        else if str == "bear"
+            array.push(oldBearBoxes, array.shift(arr))
+            while array.size(oldBearBoxes) > 30
+                box.delete(array.shift(oldBearBoxes))
+    0
+
+// =============================================================================
+// [v2.42] OB & BB Index
+// =============================================================================
+
+// Bu-OB
+buObIdx = bar_index
+buObIdx := nz(buObIdx[1], bar_index)
+if mChanged or na(buObIdx[1])
+    if array.size(hiIdx) >= 2 and array.size(loIdx) >= 1 and not na(h1i) and not na(l0i)
+        int from_offset = bar_index - h1i
+        int to_offset   = bar_index - l0i
+        buObIdx := l0i
+        if from_offset > 0 and to_offset >= 0 and from_offset > to_offset
+            for i = to_offset to from_offset
+                if open[i] > close[i]
+                    buObIdx := bar_index - i
+                    break
+buObSince = bar_index - buObIdx
+
+// Be-OB
+beObIdx = bar_index
+beObIdx := nz(beObIdx[1], bar_index)
+if mChanged or na(beObIdx[1])
+    if array.size(loIdx) >= 2 and array.size(hiIdx) >= 1 and not na(l1i) and not na(h0i)
+        int from_offset = bar_index - l1i
+        int to_offset   = bar_index - h0i
+        beObIdx := h0i
+        if from_offset > 0 and to_offset >= 0 and from_offset > to_offset
+            for i = to_offset to from_offset
+                if open[i] < close[i]
+                    beObIdx := bar_index - i
+                    break
+beObSince = bar_index - beObIdx
+
+// Instant OB Logic
+if mChanged
+    if market == 1 and not na(h1i)
+        int lookback = math.min(bar_index - h1i, 200)
+        if lookback > 0
+            float lowest_price = low
+            int lowest_idx = bar_index
+            for i = 0 to lookback
+                if low[i] < lowest_price
+                    lowest_price := low[i]
+                    lowest_idx   := bar_index - i
+            int origin_idx = lowest_idx
+            int offset = bar_index - lowest_idx
+            if offset >= 0
+                for k = offset to math.min(offset + 10, bar_index)
+                    if open[k] > close[k]
+                        origin_idx := bar_index - k
+                        break
+            buObIdx := origin_idx
+            buObSince := bar_index - buObIdx
+
+    else if market == -1 and not na(l1i)
+        int lookback = math.min(bar_index - l1i, 200)
+        if lookback > 0
+            float highest_price = high
+            int highest_idx = bar_index
+            for i = 0 to lookback
+                if high[i] > highest_price
+                    highest_price := high[i]
+                    highest_idx   := bar_index - i
+            int origin_idx = highest_idx
+            int offset = bar_index - highest_idx
+            if offset >= 0
+                for k = offset to math.min(offset + 10, bar_index)
+                    if open[k] < close[k]
+                        origin_idx := bar_index - k
+                        break
+            beObIdx := origin_idx
+            beObSince := bar_index - beObIdx
+
+// Be-BB
+beBbIdx = bar_index
+beBbIdx := nz(beBbIdx[1], bar_index)
+if mChanged or na(beBbIdx[1])
+    if array.size(hiIdx) >= 2 and array.size(loIdx) >= 2 and not na(h1i) and not na(l1i)
+        beBbIdx := l1i
+        int from_offset = bar_index - h1i
+        int to_offset   = bar_index - l1i
+        if from_offset > 0 and to_offset > 0 and from_offset > to_offset
+            for i = to_offset to from_offset
+                if open[i] > close[i]
+                    beBbIdx := bar_index - i
+                    break
+beBbSince = bar_index - beBbIdx
+
+// Bu-BB
+buBbIdx = bar_index
+buBbIdx := nz(buBbIdx[1], bar_index)
+if mChanged or na(buBbIdx[1])
+    if array.size(loIdx) >= 2 and array.size(hiIdx) >= 2 and not na(l1i) and not na(h1i)
+        buBbIdx := h1i
+        int from_offset = bar_index - l1i
+        int to_offset   = bar_index - h1i
+        if from_offset > 0 and to_offset > 0 and from_offset > to_offset
+            for i = to_offset to from_offset
+                if open[i] < close[i]
+                    buBbIdx := bar_index - i
+                    break
+buBbSince = bar_index - buBbIdx
+
+// =============================================================================
+// OB & BB Filters
+// =============================================================================
+var float _cachedSmaVol = na
+_cachedSmaVol := ta.sma(volume, 20)
+float _currentAtr = ta.atr(14)
+
+buObVolSpike    = buObSince > 0 and not na(_cachedSmaVol[buObSince]) and volume[buObSince] > _cachedSmaVol[buObSince] * volMult
+buObBody        = math.abs(close[buObSince] - open[buObSince])
+buObLargeCandle = buObSince > 0 and buObBody > _currentAtr[buObSince]
+isValidBuOB     = not useVolFilter or (buObVolSpike or buObLargeCandle)
+
+beObVolSpike    = beObSince > 0 and not na(_cachedSmaVol[beObSince]) and volume[beObSince] > _cachedSmaVol[beObSince] * volMult
+beObBody        = math.abs(close[beObSince] - open[beObSince])
+beObLargeCandle = beObSince > 0 and beObBody > _currentAtr[beObSince]
+isValidBeOB     = not useVolFilter or (beObVolSpike or beObLargeCandle)
+
+buBbVolSpike    = buBbSince > 0 and not na(_cachedSmaVol[buBbSince]) and volume[buBbSince] > _cachedSmaVol[buBbSince] * volMult
+buBbBody        = math.abs(close[buBbSince] - open[buBbSince])
+buBbLargeCandle = buBbSince > 0 and buBbBody > _currentAtr[buBbSince]
+isValidBuBB     = not useVolFilter or (buBbVolSpike or buBbLargeCandle)
+
+beBbVolSpike    = beBbSince > 0 and not na(_cachedSmaVol[beBbSince]) and volume[beBbSince] > _cachedSmaVol[beBbSince] * volMult
+beBbBody        = math.abs(close[beBbSince] - open[beBbSince])
+beBbLargeCandle = beBbSince > 0 and beBbBody > _currentAtr[beBbSince]
+isValidBeBB     = not useVolFilter or (beBbVolSpike or beBbLargeCandle)
+
+// =============================================================================
+// MSB, CHoCH Visualization
+// =============================================================================
+
+if mChanged and showMSB
+    if market == 1 and array.size(hiIdx) >= 1 and not na(h0i)
+        line.new(h0i, h0, bar_index + msbExtend, h0, color=color.green, width=2, style=line.style_dashed)
+        label.new(int(math.avg(h0i, bar_index)), h0, "MSB", color=color.new(color.white, 100), style=label.style_label_down, textcolor=color.green, size=size.small)
+    if market == -1 and array.size(loIdx) >= 1 and not na(l0i)
+        line.new(l0i, l0, bar_index + msbExtend, l0, color=color.red, width=2, style=line.style_dashed)
+        label.new(int(math.avg(l0i, bar_index)), l0, "MSB", color=color.new(color.white, 100), style=label.style_label_up, textcolor=color.red, size=size.small)
+
+if chochOnlyForSignal and showMSB
+    if choch_dir == 1 and array.size(hiIdx) >= 1 and not na(h0i)
+        line.new(h0i, h0, bar_index + msbExtend, h0, color=color.green, width=1, style=line.style_dotted)
+        label.new(int(math.avg(h0i, bar_index)), h0, "CHoCH", color=color.new(color.white, 100), style=label.style_label_down, textcolor=color.green, size=size.tiny)
+    if choch_dir == -1 and array.size(loIdx) >= 1 and not na(l0i)
+        line.new(l0i, l0, bar_index + msbExtend, l0, color=color.red, width=1, style=line.style_dotted)
+        label.new(int(math.avg(l0i, bar_index)), l0, "CHoCH", color=color.new(color.white, 100), style=label.style_label_up, textcolor=color.red, size=size.tiny)
+
+if mChanged and array.size(hiIdx) >= 2 and array.size(loIdx) >= 2 and not na(h1i) and not na(l1i) and not na(h0i) and not na(l0i)
+    if market == 1
+        if isValidBuOB
+            buOB = box.new(buObIdx, high[buObSince], bar_index + msbExtend, low[buObSince], bgcolor=buObCol, border_color=buObEdge, text="Bu-OB", text_color=color.green, text_halign=text.align_right, text_size=txtSize)
+            array.push(buObBoxes, buOB)
+            if array.size(buObBoxes) > 30
+                dropBox(buObBoxes, "bull")
+                if array.size(_buCeLines) > 0
+                    line.delete(array.shift(_buCeLines))
+            _buOB_ce = (high[buObSince] + low[buObSince]) / 2
+            _buOB_ce_ln = line.new(buObIdx, _buOB_ce, bar_index + msbExtend, _buOB_ce, color=color.new(buObEdge, 50), style=line.style_dotted, width=1)
+            array.push(_buCeLines, _buOB_ce_ln)
+
+        bbText = "Bu-BB"
+        if showMB and l0 >= l1
+            bbText := "Bu-MB"
+        if showBB and isValidBuBB
+            buBB = box.new(buBbIdx, high[buBbSince], bar_index + msbExtend, low[buBbSince], bgcolor=buBbCol, border_color=buBbEdge, text=bbText, text_color=color.green, text_halign=text.align_right, text_size=txtSize)
+            array.push(buBbBoxes, buBB)
+            if array.size(buBbBoxes) > 30
+                dropBox(buBbBoxes, "bull")
+
+    if market == -1
+        if isValidBeOB
+            beOB = box.new(beObIdx, high[beObSince], bar_index + msbExtend, low[beObSince], bgcolor=beObCol, border_color=beObEdge, text="Be-OB", text_color=color.red, text_halign=text.align_right, text_size=txtSize)
+            array.push(beObBoxes, beOB)
+            if array.size(beObBoxes) > 30
+                dropBox(beObBoxes, "bear")
+                if array.size(_beCeLines) > 0
+                    line.delete(array.shift(_beCeLines))
+            _beOB_ce = (high[beObSince] + low[beObSince]) / 2
+            _beOB_ce_ln = line.new(beObIdx, _beOB_ce, bar_index + msbExtend, _beOB_ce, color=color.new(beObEdge, 50), style=line.style_dotted, width=1)
+            array.push(_beCeLines, _beOB_ce_ln)
+
+        bbText = "Be-BB"
+        if showMB and h0 <= h1
+            bbText := "Be-MB"
+        if showBB and isValidBeBB
+            beBB = box.new(beBbIdx, high[beBbSince], bar_index + msbExtend, low[beBbSince], bgcolor=beBbCol, border_color=beBbEdge, text=bbText, text_color=color.red, text_halign=text.align_right, text_size=txtSize)
+            array.push(beBbBoxes, beBB)
+            if array.size(beBbBoxes) > 30
+                dropBox(beBbBoxes, "bear")
+
+// Box Deletion and Alerts
+if array.size(buObBoxes) > 0
+    for _i = array.size(buObBoxes) - 1 to 0
+        _ob     = array.get(buObBoxes, _i)
+        _bottom = box.get_bottom(_ob)
+        _top    = box.get_top(_ob)
+        if close < _bottom
+            box.delete(array.remove(buObBoxes, _i))
+            if _i < array.size(_buCeLines)
+                line.delete(array.remove(_buCeLines, _i))
+        else if close < _top
+            bool justEnteredBuOB = close[1] >= _top
+            if justEnteredBuOB
+                if buob_alert_enabled
+                    array.push(alert_messages, "매수OB진입, 현재가격:"+str.tostring(close))
+                if ob_entry_label
+                    label.new(bar_index, low, "▲ Bu-OB", color=color.new(color.white,100), style=label.style_label_up, textcolor=color.green, size=size.tiny)
+
+if array.size(beObBoxes) > 0
+    for _i = array.size(beObBoxes) - 1 to 0
+        _ob     = array.get(beObBoxes, _i)
+        _top    = box.get_top(_ob)
+        _bottom = box.get_bottom(_ob)
+        if close > _top
+            box.delete(array.remove(beObBoxes, _i))
+            if _i < array.size(_beCeLines)
+                line.delete(array.remove(_beCeLines, _i))
+        else if close > _bottom
+            bool justEnteredBeOB = close[1] <= _bottom
+            if justEnteredBeOB
+                if beob_alert_enabled
+                    array.push(alert_messages, "매도OB진입, 현재가격:"+str.tostring(close))
+                if ob_entry_label
+                    label.new(bar_index, high, "▼ Be-OB", color=color.new(color.white,100), style=label.style_label_down, textcolor=color.red, size=size.tiny)
+
+if array.size(buBbBoxes) > 0
+    for _i = array.size(buBbBoxes) - 1 to 0
+        _bb     = array.get(buBbBoxes, _i)
+        _bottom = box.get_bottom(_bb)
+        _top    = box.get_top(_bb)
+        if close < _bottom
+            box.delete(array.remove(buBbBoxes, _i))
+        else if close < _top
+            bool justEnteredBuBB = close[1] >= _top
+            if justEnteredBuBB and bubb_alert_enabled
+                array.push(alert_messages, "매수BB진입, 현재가격:"+str.tostring(close))
+
+if array.size(beBbBoxes) > 0
+    for _i = array.size(beBbBoxes) - 1 to 0
+        _bb     = array.get(beBbBoxes, _i)
+        _top    = box.get_top(_bb)
+        _bottom = box.get_bottom(_bb)
+        if close > _top
+            box.delete(array.remove(beBbBoxes, _i))
+        else if close > _bottom
+            bool justEnteredBeBB = close[1] <= _bottom
+            if justEnteredBeBB and bebb_alert_enabled
+                array.push(alert_messages, "매도BB진입, 현재가격:"+str.tostring(close))
+
+// =============================================================================
+// CISD (Change in State of Delivery)
+// =============================================================================
+bool in_bu_ob = false
+if array.size(buObBoxes) > 0
+    for _ob in buObBoxes
+        if close <= box.get_top(_ob) and close >= box.get_bottom(_ob)
+            in_bu_ob := true
+            break
+
+bool in_be_ob = false
+if array.size(beObBoxes) > 0
+    for _ob in beObBoxes
+        if close <= box.get_top(_ob) and close >= box.get_bottom(_ob)
+            in_be_ob := true
+            break
+
+bool bull_cisd = chochOnlyForSignal and choch_dir == 1 and in_bu_ob
+bool bear_cisd = chochOnlyForSignal and choch_dir == -1 and in_be_ob
+
+if showCISD
+    if bull_cisd
+        label.new(bar_index, low, "⚡ CISD", color=color.new(color.white, 100), style=label.style_label_up, textcolor=color.new(#089981, 0), size=size.small)
+    if bear_cisd
+        label.new(bar_index, high, "⚡ CISD", color=color.new(color.white, 100), style=label.style_label_down, textcolor=color.new(#f23645, 0), size=size.small)
+
+applyFilterMode(arr, col) =>
+    if filterMode == "Hide"
+        for filterdBox in arr
+            box.set_border_color(filterdBox, color.new(col, 100))
+            box.set_bgcolor(filterdBox, color.new(col, 100))
+            box.set_text_color(filterdBox, color.new(col, 100))
+    else if filterMode == "Fade"
+        for filterdBox in arr
+            box.set_border_color(filterdBox, color.new(col, fadePct))
+            box.set_bgcolor(filterdBox, color.new(col, fadePct))
+            box.set_text_color(filterdBox, color.new(col, fadePct))
+
+// =============================================================================
+// Panel Update
+// =============================================================================
+
+var string biasTxt  = "BIAS: NEUTRAL"
+var string scoreTxt = ""
+var string whereTxt = ""
+var string kzTxt    = ""
+var string biasText = ""
+int _biasKey = longBias ? 1 : shortBias ? -1 : 0
+bool _bc1 = ta.change(_biasKey)               != 0
+bool _bc2 = ta.change(in_killzone ? 1 : 0)    != 0
+bool _bc3 = ta.change(biasVal)                != 0
+bool biasChanged = _bc1 or _bc2 or _bc3
+
+if biasChanged and filterMode != "Show All"
+    if longBias
+        applyFilterMode(beObBoxes,  color.red)
+        applyFilterMode(beBbBoxes,  color.red)
+        applyFilterMode(oldBearBoxes, color.red)
+    else if shortBias
+        applyFilterMode(buObBoxes,  color.green)
+        applyFilterMode(buBbBoxes,  color.green)
+        applyFilterMode(oldBullBoxes, color.green)
+
+if biasChanged or barstate.isfirst
+    biasTxt  := longBias ? "BIAS: LONG🟢" : shortBias ? "BIAS: SHORT🔴" : "BIAS: NEUTRAL"
+    modeTxt = useConfirmedHTF ? "Confirmed" : "Aggressive"
+    decayTxt = useStructureDecay and structureDecayFactor < 1.0 ? " Decay:" + str.tostring(structureDecayFactor, "#.##") : ""
+    scoreTxt := "Total: " + str.tostring(biasVal) + " [" + modeTxt + decayTxt + "] (Struct:" + str.tostring(structureScore, "#.##") + " PO3:" + str.tostring(po3Score) + " Trig:" + str.tostring(triggerScore) + " MTF:" + str.tostring(mtfAlignScore) + ")"
+    whereTxt := "PO3: " + (po3Score == 1.5 or po3Score == -1.5 ? "Good" : "Bad") + ((bullSweepCondition or bearSweepCondition or triggerScore == 2.0 or triggerScore == -2.0) ? " [SWEEP!]" : inLongOTE or inShortOTE ? " [OTE]" : "")
+    kzTxt    := "Killzone: " + (in_killzone ? "ON [" + _kzSessionName + "] (boost:" + str.tostring(kzBoostScore) + ")" : "off")
+    biasText := biasTxt + "\n" + scoreTxt + "\n" + whereTxt + "\n" + kzTxt
+
+getMsbChochText(tf, sec_msb, sec_choch, is_current_tf) =>
+    val_msb = is_current_tf ? market : sec_msb
+    val_choch = is_current_tf ? choch_dir : sec_choch
+    msb_code = na(val_msb) ? "⚪" : val_msb == 1 ? "🟢" : "🔴"
+    choch_code = na(val_choch) ? "⚪" : val_choch == 1 ? "🟢" : "🔴"
+    tf + " MSB: " + msb_code + " | CHoCH: " + choch_code
+
+bool mChanged1   = ta.change(sec1_msb)   != 0
+bool mChanged5   = ta.change(sec5_msb)   != 0
+bool mChanged15  = ta.change(sec15_msb)  != 0
+bool mChanged1h  = ta.change(sec60_msb)  != 0
+bool mChanged4h  = ta.change(sec240_msb) != 0
+bool mChangedD   = ta.change(secD_msb)   != 0
+bool chochChanged1  = ta.change(sec1_choch)   != 0 and ta.change(sec1_msb)   == 0
+bool chochChanged5  = ta.change(sec5_choch)   != 0 and ta.change(sec5_msb)   == 0
+bool chochChanged15 = ta.change(sec15_choch)  != 0 and ta.change(sec15_msb)  == 0
+bool chochChanged1h = ta.change(sec60_choch)  != 0 and ta.change(sec60_msb)  == 0
+bool chochChanged4h = ta.change(sec240_choch) != 0 and ta.change(sec240_msb) == 0
+bool chochChangedD  = ta.change(secD_choch)   != 0 and ta.change(secD_msb)   == 0
+
+var string tfText = ""
+bool _tfChanged = mChanged or mChanged1 or mChanged5 or mChanged15 or mChanged1h or mChanged4h or mChangedD or chochOnlyForSignal or chochChanged1 or chochChanged5 or chochChanged15 or chochChanged1h or chochChanged4h or chochChangedD
+
+if _tfChanged or barstate.islast or barstate.isfirst
+    string _tf = timeframe.period
+    msb1  = getMsbChochText("1m ", sec1_msb, sec1_choch, _tf == "1")
+    msb5  = getMsbChochText("5m ", sec5_msb, sec5_choch, _tf == "5")
+    msb15 = getMsbChochText("15m", sec15_msb, sec15_choch, _tf == "15")
+    msb60 = getMsbChochText("1h ", sec60_msb, sec60_choch, _tf == "60")
+    msb240= getMsbChochText("4h ", sec240_msb, sec240_choch, _tf == "240")
+    msbD  = getMsbChochText("1D ", secD_msb, secD_choch, _tf == "1D")
+    tfText := msb1 + "\n" + msb5 + "\n" + msb15 + "\n" + msb60 + "\n" + msb240 + "\n" + msbD
+
+var table fixedPanel = na
+pos = screenCorner == "top_right" ? position.top_right : screenCorner == "top_left" ? position.top_left : screenCorner == "bottom_right" ? position.bottom_right : position.bottom_left
+textSizeBias = biasTextSizeInp == "tiny" ? size.tiny : biasTextSizeInp == "small" ? size.small : biasTextSizeInp == "large" ? size.large : size.normal
+textSizeTF   = tfTextSizeInp == "tiny" ? size.tiny : tfTextSizeInp == "normal" ? size.normal : size.small
+if na(fixedPanel)
+    fixedPanel := table.new(pos, 1, 2, border_width=1)
+biasBGcol = longBias ? color.new(color.green, biasBgAlpha) : shortBias ? color.new(color.red, biasBgAlpha) : color.new(color.gray, biasBgAlpha)
+tfBGcol   = color.new(color.black, tfBgAlpha)
+if showBiasPanel
+    table.cell(fixedPanel, 0, 0, biasText, text_color=color.white, bgcolor=biasBGcol, text_size=textSizeBias)
+if showTFPanel
+    table.cell(fixedPanel, 0, 1, tfText,   text_color=color.white, bgcolor=tfBGcol,   text_size=textSizeTF)
+
+// OTE Box Draw
+var box oteLong  = na
+var box oteShort = na
+var line oteLine50 = na
+
+showLongOTE  = showOTE and ((oteBiasOnly and longBias)  or (not oteBiasOnly))
+showShortOTE = showOTE and ((oteBiasOnly and shortBias) or (not oteBiasOnly))
+
+if showOTE
+    if na(oteLine50)
+        oteLine50 := line.new(bar_index - oteLeft, ote_50, bar_index + oteRight, ote_50, color=color.new(color.gray, 50), style=line.style_dashed, width=1)
+    else if barstate.islast
+        line.set_xy1(oteLine50, bar_index - oteLeft, ote_50)
+        line.set_xy2(oteLine50, bar_index + oteRight, ote_50)
+else
+    if not na(oteLine50)
+        line.delete(oteLine50), oteLine50 := na
+
+if showLongOTE
+    if na(oteLong)
+        oteLong := box.new(bar_index - oteLeft, oteL_hi, bar_index + oteRight, oteL_lo, bgcolor=oteLongCol, border_color=color.new(oteLongCol, 0), text="OTE LONG", text_color=color.new(oteLongCol, 0), text_halign=text.align_right, text_size=size.tiny)
+    else if barstate.islast
+        box.set_left(oteLong,   bar_index - oteLeft), box.set_right(oteLong,  bar_index + oteRight)
+        box.set_top(oteLong,    oteL_hi),              box.set_bottom(oteLong, oteL_lo)
+else
+    if not na(oteLong)
+        box.delete(oteLong), oteLong := na
+
+if showShortOTE
+    if na(oteShort)
+        oteShort := box.new(bar_index - oteLeft, oteS_hi, bar_index + oteRight, oteS_lo, bgcolor=oteShortCol, border_color=color.new(oteShortCol, 0), text="OTE SHORT", text_color=color.new(oteShortCol, 0), text_halign=text.align_right, text_size=size.tiny)
+    else if barstate.islast
+        box.set_left(oteShort,  bar_index - oteLeft), box.set_right(oteShort, bar_index + oteRight)
+        box.set_top(oteShort,   oteS_hi),              box.set_bottom(oteShort,oteS_lo)
+else
+    if not na(oteShort)
+        box.delete(oteShort), oteShort := na
+
+// =============================================================================
+// Alerts
+// =============================================================================
+if mChanged1  and msb1_alert_enabled
+    array.push(alert_messages, "1m MSB 변경!!\n"   + tfText)
+if mChanged5  and msb5_alert_enabled
+    array.push(alert_messages, "5m MSB 변경!!\n"   + tfText)
+if mChanged15 and msb15_alert_enabled
+    array.push(alert_messages, "15m MSB 변경!!\n"  + tfText)
+if mChanged1h and msb1h_alert_enabled
+    array.push(alert_messages, "1h MSB 변경!!\n"   + tfText)
+if mChanged4h and msb4h_alert_enabled
+    array.push(alert_messages, "4h MSB 변경!!\n"   + tfText)
+if mChangedD  and msb1d_alert_enabled
+    array.push(alert_messages, "1D MSB 변경!!\n"   + tfText)
+
+if choch_alert_enabled and signalBarConfirmed
+    if chochChanged1
+        array.push(alert_messages, "1m CHoCH 변경! (MSB 미변경)\n" + tfText)
+    if chochChanged5
+        array.push(alert_messages, "5m CHoCH 변경! (MSB 미변경)\n" + tfText)
+    if chochChanged15
+        array.push(alert_messages, "15m CHoCH 변경! (MSB 미변경)\n" + tfText)
+    if chochChanged1h
+        array.push(alert_messages, "1h CHoCH 변경! (MSB 미변경)\n" + tfText)
+    if chochChanged4h
+        array.push(alert_messages, "4h CHoCH 변경! (MSB 미변경)\n" + tfText)
+    if chochChangedD
+        array.push(alert_messages, "1D CHoCH 변경! (MSB 미변경)\n" + tfText)
+
+if bull_cisd and cisd_alert_enabled
+    array.push(alert_messages, "⚡ 매수 CISD 발생! (매수OB 지지 + 상승 CHoCH)\n현재가: " + str.tostring(close))
+if bear_cisd and cisd_alert_enabled
+    array.push(alert_messages, "⚡ 매도 CISD 발생! (매도OB 저항 + 하락 CHoCH)\n현재가: " + str.tostring(close))
+
+if poc_alert_enabled and barstate.islast
+    _poc_pct = poc_alert_pct / 100
+    if not na(poc0_val) and math.abs(close - poc0_val) / poc0_val < _poc_pct
+        array.push(alert_messages, "1m POC 근접! 현재가: "+str.tostring(close)+" POC: "+str.tostring(poc0_val, "#.##"))
+    if not na(poc1_val) and math.abs(close - poc1_val) / poc1_val < _poc_pct
+        array.push(alert_messages, "15m POC 근접! 현재가: "+str.tostring(close)+" POC: "+str.tostring(poc1_val, "#.##"))
+    if not na(poc2_val) and math.abs(close - poc2_val) / poc2_val < _poc_pct
+        array.push(alert_messages, "1H POC 근접! 현재가: "+str.tostring(close)+" POC: "+str.tostring(poc2_val, "#.##"))
+    if not na(poc3_val) and math.abs(close - poc3_val) / poc3_val < _poc_pct
+        array.push(alert_messages, "4H POC 근접! 현재가: "+str.tostring(close)+" POC: "+str.tostring(poc3_val, "#.##"))
+
+longA  = in_killzone and longBias  and mChanged and market == 1
+shortA = in_killzone and shortBias and mChanged and market == -1
+alertcondition(longA,  "A Long (KZ+Bias+MSB)",  "A Long: KZ+Bias+MSB")
+alertcondition(shortA, "A Short (KZ+Bias+MSB)", "A Short: KZ+Bias+MSB")
+if array.size(alert_messages) > 0
+    combined_message = array.join(alert_messages, "\n")
+    alert(combined_message, alert.freq_once_per_bar)
+    array.clear(alert_messages)
+
+// =============================================================================
+// FVG Processing
+// =============================================================================
+var fvg_records = array.new<fvg>(0)
+var fvg_areas   = array.new<box>(0)
+var t_15m = 0
+var t_1h  = 0
+var t_4h  = 0
+var t_1d  = 0
+var float currentTfInMinutes = timeframe.in_seconds(timeframe.period) / 60
+
+f_getOffset(fvgTfInMinutes) =>
+    int offset = 2
+    if currentTfInMinutes < fvgTfInMinutes
+        ratio = fvgTfInMinutes / currentTfInMinutes
+        offset := int(math.min(math.round(ratio * 3), 1800))
+    offset
+
+barIdx = bar_index
+var int _offset_15m = f_getOffset(15)
+var int _offset_1h  = f_getOffset(60)
+var int _offset_4h  = f_getOffset(240)
+var int _offset_1d  = f_getOffset(1440)
+if fvg_enabled
+    offset_15m = _offset_15m, offset_1h = _offset_1h, offset_4h = _offset_4h, offset_1d = _offset_1d
+    if tf1_enabled and (fvg15_b or fvg15_be) and fvg15_n_t != t_15m
+        fvg_records.unshift(fvg.new(fvg15_n_max, fvg15_n_min, fvg15_b, fvg15_n_t, '15m'))
+        fvg_areas.unshift(box.new(barIdx - offset_15m, fvg15_n_max, barIdx + extend, fvg15_n_min, na, bgcolor = fvg15_b ? bullCss : bearCss, text="15m", text_color=color.yellow, text_size=size.small))
+        t_15m := fvg15_n_t
+    if tf2_enabled and (fvg1h_b or fvg1h_be) and fvg1h_n_t != t_1h
+        fvg_records.unshift(fvg.new(fvg1h_n_max, fvg1h_n_min, fvg1h_b, fvg1h_n_t, '1h'))
+        fvg_areas.unshift(box.new(barIdx - offset_1h, fvg1h_n_max, barIdx + extend, fvg1h_n_min, na, bgcolor = fvg1h_b ? bullCss : bearCss, text="1h", text_color=color.yellow, text_size=size.small))
+        t_1h := fvg1h_n_t
+    if tf3_enabled and (fvg4h_b or fvg4h_be) and fvg4h_n_t != t_4h
+        fvg_records.unshift(fvg.new(fvg4h_n_max, fvg4h_n_min, fvg4h_b, fvg4h_n_t, '4h'))
+        fvg_areas.unshift(box.new(barIdx - offset_4h, fvg4h_n_max, barIdx + extend, fvg4h_n_min, na, bgcolor = fvg4h_b ? bullCss : bearCss, text="4h", text_color=color.yellow, text_size=size.small))
+        t_4h := fvg4h_n_t
+    if tf4_enabled and (fvg1d_b or fvg1d_be) and fvg1d_n_t != t_1d
+        fvg_records.unshift(fvg.new(fvg1d_n_max, fvg1d_n_min, fvg1d_b, fvg1d_n_t, '1d'))
+        fvg_areas.unshift(box.new(barIdx - offset_1d, fvg1d_n_max, barIdx + extend, fvg1d_n_min, na, bgcolor = fvg1d_b ? bullCss : bearCss, text="1d", text_color=color.yellow, text_size=size.small))
+        t_1d := fvg1d_n_t
+
+    if fvg_records.size() > 40
+        last_idx = fvg_records.size() - 1
+        fvg_records.remove(last_idx)
+        old_box = fvg_areas.remove(last_idx)
+        box.delete(old_box)
+
+    bool _isBodyClose = fvg_mit_mode == "Body Close"
+    if fvg_records.size() > 0
+        for i = fvg_records.size() - 1 to 0
+            get  = fvg_records.get(i)
+            area = fvg_areas.get(i)
+
+            if not get.is_ifvg
+                bool fully_broken = false
+                if _isBodyClose
+                    fully_broken := (get.isbull and close < get.min) or (not get.isbull and close > get.max)
+                else
+                    fully_broken := (get.isbull and low  < get.min) or (not get.isbull and high > get.max)
+
+                if fully_broken
+                    if ifvg_enabled
+                        new_col = get.isbull ? ifvgBearCss : ifvgBullCss
+                        area.set_bgcolor(new_col)
+                        area.set_text("i" + get.timeframe)
+                        area.set_text_color(color.white)
+                        area.set_border_color(color.new(new_col, 20))
+                        get.is_ifvg := true
+                        fvg_records.set(i, get)
+                    else
+                        if mitigationLevels
+                            line.new(get.t, get.isbull ? get.min : get.max, time, get.isbull ? get.min : get.max, xloc.bar_time, color = get.isbull ? bullCss : bearCss, style = line.style_dashed)
+                        fvg_areas.remove(i).delete()
+                        fvg_records.remove(i)
+            else
+                bool ifvg_done = false
+                if _isBodyClose
+                    ifvg_done := (get.isbull and close > get.max) or (not get.isbull and close < get.min)
+                else
+                    ifvg_done := (get.isbull and high  > get.max) or (not get.isbull and low  < get.min)
+                if ifvg_done
+                    fvg_areas.remove(i).delete()
+                    fvg_records.remove(i)
+
+    var unmitigated = array.new<line>(0)
+    if barstate.islast and showLast > 0 and fvg_records.size() > 0
+        if unmitigated.size() > 0
+            for element in unmitigated
+                element.delete()
+            unmitigated.clear()
+        for i = 0 to math.min(showLast - 1, fvg_records.size() - 1)
+            get = fvg_records.get(i)
+            unmitigated.push(line.new(get.t, get.isbull ? get.min : get.max, time, get.isbull ? get.min : get.max, xloc.bar_time, color = get.isbull ? bullCss : bearCss))
+
+// =============================================================================
+// App State Export
+// =============================================================================
+string appBiasSide = longBias ? "long" : shortBias ? "short" : "neutral"
+string appEmaSide = na(htfEMA) ? "unknown" : close >= htfEMA ? "above" : "below"
+string appOteZone = inLongOTE ? "long" : inShortOTE ? "short" : "none"
+string appCisdSide = bull_cisd ? "bullish" : bear_cisd ? "bearish" : "none"
+
+bool appInFvg = false
+bool appFvgIsIfvg = false
+string appFvgTf = "none"
+string appFvgDir = "none"
+float appFvgTop = na
+float appFvgBottom = na
+
+if fvg_records.size() > 0
+    for i = 0 to fvg_records.size() - 1
+        stateFvg = fvg_records.get(i)
+        bool isInsideFvg = close <= stateFvg.max and close >= stateFvg.min
+        if isInsideFvg and not appInFvg
+            appInFvg := true
+            appFvgIsIfvg := stateFvg.is_ifvg
+            appFvgTf := stateFvg.timeframe
+            appFvgDir := stateFvg.isbull ? "bullish" : "bearish"
+            appFvgTop := stateFvg.max
+            appFvgBottom := stateFvg.min
+
+string appStateCompact =
+  "APP STATE\n" +
+  "Mode: " + (useConfirmedHTF ? "Confirmed" : "Aggressive") + "\n" +
+  "Bias: " + appBiasSide + " (" + str.tostring(biasVal, "#.##") + ")\n" +
+  "MSB 15/1H/4H/1D: " + f_dir_text(sec15_msb) + " / " + f_dir_text(sec60_msb) + " / " + f_dir_text(sec240_msb) + " / " + f_dir_text(secD_msb) + "\n" +
+  "OTE: " + appOteZone + " | EMA200: " + appEmaSide + "\n" +
+  "FVG: " + (appInFvg ? appFvgTf + " " + appFvgDir + (appFvgIsIfvg ? " iFVG" : " FVG") : "none") + "\n" +
+  "CISD: " + appCisdSide
+
+string appStateJson =
+  "{" +
+  "\"symbol\":\"" + syminfo.tickerid + "\"," +
+  "\"chartTf\":\"" + timeframe.period + "\"," +
+  "\"mode\":\"" + (useConfirmedHTF ? "confirmed" : "aggressive") + "\"," +
+  "\"bias\":\"" + appBiasSide + "\"," +
+  "\"biasScore\":" + f_num_json(biasVal) + "," +
+  "\"structureScore\":" + f_num_json(structureScore) + "," +
+  "\"structureDecay\":" + f_num_json(structureDecayFactor) + "," +
+  "\"msb\":{\"1m\":\"" + f_dir_text(sec1_msb) + "\",\"5m\":\"" + f_dir_text(sec5_msb) + "\",\"15m\":\"" + f_dir_text(sec15_msb) + "\",\"1h\":\"" + f_dir_text(sec60_msb) + "\",\"4h\":\"" + f_dir_text(sec240_msb) + "\",\"1d\":\"" + f_dir_text(secD_msb) + "\"}," +
+  "\"choch\":{\"1m\":\"" + f_dir_text(sec1_choch) + "\",\"5m\":\"" + f_dir_text(sec5_choch) + "\",\"15m\":\"" + f_dir_text(sec15_choch) + "\",\"1h\":\"" + f_dir_text(sec60_choch) + "\",\"4h\":\"" + f_dir_text(sec240_choch) + "\",\"1d\":\"" + f_dir_text(secD_choch) + "\"}," +
+  "\"oteZone\":\"" + appOteZone + "\"," +
+  "\"ema200Side\":\"" + appEmaSide + "\"," +
+  "\"inFvg\":" + f_bool_json(appInFvg) + "," +
+  "\"fvgTf\":\"" + appFvgTf + "\"," +
+  "\"fvgDir\":\"" + appFvgDir + "\"," +
+  "\"fvgIsIfvg\":" + f_bool_json(appFvgIsIfvg) + "," +
+  "\"fvgTop\":" + f_num_json(appFvgTop) + "," +
+  "\"fvgBottom\":" + f_num_json(appFvgBottom) + "," +
+  "\"cisd\":\"" + appCisdSide + "\"" +
+  "}"
+
+var table appStatePanel = na
+appStatePos = appStateCorner == "top_right" ? position.top_right : appStateCorner == "top_left" ? position.top_left : appStateCorner == "bottom_right" ? position.bottom_right : position.bottom_left
+if showAppStatePanel and barstate.islast
+    if na(appStatePanel)
+        appStatePanel := table.new(appStatePos, 1, 1, border_width=1)
+    table.cell(appStatePanel, 0, 0, appStateCompact, text_color=color.white, bgcolor=color.new(color.black, 20), text_size=size.small)
+else if not showAppStatePanel and not na(appStatePanel)
+    table.cell(appStatePanel, 0, 0, "", text_color=color.new(color.white, 100), bgcolor=color.new(color.black, 100), text_size=size.tiny)
+
+bool appStateCanAlert = appStateAlertEnabled and barstate.islast and (not appStateAlertOnClose or barstate.isconfirmed)
+if appStateCanAlert
+    alert(appStateJson, alert.freq_once_per_bar)
+
+// =============================================================================
+// Sweep Logic
+// =============================================================================
+oW = opt == 'Only Wicks'
+oO = opt == 'Only Outbreaks & Retest'
+WO = opt == 'Wicks + Outbreaks & Retest'
+var int MAX_PIVOTS = 40
+var array<piv>   aPivH  = array.new<piv>(0)
+var array<piv>   aPivL  = array.new<piv>(0)
+var array<boxBr> aBoxBr = array.new<boxBr>(0)
+
+if sweep_enabled
+    ph = ta.pivothigh(len, len)
+    pl = ta.pivotlow (len, len)
+    if not na(ph)
+        aPivH.unshift(piv.new(ph, bar_index - len, false, false, false, false))
+    if not na(pl)
+        aPivL.unshift(piv.new(pl, bar_index - len, false, false, false, false))
+
+    if array.size(aPivH) > MAX_PIVOTS
+        removed = array.pop(aPivH)
+        if not na(removed.lin)
+            removed.lin.delete()
+    if array.size(aPivL) > MAX_PIVOTS
+        removed = array.pop(aPivL)
+        if not na(removed.lin)
+            removed.lin.delete()
+    if array.size(aBoxBr) > MAX_PIVOTS
+        old_br = array.pop(aBoxBr)
+        box.delete(old_br.bx)
+        line.delete(old_br.ln)
+
+    if array.size(aPivH) > 0
+        for i = aPivH.size() - 1 to 0
+            get = aPivH.get(i)
+            if not get.mit
+                if not get.brk
+                    if close > get.prc
+                        if not oW
+                            get.brk := true
+                        else
+                            get.mit := true
+                    if not oO and not get.wic
+                        if high > get.prc and close < get.prc
+                            aBoxBr.unshift(get.br(colBr3, colBr, 1))
+                            get.l(colBr2, 'dt')
+                            lnDot(low, colBr)
+                            get.wic := true
+                            _sweepBearFired := true
+                else
+                    if close < get.prc
+                        get.mit := true
+                    if not oW and low < get.prc and close > get.prc
+                        aBoxBr.unshift(get.br(colBl3, colBl, -1))
+                        get.l(colBl2, 'ds')
+                        lnDot(high, colBl)
+                        get.tak := true
+                        _sweepBullFired := true
+            if bar_index - get.bix > 2000 or get.mit or get.tak
+                removed = aPivH.remove(i)
+                if not na(removed.lin)
+                    removed.lin.delete()
+
+    if array.size(aPivL) > 0
+        for i = aPivL.size() - 1 to 0
+            get = aPivL.get(i)
+            if not get.mit
+                if not get.brk
+                    if close < get.prc
+                        if not oW
+                            get.brk := true
+                        else
+                            get.mit := true
+                    if not oO and not get.wic
+                        if low < get.prc and close > get.prc
+                            aBoxBr.unshift(get.br(colBl3, colBl, -1))
+                            get.l(colBl2, 'dt')
+                            lnDot(high, colBl)
+                            get.wic := true
+                            _sweepBullFired := true
+                else
+                    if close > get.prc
+                        get.mit := true
+                    if not oW and high > get.prc and close < get.prc
+                        aBoxBr.unshift(get.br(colBr3, colBr, 1))
+                        get.l(colBr2, 'ds')
+                        lnDot(low, colBr)
+                        get.tak := true
+                        _sweepBearFired := true
+            if bar_index - get.bix > 2000 or get.mit or get.tak
+                removed = aPivL.remove(i)
+                if not na(removed.lin)
+                    removed.lin.delete()
+
+    if extend_sweep
+        for bx in aBoxBr
+            if not bx.br and bar_index - bx.bx.get_left() - 1 <= maxB
+                if bx.dr == -1 and close < bx.bx.get_bottom()
+                    bx.br := true
+                if bx.dr ==  1 and close > bx.bx.get_top()
+                    bx.br := true
+
+if barstate.islast
+    for _ob in buObBoxes
+        box.set_right(_ob, bar_index + msbExtend)
+    for _ob in beObBoxes
+        box.set_right(_ob, bar_index + msbExtend)
+    for _bb in buBbBoxes
+        box.set_right(_bb, bar_index + msbExtend)
+    for _bb in beBbBoxes
+        box.set_right(_bb, bar_index + msbExtend)
+    for _cl in _buCeLines
+        line.set_x2(_cl, bar_index + msbExtend)
+    for _cl in _beCeLines
+        line.set_x2(_cl, bar_index + msbExtend)
+    if sweep_enabled and extend_sweep
+        for bx in aBoxBr
+            if not bx.br and bar_index - bx.bx.get_left() - 1 <= maxB
+                bx.bx.set_right(bar_index)
+    if fvg_enabled
+        for _fa in fvg_areas
+            box.set_right(_fa, bar_index + extend)
+
+// =============================================================================
+// POC & VAH/VAL Drawing
+// =============================================================================
+var line line_0 = na
+var label lb0 = na
+var line line_1 = na
+var label lb1 = na
+var line line_1_vah = na
+var label lb1_vah = na
+var line line_1_val = na
+var label lb1_val = na
+var line line_2 = na
+var label lb2 = na
+var line line_2_vah = na
+var label lb2_vah = na
+var line line_2_val = na
+var label lb2_val = na
+var line line_3 = na
+var label lb3 = na
+var line line_3_vah = na
+var label lb3_vah = na
+var line line_3_val = na
+var label lb3_val = na
+
+update_poc_drawings(bool show, float price, color col, string label_text, int lane_multiplier, line old_l, label old_lb, string l_style = line.style_solid) =>
+    if not na(old_l)
+        line.delete(old_l)
+    if not na(old_lb)
+        label.delete(old_lb)
+    line  new_l  = na
+    label new_lb = na
+    if show and barstate.islast and not na(price)
+        int x1 = bar_index - line_length
+        int x2 = bar_index + msbExtend + (lane_multiplier * gap_step)
+        new_l  := line.new(x1, price, x2, price, color=col, width=line_width, style=l_style)
+        new_lb := label.new(x2, price, label_text, color=color.new(color.white, 100), style=label.style_label_left, textcolor=col, size=text_size)
+    [new_l, new_lb]
+
+if barstate.islast
+    [new_l0, new_lb0] = update_poc_drawings(tf0_show, poc0_val, tf0_color, "1m POC",  0, line_0, lb0)
+    line_0 := new_l0, lb0 := new_lb0
+
+    [new_l1, new_lb1] = update_poc_drawings(tf1_show, poc1_val, tf1_color, "15m POC", 1, line_1, lb1)
+    line_1 := new_l1, lb1 := new_lb1
+    [new_l1_vah, new_lb1_vah] = update_poc_drawings(tf1_show_va, vah1_val, color.new(tf1_color, 40), "15m VAH", 1, line_1_vah, lb1_vah, line.style_dashed)
+    line_1_vah := new_l1_vah, lb1_vah := new_lb1_vah
+    [new_l1_val, new_lb1_val] = update_poc_drawings(tf1_show_va, val1_val, color.new(tf1_color, 40), "15m VAL", 1, line_1_val, lb1_val, line.style_dashed)
+    line_1_val := new_l1_val, lb1_val := new_lb1_val
+
+    [new_l2, new_lb2] = update_poc_drawings(tf2_show, poc2_val, tf2_color, "1H POC",  2, line_2, lb2)
+    line_2 := new_l2, lb2 := new_lb2
+    [new_l2_vah, new_lb2_vah] = update_poc_drawings(tf2_show_va, vah2_val, color.new(tf2_color, 40), "1H VAH", 2, line_2_vah, lb2_vah, line.style_dashed)
+    line_2_vah := new_l2_vah, lb2_vah := new_lb2_vah
+    [new_l2_val, new_lb2_val] = update_poc_drawings(tf2_show_va, val2_val, color.new(tf2_color, 40), "1H VAL", 2, line_2_val, lb2_val, line.style_dashed)
+    line_2_val := new_l2_val, lb2_val := new_lb2_val
+
+    [new_l3, new_lb3] = update_poc_drawings(tf3_show, poc3_val, tf3_color, "4H POC",  3, line_3, lb3)
+    line_3 := new_l3, lb3 := new_lb3
+    [new_l3_vah, new_lb3_vah] = update_poc_drawings(tf3_show_va, vah3_val, color.new(tf3_color, 40), "4H VAH", 3, line_3_vah, lb3_vah, line.style_dashed)
+    line_3_vah := new_l3_vah, lb3_vah := new_lb3_vah
+    [new_l3_val, new_lb3_val] = update_poc_drawings(tf3_show_va, val3_val, color.new(tf3_color, 40), "4H VAL", 3, line_3_val, lb3_val, line.style_dashed)
+    line_3_val := new_l3_val, lb3_val := new_lb3_val

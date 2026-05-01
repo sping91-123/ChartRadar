@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>코털스 - 코인에 털린 사람들을 위한 채널</title>
+    <meta name="description" content="암호화폐 거래소 수수료 페이백 정보와 트레이딩 심화반 교육을 제공하는 코털스 커뮤니티">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <img src="images/coters-logo.jpg" alt="코털스" class="logo-image">
+                    <div class="logo-text-wrapper">
+                        <span class="logo-text">코털스</span>
+                        <span class="logo-subtitle">코인에 털린 사람들을 위한 채널</span>
+                    </div>
+                </div>
+                <nav class="nav">
+                    <a href="#exchanges" class="nav-link">거래소</a>
+                    <a href="#premium" class="nav-link">심화반</a>
+                    <a href="#events" class="nav-link">이벤트</a>
+                    <a href="#community" class="nav-link">커뮤니티</a>
+                    <a href="#membership" class="nav-link">멤버십</a>
+                    <a href="#app-download" class="nav-link">거래소app다운로드</a>
+                </nav>
+                <button class="mobile-menu-btn" id="mobileMenuBtn">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <div class="mobile-menu-content">
+            <a href="#exchanges" class="mobile-menu-link">거래소</a>
+            <a href="#premium" class="mobile-menu-link">심화반</a>
+            <a href="#events" class="mobile-menu-link">이벤트</a>
+            <a href="#community" class="mobile-menu-link">커뮤니티</a>
+            <a href="#membership" class="mobile-menu-link">멤버십</a>
+            <a href="#app-download" class="mobile-menu-link">거래소app다운로드</a>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-background"></div>
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-badge">
+                    <i class="fas fa-chart-line"></i>
+                    10만원으로 1억 만드는 법
+                </div>
+                <h1 class="hero-title">
+                    코인에 털린 사람들을 위한<br>
+                    <span class="gradient-text">코털스</span>
+                </h1>
+                <p class="hero-description">
+                    최대 50% 수수료 페이백과 심화반 트레이딩 교육을 통해<br>
+                    체계적인 암호화폐 투자를 시작하세요
+                </p>
+                <div class="hero-buttons">
+                    <a href="#exchanges" class="btn-hero-primary">
+                        <i class="fas fa-building"></i>
+                        거래소 둘러보기
+                    </a>
+                    <a href="#premium" class="btn-hero-secondary">
+                        <i class="fas fa-graduation-cap"></i>
+                        심화반 알아보기
+                    </a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">50%</div>
+                        <div class="stat-label">최대 페이백</div>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <div class="stat-number">6+</div>
+                        <div class="stat-label">제휴 거래소</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Exchanges Section -->
+    <section class="exchanges" id="exchanges">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-badge">
+                    <i class="fas fa-building"></i>
+                    제휴 거래소
+                </div>
+                <h2 class="section-title">최고의 수수료 페이백</h2>
+                <p class="section-description">
+                    코털스와 함께하면 거래 수수료를 페이백 받으며<br>
+                    더 효율적인 트레이딩이 가능합니다
+                </p>
+            </div>
+
+            <div class="exchanges-grid">
+                <!-- OKX -->
+                <div class="exchange-card" data-exchange="okx">
+                    <div class="exchange-header">
+                        <div class="exchange-logo">
+                            <img src="images/okx-logo.webp" alt="OKX">
+                        </div>
+                        <h3 class="exchange-name">OKX</h3>
+                    </div>
+                    <div class="exchange-payback">
+                        <div class="payback-label">수수료 페이백</div>
+                        <div class="payback-rate">20%</div>
+                    </div>
+                    <div class="exchange-info">
+                        <div class="info-row">
+                            <span class="info-label">업비트 입출금</span>
+                            <span class="info-value success"><i class="fas fa-check-circle"></i> 가능</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">빗썸 입출금</span>
+                            <span class="info-value success"><i class="fas fa-check-circle"></i> 가능</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">실질 수수료 (지정가)</span>
+                            <span class="info-value">0.016%</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">실질 수수료 (시장가)</span>
+                            <span class="info-value">0.04%</span>
+                        </div>
+                    </div>
+                    <div class="exchange-buttons">
+                        <a href="https://www.okx.com/join/COTERS" target="_blank" class="exchange-btn primary">
+                            <span>가입하기</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                        <a href="referral-okx.html" class="exchange-btn secondary">
+                            <i class="fas fa-exchange-alt"></i>
+                            <span>레퍼럴 변경</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Bitget -->
+                <div class="exchange-card" data-exchange="bitget">
+                    <div class="exchange-header">
+                        <div class="exchange-logo">
+                            <img src="images/bitget-logo.png" alt="Bitget">
+                        </div>
+                        <h3 class="exchange-name">비트겟</h3>
+                    </div>
+                    <div class="exchange-payback">
+                        <div class="payback-label">수수료 페이백</div>
+                        <div class="payback-rate">20%</div>
+                    </div>
+                    <div class="exchange-info">
+                        <div class="info-row">
+                            <span class="info-label">업비트 입출금</span>
+                            <span class="info-value success"><i class="fas fa-check-circle"></i> 가능</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">빗썸 입출금</span>
+                            <span class="info-value success"><i class="fas fa-check-circle"></i> 가능</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">실질 수수료 (지정가)</span>
+                            <span class="info-value">0.016%</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">실질 수수료 (시장가)</span>
+                            <span class="info-value">0.032%</span>
+                        </div>
+                    </div>
+                    <div class="exchange-buttons">
+                        <a href="https://partner.bitget.com/bg/COTERS20" target="_blank" class="exchange-btn primary">
+                            <span>가입하기</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                        <a href="referral-bitget.html" class="exchange-btn secondary">
+                            <i class="fas fa-exchange-alt"></i>
+                            <span>레퍼럴 변경</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- BingX -->
+                <div class="exchange-card" data-exchange="bingx">
+                    <div class="exchange-header">
+                        <div class="exchange-logo">
+                            <img src="images/bingx-logo-new.png" alt="BingX">
+                        </div>
+                        <h3 class="exchange-name">BingX</h3>
+                    </div>
+                    <div class="exchange-payback">
+                        <div class="payback-label">수수료 페이백</div>
+                        <div class="payback-rate">45%</div>
+                    </div>
+                    <div class="exchange-info">
+                        <div class="info-row">
+                            <span class="info-label">업비트 입출금</span>
+                            <span class="info-value error"><i class="fas fa-times-circle"></i> 불가</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">빗썸 입출금</span>
+                            <span class="info-value error"><i class="fas fa-times-circle"></i> 불가 <span style="font-size: 11px; color: #f59e0b; margin-left: 6px;">(해외거래소 경유만 가능)</span></span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">실질 수수료 (지정가)</span>
+                            <span class="info-value">0.011%</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">실질 수수료 (시장가)</span>
+                            <span class="info-value">0.0275%</span>
+                        </div>
+                    </div>
+                    <div class="exchange-buttons">
+                        <a href="https://bingx.com/partner/COTERS/" target="_blank" class="exchange-btn primary">
+                            <span>가입하기</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                        <a href="referral-bingx.html" class="exchange-btn secondary">
+                            <i class="fas fa-exchange-alt"></i>
+                            <span>레퍼럴 변경</span>
+                        </a>
+                    </div>
+                </div>
+
+
+                <!-- LBank -->
+                <div class="exchange-card" data-exchange="lbank">
+                    <div class="exchange-header">
+                        <div class="exchange-logo">
+                            <img src="images/lbank-logo-final.png" alt="LBank">
+                        </div>
+                        <h3 class="exchange-name">엘뱅크</h3>
+                    </div>
+                    <div class="exchange-payback">
+                        <div class="payback-label">수수료 페이백</div>
+                        <div class="payback-rate">30%</div>
+                    </div>
+                    <div class="exchange-info">
+                        <div class="info-row">
+                            <span class="info-label">업비트 입출금</span>
+                            <span class="info-value error"><i class="fas fa-times-circle"></i> 불가</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">빗썸 입출금</span>
+                            <span class="info-value success"><i class="fas fa-check-circle"></i> 가능</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">실질 수수료 (지정가)</span>
+                            <span class="info-value">0.014%</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">실질 수수료 (시장가)</span>
+                            <span class="info-value">0.042%</span>
+                        </div>
+                    </div>
+                    <div class="exchange-buttons">
+                        <a href="https://lbank.com/ref/COTERS" target="_blank" class="exchange-btn primary">
+                            <span>가입하기</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                        <a href="referral-lbank.html" class="exchange-btn secondary">
+                            <i class="fas fa-exchange-alt"></i>
+                            <span>레퍼럴 변경</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Gate.io -->
+                <div class="exchange-card" data-exchange="gate">
+                    <div class="exchange-header">
+                        <div class="exchange-logo">
+                            <img src="images/gate-logo.png" alt="Gate.io">
+                        </div>
+                        <h3 class="exchange-name">Gate.io</h3>
+                    </div>
+                    <div class="exchange-payback">
+                        <div class="payback-label">수수료 페이백</div>
+                        <div class="payback-rate">50%</div>
+                    </div>
+                    <div class="exchange-info">
+                        <div class="info-row">
+                            <span class="info-label">업비트 입출금</span>
+                            <span class="info-value success"><i class="fas fa-check-circle"></i> 가능</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">빗썸 입출금</span>
+                            <span class="info-value error"><i class="fas fa-times-circle"></i> 불가</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">실질 수수료 (지정가)</span>
+                            <span class="info-value">0.01%</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">실질 수수료 (시장가)</span>
+                            <span class="info-value">0.025%</span>
+                        </div>
+                    </div>
+                    <div class="exchange-buttons">
+                        <a href="https://www.gate.com/share/COTERS" target="_blank" class="exchange-btn primary">
+                            <span>가입하기</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                        <a href="referral-gate.html" class="exchange-btn secondary">
+                            <i class="fas fa-exchange-alt"></i>
+                            <span>레퍼럴 변경</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Premium Class Section -->
+    <section class="premium" id="premium">
+        <div class="container">
+            <div class="premium-content">
+                <div class="premium-left">
+                    <div class="section-badge">
+                        <i class="fas fa-graduation-cap"></i>
+                        심화반 교육
+                    </div>
+                    <h2 class="premium-title">
+                        코털스<br>
+                        <span class="gradient-text">심화반</span>
+                    </h2>
+                    <p class="premium-description">
+                        체계적인 트레이딩 교육과 실전 피드백을 통해<br>
+                        10만원으로 1억 만드는 실전 전략을 배우세요
+                    </p>
+                    
+                    <div class="premium-benefits">
+                        <h3 class="benefits-title">심화반 혜택</h3>
+                        <div class="benefit-item">
+                            <i class="fas fa-chart-bar"></i>
+                            <div>
+                                <div class="benefit-name">통합 지표 제공</div>
+                                <div class="benefit-desc">MSB, OB, FVG, Liquidity Sweep, POC 등</div>
+                            </div>
+                        </div>
+                        <div class="benefit-item">
+                            <i class="fas fa-file-pdf"></i>
+                            <div>
+                                <div class="benefit-name">3~4구간 상세 매매법 PDF</div>
+                                <div class="benefit-desc">구간별 이론 및 실전 전략</div>
+                            </div>
+                        </div>
+                        <div class="benefit-item">
+                            <i class="fas fa-comments"></i>
+                            <div>
+                                <div class="benefit-name">타점 및 상황대처 피드백</div>
+                                <div class="benefit-desc">매매 질문 최우선 답변</div>
+                            </div>
+                        </div>
+                        <div class="benefit-item">
+                            <i class="fas fa-eye"></i>
+                            <div>
+                                <div class="benefit-name">세부 관점 제공</div>
+                                <div class="benefit-desc">실시간 시황 분석 공유</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="premium-right">
+                    <div class="premium-card">
+                        <div class="premium-card-header">
+                            <i class="fas fa-star"></i>
+                            <h3>심화반 가입 조건</h3>
+                        </div>
+                        <div class="premium-steps">
+                            <div class="step-item">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <div class="step-title">거래소 가입</div>
+                                    <div class="step-desc">코털스 레퍼럴 링크로 거래소 가입</div>
+                                </div>
+                            </div>
+                            <div class="step-divider"></div>
+                            <div class="step-item">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <div class="step-title">100달러 이상 예치</div>
+                                    <div class="step-desc">최소 예치금 충족</div>
+                                </div>
+                            </div>
+                            <div class="step-divider"></div>
+                            <div class="step-item">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <div class="step-title">인증샷 제출</div>
+                                    <div class="step-desc">UID와 시드 인증샷을 텔레그램으로 전송</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="premium-actions">
+                            <a href="https://t.me/coterstube" target="_blank" class="btn-premium">
+                                <i class="fab fa-telegram"></i>
+                                텔레그램으로 인증하기
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Events Section -->
+    <section class="events" id="events">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-badge">
+                    <i class="fas fa-gift"></i>
+                    거래소 대회 및 이벤트
+                </div>
+                <h2 class="section-title">진행중인 대회 및 이벤트</h2>
+                <p class="section-description">
+                    각 거래소에서 진행 중인 특별 이벤트를 확인하세요
+                </p>
+            </div>
+
+            <div class="events-placeholder">
+                <div class="placeholder-icon">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <h3>곧 새로운 이벤트가 시작됩니다!</h3>
+                <p>거래소 이벤트 정보는 이곳에 업데이트됩니다</p>
+                <a href="http://t.me/coters_talk" target="_blank" class="btn-secondary">
+                    <i class="fab fa-telegram"></i>
+                    텔레그램에서 공지 받기
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Community Section -->
+    <section class="community" id="community">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-badge">
+                    <i class="fab fa-telegram"></i>
+                    커뮤니티
+                </div>
+                <h2 class="section-title">코털스 텔레그램</h2>
+                <p class="section-description">
+                    실시간 시황과 트레이딩 정보를 공유하는<br>
+                    텔레그램 커뮤니티에 참여하세요
+                </p>
+            </div>
+
+            <div class="community-grid">
+                <div class="community-card">
+                    <div class="community-icon">
+                        <i class="fab fa-telegram"></i>
+                    </div>
+                    <h3 class="community-name">코털스 TALK</h3>
+                    <p class="community-desc">
+                        자유로운 소통과 정보 공유<br>
+                        커뮤니티 채팅방
+                    </p>
+                    <div class="community-features">
+                        <div class="community-feature">
+                            <i class="fas fa-users"></i>
+                            <span>커뮤니티 소통</span>
+                        </div>
+                        <div class="community-feature">
+                            <i class="fas fa-bell"></i>
+                            <span>실시간 알림</span>
+                        </div>
+                    </div>
+                    <a href="http://t.me/coters_talk" target="_blank" class="btn-telegram">
+                        <i class="fab fa-telegram"></i>
+                        참여하기
+                    </a>
+                </div>
+
+                <div class="community-card">
+                    <div class="community-icon premium-icon">
+                        <i class="fas fa-crown"></i>
+                    </div>
+                    <h3 class="community-name">심화반 전용</h3>
+                    <p class="community-desc">
+                        심화반 회원 전용<br>
+                        인증 텔레그램 채널
+                    </p>
+                    <div class="community-features">
+                        <div class="community-feature">
+                            <i class="fas fa-lock"></i>
+                            <span>회원 전용</span>
+                        </div>
+                        <div class="community-feature">
+                            <i class="fas fa-chart-line"></i>
+                            <span>전문 분석</span>
+                        </div>
+                    </div>
+                    <a href="https://t.me/coterstube" target="_blank" class="btn-telegram premium-btn">
+                        <i class="fab fa-telegram"></i>
+                        인증하기
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Membership Section -->
+    <section class="membership" id="membership">
+        <div class="container">
+            <div class="membership-card">
+                <div class="membership-icon">
+                    <i class="fab fa-youtube"></i>
+                </div>
+                <div class="membership-content">
+                    <h2 class="membership-title">유튜브 멤버십</h2>
+                    <p class="membership-description">
+                        코털스 유튜브 채널의 멤버십에 가입하고<br>
+                        전용 콘텐츠와 라이브 강의를 시청하세요
+                    </p>
+                </div>
+                <a href="https://www.youtube.com/channel/UC6f5cQEVfoz9rLk7pMXTzYg/join" target="_blank" class="btn-membership-large">
+                    <i class="fab fa-youtube"></i>
+                    유튜브 멤버십 가입하기
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- App Download Section -->
+    <section class="app-download" id="app-download">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-badge">
+                    <i class="fas fa-mobile-alt"></i>
+                    앱 다운로드
+                </div>
+                <h2 class="section-title">거래소 앱 다운로드</h2>
+                <p class="section-description">
+                    플레이스토어 제한 우회<br>
+                    직접 APK 다운로드 가이드
+                </p>
+            </div>
+
+            <div class="app-grid">
+                <div class="app-card">
+                    <div class="app-icon">
+                        <img src="images/bingx-logo-new.png" alt="BingX">
+                    </div>
+                    <h3 class="app-name">BingX</h3>
+                    <a href="https://bingx.com/en-us/download/" target="_blank" class="btn-app-download">
+                        <i class="fas fa-download"></i>
+                        다운로드
+                    </a>
+                </div>
+
+                <div class="app-card">
+                    <div class="app-icon">
+                        <img src="images/gate-logo.png" alt="Gate.io">
+                    </div>
+                    <h3 class="app-name">Gate.io</h3>
+                    <a href="https://www.gate.io/appdownload" target="_blank" class="btn-app-download">
+                        <i class="fas fa-download"></i>
+                        다운로드
+                    </a>
+                </div>
+
+                <div class="app-card">
+                    <div class="app-icon">
+                        <img src="images/lbank-logo-final.png" alt="LBank">
+                    </div>
+                    <h3 class="app-name">LBank</h3>
+                    <a href="https://www.lbank.com/download" target="_blank" class="btn-app-download">
+                        <i class="fas fa-download"></i>
+                        다운로드
+                    </a>
+                </div>
+
+                <div class="app-card">
+                    <div class="app-icon">
+                        <img src="images/okx-logo.webp" alt="OKX">
+                    </div>
+                    <h3 class="app-name">OKX</h3>
+                    <a href="https://www.okx.com/download" target="_blank" class="btn-app-download">
+                        <i class="fas fa-download"></i>
+                        다운로드
+                    </a>
+                </div>
+
+                <div class="app-card">
+                    <div class="app-icon">
+                        <img src="images/bitget-logo.png" alt="Bitget">
+                    </div>
+                    <h3 class="app-name">Bitget</h3>
+                    <a href="https://www.bitget.com/download" target="_blank" class="btn-app-download">
+                        <i class="fas fa-download"></i>
+                        다운로드
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-left">
+                    <div class="footer-logo">
+                        <img src="images/coters-logo.jpg" alt="코털스" class="footer-logo-image">
+                        <span>코털스</span>
+                    </div>
+                    <p class="footer-description">
+                        코인에 털린 사람들을 위한 채널<br>
+                        최고의 수수료 페이백과 트레이딩 전략을 제공합니다
+                    </p>
+                    <div class="footer-social">
+                        <a href="https://www.youtube.com/@코털스-선털" target="_blank" class="social-link" aria-label="YouTube">
+                            <i class="fab fa-youtube"></i>
+                        </a>
+                        <a href="http://t.me/coters_talk" target="_blank" class="social-link" aria-label="Telegram">
+                            <i class="fab fa-telegram"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p class="footer-copyright">
+                    © 2025 코털스 (COTERS). All rights reserved.
+                </p>
+                <p class="footer-disclaimer">
+                    암호화폐 투자는 원금 손실의 위험이 있습니다. 신중한 투자 결정을 권장합니다.
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scroll to Top Button -->
+    <button class="scroll-top" id="scrollTop" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <!-- JavaScript -->
+    <script src="js/main.js"></script>
+</body>
+</html>

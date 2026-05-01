@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LBank 레퍼럴 변경 방법 - 코털스</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .guide-container {
+            max-width: 900px;
+            margin: 120px auto 80px;
+            padding: 0 24px;
+        }
+        .guide-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        .guide-logo {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 24px;
+            background: var(--bg-card);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .guide-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .guide-title {
+            font-size: 42px;
+            font-weight: 800;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+        .guide-subtitle {
+            font-size: 18px;
+            color: var(--text-secondary);
+        }
+        .warning-banner {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 32px;
+            text-align: center;
+            color: white;
+        }
+        .warning-banner i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.9;
+        }
+        .warning-banner h3 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .warning-banner p {
+            font-size: 16px;
+            opacity: 0.95;
+            line-height: 1.6;
+        }
+        .info-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 32px;
+        }
+        .info-box-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .info-box-title i {
+            color: var(--accent-color);
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+        .info-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .info-value.success {
+            color: #10b981;
+        }
+        .info-value.error {
+            color: #ef4444;
+        }
+        .guide-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 32px;
+        }
+        .guide-section-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 32px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .guide-section-title i {
+            color: var(--accent-color);
+        }
+        .steps-list {
+            list-style: none;
+            counter-reset: step-counter;
+            padding: 0;
+        }
+        .step-item {
+            counter-increment: step-counter;
+            margin-bottom: 40px;
+            padding-left: 60px;
+            padding-bottom: 24px;
+            position: relative;
+            border-bottom: 1px solid rgba(45, 53, 72, 0.3);
+        }
+        .step-item:last-child {
+            margin-bottom: 0;
+            border-bottom: none;
+        }
+        .step-item::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-color) 0%, #f59e0b 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 700;
+            color: #0a0e27;
+        }
+        .step-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+            line-height: 1.4;
+            word-break: keep-all;
+            white-space: nowrap;
+        }
+        .step-description {
+            font-size: 16px;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            text-align: left;
+        }
+        .step-description strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        .step-description br + br {
+            display: block;
+            content: "";
+            margin-top: 8px;
+        }
+        .note-box {
+            background: rgba(251, 191, 36, 0.1);
+            border-left: 4px solid var(--accent-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 32px;
+        }
+        .note-box-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent-color);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .note-box-content {
+            font-size: 15px;
+            line-height: 1.8;
+            color: var(--text-secondary);
+        }
+        .note-box-content ul {
+            margin: 12px 0;
+            padding-left: 20px;
+        }
+        .note-box-content li {
+            margin-bottom: 8px;
+        }
+        .success-box {
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 4px solid #10b981;
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 32px;
+        }
+        .success-box-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #10b981;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .danger-box {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid #ef4444;
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 32px;
+        }
+        .danger-box-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #ef4444;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-container {
+            display: flex;
+            gap: 16px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+        .btn-large {
+            flex: 1;
+            min-width: 200px;
+            padding: 18px 32px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 12px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: all 0.3s ease;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-color) 0%, #f59e0b 100%);
+            color: #0a0e27;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(251, 191, 36, 0.3);
+        }
+        .btn-secondary {
+            background: var(--bg-card);
+            border: 2px solid var(--accent-color);
+            color: var(--accent-color);
+        }
+        .btn-secondary:hover {
+            background: rgba(251, 191, 36, 0.1);
+            transform: translateY(-2px);
+        }
+        @media (max-width: 768px) {
+            .guide-title {
+                font-size: 32px;
+            }
+            .guide-section, .info-box {
+                padding: 24px;
+            }
+            .step-item {
+                padding-left: 50px;
+            }
+            .btn-container {
+                flex-direction: column;
+            }
+            .btn-large {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <a href="index.html" style="display: flex; align-items: center; gap: 12px; text-decoration: none;">
+                        <img src="images/coters-logo.jpg" alt="코털스" class="logo-image">
+                        <div class="logo-text-wrapper">
+                            <span class="logo-text">코털스</span>
+                            <span class="logo-subtitle">코인에 털린 사람들을 위한 채널</span>
+                        </div>
+                    </a>
+                </div>
+                <nav class="nav">
+                    <a href="index.html#exchanges" class="nav-link">거래소</a>
+                    <a href="index.html#premium" class="nav-link">심화반</a>
+                    <a href="index.html#membership" class="nav-link">멤버십</a>
+                    <a href="index.html#community" class="nav-link">커뮤니티</a>
+                </nav>
+                <button class="mobile-menu-btn" id="mobileMenuBtn">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="guide-container">
+        <div class="guide-header">
+            <div class="guide-logo">
+                <img src="images/lbank-logo-final.png" alt="LBank">
+            </div>
+            <h1 class="guide-title">LBank 레퍼럴 변경</h1>
+            <p class="guide-subtitle">탈퇴 후 재가입이 필요합니다</p>
+        </div>
+
+        <!-- 안내 배너 -->
+        <div class="warning-banner" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+            <i class="fas fa-info-circle"></i>
+            <h3>💡 레퍼럴 변경 방법</h3>
+            <p>LBank는 레퍼럴 코드를 직접 변경할 수 없지만,<br>
+            <strong>기존 계정을 탈퇴한 후 코털스 레퍼럴로 새로 가입</strong>하면 혜택을 받으실 수 있습니다!</p>
+        </div>
+
+        <!-- 거래소 정보 -->
+        <div class="info-box">
+            <h2 class="info-box-title">
+                <i class="fas fa-info-circle"></i>
+                LBank 거래소 정보
+            </h2>
+            <div class="info-row">
+                <span class="info-label">수수료 페이백</span>
+                <span class="info-value" style="color: var(--accent-color);">30%</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">페이백 적용 후 (지정가)</span>
+                <span class="info-value success">0.014%</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">페이백 적용 후 (시장가)</span>
+                <span class="info-value success">0.042%</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">업비트 입출금</span>
+                <span class="info-value error"><i class="fas fa-times-circle"></i> 불가</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">빗썸 입출금</span>
+                <span class="info-value success"><i class="fas fa-check-circle"></i> 가능</span>
+            </div>
+        </div>
+
+        <!-- 탈퇴 및 재가입 절차 -->
+        <div class="guide-section">
+            <h2 class="guide-section-title">
+                <i class="fas fa-redo"></i>
+                탈퇴 후 재가입 절차
+            </h2>
+            
+            <ol class="steps-list">
+                <li class="step-item">
+                    <div class="step-title">① 기존 LBank 계정의 자산 출금</div>
+                    <div class="step-description">
+                        LBank에서 보유 중인 <strong>모든 자산을 다른 거래소로 출금</strong>합니다.<br>
+                        • 현물 지갑의 모든 코인/토큰 출금<br>
+                        • 선물 포지션 청산 및 자금 출금<br>
+                        • 임시 보관: OKX, Gate.io, Bitget, 빗썸 등
+                    </div>
+                </li>
+
+                <li class="step-item">
+                    <div class="step-title">② LBank 계정 잔고 확인</div>
+                    <div class="step-description">
+                        모든 자산이 출금되었는지 다시 한번 확인합니다.<br>
+                        ✅ 현물 지갑: <strong>0원</strong><br>
+                        ✅ 선물 지갑: <strong>0원</strong><br>
+                        ✅ 자금 계좌: <strong>0원</strong><br><br>
+                        <em style="color: #f59e0b;">💡 소액 먼지(1~2달러 이하)는 남아있어도 괜찮습니다.</em>
+                    </div>
+                </li>
+
+                <li class="step-item">
+                    <div class="step-title">③ LBank 계정 탈퇴</div>
+                    <div class="step-description">
+                        <strong>앱:</strong> 프로필 → 설정 → 보안 → 계정 삭제<br>
+                        <strong>웹:</strong> 우측 상단 프로필 → 계정 설정 → 계정 삭제<br><br>
+                        본인 인증 절차(이메일 인증 코드 또는 2FA 입력)를 완료하면 계정이 삭제됩니다.
+                    </div>
+                </li>
+
+                <li class="step-item">
+                    <div class="step-title">④ 코털스 레퍼럴로 새 계정 생성</div>
+                    <div class="step-description">
+                        아래 <strong>코털스 전용 LBank 가입 링크</strong>로 접속합니다.<br><br>
+                        
+                        <a href="https://lbank.com/ref/COTERS" target="_blank" 
+                           style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #fbbf24, #f59e0b); 
+                           color: #0a0e27; font-weight: 600; border-radius: 8px; text-decoration: none; margin: 8px 0;">
+                            <i class="fas fa-external-link-alt"></i> LBank 가입하기 (레퍼럴: COTERS)
+                        </a><br><br>
+
+                        가입 시 레퍼럴 코드란에 <strong style="color: var(--accent-color);">COTERS</strong>가 표시되는지 확인하세요.<br>
+                        <strong>새 이메일 주소</strong>로 계정을 생성합니다. (기존 이메일 재사용 가능)
+                    </div>
+                </li>
+
+                <li class="step-item">
+                    <div class="step-title">⑤ 새 계정에서 KYC 인증 완료</div>
+                    <div class="step-description">
+                        프로필 → 신원 인증 → <strong>KYC 레벨 2 인증</strong>을 완료합니다.<br>
+                        (신분증 + 얼굴 인증)
+                    </div>
+                </li>
+
+                <li class="step-item">
+                    <div class="step-title">⑥ 자산 재입금 및 거래 시작</div>
+                    <div class="step-description">
+                        2단계에서 다른 거래소로 옮겨뒀던 자산을 새 LBank 계정으로 <strong>다시 입금</strong>합니다.<br>
+                        이제 코털스 레퍼럴이 적용되어 <strong>30% 수수료 페이백 혜택</strong>을 받을 수 있습니다!
+                    </div>
+                </li>
+
+                <li class="step-item">
+                    <div class="step-title">⑦ 심화반 가입 인증 (선택)</div>
+                    <div class="step-description">
+                        코털스 심화반에 가입하려면 아래 정보를 텔레그램으로 전송하세요:<br><br>
+                        
+                        📱 <strong>텔레그램:</strong> <a href="https://t.me/coterstube" target="_blank" style="color: var(--accent-color);">@coterstube</a><br><br>
+                        
+                        <strong>제출 자료:</strong><br>
+                        • LBank UID (사용자 ID)<br>
+                        • 레퍼럴 변경 완료 확인 (프로필에서 레퍼럴 코드 COTERS 확인 스크린샷)<br>
+                        • 최소 $100 이상 예치 인증샷<br><br>
+                        
+                        <em style="color: #10b981;">✅ 인증 완료 후 심화반 혜택을 받으실 수 있습니다.</em>
+                    </div>
+                </li>
+            </ol>
+
+            <!-- 성공 팁 -->
+            <div class="success-box">
+                <div class="success-box-title">
+                    <i class="fas fa-lightbulb"></i>
+                    성공 팁
+                </div>
+                <div class="note-box-content">
+                    <ul>
+                        <li><strong>모든 자산을 완전히 출금</strong>한 후에 탈퇴하세요</li>
+                        <li>탈퇴 전에 <strong>미결제 주문이 없는지</strong> 확인하세요</li>
+                        <li>새 계정 생성 시 <strong>레퍼럴 코드 COTERS</strong>가 자동 입력되었는지 확인</li>
+                        <li>기존 이메일 주소도 재사용 가능합니다</li>
+                        <li>KYC 인증은 신분증과 얼굴 인증으로 간단하게 완료됩니다</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 주의사항 -->
+            <div class="danger-box">
+                <div class="danger-box-title">
+                    <i class="fas fa-exclamation-circle"></i>
+                    주의사항
+                </div>
+                <div class="note-box-content">
+                    <ul>
+                        <li><strong>계정 탈퇴는 되돌릴 수 없습니다</strong> - 신중하게 진행하세요</li>
+                        <li>자산이 남아있으면 탈퇴가 불가능합니다</li>
+                        <li>미결제 주문이 있으면 탈퇴가 거부됩니다</li>
+                        <li>탈퇴 후에는 기존 거래 내역을 조회할 수 없습니다</li>
+                        <li><strong>업비트 입출금: 불가</strong> / <strong>빗썸 입출금: 가능</strong></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 버튼 -->
+            <div class="btn-container">
+                <a href="https://lbank.com/ref/COTERS" target="_blank" class="btn-large" style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #0a0e27;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 24px rgba(251, 191, 36, 0.4)'" onmouseout="this.style.transform=''; this.style.boxShadow=''">
+                    <i class="fas fa-user-plus"></i>
+                    LBank 가입하기
+                </a>
+                <a href="index.html" class="btn-large" style="background: var(--bg-card); border: 2px solid #fbbf24; color: #fbbf24;" onmouseover="this.style.transform='translateY(-2px)'; this.style.background='rgba(251, 191, 36, 0.1)'" onmouseout="this.style.transform=''; this.style.background='var(--bg-card)'">
+                    <i class="fas fa-home"></i>
+                    홈으로 돌아가기
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

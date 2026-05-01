@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BingX 레퍼럴 변경 방법 - 코털스</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .guide-container {
+            max-width: 900px;
+            margin: 120px auto 80px;
+            padding: 0 24px;
+        }
+        .guide-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        .guide-logo {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 24px;
+            background: var(--bg-card);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .guide-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .guide-title {
+            font-size: 42px;
+            font-weight: 800;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+        .guide-subtitle {
+            font-size: 18px;
+            color: var(--text-secondary);
+        }
+        .info-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 32px;
+        }
+        .info-box-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .info-box-title i {
+            color: #fbbf24;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+        .info-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .info-value.success {
+            color: #10b981;
+        }
+        .info-value.error {
+            color: #ef4444;
+        }
+        .guide-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 32px;
+        }
+        .guide-section-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 32px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .guide-section-title i {
+            color: #fbbf24;
+        }
+        .method-title {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            color: #fbbf24;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .steps-list {
+            list-style: none;
+            padding: 0;
+            counter-reset: step-counter;
+        }
+        .step-item {
+            position: relative;
+            padding-left: 60px;
+            margin-bottom: 40px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid rgba(45, 53, 72, 0.3);
+        }
+        .step-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        .step-item::before {
+            counter-increment: step-counter;
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #0a0e27;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+        }
+        .step-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+            line-height: 1.4;
+            word-break: keep-all;
+            white-space: nowrap;
+        }
+        .step-description {
+            font-size: 16px;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            text-align: left;
+        }
+        .step-description strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+        .step-description br + br {
+            display: block;
+            content: "";
+            margin-top: 8px;
+        }
+        .alert-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 32px;
+        }
+        .alert-box-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #ef4444;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .alert-box-content {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+        .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px 32px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            text-decoration: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-back:hover {
+            background: #fbbf24;
+            color: #0a0e27;
+            border-color: #fbbf24;
+        }
+        @media (max-width: 768px) {
+            .guide-container {
+                margin: 100px auto 60px;
+            }
+            .guide-title {
+                font-size: 32px;
+            }
+            .guide-subtitle {
+                font-size: 16px;
+            }
+            .info-box, .guide-section {
+                padding: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <img src="images/coters-logo.jpg" alt="코털스" class="logo-image">
+                    <div class="logo-text-wrapper">
+                        <span class="logo-text">코털스</span>
+                        <span class="logo-subtitle">코인에 털린 사람들을 위한 채널</span>
+                    </div>
+                </div>
+                <nav class="nav">
+                    <a href="index.html#exchanges" class="nav-link">거래소</a>
+                    <a href="index.html#premium" class="nav-link">심화반</a>
+                    <a href="index.html#membership" class="nav-link">멤버십</a>
+                    <a href="index.html#community" class="nav-link">커뮤니티</a>
+                </nav>
+                <button class="mobile-menu-btn" id="mobileMenuBtn">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="guide-container">
+        <div class="guide-header">
+            <div class="guide-logo">
+                <img src="images/bingx-logo-new.png" alt="BingX">
+            </div>
+            <h1 class="guide-title">BingX 레퍼럴 변경 방법</h1>
+            <p class="guide-subtitle">새 계정 생성 + KYC 이전을 통한 완벽한 레퍼럴 변경 가이드</p>
+        </div>
+
+        <!-- 거래소 정보 -->
+        <div class="info-box">
+            <h2 class="info-box-title">
+                <i class="fas fa-info-circle"></i>
+                BingX 거래소 정보
+            </h2>
+            <div class="info-row">
+                <span class="info-label">수수료 페이백</span>
+                <span class="info-value" style="color: #fbbf24;">45%</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">기본 수수료 (지정가)</span>
+                <span class="info-value">0.02%</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">기본 수수료 (시장가)</span>
+                <span class="info-value">0.05%</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">페이백 적용 후 (지정가)</span>
+                <span class="info-value success">0.011%</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">페이백 적용 후 (시장가)</span>
+                <span class="info-value success">0.0275%</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">업비트 입출금</span>
+                <span class="info-value error"><i class="fas fa-times-circle"></i> 불가</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">빗썸 입출금</span>
+                <span class="info-value error"><i class="fas fa-times-circle"></i> 불가</span>
+            </div>
+            <div class="info-row" style="border-top: 1px dashed rgba(251, 191, 36, 0.3); padding-top: 12px; margin-top: 8px;">
+                <span class="info-label" style="font-size: 14px;">💡 입금 방법</span>
+                <span class="info-value" style="font-size: 14px; color: #f59e0b;">해외거래소 경유 필요</span>
+            </div>
+        </div>
+
+        <!-- 방법 1: 새 계정 생성 -->
+        <div class="guide-section">
+            <div class="method-title">
+                <i class="fas fa-user-plus"></i>
+                ① 새로운 BingX 계정 생성하기
+            </div>
+            
+            <ol class="steps-list">
+                <li class="step-item">
+                    <div class="step-title">코털스 레퍼럴 링크로 접속</div>
+                    <div class="step-description">
+                        <a href="https://bingx.com/partner/COTERS/" target="_blank" style="color: #fbbf24; font-weight: 600; font-size: 18px;">
+                            👉 BingX 코털스 가입 링크 바로가기
+                        </a><br><br>
+                        코털스 커뮤니티에서 제공하는 공식 레퍼럴 링크를 통해 BingX에 접속해 주세요.
+                    </div>
+                </li>
+                <li class="step-item">
+                    <div class="step-title">레퍼럴 코드 확인 및 새 계정 생성</div>
+                    <div class="step-description">
+                        <strong>⚠️ 중요!</strong> 가입 페이지에서 레퍼럴 코드(초대인 코드)에 <strong style="color: #fbbf24;">COTERS</strong>가 보이는지 반드시 확인하세요!<br><br>
+                        
+                        <strong>✅ 확인 사항:</strong><br>
+                        • 레퍼럴 코드/초대인 코드: <span style="color: #fbbf24; font-weight: 700;">COTERS</span><br>
+                        • <strong>새로운 이메일 주소</strong>로 계정 생성 (기존 계정과 다른 이메일)<br>
+                        • 비밀번호 설정 및 기본 정보 입력
+                    </div>
+                </li>
+            </ol>
+
+            <div class="alert-box" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3);">
+                <div class="alert-box-title" style="color: #10b981;">
+                    <i class="fas fa-check-circle"></i>
+                    확인 완료!
+                </div>
+                <div class="alert-box-content">
+                    새 계정이 생성되었습니다! 이제 기존 계정의 자산을 옮기는 단계로 진행하세요.
+                </div>
+            </div>
+        </div>
+
+        <!-- 방법 2: 자산 이동 -->
+        <div class="guide-section">
+            <div class="method-title">
+                <i class="fas fa-exchange-alt"></i>
+                ② 기존 BingX 계정의 자산 옮기기
+            </div>
+            
+            <ol class="steps-list">
+                <li class="step-item">
+                    <div class="step-title">기존 계정의 모든 자산을 다른 거래소로 이동</div>
+                    <div class="step-description">
+                        <strong>🚨 매우 중요!</strong> 기존 BingX 계정에 있는 <strong>모든 자산을 다른 거래소에 잠시 옮겨두세요!</strong><br><br>
+                        
+                        <strong>📤 자산 이동 방법:</strong><br>
+                        1) 기존 BingX 계정에 로그인<br>
+                        2) 현물 지갑에서 출금(Withdraw) 선택<br>
+                        3) Gate.io, OKX, Bitget 등 다른 거래소로 전송<br>
+                        4) 선물 포지션이 있다면 <strong>모두 청산</strong><br>
+                        5) USDT, BTC, 모든 코인을 완전히 출금
+                    </div>
+                </li>
+                <li class="step-item">
+                    <div class="step-title">자산이 남아있지 않은지 꼼꼼히 확인</div>
+                    <div class="step-description">
+                        <strong>✅ 반드시 확인해야 할 항목:</strong><br>
+                        • <strong>현물 지갑</strong>: 모든 코인 잔액 0원<br>
+                        • <strong>선물 계좌</strong>: 모든 포지션 청산 및 잔액 0원<br>
+                        • <strong>자금 계좌</strong>: 모든 자산 0원<br>
+                        • <strong>쿠폰/바우처</strong>: 사용 가능한 것들 모두 확인<br><br>
+                        
+                        <em style="color: #f59e0b;">💡 팁: 소액(1~2달러 이하)은 남아도 괜찮지만, 가능한 한 모두 출금하는 것이 좋습니다.</em>
+                    </div>
+                </li>
+            </ol>
+
+            <div class="alert-box">
+                <div class="alert-box-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    주의사항
+                </div>
+                <div class="alert-box-content">
+                    • 자산이 남아있으면 KYC 이전이 불가능할 수 있습니다<br>
+                    • 출금 수수료를 고려하여 출금하세요<br>
+                    • 출금 처리 시간은 보통 10~30분 정도 소요됩니다
+                </div>
+            </div>
+        </div>
+
+        <!-- 방법 3: KYC 이전 -->
+        <div class="guide-section">
+            <div class="method-title">
+                <i class="fas fa-id-card"></i>
+                ③ 기존 계정의 KYC를 새 계정으로 이전하기
+            </div>
+            
+            <ol class="steps-list">
+                <li class="step-item">
+                    <div class="step-title">기존 BingX 계정에 로그인</div>
+                    <div class="step-description">
+                        BingX 앱에서 <strong>기존 KYC가 인증되어 있는 계정</strong>으로 로그인해 주세요.<br>
+                        (KYC 레벨 2 인증이 완료된 계정이어야 합니다)
+                    </div>
+                </li>
+                <li class="step-item">
+                    <div class="step-title">Verification 메뉴 접속</div>
+                    <div class="step-description">
+                        1) 앱 좌측 상단의 <strong>동그라미 프로필 아이콘</strong>을 클릭<br>
+                        2) <strong>"Verification"</strong> (또는 "신원 인증") 메뉴를 클릭
+                    </div>
+                </li>
+                <li class="step-item">
+                    <div class="step-title">Identity Transfer 시작</div>
+                    <div class="step-description">
+                        1) <strong>"View Detail"</strong> (세부 정보 보기) 버튼 클릭<br>
+                        2) 페이지 하단의 <strong>"Identity Transfer"</strong> (신원 이전) 버튼 클릭
+                    </div>
+                </li>
+                <li class="step-item">
+                    <div class="step-title">본인 인증 진행</div>
+                    <div class="step-description">
+                        1) 약관 동의 체크박스를 체크하고 <strong>"OK"</strong> 클릭<br>
+                        2) <strong>이메일 인증 코드</strong> 입력 (기존 계정 이메일로 전송됨)<br>
+                        3) <strong>Google OTP 인증 코드</strong> 입력 (2단계 인증이 설정되어 있는 경우)
+                    </div>
+                </li>
+                <li class="step-item">
+                    <div class="step-title">새 계정 정보 입력</div>
+                    <div class="step-description">
+                        1) <strong>새로 가입한 계정의 이메일 주소</strong> 또는 <strong>전화번호</strong> 입력<br>
+                        2) 해당 이메일/전화번호로 전송된 <strong>인증 코드</strong> 입력<br>
+                        3) <strong>"Submit"</strong> (제출) 클릭
+                    </div>
+                </li>
+                <li class="step-item">
+                    <div class="step-title">KYC 이전 완료 확인</div>
+                    <div class="step-description">
+                        다음과 같은 메시지가 표시되면 <strong>KYC 이전 완료!</strong><br><br>
+                        
+                        <div style="background: rgba(16, 185, 129, 0.1); padding: 16px; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                            <strong style="color: #10b981;">✅ "Identity transfer successful"</strong><br>
+                            또는<br>
+                            <strong style="color: #10b981;">✅ "신원 이전이 완료되었습니다"</strong>
+                        </div>
+                        <br>
+                        
+                        이제 새 계정에서 기존 KYC 정보를 그대로 사용할 수 있습니다!<br>
+                        기존 계정은 자동으로 탈퇴 처리됩니다.
+                    </div>
+                </li>
+                <li class="step-item">
+                    <div class="step-title">자산 이동 및 심화반 인증</div>
+                    <div class="step-description">
+                        1) 다른 거래소로 옮겨둔 자산을 <strong>새 BingX 계정</strong>으로 다시 입금<br>
+                        2) 100달러 이상 예치 후 <a href="https://t.me/coterstube" target="_blank" style="color: #fbbf24; font-weight: 600;">텔레그램</a>으로 인증샷 전송:<br>
+                        • <strong>UID 인증샷</strong><br>
+                        • <strong>레퍼럴 확인 화면</strong> (COTERS 표시)<br>
+                        • <strong>시드 인증샷</strong> (100달러 이상)<br><br>
+                        
+                        <em style="color: #10b981;">🎉 심화반 혜택을 받으실 수 있습니다!</em>
+                    </div>
+                </li>
+            </ol>
+
+            <div class="alert-box" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3); margin-bottom: 24px;">
+                <div class="alert-box-title" style="color: #10b981;">
+                    <i class="fas fa-lightbulb"></i>
+                    KYC 이전 성공 팁 💡
+                </div>
+                <div class="alert-box-content">
+                    <strong>✅ 반드시 확인하세요:</strong><br>
+                    • 기존 계정의 <strong>모든 자산을 출금</strong>한 후 진행<br>
+                    • <strong>KYC 레벨 2 인증</strong>이 완료된 계정이어야 함<br>
+                    • 새 계정은 <strong>레퍼럴 코드 COTERS</strong>로 가입<br>
+                    • 이메일 인증과 OTP 인증 코드를 정확히 입력<br>
+                    • KYC 이전은 <strong>1회만 가능</strong>하므로 신중하게 진행
+                </div>
+            </div>
+
+            <div class="alert-box">
+                <div class="alert-box-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    주의사항 ⚠️
+                </div>
+                <div class="alert-box-content">
+                    • KYC 이전은 <strong>계정당 1회만 가능</strong>합니다<br>
+                    • 기존 계정에 자산이 남아있으면 이전이 안 될 수 있습니다<br>
+                    • KYC 이전 후 기존 계정은 자동으로 탈퇴됩니다<br>
+                    • 새 계정의 이메일/전화번호를 정확히 입력하세요<br>
+                    • 문제 발생 시 BingX 고객센터에 문의하세요<br>
+                    • KYC 이전이 불가능한 경우, 새 계정으로 다시 KYC 인증을 진행해야 합니다
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 48px;">
+            <a href="https://bingx.com/partner/COTERS/" target="_blank" class="btn-back" style="background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #0a0e27; border-color: #fbbf24; margin-bottom: 16px;">
+                <i class="fas fa-user-plus"></i>
+                코털스 레퍼럴로 BingX 가입하기
+            </a>
+            <br>
+            <a href="index.html#exchanges" class="btn-back">
+                <i class="fas fa-arrow-left"></i>
+                거래소 목록으로 돌아가기
+            </a>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
