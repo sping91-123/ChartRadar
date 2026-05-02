@@ -22,6 +22,16 @@ export interface SupabaseUser {
   };
 }
 
+export interface SupabaseProfile {
+  id: string;
+  email: null | string;
+  display_name: null | string;
+  avatar_url: null | string;
+  plan: "free" | "member" | "premium" | "admin";
+  created_at: string;
+  updated_at: string;
+}
+
 export function isSupabaseConfigured() {
   return Boolean(supabaseUrl && supabasePublishableKey);
 }
@@ -96,6 +106,16 @@ export async function fetchSupabaseUser(accessToken: string) {
 
   if (!response.ok) throw new Error("로그인 정보를 불러오지 못했습니다.");
   return (await response.json()) as SupabaseUser;
+}
+
+export async function fetchSupabaseProfile(accessToken: string) {
+  const user = await fetchSupabaseUser(accessToken);
+  const rows = await supabaseRest<SupabaseProfile[]>(
+    `profiles?select=*&id=eq.${encodeURIComponent(user.id)}&limit=1`,
+    { accessToken }
+  );
+
+  return rows[0] ?? null;
 }
 
 export async function supabaseRest<T>(

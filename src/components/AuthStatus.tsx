@@ -1,29 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { LogIn, LogOut } from "lucide-react";
-import {
-  clearSupabaseSession,
-  fetchSupabaseUser,
-  getSupabaseSession,
-  type SupabaseUser
-} from "@/lib/supabase";
+import { Loader2, LogIn, LogOut } from "lucide-react";
+import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 export function AuthStatus() {
-  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const { user, isLoading, signOut } = useSupabaseAuth();
 
-  useEffect(() => {
-    const session = getSupabaseSession();
-    if (!session) return;
-
-    fetchSupabaseUser(session.accessToken)
-      .then(setUser)
-      .catch(() => {
-        clearSupabaseSession();
-        setUser(null);
-      });
-  }, []);
+  if (isLoading) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold text-slate-300">
+        <Loader2 className="animate-spin" size={13} aria-hidden />
+        확인 중
+      </span>
+    );
+  }
 
   if (!user) {
     return (
@@ -43,8 +34,7 @@ export function AuthStatus() {
     <button
       type="button"
       onClick={() => {
-        clearSupabaseSession();
-        setUser(null);
+        signOut();
         window.location.reload();
       }}
       className="inline-flex items-center gap-1.5 rounded-md border border-signal-success/20 bg-signal-success/10 px-2.5 py-1 text-xs font-semibold text-signal-success hover:border-signal-success/50"

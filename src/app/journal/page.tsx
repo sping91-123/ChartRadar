@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  BadgeCheck,
   Cloud,
   CloudOff,
   History,
@@ -29,7 +30,7 @@ import {
   loadRemoteJournalEntries,
   migrateLocalJournalEntries
 } from "@/lib/remoteJournal";
-import { getSupabaseSession, type SupabaseSession } from "@/lib/supabase";
+import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 const promptChips = [
   "왜 들어가고 싶었는가?",
@@ -134,27 +135,31 @@ function SectionList({
 }
 
 export default function JournalPage() {
+  const { session, user, profile, isLoading: isLoadingAuth } = useSupabaseAuth();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [localEntries, setLocalEntries] = useState<JournalEntry[]>([]);
-  const [session, setSession] = useState<SupabaseSession | null>(null);
   const [title, setTitle] = useState("");
   const [bias, setBias] = useState("관망");
   const [note, setNote] = useState("");
   const [activeFilter, setActiveFilter] = useState<(typeof filters)[number]>("전체");
   const [isLoadingRemote, setIsLoadingRemote] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
+  const [shouldAutoSync, setShouldAutoSync] = useState(false);
 
   useEffect(() => {
     const savedLocal = loadJournalEntries();
-    const savedSession = getSupabaseSession();
     setLocalEntries(savedLocal);
     setEntries(savedLocal);
-    setSession(savedSession);
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      setShouldAutoSync(params.get("sync") === "1");
+    }
+  }, []);
 
-    if (!savedSession) return;
-
+  useEffect(() => {
+    if (!session) return;
     setIsLoadingRemote(true);
-    loadRemoteJournalEntries(savedSession.accessToken)
+    loadRemoteJournalEntries(session.accessToken)
       .then((remoteEntries) => {
         setEntries(remoteEntries);
       })
@@ -162,7 +167,7 @@ export default function JournalPage() {
         setSyncMessage(error instanceof Error ? error.message : "서버 복기장을 불러오지 못했습니다.");
       })
       .finally(() => setIsLoadingRemote(false));
-  }, []);
+  }, [session]);
 
   function persistLocal(nextEntries: JournalEntry[]) {
     setEntries(nextEntries);
@@ -214,7 +219,7 @@ export default function JournalPage() {
     persistLocal(entries.filter((entry) => entry.id !== id));
   }
 
-  async function migrateLocalEntries() {
+  const migrateLocalEntries = useCallback(async () => {
     if (!session || !localEntries.length) return;
     setIsLoadingRemote(true);
     setSyncMessage("");
@@ -231,7 +236,14 @@ export default function JournalPage() {
     } finally {
       setIsLoadingRemote(false);
     }
-  }
+  }, [localEntries, session]);
+
+  useEffect(() => {
+    if (isLoadingAuth || !session) return;
+    if (!shouldAutoSync) return;
+    if (!localEntries.length) return;
+    void migrateLocalEntries();
+  }, [isLoadingAuth, session, shouldAutoSync, localEntries, migrateLocalEntries]);
 
   const filteredEntries = useMemo(() => {
     if (activeFilter === "차트 저장") return entries.filter((entry) => entry.source === "chart");
@@ -296,6 +308,20 @@ export default function JournalPage() {
                 ) : null}
               </div>
             </div>
+            {session && user ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1">
+                  {profile?.display_name ?? user.user_metadata?.name ?? user.email ?? "회원"}
+                </span>
+                <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1">
+                  {user.email ?? "이메일 없음"}
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-md border border-accent-blue/25 bg-accent-blue/10 px-2 py-1 text-accent-blue">
+                  <BadgeCheck size={12} aria-hidden />
+                  {profile?.plan?.toUpperCase() ?? "FREE"}
+                </span>
+              </div>
+            ) : null}
             {syncMessage ? <p className="mt-3 text-xs leading-5 text-slate-400">{syncMessage}</p> : null}
           </div>
 
