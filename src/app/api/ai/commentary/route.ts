@@ -37,7 +37,8 @@ function cacheKey(input: CommentaryInput): string {
     input.context.quality,
     input.context.inOte ? "1" : "0",
     input.context.inOb ? "1" : "0",
-    input.context.inFvg ? "1" : "0"
+    input.context.inFvg ? "1" : "0",
+    input.context.pocPosition ?? "unknown"
   ].join("|");
 }
 

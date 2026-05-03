@@ -24,10 +24,10 @@ function buildUserPrompt(input: CommentaryInput): string {
   const sideLabel = input.side === "long" ? "롱" : input.side === "short" ? "숏" : "관망";
   const proximityLabel =
     input.proximity === "ready"
-      ? "현재가가 진입 영역 내부"
+      ? "현재가가 검토 영역 내부"
       : input.proximity === "near"
-        ? `현재가가 진입까지 ${Math.abs(input.distancePercent).toFixed(2)}% 차이 (근접)`
-        : `현재가가 진입까지 ${Math.abs(input.distancePercent).toFixed(2)}% 차이 (대기)`;
+        ? `현재가가 검토 영역까지 ${Math.abs(input.distancePercent).toFixed(2)}% 차이 (근접)`
+        : `현재가가 검토 영역까지 ${Math.abs(input.distancePercent).toFixed(2)}% 차이 (대기)`;
 
   const killzoneLabel =
     input.context.killzone === "asia"
@@ -44,6 +44,14 @@ function buildUserPrompt(input: CommentaryInput): string {
   const risks = input.context.riskFlags.length
     ? input.context.riskFlags.slice(0, 3).join(", ")
     : "없음";
+  const pocLabel =
+    input.context.pocPosition === "near"
+      ? "POC 근처"
+      : input.context.pocPosition === "above"
+        ? "POC 위"
+        : input.context.pocPosition === "below"
+          ? "POC 아래"
+          : "미확인";
 
   return `다음 셋업에 대한 한 줄 코멘트를 60자 이내로 작성하세요.
 
@@ -56,6 +64,7 @@ function buildUserPrompt(input: CommentaryInput): string {
 OTE 영역 일치: ${input.context.inOte ? "예" : "아니오"}
 OB 내부: ${input.context.inOb ? "예" : "아니오"}
 FVG 내부: ${input.context.inFvg ? "예" : "아니오"}
+POC 위치: ${pocLabel}
 강점 신호: ${opportunities}
 리스크 신호: ${risks}
 

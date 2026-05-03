@@ -27,6 +27,7 @@ export interface CommentaryInput {
     inOte: boolean;
     inOb: boolean;
     inFvg: boolean;
+    pocPosition: "above" | "below" | "near" | "unknown";
     quality: "A" | "B" | "C";
     riskFlags: string[];
     opportunityFlags: string[];

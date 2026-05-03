@@ -56,6 +56,7 @@ interface CreditState {
 
 interface OverlaySettings {
   ema200: boolean;
+  poc: boolean;
   orderBlocks: boolean;
   fvgs: boolean;
   ote: boolean;
@@ -69,6 +70,7 @@ interface OverlaySettings {
 // 풀 모드(everything 켜진 상태)는 차트가 가려서 첫 인상에 부적합하다는 사용자 피드백 반영.
 const defaultOverlaySettings: OverlaySettings = {
   ema200: true,
+  poc: true,
   orderBlocks: true,
   fvgs: false,
   ote: false,
@@ -82,6 +84,7 @@ const overlayPresets = {
   all: defaultOverlaySettings,
   structure: {
     ema200: true,
+    poc: true,
     orderBlocks: false,
     fvgs: false,
     ote: false,
@@ -92,6 +95,7 @@ const overlayPresets = {
   } satisfies OverlaySettings,
   zones: {
     ema200: false,
+    poc: true,
     orderBlocks: true,
     fvgs: true,
     ote: true,
@@ -102,6 +106,7 @@ const overlayPresets = {
   } satisfies OverlaySettings,
   minimal: {
     ema200: true,
+    poc: true,
     orderBlocks: true,
     fvgs: false,
     ote: false,
@@ -230,6 +235,7 @@ function stateLabel(value: string) {
   if (value === "neutral") return "중립";
   if (value === "above") return "위";
   if (value === "below") return "아래";
+  if (value === "near") return "근처";
   if (value === "long") return "롱";
   if (value === "short") return "숏";
   if (value === "premium") return "프리미엄";
@@ -673,6 +679,15 @@ export function LiveMarketChart() {
       });
     }
 
+    if (overlaySettings.poc && activeAnalysis.volumeProfile) {
+      lines.push({
+        price: activeAnalysis.volumeProfile.poc,
+        color: "#fbbf24",
+        title: `${activeAnalysis.timeframe} POC`,
+        style: LineStyle.Dashed
+      });
+    }
+
     if (overlaySettings.orderBlocks && activeAnalysis.latestOb) {
       const color = activeAnalysis.latestOb.direction === "bullish" ? "#34d399" : "#fb4d5f";
       lines.push(
@@ -1105,6 +1120,7 @@ export function LiveMarketChart() {
       msb: activeAnalysis.msb,
       choch: activeAnalysis.choch,
       ema200Side: activeAnalysis.ema200Side,
+      volumeProfile: activeAnalysis.volumeProfile,
       premiumDiscount: activeAnalysis.premiumDiscount,
       oteZone: activeAnalysis.oteZone,
       h0: activeAnalysis.debug.h0,
@@ -1177,6 +1193,7 @@ export function LiveMarketChart() {
       latestFvg: activeAnalysis.latestFvg,
       latestSweep: activeAnalysis.latestSweep,
       latestCisd: activeAnalysis.latestCisd,
+      volumeProfile: activeAnalysis.volumeProfile,
       overlaySettings,
       currentLocationLabel: analysis?.currentLocationLabel ?? null,
       msbMode,
@@ -1202,6 +1219,11 @@ export function LiveMarketChart() {
       `상위 구조: ${alignmentSummary?.higher ?? "-"}`,
       `단기 구조: ${alignmentSummary?.fast ?? "-"}`,
       `MSB/CHoCH: ${stateLabel(activeAnalysis.msb)} / ${stateLabel(activeAnalysis.choch)}`,
+      `POC: ${
+        activeAnalysis.volumeProfile
+          ? `${formatPrice(activeAnalysis.volumeProfile.poc)} / ${stateLabel(activeAnalysis.volumeProfile.position)}`
+          : "-"
+      }`,
       `체크포인트:`,
       ...analysis.checkpoints.map((item) => `- ${item}`),
       `위험 신호:`,
@@ -1464,6 +1486,7 @@ export function LiveMarketChart() {
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {[
                 ["ema200", "EMA200"],
+                ["poc", "POC"],
                 ["orderBlocks", "OB / BB"],
                 ["fvgs", "FVG / iFVG"],
                 ["ote", "OTE / PD"],
@@ -1525,6 +1548,7 @@ export function LiveMarketChart() {
               표시 중:{" "}
               {[
                 overlaySettings.ema200 ? "EMA200" : null,
+                overlaySettings.poc ? "POC" : null,
                 overlaySettings.orderBlocks ? "OB/BB" : null,
                 overlaySettings.fvgs ? "FVG/iFVG" : null,
                 overlaySettings.ote ? "OTE/PD" : null,
@@ -1552,6 +1576,7 @@ export function LiveMarketChart() {
               <div className="flex flex-wrap gap-2 text-[11px] font-semibold text-slate-300">
                 <span className="rounded-md border border-emerald-400/20 bg-emerald-400/10 px-2 py-1 text-emerald-300">OB</span>
                 <span className="rounded-md border border-sky-400/20 bg-sky-400/10 px-2 py-1 text-sky-300">FVG / iFVG</span>
+                <span className="rounded-md border border-amber-400/20 bg-amber-400/10 px-2 py-1 text-amber-300">POC</span>
                 <span className="rounded-md border border-teal-400/20 bg-teal-400/10 px-2 py-1 text-teal-300">OTE 롱</span>
                 <span className="rounded-md border border-violet-400/20 bg-violet-400/10 px-2 py-1 text-violet-300">OTE 숏</span>
                 <span className="rounded-md border border-slate-400/20 bg-slate-400/10 px-2 py-1 text-slate-300">PD 50%</span>
@@ -1665,9 +1690,12 @@ export function LiveMarketChart() {
                   <p className="text-xs font-semibold text-accent-blue">PRO 미리보기</p>
                   <h3 className="mt-1 text-lg font-black text-white">{analysis.proPlan.title}</h3>
                   <p className="mt-2 text-sm leading-6 text-slate-300">{analysis.proPlan.reason}</p>
+                  <p className="mt-2 rounded-md border border-signal-warning/25 bg-signal-warning/10 px-3 py-2 text-xs leading-5 text-signal-warning">
+                    아래 가격대는 자동 진입 신호가 아니라 검토용 후보입니다. 고배율 진입은 별도 손절 수량 계산 후 판단하세요.
+                  </p>
                 </div>
                 <span className={`inline-flex shrink-0 rounded-md border px-3 py-1.5 text-sm font-black ${planQualityClasses(analysis.proPlan.quality)}`}>
-                  {analysis.proPlan.quality}급 · 신뢰 {analysis.proPlan.confidence}%
+                  {analysis.proPlan.quality}급 · 검토 {analysis.proPlan.confidence}%
                 </span>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3">
@@ -1784,6 +1812,12 @@ export function LiveMarketChart() {
                       {activeAnalysis.latestFvg.state === "ifvg" ? "iFVG" : "FVG"} {eventDirectionLabel(activeAnalysis.latestFvg.direction)} / {formatPriceRange(activeAnalysis.latestFvg.bottom, activeAnalysis.latestFvg.top)}
                     </p>
                   ) : null}
+                  {activeAnalysis.volumeProfile ? (
+                    <p className="rounded-md border border-amber-500/20 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-200">
+                      POC {stateLabel(activeAnalysis.volumeProfile.position)} / {formatPrice(activeAnalysis.volumeProfile.poc)} · VA{" "}
+                      {formatPriceRange(activeAnalysis.volumeProfile.val, activeAnalysis.volumeProfile.vah)}
+                    </p>
+                  ) : null}
                   {activeAnalysis.oteLevels ? (
                     <>
                       <p className="rounded-md border border-teal-500/20 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-200">
@@ -1797,6 +1831,7 @@ export function LiveMarketChart() {
                   {!activeAnalysis.latestOb &&
                   !activeAnalysis.latestBb &&
                   !activeAnalysis.latestFvg &&
+                  !activeAnalysis.volumeProfile &&
                   !activeAnalysis.oteLevels ? (
                     <p className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-400">
                       아직 표시할 주요 구간이 부족합니다.
@@ -1905,6 +1940,14 @@ export function LiveMarketChart() {
               <MiniMetric label="현재 TF CHoCH" value={stateLabel(activeAnalysis.choch)} />
               <MiniMetric label="EMA200 위치" value={stateLabel(activeAnalysis.ema200Side)} />
               <MiniMetric
+                label="POC 위치"
+                value={
+                  activeAnalysis.volumeProfile
+                    ? `${stateLabel(activeAnalysis.volumeProfile.position)} / ${Math.abs(activeAnalysis.volumeProfile.distancePercent).toFixed(2)}%`
+                    : "없음"
+                }
+              />
+              <MiniMetric
                 label="최근 OB"
                 value={
                   activeAnalysis.latestOb
@@ -1989,6 +2032,7 @@ export function LiveMarketChart() {
                 <MiniMetric label="CHoCH 판정" value="윅 돌파" />
                 <MiniMetric label="OTE 기준" value="4시간 20봉 범위" />
                 <MiniMetric label="PD 기준" value="4시간 프리미엄/디스카운트" />
+                <MiniMetric label="POC 기준" value="현재 TF 최근 180봉 VP" />
                 <MiniMetric label="스윕 기준" value="확정 pivot 이후" />
                 <MiniMetric label="판독 모드" value={analysisMode === "confirmed" ? "닫힌 봉 기준" : "진행 중 봉 포함"} />
                 <MiniMetric label="4H EMA200" value={fourHourAnalysis ? stateLabel(fourHourAnalysis.ema200Side) : "-"} />

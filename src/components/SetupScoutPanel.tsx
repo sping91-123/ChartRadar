@@ -57,8 +57,8 @@ function ScoreBadge({ score }: { score: number }) {
 function ProximityBadge({ setup }: { setup: ScoutSetup }) {
   if (setup.proximity === "ready") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-md border border-signal-success/40 bg-signal-success/15 px-2 py-1 text-[11px] font-black text-signal-success">
-        진입 영역 내부
+      <span className="inline-flex items-center gap-1 rounded-md border border-signal-warning/40 bg-signal-warning/15 px-2 py-1 text-[11px] font-black text-signal-warning">
+        검토 영역 내부 · 확인 필요
       </span>
     );
   }
@@ -125,6 +125,7 @@ function buildCommentaryInput(setup: ScoutSetup): CommentaryInput {
       inOte: active?.oteZone === setup.plan.side,
       inOb: active?.inOb === true,
       inFvg: active?.inFvg === true,
+      pocPosition: active?.volumeProfile?.position ?? "unknown",
       quality: setup.plan.quality,
       riskFlags: setup.analysis.riskFlags ?? [],
       opportunityFlags: setup.analysis.opportunityFlags ?? []
@@ -210,6 +211,12 @@ function buildEvidence(setup: ScoutSetup) {
   if (active?.oteZone === setup.plan.side) evidence.push("OTE 일치");
   if (active?.inOb) evidence.push("OB 내부");
   if (active?.inFvg) evidence.push("FVG 내부");
+  if (active?.volumeProfile?.position === "above" && setup.plan.side === "long") {
+    evidence.push("POC 위 유지");
+  }
+  if (active?.volumeProfile?.position === "below" && setup.plan.side === "short") {
+    evidence.push("POC 아래 유지");
+  }
 
   return evidence;
 }
@@ -357,7 +364,7 @@ function SetupCard({ setup, rank }: { setup: ScoutSetup; rank: number }) {
 
       <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
         <span className="inline-flex items-center gap-1">
-          <Target size={12} aria-hidden /> 신뢰도 {setup.plan.confidence}%
+          <Target size={12} aria-hidden /> 검토 점수 {setup.plan.confidence}%
         </span>
         <span className="font-bold text-slate-400">2차 후보 {formatPriceWithSymbol(setup.plan.target2)}</span>
       </div>
@@ -443,6 +450,9 @@ export function SetupScoutPanel() {
             </div>
             <p className="mt-1 text-sm leading-6 text-slate-400">
               주요 종목 × 활성 TF를 자동 스캔해 오늘 검토할 만한 셋업 TOP 3를 보여줍니다.
+            </p>
+            <p className="mt-2 rounded-md border border-signal-warning/25 bg-signal-warning/10 px-3 py-2 text-xs leading-5 text-signal-warning">
+              영역 내부는 진입 신호가 아니라 검토 상태입니다. 특히 고배율은 작은 흔들림도 손실을 크게 만들 수 있습니다.
             </p>
           </div>
         </div>

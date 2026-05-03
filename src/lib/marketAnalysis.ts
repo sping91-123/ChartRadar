@@ -72,6 +72,14 @@ export interface OteLevels {
   shortHigh: number;
 }
 
+export interface VolumeProfileLevels {
+  poc: number;
+  vah: number;
+  val: number;
+  distancePercent: number;
+  position: "above" | "below" | "near";
+}
+
 export interface StructureDebug {
   h0: number | null;
   h1: number | null;
@@ -99,6 +107,7 @@ export interface TimeframeAnalysis {
   inBb: boolean;
   latestSweep: SweepZone | null;
   latestCisd: CisdSignal | null;
+  volumeProfile: VolumeProfileLevels | null;
   oteZone: "long" | "short" | "none";
   oteLevels: OteLevels | null;
   premiumDiscount: "premium" | "discount" | "equilibrium" | "unknown";
@@ -277,6 +286,12 @@ function directionKorean(direction: DirectionState) {
   if (direction === "bearish") return "하락";
   if (direction === "neutral") return "중립";
   return "미확인";
+}
+
+function formatLevel(value: number) {
+  return value.toLocaleString("ko-KR", {
+    maximumFractionDigits: value > 100 ? 2 : 5
+  });
 }
 
 function getCurrentKillzone(): "asia" | "london" | "newyork" | "off" {
@@ -756,6 +771,67 @@ function detectLatestFvg(candles: Candle[], timeframe: ChartTimeframe): FvgZone 
   return null;
 }
 
+function calculateVolumeProfile(candles: Candle[], lookback = 180, bins = 96): VolumeProfileLevels | null {
+  const source = candles.slice(-lookback);
+  const latestPrice = source[source.length - 1]?.close;
+  if (source.length < 20 || !latestPrice) return null;
+
+  const highest = Math.max(...source.map((candle) => candle.high));
+  const lowest = Math.min(...source.map((candle) => candle.low));
+  const range = highest - lowest;
+  if (!Number.isFinite(range) || range <= 0) return null;
+
+  const safeBins = Math.max(20, bins);
+  const interval = range / safeBins;
+  const volumes = Array.from({ length: safeBins }, () => 0);
+
+  for (const candle of source) {
+    const start = Math.max(0, Math.floor((candle.low - lowest) / interval));
+    const end = Math.min(safeBins - 1, Math.floor((candle.high - lowest) / interval));
+    const spread = Math.max(1, end - start + 1);
+    const volumePerBin = candle.volume / spread;
+
+    for (let index = start; index <= end; index += 1) {
+      volumes[index] += volumePerBin;
+    }
+  }
+
+  let pocIndex = 0;
+  for (let index = 1; index < volumes.length; index += 1) {
+    if (volumes[index] > volumes[pocIndex]) pocIndex = index;
+  }
+
+  const totalVolume = volumes.reduce((sum, value) => sum + value, 0);
+  const targetVolume = totalVolume * 0.7;
+  let currentVolume = volumes[pocIndex];
+  let upperIndex = pocIndex;
+  let lowerIndex = pocIndex;
+
+  while (currentVolume < targetVolume && (upperIndex < safeBins - 1 || lowerIndex > 0)) {
+    const upVolume = upperIndex < safeBins - 1 ? volumes[upperIndex + 1] : -1;
+    const downVolume = lowerIndex > 0 ? volumes[lowerIndex - 1] : -1;
+
+    if (upVolume >= downVolume && upVolume >= 0) {
+      upperIndex += 1;
+      currentVolume += upVolume;
+    } else if (downVolume > upVolume && downVolume >= 0) {
+      lowerIndex -= 1;
+      currentVolume += downVolume;
+    } else {
+      break;
+    }
+  }
+
+  const poc = lowest + (pocIndex + 0.5) * interval;
+  const vah = lowest + (upperIndex + 1) * interval;
+  const val = lowest + lowerIndex * interval;
+  const distancePercent = ((latestPrice - poc) / latestPrice) * 100;
+  const position =
+    Math.abs(distancePercent) <= 0.2 ? "near" : latestPrice > poc ? "above" : "below";
+
+  return { poc, vah, val, distancePercent, position };
+}
+
 function detectOteAndPd(candles: Candle[], anchorCandles?: Candle[]) {
   const latest = candles[candles.length - 1];
   const range = (anchorCandles && anchorCandles.length >= 20 ? anchorCandles : candles).slice(-20);
@@ -953,6 +1029,12 @@ function buildCheckpoints(active: TimeframeAnalysis | undefined) {
     );
   }
 
+  if (active.volumeProfile) {
+    checkpoints.push(
+      `${active.timeframe} POC: ${formatLevel(active.volumeProfile.poc)} (${active.volumeProfile.position === "near" ? "근처" : active.volumeProfile.position === "above" ? "위" : "아래"})`
+    );
+  }
+
   if (active.oteZone !== "none") {
     checkpoints.push(`${active.timeframe} 현재 ${active.oteZone === "long" ? "롱" : "숏"} OTE 구간`);
   }
@@ -966,6 +1048,10 @@ function buildCheckpoints(active: TimeframeAnalysis | undefined) {
 
 function buildCurrentLocationLabel(active: TimeframeAnalysis | undefined, bias: BiasSide) {
   if (!active) return "판독 준비 중";
+
+  if (active.volumeProfile?.position === "near") {
+    return "POC 근처 균형 / 휩쏘 주의 구간";
+  }
 
   if (active.inOb && active.latestOb?.direction === "bullish") {
     return "상승 OB 반응 구간";
@@ -1070,7 +1156,7 @@ function buildScenarioCard(
     if (active.inOb && active.latestOb?.direction === "bullish") {
       summary = "상승 OB 반응을 확인하는 롱 시나리오가 가장 자연스럽습니다.";
     } else if (active.inFvg && active.latestFvg?.direction === "bullish") {
-      summary = `${active.latestFvg.state === "ifvg" ? "iFVG" : "FVG"} 지지 반응을 보는 롱 시나리오가 가능합니다.`;
+      summary = `${active.latestFvg.state === "ifvg" ? "iFVG" : "FVG"} 지지 반응을 보는 롱 시나리오를 검토할 수 있습니다.`;
     } else if (active.oteZone === "long") {
       summary = "롱 OTE 구간이라 구조가 다시 붙는지 보는 시나리오가 유효합니다.";
     } else {
@@ -1080,7 +1166,7 @@ function buildScenarioCard(
     if (active.inOb && active.latestOb?.direction === "bearish") {
       summary = "하락 OB 저항을 확인하는 숏 시나리오가 가장 자연스럽습니다.";
     } else if (active.inFvg && active.latestFvg?.direction === "bearish") {
-      summary = `${active.latestFvg.state === "ifvg" ? "iFVG" : "FVG"} 저항 반응을 보는 숏 시나리오가 가능합니다.`;
+      summary = `${active.latestFvg.state === "ifvg" ? "iFVG" : "FVG"} 저항 반응을 보는 숏 시나리오를 검토할 수 있습니다.`;
     } else if (active.oteZone === "short") {
       summary = "숏 OTE 구간이라 구조가 다시 눌리는지 보는 시나리오가 유효합니다.";
     } else {
@@ -1245,6 +1331,8 @@ function buildOpportunityFlags(
   }
   if (active.latestSweep?.direction === direction && active.latestSweep.age <= 8) flags.push("최근 같은 방향 스윕 발생");
   if (active.latestCisd?.direction === direction && active.latestCisd.age <= 8) flags.push("최근 같은 방향 CISD 발생");
+  if (active.volumeProfile?.position === "above" && bias === "long") flags.push("현재가가 POC 위에서 유지");
+  if (active.volumeProfile?.position === "below" && bias === "short") flags.push("현재가가 POC 아래에서 유지");
   if (killzone !== "off") {
     flags.push(`${killzone === "asia" ? "아시아" : killzone === "london" ? "런던" : "뉴욕"} 킬존 진행 중`);
   }
@@ -1272,6 +1360,9 @@ function buildRiskFlags(
   if (bias === "long" && active.premiumDiscount === "premium") flags.push("롱 기준 프리미엄 추격 구간");
   if (bias === "short" && active.premiumDiscount === "discount") flags.push("숏 기준 디스카운트 추격 구간");
   if (killzone === "off") flags.push("킬존 바깥 시간대");
+  if (active.volumeProfile?.position === "near") flags.push("POC 근처 균형 구간");
+  if (bias === "long" && active.volumeProfile?.position === "below") flags.push("롱 기준 POC 아래 위치");
+  if (bias === "short" && active.volumeProfile?.position === "above") flags.push("숏 기준 POC 위 위치");
   if (bias !== "neutral" && active.latestSweep?.direction === opposite && active.latestSweep.age <= 8) flags.push("최근 반대 방향 스윕 발생");
   if (bias !== "neutral" && active.latestCisd?.direction === opposite && active.latestCisd.age <= 8) flags.push("최근 반대 방향 CISD 발생");
   if (bias === "long" && active.inOb && active.latestOb?.direction === "bearish") flags.push("현재가가 하락 OB 안에 있음");
@@ -1294,6 +1385,7 @@ export function analyzeTimeframe(
   const latestOb = structure.latestOb;
   const latestBb = structure.latestBb;
   const latestCisd = structure.latestCisd;
+  const volumeProfile = calculateVolumeProfile(candles);
   const { oteZone, premiumDiscount, oteLevels } = detectOteAndPd(candles, context?.oteAnchorCandles);
 
   const msb: DirectionState = structure.market === 1 ? "bullish" : "bearish";
@@ -1335,6 +1427,7 @@ export function analyzeTimeframe(
     inBb: Boolean(latestBb?.isInside),
     latestSweep,
     latestCisd,
+    volumeProfile,
     oteZone,
     oteLevels,
     premiumDiscount,
@@ -1447,6 +1540,20 @@ export function summarizeMarket(
     );
   }
 
+  if (active?.volumeProfile) {
+    appendReason(
+      reasons,
+      `${active.timeframe} POC ${formatLevel(active.volumeProfile.poc)} ${
+        active.volumeProfile.position === "near"
+          ? "근처"
+          : active.volumeProfile.position === "above"
+            ? "위"
+            : "아래"
+      }`,
+      "neutral"
+    );
+  }
+
   if (active && active.oteZone !== "none") {
     appendReason(
       reasons,
@@ -1491,6 +1598,10 @@ export function summarizeMarket(
 
   if (bias === "neutral") {
     warnings.push("방향이 아직 충분히 정리되지 않았습니다. 지금은 진입보다 관찰이 우선입니다.");
+  }
+
+  if (active?.volumeProfile?.position === "near") {
+    warnings.push("현재가가 POC 근처입니다. 방향 추종보다 체결 균형 구간의 휩쏘 가능성을 먼저 의심하세요.");
   }
 
   if (active?.latestCisd?.direction === "bullish" && bias === "short") {

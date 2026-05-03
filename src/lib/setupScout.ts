@@ -111,6 +111,7 @@ async function scanCombo(
   if (Math.abs(proximityInfo.distancePercent) > proximityHardLimit[activeTimeframe]) return null;
 
   const score = computeScoutScore(market, analyses, proximityInfo);
+  if (score < 58) return null;
   const headline = buildHeadline(symbol, activeTimeframe, market);
 
   return {
@@ -182,7 +183,8 @@ function analyzeProximity(
  * - readiness 보정                      : ±0~5
  * - riskFlags 패널티                    : -0~10
  * - 활성 TF가 OTE 영역인지 가산           : +0~4
- * - 근접도 가산                          : +0~15 (검토 영역 내부 = 가장 큼)
+ * - 근접도 보정                          : +0~6
+ * - POC 균형/역행 위치 패널티             : -0~10
  *
  * 최종 0~100 클램프.
  */
@@ -213,10 +215,16 @@ function computeScoutScore(
   const active = analyses.find((a) => a.timeframe === market.activeTimeframe);
   if (active?.oteZone === plan.side) score += 4;
 
-  // 근접도 — 현재가가 검토 영역 내부인 후보를 가장 높게 평가
-  if (proximityInfo.proximity === "ready") score += 15;
-  else if (proximityInfo.proximity === "near") score += 8;
-  else if (proximityInfo.proximity === "wait") score -= 4;
+  // 근접도는 "검토 가치"만 보정한다. 영역 내부를 진입 신호처럼 과대평가하지 않는다.
+  if (proximityInfo.proximity === "ready") score += 4;
+  else if (proximityInfo.proximity === "near") score += 6;
+  else if (proximityInfo.proximity === "wait") score -= 6;
+
+  if (active?.volumeProfile?.position === "near") score -= 8;
+  if (plan.side === "long" && active?.volumeProfile?.position === "below") score -= 5;
+  if (plan.side === "short" && active?.volumeProfile?.position === "above") score -= 5;
+  if (plan.side === "long" && active?.volumeProfile?.position === "above") score += 2;
+  if (plan.side === "short" && active?.volumeProfile?.position === "below") score += 2;
 
   return Math.round(Math.max(0, Math.min(100, score)));
 }
@@ -265,7 +273,7 @@ export function topSetups(setups: ScoutSetup[], n = 3): ScoutSetup[] {
 }
 
 /** 무료 티어 일일 제한용. localStorage 저장 키. */
-export const scoutCacheKey = "positionguard.setupScout.v1";
+export const scoutCacheKey = "positionguard.setupScout.v2";
 export const scoutCacheTtlMs = 5 * 60 * 1000; // 5분
 
 interface ScoutCacheEntry {

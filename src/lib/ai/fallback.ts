@@ -11,11 +11,11 @@ export function generateFallbackCommentary(input: CommentaryInput): string {
 
   // 1. 근접도 상태
   if (input.proximity === "ready") {
-    parts.push("현재가 진입 영역 내 위치");
+    parts.push("현재가 검토 영역 내 위치");
   } else if (input.proximity === "near") {
-    parts.push(`진입까지 ${Math.abs(input.distancePercent).toFixed(2)}% 차이`);
+    parts.push(`검토 영역까지 ${Math.abs(input.distancePercent).toFixed(2)}% 차이`);
   } else {
-    parts.push(`진입 대기 (${Math.abs(input.distancePercent).toFixed(2)}% 이격)`);
+    parts.push(`검토 대기 (${Math.abs(input.distancePercent).toFixed(2)}% 이격)`);
   }
 
   // 2. 상위 TF 정합
@@ -31,19 +31,24 @@ export function generateFallbackCommentary(input: CommentaryInput): string {
   if (input.context.inOte) {
     parts.push("OTE 영역 일치");
   } else if (input.context.inOb) {
-    parts.push("OB 내부 진입 구간");
+    parts.push("OB 내부 검토 구간");
   } else if (input.context.inFvg) {
     parts.push("FVG 채움 구간");
   }
 
-  // 4. 주요 리스크 (있을 때만)
+  // 4. POC 균형 구간은 휩쏘 리스크로 우선 표시
+  if (input.context.pocPosition === "near") {
+    parts.push("POC 근처 휩쏘 주의");
+  }
+
+  // 5. 주요 리스크 (있을 때만)
   if (input.context.riskFlags.length > 0) {
     const risk = input.context.riskFlags[0];
     // 너무 긴 경우 자르기
     parts.push(risk.length > 15 ? risk.slice(0, 15) : risk);
   }
 
-  // 5. 킬존 보정
+  // 6. 킬존 보정
   if (input.context.killzone === "off") {
     parts.push("킬존 외 구간 주의");
   }
