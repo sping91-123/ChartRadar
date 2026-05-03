@@ -915,19 +915,19 @@ export function LiveMarketChart() {
     const pineChoch = normalizeDirection(pineSnapshot.choch ?? pineSnapshot.chochDir);
     const rows: ParityRow[] = [
       {
-        label: "MSB ??",
+        label: "MSB direction",
         web: stateLabel(activeAnalysis.msb),
         pine: stateLabel(pineMsb),
         matched: activeAnalysis.msb === pineMsb,
-        result: activeAnalysis.msb === pineMsb ? "??" : "??",
+        result: activeAnalysis.msb === pineMsb ? "일치" : "차이",
         importance: "core"
       },
       {
-        label: "CHoCH ??",
+        label: "CHoCH direction",
         web: stateLabel(activeAnalysis.choch),
         pine: stateLabel(pineChoch),
         matched: activeAnalysis.choch === pineChoch,
-        result: activeAnalysis.choch === pineChoch ? "??" : "??",
+        result: activeAnalysis.choch === pineChoch ? "일치" : "차이",
         importance: "core"
       },
       {
@@ -959,89 +959,89 @@ export function LiveMarketChart() {
         importance: "major"
       },
       {
-        label: "EMA200 ??",
+        label: "EMA200 side",
         web: stateLabel(activeAnalysis.ema200Side),
         pine: stateLabel(pineSnapshot.ema200Side ?? "unknown"),
         ...compareOptionalValue(activeAnalysis.ema200Side, pineSnapshot.ema200Side),
         importance: "major"
       },
       {
-        label: "PD ??",
+        label: "PD zone",
         web: stateLabel(activeAnalysis.premiumDiscount),
         pine: stateLabel(pineSnapshot.premiumDiscount ?? "unknown"),
         ...compareOptionalValue(activeAnalysis.premiumDiscount, pineSnapshot.premiumDiscount),
         importance: "major"
       },
       {
-        label: "OTE ??",
+        label: "OTE zone",
         web: stateLabel(activeAnalysis.oteZone),
         pine: stateLabel(pineSnapshot.oteZone ?? "unknown"),
         ...compareOptionalValue(activeAnalysis.oteZone, pineSnapshot.oteZone),
         importance: "major"
       },
       {
-        label: "OB ??",
+        label: "OB direction",
         web: activeAnalysis.latestOb ? stateLabel(activeAnalysis.latestOb.direction) : "-",
         pine: pineSnapshot.latestOb?.direction ? stateLabel(pineSnapshot.latestOb.direction) : "-",
         ...compareOptionalValue(activeAnalysis.latestOb?.direction ?? "", pineSnapshot.latestOb?.direction),
         importance: "major"
       },
       {
-        label: "OB ??",
+        label: "OB top",
         web: activeAnalysis.latestOb ? formatPrice(activeAnalysis.latestOb.top) : "-",
         pine: pineSnapshot.latestOb?.top ? formatPrice(Number(pineSnapshot.latestOb.top)) : "-",
         ...compareNumber(activeAnalysis.latestOb?.top ?? null, pineSnapshot.latestOb?.top),
         importance: "minor"
       },
       {
-        label: "OB ??",
+        label: "OB bottom",
         web: activeAnalysis.latestOb ? formatPrice(activeAnalysis.latestOb.bottom) : "-",
         pine: pineSnapshot.latestOb?.bottom ? formatPrice(Number(pineSnapshot.latestOb.bottom)) : "-",
         ...compareNumber(activeAnalysis.latestOb?.bottom ?? null, pineSnapshot.latestOb?.bottom),
         importance: "minor"
       },
       {
-        label: "FVG ??",
+        label: "FVG direction",
         web: activeAnalysis.latestFvg ? stateLabel(activeAnalysis.latestFvg.direction) : "-",
         pine: pineSnapshot.latestFvg?.direction ? stateLabel(pineSnapshot.latestFvg.direction) : "-",
         ...compareOptionalValue(activeAnalysis.latestFvg?.direction ?? "", pineSnapshot.latestFvg?.direction),
         importance: "major"
       },
       {
-        label: "FVG ??",
+        label: "FVG state",
         web: activeAnalysis.latestFvg?.state?.toUpperCase() ?? "-",
         pine: pineSnapshot.latestFvg?.state?.toUpperCase() ?? "-",
         ...compareOptionalValue(activeAnalysis.latestFvg?.state ?? "", pineSnapshot.latestFvg?.state),
         importance: "minor"
       },
       {
-        label: "Sweep ??",
+        label: "Sweep direction",
         web: activeAnalysis.latestSweep ? stateLabel(activeAnalysis.latestSweep.direction) : "-",
         pine: pineSnapshot.latestSweep?.direction ? stateLabel(pineSnapshot.latestSweep.direction) : "-",
         ...compareOptionalValue(activeAnalysis.latestSweep?.direction ?? "", pineSnapshot.latestSweep?.direction),
         importance: "minor"
       },
       {
-        label: "CISD ??",
+        label: "CISD direction",
         web: activeAnalysis.latestCisd ? stateLabel(activeAnalysis.latestCisd.direction) : "-",
         pine: pineSnapshot.latestCisd?.direction ? stateLabel(pineSnapshot.latestCisd.direction) : "-",
         ...compareOptionalValue(activeAnalysis.latestCisd?.direction ?? "", pineSnapshot.latestCisd?.direction),
         importance: "minor"
       },
       {
-        label: "hiPts ?",
+        label: "hiPts count",
         web: String(activeAnalysis.debug.hiCount),
         pine: pineSnapshot.hiCount === undefined ? "-" : String(pineSnapshot.hiCount),
         matched: pineSnapshot.hiCount === activeAnalysis.debug.hiCount,
-        result: pineSnapshot.hiCount === activeAnalysis.debug.hiCount ? "??" : "??",
+        result: pineSnapshot.hiCount === activeAnalysis.debug.hiCount ? "일치" : "차이",
         importance: "minor"
       },
       {
-        label: "loPts ?",
+        label: "loPts count",
         web: String(activeAnalysis.debug.loCount),
         pine: pineSnapshot.loCount === undefined ? "-" : String(pineSnapshot.loCount),
         matched: pineSnapshot.loCount === activeAnalysis.debug.loCount,
-        result: pineSnapshot.loCount === activeAnalysis.debug.loCount ? "??" : "??",
+        result: pineSnapshot.loCount === activeAnalysis.debug.loCount ? "일치" : "차이",
         importance: "minor"
       }
     ];

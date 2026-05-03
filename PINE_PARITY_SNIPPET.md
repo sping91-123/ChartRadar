@@ -1,31 +1,94 @@
-# Pine-Web 일치율 검증 스냅샷
+# Pine-Web Parity Check Guide
 
-웹앱의 `상세 판독 > 고급 판독 기준 > Pine 대조 디버그`에 아래 값들을 붙여넣으면 MSB, CHoCH, h0/h1/l0/l1, 피벗 수를 비교할 수 있습니다.
+Use this when the TradingView Pine indicator and the `/survival` web chart show different MSB, CHoCH, OB, FVG, OTE, Sweep, or CISD values.
 
-## TradingView에서 붙일 스냅샷 형식
+## Where To Paste Values
 
-아래처럼 한 줄 JSON으로 붙여넣으면 됩니다.
+Open the web app:
+
+1. Go to `/survival`.
+2. Open `상세 판독`.
+3. Open `고급 판독 기준`.
+4. Open `Pine 대조 디버그`.
+5. Paste a Pine snapshot into `Pine 스냅샷 일치율`.
+
+Tip: click `웹값 예시 채우기` first. It fills the input with the exact JSON shape the web app can compare.
+
+## Accepted JSON Shape
 
 ```json
-{"market":1,"chochDir":1,"h0":104500,"h1":105100,"l0":103800,"l1":102900,"hiCount":12,"loCount":12}
+{
+  "symbol": "BTCUSDT.P",
+  "timeframe": "15m",
+  "market": 1,
+  "chochDir": -1,
+  "msb": "bullish",
+  "choch": "bearish",
+  "ema200Side": "above",
+  "premiumDiscount": "discount",
+  "oteZone": "long",
+  "h0": 104500,
+  "h1": 105100,
+  "l0": 103800,
+  "l1": 102900,
+  "hiCount": 12,
+  "loCount": 12,
+  "latestOb": {
+    "direction": "bullish",
+    "top": 104200,
+    "bottom": 103900
+  },
+  "latestFvg": {
+    "direction": "bearish",
+    "state": "fvg",
+    "top": 104800,
+    "bottom": 104300
+  },
+  "latestSweep": {
+    "direction": "bullish",
+    "level": 103700,
+    "age": 4
+  },
+  "latestCisd": {
+    "direction": "bearish",
+    "level": 104650,
+    "age": 2
+  }
+}
 ```
 
-또는 key=value 형식도 됩니다.
+## Accepted Key-Value Shape
+
+You can also paste simple `key=value` lines. Nested values use dot notation.
 
 ```text
 market=1
-chochDir=1
+chochDir=-1
 h0=104500
 h1=105100
 l0=103800
 l1=102900
 hiCount=12
 loCount=12
+ema200Side=above
+premiumDiscount=discount
+oteZone=long
+latestOb.direction=bullish
+latestOb.top=104200
+latestOb.bottom=103900
+latestFvg.direction=bearish
+latestFvg.state=fvg
+latestFvg.top=104800
+latestFvg.bottom=104300
+latestSweep.direction=bullish
+latestCisd.direction=bearish
 ```
 
-## Pine 지표에 임시로 추가할 코드
+## Pine Debug Snippet
 
-`h0`, `h1`, `l0`, `l1`, `market`, `choch_dir`, `hiPts`, `loPts`가 계산된 뒤, 패널 업데이트 이후 아무 곳에나 임시로 넣으면 됩니다.
+Add this near the end of the Pine script after `market`, `choch_dir`, `h0`, `h1`, `l0`, `l1`, `hiPts`, and `loPts` are calculated.
+
+This basic snippet covers structure and swing parity first. Add OB/FVG/Sweep/CISD fields later from the indicator's latest active boxes/events.
 
 ```pinescript
 showParitySnapshot = input.bool(false, "Show Web Parity Snapshot", group="Debug")
@@ -55,10 +118,21 @@ if showParitySnapshot and barstate.islast
     )
 ```
 
-## 비교 기준
+## What The Score Means
 
-- 웹앱과 TradingView는 같은 심볼, 같은 타임프레임, 같은 `Confirmed/Aggressive`, 같은 `MSB 종가/윅 기준`으로 맞춰야 합니다.
-- 가격값은 0.05% 이내 오차를 일치로 봅니다.
-- `market=1`은 상승 MSB, `market=-1`은 하락 MSB입니다.
-- `chochDir=1`은 상승 CHoCH, `chochDir=-1`은 하락 CHoCH입니다.
+The web parity panel uses weighted scoring.
 
+- Core: MSB direction and CHoCH direction. Weight 3 each.
+- Major: swing points, EMA200 side, PD zone, OTE zone, OB/FVG direction. Weight 2 each.
+- Minor: OB/FVG prices and states, Sweep/CISD direction, hiPts/loPts count. Weight 1 each.
+
+Price values match when the difference is within 0.05%.
+
+## Usual Causes Of Mismatch
+
+- Different symbol: compare the same Binance perpetual symbol, e.g. `BTCUSDT.P`.
+- Different timeframe: compare the exact same 5m, 15m, 1h, 4h, or 1d chart.
+- Current bar handling: Pine may be showing an in-progress bar while the web panel is using confirmed data.
+- ZigZag settings: `zigLen`, close-based break, and wick-based swing storage must match.
+- OB/FVG lifecycle: origin candle selection, mitigation, deletion, and iFVG conversion rules must match.
+- OTE/PD basis: the current web implementation uses the 4H range logic from the port; compare it with the Pine basis before judging entries.
