@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowDownRight, ArrowUpRight, Bot, Loader2, RefreshCw, Sparkles, Target } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Bot, CheckCircle2, Loader2, RefreshCw, Save, Sparkles, Target } from "lucide-react";
 import {
   readScoutCache,
   scanAllSetups,
@@ -9,6 +9,9 @@ import {
   writeScoutCache,
   type ScoutSetup
 } from "@/lib/setupScout";
+import { appendJournalEntry } from "@/lib/journal";
+import { createRemoteJournalEntry } from "@/lib/remoteJournal";
+import { getSupabaseSession } from "@/lib/supabase";
 import type { CommentaryInput } from "@/lib/ai/types";
 
 type ScanState =
@@ -55,7 +58,7 @@ function ProximityBadge({ setup }: { setup: ScoutSetup }) {
   if (setup.proximity === "ready") {
     return (
       <span className="inline-flex items-center gap-1 rounded-md border border-signal-success/40 bg-signal-success/15 px-2 py-1 text-[11px] font-black text-signal-success">
-        🎯 지금 진입 가능
+        진입 영역 내부
       </span>
     );
   }
@@ -63,7 +66,7 @@ function ProximityBadge({ setup }: { setup: ScoutSetup }) {
     const direction = setup.plan.side === "long" ? "내려오면" : "올라오면";
     return (
       <span className="inline-flex items-center gap-1 rounded-md border border-accent-blue/40 bg-accent-blue/10 px-2 py-1 text-[11px] font-black text-accent-blue">
-        ⏱ {Math.abs(setup.distancePercent).toFixed(2)}% {direction} 진입
+        {Math.abs(setup.distancePercent).toFixed(2)}% {direction} 검토
       </span>
     );
   }
@@ -72,6 +75,13 @@ function ProximityBadge({ setup }: { setup: ScoutSetup }) {
       대기 — {Math.abs(setup.distancePercent).toFixed(2)}% 차이
     </span>
   );
+}
+
+function killzoneLabel(value: ScoutSetup["analysis"]["killzone"]) {
+  if (value === "asia") return "아시아 킬존";
+  if (value === "london") return "런던 킬존";
+  if (value === "newyork") return "뉴욕 킬존";
+  return "킬존 외";
 }
 
 function formatPriceWithSymbol(price: number) {
@@ -184,11 +194,114 @@ function CommentaryLine({ setup }: { setup: ScoutSetup }) {
   );
 }
 
+function buildEvidence(setup: ScoutSetup) {
+  const active = setup.analysis.timeframeAnalyses.find((a) => a.timeframe === setup.timeframe);
+  const direction = setup.plan.side === "long" ? "bullish" : "bearish";
+  const higherAlignedCount = setup.analysis.timeframeAnalyses
+    .filter((a) => a.timeframe === "4h" || a.timeframe === "1d")
+    .filter((a) => a.msb === direction).length;
+
+  const evidence = [
+    `상위 TF 정합 ${higherAlignedCount}/2`,
+    `${setup.plan.quality}급 후보`,
+    killzoneLabel(setup.analysis.killzone)
+  ];
+
+  if (active?.oteZone === setup.plan.side) evidence.push("OTE 일치");
+  if (active?.inOb) evidence.push("OB 내부");
+  if (active?.inFvg) evidence.push("FVG 내부");
+
+  return evidence;
+}
+
+function EvidenceChips({ setup }: { setup: ScoutSetup }) {
+  const evidence = buildEvidence(setup);
+  const risks = setup.analysis.riskFlags.slice(0, 2);
+
+  return (
+    <div className="mt-3 space-y-2">
+      <div className="flex flex-wrap gap-1.5">
+        {evidence.map((item) => (
+          <span
+            key={item}
+            className="rounded-md border border-signal-success/20 bg-signal-success/10 px-2 py-1 text-[11px] font-bold text-signal-success"
+          >
+            {item}
+          </span>
+        ))}
+      </div>
+      {risks.length ? (
+        <div className="flex flex-wrap gap-1.5">
+          {risks.map((item) => (
+            <span
+              key={item}
+              className="rounded-md border border-signal-warning/20 bg-signal-warning/10 px-2 py-1 text-[11px] font-bold text-signal-warning"
+            >
+              {item}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function buildJournalNote(setup: ScoutSetup) {
+  const evidence = buildEvidence(setup);
+  const risks = setup.analysis.riskFlags.slice(0, 5);
+  const opportunities = setup.analysis.opportunityFlags.slice(0, 5);
+
+  return [
+    `Setup Scout 저장: ${setup.headline}`,
+    `현재가: ${formatPriceWithSymbol(setup.currentPrice)}`,
+    `검토 영역: ${formatPriceWithSymbol(setup.plan.entryLow)} ~ ${formatPriceWithSymbol(setup.plan.entryHigh)}`,
+    `무효화 기준 후보: ${formatPriceWithSymbol(setup.plan.invalidation)}`,
+    `목표 후보: ${formatPriceWithSymbol(setup.plan.target1)} / ${formatPriceWithSymbol(setup.plan.target2)}`,
+    "",
+    "체크포인트:",
+    ...evidence.map((item) => `- ${item}`),
+    "",
+    "위험 신호:",
+    ...(risks.length ? risks.map((item) => `- ${item}`) : ["- 별도 위험 신호 없음"]),
+    "",
+    "기회 신호:",
+    ...(opportunities.length ? opportunities.map((item) => `- ${item}`) : ["- 별도 기회 신호 없음"])
+  ].join("\n");
+}
+
 function SetupCard({ setup, rank }: { setup: ScoutSetup; rank: number }) {
   const isLong = setup.plan.side === "long";
   const sideColor = isLong ? "text-signal-success" : "text-signal-danger";
   const SideIcon = isLong ? ArrowUpRight : ArrowDownRight;
   const sym = setup.symbol.replace("USDT.P", "");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  async function saveSetup() {
+    setSaveState("saving");
+    const payload = {
+      title: setup.headline,
+      bias: isLong ? "롱" : "숏",
+      note: buildJournalNote(setup),
+      source: "chart" as const,
+      symbol: setup.symbol,
+      timeframe: setup.timeframe,
+      verdict: `${setup.score}점 · ${setup.plan.quality}급 · ${setup.proximity === "ready" ? "영역 내부" : "검토 대기"}`
+    };
+
+    const session = getSupabaseSession();
+    try {
+      if (session) {
+        await createRemoteJournalEntry(session.accessToken, payload);
+      } else {
+        appendJournalEntry(payload);
+      }
+      setSaveState("saved");
+      window.setTimeout(() => setSaveState("idle"), 1800);
+    } catch {
+      setSaveState("error");
+      window.setTimeout(() => setSaveState("idle"), 2200);
+    }
+  }
 
   return (
     <article className="rounded-lg border border-surface-line bg-surface-cardSoft p-4 transition hover:border-accent-blue/40">
@@ -216,13 +329,15 @@ function SetupCard({ setup, rank }: { setup: ScoutSetup; rank: number }) {
 
       <p className="mt-3 text-sm leading-6 text-slate-300">{setup.plan.entryLabel}</p>
 
+      <EvidenceChips setup={setup} />
+
       <div className="mt-3 grid grid-cols-2 gap-2 text-center">
         <div className="rounded border border-white/10 bg-black/30 px-2 py-2">
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">현재가</p>
           <p className="mt-1 text-xs font-bold text-white">{formatPriceWithSymbol(setup.currentPrice)}</p>
         </div>
         <div className="rounded border border-accent-blue/20 bg-accent-blue/5 px-2 py-2">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-accent-blue">진입 영역</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-accent-blue">검토 영역</p>
           <p className="mt-1 text-xs font-bold text-white">
             {formatPriceWithSymbol(setup.plan.entryLow)} ~ {formatPriceWithSymbol(setup.plan.entryHigh)}
           </p>
@@ -231,11 +346,11 @@ function SetupCard({ setup, rank }: { setup: ScoutSetup; rank: number }) {
 
       <div className="mt-2 grid grid-cols-2 gap-2 text-center">
         <div className="rounded border border-signal-danger/20 bg-signal-danger/10 px-2 py-2">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-signal-danger">무효 가격</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-signal-danger">무효화 기준 후보</p>
           <p className="mt-1 text-xs font-bold text-white">{formatPriceWithSymbol(setup.plan.invalidation)}</p>
         </div>
         <div className="rounded border border-signal-success/20 bg-signal-success/10 px-2 py-2">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-signal-success">1차 목표 (1.5R)</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-signal-success">1차 목표 후보</p>
           <p className="mt-1 text-xs font-bold text-white">{formatPriceWithSymbol(setup.plan.target1)}</p>
         </div>
       </div>
@@ -244,10 +359,20 @@ function SetupCard({ setup, rank }: { setup: ScoutSetup; rank: number }) {
         <span className="inline-flex items-center gap-1">
           <Target size={12} aria-hidden /> 신뢰도 {setup.plan.confidence}%
         </span>
-        <span className="font-bold text-slate-400">2차 {formatPriceWithSymbol(setup.plan.target2)}</span>
+        <span className="font-bold text-slate-400">2차 후보 {formatPriceWithSymbol(setup.plan.target2)}</span>
       </div>
 
       <CommentaryLine setup={setup} />
+
+      <button
+        type="button"
+        onClick={saveSetup}
+        disabled={saveState === "saving"}
+        className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-accent-blue/30 bg-accent-blue/10 px-3 text-xs font-black text-accent-blue transition hover:bg-accent-blue hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {saveState === "saving" ? <Loader2 size={14} className="animate-spin" aria-hidden /> : saveState === "saved" ? <CheckCircle2 size={14} aria-hidden /> : <Save size={14} aria-hidden />}
+        {saveState === "saving" ? "저장 중" : saveState === "saved" ? "복기에 저장됨" : saveState === "error" ? "저장 실패" : "이 셋업 복기 저장"}
+      </button>
 
       {setup.plan.cautions.length > 0 ? (
         <p className="mt-2 line-clamp-2 text-[11px] leading-5 text-slate-500">
@@ -261,7 +386,7 @@ function SetupCard({ setup, rank }: { setup: ScoutSetup; rank: number }) {
 function EmptyState() {
   return (
     <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-5 text-center">
-      <p className="text-sm font-bold text-slate-300">현재 추천할 셋업이 없습니다.</p>
+      <p className="text-sm font-bold text-slate-300">현재 검토할 셋업이 없습니다.</p>
       <p className="mt-2 text-xs leading-5 text-slate-500">
         시장이 관망 구간이거나 구조가 명확하지 않은 시점입니다. 잠시 후 다시 스캔해보세요.
       </p>
@@ -317,7 +442,7 @@ export function SetupScoutPanel() {
               </span>
             </div>
             <p className="mt-1 text-sm leading-6 text-slate-400">
-              주요 종목 × 활성 TF를 자동 스캔해 오늘 잡을 만한 셋업 TOP 3를 보여줍니다.
+              주요 종목 × 활성 TF를 자동 스캔해 오늘 검토할 만한 셋업 TOP 3를 보여줍니다.
             </p>
           </div>
         </div>
@@ -359,7 +484,7 @@ export function SetupScoutPanel() {
       </div>
 
       <p className="mt-3 text-[11px] leading-5 text-slate-500">
-        스캔 결과는 5분 단위 캐시됩니다. 이 값은 매수·매도 신호가 아니며, 진입 전 차트 판독과 본인의 매매 원칙을 반드시 함께 확인하세요.
+        스캔 결과는 5분 단위 캐시됩니다. 이 값은 매수·매도 신호가 아니며, 검토 영역과 무효화 기준 후보는 반드시 본인의 차트 판독과 매매 원칙으로 다시 확인하세요.
       </p>
     </section>
   );

@@ -88,7 +88,10 @@ export async function POST(request: Request) {
     provider = getAIProvider();
   } catch (error) {
     const message = error instanceof Error ? error.message : "AI Provider 초기화 실패";
-    return NextResponse.json({ error: message }, { status: 503 });
+    console.warn("[ai/commentary] Provider 없음, 폴백 사용:", message);
+    const fallback = generateFallbackCommentary(input);
+    cache.set(key, { text: fallback, expiresAt: now + CACHE_TTL_MS });
+    return NextResponse.json({ commentary: fallback, model: "fallback", cached: false });
   }
 
   try {

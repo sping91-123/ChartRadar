@@ -29,7 +29,7 @@ export interface ScoutSetup {
   distancePercent: number;
   /** 현재가가 진입 영역 안에 있는지 */
   insideZone: boolean;
-  /** "지금 진입 가능" / "근접" / "대기" / "이탈" 중 하나 */
+  /** "영역 내부" / "근접" / "대기" / "이탈" 중 하나 */
   proximity: "ready" | "near" | "wait" | "missed";
   /** 현재가 (진입가 비교용) */
   currentPrice: number;
@@ -182,7 +182,7 @@ function analyzeProximity(
  * - readiness 보정                      : ±0~5
  * - riskFlags 패널티                    : -0~10
  * - 활성 TF가 OTE 영역인지 가산           : +0~4
- * - 근접도 가산                          : +0~15 (지금 진입 가능 = 가장 큼)
+ * - 근접도 가산                          : +0~15 (검토 영역 내부 = 가장 큼)
  *
  * 최종 0~100 클램프.
  */
@@ -213,7 +213,7 @@ function computeScoutScore(
   const active = analyses.find((a) => a.timeframe === market.activeTimeframe);
   if (active?.oteZone === plan.side) score += 4;
 
-  // 근접도 — 지금 진입 가능한 셋업이 가장 가치 있음
+  // 근접도 — 현재가가 검토 영역 내부인 후보를 가장 높게 평가
   if (proximityInfo.proximity === "ready") score += 15;
   else if (proximityInfo.proximity === "near") score += 8;
   else if (proximityInfo.proximity === "wait") score -= 4;
