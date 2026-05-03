@@ -105,9 +105,12 @@ const overlayPresets = {
   } satisfies OverlaySettings
 };
 
+type PineDirectionValue = DirectionState | "long" | "short" | 1 | -1 | 0;
+type PineTimeframeDirectionMap = Partial<Record<ChartTimeframe | "1m", PineDirectionValue>>;
+
 interface PineSnapshot {
-  msb?: DirectionState | "long" | "short" | 1 | -1;
-  choch?: DirectionState | "long" | "short" | 1 | -1;
+  msb?: PineDirectionValue | PineTimeframeDirectionMap;
+  choch?: PineDirectionValue | PineTimeframeDirectionMap;
   market?: 1 | -1 | 0;
   chochDir?: 1 | -1 | 0;
   ema200Side?: "above" | "below" | "unknown";
@@ -135,6 +138,10 @@ interface PineSnapshot {
     top?: number | null;
     bottom?: number | null;
   } | null;
+  fvgDir?: "bullish" | "bearish" | "none";
+  fvgIsIfvg?: boolean;
+  fvgTop?: number | null;
+  fvgBottom?: number | null;
   latestSweep?: {
     direction?: "bullish" | "bearish";
     level?: number | null;
@@ -145,7 +152,9 @@ interface PineSnapshot {
     level?: number | null;
     age?: number | null;
   } | null;
+  cisd?: DirectionState | "long" | "short" | "none" | 1 | -1 | 0;
   timeframe?: string;
+  chartTf?: string;
   symbol?: string;
 }
 
@@ -317,11 +326,22 @@ function planQualityClasses(quality?: string) {
   return "border-signal-warning/30 bg-signal-warning/10 text-signal-warning";
 }
 
-function normalizeDirection(value: PineSnapshot["msb"] | PineSnapshot["choch"] | 0 | undefined) {
+function normalizeDirection(value: PineDirectionValue | "none" | null | undefined) {
   if (value === 1 || value === "long" || value === "bullish") return "bullish";
   if (value === -1 || value === "short" || value === "bearish") return "bearish";
   if (value === "neutral") return "neutral";
   return "unknown";
+}
+
+function pineDirectionForTimeframe(
+  value: PineSnapshot["msb"] | PineSnapshot["choch"],
+  timeframe: ChartTimeframe
+) {
+  if (value && typeof value === "object") {
+    return normalizeDirection(value[timeframe] ?? value[timeframe.toLowerCase() as ChartTimeframe]);
+  }
+
+  return normalizeDirection(value);
 }
 
 function parsePineSnapshot(value: string): PineSnapshot | null {
@@ -911,8 +931,21 @@ export function LiveMarketChart() {
   const parityRows = useMemo<ParityRow[]>(() => {
     if (!activeAnalysis || !pineSnapshot) return [];
 
-    const pineMsb = normalizeDirection(pineSnapshot.msb ?? pineSnapshot.market);
-    const pineChoch = normalizeDirection(pineSnapshot.choch ?? pineSnapshot.chochDir);
+    const pineMsb = pineSnapshot.msb ? pineDirectionForTimeframe(pineSnapshot.msb, activeTimeframe) : normalizeDirection(pineSnapshot.market);
+    const pineChoch = pineSnapshot.choch
+      ? pineDirectionForTimeframe(pineSnapshot.choch, activeTimeframe)
+      : normalizeDirection(pineSnapshot.chochDir);
+    const pineLatestFvg = pineSnapshot.latestFvg ??
+      (pineSnapshot.fvgDir && pineSnapshot.fvgDir !== "none"
+        ? {
+            direction: pineSnapshot.fvgDir,
+            state: pineSnapshot.fvgIsIfvg ? ("ifvg" as const) : ("fvg" as const),
+            top: pineSnapshot.fvgTop,
+            bottom: pineSnapshot.fvgBottom
+          }
+        : null);
+    const pineCisdDirection =
+      pineSnapshot.latestCisd?.direction ?? (pineSnapshot.cisd && pineSnapshot.cisd !== "none" ? normalizeDirection(pineSnapshot.cisd) : undefined);
     const rows: ParityRow[] = [
       {
         label: "MSB direction",
@@ -1003,15 +1036,29 @@ export function LiveMarketChart() {
       {
         label: "FVG direction",
         web: activeAnalysis.latestFvg ? stateLabel(activeAnalysis.latestFvg.direction) : "-",
-        pine: pineSnapshot.latestFvg?.direction ? stateLabel(pineSnapshot.latestFvg.direction) : "-",
-        ...compareOptionalValue(activeAnalysis.latestFvg?.direction ?? "", pineSnapshot.latestFvg?.direction),
+        pine: pineLatestFvg?.direction ? stateLabel(pineLatestFvg.direction) : "-",
+        ...compareOptionalValue(activeAnalysis.latestFvg?.direction ?? "", pineLatestFvg?.direction),
         importance: "major"
       },
       {
         label: "FVG state",
         web: activeAnalysis.latestFvg?.state?.toUpperCase() ?? "-",
-        pine: pineSnapshot.latestFvg?.state?.toUpperCase() ?? "-",
-        ...compareOptionalValue(activeAnalysis.latestFvg?.state ?? "", pineSnapshot.latestFvg?.state),
+        pine: pineLatestFvg?.state?.toUpperCase() ?? "-",
+        ...compareOptionalValue(activeAnalysis.latestFvg?.state ?? "", pineLatestFvg?.state),
+        importance: "minor"
+      },
+      {
+        label: "FVG top",
+        web: activeAnalysis.latestFvg ? formatPrice(activeAnalysis.latestFvg.top) : "-",
+        pine: pineLatestFvg?.top ? formatPrice(Number(pineLatestFvg.top)) : "-",
+        ...compareNumber(activeAnalysis.latestFvg?.top ?? null, pineLatestFvg?.top),
+        importance: "minor"
+      },
+      {
+        label: "FVG bottom",
+        web: activeAnalysis.latestFvg ? formatPrice(activeAnalysis.latestFvg.bottom) : "-",
+        pine: pineLatestFvg?.bottom ? formatPrice(Number(pineLatestFvg.bottom)) : "-",
+        ...compareNumber(activeAnalysis.latestFvg?.bottom ?? null, pineLatestFvg?.bottom),
         importance: "minor"
       },
       {
@@ -1022,10 +1069,24 @@ export function LiveMarketChart() {
         importance: "minor"
       },
       {
+        label: "Sweep level",
+        web: activeAnalysis.latestSweep ? formatPrice(activeAnalysis.latestSweep.level) : "-",
+        pine: pineSnapshot.latestSweep?.level ? formatPrice(Number(pineSnapshot.latestSweep.level)) : "-",
+        ...compareNumber(activeAnalysis.latestSweep?.level ?? null, pineSnapshot.latestSweep?.level),
+        importance: "minor"
+      },
+      {
         label: "CISD direction",
         web: activeAnalysis.latestCisd ? stateLabel(activeAnalysis.latestCisd.direction) : "-",
-        pine: pineSnapshot.latestCisd?.direction ? stateLabel(pineSnapshot.latestCisd.direction) : "-",
-        ...compareOptionalValue(activeAnalysis.latestCisd?.direction ?? "", pineSnapshot.latestCisd?.direction),
+        pine: pineCisdDirection ? stateLabel(pineCisdDirection) : "-",
+        ...compareOptionalValue(activeAnalysis.latestCisd?.direction ?? "", pineCisdDirection),
+        importance: "minor"
+      },
+      {
+        label: "CISD level",
+        web: activeAnalysis.latestCisd ? formatPrice(activeAnalysis.latestCisd.level) : "-",
+        pine: pineSnapshot.latestCisd?.level ? formatPrice(Number(pineSnapshot.latestCisd.level)) : "-",
+        ...compareNumber(activeAnalysis.latestCisd?.level ?? null, pineSnapshot.latestCisd?.level),
         importance: "minor"
       },
       {
@@ -1047,7 +1108,7 @@ export function LiveMarketChart() {
     ];
 
     return rows.filter((row) => row.web !== "-" || row.pine !== "-");
-  }, [activeAnalysis, pineSnapshot]);
+  }, [activeAnalysis, activeTimeframe, pineSnapshot]);
 
   const parityScore = useMemo(() => {
     if (!parityRows.length) return null;

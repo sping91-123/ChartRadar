@@ -84,6 +84,46 @@ latestSweep.direction=bullish
 latestCisd.direction=bearish
 ```
 
+## Existing App State JSON Also Works
+
+`pine/Coters_v2.42.pine` already has `App State Export > App State JSON Alert`.
+
+That JSON has multi-timeframe `msb` and `choch` objects. The web panel now reads those objects and compares the value for the currently selected web timeframe.
+
+```json
+{
+  "symbol": "BINANCE:BTCUSDTPERP",
+  "chartTf": "15",
+  "mode": "confirmed",
+  "bias": "long",
+  "msb": {
+    "1m": "bullish",
+    "5m": "bearish",
+    "15m": "bullish",
+    "1h": "bullish",
+    "4h": "bearish",
+    "1d": "bullish"
+  },
+  "choch": {
+    "1m": "bullish",
+    "5m": "bearish",
+    "15m": "bearish",
+    "1h": "bullish",
+    "4h": "bearish",
+    "1d": "bullish"
+  },
+  "oteZone": "long",
+  "ema200Side": "above",
+  "fvgDir": "bullish",
+  "fvgIsIfvg": false,
+  "fvgTop": 104800,
+  "fvgBottom": 104300,
+  "cisd": "none"
+}
+```
+
+For full parity, add the swing and zone fields from the debug snippet too: `market`, `chochDir`, `h0`, `h1`, `l0`, `l1`, `hiCount`, `loCount`, `latestOb.*`, `latestSweep.*`, and `latestCisd.*`.
+
 ## Pine Debug Snippet
 
 Add this near the end of the Pine script after `market`, `choch_dir`, `h0`, `h1`, `l0`, `l1`, `hiPts`, and `loPts` are calculated.
