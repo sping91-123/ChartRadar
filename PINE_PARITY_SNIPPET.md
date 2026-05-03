@@ -62,6 +62,7 @@ Tip: click `웹값 예시 채우기` first. It fills the input with the exact JS
 You can also paste simple `key=value` lines. Nested values use dot notation.
 
 ```text
+symbol=BINANCE:BTCUSDTPERP
 market=1
 chochDir=-1
 h0=104500
@@ -83,6 +84,8 @@ latestFvg.bottom=104300
 latestSweep.direction=bullish
 latestCisd.direction=bearish
 ```
+
+The parser preserves `:` inside values, so `symbol=BINANCE:BTCUSDTPERP` is safe. It also converts `true`, `false`, `null`, and `na` into real boolean/null values.
 
 ## Existing App State JSON Also Works
 
