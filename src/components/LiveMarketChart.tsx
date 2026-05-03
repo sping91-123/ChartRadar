@@ -29,6 +29,7 @@ import {
   type TimeframeAnalysis
 } from "@/lib/marketAnalysis";
 import { appendJournalEntry } from "@/lib/journal";
+import { normalizePineDirection, parsePineSnapshot, pineDirectionForTimeframe, type PineSnapshot } from "@/lib/pineParity";
 import { createRemoteJournalEntry } from "@/lib/remoteJournal";
 import { getSupabaseSession } from "@/lib/supabase";
 
@@ -104,59 +105,6 @@ const overlayPresets = {
     cisd: false
   } satisfies OverlaySettings
 };
-
-type PineDirectionValue = DirectionState | "long" | "short" | 1 | -1 | 0;
-type PineTimeframeDirectionMap = Partial<Record<ChartTimeframe | "1m", PineDirectionValue>>;
-
-interface PineSnapshot {
-  msb?: PineDirectionValue | PineTimeframeDirectionMap;
-  choch?: PineDirectionValue | PineTimeframeDirectionMap;
-  market?: 1 | -1 | 0;
-  chochDir?: 1 | -1 | 0;
-  ema200Side?: "above" | "below" | "unknown";
-  premiumDiscount?: "premium" | "discount" | "equilibrium" | "unknown";
-  oteZone?: "long" | "short" | "none";
-  h0?: number | null;
-  h1?: number | null;
-  l0?: number | null;
-  l1?: number | null;
-  hiCount?: number;
-  loCount?: number;
-  latestOb?: {
-    direction?: "bullish" | "bearish";
-    top?: number | null;
-    bottom?: number | null;
-  } | null;
-  latestBb?: {
-    direction?: "bullish" | "bearish";
-    top?: number | null;
-    bottom?: number | null;
-  } | null;
-  latestFvg?: {
-    direction?: "bullish" | "bearish";
-    state?: "fvg" | "ifvg";
-    top?: number | null;
-    bottom?: number | null;
-  } | null;
-  fvgDir?: "bullish" | "bearish" | "none";
-  fvgIsIfvg?: boolean;
-  fvgTop?: number | null;
-  fvgBottom?: number | null;
-  latestSweep?: {
-    direction?: "bullish" | "bearish";
-    level?: number | null;
-    age?: number | null;
-  } | null;
-  latestCisd?: {
-    direction?: "bullish" | "bearish";
-    level?: number | null;
-    age?: number | null;
-  } | null;
-  cisd?: DirectionState | "long" | "short" | "none" | 1 | -1 | 0;
-  timeframe?: string;
-  chartTf?: string;
-  symbol?: string;
-}
 
 interface ParityRow {
   label: string;
@@ -324,64 +272,6 @@ function planQualityClasses(quality?: string) {
   if (quality === "A") return "border-signal-success/30 bg-signal-success/10 text-signal-success";
   if (quality === "B") return "border-accent-blue/30 bg-accent-blue/10 text-accent-blue";
   return "border-signal-warning/30 bg-signal-warning/10 text-signal-warning";
-}
-
-function normalizeDirection(value: PineDirectionValue | "none" | null | undefined) {
-  if (value === 1 || value === "long" || value === "bullish") return "bullish";
-  if (value === -1 || value === "short" || value === "bearish") return "bearish";
-  if (value === "neutral") return "neutral";
-  return "unknown";
-}
-
-function pineDirectionForTimeframe(
-  value: PineSnapshot["msb"] | PineSnapshot["choch"],
-  timeframe: ChartTimeframe
-) {
-  if (value && typeof value === "object") {
-    return normalizeDirection(value[timeframe] ?? value[timeframe.toLowerCase() as ChartTimeframe]);
-  }
-
-  return normalizeDirection(value);
-}
-
-function parsePineSnapshot(value: string): PineSnapshot | null {
-  if (!value.trim()) return null;
-
-  try {
-    return JSON.parse(value) as PineSnapshot;
-  } catch {
-    const entries = value
-      .split(/[\n,]+/)
-      .map((part) => part.trim())
-      .filter(Boolean)
-      .map((part) => part.split(/[:=]/).map((piece) => piece.trim()));
-
-    if (!entries.length) return null;
-
-    const parsed: Record<string, string | number | null | Record<string, string | number | null>> = {};
-    for (const [key, rawValue] of entries) {
-      if (!key || rawValue === undefined) continue;
-      const numeric = Number(rawValue);
-      const parsedValue = Number.isFinite(numeric) ? numeric : rawValue;
-
-      if (key.includes(".")) {
-        const [parentKey, childKey] = key.split(".");
-        if (parentKey && childKey) {
-          const parent =
-            typeof parsed[parentKey] === "object" && parsed[parentKey] !== null
-              ? (parsed[parentKey] as Record<string, string | number | null>)
-              : {};
-          parent[childKey] = parsedValue;
-          parsed[parentKey] = parent;
-          continue;
-        }
-      }
-
-      parsed[key] = parsedValue;
-    }
-
-    return parsed as PineSnapshot;
-  }
 }
 
 function compareNumber(webValue: number | null, pineValue: number | null | undefined, tolerancePct = 0.0005) {
@@ -935,8 +825,8 @@ export function LiveMarketChart() {
     const pineChochFromSnapshot = pineSnapshot.choch
       ? pineDirectionForTimeframe(pineSnapshot.choch, activeTimeframe)
       : "unknown";
-    const pineMsb = pineMsbFromSnapshot !== "unknown" ? pineMsbFromSnapshot : normalizeDirection(pineSnapshot.market);
-    const pineChoch = pineChochFromSnapshot !== "unknown" ? pineChochFromSnapshot : normalizeDirection(pineSnapshot.chochDir);
+    const pineMsb = pineMsbFromSnapshot !== "unknown" ? pineMsbFromSnapshot : normalizePineDirection(pineSnapshot.market);
+    const pineChoch = pineChochFromSnapshot !== "unknown" ? pineChochFromSnapshot : normalizePineDirection(pineSnapshot.chochDir);
     const pineLatestFvg = pineSnapshot.latestFvg ??
       (pineSnapshot.fvgDir && pineSnapshot.fvgDir !== "none"
         ? {
@@ -947,7 +837,7 @@ export function LiveMarketChart() {
           }
         : null);
     const pineCisdDirection =
-      pineSnapshot.latestCisd?.direction ?? (pineSnapshot.cisd && pineSnapshot.cisd !== "none" ? normalizeDirection(pineSnapshot.cisd) : undefined);
+      pineSnapshot.latestCisd?.direction ?? (pineSnapshot.cisd && pineSnapshot.cisd !== "none" ? normalizePineDirection(pineSnapshot.cisd) : undefined);
     const rows: ParityRow[] = [
       {
         label: "MSB direction",
