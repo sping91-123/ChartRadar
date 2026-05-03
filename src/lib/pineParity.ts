@@ -53,7 +53,8 @@ export interface PineSnapshot {
   symbol?: string;
 }
 
-type ParsedValue = string | number | null | Record<string, string | number | null>;
+type ParsedScalar = string | number | boolean | null;
+type ParsedValue = ParsedScalar | Record<string, ParsedScalar>;
 
 export function normalizePineDirection(value: PineDirectionValue | "none" | null | undefined) {
   if (value === 1 || value === "long" || value === "bullish") return "bullish";
@@ -73,6 +74,22 @@ export function pineDirectionForTimeframe(
   return normalizePineDirection(value);
 }
 
+function splitSnapshotEntry(part: string) {
+  const match = part.match(/^([^:=]+)\s*[:=]\s*(.*)$/);
+  if (!match) return null;
+  return [match[1].trim(), match[2].trim()] as const;
+}
+
+function parseSnapshotScalar(rawValue: string): ParsedScalar {
+  const lowerValue = rawValue.toLowerCase();
+  if (lowerValue === "true") return true;
+  if (lowerValue === "false") return false;
+  if (lowerValue === "null" || lowerValue === "na") return null;
+
+  const numeric = Number(rawValue);
+  return Number.isFinite(numeric) ? numeric : rawValue;
+}
+
 export function parsePineSnapshot(value: string): PineSnapshot | null {
   if (!value.trim()) return null;
 
@@ -83,22 +100,22 @@ export function parsePineSnapshot(value: string): PineSnapshot | null {
       .split(/[\n,]+/)
       .map((part) => part.trim())
       .filter(Boolean)
-      .map((part) => part.split(/[:=]/).map((piece) => piece.trim()));
+      .map(splitSnapshotEntry)
+      .filter((entry): entry is readonly [string, string] => Boolean(entry));
 
     if (!entries.length) return null;
 
     const parsed: Record<string, ParsedValue> = {};
     for (const [key, rawValue] of entries) {
-      if (!key || rawValue === undefined) continue;
-      const numeric = Number(rawValue);
-      const parsedValue = Number.isFinite(numeric) ? numeric : rawValue;
+      if (!key) continue;
+      const parsedValue = parseSnapshotScalar(rawValue);
 
       if (key.includes(".")) {
         const [parentKey, childKey] = key.split(".");
         if (parentKey && childKey) {
           const parent =
             typeof parsed[parentKey] === "object" && parsed[parentKey] !== null
-              ? (parsed[parentKey] as Record<string, string | number | null>)
+              ? (parsed[parentKey] as Record<string, ParsedScalar>)
               : {};
           parent[childKey] = parsedValue;
           parsed[parentKey] = parent;
