@@ -1996,7 +1996,7 @@ export function LiveMarketChart() {
                       <div>
                         <h4 className="text-sm font-bold text-white">Pine 스냅샷 일치율</h4>
                         <p className="mt-1 text-xs leading-5 text-slate-400">
-                          Pine 지표에서 같은 봉 기준 값을 JSON 또는 key=value 형태로 붙여넣으면 웹앱 값과 즉시 비교합니다.
+                          Pine 지표의 App State JSON Alert 또는 직접 적은 key=value 값을 붙여넣으면 웹앱 값과 즉시 비교합니다.
                         </p>
                       </div>
                       {parityScore !== null ? (
@@ -2027,6 +2027,9 @@ export function LiveMarketChart() {
                       placeholder={'예: {"market":1,"chochDir":-1,"h0":104500,"h1":105100,"l0":103800,"l1":102900,"hiCount":12,"loCount":12}'}
                       className="mt-3 min-h-24 w-full rounded-md border border-surface-line bg-surface-card px-3 py-2 text-xs leading-5 text-slate-200 outline-none focus:border-accent-blue"
                     />
+                    <p className="mt-2 text-[11px] leading-5 text-slate-500">
+                      지원 필드: market, chochDir, h0/h1/l0/l1, msb.{activeTimeframe}, choch.{activeTimeframe}, latestOb.*, latestFvg.*, fvgDir/fvgTop/fvgBottom, latestSweep.*, latestCisd.*, cisd
+                    </p>
                     {pineSnapshotInput.trim() && !pineSnapshot ? (
                       <p className="mt-2 text-xs text-signal-danger">스냅샷 형식을 읽지 못했습니다. JSON 또는 market=1, h0=... 형태로 넣어주세요.</p>
                     ) : null}
