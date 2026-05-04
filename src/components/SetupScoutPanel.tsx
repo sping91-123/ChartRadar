@@ -9,7 +9,7 @@ import {
   writeScoutCache,
   type ScoutSetup
 } from "@/lib/setupScout";
-import { appendJournalEntry } from "@/lib/journal";
+import { appendJournalEntry, type ScoutSnapshot } from "@/lib/journal";
 import { createRemoteJournalEntry } from "@/lib/remoteJournal";
 import { getSupabaseSession } from "@/lib/supabase";
 import type { CommentaryInput } from "@/lib/ai/types";
@@ -285,14 +285,26 @@ function SetupCard({ setup, rank }: { setup: ScoutSetup; rank: number }) {
 
   async function saveSetup() {
     setSaveState("saving");
+    const snapshot: ScoutSnapshot = {
+      entryLow: setup.plan.entryLow,
+      entryHigh: setup.plan.entryHigh,
+      invalidation: setup.plan.invalidation,
+      target1: setup.plan.target1,
+      target2: setup.plan.target2,
+      side: setup.plan.side,
+      score: setup.score,
+      quality: setup.plan.quality,
+      scannedAt: setup.scannedAt
+    };
     const payload = {
       title: setup.headline,
       bias: isLong ? "롱" : "숏",
       note: buildJournalNote(setup),
-      source: "chart" as const,
+      source: "scout" as const,
       symbol: setup.symbol,
       timeframe: setup.timeframe,
-      verdict: `${setup.score}점 · ${setup.plan.quality}급 · ${setup.proximity === "ready" ? "영역 내부" : "검토 대기"}`
+      verdict: `${setup.score}점 · ${setup.plan.quality}급 · ${setup.proximity === "ready" ? "영역 내부" : "검토 대기"}`,
+      scoutSnapshot: snapshot
     };
 
     const session = getSupabaseSession();

@@ -12,6 +12,8 @@ import {
   Rows3,
   ScanSearch,
   Trash2,
+  TrendingDown,
+  TrendingUp,
   UploadCloud
 } from "lucide-react";
 import { AppFooter } from "@/components/AppFooter";
@@ -22,7 +24,8 @@ import {
   journalStorageKey,
   loadJournalEntries,
   saveJournalEntries,
-  type JournalEntry
+  type JournalEntry,
+  type OutcomeType
 } from "@/lib/journal";
 import {
   createRemoteJournalEntry,
@@ -38,7 +41,80 @@ const promptChips = [
   "손절 기준은 지켰는가?",
   "다음엔 무엇 하나만 고칠까?"
 ];
-const filters = ["전체", "차트 저장", "직접 기록"] as const;
+const filters = ["전체", "Scout 저장", "직접 기록"] as const;
+
+/** 30일 Scout 결과 통계 */
+function useScoutStats(entries: JournalEntry[]) {
+  return useMemo(() => {
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const scoutEntries = entries.filter(
+      (e) => e.source === "scout" && new Date(e.createdAt).getTime() >= cutoff
+    );
+    const withOutcome = scoutEntries.filter((e) => e.outcome);
+    const win = withOutcome.filter((e) => e.outcome === "win").length;
+    const loss = withOutcome.filter((e) => e.outcome === "loss").length;
+    const be = withOutcome.filter((e) => e.outcome === "breakeven").length;
+    const pending = scoutEntries.filter((e) => !e.outcome).length;
+    const total = withOutcome.length;
+    const winRate = total > 0 ? Math.round((win / total) * 100) : null;
+    return { win, loss, be, pending, total, winRate, scoutEntries };
+  }, [entries]);
+}
+
+/** Scout 항목 결과 기록 버튼 */
+function OutcomeButtons({
+  entry,
+  onOutcome
+}: {
+  entry: JournalEntry;
+  onOutcome: (id: string, outcome: OutcomeType) => void;
+}) {
+  const buttons: { label: string; value: OutcomeType; color: string }[] = [
+    { label: "✓ 익절", value: "win", color: "border-signal-success/40 bg-signal-success/15 text-signal-success hover:bg-signal-success/30" },
+    { label: "✕ 손절", value: "loss", color: "border-signal-danger/40 bg-signal-danger/15 text-signal-danger hover:bg-signal-danger/30" },
+    { label: "— 본전", value: "breakeven", color: "border-slate-500/40 bg-slate-500/15 text-slate-300 hover:bg-slate-500/30" },
+    { label: "패스", value: "missed", color: "border-slate-600/30 bg-slate-600/10 text-slate-500 hover:bg-slate-600/20" }
+  ];
+
+  if (entry.outcome) {
+    const found = buttons.find((b) => b.value === entry.outcome);
+    return (
+      <div className="mt-3 flex items-center gap-2">
+        <span className={`rounded-md border px-2.5 py-1 text-xs font-black ${found?.color ?? ""}`}>
+          {found?.label ?? entry.outcome}
+        </span>
+        <span className="text-[11px] text-slate-500">
+          {entry.outcomeAt ? new Intl.DateTimeFormat("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(entry.outcomeAt)) : ""}
+        </span>
+        <button
+          type="button"
+          onClick={() => onOutcome(entry.id, entry.outcome!)}
+          className="text-[11px] text-slate-600 underline hover:text-slate-400"
+        >
+          취소
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3">
+      <p className="mb-1.5 text-[11px] font-bold text-slate-500">결과 기록</p>
+      <div className="flex flex-wrap gap-1.5">
+        {buttons.map((btn) => (
+          <button
+            key={btn.value}
+            type="button"
+            onClick={() => onOutcome(entry.id, btn.value)}
+            className={`rounded-md border px-2.5 py-1 text-xs font-bold transition ${btn.color}`}
+          >
+            {btn.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function parseChartNote(note: string) {
   const lines = note.split("\n").map((line) => line.trim()).filter(Boolean);
@@ -79,7 +155,11 @@ function SourceBadge({ entry }: { entry: JournalEntry }) {
       <span className="rounded-md border border-accent-blue/20 bg-accent-blue/10 px-2 py-1 text-[11px] font-bold text-accent-blue">
         {entry.bias}
       </span>
-      {entry.source === "chart" ? (
+      {entry.source === "scout" ? (
+        <span className="rounded-md border border-accent-blue/30 bg-accent-blue/10 px-2 py-1 text-[11px] font-bold text-accent-blue">
+          AI Scout
+        </span>
+      ) : entry.source === "chart" ? (
         <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] font-bold text-slate-300">
           차트 판독 저장
         </span>
@@ -246,10 +326,31 @@ export default function JournalPage() {
   }, [isLoadingAuth, session, shouldAutoSync, localEntries, migrateLocalEntries]);
 
   const filteredEntries = useMemo(() => {
-    if (activeFilter === "차트 저장") return entries.filter((entry) => entry.source === "chart");
-    if (activeFilter === "직접 기록") return entries.filter((entry) => entry.source !== "chart");
+    if (activeFilter === "Scout 저장") return entries.filter((entry) => entry.source === "scout");
+    if (activeFilter === "직접 기록") return entries.filter((entry) => entry.source !== "chart" && entry.source !== "scout");
     return entries;
   }, [activeFilter, entries]);
+
+  const stats = useScoutStats(entries);
+
+  async function recordOutcome(id: string, outcome: OutcomeType) {
+    const updater = (list: JournalEntry[]): JournalEntry[] =>
+      list.map((e) => {
+        if (e.id !== id) return e;
+        // 같은 값 클릭 시 취소
+        if (e.outcome === outcome) return { ...e, outcome: undefined, outcomeAt: undefined };
+        return { ...e, outcome, outcomeAt: new Date().toISOString() };
+      });
+
+    if (session) {
+      // 서버 저장은 현재 PATCH 미구현 → 로컬만 업데이트
+      setEntries(updater(entries));
+    } else {
+      const next = updater(loadJournalEntries());
+      saveJournalEntries(next);
+      setEntries(next);
+    }
+  }
 
   return (
     <main className="min-h-screen px-4 pb-10">
@@ -269,6 +370,42 @@ export default function JournalPage() {
               </p>
             </div>
           </div>
+
+          {/* Scout 30일 통계 카드 */}
+          {stats.scoutEntries.length > 0 && (
+            <div className="mt-5 rounded-lg border border-accent-blue/20 bg-accent-blue/5 p-4">
+              <p className="mb-3 text-xs font-bold uppercase tracking-wider text-accent-blue">Scout 30일 결과</p>
+              <div className="grid grid-cols-4 gap-2 text-center">
+                <div className="rounded-md border border-signal-success/20 bg-signal-success/10 px-2 py-2">
+                  <p className="text-lg font-black text-signal-success">{stats.win}</p>
+                  <p className="text-[10px] font-bold text-slate-500">익절</p>
+                </div>
+                <div className="rounded-md border border-signal-danger/20 bg-signal-danger/10 px-2 py-2">
+                  <p className="text-lg font-black text-signal-danger">{stats.loss}</p>
+                  <p className="text-[10px] font-bold text-slate-500">손절</p>
+                </div>
+                <div className="rounded-md border border-white/10 bg-black/20 px-2 py-2">
+                  <p className="text-lg font-black text-slate-300">{stats.be}</p>
+                  <p className="text-[10px] font-bold text-slate-500">본전</p>
+                </div>
+                <div className="rounded-md border border-white/10 bg-black/10 px-2 py-2">
+                  <p className="text-lg font-black text-slate-400">{stats.pending}</p>
+                  <p className="text-[10px] font-bold text-slate-500">미기록</p>
+                </div>
+              </div>
+              {stats.winRate !== null && (
+                <div className="mt-3 flex items-center gap-2">
+                  {stats.winRate >= 50
+                    ? <TrendingUp size={14} className="text-signal-success" aria-hidden />
+                    : <TrendingDown size={14} className="text-signal-danger" aria-hidden />}
+                  <p className="text-sm font-black text-white">
+                    적중률 {stats.winRate}%
+                    <span className="ml-2 text-xs font-normal text-slate-500">({stats.total}건 기준)</span>
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="mt-5 rounded-lg border border-white/10 bg-black/20 p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -404,15 +541,16 @@ export default function JournalPage() {
               </div>
             ) : filteredEntries.length ? (
               filteredEntries.map((entry) => {
-                const chartNote = entry.source === "chart" ? parseChartNote(entry.note) : null;
+                const chartNote = (entry.source === "chart") ? parseChartNote(entry.note) : null;
+                const isScout = entry.source === "scout";
 
                 return (
-                  <article key={entry.id} className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
+                  <article key={entry.id} className={`rounded-lg border bg-surface-cardSoft p-4 ${isScout ? "border-accent-blue/20" : "border-surface-line"}`}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <SourceBadge entry={entry} />
                         <h3 className="mt-2 text-base font-bold text-white">{entry.title}</h3>
-                        {entry.verdict ? <p className="mt-2 text-sm font-semibold text-slate-200">{entry.verdict}</p> : null}
+                        {entry.verdict ? <p className="mt-1 text-xs font-semibold text-slate-400">{entry.verdict}</p> : null}
                         <p className="mt-1 text-xs text-slate-500">
                           {new Intl.DateTimeFormat("ko-KR", {
                             month: "2-digit",
@@ -431,8 +569,14 @@ export default function JournalPage() {
                         <Trash2 size={16} aria-hidden />
                       </button>
                     </div>
+
+                    {/* Scout 항목 - W/L/BE 결과 기록 버튼 */}
+                    {isScout && (
+                      <OutcomeButtons entry={entry} onOutcome={recordOutcome} />
+                    )}
+
                     {entry.note ? (
-                      entry.source === "chart" && chartNote ? (
+                      chartNote ? (
                         <div className="mt-4 space-y-4">
                           <div className="rounded-md border border-white/10 bg-black/20 p-3">
                             <div className="mb-2 flex items-center gap-2 text-xs font-bold text-slate-500">
@@ -455,7 +599,7 @@ export default function JournalPage() {
                         <div className="mt-4 rounded-md border border-white/10 bg-black/20 p-3">
                           <div className="mb-2 flex items-center gap-2 text-xs font-bold text-slate-500">
                             <Rows3 size={14} aria-hidden />
-                            직접 기록
+                            {isScout ? "AI Scout 분석" : "직접 기록"}
                           </div>
                           <p className="whitespace-pre-wrap text-sm leading-7 text-slate-300">{entry.note}</p>
                         </div>

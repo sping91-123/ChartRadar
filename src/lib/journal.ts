@@ -1,13 +1,35 @@
+/** Scout 셋업 저장 시 결과 추적용 구조화 데이터 */
+export interface ScoutSnapshot {
+  entryLow: number;
+  entryHigh: number;
+  invalidation: number;
+  target1: number;
+  target2: number;
+  side: "long" | "short";
+  score: number;
+  quality: string;
+  scannedAt: string | number;
+}
+
+/** W/L/BE 결과 기록 */
+export type OutcomeType = "win" | "loss" | "breakeven" | "missed";
+
 export interface JournalEntry {
   id: string;
   title: string;
   bias: string;
   note: string;
   createdAt: string;
-  source?: "manual" | "chart";
+  source?: "manual" | "chart" | "scout";
   symbol?: string;
   timeframe?: string;
   verdict?: string;
+  /** Scout 저장 시에만 존재 */
+  scoutSnapshot?: ScoutSnapshot;
+  /** 결과 기록 (W/L/BE/missed) */
+  outcome?: OutcomeType;
+  /** 결과 기록 시각 */
+  outcomeAt?: string;
 }
 
 export const journalStorageKey = "positionguard.journal";
