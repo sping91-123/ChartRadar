@@ -23,14 +23,10 @@ import {
   Calculator,
   ClipboardCheck,
   Copy,
-  Grid2X2,
   History,
-  LayoutDashboard,
   LockKeyhole,
-  Newspaper,
   RefreshCcw,
   Settings2,
-  Star
 } from "lucide-react";
 import {
   analyzeTimeframe,
@@ -189,13 +185,6 @@ interface ParityRow {
   result: string;
   importance: "core" | "major" | "minor";
 }
-
-const radarProductTabs = [
-  { label: "기본코인", icon: Grid2X2, href: "#basic-coins", active: true },
-  { label: "관심코인", icon: Star, href: "#watchlist", active: false },
-  { label: "대시보드", icon: LayoutDashboard, href: "#market-digest", active: false },
-  { label: "AI 브리핑", icon: Newspaper, href: "#ai-briefing", active: false }
-] as const;
 
 type MarketBriefingState =
   | { status: "idle" }
@@ -1662,22 +1651,6 @@ export function LiveMarketChart() {
           </button>
         </div>
 
-        <nav className="grid grid-cols-4 gap-1.5 rounded-lg border border-surface-line bg-black/20 p-1.5">
-          {radarProductTabs.map(({ label, icon: Icon, href, active }) => (
-            <a
-              key={label}
-              href={href}
-              className={`flex min-h-12 flex-col items-center justify-center gap-1 rounded-md px-1 text-[10px] font-black transition sm:text-xs ${
-                active
-                  ? "bg-accent-blue/15 text-accent-blue"
-                  : "text-slate-400 hover:bg-white/5 hover:text-white"
-              }`}
-            >
-              <Icon size={16} aria-hidden />
-              <span className="whitespace-nowrap">{label}</span>
-            </a>
-          ))}
-        </nav>
       </div>
 
       <div className="mt-4 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
