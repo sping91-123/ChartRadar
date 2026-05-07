@@ -93,7 +93,7 @@ function WatchlistSetupCard({ setup }: { setup: ScoutSetup }) {
       </div>
 
       <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500">
-        <span>{setup.plan.quality}급 검토 후보 · 준비도 {setup.plan.confidence}%</span>
+        <span>{setup.plan.quality}급 검토 후보 · 구조 신뢰도 {setup.plan.confidence}%</span>
         <span className="font-bold text-slate-400">1차 {formatPrice(setup.plan.target1)}</span>
       </div>
     </article>

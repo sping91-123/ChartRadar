@@ -77,7 +77,7 @@ function ScoreBadge({ score }: { score: number }) {
         : "border-signal-warning/40 bg-signal-warning/15 text-signal-warning";
 
   return (
-    <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-black ${tone}`}>
+    <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-md border px-2 py-1 text-xs font-black ${tone}`}>
       {score}점
     </span>
   );
@@ -86,7 +86,7 @@ function ScoreBadge({ score }: { score: number }) {
 function StatusBadge({ setup, riskProfile }: { setup: ScoutSetup; riskProfile: ScoutRiskProfile }) {
   if (setup.status === "active") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-md border border-orange-400/40 bg-orange-400/15 px-2 py-1 text-[11px] font-black text-orange-300">
+      <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-orange-400/40 bg-orange-400/15 px-2 py-1 text-[11px] font-black text-orange-300">
         공격적 분석
       </span>
     );
@@ -94,7 +94,7 @@ function StatusBadge({ setup, riskProfile }: { setup: ScoutSetup; riskProfile: S
 
   if (setup.status === "watch" && setup.watchKind === "counter") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-md border border-orange-400/40 bg-orange-400/15 px-2 py-1 text-[11px] font-black text-orange-300">
+      <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-orange-400/40 bg-orange-400/15 px-2 py-1 text-[11px] font-black text-orange-300">
         반대 구간 감시
       </span>
     );
@@ -103,21 +103,21 @@ function StatusBadge({ setup, riskProfile }: { setup: ScoutSetup; riskProfile: S
   if (setup.status === "watch") {
     if (riskProfile === "radar") {
       return (
-        <span className="inline-flex items-center gap-1 rounded-md border border-accent-blue/40 bg-accent-blue/15 px-2 py-1 text-[11px] font-black text-accent-blue">
+        <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-accent-blue/40 bg-accent-blue/15 px-2 py-1 text-[11px] font-black text-accent-blue">
           공격적 관찰
         </span>
       );
     }
 
     return (
-      <span className="inline-flex items-center gap-1 rounded-md border border-signal-warning/40 bg-signal-warning/15 px-2 py-1 text-[11px] font-black text-signal-warning">
-        관찰 카드
+      <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-signal-warning/40 bg-signal-warning/15 px-2 py-1 text-[11px] font-black text-signal-warning">
+        관찰 대기
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-signal-success/40 bg-signal-success/15 px-2 py-1 text-[11px] font-black text-signal-success">
+    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-signal-success/40 bg-signal-success/15 px-2 py-1 text-[11px] font-black text-signal-success">
       분석 후보
     </span>
   );
@@ -126,8 +126,8 @@ function StatusBadge({ setup, riskProfile }: { setup: ScoutSetup; riskProfile: S
 function ProximityBadge({ setup }: { setup: ScoutSetup }) {
   if (setup.proximity === "ready") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-md border border-signal-warning/40 bg-signal-warning/15 px-2 py-1 text-[11px] font-black text-signal-warning">
-        검토 구간 내부 · 즉시 진입 신호 아님
+      <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-signal-warning/40 bg-signal-warning/15 px-2 py-1 text-[11px] font-black text-signal-warning">
+        구간 내부 · 신호 아님
       </span>
     );
   }
@@ -135,14 +135,14 @@ function ProximityBadge({ setup }: { setup: ScoutSetup }) {
   if (setup.proximity === "near") {
     const direction = setup.plan.side === "long" ? "내려오면" : "올라오면";
     return (
-      <span className="inline-flex items-center gap-1 rounded-md border border-accent-blue/40 bg-accent-blue/10 px-2 py-1 text-[11px] font-black text-accent-blue">
+      <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-accent-blue/40 bg-accent-blue/10 px-2 py-1 text-[11px] font-black text-accent-blue">
         {formatDistance(setup.distancePercent)}% {direction} 검토 구간
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-slate-600/40 bg-slate-600/10 px-2 py-1 text-[11px] font-bold text-slate-400">
+    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-slate-600/40 bg-slate-600/10 px-2 py-1 text-[11px] font-bold text-slate-400">
       대기 · 검토 구간까지 {formatDistance(setup.distancePercent)}%
     </span>
   );
@@ -400,21 +400,18 @@ function SetupCard({
   }
 
   return (
-    <article className={`rounded-lg border p-4 transition ${modeCardClass}`}>
+    <article className={`rounded-lg border p-4 [word-break:keep-all] transition ${modeCardClass}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold text-slate-500">TOP {rank}</p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <h3 className="text-base font-black text-white">{symbol}</h3>
-            <span className="rounded border border-white/10 bg-black/20 px-1.5 py-0.5 text-xs font-bold text-slate-300">
+            <span className="whitespace-nowrap rounded border border-white/10 bg-black/20 px-1.5 py-0.5 text-xs font-bold text-slate-300">
               {setup.timeframe}
             </span>
-            <span className={`rounded border px-1.5 py-0.5 text-xs font-bold ${modeBadgeClass}`}>
-              {setup.timeframe} 레이더
-            </span>
             <SideIcon className={sideColor} size={16} aria-hidden />
-            <span className={`text-xs font-bold ${sideColor}`}>{isLong ? "롱 우세" : "숏 우세"}</span>
-            <span className="rounded border border-accent-blue/30 bg-accent-blue/10 px-1.5 py-0.5 text-xs font-bold text-accent-blue">
+            <span className={`whitespace-nowrap text-xs font-bold ${sideColor}`}>{isLong ? "롱 우세" : "숏 우세"}</span>
+            <span className={`whitespace-nowrap rounded border px-1.5 py-0.5 text-xs font-bold ${modeBadgeClass}`}>
               {setup.plan.quality}급
             </span>
           </div>
@@ -429,11 +426,11 @@ function SetupCard({
         <ProximityBadge setup={setup} />
       </div>
 
-      <p className="mt-3 text-sm leading-6 text-slate-300">{setup.plan.entryLabel}</p>
+      <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-300">{setup.plan.entryLabel}</p>
       {setup.status === "watch" && setup.watchReason ? (
-        <p className="mt-3 rounded-md border border-signal-warning/25 bg-signal-warning/10 px-3 py-2 text-[11px] leading-5 text-signal-warning">
-          관찰 사유: {setup.watchReason}. 이 카드는 진입 신호가 아니라, 기다리거나 제외할 이유를 보여주는 카드입니다.
-          {setup.watchKind === "counter" ? " 반대 방향 구간을 감시하는 카드라 방향 추천으로 보면 안 됩니다." : ""}
+        <p className="mt-3 line-clamp-2 rounded-md border border-signal-warning/25 bg-signal-warning/10 px-3 py-2 text-[11px] leading-5 text-signal-warning">
+          <span className="font-black">관찰 사유.</span> {setup.watchReason}
+          {setup.watchKind === "counter" ? " 반대 방향 구간 감시." : ""}
         </p>
       ) : null}
       <EvidenceChips setup={setup} />
@@ -463,16 +460,11 @@ function SetupCard({
       </div>
 
       <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-        <span className="inline-flex items-center gap-1">
-          <Target size={12} aria-hidden /> 준비도 {setup.plan.confidence}%
+        <span className="inline-flex items-center gap-1 whitespace-nowrap">
+          <Target size={12} aria-hidden /> 구조 신뢰도 {setup.plan.confidence}%
         </span>
         <span className="font-bold text-slate-400">참고 목표 2 {formatPriceWithSymbol(setup.plan.target2)}</span>
       </div>
-
-      <p className="mt-3 rounded-md border border-signal-warning/25 bg-signal-warning/10 px-3 py-2 text-[11px] leading-5 text-signal-warning">
-        검토 구간 내부여도 바로 진입하라는 뜻이 아닙니다. 손절폭 기준 포지션 크기, 레버리지,
-        리스크 기준을 먼저 확인하세요.
-      </p>
 
       <CommentaryLine setup={setup} />
 
@@ -544,9 +536,9 @@ function ScanSummary({
         }`}
       >
         <p className={`text-sm font-black ${isRadar ? "text-signal-danger" : "text-accent-blue"}`}>
-          전체 TF 통합 · {isRadar ? "공격적 분석" : "보수적 분석"} · 분석 후보 {entryCount}개, 완화 후보 {activeCount}개, 관찰 카드 {watchCount}개
+          전체 TF 점수순 · {isRadar ? "공격적 분석" : "보수적 분석"} · 후보 {entryCount + activeCount}개 · 관찰 {watchCount}개
         </p>
-        <p className="mt-1 text-xs leading-5 text-slate-300">
+        <p className="mt-1 text-xs leading-5 text-slate-300 [word-break:keep-all]">
           {isRadar
             ? "공격적 분석은 정확도가 조금 떨어질 수 있지만 완화된 조건으로 더 많은 후보를 보고 싶은 사용자를 위한 모드입니다."
             : "분석 후보도 자동 매수·매도 신호가 아닙니다. 검토 구간, 리스크 기준, 포지션 크기를 확인한 뒤에만 판단하세요."}
@@ -562,9 +554,9 @@ function ScanSummary({
       }`}
     >
       <p className={`text-sm font-black ${isRadar ? "text-signal-danger" : "text-accent-blue"}`}>
-        {isRadar ? "공격적 분석" : "보수적 분석"} · 분석 후보 없음, 관찰 카드 {watchCount}개
+        {isRadar ? "공격적 분석" : "보수적 분석"} · 분석 후보 없음 · 관찰 {watchCount}개
       </p>
-      <p className="mt-1 text-xs leading-5 text-slate-300">
+      <p className="mt-1 text-xs leading-5 text-slate-300 [word-break:keep-all]">
         전체 타임프레임을 통틀어 바로 검토할 조건은 부족합니다.
         {isRadar
           ? " 대신 공격적 분석은 완화된 조건으로 움직임 후보를 더 넓게 보여주며, 실제 진입 전에는 보수적 분석 기준으로 다시 걸러야 합니다."
@@ -672,21 +664,20 @@ export function SetupScoutPanel() {
                 Beta
               </span>
             </div>
-            <p className="mt-1 text-sm leading-6 text-slate-400">
-              현재 베타버전은 코인 데이터를 우선 분석합니다. 결과는 진입 추천이 아니라,
-              검토할 가치가 있는 후보와 위험 조건을 정리한 것입니다.
+            <p className="mt-1 text-sm leading-6 text-slate-400 [word-break:keep-all]">
+              전체 타임프레임에서 점수 높은 코인만 추립니다. 신호가 아니라 구조 점검용입니다.
             </p>
-            <p className="mt-2 rounded-md border border-signal-warning/25 bg-signal-warning/10 px-3 py-2 text-xs leading-5 text-signal-warning">
-              “검토 구간”은 매수·매도 신호가 아닙니다. 리스크 기준, 손절폭, 레버리지, 포지션 크기를
-              먼저 확인하지 않으면 후보가 좋아 보여도 손실이 커질 수 있습니다.
-            </p>
-            <p className="mt-2 rounded-md border border-surface-line bg-black/20 px-3 py-2 text-xs leading-5 text-slate-400">
-              화면에 표시되는 관찰 카드는 진입 추천이 아니라 “조건이 더 필요하다”는 대기 카드입니다.
-            </p>
-            <p className="mt-2 rounded-md border border-orange-400/20 bg-orange-400/10 px-3 py-2 text-xs leading-5 text-orange-200">
-              공격적 분석은 정확도가 조금 떨어질 수 있지만, 완화된 조건으로 더 많은 후보를 보고 싶은 사용자를 위한 모드입니다.
-              실제 진입 판단은 반드시 보수적 분석과 리스크 기준으로 다시 확인해야 합니다.
-            </p>
+            <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold text-slate-300">
+              <span className="whitespace-nowrap rounded-md border border-signal-warning/25 bg-signal-warning/10 px-2 py-1 text-signal-warning">
+                매수·매도 신호 아님
+              </span>
+              <span className="whitespace-nowrap rounded-md border border-surface-line bg-black/20 px-2 py-1">
+                관찰은 대기 조건
+              </span>
+              <span className="whitespace-nowrap rounded-md border border-orange-400/20 bg-orange-400/10 px-2 py-1 text-orange-200">
+                공격적 분석은 후보를 넓게 표시
+              </span>
+            </div>
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-start gap-3 sm:justify-end">

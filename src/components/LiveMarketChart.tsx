@@ -1827,7 +1827,7 @@ export function LiveMarketChart() {
             {analysis ? (
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <div className={`rounded-md border px-3 py-3 ${readinessClasses(analysis.readiness)}`}>
-                  <span className="block text-xs font-semibold opacity-80">검토 준비도</span>
+                  <span className="block text-xs font-semibold opacity-80">판독 상태</span>
                   <span className="mt-1 block text-lg font-black">{readinessLabel(analysis.readiness)}</span>
                 </div>
                 <div className="rounded-md border border-white/10 bg-black/15 p-3 text-sm leading-6 text-slate-100">
@@ -1925,7 +1925,7 @@ export function LiveMarketChart() {
                         </p>
                       </div>
                       <div className={`rounded-md border px-3 py-2 ${readinessClasses(analysis.readiness)}`}>
-                        <p className="text-[11px] font-bold opacity-80">검토 준비도</p>
+                        <p className="text-[11px] font-bold opacity-80">판독 상태</p>
                         <p className="mt-1 text-base font-black">{readinessLabel(analysis.readiness)}</p>
                       </div>
                     </div>
@@ -2419,7 +2419,7 @@ export function LiveMarketChart() {
                 <MiniMetric label="4H EMA200" value={fourHourAnalysis ? stateLabel(fourHourAnalysis.ema200Side) : "-"} />
                 <MiniMetric label="현재 킬존" value={killzoneLabel(analysis.killzone)} />
                 <MiniMetric label="최근 갱신" value={formatUpdatedAt(analysis.updatedAt)} />
-                <MiniMetric label="검토 준비도" value={readinessLabel(analysis.readiness)} />
+                <MiniMetric label="판독 상태" value={readinessLabel(analysis.readiness)} />
               </div>
             </div>
           ) : null}

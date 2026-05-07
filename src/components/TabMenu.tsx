@@ -12,8 +12,8 @@ import {
 
 const pageLinks = [
   { href: "/survival", label: "레이더", icon: BarChart3 },
-  { href: "/diagnosis", label: "진입 진단", icon: ClipboardCheck },
-  { href: "/calculator", label: "계산", icon: Calculator },
+  { href: "/diagnosis", label: "원칙 점검", icon: ClipboardCheck },
+  { href: "/calculator", label: "수량 계산", icon: Calculator },
   { href: "/journal", label: "복기", icon: History },
   { href: "/learn", label: "학습", icon: BookOpen }
 ] as const;

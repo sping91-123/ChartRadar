@@ -379,7 +379,7 @@ function buildWatchOnlyPlan(
     mode,
     side: pickedSide,
     quality: confidence >= 62 ? "B" : "C",
-    title: `${pickedSide === "long" ? "롱" : "숏"} 관찰 카드`,
+    title: `${pickedSide === "long" ? "롱" : "숏"} 관찰 대기`,
     entryLabel: zone.label,
     entryLow,
     entryHigh,
@@ -391,7 +391,7 @@ function buildWatchOnlyPlan(
     confidence,
     reason: "검토 후보는 아니지만, 구조상 계속 관찰할 만한 반응 구간입니다.",
     cautions: [
-      "관찰 카드입니다. 조건이 추가로 맞기 전까지 진입 신호로 보지 마세요.",
+      "관찰 대기입니다. 조건이 추가로 맞기 전까지 진입 신호로 보지 마세요.",
       "MSB/CHoCH, 스윕/CISD, POC 위치를 다시 확인하세요.",
       ...market.riskFlags.slice(0, 2)
     ]

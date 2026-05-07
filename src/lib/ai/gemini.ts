@@ -69,7 +69,7 @@ function buildMarketBriefingPrompt(input: MarketBriefingInput): string {
 판정: ${input.verdict}
 방향: ${input.bias}
 종합 점수: ${input.biasScore} / ${input.scoreRange}
-준비도: ${input.readiness}
+판독 상태: ${input.readiness}
 요약: ${input.summaryLine}
 행동 가이드: ${input.actionGuide}
 현재 위치: ${input.currentLocationLabel}
