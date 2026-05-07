@@ -2258,7 +2258,7 @@ export function LiveMarketChart() {
               <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
                 <h3 className="text-sm font-bold text-white">현재 결론</h3>
                 <p className="mt-3 text-sm leading-6 text-slate-300">
-                  지금은 {analysis.verdict} 쪽입니다. 다만 실제 진입은 현재 위치, 리스크 기준, 포지션 크기를 같이 확인해야 합니다.
+                  지금은 {analysis.verdict} 쪽입니다. 다만 실제 판단은 현재 위치, 무효 기준, 포지션 크기를 같이 확인해야 합니다.
                 </p>
               </div>
             </div>
@@ -2276,14 +2276,14 @@ export function LiveMarketChart() {
                   </p>
                 </div>
                 <span className={`inline-flex shrink-0 rounded-md border px-3 py-1.5 text-sm font-black ${planQualityClasses(analysis.proPlan.quality)}`}>
-                  {analysis.proPlan.quality}급 · 검토 {analysis.proPlan.confidence}%
+                  {analysis.proPlan.quality}급 · 신뢰도 {analysis.proPlan.confidence}%
                 </span>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <MiniMetric label="관찰 구간" value={formatPriceRange(analysis.proPlan.entryLow, analysis.proPlan.entryHigh)} />
-                <MiniMetric label="리스크 기준" value={formatPrice(analysis.proPlan.invalidation)} />
-                <MiniMetric label="참고 목표 1" value={`${formatPrice(analysis.proPlan.target1)} / ${analysis.proPlan.rr1.toFixed(1)}R`} />
-                <MiniMetric label="참고 목표 2" value={`${formatPrice(analysis.proPlan.target2)} / ${analysis.proPlan.rr2.toFixed(1)}R`} />
+                <MiniMetric label="무효 기준" value={formatPrice(analysis.proPlan.invalidation)} />
+                <MiniMetric label="다음 레벨 1" value={`${formatPrice(analysis.proPlan.target1)} / ${analysis.proPlan.rr1.toFixed(1)}R`} />
+                <MiniMetric label="다음 레벨 2" value={`${formatPrice(analysis.proPlan.target2)} / ${analysis.proPlan.rr2.toFixed(1)}R`} />
               </div>
               <div className="mt-3 space-y-2">
                 {analysis.proPlan.cautions.slice(0, 3).map((item) => (
@@ -2297,7 +2297,7 @@ export function LiveMarketChart() {
             <div className="rounded-lg border border-signal-warning/25 bg-signal-warning/10 p-4">
               <p className="text-sm font-bold text-signal-warning">분석 시나리오 대기</p>
               <p className="mt-2 text-sm leading-6 text-slate-300">
-                지금은 방향 우세가 충분히 또렷하지 않아 관찰 구간과 리스크 기준을 계산하지 않았습니다. 이 상태에서 억지로 자리를 만들지 않는 것이 더 좋은 판독입니다.
+                지금은 방향 우세가 충분히 또렷하지 않아 관찰 구간과 무효 기준을 계산하지 않았습니다. 이 상태에서 억지로 자리를 만들지 않는 것이 더 좋은 판독입니다.
               </p>
             </div>
           ) : null}

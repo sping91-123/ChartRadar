@@ -36,7 +36,7 @@ function formatPrice(price: number): string {
   }).format(price);
 }
 
-// ─── 미니 셋업 카드 ───────────────────────────────────────────────────────────
+// ─── 미니 레이더 카드 ──────────────────────────────────────────────────────────
 function WatchlistSetupCard({ setup }: { setup: ScoutSetup }) {
   const isLong = setup.plan.side === "long";
   const sideColor = isLong ? "text-signal-success" : "text-signal-danger";
@@ -93,8 +93,8 @@ function WatchlistSetupCard({ setup }: { setup: ScoutSetup }) {
       </div>
 
       <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500">
-        <span>{setup.plan.quality}급 검토 후보 · 구조 신뢰도 {setup.plan.confidence}%</span>
-        <span className="font-bold text-slate-400">1차 {formatPrice(setup.plan.target1)}</span>
+        <span>{setup.plan.quality}급 감지 · 구조 신뢰도 {setup.plan.confidence}%</span>
+        <span className="font-bold text-slate-400">다음 레벨 {formatPrice(setup.plan.target1)}</span>
       </div>
     </article>
   );
@@ -329,7 +329,7 @@ export function WatchlistPanel() {
               <Bookmark className="mx-auto text-slate-600" size={24} aria-hidden />
               <p className="mt-2 text-sm font-bold text-slate-400">관심 코인을 추가해보세요.</p>
               <p className="mt-1 text-xs leading-5 text-slate-600">
-                ADA, AVAX, LINK 등 관심 코인 중 최대 {limit}개를 선택해 구조 후보를 감지합니다.
+                ADA, AVAX, LINK 등 관심 코인 중 최대 {limit}개를 선택해 구조 변화를 감지합니다.
               </p>
               <button
                 type="button"
@@ -352,7 +352,7 @@ export function WatchlistPanel() {
           ) : scanState.status === "ready" ? (
             scanState.setups.length === 0 ? (
               <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-5 text-center">
-                <p className="text-sm font-bold text-slate-300">현재 검토할 셋업이 없습니다.</p>
+                <p className="text-sm font-bold text-slate-300">현재 강하게 감지된 구조가 없습니다.</p>
                 <p className="mt-1 text-xs leading-5 text-slate-500">
                   관심 코인의 구조가 명확하지 않거나 관망 구간입니다.
                 </p>
