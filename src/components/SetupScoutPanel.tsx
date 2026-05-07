@@ -17,7 +17,7 @@ import { appendJournalEntry, type ScoutSnapshot } from "@/lib/journal";
 import { createRemoteJournalEntry } from "@/lib/remoteJournal";
 import { getSupabaseSession } from "@/lib/supabase";
 import type { CommentaryInput } from "@/lib/ai/types";
-import { chartTimeframes, type ChartTimeframe, type TradingMode } from "@/lib/marketAnalysis";
+import type { TradingMode } from "@/lib/marketAnalysis";
 
 type ScanState =
   | { status: "idle" }
@@ -35,17 +35,10 @@ const numberFormatter = new Intl.NumberFormat("ko-KR", {
   minimumFractionDigits: 2
 });
 const scoutRiskProfileStorageKey = "untitledRisk.scoutRiskProfile.v1";
-const scoutTimeframeStorageKey = "chartRadar.scoutTimeframe.v1";
 
 function readStoredScoutRiskProfile(): ScoutRiskProfile {
   if (typeof window === "undefined") return "radar";
   return window.localStorage.getItem(scoutRiskProfileStorageKey) === "guard" ? "guard" : "radar";
-}
-
-function readStoredScoutTimeframe(): ChartTimeframe {
-  if (typeof window === "undefined") return "15m";
-  const stored = window.localStorage.getItem(scoutTimeframeStorageKey) as ChartTimeframe | null;
-  return stored && chartTimeframes.includes(stored) ? stored : "15m";
 }
 
 function formatCachedAt(ms: number) {
@@ -533,12 +526,10 @@ function EmptyState() {
 
 function ScanSummary({
   setups,
-  riskProfile,
-  selectedTimeframe
+  riskProfile
 }: {
   setups: ScoutSetup[];
   riskProfile: ScoutRiskProfile;
-  selectedTimeframe: ChartTimeframe;
 }) {
   const entryCount = setups.filter((setup) => setup.status === "entry").length;
   const activeCount = setups.filter((setup) => setup.status === "active").length;
@@ -553,7 +544,7 @@ function ScanSummary({
         }`}
       >
         <p className={`text-sm font-black ${isRadar ? "text-signal-danger" : "text-accent-blue"}`}>
-          {selectedTimeframe} · {isRadar ? "공격적 분석" : "보수적 분석"} · 분석 후보 {entryCount}개, 완화 후보 {activeCount}개, 관찰 카드 {watchCount}개
+          전체 TF 통합 · {isRadar ? "공격적 분석" : "보수적 분석"} · 분석 후보 {entryCount}개, 완화 후보 {activeCount}개, 관찰 카드 {watchCount}개
         </p>
         <p className="mt-1 text-xs leading-5 text-slate-300">
           {isRadar
@@ -574,7 +565,7 @@ function ScanSummary({
         {isRadar ? "공격적 분석" : "보수적 분석"} · 분석 후보 없음, 관찰 카드 {watchCount}개
       </p>
       <p className="mt-1 text-xs leading-5 text-slate-300">
-        {selectedTimeframe} 기준에서 바로 검토할 조건은 부족합니다.
+        전체 타임프레임을 통틀어 바로 검토할 조건은 부족합니다.
         {isRadar
           ? " 대신 공격적 분석은 완화된 조건으로 움직임 후보를 더 넓게 보여주며, 실제 진입 전에는 보수적 분석 기준으로 다시 걸러야 합니다."
           : " 이 카드는 “매수·매도 자리”가 아니라 가격이 다시 올 때 확인할 체크포인트입니다."}
@@ -583,19 +574,38 @@ function ScanSummary({
   );
 }
 
+function setupStatusRank(setup: ScoutSetup) {
+  if (setup.status === "entry") return 3;
+  if (setup.status === "active") return 2;
+  return 1;
+}
+
+function setupQualityRank(setup: ScoutSetup) {
+  if (setup.plan.quality === "A") return 3;
+  if (setup.plan.quality === "B") return 2;
+  return 1;
+}
+
+function rankScoutSetups(setups: ScoutSetup[]) {
+  return [...setups].sort((a, b) => {
+    const statusDiff = setupStatusRank(b) - setupStatusRank(a);
+    if (statusDiff !== 0) return statusDiff;
+    const qualityDiff = setupQualityRank(b) - setupQualityRank(a);
+    if (qualityDiff !== 0) return qualityDiff;
+    return b.score - a.score;
+  });
+}
+
 export function SetupScoutPanel() {
   const [state, setState] = useState<ScanState>({ status: "idle" });
-  const [selectedTimeframe, setSelectedTimeframe] = useState<ChartTimeframe>("15m");
   const [riskProfile, setRiskProfile] = useState<ScoutRiskProfile>("radar");
   const [hasLoadedPreferences, setHasLoadedPreferences] = useState(false);
   useEffect(() => {
-    setSelectedTimeframe(readStoredScoutTimeframe());
     setRiskProfile(readStoredScoutRiskProfile());
     setHasLoadedPreferences(true);
   }, []);
 
   const runScan = useCallback(async (force = false) => {
-    window.localStorage.setItem(scoutTimeframeStorageKey, selectedTimeframe);
     window.localStorage.setItem(scoutRiskProfileStorageKey, riskProfile);
     if (!force) {
       const cachedScalp = readScoutCache("scalp", riskProfile);
@@ -632,7 +642,7 @@ export function SetupScoutPanel() {
       const message = error instanceof Error ? error.message : "레이더 판독에 실패했습니다.";
       setState({ status: "error", message });
     }
-  }, [riskProfile, selectedTimeframe]);
+  }, [riskProfile]);
 
   useEffect(() => {
     if (!hasLoadedPreferences) return;
@@ -645,8 +655,8 @@ export function SetupScoutPanel() {
   }, [state]);
 
   const visibleLimit = riskProfile === "radar" ? 6 : 3;
-  const timeframeSetups = state.status === "ready" ? state.setups.filter((setup) => setup.timeframe === selectedTimeframe) : [];
-  const visibleSetups = timeframeSetups.slice(0, visibleLimit);
+  const rankedSetups = state.status === "ready" ? rankScoutSetups(state.setups) : [];
+  const visibleSetups = rankedSetups.slice(0, visibleLimit);
 
   return (
     <section className="rounded-lg border border-accent-blue/25 bg-surface-card p-4 shadow-glow sm:p-5">
@@ -679,25 +689,8 @@ export function SetupScoutPanel() {
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {chartTimeframes.map((timeframe) => (
-            <button
-              key={timeframe}
-              type="button"
-              onClick={() => {
-                setSelectedTimeframe(timeframe);
-                setState({ status: "idle" });
-              }}
-              className={`inline-flex min-h-9 items-center rounded-md border px-3 text-xs font-black transition ${
-                selectedTimeframe === timeframe
-                  ? "border-accent-blue bg-accent-blue text-slate-950"
-                  : "border-surface-line bg-surface-cardSoft text-slate-300 hover:border-accent-blue/50"
-              }`}
-            >
-              {timeframe}
-            </button>
-          ))}
-          <span className="mx-1 hidden h-5 w-px bg-surface-line sm:inline-block" />
+        <div className="flex flex-wrap items-center justify-start gap-3 sm:justify-end">
+          <div className="inline-flex overflow-hidden rounded-md border border-surface-line bg-black/30 p-1">
           {(["guard", "radar"] as ScoutRiskProfile[]).map((profile) => (
             <button
               key={profile}
@@ -711,12 +704,16 @@ export function SetupScoutPanel() {
                   ? profile === "radar"
                     ? "border-signal-danger bg-signal-danger text-white"
                     : "border-accent-blue bg-accent-blue text-slate-950"
-                  : "border-surface-line bg-surface-cardSoft text-slate-300 hover:border-accent-blue/50"
+                  : "border-transparent text-slate-300 hover:bg-surface-cardSoft hover:text-white"
               }`}
             >
               {profile === "guard" ? "보수적 분석" : "공격적 분석"}
             </button>
           ))}
+          </div>
+          <span className="rounded-md border border-surface-line bg-surface-cardSoft px-3 py-2 text-xs font-bold text-slate-400">
+            전체 TF 점수순
+          </span>
           {cacheLabel ? <span className="text-xs text-slate-500">{cacheLabel} 레이더</span> : null}
           <button
             type="button"
@@ -745,7 +742,7 @@ export function SetupScoutPanel() {
             <EmptyState />
           ) : (
             <>
-              <ScanSummary setups={timeframeSetups} riskProfile={riskProfile} selectedTimeframe={selectedTimeframe} />
+              <ScanSummary setups={rankedSetups} riskProfile={riskProfile} />
               <div className="grid gap-3 sm:grid-cols-3">
                 {visibleSetups.map((setup, idx) => (
                   <SetupCard
