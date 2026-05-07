@@ -3,6 +3,7 @@ import { Header } from "@/components/Header";
 import { LiveMarketChart } from "@/components/LiveMarketChart";
 import { MarketBoardPanel } from "@/components/MarketBoardPanel";
 import { RadarCommandCenter } from "@/components/RadarCommandCenter";
+import { RadarDigestPanel } from "@/components/RadarDigestPanel";
 import { SetupScoutPanel } from "@/components/SetupScoutPanel";
 import { WatchlistPanel } from "@/components/WatchlistPanel";
 
@@ -13,6 +14,7 @@ export function SurvivalApp() {
         <Header />
         <RadarCommandCenter />
         <MarketBoardPanel />
+        <RadarDigestPanel />
         <LiveMarketChart />
         <section id="watchlist" className="scroll-mt-24">
           <WatchlistPanel />

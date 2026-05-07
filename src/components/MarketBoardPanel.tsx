@@ -115,7 +115,7 @@ export function MarketBoardPanel() {
   }, [state, tab]);
 
   return (
-    <section className="rounded-lg border border-surface-line bg-surface-card p-4 shadow-glow sm:p-5">
+    <section id="market-board" className="scroll-mt-24 rounded-lg border border-surface-line bg-surface-card p-4 shadow-glow sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">

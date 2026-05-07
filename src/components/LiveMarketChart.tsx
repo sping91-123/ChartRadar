@@ -193,7 +193,7 @@ interface ParityRow {
 const radarProductTabs = [
   { label: "기본코인", icon: Grid2X2, href: "#basic-coins", active: true },
   { label: "관심코인", icon: Star, href: "#watchlist", active: false },
-  { label: "대시보드", icon: LayoutDashboard, href: "#radar-dashboard", active: false },
+  { label: "대시보드", icon: LayoutDashboard, href: "#market-digest", active: false },
   { label: "AI 브리핑", icon: Newspaper, href: "#ai-briefing", active: false }
 ] as const;
 
