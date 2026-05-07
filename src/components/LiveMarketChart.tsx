@@ -1622,7 +1622,7 @@ export function LiveMarketChart() {
   }
 
   return (
-    <section id="basic-coins" className="rounded-lg border border-surface-line bg-surface-card p-4 shadow-glow sm:p-5">
+    <section id="basic-coins" className="scroll-mt-24 rounded-lg border border-surface-line bg-surface-card p-4 shadow-glow sm:p-5">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
