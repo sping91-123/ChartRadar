@@ -20,6 +20,8 @@ const FEEDS = [
 const CACHE_MS = 5 * 60 * 1000;
 const GEMINI_MODEL = "gemini-3-flash-preview";
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const GROQ_DEFAULT_MODEL = "qwen/qwen3-32b";
+const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 
 let cache:
   | {
@@ -309,8 +311,8 @@ function asStringList(value: unknown, limit: number) {
   return value.filter((item): item is string => typeof item === "string").slice(0, limit).map((item) => item.slice(0, 260));
 }
 
-function parseAIJsonBriefing(raw: string, items: RadarNewsItem[]): RadarNewsBriefing {
-  const fallback = fallbackNewsBriefing(items, GEMINI_MODEL);
+function parseAIJsonBriefing(raw: string, items: RadarNewsItem[], model: string): RadarNewsBriefing {
+  const fallback = fallbackNewsBriefing(items, model);
   const match = raw.match(/\{[\s\S]*\}/);
   if (!match) return { ...fallback, overview: raw.slice(0, 500) || fallback.overview };
 
@@ -322,7 +324,7 @@ function parseAIJsonBriefing(raw: string, items: RadarNewsItem[]): RadarNewsBrie
 
     return {
       generatedAt: new Date().toISOString(),
-      model: GEMINI_MODEL,
+      model,
       overview: typeof parsed.overview === "string" ? parsed.overview.slice(0, 700) : fallback.overview,
       keyIssues: keyIssues.length ? keyIssues : fallback.keyIssues,
       marketImpact: asStringList(parsed.marketImpact, 3).length ? asStringList(parsed.marketImpact, 3) : fallback.marketImpact,
@@ -335,8 +337,61 @@ function parseAIJsonBriefing(raw: string, items: RadarNewsItem[]): RadarNewsBrie
 }
 
 async function generateNewsBriefing(items: RadarNewsItem[]) {
+  const groqBriefing = await generateGroqNewsBriefing(items);
+  if (groqBriefing) return groqBriefing;
+
+  const geminiBriefing = await generateGeminiNewsBriefing(items);
+  if (geminiBriefing) return geminiBriefing;
+
+  return fallbackNewsBriefing(items);
+}
+
+async function generateGroqNewsBriefing(items: RadarNewsItem[]) {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return null;
+
+  const model = process.env.GROQ_MODEL || GROQ_DEFAULT_MODEL;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const response = await fetch(GROQ_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model,
+        messages: [
+          {
+            role: "user",
+            content: buildNewsBriefingPrompt(items)
+          }
+        ],
+        temperature: 0.2,
+        max_tokens: 1800
+      })
+    });
+
+    if (!response.ok) {
+      console.warn(`Groq news briefing failed: ${response.status} ${response.statusText}`);
+      return null;
+    }
+    const payload = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const text = payload.choices?.[0]?.message?.content?.trim() ?? "";
+    if (!text) return null;
+    return parseAIJsonBriefing(text, items, model);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function generateGeminiNewsBriefing(items: RadarNewsItem[]) {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return fallbackNewsBriefing(items);
+  if (!apiKey) return null;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 18_000);
@@ -361,12 +416,13 @@ async function generateNewsBriefing(items: RadarNewsItem[]) {
       })
     });
 
-    if (!response.ok) return fallbackNewsBriefing(items);
+    if (!response.ok) return null;
     const payload = (await response.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
     const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim() ?? "";
-    return parseAIJsonBriefing(text, items);
+    if (!text) return null;
+    return parseAIJsonBriefing(text, items, GEMINI_MODEL);
   } catch {
-    return fallbackNewsBriefing(items);
+    return null;
   } finally {
     clearTimeout(timer);
   }
