@@ -54,6 +54,19 @@ function rankSetups(setups: ScoutSetup[]) {
   });
 }
 
+function uniqueSetupsBySymbol(setups: ScoutSetup[]) {
+  const picked: ScoutSetup[] = [];
+  const usedSymbols = new Set<string>();
+
+  for (const setup of rankSetups(setups)) {
+    if (usedSymbols.has(setup.symbol)) continue;
+    picked.push(setup);
+    usedSymbols.add(setup.symbol);
+  }
+
+  return picked;
+}
+
 function marketTone(board: MarketBoardItem[]) {
   const up = board.filter((item) => item.changePercent > 0).length;
   const down = board.filter((item) => item.changePercent < 0).length;
@@ -133,7 +146,7 @@ export function RadarDigestPanel() {
 
   const digest = useMemo(() => {
     if (state.status !== "ready") return null;
-    const ranked = rankSetups(state.setups);
+    const ranked = uniqueSetupsBySymbol(state.setups);
     const tone = marketTone(state.board);
     const volumeLeader = [...state.board].sort((a, b) => b.quoteVolume - a.quoteVolume)[0] ?? null;
     const gainer = [...state.board].sort((a, b) => b.changePercent - a.changePercent)[0] ?? null;

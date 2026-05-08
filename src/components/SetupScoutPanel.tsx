@@ -594,6 +594,20 @@ function rankScoutSetups(setups: ScoutSetup[]) {
   });
 }
 
+function uniqueTopSetupsBySymbol(setups: ScoutSetup[], limit: number) {
+  const picked: ScoutSetup[] = [];
+  const usedSymbols = new Set<string>();
+
+  for (const setup of rankScoutSetups(setups)) {
+    if (usedSymbols.has(setup.symbol)) continue;
+    picked.push(setup);
+    usedSymbols.add(setup.symbol);
+    if (picked.length >= limit) break;
+  }
+
+  return picked;
+}
+
 export function SetupScoutPanel() {
   const [state, setState] = useState<ScanState>({ status: "idle" });
   const [riskProfile, setRiskProfile] = useState<ScoutRiskProfile>("radar");
@@ -654,7 +668,7 @@ export function SetupScoutPanel() {
 
   const visibleLimit = riskProfile === "radar" ? 6 : 3;
   const rankedSetups = state.status === "ready" ? rankScoutSetups(state.setups) : [];
-  const visibleSetups = rankedSetups.slice(0, visibleLimit);
+  const visibleSetups = state.status === "ready" ? uniqueTopSetupsBySymbol(state.setups, visibleLimit) : [];
 
   return (
     <section className="rounded-lg border border-accent-blue/25 bg-surface-card p-4 shadow-glow sm:p-5">

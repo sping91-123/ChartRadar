@@ -50,6 +50,20 @@ function rankSetups(setups: ScoutSetup[]) {
   });
 }
 
+function uniqueTopSetupsBySymbol(setups: ScoutSetup[], limit: number) {
+  const picked: ScoutSetup[] = [];
+  const usedSymbols = new Set<string>();
+
+  for (const setup of rankSetups(setups)) {
+    if (usedSymbols.has(setup.symbol)) continue;
+    picked.push(setup);
+    usedSymbols.add(setup.symbol);
+    if (picked.length >= limit) break;
+  }
+
+  return picked;
+}
+
 function sideClasses(side: ScoutSetup["plan"]["side"]) {
   return side === "long"
     ? "border-signal-success/30 bg-signal-success/10 text-signal-success"
@@ -155,7 +169,7 @@ export function RadarCommandCenter() {
   }, [loadRadar]);
 
   const rankedSetups = useMemo(() => (state.status === "ready" ? rankSetups(state.setups) : []), [state]);
-  const topSetups = rankedSetups.slice(0, 3);
+  const topSetups = useMemo(() => (state.status === "ready" ? uniqueTopSetupsBySymbol(state.setups, 3) : []), [state]);
   const strongCount = rankedSetups.filter((setup) => setup.status === "entry" || setup.status === "active").length;
   const watchCount = rankedSetups.filter((setup) => setup.status === "watch").length;
   const longCount = rankedSetups.filter((setup) => setup.plan.side === "long").length;
