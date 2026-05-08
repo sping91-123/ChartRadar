@@ -22,6 +22,22 @@ export type RadarNewsItem = RadarNewsSignal & {
   publishedAt: string;
 };
 
+export type RadarNewsBriefingIssue = {
+  title: string;
+  detail: string;
+  tone: RadarNewsDirection;
+};
+
+export type RadarNewsBriefing = {
+  generatedAt: string;
+  model: string;
+  overview: string;
+  keyIssues: RadarNewsBriefingIssue[];
+  marketImpact: string[];
+  strategyNotes: string[];
+  finalSummary: string;
+};
+
 type KeywordRule = {
   keywords: string[];
   score: number;

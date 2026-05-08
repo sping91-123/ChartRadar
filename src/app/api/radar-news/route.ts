@@ -1,7 +1,7 @@
 // 공개 RSS 뉴스 제목을 수집해 레이더뉴스 카드 데이터로 변환하는 API.
 import { NextResponse } from "next/server";
 import { XMLParser } from "fast-xml-parser";
-import { createRadarNewsItem, type RadarNewsItem } from "@/lib/radarNews";
+import { createRadarNewsItem, type RadarNewsBriefing, type RadarNewsDirection, type RadarNewsItem } from "@/lib/radarNews";
 import { rateLimit } from "@/lib/server/rateLimit";
 
 export const runtime = "nodejs";
@@ -18,11 +18,14 @@ const FEEDS = [
 ] as const;
 
 const CACHE_MS = 5 * 60 * 1000;
+const GEMINI_MODEL = "gemini-3-flash-preview";
+const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 let cache:
   | {
       updatedAt: number;
       items: RadarNewsItem[];
+      briefing: RadarNewsBriefing;
       failedSources: string[];
     }
   | null = null;
@@ -148,7 +151,7 @@ async function loadFeed(feed: (typeof FEEDS)[number]) {
   const atomItems = asArray(parsed?.feed?.entry);
   const entries = rssItems.length ? rssItems : atomItems;
 
-  const pickedEntries = entries.slice(0, 12);
+  const pickedEntries = entries.slice(0, 6);
   const items = await Promise.all(
     pickedEntries.map(async (entry) => {
       const title = pickText(entry?.title);
@@ -174,6 +177,199 @@ async function loadFeed(feed: (typeof FEEDS)[number]) {
   );
 
   return items.filter((item): item is RadarNewsItem => Boolean(item));
+}
+
+function itemTitle(item: RadarNewsItem) {
+  return item.translatedTitle ?? item.title;
+}
+
+function toneLabel(tone: RadarNewsDirection) {
+  if (tone === "bullish") return "상방 우호";
+  if (tone === "bearish") return "하방 주의";
+  return "중립 확인";
+}
+
+function mostCommonAssets(items: RadarNewsItem[]) {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    for (const asset of item.assets) {
+      counts.set(asset, (counts.get(asset) ?? 0) + 1);
+    }
+  }
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([asset]) => asset);
+}
+
+function fallbackNewsBriefing(items: RadarNewsItem[], model = "rules"): RadarNewsBriefing {
+  const bullish = items.filter((item) => item.direction === "bullish").length;
+  const bearish = items.filter((item) => item.direction === "bearish").length;
+  const neutral = Math.max(0, items.length - bullish - bearish);
+  const urgent = items.filter((item) => item.urgency === "high").length;
+  const assets = mostCommonAssets(items);
+  const leadingTone: RadarNewsDirection = bullish > bearish ? "bullish" : bearish > bullish ? "bearish" : "neutral";
+  const topItems = [...items]
+    .sort((a, b) => {
+      const urgencyDiff = (b.urgency === "high" ? 2 : b.urgency === "medium" ? 1 : 0) - (a.urgency === "high" ? 2 : a.urgency === "medium" ? 1 : 0);
+      if (urgencyDiff !== 0) return urgencyDiff;
+      return Math.abs(b.score - 50) - Math.abs(a.score - 50);
+    })
+    .slice(0, 4);
+
+  const overview =
+    items.length === 0
+      ? "현재 불러온 뉴스가 부족합니다. 차트 흐름과 주요 거래소 공지를 먼저 확인하는 편이 좋습니다."
+      : `현재 수집된 코인 뉴스는 상방 우호 ${bullish}개, 하방 주의 ${bearish}개, 중립 확인 ${neutral}개로 정리됩니다. ${assets.length ? `${assets.join(", ")} 관련 이슈가 가장 많이 잡히고 있으며, ` : ""}${urgent ? `즉시 확인할 만한 이슈가 ${urgent}개 있습니다.` : "아직은 단일 방향으로 강하게 쏠린 뉴스는 제한적입니다."}`;
+
+  return {
+    generatedAt: new Date().toISOString(),
+    model,
+    overview,
+    keyIssues: topItems.map((item) => ({
+      title: itemTitle(item),
+      detail: `${item.source} 기준 ${toneLabel(item.direction)} 이슈입니다. ${item.summary}`,
+      tone: item.direction
+    })),
+    marketImpact: [
+      leadingTone === "bullish"
+        ? "긍정 뉴스가 더 많아 단기 심리는 우호적으로 해석될 수 있습니다. 다만 이미 오른 자리라면 추격보다 눌림과 지지 확인이 중요합니다."
+        : leadingTone === "bearish"
+          ? "주의 뉴스가 더 많아 변동성 확대와 지지 이탈 가능성을 먼저 봐야 합니다. 반등이 나와도 거래량과 되돌림 강도를 같이 확인해야 합니다."
+          : "뉴스 방향성이 엇갈려 차트 구조 확인이 더 중요합니다. 가격이 박스 상단과 하단 중 어디를 먼저 돌파하는지 확인하는 편이 안전합니다.",
+      "뉴스만으로 진입 방향을 확정하기보다 BTC와 ETH의 반응, 도미넌스 변화, 거래량 증가 여부를 함께 확인하는 것이 좋습니다.",
+      "알트코인은 같은 뉴스에도 과하게 반응할 수 있으므로 손절 기준과 포지션 크기를 먼저 줄여서 보는 것이 좋습니다."
+    ],
+    strategyNotes: [
+      "강한 호재가 나와도 이미 장대 양봉 이후라면 추격 진입보다 되돌림 지지 확인을 우선하세요.",
+      "악재성 뉴스가 많을 때는 숏만 보겠다는 뜻이 아니라, 롱 진입 조건을 더 엄격하게 보겠다는 의미로 쓰는 편이 좋습니다.",
+      "뉴스 브리핑은 매수·매도 신호가 아니라 오늘 차트에서 무엇을 더 조심해서 볼지 정하는 체크리스트로 활용하세요."
+    ],
+    finalSummary:
+      leadingTone === "bullish"
+        ? "정리하면, 뉴스 심리는 다소 긍정적이지만 추격 매수보다 구조 확인이 먼저입니다."
+        : leadingTone === "bearish"
+          ? "정리하면, 방어적인 관찰이 필요한 흐름입니다. 지지 이탈과 청산성 변동성을 우선 체크하세요."
+          : "정리하면, 뉴스만으로 방향을 단정하기 어렵습니다. 차트 레이더의 구조 판독과 함께 확인하는 구간입니다."
+  };
+}
+
+function buildNewsBriefingPrompt(items: RadarNewsItem[]) {
+  const headlines = items
+    .slice(0, 10)
+    .map((item, index) => {
+      return `${index + 1}. [${item.source}] ${itemTitle(item)}
+원문: ${item.title}
+방향: ${toneLabel(item.direction)}
+점수: ${item.score}
+태그: ${item.tags.join(", ")}
+요약: ${item.summary}`;
+    })
+    .join("\n\n");
+
+  return `아래 코인 관련 뉴스 제목과 1차 분류를 바탕으로 한국어 시장 브리핑을 작성해 주세요.
+
+출력은 반드시 JSON 하나만 반환하세요. 마크다운 문법은 쓰지 마세요.
+스키마는 다음과 같습니다.
+{
+  "overview": "오늘 시장을 한 문단으로 요약",
+  "keyIssues": [
+    { "title": "주요 이슈 제목", "detail": "왜 중요한지와 확인할 점", "tone": "bullish|bearish|neutral" }
+  ],
+  "marketImpact": ["시장에 미칠 수 있는 영향 3개"],
+  "strategyNotes": ["투자 판단 시 참고할 점 3개"],
+  "finalSummary": "마지막 한 줄 정리"
+}
+
+규칙.
+- 모든 문장은 한국어로 작성하세요.
+- 직접적인 매수·매도 신호, 수익 보장, 특정 진입 지시는 금지입니다.
+- 대신 오늘 시장에서 조심할 점, 확인할 조건, 리스크 관리 관점으로 정리하세요.
+- keyIssues는 3개에서 5개 사이로 작성하세요.
+- marketImpact와 strategyNotes는 각각 3개로 작성하세요.
+
+뉴스 재료.
+${headlines || "수집된 뉴스가 부족합니다."}`;
+}
+
+function asBriefingIssue(value: unknown): RadarNewsBriefing["keyIssues"][number] | null {
+  if (!value || typeof value !== "object") return null;
+  const item = value as { title?: unknown; detail?: unknown; tone?: unknown };
+  const tone = item.tone === "bullish" || item.tone === "bearish" || item.tone === "neutral" ? item.tone : "neutral";
+  if (typeof item.title !== "string" || typeof item.detail !== "string") return null;
+  return {
+    title: item.title.slice(0, 120),
+    detail: item.detail.slice(0, 360),
+    tone
+  };
+}
+
+function asStringList(value: unknown, limit: number) {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string").slice(0, limit).map((item) => item.slice(0, 260));
+}
+
+function parseAIJsonBriefing(raw: string, items: RadarNewsItem[]): RadarNewsBriefing {
+  const fallback = fallbackNewsBriefing(items, GEMINI_MODEL);
+  const match = raw.match(/\{[\s\S]*\}/);
+  if (!match) return { ...fallback, overview: raw.slice(0, 500) || fallback.overview };
+
+  try {
+    const parsed = JSON.parse(match[0]) as Record<string, unknown>;
+    const keyIssues = Array.isArray(parsed.keyIssues)
+      ? parsed.keyIssues.map(asBriefingIssue).filter((item): item is RadarNewsBriefing["keyIssues"][number] => Boolean(item)).slice(0, 5)
+      : [];
+
+    return {
+      generatedAt: new Date().toISOString(),
+      model: GEMINI_MODEL,
+      overview: typeof parsed.overview === "string" ? parsed.overview.slice(0, 700) : fallback.overview,
+      keyIssues: keyIssues.length ? keyIssues : fallback.keyIssues,
+      marketImpact: asStringList(parsed.marketImpact, 3).length ? asStringList(parsed.marketImpact, 3) : fallback.marketImpact,
+      strategyNotes: asStringList(parsed.strategyNotes, 3).length ? asStringList(parsed.strategyNotes, 3) : fallback.strategyNotes,
+      finalSummary: typeof parsed.finalSummary === "string" ? parsed.finalSummary.slice(0, 360) : fallback.finalSummary
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+async function generateNewsBriefing(items: RadarNewsItem[]) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return fallbackNewsBriefing(items);
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 18_000);
+  try {
+    const response = await fetch(`${GEMINI_ENDPOINT}?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: buildNewsBriefingPrompt(items) }]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.25,
+          topP: 0.85,
+          maxOutputTokens: 2048,
+          candidateCount: 1
+        }
+      })
+    });
+
+    if (!response.ok) return fallbackNewsBriefing(items);
+    const payload = (await response.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+    const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim() ?? "";
+    return parseAIJsonBriefing(text, items);
+  } catch {
+    return fallbackNewsBriefing(items);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export async function GET(request: Request) {
@@ -212,10 +408,12 @@ export async function GET(request: Request) {
   const items = Array.from(deduped.values())
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
     .slice(0, 24);
+  const briefing = await generateNewsBriefing(items);
 
   cache = {
     updatedAt: now,
     items,
+    briefing,
     failedSources
   };
 
