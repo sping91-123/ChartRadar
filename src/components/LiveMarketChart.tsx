@@ -677,12 +677,16 @@ export function LiveMarketChart() {
   const [isUsingCachedData, setIsUsingCachedData] = useState(false);
   const [showAdvancedControls, setShowAdvancedControls] = useState(false);
   const [showDetailedReadout, setShowDetailedReadout] = useState(true);
+  const [showOtherSymbols, setShowOtherSymbols] = useState(false);
   const [pineSnapshotInput, setPineSnapshotInput] = useState("");
   const [savedMessage, setSavedMessage] = useState("");
   const [marketBriefing, setMarketBriefing] = useState<MarketBriefingState>({ status: "idle" });
   const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>(defaultOverlaySettings);
   const effectiveTradingMode: TradingMode = activeTimeframe === "5m" || activeTimeframe === "15m" ? "scalp" : "swing";
   const modeTimeframes = chartTimeframes;
+  const primarySymbols = symbols.slice(0, 2);
+  const otherSymbols = symbols.slice(2);
+  const isOtherSymbolActive = otherSymbols.includes(symbol);
 
   const cacheKey = `${storagePrefix}.marketCache.${symbol}.${activeTimeframe}.${analysisMode}.${msbMode}`;
 
@@ -2944,14 +2948,17 @@ export function LiveMarketChart() {
         </div>
       </div>
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-surface-line bg-slate-950/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-20px_50px_rgba(0,0,0,0.45)] backdrop-blur">
-        <div className="mx-auto max-w-6xl space-y-2 sm:grid sm:grid-cols-[minmax(0,1fr)_260px] sm:items-center sm:gap-2 sm:space-y-0 lg:grid-cols-[minmax(0,1fr)_220px_330px_260px]">
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-            {symbols.map((item) => (
+        <div className="mx-auto max-w-6xl space-y-2 sm:grid sm:grid-cols-[minmax(0,1fr)_260px] sm:items-center sm:gap-2 sm:space-y-0 lg:grid-cols-[230px_220px_330px_110px]">
+          <div className="relative grid grid-cols-3 gap-2">
+            {primarySymbols.map((item) => (
               <button
                 key={item}
                 type="button"
-                onClick={() => setSymbol(item)}
-                className={`min-h-9 min-w-[58px] whitespace-nowrap rounded-md border px-2 text-xs font-black transition ${
+                onClick={() => {
+                  setSymbol(item);
+                  setShowOtherSymbols(false);
+                }}
+                className={`min-h-9 whitespace-nowrap rounded-md border px-2 text-xs font-black transition ${
                   symbol === item
                     ? "border-accent-blue bg-accent-blue text-slate-950"
                     : "border-surface-line bg-surface-cardSoft text-slate-300"
@@ -2960,6 +2967,38 @@ export function LiveMarketChart() {
                 {symbolLabel(item)}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => setShowOtherSymbols((value) => !value)}
+              className={`min-h-9 whitespace-nowrap rounded-md border px-2 text-xs font-black transition ${
+                isOtherSymbolActive || showOtherSymbols
+                  ? "border-accent-blue bg-accent-blue text-slate-950"
+                  : "border-surface-line bg-surface-cardSoft text-slate-300"
+              }`}
+            >
+              {isOtherSymbolActive ? symbolLabel(symbol) : "그 외"}
+            </button>
+            {showOtherSymbols ? (
+              <div className="absolute bottom-full left-0 z-50 mb-2 grid w-[min(92vw,360px)] grid-cols-4 gap-2 rounded-lg border border-surface-line bg-slate-950 p-2 shadow-[0_-18px_50px_rgba(0,0,0,0.55)]">
+                {otherSymbols.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => {
+                      setSymbol(item);
+                      setShowOtherSymbols(false);
+                    }}
+                    className={`min-h-9 rounded-md border px-2 text-xs font-black transition ${
+                      symbol === item
+                        ? "border-accent-blue bg-accent-blue text-slate-950"
+                        : "border-surface-line bg-surface-cardSoft text-slate-300 hover:border-accent-blue/60"
+                    }`}
+                  >
+                    {symbolLabel(item)}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <div className="grid grid-cols-3 gap-2 rounded-lg border border-surface-line bg-black/20 p-1">
@@ -3006,7 +3045,7 @@ export function LiveMarketChart() {
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 gap-2">
             <button
               type="button"
               onClick={loadMarketBriefing}
@@ -3014,23 +3053,6 @@ export function LiveMarketChart() {
               className="inline-flex min-h-10 items-center justify-center rounded-md bg-accent-blue px-3 text-xs font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
             >
               분석
-            </button>
-            <button
-              type="button"
-              onClick={() => document.getElementById("ai-briefing")?.scrollIntoView({ behavior: "smooth" })}
-              className="inline-flex min-h-10 items-center justify-center rounded-md border border-surface-line bg-surface-cardSoft px-3 text-xs font-black text-slate-200"
-            >
-              요약
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const targetId = radarProfile === "technical" ? "technical-radar" : radarProfile === "ict" ? "ict-radar" : "radar-dashboard";
-                document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth" });
-              }}
-              className="inline-flex min-h-10 items-center justify-center rounded-md border border-surface-line bg-surface-cardSoft px-3 text-xs font-black text-slate-200"
-            >
-              근거
             </button>
           </div>
         </div>
