@@ -188,3 +188,35 @@ button {
     transform: translateX(260%);
   }
 }
+
+@keyframes macro-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.macro-marquee {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  mask-image: linear-gradient(90deg, transparent, black 7%, black 93%, transparent);
+}
+
+.macro-marquee-track {
+  display: inline-block;
+  min-width: max-content;
+  animation: macro-marquee 34s linear infinite;
+}
+
+.macro-marquee:hover .macro-marquee-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .macro-marquee-track {
+    animation: none;
+  }
+}

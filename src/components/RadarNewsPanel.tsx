@@ -167,6 +167,15 @@ export function RadarNewsPanel() {
   }, [payload]);
 
   const briefing = payload?.briefing;
+  const leadingTone =
+    digest.bullish > digest.bearish ? "상방 우호" : digest.bearish > digest.bullish ? "하방 주의" : "중립 확인";
+  const leadingToneClass =
+    digest.bullish > digest.bearish
+      ? "text-signal-success"
+      : digest.bearish > digest.bullish
+        ? "text-signal-danger"
+        : "text-signal-warning";
+  const topIssue = briefing?.keyIssues[0];
 
   return (
     <section className="space-y-5">
@@ -213,6 +222,21 @@ export function RadarNewsPanel() {
             <p className="text-xs font-bold text-slate-400">중요 이슈</p>
           </div>
         </div>
+
+        {briefing ? (
+          <div className="mt-4 grid gap-2 lg:grid-cols-3">
+            <div className="rounded-md border border-white/10 bg-black/25 p-3">
+              <p className="text-[11px] font-bold text-slate-500">뉴스 톤</p>
+              <p className={`mt-1 text-lg font-black ${leadingToneClass}`}>{leadingTone}</p>
+            </div>
+            <div className="rounded-md border border-white/10 bg-black/25 p-3 lg:col-span-2">
+              <p className="text-[11px] font-bold text-slate-500">먼저 볼 이슈</p>
+              <p className="mt-1 line-clamp-2 text-sm font-black leading-5 text-white [word-break:keep-all]">
+                {topIssue?.title ?? "뉴스를 불러오면 핵심 이슈를 먼저 정리합니다."}
+              </p>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {status === "loading" && !briefing ? (
