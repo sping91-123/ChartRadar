@@ -32,6 +32,9 @@ type DailyBriefState =
   | { status: "error"; message: string };
 
 const scanModes: TradingMode[] = ["scalp", "swing"];
+const majorSymbols = new Set(["BTCUSDT.P", "ETHUSDT.P"]);
+
+type BriefScope = "all" | "major" | "alts";
 
 function compactSymbol(symbol: string) {
   return symbol.replace("USDT.P", "").replace("USDT", "");
@@ -96,24 +99,39 @@ function uniqueTopSetups(setups: ScoutSetup[], limit: number) {
   return picked;
 }
 
-function getMarketTone(board: MarketBoardItem[]) {
+function isInScope(symbol: string, scope: BriefScope) {
+  if (scope === "all") return true;
+  const normalized = symbol.endsWith(".P") ? symbol : `${symbol}.P`;
+  const isMajor = majorSymbols.has(normalized);
+  return scope === "major" ? isMajor : !isMajor;
+}
+
+function scopeLabel(scope: BriefScope) {
+  if (scope === "major") return "BTC와 ETH";
+  if (scope === "alts") return "알트코인";
+  return "주요 코인";
+}
+
+function getMarketTone(board: MarketBoardItem[], scope: BriefScope) {
   const up = board.filter((item) => item.changePercent > 0).length;
   const down = board.filter((item) => item.changePercent < 0).length;
+  const threshold = board.length <= 3 ? 1 : 3;
+  const label = scopeLabel(scope);
 
-  if (up >= down + 3) {
+  if (up >= down + threshold) {
     return {
       label: "상승 우세",
-      description: `주요 코인 ${up}개가 상승, ${down}개가 하락 중입니다.`,
+      description: `${label} 중 ${up}개가 상승, ${down}개가 하락 중입니다.`,
       tone: "long" as const,
       up,
       down
     };
   }
 
-  if (down >= up + 3) {
+  if (down >= up + threshold) {
     return {
       label: "하락 우세",
-      description: `주요 코인 ${down}개가 하락, ${up}개가 상승 중입니다.`,
+      description: `${label} 중 ${down}개가 하락, ${up}개가 상승 중입니다.`,
       tone: "short" as const,
       up,
       down
@@ -152,21 +170,31 @@ function setupStateLabel(setup: ScoutSetup) {
   return "관찰";
 }
 
-function getMainSentence(board: MarketBoardItem[], setups: ScoutSetup[]) {
-  const tone = getMarketTone(board);
+function getMainSentence(board: MarketBoardItem[], setups: ScoutSetup[], scope: BriefScope) {
+  const tone = getMarketTone(board, scope);
   const top = uniqueTopSetups(setups, 1)[0] ?? null;
   const readyCount = setups.filter((setup) => setup.proximity === "ready" || setup.proximity === "near").length;
 
   if (!top) {
-    return `${tone.label} 흐름이지만 구조 감지는 아직 강하지 않습니다. 지금은 BTC와 ETH의 상위 타임프레임을 먼저 확인하고, 알트는 거래대금 상위 위주로만 좁혀보는 편이 좋습니다.`;
+    if (scope === "major") {
+      return `${tone.label} 흐름이지만 BTC와 ETH의 구조 감지는 아직 강하지 않습니다. 지금은 1h와 4h 방향을 먼저 확인하고, 알트는 별도 레이더에서만 좁혀보는 편이 좋습니다.`;
+    }
+    return `${tone.label} 흐름이지만 구조 감지는 아직 강하지 않습니다. 지금은 거래대금 상위와 뉴스 이슈가 겹치는 코인 위주로만 좁혀보는 편이 좋습니다.`;
+  }
+
+  if (scope === "major") {
+    return `${tone.label} 흐름 속에서 ${compactSymbol(top.symbol)} ${top.timeframe}가 먼저 볼 레이더 감지로 올라왔습니다. BTC와 ETH는 시장 기준선 역할이 크기 때문에, 이 화면에서는 알트보다 큰 방향과 위험 구간을 먼저 정리합니다.`;
   }
 
   return `${tone.label} 흐름 속에서 ${compactSymbol(top.symbol)} ${top.timeframe}가 가장 먼저 볼 레이더 감지로 올라왔습니다. 감지 코인이 ${readyCount}개라서 무작정 넓게 보기보다 TOP 감지와 뉴스 이슈를 함께 확인하는 흐름이 좋습니다.`;
 }
 
-function getNextAction(setups: ScoutSetup[]) {
+function getNextAction(setups: ScoutSetup[], scope: BriefScope) {
   const top = uniqueTopSetups(setups, 1)[0] ?? null;
   if (!top) {
+    if (scope === "major") {
+      return "BTC와 ETH의 1h, 4h 방향부터 확인하고 알트는 아직 넓게 보지 마세요.";
+    }
     return "오늘은 억지로 후보를 찾기보다 BTC, ETH, 레이더뉴스 순서로 시장 방향만 정리해보세요.";
   }
 
@@ -206,7 +234,7 @@ function MiniSetupCard({ setup }: { setup: ScoutSetup }) {
   );
 }
 
-export function DailyRadarBrief() {
+export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
   const [state, setState] = useState<DailyBriefState>({ status: "loading" });
 
   const loadBrief = useCallback(async () => {
@@ -243,8 +271,8 @@ export function DailyRadarBrief() {
 
       setState({
         status: "ready",
-        board: boardPayload.items,
-        setups: scanPayloads.flatMap((payload) => payload.setups ?? []),
+        board: boardPayload.items.filter((item) => isInScope(item.symbol, scope)),
+        setups: scanPayloads.flatMap((payload) => payload.setups ?? []).filter((setup) => isInScope(setup.symbol, scope)),
         cachedAt: Math.max(boardPayload.cachedAt ?? Date.now(), ...scanPayloads.map((payload) => payload.cachedAt ?? Date.now()))
       });
     } catch (error) {
@@ -253,7 +281,7 @@ export function DailyRadarBrief() {
         message: error instanceof Error ? error.message : "오늘의 레이더를 불러오지 못했습니다."
       });
     }
-  }, []);
+  }, [scope]);
 
   useEffect(() => {
     void loadBrief();
@@ -263,7 +291,7 @@ export function DailyRadarBrief() {
     if (state.status !== "ready") return null;
 
     const topSetups = uniqueTopSetups(state.setups, 3);
-    const tone = getMarketTone(state.board);
+    const tone = getMarketTone(state.board, scope);
     const volumeLeader = [...state.board].sort((a, b) => b.quoteVolume - a.quoteVolume)[0] ?? null;
     const strongestMove = [...state.board].sort((a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent))[0] ?? null;
     const strongCount = state.setups.filter((setup) => setup.status === "entry" || setup.status === "active").length;
@@ -276,10 +304,10 @@ export function DailyRadarBrief() {
       strongestMove,
       strongCount,
       watchCount,
-      sentence: getMainSentence(state.board, state.setups),
-      nextAction: getNextAction(state.setups)
+      sentence: getMainSentence(state.board, state.setups, scope),
+      nextAction: getNextAction(state.setups, scope)
     };
-  }, [state]);
+  }, [scope, state]);
 
   return (
     <section className="overflow-hidden rounded-lg border border-accent-blue/25 bg-surface-card shadow-glow">
@@ -291,7 +319,7 @@ export function DailyRadarBrief() {
               <p className="text-xs font-black uppercase tracking-widest text-accent-blue">Daily Radar</p>
               <h2 className="mt-1 text-2xl font-black text-white">오늘 먼저 볼 시장</h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300 [word-break:keep-all]">
-                {summary?.sentence ?? "BTC, ETH, 주요 알트, 뉴스 흐름을 한 번에 훑어서 오늘 먼저 확인할 순서를 정리하고 있습니다."}
+                {summary?.sentence ?? (scope === "major" ? "BTC와 ETH 흐름을 먼저 훑어서 오늘 시장의 기준선을 정리하고 있습니다." : "주요 코인과 뉴스 흐름을 한 번에 훑어서 오늘 먼저 확인할 순서를 정리하고 있습니다.")}
               </p>
             </div>
           </div>

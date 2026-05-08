@@ -505,14 +505,33 @@ function SetupCard({
   );
 }
 
-function EmptyState() {
+function EmptyState({
+  excludeMajor,
+  riskProfile,
+  onUseRadar
+}: {
+  excludeMajor: boolean;
+  riskProfile: ScoutRiskProfile;
+  onUseRadar: () => void;
+}) {
+  const marketLabel = excludeMajor ? "알트코인" : "코인";
+
   return (
     <div className="rounded-lg border border-signal-warning/25 bg-signal-warning/10 p-5">
-      <p className="text-sm font-black text-signal-warning">현재 강하게 감지된 코인이 없습니다.</p>
+      <p className="text-sm font-black text-signal-warning">현재 강하게 감지된 {marketLabel}이 없습니다.</p>
       <p className="mt-2 text-xs leading-5 text-slate-300">
         이 상태는 오류가 아니라 “매매하지 않을 근거”입니다. 구조가 애매하거나 관찰 구간에서 너무 멀어진 상태라
         무리해서 찾기보다 다음 레이더 판독을 기다리는 편이 낫습니다.
       </p>
+      {riskProfile === "guard" ? (
+        <button
+          type="button"
+          onClick={onUseRadar}
+          className="mt-4 inline-flex min-h-10 items-center justify-center rounded-md border border-signal-danger/30 bg-signal-danger/15 px-3 text-xs font-black text-signal-danger transition hover:bg-signal-danger hover:text-white"
+        >
+          공격적 분석으로 더 넓게 보기
+        </button>
+      ) : null}
       <div className="mt-3 grid gap-2 text-left text-[11px] leading-5 text-slate-400 sm:grid-cols-3">
         <span className="rounded-md border border-surface-line bg-black/20 px-3 py-2">1. 킬존/세션 재진입 대기</span>
         <span className="rounded-md border border-surface-line bg-black/20 px-3 py-2">2. MSB·CHoCH 재정렬 대기</span>
@@ -619,9 +638,9 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
   const [riskProfile, setRiskProfile] = useState<ScoutRiskProfile>("radar");
   const [hasLoadedPreferences, setHasLoadedPreferences] = useState(false);
   useEffect(() => {
-    setRiskProfile(readStoredScoutRiskProfile());
+    setRiskProfile(excludeMajor ? "radar" : readStoredScoutRiskProfile());
     setHasLoadedPreferences(true);
-  }, []);
+  }, [excludeMajor]);
 
   const runScan = useCallback(async (force = false) => {
     window.localStorage.setItem(scoutRiskProfileStorageKey, riskProfile);
@@ -758,7 +777,14 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
           </div>
         ) : state.status === "ready" ? (
           visibleSetups.length === 0 ? (
-            <EmptyState />
+            <EmptyState
+              excludeMajor={excludeMajor}
+              riskProfile={riskProfile}
+              onUseRadar={() => {
+                setRiskProfile("radar");
+                setState({ status: "idle" });
+              }}
+            />
           ) : (
             <>
               <ScanSummary setups={rankedSetups} riskProfile={riskProfile} />

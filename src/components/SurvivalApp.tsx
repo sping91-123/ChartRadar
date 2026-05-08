@@ -10,7 +10,7 @@ export function SurvivalApp() {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
         <Header />
         <RadarTopNav />
-        <DailyRadarBrief />
+        <DailyRadarBrief scope="major" />
         <LiveMarketChart majorOnly />
         <AppFooter />
       </div>

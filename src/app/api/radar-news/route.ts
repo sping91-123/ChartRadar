@@ -80,6 +80,25 @@ function hasKorean(value: string) {
   return /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(value);
 }
 
+function knownCryptoTitle(title: string) {
+  const normalized = title.toLowerCase();
+
+  if (normalized.includes("kraken parent") && normalized.includes("occ charter")) {
+    return "크라켄 모회사, 연방 암호화 은행 인가 신청";
+  }
+  if (normalized.includes("coinbase bulls") && normalized.includes("stablecoin")) {
+    return "코인베이스 강세론자들, 실적 부진 뒤 암호화폐 법안과 스테이블코인에 주목";
+  }
+  if (normalized.includes("kelp dao exploit")) {
+    return "Kelp DAO 해킹 이슈, DeFi 오라클 리스크 재점검 촉발";
+  }
+  if (normalized.includes("mstr stock") && normalized.includes("rally")) {
+    return "스트래티지 MSTR 주가, 1분기 손실에도 랠리 가능성 부각";
+  }
+
+  return null;
+}
+
 function localTranslateTitle(title: string) {
   return title
     .replace(/\bBitcoin\b/gi, "비트코인")
@@ -102,8 +121,27 @@ function localTranslateTitle(title: string) {
     .trim();
 }
 
+function polishKoreanTitle(title: string) {
+  return title
+    .replace(/크라켄 부모/g, "크라켄 모회사")
+    .replace(/부모는/g, "모회사는")
+    .replace(/OCC 헌장/g, "OCC 인가")
+    .replace(/헌장을 신청/g, "인가를 신청")
+    .replace(/코인베이스 불은/g, "코인베이스 강세론자들은")
+    .replace(/전략의 MSTR 재고/g, "스트래티지 MSTR 주가")
+    .replace(/\b재고\b/g, "주가")
+    .replace(/오라클 제공자/g, "오라클 제공업체")
+    .replace(/익스플로잇/g, "해킹 이슈")
+    .replace(/\s+%/g, "%")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 async function translateTitleToKorean(title: string) {
   if (hasKorean(title)) return title;
+  const known = knownCryptoTitle(title);
+  if (known) return known;
+
   const cached = translationCache.get(title);
   if (cached) return cached;
 
@@ -120,7 +158,7 @@ async function translateTitleToKorean(title: string) {
 
     if (response.ok) {
       const payload = (await response.json()) as { responseData?: { translatedText?: string } };
-      const translated = payload.responseData?.translatedText?.replace(/\s+/g, " ").trim();
+      const translated = polishKoreanTitle(payload.responseData?.translatedText?.replace(/\s+/g, " ").trim() ?? "");
       if (translated && translated.toLowerCase() !== title.toLowerCase()) {
         translationCache.set(title, translated);
         return translated;
@@ -130,7 +168,7 @@ async function translateTitleToKorean(title: string) {
     // 무료 번역 API가 지연되면 아래의 로컬 용어 치환으로 대체한다.
   }
 
-  const fallback = localTranslateTitle(title);
+  const fallback = polishKoreanTitle(localTranslateTitle(title));
   translationCache.set(title, fallback);
   return fallback;
 }
