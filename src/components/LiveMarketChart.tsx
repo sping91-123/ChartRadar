@@ -47,7 +47,7 @@ import { appendJournalEntry } from "@/lib/journal";
 import type { MarketBriefingInput } from "@/lib/ai/types";
 import { normalizePineDirection, parsePineSnapshot, pineDirectionForTimeframe, type PineSnapshot } from "@/lib/pineParity";
 import { createRemoteJournalEntry } from "@/lib/remoteJournal";
-import { getSupabaseSession } from "@/lib/supabase";
+import { getActiveSupabaseSession } from "@/lib/supabase";
 import { TechnicalRadarPanel } from "@/components/TechnicalRadarPanel";
 
 const symbols = [
@@ -1615,7 +1615,7 @@ export function LiveMarketChart() {
       verdict: analysis.verdict
     } as const;
 
-    const session = getSupabaseSession();
+    const session = await getActiveSupabaseSession();
     if (session) {
       try {
         await createRemoteJournalEntry(session.accessToken, payload);

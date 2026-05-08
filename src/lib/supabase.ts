@@ -98,6 +98,18 @@ export function getSupabaseSession(): SupabaseSession | null {
   }
 }
 
+export async function getActiveSupabaseSession(): Promise<SupabaseSession | null> {
+  const session = getSupabaseSession();
+  if (!session) return null;
+
+  const now = Math.floor(Date.now() / 1000);
+  if (session.expiresAt && session.expiresAt <= now) {
+    return refreshSupabaseSession(session);
+  }
+
+  return session;
+}
+
 export function clearSupabaseSession() {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(supabaseSessionStorageKey);

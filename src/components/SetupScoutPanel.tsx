@@ -15,7 +15,7 @@ import {
 import { readScoutCache, writeScoutCache, type ScoutRiskProfile, type ScoutSetup } from "@/lib/setupScout";
 import { appendJournalEntry, type ScoutSnapshot } from "@/lib/journal";
 import { createRemoteJournalEntry } from "@/lib/remoteJournal";
-import { getSupabaseSession } from "@/lib/supabase";
+import { getActiveSupabaseSession } from "@/lib/supabase";
 import type { CommentaryInput } from "@/lib/ai/types";
 import type { TradingMode } from "@/lib/marketAnalysis";
 
@@ -384,7 +384,7 @@ function SetupCard({
       scoutSnapshot: snapshot
     };
 
-    const session = getSupabaseSession();
+    const session = await getActiveSupabaseSession();
     try {
       if (session) {
         await createRemoteJournalEntry(session.accessToken, payload);
@@ -394,8 +394,14 @@ function SetupCard({
       setSaveState("saved");
       window.setTimeout(() => setSaveState("idle"), 1800);
     } catch {
-      setSaveState("error");
-      window.setTimeout(() => setSaveState("idle"), 2200);
+      try {
+        appendJournalEntry(payload);
+        setSaveState("saved");
+        window.setTimeout(() => setSaveState("idle"), 1800);
+      } catch {
+        setSaveState("error");
+        window.setTimeout(() => setSaveState("idle"), 2200);
+      }
     }
   }
 

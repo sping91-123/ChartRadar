@@ -105,11 +105,13 @@ function AddCoinModal({
   watchlist,
   plan,
   onAdd,
+  onRemove,
   onClose
 }: {
   watchlist: string[];
   plan: WatchlistPlan;
   onAdd: (symbol: string) => void;
+  onRemove: (symbol: string) => void;
   onClose: () => void;
 }) {
   const limit = WATCHLIST_LIMIT[plan];
@@ -155,7 +157,10 @@ function AddCoinModal({
                 type="button"
                 disabled={isFull}
                 onClick={() => {
-                  if (isAdded) return; // 이미 추가된 항목은 여기서 제거 안 함
+                  if (isAdded) {
+                    onRemove(symbol);
+                    return;
+                  }
                   onAdd(symbol);
                 }}
                 className={`flex items-center justify-between rounded-lg border px-3 py-2.5 text-xs font-bold transition
@@ -260,6 +265,7 @@ export function WatchlistPanel() {
           watchlist={watchlist}
           plan={plan}
           onAdd={handleAdd}
+          onRemove={handleRemove}
           onClose={() => setShowModal(false)}
         />
       )}
