@@ -1,9 +1,12 @@
 // 차트 레이더의 코인과 해외주식 진입 경로를 분리해서 보여준다.
 import Link from "next/link";
-import { BarChart3, Coins, Newspaper, Radar, TrendingUp } from "lucide-react";
+import { BarChart3, BellRing, Coins, Radar, TrendingUp } from "lucide-react";
 import { AppFooter } from "@/components/AppFooter";
+import { DailyRadarBrief } from "@/components/DailyRadarBrief";
 import { Header } from "@/components/Header";
+import { MacroTicker } from "@/components/MacroTicker";
 import { RadarTopNav } from "@/components/RadarTopNav";
+import { UsageMeterPanel } from "@/components/UsageMeterPanel";
 
 const entryCards = [
   {
@@ -30,6 +33,9 @@ export default function Home() {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
         <Header />
         <RadarTopNav />
+        <MacroTicker />
+        <DailyRadarBrief />
+        <UsageMeterPanel compact />
 
         <section className="rounded-lg border border-accent-blue/25 bg-surface-card p-5 shadow-glow sm:p-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -41,11 +47,11 @@ export default function Home() {
               </p>
             </div>
             <Link
-              href="/news"
+              href="/alerts"
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-surface-line bg-surface-cardSoft px-4 text-sm font-black text-slate-200 transition hover:border-accent-blue/60 hover:text-white"
             >
-              <Newspaper size={16} aria-hidden />
-              오늘 시장 이슈 보기
+              <BellRing size={16} aria-hidden />
+              알림 조건 켜기
             </Link>
           </div>
 
