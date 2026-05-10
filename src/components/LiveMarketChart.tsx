@@ -49,6 +49,7 @@ import { normalizePineDirection, parsePineSnapshot, pineDirectionForTimeframe, t
 import { createRemoteJournalEntry } from "@/lib/remoteJournal";
 import { getActiveSupabaseSession } from "@/lib/supabase";
 import { TechnicalRadarPanel } from "@/components/TechnicalRadarPanel";
+import { LiquidationPressurePanel } from "@/components/LiquidationPressurePanel";
 
 const symbols = [
   "BTCUSDT.P",
@@ -2135,6 +2136,10 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
               </p>
             ) : null}
           </div>
+
+          {analysis && activeAnalysis ? (
+            <LiquidationPressurePanel symbol={symbol} timeframe={activeTimeframe} />
+          ) : null}
 
           {analysis && activeAnalysis ? (
             <div id="ai-briefing" className="scroll-mt-24 rounded-lg border border-accent-blue/25 bg-surface-cardSoft p-4">
