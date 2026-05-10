@@ -34,7 +34,24 @@ export function PwaInstallPrompt() {
   const [isDismissed, setIsDismissed] = useState(true);
 
   useEffect(() => {
-    if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
+    if (!("serviceWorker" in navigator)) return;
+
+    if (process.env.NODE_ENV !== "production") {
+      void navigator.serviceWorker
+        .getRegistrations()
+        .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())))
+        .then(() =>
+          "caches" in window
+            ? caches
+                .keys()
+                .then((keys) =>
+                  Promise.all(keys.filter((key) => key.startsWith("chart-radar-")).map((key) => caches.delete(key)))
+                )
+            : undefined
+        )
+        .catch(() => undefined);
+      return;
+    }
 
     window.addEventListener("load", () => {
       void navigator.serviceWorker.register("/sw.js").catch(() => undefined);

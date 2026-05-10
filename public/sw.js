@@ -1,5 +1,5 @@
 // 차트 레이더 PWA의 기본 오프라인 캐시를 관리하는 서비스워커.
-const CACHE_NAME = "chart-radar-shell-v2";
+const CACHE_NAME = "chart-radar-shell-v3";
 const SHELL_URLS = ["/", "/survival", "/alts", "/news", "/offline.html", "/brand/chart-radar-icon.png", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
@@ -28,6 +28,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
+  if (url.pathname.startsWith("/_next/")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(
@@ -42,7 +43,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (url.pathname.startsWith("/_next/static/") || /\.(?:css|js|svg|png|jpg|jpeg|webp|ico|woff2?)$/i.test(url.pathname)) {
+  if (/\.(?:svg|png|jpg|jpeg|webp|ico|woff2?)$/i.test(url.pathname)) {
     event.respondWith(
       caches.match(request).then((cached) => {
         if (cached) return cached;
