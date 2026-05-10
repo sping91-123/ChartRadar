@@ -8,6 +8,7 @@ const routes = [
   "/alts",
   "/stocks",
   "/news",
+  "/pro",
   "/calculator",
   "/journal",
   "/terms",

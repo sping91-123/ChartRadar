@@ -4,7 +4,7 @@ import type { Candle, ChartTimeframe } from "@/lib/marketAnalysis";
 export interface StockSymbolInfo {
   symbol: string;
   name: string;
-  group: "index_etf" | "mega_cap" | "growth" | "commodity";
+  group: "index_etf" | "mega_cap" | "ai_chip" | "growth" | "finance" | "commodity";
 }
 
 export const stockSymbols: StockSymbolInfo[] = [
@@ -12,19 +12,40 @@ export const stockSymbols: StockSymbolInfo[] = [
   { symbol: "QQQ", name: "Nasdaq 100 ETF", group: "index_etf" },
   { symbol: "DIA", name: "Dow Jones ETF", group: "index_etf" },
   { symbol: "IWM", name: "Russell 2000 ETF", group: "index_etf" },
+  { symbol: "VOO", name: "Vanguard S&P 500", group: "index_etf" },
+  { symbol: "TQQQ", name: "Nasdaq 3x Long", group: "index_etf" },
+  { symbol: "SQQQ", name: "Nasdaq 3x Short", group: "index_etf" },
   { symbol: "AAPL", name: "Apple", group: "mega_cap" },
   { symbol: "MSFT", name: "Microsoft", group: "mega_cap" },
   { symbol: "NVDA", name: "Nvidia", group: "mega_cap" },
   { symbol: "GOOGL", name: "Alphabet", group: "mega_cap" },
   { symbol: "AMZN", name: "Amazon", group: "mega_cap" },
   { symbol: "META", name: "Meta", group: "mega_cap" },
+  { symbol: "AVGO", name: "Broadcom", group: "mega_cap" },
+  { symbol: "AMD", name: "AMD", group: "ai_chip" },
+  { symbol: "TSM", name: "TSMC", group: "ai_chip" },
+  { symbol: "ASML", name: "ASML", group: "ai_chip" },
+  { symbol: "ARM", name: "Arm", group: "ai_chip" },
+  { symbol: "MU", name: "Micron", group: "ai_chip" },
+  { symbol: "QCOM", name: "Qualcomm", group: "ai_chip" },
+  { symbol: "INTC", name: "Intel", group: "ai_chip" },
   { symbol: "TSLA", name: "Tesla", group: "growth" },
-  { symbol: "AMD", name: "AMD", group: "growth" },
   { symbol: "NFLX", name: "Netflix", group: "growth" },
-  { symbol: "AVGO", name: "Broadcom", group: "growth" },
+  { symbol: "PLTR", name: "Palantir", group: "growth" },
+  { symbol: "COIN", name: "Coinbase", group: "growth" },
+  { symbol: "MSTR", name: "MicroStrategy", group: "growth" },
+  { symbol: "SHOP", name: "Shopify", group: "growth" },
+  { symbol: "UBER", name: "Uber", group: "growth" },
+  { symbol: "CRWD", name: "CrowdStrike", group: "growth" },
+  { symbol: "JPM", name: "JPMorgan", group: "finance" },
+  { symbol: "BAC", name: "Bank of America", group: "finance" },
+  { symbol: "GS", name: "Goldman Sachs", group: "finance" },
+  { symbol: "XLF", name: "Financials ETF", group: "finance" },
+  { symbol: "XLE", name: "Energy ETF", group: "commodity" },
   { symbol: "GLD", name: "Gold ETF", group: "commodity" },
   { symbol: "SLV", name: "Silver ETF", group: "commodity" },
-  { symbol: "USO", name: "Oil ETF", group: "commodity" }
+  { symbol: "USO", name: "Oil ETF", group: "commodity" },
+  { symbol: "UNG", name: "Natural Gas ETF", group: "commodity" }
 ];
 
 interface YahooChartResponse {
