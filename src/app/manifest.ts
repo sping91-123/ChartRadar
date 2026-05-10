@@ -1,47 +1,56 @@
+// PWA 설치와 앱 아이콘 정보를 제공하는 매니페스트.
 import type { MetadataRoute } from "next";
+
+const icon = "/brand/chart-radar-icon.png";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/survival",
-    name: "차트 레이더 Beta",
-    short_name: "차트 레이더",
-    description: "진입 전 차트 구조와 포지션 리스크를 먼저 감지하는 코인 분석 레이더",
+    name: "Chart Radar Beta",
+    short_name: "Chart Radar",
+    description: "코인과 해외주식의 차트 흐름을 빠르게 감지하는 분석 레이더",
     start_url: "/survival?source=pwa",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
     background_color: "#050608",
-    theme_color: "#0ea5e9",
+    theme_color: "#07142d",
     categories: ["finance", "productivity", "education"],
     lang: "ko-KR",
     shortcuts: [
       {
-        name: "BTC / ETH 레이더",
-        short_name: "BTC / ETH",
-        description: "비트코인과 이더리움 시장 레이더를 바로 엽니다.",
+        name: "Crypto Radar",
+        short_name: "Crypto",
+        description: "BTC와 ETH 시장 레이더를 바로 엽니다.",
         url: "/survival?source=pwa-shortcut",
-        icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml" }]
+        icons: [{ src: icon, sizes: "1024x1024", type: "image/png" }]
       },
       {
-        name: "알트코인 레이더",
-        short_name: "알트",
+        name: "Altcoin Radar",
+        short_name: "Alts",
         description: "알트코인 감지 목록을 바로 확인합니다.",
         url: "/alts?source=pwa-shortcut",
-        icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml" }]
+        icons: [{ src: icon, sizes: "1024x1024", type: "image/png" }]
       },
       {
-        name: "레이더뉴스",
-        short_name: "뉴스",
+        name: "Radar News",
+        short_name: "News",
         description: "오늘 시장 이슈와 매크로 체크를 바로 확인합니다.",
         url: "/news?source=pwa-shortcut",
-        icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml" }]
+        icons: [{ src: icon, sizes: "1024x1024", type: "image/png" }]
       }
     ],
     icons: [
       {
-        src: "/icon.svg",
-        sizes: "any",
-        type: "image/svg+xml",
+        src: icon,
+        sizes: "1024x1024",
+        type: "image/png",
+        purpose: "any"
+      },
+      {
+        src: icon,
+        sizes: "1024x1024",
+        type: "image/png",
         purpose: "maskable"
       }
     ]

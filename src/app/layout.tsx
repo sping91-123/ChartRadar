@@ -1,26 +1,23 @@
+// 전역 메타데이터와 테마 초기화를 담당하는 루트 레이아웃.
 import type { Metadata, Viewport } from "next";
 import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 import "./globals.css";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:3000";
+const appIcon = "/brand/chart-radar-icon.png";
 
 export const metadata: Metadata = {
-  metadataBase: siteUrl ? new URL(siteUrl) : undefined,
+  metadataBase: new URL(siteUrl),
   manifest: "/manifest.webmanifest",
   title: {
-    default: "차트 레이더 Beta",
-    template: "%s | 차트 레이더"
+    default: "Chart Radar Beta",
+    template: "%s | Chart Radar"
   },
   description: "코인과 해외주식의 차트 구조, 기술지표, 시장 이슈를 빠르게 확인하는 분석 레이더",
   applicationName: "Chart Radar",
   keywords: [
-    "매매 리스크",
-    "진입 전 점검",
-    "차트 판독",
-    "차트 레이더",
     "Chart Radar",
-    "포지션 계산",
-    "매매 복기",
+    "차트 레이더",
     "코인 분석",
     "해외주식 분석",
     "미국주식",
@@ -33,10 +30,11 @@ export const metadata: Metadata = {
     "리스크 관리"
   ],
   openGraph: {
-    title: "차트 레이더 Beta",
+    title: "Chart Radar Beta",
     description: "코인과 해외주식의 차트 구조, 기술지표, 시장 이슈를 빠르게 확인하세요.",
     type: "website",
-    locale: "ko_KR"
+    locale: "ko_KR",
+    images: [{ url: appIcon, width: 1024, height: 1024, alt: "Chart Radar app icon" }]
   },
   robots: {
     index: true,
@@ -44,20 +42,21 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "차트 레이더 Beta",
-    description: "코인과 해외주식의 차트 구조와 시장 이슈를 빠르게 확인하세요."
+    title: "Chart Radar Beta",
+    description: "코인과 해외주식의 차트 구조와 시장 이슈를 빠르게 확인하세요.",
+    images: [appIcon]
   },
   appleWebApp: {
     capable: true,
-    title: "차트 레이더",
+    title: "Chart Radar",
     statusBarStyle: "black-translucent"
   },
   formatDetection: {
     telephone: false
   },
   icons: {
-    icon: "/icon.svg",
-    apple: "/icon.svg"
+    icon: appIcon,
+    apple: appIcon
   }
 };
 

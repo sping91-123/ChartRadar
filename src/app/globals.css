@@ -139,93 +139,93 @@ html.theme-light body {
 .radar-mark {
   position: relative;
   overflow: hidden;
-  border-radius: 9999px;
+  border-radius: 1rem;
   background:
-    radial-gradient(circle at 68% 34%, rgba(134, 239, 172, 0.95) 0 2px, transparent 3px),
-    radial-gradient(circle at 32% 66%, rgba(56, 189, 248, 0.95) 0 2px, transparent 3px),
-    radial-gradient(circle at 50% 50%, rgba(240, 249, 255, 0.92) 0 3%, transparent 4%),
-    repeating-radial-gradient(circle at 50% 50%, transparent 0 18%, rgba(125, 211, 252, 0.18) 19% 20%, transparent 21% 37%),
-    repeating-conic-gradient(from 0deg, rgba(125, 211, 252, 0.08) 0deg 2deg, transparent 2deg 30deg),
-    radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.22), rgba(2, 6, 23, 0.96) 72%),
-    linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 1));
+    radial-gradient(circle at 70% 18%, rgba(34, 211, 238, 0.2), transparent 34%),
+    radial-gradient(circle at 24% 82%, rgba(37, 99, 235, 0.28), transparent 42%),
+    linear-gradient(145deg, #0b1a3a 0%, #071126 54%, #040816 100%);
   box-shadow:
-    inset 0 0 0 1px rgba(186, 230, 253, 0.18),
-    inset 0 0 22px rgba(56, 189, 248, 0.26),
-    0 0 0 1px rgba(14, 165, 233, 0.18),
-    0 0 34px rgba(14, 165, 233, 0.24);
+    inset 0 0 0 1px rgba(147, 197, 253, 0.18),
+    inset 0 0 28px rgba(14, 165, 233, 0.18),
+    0 0 0 1px rgba(14, 165, 233, 0.2),
+    0 0 30px rgba(6, 182, 212, 0.24);
 }
 
 .radar-mark::before {
   position: absolute;
-  inset: 50% 0 0 50%;
+  inset: 18% 18% 26%;
   content: "";
-  width: 50%;
-  height: 50%;
-  transform-origin: 0 0;
-  background: linear-gradient(38deg, rgba(224, 242, 254, 0.98), rgba(56, 189, 248, 0.34) 34%, transparent 74%);
-  clip-path: polygon(0 0, 100% 13%, 100% 86%);
-  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.42));
+  border: 3px solid transparent;
+  border-top-color: rgba(34, 211, 238, 0.96);
+  border-left-color: rgba(37, 99, 235, 0.9);
+  border-radius: 9999px;
+  filter: drop-shadow(0 0 9px rgba(34, 211, 238, 0.55));
+  transform: rotate(-15deg);
   animation: radar-sweep 2.45s linear infinite;
 }
 
 .radar-mark::after {
   position: absolute;
-  inset: 12%;
+  left: 28%;
+  bottom: 21%;
   content: "";
-  border: 1px solid rgba(186, 230, 253, 0.28);
-  border-radius: 9999px;
-  background:
-    radial-gradient(circle at 50% 50%, transparent 0 5%, rgba(186, 230, 253, 0.22) 6% 7%, transparent 8%),
-    linear-gradient(rgba(186, 230, 253, 0.17), rgba(186, 230, 253, 0.17)) 50% 0 / 1px 100% no-repeat,
-    linear-gradient(90deg, rgba(186, 230, 253, 0.17), rgba(186, 230, 253, 0.17)) 0 50% / 100% 1px no-repeat;
+  width: 58%;
+  height: 46%;
+  background: linear-gradient(135deg, #2563eb 0%, #22d3ee 48%, #67e8f9 100%);
+  clip-path: polygon(0 82%, 38% 45%, 51% 58%, 77% 29%, 68% 21%, 100% 0, 90% 34%, 83% 25%, 52% 70%, 38% 57%, 7% 90%);
+  filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0.5));
   animation: radar-pulse 1.8s ease-in-out infinite;
+}
+
+.radar-mark > * {
+  position: relative;
+  z-index: 2;
 }
 
 .radar-mark-lg {
   position: relative;
   overflow: hidden;
-  border-radius: 9999px;
+  border-radius: 1.8rem;
   background:
-    radial-gradient(circle at 72% 28%, rgba(134, 239, 172, 1) 0 3px, transparent 4px),
-    radial-gradient(circle at 35% 70%, rgba(56, 189, 248, 1) 0 3px, transparent 4px),
-    radial-gradient(circle at 58% 62%, rgba(251, 191, 36, 0.9) 0 2px, transparent 3px),
-    radial-gradient(circle at 50% 50%, rgba(248, 250, 252, 0.96) 0 1.8%, transparent 2.8%),
-    repeating-radial-gradient(circle at 50% 50%, transparent 0 15%, rgba(186, 230, 253, 0.22) 16% 17%, transparent 18% 31%),
-    repeating-conic-gradient(from 0deg, rgba(125, 211, 252, 0.1) 0deg 1.5deg, transparent 1.5deg 15deg),
-    radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.2), rgba(15, 23, 42, 0.9) 68%, rgba(2, 6, 23, 1)),
-    linear-gradient(145deg, #020617, #111827);
+    radial-gradient(circle at 68% 18%, rgba(34, 211, 238, 0.22), transparent 34%),
+    radial-gradient(circle at 28% 82%, rgba(37, 99, 235, 0.32), transparent 42%),
+    linear-gradient(145deg, #0d1e42 0%, #07132c 52%, #030816 100%);
   box-shadow:
-    inset 0 0 0 1px rgba(224, 242, 254, 0.18),
-    inset 0 0 42px rgba(56, 189, 248, 0.24),
-    0 0 0 8px rgba(15, 23, 42, 0.72),
-    0 0 0 9px rgba(56, 189, 248, 0.18),
-    0 0 58px rgba(56, 189, 248, 0.3),
-    0 0 120px rgba(20, 184, 166, 0.18);
+    inset 0 0 0 1px rgba(147, 197, 253, 0.2),
+    inset 0 0 56px rgba(14, 165, 233, 0.2),
+    0 0 0 8px rgba(3, 7, 18, 0.76),
+    0 0 0 9px rgba(34, 211, 238, 0.16),
+    0 0 68px rgba(6, 182, 212, 0.32),
+    0 0 120px rgba(37, 99, 235, 0.2);
 }
 
 .radar-mark-lg::before {
   position: absolute;
-  inset: 50% 0 0 50%;
+  inset: 19% 18% 25%;
   content: "";
-  width: 50%;
-  height: 50%;
-  transform-origin: 0 0;
-  background: linear-gradient(38deg, rgba(240, 249, 255, 1), rgba(56, 189, 248, 0.38) 34%, transparent 76%);
-  clip-path: polygon(0 0, 100% 12%, 100% 88%);
-  filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.55));
+  border: 7px solid transparent;
+  border-top-color: rgba(34, 211, 238, 0.98);
+  border-left-color: rgba(37, 99, 235, 0.94);
+  border-radius: 9999px;
+  filter: drop-shadow(0 0 18px rgba(34, 211, 238, 0.58));
+  transform: rotate(-15deg);
   animation: radar-sweep 1.65s linear infinite;
 }
 
 .radar-mark-lg::after {
   position: absolute;
-  inset: 14%;
+  left: 29%;
+  bottom: 19%;
   content: "";
-  border: 1px solid rgba(186, 230, 253, 0.22);
-  border-radius: 9999px;
+  width: 58%;
+  height: 45%;
   background:
-    radial-gradient(circle at 50% 50%, transparent 0 6%, rgba(186, 230, 253, 0.25) 7% 8%, transparent 9%),
-    linear-gradient(rgba(186, 230, 253, 0.22), rgba(186, 230, 253, 0.22)) 50% 0 / 1px 100% no-repeat,
-    linear-gradient(90deg, rgba(186, 230, 253, 0.22), rgba(186, 230, 253, 0.22)) 0 50% / 100% 1px no-repeat;
+    linear-gradient(180deg, transparent 58%, rgba(37, 99, 235, 0.85) 58% 100%) 21% 68% / 12% 35% no-repeat,
+    linear-gradient(180deg, transparent 42%, rgba(14, 165, 233, 0.9) 42% 100%) 43% 70% / 12% 45% no-repeat,
+    linear-gradient(180deg, transparent 26%, rgba(34, 211, 238, 0.9) 26% 100%) 66% 67% / 12% 58% no-repeat,
+    linear-gradient(135deg, #2563eb 0%, #22d3ee 50%, #67e8f9 100%);
+  clip-path: polygon(0 82%, 38% 45%, 51% 58%, 77% 29%, 68% 21%, 100% 0, 90% 34%, 83% 25%, 52% 70%, 38% 57%, 7% 90%);
+  filter: drop-shadow(0 0 18px rgba(34, 211, 238, 0.55));
   animation: radar-pulse 1.35s ease-in-out infinite;
 }
 
