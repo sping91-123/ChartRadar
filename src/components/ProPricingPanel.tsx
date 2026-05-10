@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { BellRing, Check, Crown, Loader2, Radar, Sparkles } from "lucide-react";
+import { RadarAlertCenter } from "@/components/RadarAlertCenter";
 import { paidBillingPlans, billingPlans, launchPaymentNotes, type BillingPlanId } from "@/lib/billing";
 
 type CheckoutState =
@@ -68,7 +69,7 @@ export function ProPricingPanel() {
 
   return (
     <section className="space-y-5">
-      <div className="overflow-hidden rounded-lg border border-cyan-300/20 bg-[radial-gradient(circle_at_20%_10%,rgba(34,211,238,0.18),transparent_34%),linear-gradient(135deg,rgba(2,6,23,0.96),rgba(15,23,42,0.92))] p-5 shadow-glow">
+      <div className="force-dark-card overflow-hidden rounded-lg border border-cyan-300/20 bg-[radial-gradient(circle_at_20%_10%,rgba(34,211,238,0.18),transparent_34%),linear-gradient(135deg,rgba(2,6,23,0.96),rgba(15,23,42,0.92))] p-5 shadow-glow">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
             <p className="inline-flex rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-xs font-black text-cyan-200">
@@ -173,6 +174,8 @@ export function ProPricingPanel() {
           );
         })}
       </div>
+
+      <RadarAlertCenter />
 
       {checkoutState.status === "message" ? (
         <div

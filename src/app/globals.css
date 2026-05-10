@@ -160,6 +160,39 @@ html.theme-light body {
   color: #0f172a !important;
 }
 
+.theme-light .force-dark-card {
+  color: #f8fafc !important;
+}
+
+.theme-light .force-dark-card .text-white,
+.theme-light .force-dark-card [class~="text-white"] {
+  color: #f8fafc !important;
+}
+
+.theme-light .force-dark-card .text-slate-200,
+.theme-light .force-dark-card .text-slate-300 {
+  color: #cbd5e1 !important;
+}
+
+.theme-light .force-dark-card .text-slate-400,
+.theme-light .force-dark-card .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+.theme-light .force-dark-card [class~="bg-black/20"],
+.theme-light .force-dark-card [class~="bg-black/25"],
+.theme-light .force-dark-card [class~="bg-black/30"] {
+  background-color: rgba(2, 6, 23, 0.42) !important;
+}
+
+.theme-light .force-dark-card [class~="bg-white/[0.04]"] {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.theme-light .force-dark-card [class~="border-white/10"] {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
 @keyframes radar-sweep {
   from {
     transform: rotate(0deg);

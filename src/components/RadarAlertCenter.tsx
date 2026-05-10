@@ -1,0 +1,264 @@
+"use client";
+// 사용자가 받을 레이더 알림 조건을 설정하고 Pro 가치를 확인하는 패널이다.
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { BellRing, CheckCircle2, Crown, Loader2, Radar, ShieldCheck, Smartphone, Zap } from "lucide-react";
+import {
+  getDefaultRadarAlertRuleIds,
+  radarAlertRules,
+  summarizeRadarAlerts,
+  type RadarAlertRule,
+  type RadarAlertRuleId
+} from "@/lib/radarAlerts";
+
+const storageKey = "chartRadar.alertRules.v1";
+
+type PermissionState = "unsupported" | "default" | "granted" | "denied";
+
+function readStoredRuleIds(): RadarAlertRuleId[] {
+  if (typeof window === "undefined") return getDefaultRadarAlertRuleIds();
+
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) return getDefaultRadarAlertRuleIds();
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return getDefaultRadarAlertRuleIds();
+    const allowed = new Set(radarAlertRules.map((rule) => rule.id));
+    return parsed.filter((id): id is RadarAlertRuleId => typeof id === "string" && allowed.has(id as RadarAlertRuleId));
+  } catch {
+    return getDefaultRadarAlertRuleIds();
+  }
+}
+
+function getPermissionState(): PermissionState {
+  if (typeof window === "undefined" || !("Notification" in window)) return "unsupported";
+  return Notification.permission as PermissionState;
+}
+
+function categoryLabel(category: RadarAlertRule["category"]) {
+  if (category === "crypto") return "코인";
+  if (category === "stocks") return "해외주식";
+  if (category === "news") return "뉴스";
+  return "시스템";
+}
+
+function categoryClass(category: RadarAlertRule["category"]) {
+  if (category === "crypto") return "border-cyan-300/25 bg-cyan-300/10 text-cyan-200";
+  if (category === "stocks") return "border-emerald-300/25 bg-emerald-300/10 text-emerald-200";
+  if (category === "news") return "border-amber-300/25 bg-amber-300/10 text-amber-200";
+  return "border-slate-300/20 bg-slate-300/10 text-slate-200";
+}
+
+function permissionLabel(permission: PermissionState) {
+  if (permission === "granted") return "브라우저 알림 허용됨";
+  if (permission === "denied") return "브라우저 알림 차단됨";
+  if (permission === "unsupported") return "이 브라우저는 알림을 지원하지 않습니다";
+  return "브라우저 알림 권한 대기";
+}
+
+function RuleCard({
+  rule,
+  enabled,
+  onToggle
+}: {
+  rule: RadarAlertRule;
+  enabled: boolean;
+  onToggle: (ruleId: RadarAlertRuleId) => void;
+}) {
+  return (
+    <article className={`rounded-lg border p-4 transition ${enabled ? "border-cyan-300/25 bg-cyan-300/10" : "border-surface-line bg-surface-cardSoft"}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`rounded-md border px-2 py-1 text-[11px] font-black ${categoryClass(rule.category)}`}>
+              {categoryLabel(rule.category)}
+            </span>
+            {rule.tier === "pro" ? (
+              <span className="inline-flex items-center gap-1 rounded-md border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-[11px] font-black text-cyan-200">
+                <Crown size={12} aria-hidden />
+                Pro
+              </span>
+            ) : (
+              <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] font-bold text-slate-300">
+                Free
+              </span>
+            )}
+          </div>
+          <h3 className="mt-3 text-base font-black text-white">{rule.title}</h3>
+          <p className="mt-2 text-sm leading-6 text-slate-400 [word-break:keep-all]">{rule.description}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => onToggle(rule.id)}
+          className={`relative h-7 w-12 shrink-0 rounded-full border transition ${
+            enabled ? "border-cyan-300 bg-cyan-300" : "border-surface-line bg-slate-800"
+          }`}
+          aria-pressed={enabled}
+          aria-label={`${rule.title} 알림 ${enabled ? "끄기" : "켜기"}`}
+        >
+          <span
+            className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${
+              enabled ? "left-6" : "left-1"
+            }`}
+          />
+        </button>
+      </div>
+      <div className="mt-4 grid gap-2 text-xs leading-5 text-slate-400 sm:grid-cols-2">
+        <p className="rounded-md border border-white/10 bg-black/20 p-3">
+          <span className="font-black text-slate-200">조건.</span> {rule.trigger}
+        </p>
+        <p className="rounded-md border border-white/10 bg-black/20 p-3">
+          <span className="font-black text-slate-200">효용.</span> {rule.value}
+        </p>
+      </div>
+      <p className="mt-3 text-[11px] font-bold text-slate-500">{rule.cadence}</p>
+    </article>
+  );
+}
+
+export function RadarAlertCenter({ compact = false }: { compact?: boolean }) {
+  const [enabledRuleIds, setEnabledRuleIds] = useState<RadarAlertRuleId[]>(() => getDefaultRadarAlertRuleIds());
+  const [permission, setPermission] = useState<PermissionState>("default");
+  const [isRequesting, setIsRequesting] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    setEnabledRuleIds(readStoredRuleIds());
+    setPermission(getPermissionState());
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(storageKey, JSON.stringify(enabledRuleIds));
+  }, [enabledRuleIds]);
+
+  const summary = useMemo(() => summarizeRadarAlerts(enabledRuleIds), [enabledRuleIds]);
+  const visibleRules = compact ? radarAlertRules.slice(0, 3) : radarAlertRules;
+
+  function toggleRule(ruleId: RadarAlertRuleId) {
+    setEnabledRuleIds((current) => {
+      if (current.includes(ruleId)) return current.filter((id) => id !== ruleId);
+      return [...current, ruleId];
+    });
+  }
+
+  async function requestNotificationPermission() {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      setPermission("unsupported");
+      setToast("현재 브라우저에서는 알림 권한을 요청할 수 없습니다.");
+      return;
+    }
+
+    setIsRequesting(true);
+    try {
+      const result = await Notification.requestPermission();
+      setPermission(result as PermissionState);
+      if (result === "granted") {
+        new Notification("Chart Radar 알림 준비 완료", {
+          body: "A급 감지, 청산 압력, 뉴스 브리핑 알림을 받을 준비가 되었습니다.",
+          icon: "/brand/chart-radar-mark.png"
+        });
+        setToast("브라우저 알림 권한이 켜졌습니다. 실제 푸시는 앱/서버 알림 단계에서 연결됩니다.");
+      } else {
+        setToast("알림 권한이 꺼져 있습니다. 설정에서 언제든 다시 허용할 수 있습니다.");
+      }
+    } finally {
+      setIsRequesting(false);
+    }
+  }
+
+  return (
+    <section className="rounded-lg border border-cyan-300/25 bg-surface-card p-4 shadow-glow sm:p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-cyan-300/30 bg-cyan-300/12 text-cyan-200">
+            <BellRing size={22} aria-hidden />
+          </div>
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">Radar Alerts</p>
+            <h2 className="mt-1 text-xl font-black text-white">놓치면 아쉬운 변화만 알려드릴게요</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400 [word-break:keep-all]">
+              Chart Radar의 유료 가치는 단순히 차트를 한 번 더 보여주는 것이 아니라, 시장이 움직일 때 먼저 잡아주는 데 있습니다.
+              지금은 권한과 조건을 준비하고, 출시 단계에서는 웹푸시와 앱 알림으로 이어 붙이면 됩니다.
+            </p>
+          </div>
+        </div>
+        <div className="rounded-lg border border-white/10 bg-black/25 p-3 lg:w-72">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs font-bold text-slate-400">켜진 알림</span>
+            <span className="text-lg font-black text-cyan-200">{summary.enabledCount}개</span>
+          </div>
+          <p className="mt-2 text-xs leading-5 text-slate-400 [word-break:keep-all]">{summary.headline}</p>
+          <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] font-bold">
+            <span className="rounded-md border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-cyan-200">
+              Pro {summary.proCount}
+            </span>
+            <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-slate-300">
+              Free {summary.freeCount}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className="rounded-lg border border-cyan-300/20 bg-cyan-300/10 p-4">
+          <Radar className="text-cyan-300" size={20} aria-hidden />
+          <p className="mt-3 text-sm font-black text-white">레이더 감지</p>
+          <p className="mt-2 text-xs leading-5 text-slate-400">A급 후보와 관심코인 변화를 빠르게 확인합니다.</p>
+        </div>
+        <div className="rounded-lg border border-orange-300/20 bg-orange-300/10 p-4">
+          <Zap className="text-orange-200" size={20} aria-hidden />
+          <p className="mt-3 text-sm font-black text-white">위험 압력</p>
+          <p className="mt-2 text-xs leading-5 text-slate-400">청산 압력과 과열 구간을 추격 전에 먼저 봅니다.</p>
+        </div>
+        <div className="rounded-lg border border-emerald-300/20 bg-emerald-300/10 p-4">
+          <Smartphone className="text-emerald-200" size={20} aria-hidden />
+          <p className="mt-3 text-sm font-black text-white">앱 알림 준비</p>
+          <p className="mt-2 text-xs leading-5 text-slate-400">PWA와 앱스토어 출시 후 푸시 알림으로 확장합니다.</p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-3 rounded-lg border border-surface-line bg-surface-cardSoft p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="flex items-center gap-2 text-sm font-black text-white">
+            <ShieldCheck size={16} className="text-cyan-300" aria-hidden />
+            {permissionLabel(permission)}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            현재 단계에서는 권한 확인과 데모 알림까지만 처리합니다. 실제 자동 알림은 서버 스케줄러와 앱 푸시 연결 후 작동합니다.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={requestNotificationPermission}
+          disabled={isRequesting || permission === "unsupported"}
+          className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-md bg-cyan-300 px-4 text-sm font-black text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isRequesting ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <CheckCircle2 size={16} aria-hidden />}
+          알림 권한 확인
+        </button>
+      </div>
+
+      {toast ? (
+        <p className="mt-3 rounded-md border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-xs leading-5 text-cyan-100">
+          {toast}
+        </p>
+      ) : null}
+
+      <div className={`mt-4 grid gap-3 ${compact ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
+        {visibleRules.map((rule) => (
+          <RuleCard key={rule.id} rule={rule} enabled={enabledRuleIds.includes(rule.id)} onToggle={toggleRule} />
+        ))}
+      </div>
+
+      {compact ? (
+        <Link
+          href="/alerts"
+          className="mt-4 inline-flex min-h-10 w-full items-center justify-center rounded-md border border-cyan-300/30 bg-cyan-300/10 px-4 text-sm font-black text-cyan-200 transition hover:bg-cyan-300 hover:text-slate-950"
+        >
+          알림 조건 전체 설정하기
+        </Link>
+      ) : null}
+    </section>
+  );
+}
