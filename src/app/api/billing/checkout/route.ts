@@ -32,16 +32,29 @@ export async function POST(request: Request) {
   const orderId = makeOrderId(plan.id);
   const paymentUrl = process.env.NEXT_PUBLIC_PRO_PAYMENT_URL;
   if (paymentUrl) {
-    const url = new URL(paymentUrl);
+    let url: URL;
+    try {
+      url = new URL(paymentUrl);
+    } catch {
+      return NextResponse.json({
+        configured: false,
+        mode: "invalid_payment_url",
+        orderId,
+        amount: plan.billingAmount,
+        orderName: plan.name,
+        message: "결제 URL 형식이 올바르지 않습니다. NEXT_PUBLIC_PRO_PAYMENT_URL 값을 https://로 시작하는 전체 주소로 확인해 주세요."
+      });
+    }
+
     url.searchParams.set("plan", plan.id);
     url.searchParams.set("orderId", orderId);
-    url.searchParams.set("amount", String(plan.monthlyValue));
+    url.searchParams.set("amount", String(plan.billingAmount));
 
     return NextResponse.json({
       configured: true,
       mode: "payment_link",
       orderId,
-      amount: plan.monthlyValue,
+      amount: plan.billingAmount,
       orderName: plan.name,
       paymentUrl: url.toString()
     });
@@ -51,7 +64,7 @@ export async function POST(request: Request) {
     configured: false,
     mode: "setup_required",
     orderId,
-    amount: plan.monthlyValue,
+    amount: plan.billingAmount,
     orderName: plan.name,
     message:
       "현재 결제창을 점검하고 있습니다. 운영 결제 URL이 연결되면 같은 버튼에서 바로 결제 화면으로 이동합니다."

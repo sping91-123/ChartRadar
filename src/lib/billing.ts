@@ -6,6 +6,7 @@ export interface BillingPlan {
   name: string;
   badge: string;
   priceLabel: string;
+  billingAmount: number;
   monthlyValue: number;
   appStoreProductId?: string;
   description: string;
@@ -25,6 +26,7 @@ export const billingPlans: BillingPlan[] = [
     name: "Free Radar",
     badge: "체험",
     priceLabel: "무료",
+    billingAmount: 0,
     monthlyValue: 0,
     description: "Chart Radar의 핵심 흐름을 먼저 확인하는 무료 체험 플랜입니다.",
     highlights: ["BTC / ETH 기본 레이더", "알트 일부 감지", "뉴스 브리핑 미리보기"],
@@ -41,6 +43,7 @@ export const billingPlans: BillingPlan[] = [
     name: "Chart Radar Pro",
     badge: "추천",
     priceLabel: "월 19,900원",
+    billingAmount: 19900,
     monthlyValue: 19900,
     appStoreProductId: "chart_radar_pro_monthly",
     description: "하루에도 여러 번 시장을 확인하는 사용자를 위한 핵심 구독입니다.",
@@ -58,6 +61,7 @@ export const billingPlans: BillingPlan[] = [
     name: "Chart Radar Pro Yearly",
     badge: "절약",
     priceLabel: "연 199,000원",
+    billingAmount: 199000,
     monthlyValue: 16584,
     appStoreProductId: "chart_radar_pro_yearly",
     description: "매일 쓰겠다고 판단한 사용자를 위한 연간 구독입니다. 월간 대비 약 두 달을 아끼는 구조입니다.",
