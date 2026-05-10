@@ -7,10 +7,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "backtest:btc": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/backtest-btc-regimes.js"
+    "backtest:btc": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/backtest-btc-regimes.js",
+    "app:add:android": "npx cap add android",
+    "app:sync": "npx cap sync",
+    "app:android": "npx cap open android",
+    "app:doctor": "npx cap doctor"
   },
   "dependencies": {
-    "fast-xml-parser": "^4.5.0",
+    "@capacitor/core": "^8.3.3",
+    "fast-xml-parser": "^5.7.3",
     "lightweight-charts": "^5.2.0",
     "lucide-react": "^0.468.0",
     "next": "^14.2.5",
@@ -18,6 +23,8 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.3.3",
+    "@capacitor/cli": "^8.3.3",
     "@types/node": "^20.14.10",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",

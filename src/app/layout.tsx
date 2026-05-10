@@ -1,10 +1,12 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
 
 export const metadata: Metadata = {
   metadataBase: siteUrl ? new URL(siteUrl) : undefined,
+  manifest: "/manifest.webmanifest",
   title: {
     default: "차트 레이더 Beta",
     template: "%s | 차트 레이더"
@@ -47,10 +49,24 @@ export const metadata: Metadata = {
     title: "차트 레이더",
     statusBarStyle: "black-translucent"
   },
+  formatDetection: {
+    telephone: false
+  },
   icons: {
     icon: "/icon.svg",
     apple: "/icon.svg"
   }
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#050608" },
+    { media: "(prefers-color-scheme: light)", color: "#f3f7fb" }
+  ]
 };
 
 export default function RootLayout({
@@ -68,6 +84,7 @@ export default function RootLayout({
           }}
         />
         {children}
+        <PwaInstallPrompt />
       </body>
     </html>
   );
