@@ -4,6 +4,7 @@ import { Header } from "@/components/Header";
 import { LiveMarketChart } from "@/components/LiveMarketChart";
 import { RadarAlertCenter } from "@/components/RadarAlertCenter";
 import { RadarTopNav } from "@/components/RadarTopNav";
+import { UsageMeterPanel } from "@/components/UsageMeterPanel";
 
 export function SurvivalApp() {
   return (
@@ -12,6 +13,7 @@ export function SurvivalApp() {
         <Header />
         <RadarTopNav />
         <DailyRadarBrief scope="major" />
+        <UsageMeterPanel compact />
         <RadarAlertCenter compact />
         <LiveMarketChart majorOnly />
         <AppFooter />

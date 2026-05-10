@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { BellRing, Check, Crown, Loader2, Radar, Sparkles } from "lucide-react";
 import { RadarAlertCenter } from "@/components/RadarAlertCenter";
-import { paidBillingPlans, billingPlans, launchPaymentNotes, type BillingPlanId } from "@/lib/billing";
+import { UsageMeterPanel } from "@/components/UsageMeterPanel";
+import { billingPlans, launchPaymentNotes, type BillingPlanId } from "@/lib/billing";
 
 type CheckoutState =
   | { status: "idle" }
@@ -174,6 +175,8 @@ export function ProPricingPanel() {
           );
         })}
       </div>
+
+      <UsageMeterPanel />
 
       <RadarAlertCenter />
 

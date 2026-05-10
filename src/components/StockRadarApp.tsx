@@ -7,6 +7,7 @@ import { TechnicalRadarPanel } from "@/components/TechnicalRadarPanel";
 import { chartTimeframes, type Candle, type ChartTimeframe } from "@/lib/marketAnalysis";
 import { analyzeTechnicalRadar, type TechnicalRadarReport } from "@/lib/technicalRadar";
 import type { StockSymbolInfo } from "@/lib/stockMarket";
+import { recordUsageEvent } from "@/lib/usageMeter";
 
 const fallbackUniverse: StockSymbolInfo[] = [
   { symbol: "SPY", name: "S&P 500 ETF", group: "index_etf" },
@@ -184,6 +185,7 @@ export function StockRadarApp() {
         dataSource: data.dataSource ?? "해외주식 지연 데이터",
         cachedAt: data.cachedAt ?? Date.now()
       });
+      recordUsageEvent("stockRadar");
     } catch (error) {
       const message = error instanceof Error ? error.message : "해외주식 데이터를 불러오지 못했습니다.";
       setState({ status: "error", message });

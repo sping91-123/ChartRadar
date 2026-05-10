@@ -4,6 +4,7 @@ import { Header } from "@/components/Header";
 import { MacroTicker } from "@/components/MacroTicker";
 import { RadarNewsPanel } from "@/components/RadarNewsPanel";
 import { RadarTopNav } from "@/components/RadarTopNav";
+import { UsageMeterPanel } from "@/components/UsageMeterPanel";
 
 export default function NewsPage() {
   return (
@@ -12,6 +13,7 @@ export default function NewsPage() {
         <Header />
         <RadarTopNav />
         <MacroTicker />
+        <UsageMeterPanel compact />
         <RadarNewsPanel />
         <AppFooter />
       </div>

@@ -3,6 +3,7 @@ import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
 import { RadarTopNav } from "@/components/RadarTopNav";
 import { SetupScoutPanel } from "@/components/SetupScoutPanel";
+import { UsageMeterPanel } from "@/components/UsageMeterPanel";
 import { WatchlistPanel } from "@/components/WatchlistPanel";
 
 export default function AltsPage() {
@@ -11,6 +12,7 @@ export default function AltsPage() {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
         <Header />
         <RadarTopNav />
+        <UsageMeterPanel compact />
         <WatchlistPanel />
         <SetupScoutPanel excludeMajor />
         <AppFooter />

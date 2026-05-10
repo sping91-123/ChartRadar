@@ -3,6 +3,7 @@ import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
 import { RadarTopNav } from "@/components/RadarTopNav";
 import { StockRadarApp } from "@/components/StockRadarApp";
+import { UsageMeterPanel } from "@/components/UsageMeterPanel";
 
 export default function StocksPage() {
   return (
@@ -10,6 +11,7 @@ export default function StocksPage() {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
         <Header />
         <RadarTopNav />
+        <UsageMeterPanel compact />
         <StockRadarApp />
         <AppFooter />
       </div>

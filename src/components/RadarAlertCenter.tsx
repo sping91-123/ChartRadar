@@ -10,6 +10,7 @@ import {
   type RadarAlertRule,
   type RadarAlertRuleId
 } from "@/lib/radarAlerts";
+import { recordUsageEvent } from "@/lib/usageMeter";
 
 const storageKey = "chartRadar.alertRules.v1";
 
@@ -136,6 +137,9 @@ export function RadarAlertCenter({ compact = false }: { compact?: boolean }) {
   const visibleRules = compact ? radarAlertRules.slice(0, 3) : radarAlertRules;
 
   function toggleRule(ruleId: RadarAlertRuleId) {
+    if (!enabledRuleIds.includes(ruleId)) {
+      recordUsageEvent("alertRule");
+    }
     setEnabledRuleIds((current) => {
       if (current.includes(ruleId)) return current.filter((id) => id !== ruleId);
       return [...current, ruleId];
@@ -152,6 +156,7 @@ export function RadarAlertCenter({ compact = false }: { compact?: boolean }) {
     setIsRequesting(true);
     try {
       const result = await Notification.requestPermission();
+      recordUsageEvent("alertRule");
       setPermission(result as PermissionState);
       if (result === "granted") {
         new Notification("Chart Radar 알림 준비 완료", {

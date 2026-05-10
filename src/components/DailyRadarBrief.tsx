@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import type { TradingMode } from "@/lib/marketAnalysis";
 import type { ScoutSetup } from "@/lib/setupScout";
+import { recordUsageEvent } from "@/lib/usageMeter";
 
 interface MarketBoardItem {
   symbol: string;
@@ -276,6 +277,7 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
         setups: scanPayloads.flatMap((payload) => payload.setups ?? []).filter((setup) => isInScope(setup.symbol, scope)),
         cachedAt: Math.max(boardPayload.cachedAt ?? Date.now(), ...scanPayloads.map((payload) => payload.cachedAt ?? Date.now()))
       });
+      recordUsageEvent("radarScan");
     } catch (error) {
       setState({
         status: "error",

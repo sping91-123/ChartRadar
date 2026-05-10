@@ -13,6 +13,7 @@ import {
   X
 } from "lucide-react";
 import { watchlistSymbolPool, type ScoutSetup } from "@/lib/setupScout";
+import { recordUsageEvent } from "@/lib/usageMeter";
 import {
   addToWatchlist,
   getWatchlist,
@@ -250,6 +251,7 @@ export function WatchlistPanel() {
       }
       const data = (await res.json()) as { setups: ScoutSetup[]; cachedAt: number };
       setScanState({ status: "ready", setups: data.setups, cachedAt: data.cachedAt });
+      recordUsageEvent("watchlistScan");
     } catch (error) {
       const message = error instanceof Error ? error.message : "레이더 판독에 실패했습니다.";
       setScanState({ status: "error", message });

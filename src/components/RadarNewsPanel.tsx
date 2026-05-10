@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ExternalLink, Newspaper, Radar, RefreshCcw, ShieldAlert, Sparkles, Target, TrendingDown, TrendingUp } from "lucide-react";
 import type { RadarNewsBriefing, RadarNewsDirection, RadarNewsItem } from "@/lib/radarNews";
+import { recordUsageEvent } from "@/lib/usageMeter";
 
 type NewsPayload = {
   updatedAt: number;
@@ -146,6 +147,7 @@ export function RadarNewsPanel() {
       if (!response.ok) throw new Error(data.error ?? "레이더뉴스를 불러오지 못했습니다.");
       setPayload(data);
       setStatus("ready");
+      recordUsageEvent("aiBriefing");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "레이더뉴스를 불러오지 못했습니다.");
       setStatus("error");
