@@ -7,6 +7,8 @@ import {
   Activity,
   ArrowDownRight,
   ArrowUpRight,
+  BellRing,
+  CheckCircle2,
   Gauge,
   Loader2,
   Newspaper,
@@ -17,6 +19,12 @@ import {
 } from "lucide-react";
 import type { TradingMode } from "@/lib/marketAnalysis";
 import type { ScoutSetup } from "@/lib/setupScout";
+import {
+  buildSetupAlertPreset,
+  getSetupAlertPresetId,
+  readSetupAlertPresets,
+  writeSetupAlertPresets
+} from "@/lib/setupAlertPresets";
 import { recordUsageEvent } from "@/lib/usageMeter";
 
 interface MarketBoardItem {
@@ -202,7 +210,15 @@ function getNextAction(setups: ScoutSetup[], scope: BriefScope) {
   return `${compactSymbol(top.symbol)} ${top.timeframe}를 먼저 열고, 가격이 구조 구간에 가까워지는지와 반대 방향 스윕이 새로 나오는지만 확인하세요.`;
 }
 
-function MiniSetupCard({ setup }: { setup: ScoutSetup }) {
+function MiniSetupCard({
+  setup,
+  isSaved,
+  onToggleAlert
+}: {
+  setup: ScoutSetup;
+  isSaved: boolean;
+  onToggleAlert: (setup: ScoutSetup) => void;
+}) {
   const isLong = setup.plan.side === "long";
   const Icon = isLong ? ArrowUpRight : ArrowDownRight;
 
@@ -231,12 +247,26 @@ function MiniSetupCard({ setup }: { setup: ScoutSetup }) {
         <span className="rounded border border-white/10 bg-black/30 px-2 py-1 text-slate-300">{setup.plan.quality}급</span>
         <span className="rounded border border-white/10 bg-black/30 px-2 py-1 text-slate-300">신뢰 {setup.plan.confidence}%</span>
       </div>
+      <button
+        type="button"
+        onClick={() => onToggleAlert(setup)}
+        className={`mt-3 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-md border px-3 text-xs font-black transition ${
+          isSaved
+            ? "border-emerald-300/35 bg-emerald-300/15 text-emerald-200 hover:bg-emerald-300/25"
+            : "border-accent-blue/35 bg-accent-blue/10 text-accent-blue hover:bg-accent-blue hover:text-slate-950"
+        }`}
+      >
+        {isSaved ? <CheckCircle2 size={14} aria-hidden /> : <BellRing size={14} aria-hidden />}
+        {isSaved ? "감시 중" : "감시 저장"}
+      </button>
     </article>
   );
 }
 
 export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
   const [state, setState] = useState<DailyBriefState>({ status: "loading" });
+  const [savedPresetIds, setSavedPresetIds] = useState<Set<string>>(() => new Set());
+  const [alertToast, setAlertToast] = useState<string | null>(null);
 
   const loadBrief = useCallback(async () => {
     setState({ status: "loading" });
@@ -289,6 +319,26 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
   useEffect(() => {
     void loadBrief();
   }, [loadBrief]);
+
+  useEffect(() => {
+    setSavedPresetIds(new Set(readSetupAlertPresets().map((preset) => preset.id)));
+  }, []);
+
+  function toggleSetupAlert(setup: ScoutSetup) {
+    const preset = buildSetupAlertPreset(setup);
+    const current = readSetupAlertPresets();
+    const exists = current.some((item) => item.id === preset.id);
+    const next = exists ? current.filter((item) => item.id !== preset.id) : [preset, ...current.filter((item) => item.id !== preset.id)];
+
+    writeSetupAlertPresets(next);
+    setSavedPresetIds(new Set(next.map((item) => item.id)));
+    if (!exists) {
+      recordUsageEvent("alertRule");
+      setAlertToast(`${compactSymbol(setup.symbol)} ${setup.timeframe} ${sideLabel(setup.plan.side)} 조건을 감시 목록에 저장했습니다.`);
+    } else {
+      setAlertToast(`${compactSymbol(setup.symbol)} ${setup.timeframe} 감시 조건을 해제했습니다.`);
+    }
+  }
 
   const summary = useMemo(() => {
     if (state.status !== "ready") return null;
@@ -405,7 +455,12 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
               {summary.topSetups.length > 0 ? (
                 <div className="mt-3 grid gap-2 sm:grid-cols-3">
                   {summary.topSetups.map((setup) => (
-                    <MiniSetupCard key={`${setup.symbol}-${setup.timeframe}-${setup.mode}`} setup={setup} />
+                    <MiniSetupCard
+                      key={`${setup.symbol}-${setup.timeframe}-${setup.mode}`}
+                      setup={setup}
+                      isSaved={savedPresetIds.has(getSetupAlertPresetId(setup))}
+                      onToggleAlert={toggleSetupAlert}
+                    />
                   ))}
                 </div>
               ) : (
@@ -441,10 +496,16 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
                 </Link>
               </div>
               <p className="mt-3 text-xs leading-5 text-slate-500 [word-break:keep-all]">
-                이 화면은 매수·매도 신호가 아니라, 오늘 시장에서 먼저 확인할 순서를 줄여주는 관제실입니다.
+                이 화면은 매수·매도 신호가 아니라, 오늘 시장에서 먼저 확인할 순서를 줄여주는 관제실입니다. 마음에 드는 감지는 저장해두면 알림 센터에서 다시 볼 수 있습니다.
               </p>
             </div>
           </div>
+        ) : null}
+
+        {alertToast ? (
+          <p className="mt-4 rounded-md border border-accent-blue/25 bg-accent-blue/10 px-3 py-2 text-xs font-bold leading-5 text-accent-blue">
+            {alertToast}
+          </p>
         ) : null}
       </div>
     </section>

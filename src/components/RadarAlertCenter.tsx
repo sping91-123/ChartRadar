@@ -2,7 +2,7 @@
 // 사용자가 받을 레이더 알림 조건을 설정하고 Pro 가치를 확인하는 패널이다.
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { BellRing, CheckCircle2, Crown, Loader2, Radar, ShieldCheck, Smartphone, Zap } from "lucide-react";
+import { BellRing, CheckCircle2, Clock3, Crown, Loader2, Radar, ShieldCheck, Smartphone, Zap } from "lucide-react";
 import {
   getDefaultRadarAlertRuleIds,
   radarAlertRules,
@@ -10,6 +10,7 @@ import {
   type RadarAlertRule,
   type RadarAlertRuleId
 } from "@/lib/radarAlerts";
+import { readSetupAlertPresets, type SetupAlertPreset } from "@/lib/setupAlertPresets";
 import { recordUsageEvent } from "@/lib/usageMeter";
 
 const storageKey = "chartRadar.alertRules.v1";
@@ -55,6 +56,22 @@ function permissionLabel(permission: PermissionState) {
   if (permission === "denied") return "브라우저 알림 차단됨";
   if (permission === "unsupported") return "이 브라우저는 알림을 지원하지 않습니다";
   return "브라우저 알림 권한 대기";
+}
+
+function compactSymbol(symbol: string) {
+  return symbol.replace("USDT.P", "").replace("USDT", "");
+}
+
+function presetSideLabel(side: SetupAlertPreset["side"]) {
+  return side === "long" ? "롱 우세" : "숏 우세";
+}
+
+function formatSavedAt(ms: number) {
+  const diff = Date.now() - ms;
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "방금 저장";
+  if (min < 60) return `${min}분 전 저장`;
+  return `${Math.floor(min / 60)}시간 전 저장`;
 }
 
 function RuleCard({
@@ -119,13 +136,30 @@ function RuleCard({
 
 export function RadarAlertCenter({ compact = false }: { compact?: boolean }) {
   const [enabledRuleIds, setEnabledRuleIds] = useState<RadarAlertRuleId[]>(() => getDefaultRadarAlertRuleIds());
+  const [setupPresets, setSetupPresets] = useState<SetupAlertPreset[]>([]);
   const [permission, setPermission] = useState<PermissionState>("default");
   const [isRequesting, setIsRequesting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     setEnabledRuleIds(readStoredRuleIds());
+    setSetupPresets(readSetupAlertPresets());
     setPermission(getPermissionState());
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    function syncPresets() {
+      setSetupPresets(readSetupAlertPresets());
+    }
+
+    window.addEventListener("storage", syncPresets);
+    window.addEventListener("chart-radar:setup-alert-presets", syncPresets);
+    return () => {
+      window.removeEventListener("storage", syncPresets);
+      window.removeEventListener("chart-radar:setup-alert-presets", syncPresets);
+    };
   }, []);
 
   useEffect(() => {
@@ -249,6 +283,53 @@ export function RadarAlertCenter({ compact = false }: { compact?: boolean }) {
           {toast}
         </p>
       ) : null}
+
+      <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-black text-white">내가 저장한 레이더 감시</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              홈의 TOP 감지에서 저장한 조건입니다. 정식 알림 서버가 붙으면 이 조건을 기준으로 푸시를 받을 수 있게 확장합니다.
+            </p>
+          </div>
+          <span className="rounded-md border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-xs font-black text-cyan-200">
+            {setupPresets.length}개 저장
+          </span>
+        </div>
+        {setupPresets.length > 0 ? (
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            {setupPresets.slice(0, compact ? 2 : 6).map((preset) => (
+              <article key={preset.id} className="rounded-md border border-white/10 bg-black/25 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-sm font-black text-white">{compactSymbol(preset.symbol)}</span>
+                      <span className="rounded border border-white/10 bg-black/30 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">
+                        {preset.timeframe}
+                      </span>
+                      <span className={preset.side === "long" ? "rounded border border-emerald-300/25 bg-emerald-300/10 px-1.5 py-0.5 text-[10px] font-black text-emerald-200" : "rounded border border-red-300/25 bg-red-300/10 px-1.5 py-0.5 text-[10px] font-black text-red-200"}>
+                        {presetSideLabel(preset.side)}
+                      </span>
+                    </div>
+                    <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-400">{preset.headline}</p>
+                  </div>
+                  <span className="shrink-0 rounded border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-[11px] font-black text-cyan-200">
+                    {preset.score}점
+                  </span>
+                </div>
+                <p className="mt-3 flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
+                  <Clock3 size={12} aria-hidden />
+                  {formatSavedAt(preset.savedAt)}
+                </p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 rounded-md border border-white/10 bg-black/25 p-3 text-xs leading-5 text-slate-500">
+            아직 저장된 감시 조건이 없습니다. 홈의 레이더 TOP 감지 카드에서 감시 저장을 누르면 여기에 쌓입니다.
+          </p>
+        )}
+      </div>
 
       <div className={`mt-4 grid gap-3 ${compact ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
         {visibleRules.map((rule) => (
