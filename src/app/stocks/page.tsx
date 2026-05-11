@@ -4,7 +4,6 @@ import { Header } from "@/components/Header";
 import { MacroTicker } from "@/components/MacroTicker";
 import { RadarTopNav } from "@/components/RadarTopNav";
 import { StockRadarApp } from "@/components/StockRadarApp";
-import { UsageMeterPanel } from "@/components/UsageMeterPanel";
 
 export default function StocksPage() {
   return (
@@ -13,7 +12,6 @@ export default function StocksPage() {
         <Header />
         <RadarTopNav />
         <MacroTicker compact />
-        <UsageMeterPanel compact />
         <StockRadarApp />
         <AppFooter />
       </div>

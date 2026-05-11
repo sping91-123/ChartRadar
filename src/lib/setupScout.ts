@@ -855,7 +855,7 @@ export function topSetups(setups: ScoutSetup[], n = 3): ScoutSetup[] {
 }
 
 /** 무료 티어 일일 제한용. localStorage 저장 키. */
-export const scoutCacheKey = "untitledRisk.setupScout.v7";
+export const scoutCacheKey = "untitledRisk.setupScout.v8";
 const legacyScoutCacheKey = "positionguard.setupScout.v2";
 export const scoutCacheTtlMs = 5 * 60 * 1000; // 5분
 

@@ -50,7 +50,8 @@ function isSupportedPerpetual(symbol: BinanceExchangeInfo["symbols"][number]) {
     symbol.contractType === "PERPETUAL" &&
     symbol.quoteAsset === "USDT" &&
     typeof symbol.symbol === "string" &&
-    symbol.symbol.endsWith("USDT")
+    /^[A-Z0-9]{2,30}USDT$/.test(symbol.symbol) &&
+    (typeof symbol.baseAsset !== "string" || /^[A-Z0-9]{2,30}$/.test(symbol.baseAsset))
   );
 }
 

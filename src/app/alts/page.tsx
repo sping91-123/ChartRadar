@@ -4,7 +4,6 @@ import { Header } from "@/components/Header";
 import { MacroTicker } from "@/components/MacroTicker";
 import { RadarTopNav } from "@/components/RadarTopNav";
 import { SetupScoutPanel } from "@/components/SetupScoutPanel";
-import { UsageMeterPanel } from "@/components/UsageMeterPanel";
 import { WatchlistPanel } from "@/components/WatchlistPanel";
 
 export default function AltsPage() {
@@ -14,7 +13,6 @@ export default function AltsPage() {
         <Header />
         <RadarTopNav />
         <MacroTicker compact />
-        <UsageMeterPanel compact />
         <WatchlistPanel />
         <SetupScoutPanel excludeMajor />
         <AppFooter />

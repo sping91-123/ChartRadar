@@ -5,7 +5,6 @@ import { LiveMarketChart } from "@/components/LiveMarketChart";
 import { MacroTicker } from "@/components/MacroTicker";
 import { RadarAlertCenter } from "@/components/RadarAlertCenter";
 import { RadarTopNav } from "@/components/RadarTopNav";
-import { UsageMeterPanel } from "@/components/UsageMeterPanel";
 
 export function SurvivalApp() {
   return (
@@ -14,10 +13,9 @@ export function SurvivalApp() {
         <Header />
         <RadarTopNav />
         <MacroTicker compact />
-        <DailyRadarBrief scope="major" />
-        <UsageMeterPanel compact />
-        <RadarAlertCenter compact />
         <LiveMarketChart majorOnly />
+        <DailyRadarBrief scope="major" />
+        <RadarAlertCenter compact />
         <AppFooter />
       </div>
     </main>
