@@ -6,7 +6,13 @@ import { rateLimit } from "@/lib/server/rateLimit";
 
 export const runtime = "nodejs";
 
-const FEEDS = [
+type RadarNewsMarket = "crypto" | "stocks";
+type NewsFeed = {
+  source: string;
+  url: string;
+};
+
+const CRYPTO_FEEDS = [
   {
     source: "CoinDesk",
     url: "https://www.coindesk.com/arc/outboundfeeds/rss/"
@@ -15,7 +21,18 @@ const FEEDS = [
     source: "Cointelegraph",
     url: "https://cointelegraph.com/rss"
   }
-] as const;
+] satisfies readonly NewsFeed[];
+
+const STOCK_FEEDS = [
+  {
+    source: "CNBC Markets",
+    url: "https://www.cnbc.com/id/100003114/device/rss/rss.html"
+  },
+  {
+    source: "MarketWatch",
+    url: "https://feeds.content.dowjones.io/public/rss/mw_topstories"
+  }
+] satisfies readonly NewsFeed[];
 
 const CACHE_MS = 5 * 60 * 1000;
 const GEMINI_MODEL = "gemini-3-flash-preview";
@@ -23,14 +40,19 @@ const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models
 const GROQ_DEFAULT_MODEL = "qwen/qwen3-32b";
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 
-let cache:
+let cache: Record<
+  RadarNewsMarket,
   | {
       updatedAt: number;
       items: RadarNewsItem[];
       briefing: RadarNewsBriefing;
       failedSources: string[];
     }
-  | null = null;
+  | null
+> = {
+  crypto: null,
+  stocks: null
+};
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -173,7 +195,7 @@ async function translateTitleToKorean(title: string) {
   return fallback;
 }
 
-async function loadFeed(feed: (typeof FEEDS)[number]) {
+async function loadFeed(feed: NewsFeed) {
   const response = await fetch(feed.url, {
     headers: {
       "user-agent": "ChartRadarBot/0.1 (+https://chartradar.local)"
@@ -242,7 +264,7 @@ function mostCommonAssets(items: RadarNewsItem[]) {
     .map(([asset]) => asset);
 }
 
-function fallbackNewsBriefing(items: RadarNewsItem[], model = "rules"): RadarNewsBriefing {
+function fallbackNewsBriefing(items: RadarNewsItem[], model = "rules", market: RadarNewsMarket = "crypto"): RadarNewsBriefing {
   const bullish = items.filter((item) => item.direction === "bullish").length;
   const bearish = items.filter((item) => item.direction === "bearish").length;
   const neutral = Math.max(0, items.length - bullish - bearish);
@@ -256,6 +278,44 @@ function fallbackNewsBriefing(items: RadarNewsItem[], model = "rules"): RadarNew
       return Math.abs(b.score - 50) - Math.abs(a.score - 50);
     })
     .slice(0, 4);
+
+  if (market === "stocks") {
+    const overview =
+      items.length === 0
+        ? "현재 불러온 해외주식 뉴스가 부족합니다. 주요 지수, 금리, 실적 캘린더를 먼저 확인하는 편이 좋습니다."
+        : `현재 수집된 해외주식 뉴스는 상방 우호 ${bullish}개, 하방 주의 ${bearish}개, 중립 확인 ${neutral}개로 정리됩니다. ${assets.length ? `${assets.join(", ")} 관련 이슈가 많이 잡히고 있으며, ` : ""}${urgent ? `즉시 확인할 만한 이슈가 ${urgent}개 있습니다.` : "아직은 단일 방향으로 강하게 쏠린 뉴스는 제한적입니다."}`;
+
+    return {
+      generatedAt: new Date().toISOString(),
+      model,
+      overview,
+      keyIssues: topItems.map((item) => ({
+        title: itemTitle(item),
+        detail: `${item.source} 기준 ${toneLabel(item.direction)} 이슈입니다. ${item.summary}`,
+        tone: item.direction
+      })),
+      marketImpact: [
+        leadingTone === "bullish"
+          ? "주식 뉴스 흐름은 단기적으로 위험자산에 우호적입니다. 다만 이미 오른 종목은 장중 변동성을 함께 확인해야 합니다."
+          : leadingTone === "bearish"
+            ? "주의 뉴스가 더 많아 지수 하락과 섹터별 차별화 가능성을 먼저 봐야 합니다."
+            : "뉴스 방향성이 엇갈려 지수보다 섹터, 실적, 금리 민감도를 나눠 보는 편이 좋습니다.",
+        "나스닥, S&P500, 달러, 미국 10년물 금리의 동시 흐름을 함께 확인하세요.",
+        "뉴스만으로 진입하기보다 차트 레이더의 추세와 변동성 상태를 같이 확인하는 편이 안전합니다."
+      ],
+      strategyNotes: [
+        "장 시작 전후에는 스프레드와 급변동이 커질 수 있으니 추격보다 관찰이 우선입니다.",
+        "실적·가이던스 이슈가 있는 종목은 기술적 지표보다 이벤트 리스크가 더 크게 작동할 수 있습니다.",
+        "ETF와 개별주는 같은 방향이라도 변동성이 다르므로 손절폭과 수량을 분리해서 계산하세요."
+      ],
+      finalSummary:
+        leadingTone === "bullish"
+          ? "정리하면, 뉴스 흐름은 다소 긍정적이지만 추격보다 지수와 섹터 확인이 먼저입니다."
+          : leadingTone === "bearish"
+            ? "정리하면, 방어적인 관찰이 필요한 구간입니다. 지수 지지선과 금리 반응을 먼저 보세요."
+            : "정리하면, 뉴스만으로 방향을 확정하기보다 차트와 매크로 확인이 필요한 구간입니다."
+    };
+  }
 
   const overview =
     items.length === 0
@@ -294,7 +354,8 @@ function fallbackNewsBriefing(items: RadarNewsItem[], model = "rules"): RadarNew
   };
 }
 
-function buildNewsBriefingPrompt(items: RadarNewsItem[]) {
+function buildNewsBriefingPrompt(items: RadarNewsItem[], market: RadarNewsMarket) {
+  const marketLabel = market === "stocks" ? "미국주식·ETF" : "코인";
   const headlines = items
     .slice(0, 10)
     .map((item, index) => {
@@ -307,7 +368,7 @@ function buildNewsBriefingPrompt(items: RadarNewsItem[]) {
     })
     .join("\n\n");
 
-  return `아래 코인 관련 뉴스 제목과 1차 분류를 바탕으로 한국어 시장 브리핑을 작성해 주세요.
+  return `아래 ${marketLabel} 관련 뉴스 제목과 1차 분류를 바탕으로 한국어 시장 브리핑을 작성해 주세요.
 
 출력은 반드시 JSON 하나만 반환하세요. 마크다운 문법은 쓰지 마세요.
 스키마는 다음과 같습니다.
@@ -349,8 +410,8 @@ function asStringList(value: unknown, limit: number) {
   return value.filter((item): item is string => typeof item === "string").slice(0, limit).map((item) => item.slice(0, 260));
 }
 
-function parseAIJsonBriefing(raw: string, items: RadarNewsItem[], model: string): RadarNewsBriefing {
-  const fallback = fallbackNewsBriefing(items, model);
+function parseAIJsonBriefing(raw: string, items: RadarNewsItem[], model: string, market: RadarNewsMarket): RadarNewsBriefing {
+  const fallback = fallbackNewsBriefing(items, model, market);
   const match = raw.match(/\{[\s\S]*\}/);
   if (!match) return { ...fallback, overview: raw.slice(0, 500) || fallback.overview };
 
@@ -374,17 +435,17 @@ function parseAIJsonBriefing(raw: string, items: RadarNewsItem[], model: string)
   }
 }
 
-async function generateNewsBriefing(items: RadarNewsItem[]) {
-  const groqBriefing = await generateGroqNewsBriefing(items);
+async function generateNewsBriefing(items: RadarNewsItem[], market: RadarNewsMarket) {
+  const groqBriefing = await generateGroqNewsBriefing(items, market);
   if (groqBriefing) return groqBriefing;
 
-  const geminiBriefing = await generateGeminiNewsBriefing(items);
+  const geminiBriefing = await generateGeminiNewsBriefing(items, market);
   if (geminiBriefing) return geminiBriefing;
 
-  return fallbackNewsBriefing(items);
+  return fallbackNewsBriefing(items, "rules", market);
 }
 
-async function generateGroqNewsBriefing(items: RadarNewsItem[]) {
+async function generateGroqNewsBriefing(items: RadarNewsItem[], market: RadarNewsMarket) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return null;
 
@@ -404,7 +465,7 @@ async function generateGroqNewsBriefing(items: RadarNewsItem[]) {
         messages: [
           {
             role: "user",
-            content: buildNewsBriefingPrompt(items)
+            content: buildNewsBriefingPrompt(items, market)
           }
         ],
         temperature: 0.2,
@@ -419,7 +480,7 @@ async function generateGroqNewsBriefing(items: RadarNewsItem[]) {
     const payload = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
     const text = payload.choices?.[0]?.message?.content?.trim() ?? "";
     if (!text) return null;
-    return parseAIJsonBriefing(text, items, model);
+    return parseAIJsonBriefing(text, items, model, market);
   } catch {
     return null;
   } finally {
@@ -427,7 +488,7 @@ async function generateGroqNewsBriefing(items: RadarNewsItem[]) {
   }
 }
 
-async function generateGeminiNewsBriefing(items: RadarNewsItem[]) {
+async function generateGeminiNewsBriefing(items: RadarNewsItem[], market: RadarNewsMarket) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
 
@@ -442,7 +503,7 @@ async function generateGeminiNewsBriefing(items: RadarNewsItem[]) {
         contents: [
           {
             role: "user",
-            parts: [{ text: buildNewsBriefingPrompt(items) }]
+            parts: [{ text: buildNewsBriefingPrompt(items, market) }]
           }
         ],
         generationConfig: {
@@ -458,7 +519,7 @@ async function generateGeminiNewsBriefing(items: RadarNewsItem[]) {
     const payload = (await response.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
     const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim() ?? "";
     if (!text) return null;
-    return parseAIJsonBriefing(text, items, GEMINI_MODEL);
+    return parseAIJsonBriefing(text, items, GEMINI_MODEL, market);
   } catch {
     return null;
   } finally {
@@ -480,15 +541,18 @@ export async function GET(request: Request) {
     );
   }
 
+  const { searchParams } = new URL(request.url);
+  const market: RadarNewsMarket = searchParams.get("market") === "stocks" ? "stocks" : "crypto";
+  const feeds = market === "stocks" ? STOCK_FEEDS : CRYPTO_FEEDS;
   const now = Date.now();
-  if (cache && now - cache.updatedAt < CACHE_MS) {
-    return NextResponse.json({ ...cache, cached: true });
+  if (cache[market] && now - cache[market]!.updatedAt < CACHE_MS) {
+    return NextResponse.json({ ...cache[market], market, cached: true });
   }
 
-  const settled = await Promise.allSettled(FEEDS.map((feed) => loadFeed(feed)));
+  const settled = await Promise.allSettled(feeds.map((feed) => loadFeed(feed)));
   const failedSources = settled
-    .map((result, index) => (result.status === "rejected" ? FEEDS[index].source : null))
-    .filter((source): source is (typeof FEEDS)[number]["source"] => Boolean(source));
+    .map((result, index) => (result.status === "rejected" ? feeds[index].source : null))
+    .filter((source): source is string => Boolean(source));
 
   const deduped = new Map<string, RadarNewsItem>();
   for (const result of settled) {
@@ -502,14 +566,14 @@ export async function GET(request: Request) {
   const items = Array.from(deduped.values())
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
     .slice(0, 24);
-  const briefing = await generateNewsBriefing(items);
+  const briefing = await generateNewsBriefing(items, market);
 
-  cache = {
+  cache[market] = {
     updatedAt: now,
     items,
     briefing,
     failedSources
   };
 
-  return NextResponse.json({ ...cache, cached: false });
+  return NextResponse.json({ ...cache[market], market, cached: false });
 }

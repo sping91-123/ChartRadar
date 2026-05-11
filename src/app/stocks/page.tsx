@@ -11,7 +11,7 @@ export default function StocksPage() {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
         <Header />
         <RadarTopNav />
-        <MacroTicker compact />
+        <MacroTicker compact market="stocks" />
         <StockRadarApp />
         <AppFooter />
       </div>

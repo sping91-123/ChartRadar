@@ -4,13 +4,15 @@ import { Header } from "@/components/Header";
 import { RadarAlertCenter } from "@/components/RadarAlertCenter";
 import { RadarTopNav } from "@/components/RadarTopNav";
 
-export default function AlertsPage() {
+export default function AlertsPage({ searchParams }: { searchParams?: { market?: string } }) {
+  const market = searchParams?.market === "stocks" ? "stocks" : "crypto";
+
   return (
     <main className="min-h-screen px-4 pb-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
         <Header />
-        <RadarTopNav />
-        <RadarAlertCenter />
+        <RadarTopNav market={market} />
+        <RadarAlertCenter market={market} />
         <AppFooter />
       </div>
     </main>

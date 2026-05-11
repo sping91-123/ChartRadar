@@ -1,6 +1,6 @@
 "use client";
 // 레이더뉴스 브리핑과 참고 뉴스 목록을 보여주는 패널.
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ExternalLink, Newspaper, Radar, RefreshCcw, ShieldAlert, Sparkles, Target, TrendingDown, TrendingUp } from "lucide-react";
 import type { RadarNewsBriefing, RadarNewsDirection, RadarNewsItem } from "@/lib/radarNews";
 import { recordUsageEvent } from "@/lib/usageMeter";
@@ -13,6 +13,23 @@ type NewsPayload = {
   cached: boolean;
   error?: string;
 };
+
+type RadarNewsMarket = "crypto" | "stocks";
+
+const marketCopy = {
+  crypto: {
+    eyebrow: "Crypto Radar News",
+    title: "코인 레이더뉴스",
+    description: "코인 시장 주요 뉴스와 공개 이슈를 모아 시장 영향, 위험 요인, 오늘 확인할 포인트를 한국어로 정리합니다.",
+    summaryTitle: "오늘의 코인 이슈 요약"
+  },
+  stocks: {
+    eyebrow: "Stock Radar News",
+    title: "해외주식 레이더뉴스",
+    description: "미국주식, ETF, 금리, 실적, 매크로 이슈를 중심으로 시장 영향과 오늘 확인할 포인트를 한국어로 정리합니다.",
+    summaryTitle: "오늘의 해외주식 이슈 요약"
+  }
+} satisfies Record<RadarNewsMarket, { eyebrow: string; title: string; description: string; summaryTitle: string }>;
 
 function directionStyle(direction: RadarNewsDirection) {
   if (direction === "bullish") {
@@ -133,16 +150,17 @@ function BulletList({ items, tone = "blue" }: { items: string[]; tone?: "blue" |
   );
 }
 
-export function RadarNewsPanel() {
+export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket } = {}) {
+  const copy = marketCopy[market];
   const [payload, setPayload] = useState<NewsPayload | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [error, setError] = useState("");
 
-  async function loadNews() {
+  const loadNews = useCallback(async () => {
     setStatus("loading");
     setError("");
     try {
-      const response = await fetch("/api/radar-news", { cache: "no-store" });
+      const response = await fetch(`/api/radar-news?market=${market}`, { cache: "no-store" });
       const data = (await response.json()) as NewsPayload;
       if (!response.ok) throw new Error(data.error ?? "레이더뉴스를 불러오지 못했습니다.");
       setPayload(data);
@@ -152,11 +170,11 @@ export function RadarNewsPanel() {
       setError(caught instanceof Error ? caught.message : "레이더뉴스를 불러오지 못했습니다.");
       setStatus("error");
     }
-  }
+  }, [market]);
 
   useEffect(() => {
     void loadNews();
-  }, []);
+  }, [loadNews]);
 
   const digest = useMemo(() => {
     const items = payload?.items ?? [];
@@ -188,10 +206,10 @@ export function RadarNewsPanel() {
               <Newspaper size={21} aria-hidden />
             </div>
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-accent-blue">Radar News</p>
-              <h2 className="mt-1 text-xl font-black text-white">AI 시장 브리핑</h2>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-accent-blue">{copy.eyebrow}</p>
+              <h2 className="mt-1 text-xl font-black text-white">{copy.title}</h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400 [word-break:keep-all]">
-                해외 공개 뉴스 흐름을 모아 주요 이슈, 시장 영향, 투자 판단 포인트를 한국어로 정리합니다. 원문 뉴스는 하단 참고 자료로만 확인하세요.
+                {copy.description}
               </p>
             </div>
           </div>
@@ -267,7 +285,7 @@ export function RadarNewsPanel() {
                   <Sparkles size={13} aria-hidden />
                   {briefing.model === "rules" ? "규칙 기반 브리핑" : "AI 종합 브리핑"}
                 </div>
-                <h3 className="mt-3 text-2xl font-black text-white">오늘의 코인 이슈 요약</h3>
+                <h3 className="mt-3 text-2xl font-black text-white">{copy.summaryTitle}</h3>
                 <p className="mt-3 text-sm leading-7 text-slate-300 [word-break:keep-all]">{briefing.overview}</p>
               </div>
               <p className="shrink-0 text-xs font-bold text-slate-500">{timeLabel(briefing.generatedAt)}</p>

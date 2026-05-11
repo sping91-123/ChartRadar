@@ -20,6 +20,7 @@ export interface JournalEntry {
   bias: string;
   note: string;
   createdAt: string;
+  market?: "crypto" | "stocks";
   source?: "manual" | "chart" | "scout";
   symbol?: string;
   timeframe?: string;

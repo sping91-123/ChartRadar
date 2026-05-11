@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Calculator, ShieldAlert } from "lucide-react";
 import { AppFooter } from "@/components/AppFooter";
@@ -38,14 +38,36 @@ function Field({
   );
 }
 
-export default function CalculatorPage() {
+export default function CalculatorPage({ searchParams }: { searchParams?: { market?: string } }) {
+  const initialMarket = searchParams?.market === "stocks" ? "stocks" : "crypto";
+  const [market, setMarket] = useState<"crypto" | "stocks">(initialMarket);
+  const marketCopy =
+    market === "stocks"
+      ? {
+          title: "해외주식 포지션 계산",
+          intro: "해외주식과 ETF의 손절폭 기준 수량, 예상 손실, 손익비를 계산해보세요.",
+          leverageLabel: "증거금 배수",
+          leveragePlaceholder: "예: 1"
+        }
+      : {
+          title: "코인 포지션 계산",
+          intro: "코인 레이더에서 관찰 구간과 리스크 기준을 확인한 뒤, 시드·손절폭 기준 포지션 크기와 손익비를 계산해보세요.",
+          leverageLabel: "레버리지",
+          leveragePlaceholder: "예: 3"
+        };
   const [seed, setSeed] = useState("");
   const [direction, setDirection] = useState<"long" | "short">("long");
   const [riskPercent, setRiskPercent] = useState("1");
   const [entryPrice, setEntryPrice] = useState("");
   const [stopPrice, setStopPrice] = useState("");
-  const [leverage, setLeverage] = useState("3");
+  const [leverage, setLeverage] = useState(market === "stocks" ? "1" : "3");
   const [targetPrice, setTargetPrice] = useState("");
+
+  useEffect(() => {
+    const nextMarket = new URLSearchParams(window.location.search).get("market") === "stocks" ? "stocks" : "crypto";
+    setMarket(nextMarket);
+    if (nextMarket === "stocks") setLeverage((current) => (current === "3" ? "1" : current));
+  }, []);
 
   const result = useMemo(() => {
     const seedValue = toNumber(seed);
@@ -85,11 +107,11 @@ export default function CalculatorPage() {
     <main className="min-h-screen px-4 pb-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
         <Header />
-        <RadarTopNav />
+        <RadarTopNav market={market} />
 
         <div className="rounded-lg border border-accent-blue/20 bg-accent-blue/5 px-4 py-3 text-xs leading-6 text-slate-400">
-          <span className="font-bold text-accent-blue">차트 레이더</span>에서 관찰 구간과 리스크 기준을 확인한 뒤,
-          여기서 시드·손절폭 기준 포지션 크기와 손익비를 계산해보세요.
+          <span className="font-bold text-accent-blue">Chart Radar</span>에서 관찰 구간과 리스크 기준을 확인한 뒤,
+          여기서 시장별 포지션 크기와 손익비를 계산해보세요.
           진입 점검은 <Link href="/diagnosis" className="font-bold text-accent-blue underline underline-offset-2">진입 점검</Link>에서 확인할 수 있습니다.
         </div>
 
@@ -99,9 +121,9 @@ export default function CalculatorPage() {
               <Calculator size={21} aria-hidden />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">포지션 계산</h2>
+              <h2 className="text-lg font-bold text-white">{marketCopy.title}</h2>
               <p className="mt-1 text-sm leading-6 text-slate-400">
-                리스크 기준 손절폭으로 적정 포지션 크기, 필요 증거금, 손익비 예시를 빠르게 계산합니다.
+                {marketCopy.intro}
               </p>
             </div>
           </div>
@@ -133,7 +155,7 @@ export default function CalculatorPage() {
             <Field label="허용 손실률 (%)" value={riskPercent} onChange={setRiskPercent} placeholder="예: 1" />
             <Field label="진입가" value={entryPrice} onChange={setEntryPrice} placeholder="예: 68000" />
             <Field label="손절가" value={stopPrice} onChange={setStopPrice} placeholder="예: 66500" />
-            <Field label="레버리지" value={leverage} onChange={setLeverage} placeholder="예: 3" />
+            <Field label={marketCopy.leverageLabel} value={leverage} onChange={setLeverage} placeholder={marketCopy.leveragePlaceholder} />
             <Field label="목표가 (선택)" value={targetPrice} onChange={setTargetPrice} placeholder="예: 71000" />
           </div>
 

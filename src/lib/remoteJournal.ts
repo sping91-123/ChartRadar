@@ -24,6 +24,7 @@ function rowToEntry(row: JournalRow): JournalEntry {
     bias: row.bias,
     note: row.note,
     createdAt: row.created_at,
+    market: row.verdict?.includes("해외주식") ? "stocks" : row.verdict?.includes("코인") ? "crypto" : undefined,
     source: row.source,
     symbol: row.symbol ?? undefined,
     timeframe: row.timeframe ?? undefined,

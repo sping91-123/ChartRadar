@@ -28,6 +28,20 @@ import { recordUsageEvent } from "@/lib/usageMeter";
 const storageKey = "chartRadar.alertRules.v1";
 
 type PermissionState = "unsupported" | "default" | "granted" | "denied";
+type AlertMarket = "crypto" | "stocks";
+
+const alertMarketCopy = {
+  crypto: {
+    eyebrow: "Crypto Radar Alerts",
+    title: "코인 변동만 따로 감시합니다",
+    description: "BTC·ETH와 알트코인 급변, A급 후보, 청산 압력, 코인 뉴스 흐름을 따로 감시하도록 준비하는 알림 센터입니다."
+  },
+  stocks: {
+    eyebrow: "Stock Radar Alerts",
+    title: "해외주식 변동만 따로 감시합니다",
+    description: "미국주식, ETF, 실적, 매크로 발표, 장전·장후 급변을 따로 감시하도록 준비하는 알림 센터입니다."
+  }
+} satisfies Record<AlertMarket, { eyebrow: string; title: string; description: string }>;
 
 function readStoredRuleIds(): RadarAlertRuleId[] {
   if (typeof window === "undefined") return getDefaultRadarAlertRuleIds();
@@ -153,7 +167,8 @@ function RuleCard({
   );
 }
 
-export function RadarAlertCenter({ compact = false }: { compact?: boolean }) {
+export function RadarAlertCenter({ compact = false, market = "crypto" }: { compact?: boolean; market?: AlertMarket }) {
+  const copy = alertMarketCopy[market];
   const [enabledRuleIds, setEnabledRuleIds] = useState<RadarAlertRuleId[]>(() => getDefaultRadarAlertRuleIds());
   const [setupPresets, setSetupPresets] = useState<SetupAlertPreset[]>([]);
   const [setupMatches, setSetupMatches] = useState<SetupAlertMatch[]>([]);
@@ -212,8 +227,17 @@ export function RadarAlertCenter({ compact = false }: { compact?: boolean }) {
     window.localStorage.setItem(storageKey, JSON.stringify(enabledRuleIds));
   }, [enabledRuleIds]);
 
-  const summary = useMemo(() => summarizeRadarAlerts(enabledRuleIds), [enabledRuleIds]);
-  const visibleRules = compact ? radarAlertRules.slice(0, 3) : radarAlertRules;
+  const scopedRules = useMemo(
+    () =>
+      radarAlertRules.filter((rule) => {
+        if (rule.category === "news" || rule.category === "system") return true;
+        return market === "stocks" ? rule.category === "stocks" : rule.category === "crypto";
+      }),
+    [market]
+  );
+  const scopedEnabledRuleIds = enabledRuleIds.filter((id) => scopedRules.some((rule) => rule.id === id));
+  const summary = useMemo(() => summarizeRadarAlerts(scopedEnabledRuleIds), [scopedEnabledRuleIds]);
+  const visibleRules = compact ? scopedRules.slice(0, 3) : scopedRules;
 
   function toggleRule(ruleId: RadarAlertRuleId) {
     if (!enabledRuleIds.includes(ruleId)) {
@@ -271,10 +295,10 @@ export function RadarAlertCenter({ compact = false }: { compact?: boolean }) {
             <BellRing size={22} aria-hidden />
           </div>
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">Radar Alerts</p>
-            <h2 className="mt-1 text-xl font-black text-white">놓치면 아쉬운 변화만 알려드릴게요</h2>
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">{copy.eyebrow}</p>
+            <h2 className="mt-1 text-xl font-black text-white">{copy.title}</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400 [word-break:keep-all]">
-              Chart Radar의 유료 가치는 단순히 차트를 한 번 더 보여주는 것이 아니라, 시장이 움직일 때 먼저 잡아주는 데 있습니다.
+              {copy.description}
               지금은 권한과 조건을 준비하고, 출시 단계에서는 웹푸시와 앱 알림으로 이어 붙이면 됩니다.
             </p>
           </div>

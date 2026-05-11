@@ -141,11 +141,32 @@ function getTimeLabel(releaseAt: string) {
   const diff = new Date(releaseAt).getTime() - Date.now();
   const minute = Math.round(diff / 60000);
 
-  if (minute > 60 * 24) return `D-${Math.ceil(minute / 60 / 24)}`;
+  if (minute > 60 * 24) return `D-${getKstDayDiff(releaseAt)}`;
   if (minute > 60) return `${Math.ceil(minute / 60)}시간 후`;
   if (minute > 0) return `${minute}분 후`;
   if (minute > -60 * 36) return "발표 확인";
   return "지난 일정";
+}
+
+function getKstDayDiff(releaseAt: string) {
+  const dayMs = 24 * 60 * 60 * 1000;
+  const nowKey = getKstDateKey(new Date());
+  const targetKey = getKstDateKey(new Date(releaseAt));
+  return Math.max(1, Math.round((targetKey - nowKey) / dayMs));
+}
+
+function getKstDateKey(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(date);
+
+  const year = Number(parts.find((part) => part.type === "year")?.value ?? "1970");
+  const month = Number(parts.find((part) => part.type === "month")?.value ?? "01");
+  const day = Number(parts.find((part) => part.type === "day")?.value ?? "01");
+  return Date.UTC(year, month - 1, day);
 }
 
 function getCompactItem() {
@@ -161,15 +182,21 @@ function getCompactItem() {
   return upcoming[0] ?? macroItems.find((item) => item.state === "released") ?? macroItems[0];
 }
 
-export function MacroTicker({ compact = false }: { compact?: boolean } = {}) {
-  const repeatedItems = [...macroItems, ...macroItems];
+export function MacroTicker({ compact = false, market = "crypto" }: { compact?: boolean; market?: "crypto" | "stocks" } = {}) {
+  const now = Date.now();
+  const upcomingItems = macroItems
+    .filter((item) => new Date(item.releaseAt).getTime() >= now)
+    .sort((a, b) => new Date(a.releaseAt).getTime() - new Date(b.releaseAt).getTime());
+  const releasedItems = macroItems
+    .filter((item) => new Date(item.releaseAt).getTime() < now)
+    .sort((a, b) => new Date(b.releaseAt).getTime() - new Date(a.releaseAt).getTime());
 
   if (compact) {
     const item = getCompactItem();
 
     return (
       <Link
-        href="/news"
+        href={market === "stocks" ? "/news?market=stocks" : "/news?market=crypto"}
         className="group flex min-h-10 items-center gap-2 rounded-md border border-accent-blue/15 bg-surface-card/78 px-2.5 py-2 shadow-[0_10px_34px_rgba(0,0,0,0.18)] transition hover:border-accent-blue/35 hover:bg-surface-card"
       >
         <div className="inline-flex shrink-0 items-center gap-1.5 rounded border border-accent-blue/20 bg-accent-blue/10 px-2 py-1 text-[11px] font-black text-accent-blue">
@@ -205,12 +232,16 @@ export function MacroTicker({ compact = false }: { compact?: boolean } = {}) {
         </div>
       </div>
 
-      <div className="macro-marquee py-2">
-        <div className="macro-marquee-track">
-          {repeatedItems.map((item, index) => (
+      <div className="grid gap-3 p-3 lg:grid-cols-[1.5fr_1fr]">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-black text-white">다가오는 일정</p>
+            <span className="text-[11px] font-bold text-slate-500">{upcomingItems.length}개 대기</span>
+          </div>
+          {upcomingItems.map((item) => (
             <article
-              key={`${item.label}-${index}`}
-              className="mx-1 inline-flex min-w-[360px] max-w-[460px] items-start gap-3 rounded-md border border-white/10 bg-black/25 px-3 py-2.5 align-top"
+              key={item.label}
+              className="flex items-start gap-3 rounded-md border border-white/10 bg-black/25 px-3 py-2.5"
             >
               <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-white/10 bg-black/30 text-accent-blue">
                 <CalendarClock size={16} aria-hidden />
@@ -221,7 +252,7 @@ export function MacroTicker({ compact = false }: { compact?: boolean } = {}) {
                   <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-black text-slate-300">{importanceLabel(item.importance)}</span>
                   <span className={`rounded border px-1.5 py-0.5 text-[10px] font-black ${sourceClass(item.source)}`}>{item.source}</span>
                 </div>
-                <p className="mt-1 truncate text-xs font-black text-white">{item.label}</p>
+                <p className="mt-1 text-xs font-black text-white">{item.label}</p>
                 <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-bold text-slate-400">
                   <span className="inline-flex items-center gap-1">
                     <Clock3 size={11} aria-hidden />
@@ -229,14 +260,37 @@ export function MacroTicker({ compact = false }: { compact?: boolean } = {}) {
                   </span>
                   <span>ET {item.dateEt}</span>
                 </div>
-                <p className="mt-1 truncate text-[11px] font-medium text-slate-500">{item.summary}</p>
+                <p className="mt-1 text-[11px] font-medium leading-5 text-slate-500 [word-break:keep-all]">{item.summary}</p>
                 <div className="mt-2 grid grid-cols-3 gap-1 text-[10px] font-bold">
                   <span className="rounded bg-white/5 px-1.5 py-1 text-slate-300">실제 {item.actual ?? "미정"}</span>
                   <span className="rounded bg-white/5 px-1.5 py-1 text-slate-300">예상 {item.forecast ?? "미정"}</span>
                   <span className="rounded bg-white/5 px-1.5 py-1 text-slate-300">이전 {item.previous ?? "미정"}</span>
                 </div>
-                <p className="mt-1 truncate text-[11px] font-medium text-slate-500">{item.marketImpact}</p>
+                <p className="mt-1 text-[11px] font-medium leading-5 text-slate-500 [word-break:keep-all]">{item.marketImpact}</p>
               </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-black text-white">최근 발표</p>
+            <span className="text-[11px] font-bold text-slate-500">{releasedItems.length}개 확인</span>
+          </div>
+          {releasedItems.slice(0, 3).map((item) => (
+            <article key={item.label} className="rounded-md border border-signal-success/15 bg-signal-success/5 px-3 py-2.5">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className={`rounded border px-1.5 py-0.5 text-[10px] font-black ${stateClass(item)}`}>{stateLabel(item)}</span>
+                <span className={`rounded border px-1.5 py-0.5 text-[10px] font-black ${sourceClass(item.source)}`}>{item.source}</span>
+              </div>
+              <p className="mt-2 text-xs font-black text-white">{item.label}</p>
+              <p className="mt-1 text-[11px] font-bold text-slate-400">KST {item.dateKst} · ET {item.dateEt}</p>
+              <div className="mt-2 grid gap-1 text-[10px] font-bold">
+                <span className="rounded bg-white/5 px-1.5 py-1 text-slate-300">실제 {item.actual ?? "미정"}</span>
+                <span className="rounded bg-white/5 px-1.5 py-1 text-slate-300">예상 {item.forecast ?? "미정"}</span>
+                <span className="rounded bg-white/5 px-1.5 py-1 text-slate-300">이전 {item.previous ?? "미정"}</span>
+              </div>
+              <p className="mt-2 text-[11px] leading-5 text-slate-500 [word-break:keep-all]">{item.marketImpact}</p>
             </article>
           ))}
         </div>

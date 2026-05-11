@@ -4,17 +4,17 @@ import { Header } from "@/components/Header";
 import { MacroTicker } from "@/components/MacroTicker";
 import { RadarNewsPanel } from "@/components/RadarNewsPanel";
 import { RadarTopNav } from "@/components/RadarTopNav";
-import { UsageMeterPanel } from "@/components/UsageMeterPanel";
 
-export default function NewsPage() {
+export default function NewsPage({ searchParams }: { searchParams?: { market?: string } }) {
+  const market = searchParams?.market === "stocks" ? "stocks" : "crypto";
+
   return (
     <main className="min-h-screen px-4 pb-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
         <Header />
-        <RadarTopNav />
+        <RadarTopNav market={market} />
         <MacroTicker />
-        <UsageMeterPanel compact />
-        <RadarNewsPanel />
+        <RadarNewsPanel market={market} />
         <AppFooter />
       </div>
     </main>

@@ -43,6 +43,17 @@ const promptChips = [
   "다음엔 무엇 하나만 고칠까?"
 ];
 const filters = ["전체", "레이더 저장", "직접 기록"] as const;
+const stockSymbols = new Set(["SPY", "QQQ", "DIA", "IWM", "AAPL", "MSFT", "NVDA", "TSLA", "META", "GOOGL", "AMZN", "AMD", "AVGO", "JPM", "XOM", "GLD", "USO"]);
+
+function detectEntryMarket(entry: JournalEntry): "crypto" | "stocks" | "unknown" {
+  if (entry.market) return entry.market;
+  if (entry.verdict?.includes("해외주식")) return "stocks";
+  if (entry.verdict?.includes("코인")) return "crypto";
+  if (!entry.symbol) return "unknown";
+  const symbol = entry.symbol.replace("USDT.P", "").replace("USDT", "").toUpperCase();
+  if (stockSymbols.has(symbol)) return "stocks";
+  return "crypto";
+}
 
 /** 30일 Scout 결과 통계 */
 function useScoutStats(entries: JournalEntry[]) {
@@ -215,7 +226,10 @@ function SectionList({
   );
 }
 
-export default function JournalPage() {
+export default function JournalPage({ searchParams }: { searchParams?: { market?: string } }) {
+  const initialMarket = searchParams?.market === "stocks" ? "stocks" : "crypto";
+  const [market, setMarket] = useState<"crypto" | "stocks">(initialMarket);
+  const marketLabel = market === "stocks" ? "해외주식" : "코인";
   const { session, user, profile, isLoading: isLoadingAuth } = useSupabaseAuth();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [localEntries, setLocalEntries] = useState<JournalEntry[]>([]);
@@ -228,6 +242,7 @@ export default function JournalPage() {
   const [shouldAutoSync, setShouldAutoSync] = useState(false);
 
   useEffect(() => {
+    setMarket(new URLSearchParams(window.location.search).get("market") === "stocks" ? "stocks" : "crypto");
     const savedLocal = loadJournalEntries();
     setLocalEntries(savedLocal);
     setEntries(savedLocal);
@@ -265,6 +280,8 @@ export default function JournalPage() {
       title: cleanTitle || "복기 메모",
       bias,
       note: cleanNote,
+      market,
+      verdict: `${marketLabel} 복기`,
       source: "manual" as const
     };
 
@@ -326,13 +343,23 @@ export default function JournalPage() {
     void migrateLocalEntries();
   }, [isLoadingAuth, session, shouldAutoSync, localEntries, migrateLocalEntries]);
 
-  const filteredEntries = useMemo(() => {
-    if (activeFilter === "레이더 저장") return entries.filter((entry) => entry.source === "scout");
-    if (activeFilter === "직접 기록") return entries.filter((entry) => entry.source !== "chart" && entry.source !== "scout");
-    return entries;
-  }, [activeFilter, entries]);
+  const marketEntries = useMemo(
+    () =>
+      entries.filter((entry) => {
+        const entryMarket = detectEntryMarket(entry);
+        if (entryMarket === "unknown") return market === "crypto";
+        return entryMarket === market;
+      }),
+    [entries, market]
+  );
 
-  const stats = useScoutStats(entries);
+  const filteredEntries = useMemo(() => {
+    if (activeFilter === "레이더 저장") return marketEntries.filter((entry) => entry.source === "scout");
+    if (activeFilter === "직접 기록") return marketEntries.filter((entry) => entry.source !== "chart" && entry.source !== "scout");
+    return marketEntries;
+  }, [activeFilter, marketEntries]);
+
+  const stats = useScoutStats(marketEntries);
 
   async function recordOutcome(id: string, outcome: OutcomeType) {
     const updater = (list: JournalEntry[]): JournalEntry[] =>
@@ -370,7 +397,7 @@ export default function JournalPage() {
     <main className="min-h-screen px-4 pb-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
         <Header />
-        <RadarTopNav />
+        <RadarTopNav market={market} />
 
         <section className="rounded-lg border border-surface-line bg-surface-card p-4 shadow-glow sm:p-5">
           <div className="flex items-start gap-3">
@@ -378,9 +405,9 @@ export default function JournalPage() {
               <History size={21} aria-hidden />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">매매 복기</h2>
+              <h2 className="text-lg font-bold text-white">{marketLabel} 매매 복기</h2>
               <p className="mt-1 text-sm leading-6 text-slate-400">
-                결과보다 원칙을 지켰는지 기록하는 공간입니다. 로그인하면 기록이 서버에 저장되어 나중에 모바일 앱에서도 이어갈 수 있습니다.
+                {marketLabel} 매매에서 결과보다 원칙을 지켰는지 기록하는 공간입니다. 로그인하면 기록이 서버에 저장되어 나중에 모바일 앱에서도 이어갈 수 있습니다.
               </p>
               <p className="mt-2 rounded-md border border-signal-warning/25 bg-signal-warning/10 px-3 py-2 text-xs leading-5 text-signal-warning">
                 복기 데이터는 계정과 브라우저 상태에 따라 보존됩니다. 중요한 기록은 별도 백업을 권장합니다.
@@ -483,7 +510,7 @@ export default function JournalPage() {
             <input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="예: BTC 15m 롱 관찰"
+              placeholder={market === "stocks" ? "예: NVDA 1h 조정 관찰" : "예: BTC 15m 롱 관찰"}
               className="min-h-12 rounded-md border border-surface-line bg-surface-cardSoft px-4 text-base text-white outline-none placeholder:text-slate-600 focus:border-accent-blue"
             />
             <div className="grid grid-cols-3 gap-2">
@@ -628,7 +655,7 @@ export default function JournalPage() {
             ) : (
               <div className="rounded-md border border-white/10 bg-black/20 p-4">
                 <p className="text-sm leading-6 text-slate-300">
-                  아직 저장된 복기가 없습니다. 좋은 매매보다 지킨 매매를 먼저 기록하세요.
+                  아직 저장된 {marketLabel} 복기가 없습니다. 좋은 매매보다 지킨 매매를 먼저 기록하세요.
                 </p>
                 <p className="mt-2 text-xs leading-5 text-slate-500">
                   첫 기록은 짧아도 됩니다. 추격했는지, 손절 기준이 있었는지만 남겨도 다음 판단이 훨씬 선명해집니다.
