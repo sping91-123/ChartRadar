@@ -10,7 +10,16 @@ import {
   type RadarAlertRule,
   type RadarAlertRuleId
 } from "@/lib/radarAlerts";
-import { readSetupAlertPresets, type SetupAlertPreset } from "@/lib/setupAlertPresets";
+import {
+  readSetupAlertMatches,
+  readSetupAlertPresets,
+  REQUEST_SETUP_ALERT_CHECK_EVENT,
+  SETUP_ALERT_CHECK_FINISHED_EVENT,
+  SETUP_ALERT_MATCHES_CHANGED_EVENT,
+  SETUP_ALERT_PRESETS_CHANGED_EVENT,
+  type SetupAlertMatch,
+  type SetupAlertPreset
+} from "@/lib/setupAlertPresets";
 import { recordUsageEvent } from "@/lib/usageMeter";
 
 const storageKey = "chartRadar.alertRules.v1";
@@ -137,13 +146,16 @@ function RuleCard({
 export function RadarAlertCenter({ compact = false }: { compact?: boolean }) {
   const [enabledRuleIds, setEnabledRuleIds] = useState<RadarAlertRuleId[]>(() => getDefaultRadarAlertRuleIds());
   const [setupPresets, setSetupPresets] = useState<SetupAlertPreset[]>([]);
+  const [setupMatches, setSetupMatches] = useState<SetupAlertMatch[]>([]);
   const [permission, setPermission] = useState<PermissionState>("default");
   const [isRequesting, setIsRequesting] = useState(false);
+  const [isManualChecking, setIsManualChecking] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     setEnabledRuleIds(readStoredRuleIds());
     setSetupPresets(readSetupAlertPresets());
+    setSetupMatches(readSetupAlertMatches());
     setPermission(getPermissionState());
   }, []);
 
@@ -152,13 +164,30 @@ export function RadarAlertCenter({ compact = false }: { compact?: boolean }) {
 
     function syncPresets() {
       setSetupPresets(readSetupAlertPresets());
+      setSetupMatches(readSetupAlertMatches());
+    }
+
+    function handleCheckFinished(event: Event) {
+      const detail = (event as CustomEvent<{ matchCount?: number }>).detail;
+      const matchCount = detail?.matchCount ?? 0;
+      setIsManualChecking(false);
+      setSetupMatches(readSetupAlertMatches());
+      setToast(
+        matchCount > 0
+          ? `저장된 감시 조건 중 ${matchCount}개가 현재 레이더와 다시 맞아떨어졌습니다.`
+          : "지금은 저장된 감시 조건과 다시 맞아떨어진 레이더가 없습니다."
+      );
     }
 
     window.addEventListener("storage", syncPresets);
-    window.addEventListener("chart-radar:setup-alert-presets", syncPresets);
+    window.addEventListener(SETUP_ALERT_PRESETS_CHANGED_EVENT, syncPresets);
+    window.addEventListener(SETUP_ALERT_MATCHES_CHANGED_EVENT, syncPresets);
+    window.addEventListener(SETUP_ALERT_CHECK_FINISHED_EVENT, handleCheckFinished);
     return () => {
       window.removeEventListener("storage", syncPresets);
-      window.removeEventListener("chart-radar:setup-alert-presets", syncPresets);
+      window.removeEventListener(SETUP_ALERT_PRESETS_CHANGED_EVENT, syncPresets);
+      window.removeEventListener(SETUP_ALERT_MATCHES_CHANGED_EVENT, syncPresets);
+      window.removeEventListener(SETUP_ALERT_CHECK_FINISHED_EVENT, handleCheckFinished);
     };
   }, []);
 
@@ -204,6 +233,18 @@ export function RadarAlertCenter({ compact = false }: { compact?: boolean }) {
     } finally {
       setIsRequesting(false);
     }
+  }
+
+  function requestManualAlertCheck() {
+    if (typeof window === "undefined") return;
+    if (setupPresets.length === 0) {
+      setToast("먼저 홈의 TOP 감지 카드에서 감시 조건을 저장해 주세요.");
+      return;
+    }
+
+    setIsManualChecking(true);
+    setToast("저장된 감시 조건을 현재 레이더 결과와 다시 비교하는 중입니다.");
+    window.dispatchEvent(new CustomEvent(REQUEST_SETUP_ALERT_CHECK_EVENT));
   }
 
   return (
@@ -289,13 +330,53 @@ export function RadarAlertCenter({ compact = false }: { compact?: boolean }) {
           <div>
             <p className="text-sm font-black text-white">내가 저장한 레이더 감시</p>
             <p className="mt-1 text-xs leading-5 text-slate-500">
-              홈의 TOP 감지에서 저장한 조건입니다. 정식 알림 서버가 붙으면 이 조건을 기준으로 푸시를 받을 수 있게 확장합니다.
+              홈의 TOP 감지에서 저장한 조건입니다. 앱이 켜져 있으면 5분마다 다시 훑고, 일치하면 최근 감지에 남깁니다.
             </p>
           </div>
           <span className="rounded-md border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-xs font-black text-cyan-200">
             {setupPresets.length}개 저장
           </span>
         </div>
+        <button
+          type="button"
+          onClick={requestManualAlertCheck}
+          disabled={isManualChecking}
+          className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-emerald-300/30 bg-emerald-300/10 px-3 text-sm font-black text-emerald-200 transition hover:bg-emerald-300 hover:text-slate-950 disabled:cursor-wait disabled:opacity-70"
+        >
+          {isManualChecking ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Radar size={16} aria-hidden />}
+          지금 저장 조건 확인
+        </button>
+        {setupMatches.length > 0 ? (
+          <div className="mt-3 rounded-md border border-emerald-300/25 bg-emerald-300/10 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-black text-emerald-200">최근 일치 감지</p>
+              <span className="text-[11px] font-bold text-emerald-200/80">{formatSavedAt(setupMatches[0].matchedAt)}</span>
+            </div>
+            <div className="mt-2 grid gap-2 md:grid-cols-2">
+              {setupMatches.slice(0, compact ? 1 : 2).map((match) => (
+                <article key={match.id} className="rounded border border-emerald-300/20 bg-black/20 p-3">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-sm font-black text-white">{compactSymbol(match.setup.symbol)}</span>
+                    <span className="rounded border border-white/10 bg-black/30 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">
+                      {match.setup.timeframe}
+                    </span>
+                    <span className={match.setup.side === "long" ? "rounded border border-emerald-300/25 bg-emerald-300/10 px-1.5 py-0.5 text-[10px] font-black text-emerald-200" : "rounded border border-red-300/25 bg-red-300/10 px-1.5 py-0.5 text-[10px] font-black text-red-200"}>
+                      {presetSideLabel(match.setup.side)}
+                    </span>
+                    <span className="rounded border border-cyan-300/25 bg-cyan-300/10 px-1.5 py-0.5 text-[10px] font-black text-cyan-200">
+                      {match.setup.score}점
+                    </span>
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-300">{match.setup.headline}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="mt-3 rounded-md border border-white/10 bg-black/25 p-3 text-xs leading-5 text-slate-500">
+            저장 조건이 현재 레이더 결과와 다시 맞아떨어지면 이곳에 최근 일치 감지로 표시됩니다.
+          </p>
+        )}
         {setupPresets.length > 0 ? (
           <div className="mt-3 grid gap-2 md:grid-cols-2">
             {setupPresets.slice(0, compact ? 2 : 6).map((preset) => (

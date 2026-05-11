@@ -1,6 +1,7 @@
 // 전역 메타데이터와 테마 초기화를 담당하는 루트 레이아웃.
 import type { Metadata, Viewport } from "next";
 import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
+import { RadarAlertMonitor } from "@/components/RadarAlertMonitor";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "http://127.0.0.1:3000";
@@ -86,6 +87,7 @@ export default function RootLayout({
           }}
         />
         {children}
+        <RadarAlertMonitor />
         <PwaInstallPrompt />
       </body>
     </html>
