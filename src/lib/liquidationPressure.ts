@@ -1,4 +1,4 @@
-// Binance 공개 파생상품 데이터를 청산 압력 레이더 값으로 변환하는 순수 계산 모듈.
+// Binance 공개 파생상품 데이터를 청산 압력 보조값으로 변환하는 계산 모듈.
 export type LiquidationPressureSide = "upsideShorts" | "downsideLongs" | "balanced";
 export type LiquidationPressureGrade = "calm" | "normal" | "heated" | "extreme";
 
@@ -136,14 +136,14 @@ function summaryFor(side: LiquidationPressureSide, grade: LiquidationPressureGra
     grade === "extreme" ? "매우 높습니다" : grade === "heated" ? "높아지고 있습니다" : grade === "normal" ? "보통 수준입니다" : "차분합니다";
 
   if (side === "upsideShorts") {
-    return `숏 포지션 쏠림이 더 강해 위쪽 숏 청산 압력이 ${gradeText}. 저항 돌파나 스윕이 나오면 위쪽 변동성이 커질 수 있습니다.`;
+    return `숏 포지션 쏠림이 강해 위쪽 숏 청산 압력이 ${gradeText}. 저항 돌파나 숏 스퀴즈가 나오면 위쪽 변동성이 커질 수 있습니다.`;
   }
 
   if (side === "downsideLongs") {
-    return `롱 포지션 쏠림이 더 강해 아래쪽 롱 청산 압력이 ${gradeText}. 지지 이탈이나 저점 스윕이 나오면 아래쪽 변동성이 커질 수 있습니다.`;
+    return `롱 포지션 쏠림이 강해 아래쪽 롱 청산 압력이 ${gradeText}. 지지 이탈이나 롱 스퀴즈가 나오면 아래쪽 변동성이 커질 수 있습니다.`;
   }
 
-  return `롱과 숏 청산 압력이 비슷해 한쪽으로 크게 쏠리지는 않았습니다. 방향보다 변동성 확대 여부를 먼저 확인하는 구간입니다.`;
+  return "롱과 숏 청산 압력이 비슷해 한쪽으로 크게 기울지 않았습니다. 방향보다 변동성 확대 여부를 먼저 확인하는 구간입니다.";
 }
 
 export function buildLiquidationPressureReport(input: BuildLiquidationPressureInput): LiquidationPressureReport {
@@ -196,7 +196,7 @@ export function buildLiquidationPressureReport(input: BuildLiquidationPressureIn
     dominantSide: side,
     grade,
     summary: summaryFor(side, grade),
-    warning: "CoinGlass 청산맵이 아니라 Binance 공개 데이터 기반 추정 보조 지표입니다. 진입 신호가 아니라 레버리지 쏠림과 변동성 위험을 보는 용도로만 참고하세요.",
+    warning: "CoinGlass급 청산맵이 아니라 Binance 공개 데이터 기반 추정 보조 지표입니다. 진입 신호가 아니며, 레버리지 쏠림과 변동성 위험을 보는 용도로만 참고하세요.",
     bands: buildBands(markPrice),
     updatedAt: input.updatedAt ?? Date.now()
   };

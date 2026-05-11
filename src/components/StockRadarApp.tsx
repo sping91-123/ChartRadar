@@ -269,7 +269,7 @@ export function StockRadarApp() {
             <h2 className="mt-1 text-xl font-black text-white">해외주식 레이더</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
               미국 주요 주식, 지수 ETF, 반도체, 성장주, 원자재 ETF를 기술지표 중심으로 빠르게 훑습니다.
-              현재 해외주식 데이터는 지연될 수 있으므로 실시간 체결 기준보다는 방향 점검과 관심종목 선별용으로 보세요.
+              종목별 추세, 모멘텀, 변동성, 거래량을 한 화면에서 정리해 관심종목 선별과 장전 점검에 활용할 수 있습니다.
             </p>
           </div>
         </div>

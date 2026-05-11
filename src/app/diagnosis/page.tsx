@@ -6,7 +6,6 @@ import { AdviceCard } from "@/components/AdviceCard";
 import { AppFooter } from "@/components/AppFooter";
 import { DiagnosisForm } from "@/components/DiagnosisForm";
 import { Header } from "@/components/Header";
-import { QuestionTemplates } from "@/components/QuestionTemplates";
 import { RadarTopNav } from "@/components/RadarTopNav";
 import { ResultCard } from "@/components/ResultCard";
 import { diagnoseTrade } from "@/lib/diagnosis";
@@ -31,7 +30,6 @@ const initialValues: DiagnosisFormValues = {
 export default function DiagnosisPage() {
   const [values, setValues] = useState<DiagnosisFormValues>(initialValues);
   const [result, setResult] = useState<DiagnosisResult | null>(null);
-  const [selectedQuestion, setSelectedQuestion] = useState("");
 
   function updateValue<K extends keyof DiagnosisFormValues>(key: K, value: DiagnosisFormValues[K]) {
     setValues((current) => {
@@ -77,7 +75,6 @@ export default function DiagnosisPage() {
           <div className="space-y-5">
             <ResultCard result={result} />
             <AdviceCard result={result} />
-            <QuestionTemplates selectedQuestion={selectedQuestion} onSelect={setSelectedQuestion} />
           </div>
         </div>
         <AppFooter />

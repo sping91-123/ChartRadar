@@ -1,5 +1,5 @@
 "use client";
-// 레이더뉴스 상단에 중요한 미국 매크로 일정을 카드와 요약형으로 보여준다.
+// 한국시간 기준의 주요 매크로 일정을 거래 화면과 뉴스 화면에 보여주는 컴포넌트입니다.
 import Link from "next/link";
 import { CalendarClock, ChevronRight, Clock3, ExternalLink, Radio, ShieldAlert, TimerReset } from "lucide-react";
 import {
@@ -11,20 +11,23 @@ import {
   type MacroEventSource
 } from "@/data/macroEvents";
 
+const RECENT_RELEASE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 function stateLabel(item: MacroEventItem) {
-  if (item.state === "released") return "발표됨";
+  if (isRecentlyReleased(item)) return "결과 확인";
+  if (item.state === "released") return "발표 완료";
   if (item.state === "watch") return "관찰";
   return getTimeLabel(item.releaseAt);
 }
 
 function stateClass(item: MacroEventItem) {
-  if (item.state === "released") return "border-signal-success/25 bg-signal-success/10 text-signal-success";
+  if (isRecentlyReleased(item) || item.state === "released") return "border-signal-success/25 bg-signal-success/10 text-signal-success";
   if (item.state === "watch") return "border-signal-warning/25 bg-signal-warning/10 text-signal-warning";
   return "border-accent-blue/25 bg-accent-blue/10 text-accent-blue";
 }
 
 function compactStateClass(item: MacroEventItem) {
-  if (item.state === "released") return "text-signal-success";
+  if (isRecentlyReleased(item) || item.state === "released") return "text-signal-success";
   if (item.state === "watch") return "text-signal-warning";
   return "text-accent-blue";
 }
@@ -39,6 +42,7 @@ function sourceClass(source: MacroEventSource) {
   if (source === "Fed") return "border-violet-300/25 bg-violet-300/10 text-violet-200";
   if (source === "BEA") return "border-emerald-300/25 bg-emerald-300/10 text-emerald-200";
   if (source === "Census") return "border-amber-300/25 bg-amber-300/10 text-amber-200";
+  if (source === "NAR") return "border-cyan-300/25 bg-cyan-300/10 text-cyan-200";
   return "border-sky-300/25 bg-sky-300/10 text-sky-200";
 }
 
@@ -47,10 +51,15 @@ function getTimeLabel(releaseAt: string) {
   const minute = Math.round(diff / 60000);
 
   if (minute > 60 * 24) return `D-${getKstDayDiff(releaseAt)}`;
-  if (minute > 60) return `${Math.ceil(minute / 60)}시간 전`;
-  if (minute > 0) return `${minute}분 전`;
-  if (minute > -60 * 36) return "발표 확인";
+  if (minute > 60) return `${Math.ceil(minute / 60)}시간 후`;
+  if (minute > 0) return `${minute}분 후`;
+  if (minute > -RECENT_RELEASE_WINDOW_MS / 60000) return "결과 확인";
   return "지난 일정";
+}
+
+function isRecentlyReleased(item: MacroEventItem) {
+  const diff = Date.now() - new Date(item.releaseAt).getTime();
+  return diff >= 0 && diff <= RECENT_RELEASE_WINDOW_MS;
 }
 
 function getKstDayDiff(releaseAt: string) {
@@ -74,27 +83,43 @@ function getKstDateKey(date: Date) {
   return Date.UTC(year, month - 1, day);
 }
 
-function getCompactItem() {
+function getUpcomingItems() {
   const now = Date.now();
-  const upcoming = macroItems
-    .filter((item) => new Date(item.releaseAt).getTime() >= now)
+  return macroItems
+    .filter((item) => new Date(item.releaseAt).getTime() >= now || item.state === "watch")
+    .sort((a, b) => new Date(a.releaseAt).getTime() - new Date(b.releaseAt).getTime());
+}
+
+function getRecentReleasedItems() {
+  return macroItems
+    .filter((item) => isRecentlyReleased(item) || item.state === "released")
+    .sort((a, b) => new Date(b.releaseAt).getTime() - new Date(a.releaseAt).getTime());
+}
+
+function getCompactItem() {
+  const recent = getRecentReleasedItems()[0];
+  const upcoming = getUpcomingItems()
+    .filter((item) => new Date(item.releaseAt).getTime() >= Date.now())
     .sort((a, b) => {
       const importanceDiff = b.importance - a.importance;
       if (importanceDiff !== 0) return importanceDiff;
       return new Date(a.releaseAt).getTime() - new Date(b.releaseAt).getTime();
-    });
+    })[0];
 
-  return upcoming[0] ?? macroItems.find((item) => item.state === "released") ?? macroItems[0];
+  return recent ?? upcoming ?? macroItems[0];
+}
+
+function ValuePill({ label, value }: { label: string; value?: string }) {
+  return (
+    <span className="rounded bg-white/5 px-1.5 py-1 text-slate-300">
+      {label} {value ?? "미정"}
+    </span>
+  );
 }
 
 export function MacroTicker({ compact = false, market = "crypto" }: { compact?: boolean; market?: "crypto" | "stocks" } = {}) {
-  const now = Date.now();
-  const upcomingItems = macroItems
-    .filter((item) => new Date(item.releaseAt).getTime() >= now)
-    .sort((a, b) => new Date(a.releaseAt).getTime() - new Date(b.releaseAt).getTime());
-  const releasedItems = macroItems
-    .filter((item) => new Date(item.releaseAt).getTime() < now)
-    .sort((a, b) => new Date(b.releaseAt).getTime() - new Date(a.releaseAt).getTime());
+  const upcomingItems = getUpcomingItems().filter((item) => new Date(item.releaseAt).getTime() >= Date.now()).slice(0, 6);
+  const releasedItems = getRecentReleasedItems().slice(0, 4);
 
   if (compact) {
     const item = getCompactItem();
@@ -110,10 +135,10 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-[11px] font-black text-white">
-            다음 핵심 일정 · <span className={compactStateClass(item)}>{stateLabel(item)}</span> · {item.label}
+            {isRecentlyReleased(item) ? "최근 발표" : "다음 발표"} · <span className={compactStateClass(item)}>{stateLabel(item)}</span> · {item.label}
           </p>
           <p className="mt-0.5 truncate text-[11px] font-bold text-slate-500">
-            KST {item.dateKst} · {importanceLabel(item.importance)} · {item.marketImpact}
+            한국시간 {item.dateKst} · {importanceLabel(item.importance)} · 예상 {item.forecast ?? "미정"} · 이전 {item.previous ?? "미정"}
           </p>
         </div>
         <ChevronRight size={14} className="shrink-0 text-slate-600 transition group-hover:text-accent-blue" aria-hidden />
@@ -129,7 +154,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
         </div>
         <div className="min-w-0">
           <p className="text-xs font-black text-white">매크로 레이더</p>
-          <p className="truncate text-[11px] font-bold text-slate-500">{macroCalendarUpdatedAt}. 발표 시간은 한국시간과 미국 동부시간을 함께 표시합니다.</p>
+          <p className="truncate text-[11px] font-bold text-slate-500">{macroCalendarUpdatedAt}. 모든 발표 시간은 한국시간 기준입니다.</p>
         </div>
         <div className="ml-auto hidden items-center gap-1 rounded border border-signal-warning/20 bg-signal-warning/10 px-2 py-1 text-[11px] font-black text-signal-warning sm:flex">
           <ShieldAlert size={12} aria-hidden />
@@ -158,15 +183,14 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
                 <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-bold text-slate-400">
                   <span className="inline-flex items-center gap-1">
                     <Clock3 size={11} aria-hidden />
-                    KST {item.dateKst}
+                    한국시간 {item.dateKst}
                   </span>
-                  <span>ET {item.dateEt}</span>
                 </div>
                 <p className="mt-1 text-[11px] font-medium leading-5 text-slate-500 [word-break:keep-all]">{item.summary}</p>
                 <div className="mt-2 grid grid-cols-3 gap-1 text-[10px] font-bold">
-                  <span className="rounded bg-white/5 px-1.5 py-1 text-slate-300">실제 {item.actual ?? "미정"}</span>
-                  <span className="rounded bg-white/5 px-1.5 py-1 text-slate-300">예상 {item.forecast ?? "미정"}</span>
-                  <span className="rounded bg-white/5 px-1.5 py-1 text-slate-300">이전 {item.previous ?? "미정"}</span>
+                  <ValuePill label="실제" value={item.actual} />
+                  <ValuePill label="예상" value={item.forecast} />
+                  <ValuePill label="이전" value={item.previous} />
                 </div>
                 <p className="mt-1 text-[11px] font-medium leading-5 text-slate-500 [word-break:keep-all]">{item.marketImpact}</p>
                 <a
@@ -185,28 +209,28 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
 
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-black text-white">최근 발표</p>
+            <p className="text-xs font-black text-white">최근 24시간 발표</p>
             <span className="text-[11px] font-bold text-slate-500">{releasedItems.length}개 확인</span>
           </div>
-          {releasedItems.slice(0, 3).map((item) => (
+          {releasedItems.map((item) => (
             <article key={item.label} className="rounded-md border border-signal-success/15 bg-signal-success/5 px-3 py-2.5">
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className={`rounded border px-1.5 py-0.5 text-[10px] font-black ${stateClass(item)}`}>{stateLabel(item)}</span>
                 <span className={`rounded border px-1.5 py-0.5 text-[10px] font-black ${sourceClass(item.source)}`}>{item.source}</span>
               </div>
               <p className="mt-2 text-xs font-black text-white">{item.label}</p>
-              <p className="mt-1 text-[11px] font-bold text-slate-400">KST {item.dateKst} · ET {item.dateEt}</p>
+              <p className="mt-1 text-[11px] font-bold text-slate-400">한국시간 {item.dateKst}</p>
               <div className="mt-2 grid gap-1 text-[10px] font-bold">
-                <span className="rounded bg-white/5 px-1.5 py-1 text-slate-300">실제 {item.actual ?? "미정"}</span>
-                <span className="rounded bg-white/5 px-1.5 py-1 text-slate-300">예상 {item.forecast ?? "미정"}</span>
-                <span className="rounded bg-white/5 px-1.5 py-1 text-slate-300">이전 {item.previous ?? "미정"}</span>
+                <ValuePill label="실제" value={item.actual} />
+                <ValuePill label="예상" value={item.forecast} />
+                <ValuePill label="이전" value={item.previous} />
               </div>
               <p className="mt-2 text-[11px] leading-5 text-slate-500 [word-break:keep-all]">{item.marketImpact}</p>
             </article>
           ))}
           {releasedItems.length === 0 ? (
             <p className="rounded-md border border-white/10 bg-black/25 p-3 text-[11px] leading-5 text-slate-500">
-              현재 표시할 최근 발표가 없습니다. 다음 발표 일정 위주로 확인해 주세요.
+              최근 24시간 안에 표시할 발표 결과가 없습니다. 다음 발표 일정 위주로 확인해 주세요.
             </p>
           ) : null}
         </div>

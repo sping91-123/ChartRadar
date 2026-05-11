@@ -237,6 +237,7 @@ interface StructureState {
 interface AnalysisContext {
   oteAnchorCandles?: Candle[];
   useCloseForMsb?: boolean;
+  zigLen?: number;
 }
 
 export const chartTimeframes: ChartTimeframe[] = ["5m", "15m", "1h", "4h", "1d"];
@@ -1943,7 +1944,7 @@ export function analyzeTimeframe(
   const latest = candles[candles.length - 1];
   const closes = candles.map((candle) => candle.close);
   const ema200 = ema(closes, 200);
-  const structure = buildStructureState(candles, timeframe, 5, context?.useCloseForMsb ?? true);
+  const structure = buildStructureState(candles, timeframe, context?.zigLen ?? 5, context?.useCloseForMsb ?? true);
   const latestSweep = detectLatestSweep(candles, timeframe, structure.hiPoints, structure.loPoints);
   const latestFvg = detectLatestFvg(candles, timeframe);
   const latestOb = structure.latestOb;

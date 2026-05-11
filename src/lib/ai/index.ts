@@ -1,17 +1,18 @@
-/**
- * AI Provider 팩토리. 환경변수에 따라 활성 Provider를 결정한다.
- *
- * 현재: GEMINI_API_KEY가 있으면 Gemini 사용.
- * 추후: ANTHROPIC_API_KEY, OPENAI_API_KEY 등을 추가하고 우선순위 정하면 swap 1줄로 끝.
- */
-
+// AI Provider를 환경변수 우선순위에 따라 선택하는 팩토리.
 import type { AIProvider } from "./types";
 import { GeminiProvider } from "./gemini";
+import { GroqProvider } from "./groq";
 
 let cached: AIProvider | null = null;
 
 export function getAIProvider(): AIProvider {
   if (cached) return cached;
+
+  const groqKey = process.env.GROQ_API_KEY;
+  if (groqKey) {
+    cached = new GroqProvider(groqKey, process.env.GROQ_MODEL);
+    return cached;
+  }
 
   const geminiKey = process.env.GEMINI_API_KEY;
   if (geminiKey) {
@@ -20,9 +21,15 @@ export function getAIProvider(): AIProvider {
   }
 
   throw new Error(
-    "AI Provider가 설정되지 않았습니다. .env.local에 GEMINI_API_KEY를 추가하세요."
+    "AI Provider가 설정되지 않았습니다. .env.local에 GROQ_API_KEY 또는 GEMINI_API_KEY를 추가하세요."
   );
 }
 
-export type { CommentaryInput, CommentaryOutput, MarketBriefingInput, MarketBriefingOutput, AIProvider } from "./types";
+export type {
+  AIProvider,
+  CommentaryInput,
+  CommentaryOutput,
+  MarketBriefingInput,
+  MarketBriefingOutput
+} from "./types";
 export { AIProviderError } from "./types";

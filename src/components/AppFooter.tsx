@@ -14,7 +14,7 @@ export function AppFooter() {
           </p>
           <p>
             코인 데이터는 Binance 가격을 기준으로 판독합니다.
-            해외주식 데이터는 지연될 수 있으며, 정식 데이터 계약 전까지 방향 점검용으로 제공됩니다.
+            해외주식 데이터는 주요 종목의 방향 점검과 관심종목 선별을 돕는 보조 정보로 제공합니다.
           </p>
           <nav className="flex flex-wrap gap-x-3 gap-y-1 text-slate-400" aria-label="서비스 정책">
             <Link href="/terms" className="hover:text-white">

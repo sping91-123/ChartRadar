@@ -5,7 +5,6 @@ import type { DiagnosisFormValues } from "@/types";
 
 const coinOptions = ["BTC", "ETH", "SOL", "XRP", "DOGE", "직접입력"] as const;
 const directionOptions = ["롱", "숏"] as const;
-const timeFrameOptions = ["5m", "15m", "1h", "4h", "1d"] as const;
 const trendOptions = ["상승", "하락", "횡보", "모르겠음"] as const;
 const locationOptions = ["지지 근처", "저항 근처", "중간값", "고점 추격", "저점 추격", "모르겠음"] as const;
 const stopLossOptions = ["있음", "없음"] as const;
@@ -119,7 +118,7 @@ export function DiagnosisForm({ values, onChange, onSubmit }: DiagnosisFormProps
         </p>
       </div>
 
-      <div className="mb-5 grid grid-cols-3 gap-2">
+      <div className="mb-5 grid grid-cols-2 gap-2">
         <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2">
           <p className="text-[11px] font-semibold text-slate-500">입력 진행도</p>
           <p className="mt-1 text-base font-black text-white">{essentialsReady}/4</p>
@@ -128,14 +127,10 @@ export function DiagnosisForm({ values, onChange, onSubmit }: DiagnosisFormProps
           <p className="text-[11px] font-semibold text-slate-500">현재 방향</p>
           <p className="mt-1 text-base font-black text-white">{values.direction}</p>
         </div>
-        <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2">
-          <p className="text-[11px] font-semibold text-slate-500">타임프레임</p>
-          <p className="mt-1 text-base font-black text-white">{values.timeFrame}</p>
-        </div>
       </div>
 
       <div className="space-y-6">
-        <SectionTitle step="1" title="기본 상황" description="코인, 방향, 타임프레임만 먼저 정합니다." />
+        <SectionTitle step="1" title="기본 상황" description="코인과 방향만 먼저 정합니다." />
 
         <div className="grid gap-6">
           <FieldGroup label="코인">
@@ -149,20 +144,12 @@ export function DiagnosisForm({ values, onChange, onSubmit }: DiagnosisFormProps
             ) : null}
           </FieldGroup>
 
-          <div className="grid gap-6 sm:grid-cols-2">
+          <div className="grid gap-6">
             <FieldGroup label="방향">
               <PillGroup
                 value={values.direction}
                 options={directionOptions}
                 onChange={(value) => onChange("direction", value)}
-              />
-            </FieldGroup>
-
-            <FieldGroup label="타임프레임">
-              <PillGroup
-                value={values.timeFrame}
-                options={timeFrameOptions}
-                onChange={(value) => onChange("timeFrame", value)}
               />
             </FieldGroup>
           </div>
@@ -198,7 +185,7 @@ export function DiagnosisForm({ values, onChange, onSubmit }: DiagnosisFormProps
           />
           {values.stopLossStatus === "없음" ? (
             <p className="rounded-md border border-signal-warning/25 bg-signal-warning/10 px-3 py-2 text-xs leading-5 text-signal-warning">
-              손절가가 없으면 이 진단은 기본적으로 위험 점수를 크게 올립니다.
+              손절가가 없으면 이 진단은 기본적으로 진입 위험도를 크게 올립니다.
             </p>
           ) : null}
         </FieldGroup>

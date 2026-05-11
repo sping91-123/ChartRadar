@@ -423,7 +423,7 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
             <div className="rounded-md border border-signal-warning/25 bg-signal-warning/10 p-3 text-signal-warning">
               <p className="flex items-center gap-1.5 text-[11px] font-bold opacity-80">
                 <ShieldAlert size={13} aria-hidden />
-                다음 행동
+                지금 확인할 것
               </p>
               <p className="mt-1 text-xs font-bold leading-5 [word-break:keep-all]">{summary.nextAction}</p>
             </div>

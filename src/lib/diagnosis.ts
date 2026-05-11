@@ -28,7 +28,7 @@ function getVerdict(riskScore: number): Verdict {
   if (riskScore >= 45) {
     return "관찰 필요";
   }
-  return "소액 가능";
+  return "검토 가능";
 }
 
 function getAdvice(verdict: Verdict): string {

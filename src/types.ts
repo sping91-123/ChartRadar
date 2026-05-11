@@ -11,7 +11,7 @@ export type CurrentLocation =
   | "모르겠음";
 export type StopLossStatus = "있음" | "없음";
 export type RiskPercentPreset = "0.5" | "1" | "2" | "3" | "직접입력";
-export type Verdict = "진입 금지" | "관찰 필요" | "소액 가능";
+export type Verdict = "진입 금지" | "관찰 필요" | "검토 가능";
 
 export interface DiagnosisFormValues {
   coin: CoinOption;

@@ -24,7 +24,7 @@ import {
   ClipboardCheck,
   Copy,
   History,
-  LockKeyhole,
+  HelpCircle,
   RefreshCcw,
   Settings2,
 } from "lucide-react";
@@ -197,31 +197,42 @@ type MarketBriefingState =
   | { status: "error"; message: string };
 
 type RadarProfile = "combined" | "ict" | "technical";
+type StructureSensitivity = 5 | 7 | 9;
+
+const structureSensitivityOptions: Array<{
+  value: StructureSensitivity;
+  label: string;
+  description: string;
+}> = [
+  { value: 5, label: "빠른 변화 감지", description: "5분·15분 변화를 더 빨리 잡습니다." },
+  { value: 7, label: "균형 감지", description: "노이즈와 반응 속도 사이의 중간값입니다." },
+  { value: 9, label: "큰 구조 위주", description: "큰 추세 전환만 천천히 확인합니다." }
+];
 
 function BriefingKeyword({ children, tone }: { children: string; tone: "long" | "short" | "warn" | "neutral" }) {
   const className =
     tone === "long"
-      ? "rounded bg-signal-success/15 px-1 font-black text-signal-success"
+      ? "font-black text-signal-success"
       : tone === "short"
-        ? "rounded bg-signal-danger/15 px-1 font-black text-signal-danger"
+        ? "font-black text-signal-danger"
         : tone === "warn"
-          ? "rounded bg-signal-warning/15 px-1 font-black text-signal-warning"
-          : "rounded bg-accent-blue/15 px-1 font-black text-accent-blue";
+          ? "font-black text-signal-warning"
+          : "font-black text-accent-blue";
   return <span className={className}>{children}</span>;
 }
 
 function HighlightedBriefing({ text }: { text: string }) {
-  const pattern = /(롱|숏|상승|하락|횡보|주의|리스크|조정|과열|침체|OB|FVG|POC|PD|MSB|CHoCH|Sweep|CISD|강점|약점|대기|관찰)/g;
+  const pattern = /(롱|숏|상승|하락|횡보|주의|위험|리스크|조정|과열|침체|OB|FVG|POC|PD|MSB|BOS|CHoCH|Sweep|CISD|강점|약점|대기|관찰)/g;
   return (
     <p className="whitespace-pre-line text-sm leading-7 text-slate-200">
       {text.split(pattern).map((part, index) => {
         if (!part) return null;
-        if (["롱", "상승"].includes(part)) return <BriefingKeyword key={`${part}-${index}`} tone="long">{part}</BriefingKeyword>;
+        if (["롱", "상승", "강점"].includes(part)) return <BriefingKeyword key={`${part}-${index}`} tone="long">{part}</BriefingKeyword>;
         if (["숏", "하락"].includes(part)) return <BriefingKeyword key={`${part}-${index}`} tone="short">{part}</BriefingKeyword>;
-        if (["주의", "리스크", "조정", "과열", "침체", "약점"].includes(part)) {
+        if (["주의", "위험", "리스크", "조정", "과열", "침체", "약점"].includes(part)) {
           return <BriefingKeyword key={`${part}-${index}`} tone="warn">{part}</BriefingKeyword>;
         }
-        if (["횡보", "OB", "FVG", "POC", "PD", "MSB", "CHoCH", "Sweep", "CISD", "강점", "대기", "관찰"].includes(part)) {
+        if (["횡보", "OB", "FVG", "POC", "PD", "MSB", "BOS", "CHoCH", "Sweep", "CISD", "대기", "관찰"].includes(part)) {
           return <BriefingKeyword key={`${part}-${index}`} tone="neutral">{part}</BriefingKeyword>;
         }
         return <span key={`${part}-${index}`}>{part}</span>;
@@ -377,16 +388,26 @@ function readinessClasses(readiness?: MarketAnalysis["readiness"]) {
 }
 
 function readinessLabel(readiness?: MarketAnalysis["readiness"]) {
-  if (readiness === "high") return "높음";
-  if (readiness === "medium") return "보통";
-  return "낮음";
+  if (readiness === "high") return "신뢰 높음";
+  if (readiness === "medium") return "신뢰 보통";
+  return "신뢰 낮음";
+}
+
+function userFacingRiskPercent(analysis: MarketAnalysis | null) {
+  if (!analysis) return 0;
+  const base = analysis.bias === "neutral" ? 55 : 35;
+  const readinessPenalty = analysis.readiness === "high" ? -15 : analysis.readiness === "medium" ? 5 : 22;
+  const warningPenalty = Math.min(35, (analysis.riskFlags.length + analysis.warnings.length) * 9);
+  const scorePenalty = Math.max(0, 18 - Math.abs(analysis.biasScore)) * 0.8;
+  return Math.min(95, Math.max(5, Math.round(base + readinessPenalty + warningPenalty + scorePenalty)));
 }
 
 function userFacingRiskLabel(analysis: MarketAnalysis | null) {
   if (!analysis) return "대기 중";
-  if (analysis.readiness === "high" && analysis.riskFlags.length <= 1) return "검토 조건 양호";
-  if (analysis.bias === "neutral" || analysis.readiness === "low") return "관찰 우선";
-  return "주의 필요";
+  const risk = userFacingRiskPercent(analysis);
+  if (risk >= 70) return "위험 높음";
+  if (risk >= 45) return "주의 구간";
+  return "검토 가능";
 }
 
 function userFacingNextStep(analysis: MarketAnalysis | null) {
@@ -394,6 +415,15 @@ function userFacingNextStep(analysis: MarketAnalysis | null) {
   if (analysis.bias === "neutral") return "진입보다 구조 확인";
   if (analysis.readiness === "high") return "손절/수량 먼저 확인";
   return "반응 확인 후 판단";
+}
+
+function overlayPresetMatches(settings: OverlaySettings, preset: keyof typeof overlayPresets) {
+  const target = overlayPresets[preset];
+  return (Object.keys(target) as Array<keyof OverlaySettings>).every((key) => settings[key] === target[key]);
+}
+
+function structureSensitivityLabel(value: StructureSensitivity) {
+  return structureSensitivityOptions.find((item) => item.value === value)?.label ?? "빠른 변화 감지";
 }
 
 type RadarPulseTone = "long" | "short" | "warn" | "neutral";
@@ -453,7 +483,8 @@ function radarPulseClasses(tone: RadarPulseTone) {
 }
 
 function decisionTone(value: string) {
-  if (value.includes("양호") || value.includes("손절")) return "border-signal-success/25 bg-signal-success/10 text-signal-success";
+  if (value.includes("검토 가능") || value.includes("손절")) return "border-signal-success/25 bg-signal-success/10 text-signal-success";
+  if (value.includes("위험")) return "border-signal-danger/25 bg-signal-danger/10 text-signal-danger";
   if (value.includes("주의") || value.includes("관찰")) return "border-signal-warning/25 bg-signal-warning/10 text-signal-warning";
   return "border-white/10 bg-black/20 text-slate-200";
 }
@@ -682,6 +713,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
   const [analysisMode, setAnalysisMode] = useState<"confirmed" | "aggressive">("confirmed");
   const [radarProfile, setRadarProfile] = useState<RadarProfile>("combined");
   const [msbMode, setMsbMode] = useState<"close" | "wick">("close");
+  const [structureSensitivity, setStructureSensitivity] = useState<StructureSensitivity>(5);
   const [isUsingCachedData, setIsUsingCachedData] = useState(false);
   const [showAdvancedControls, setShowAdvancedControls] = useState(false);
   const [showDetailedReadout, setShowDetailedReadout] = useState(true);
@@ -698,7 +730,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
   const otherSymbols = majorOnly ? [] : allSelectableSymbols.filter((item) => !majorSymbols.includes(item)).slice(0, 220);
   const isOtherSymbolActive = otherSymbols.includes(symbol);
 
-  const cacheKey = `${storagePrefix}.marketCache.${symbol}.${activeTimeframe}.${analysisMode}.${msbMode}`;
+  const cacheKey = `${storagePrefix}.marketCache.${symbol}.${activeTimeframe}.${analysisMode}.${msbMode}.${structureSensitivity}`;
 
   useEffect(() => {
     setOverlaySettings(readOverlaySettings());
@@ -737,6 +769,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
     const storedMode = readLocalStorageWithLegacy(storageKey("analysisMode"), legacyStorageKey("analysisMode")) as "confirmed" | "aggressive" | null;
     const storedRadarProfile = readLocalStorageWithLegacy(storageKey("radarProfile"), legacyStorageKey("radarProfile")) as RadarProfile | null;
     const storedMsbMode = readLocalStorageWithLegacy(storageKey("msbMode"), legacyStorageKey("msbMode")) as "close" | "wick" | null;
+    const storedStructureSensitivity = Number(readLocalStorageWithLegacy(storageKey("structureSensitivity"), legacyStorageKey("structureSensitivity"))) as StructureSensitivity;
 
     if (storedSymbol && symbols.includes(storedSymbol)) {
       setSymbol(storedSymbol);
@@ -752,6 +785,9 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
     }
     if (storedMsbMode === "close" || storedMsbMode === "wick") {
       setMsbMode(storedMsbMode);
+    }
+    if ([5, 7, 9].includes(storedStructureSensitivity)) {
+      setStructureSensitivity(storedStructureSensitivity);
     }
   }, []);
 
@@ -774,6 +810,10 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
   useEffect(() => {
     writeLocalStorage(storageKey("msbMode"), legacyStorageKey("msbMode"), msbMode);
   }, [msbMode]);
+
+  useEffect(() => {
+    writeLocalStorage(storageKey("structureSensitivity"), legacyStorageKey("structureSensitivity"), String(structureSensitivity));
+  }, [structureSensitivity]);
 
   useEffect(() => {
     writeLocalStorage(overlaySettingsStorageKey, legacyOverlaySettingsStorageKey, JSON.stringify(overlaySettings));
@@ -812,7 +852,8 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
 
         return analyzeTimeframe(item.timeframe, analysisCandles, {
           oteAnchorCandles,
-          useCloseForMsb: msbMode === "close"
+          useCloseForMsb: msbMode === "close",
+          zigLen: structureSensitivity
         });
       });
       const latestPrice = (analysisMode === "confirmed" && activeCandles.length > 50 ? activeCandles[activeCandles.length - 2] : activeCandles[activeCandles.length - 1])?.close ?? 0;
@@ -843,7 +884,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
     } finally {
       setIsLoading(false);
     }
-  }, [activeTimeframe, analysisMode, cacheKey, effectiveTradingMode, msbMode, symbol]);
+  }, [activeTimeframe, analysisMode, cacheKey, effectiveTradingMode, msbMode, structureSensitivity, symbol]);
 
   useEffect(() => {
     loadMarket();
@@ -1691,7 +1732,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
   }
 
   return (
-    <section id="basic-coins" className="scroll-mt-24 rounded-lg border border-surface-line bg-surface-card p-4 pb-56 shadow-glow sm:p-5">
+    <section id="basic-coins" className="scroll-mt-24 rounded-lg border border-surface-line bg-surface-card p-4 shadow-glow sm:p-5">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
@@ -1725,13 +1766,16 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
 
       </div>
 
-      <div className="mt-4 -mx-1 hidden gap-2 overflow-x-auto px-1 pb-1">
-        {symbols.map((item) => (
+      <div className={`relative mt-4 grid gap-2 ${majorOnly ? "grid-cols-2" : "grid-cols-3"}`}>
+        {primarySymbols.map((item) => (
           <button
             key={item}
             type="button"
-            onClick={() => setSymbol(item)}
-            className={`min-h-10 min-w-[68px] whitespace-nowrap rounded-md border px-3 text-sm font-black transition ${
+            onClick={() => {
+              setSymbol(item);
+              setShowOtherSymbols(false);
+            }}
+            className={`min-h-10 whitespace-nowrap rounded-md border px-3 text-sm font-black transition ${
               symbol === item
                 ? "border-accent-blue bg-accent-blue text-slate-950"
                 : "border-surface-line bg-surface-cardSoft text-slate-300 hover:border-accent-blue/60"
@@ -1740,9 +1784,43 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
             {symbolLabel(item)}
           </button>
         ))}
+        {!majorOnly ? (
+          <button
+            type="button"
+            onClick={() => setShowOtherSymbols((value) => !value)}
+            className={`min-h-10 whitespace-nowrap rounded-md border px-3 text-sm font-black transition ${
+              isOtherSymbolActive || showOtherSymbols
+                ? "border-accent-blue bg-accent-blue text-slate-950"
+                : "border-surface-line bg-surface-cardSoft text-slate-300 hover:border-accent-blue/60"
+            }`}
+          >
+            {isOtherSymbolActive ? symbolLabel(symbol) : "그 외"}
+          </button>
+        ) : null}
+        {!majorOnly && showOtherSymbols ? (
+          <div className="absolute left-0 top-full z-50 mt-2 grid max-h-[52vh] w-[min(92vw,520px)] grid-cols-4 gap-2 overflow-y-auto rounded-lg border border-surface-line bg-slate-950 p-2 shadow-[0_18px_50px_rgba(0,0,0,0.55)] sm:grid-cols-6">
+            {otherSymbols.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => {
+                  setSymbol(item);
+                  setShowOtherSymbols(false);
+                }}
+                className={`min-h-9 rounded-md border px-2 text-xs font-black transition ${
+                  symbol === item
+                    ? "border-accent-blue bg-accent-blue text-slate-950"
+                    : "border-surface-line bg-surface-cardSoft text-slate-300 hover:border-accent-blue/60"
+                }`}
+              >
+                {symbolLabel(item)}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
 
-      <div className="mt-3 hidden grid-cols-5 gap-2">
+      <div className="mt-3 grid grid-cols-5 gap-2">
         {modeTimeframes.map((timeframe) => (
           <button
             key={timeframe}
@@ -1759,7 +1837,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
         ))}
       </div>
 
-      <div className="mt-3 hidden grid-cols-3 gap-2 rounded-lg border border-surface-line bg-black/20 p-1">
+      <div className="mt-3 grid grid-cols-3 gap-2 rounded-lg border border-surface-line bg-black/20 p-1">
         {[
           { key: "combined", label: "종합", description: "구조와 지표를 함께 요약" },
           { key: "ict", label: "ICT 구조", description: "MSB, CHoCH, OB, FVG 중심" },
@@ -1785,14 +1863,16 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
         <div className={`mt-4 rounded-lg border p-4 ${biasClasses(analysis.bias)}`}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs font-black opacity-80">{symbolLabel(symbol)} · {activeTimeframe} 오늘의 레이더 브리프</p>
+              <p className="text-xs font-black opacity-80">{symbolLabel(symbol)} · {activeTimeframe} 오늘의 레이더 브리핑</p>
               <h3 className="mt-2 text-2xl font-black sm:text-3xl">{analysis.verdict}</h3>
               <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-200 [word-break:keep-all]">
                 {analysis.summaryLine}
               </p>
             </div>
-            <div className="grid h-20 w-20 shrink-0 place-items-center rounded-full border border-current/30 bg-current/10 text-center sm:h-28 sm:w-28">
-              <span className="px-3 text-base font-black">{biasLabel(analysis.bias)}</span>
+            <div className="shrink-0 rounded-md border border-current/25 bg-current/10 px-4 py-3 text-right">
+              <p className="text-xs font-bold opacity-75">방향</p>
+              <p className="mt-1 text-lg font-black">{biasLabel(analysis.bias)}</p>
+              <p className="mt-1 text-xs font-bold opacity-75">점수 {analysis.biasScore}</p>
             </div>
           </div>
 
@@ -1840,15 +1920,23 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
 
           <div className="mt-4 grid gap-2 sm:grid-cols-3">
             <div className={`rounded-md border p-3 ${decisionTone(userFacingRiskLabel(analysis))}`}>
-              <p className="text-xs font-semibold opacity-75">자리 위험도</p>
-              <p className="mt-1 text-base font-black">{userFacingRiskLabel(analysis)}</p>
+              <p className="text-xs font-semibold opacity-75">진입 위험도</p>
+              <p className="mt-1 text-base font-black">{userFacingRiskPercent(analysis)}% · {userFacingRiskLabel(analysis)}</p>
             </div>
             <div className={`rounded-md border p-3 ${decisionTone(userFacingNextStep(analysis))}`}>
-              <p className="text-xs font-semibold opacity-75">다음 행동</p>
+              <p className="text-xs font-semibold opacity-75">진입 전 확인</p>
               <p className="mt-1 text-base font-black">{userFacingNextStep(analysis)}</p>
             </div>
             <div className={`rounded-md border p-3 ${readinessClasses(analysis.readiness)}`}>
-              <p className="text-xs font-semibold opacity-75">판독 상태</p>
+              <p className="flex items-center gap-1 text-xs font-semibold opacity-75">
+                데이터 신뢰도
+                <span className="group relative inline-flex">
+                  <HelpCircle size={13} aria-hidden />
+                  <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-64 -translate-x-1/2 rounded-md border border-white/10 bg-slate-950 px-3 py-2 text-[11px] leading-5 text-slate-300 shadow-xl group-hover:block">
+                    여러 타임프레임 구조와 현재 위치가 얼마나 서로 맞는지 보는 값입니다. 높다고 무조건 진입이라는 뜻은 아닙니다.
+                  </span>
+                </span>
+              </p>
               <p className="mt-1 text-base font-black">{readinessLabel(analysis.readiness)}</p>
             </div>
           </div>
@@ -1873,15 +1961,15 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
           className="inline-flex min-h-10 items-center gap-2 rounded-md border border-surface-line bg-surface-cardSoft px-3 text-sm font-bold text-slate-300 hover:border-accent-blue/60 hover:text-white"
         >
           <Settings2 size={16} aria-hidden />
-          판독 성향 {showAdvancedControls ? "접기" : "열기"}
+          판독 기준 {showAdvancedControls ? "접기" : "열기"}
         </button>
       </div>
 
       {showAdvancedControls ? (
         <div className="mt-3 grid gap-3 rounded-lg border border-surface-line bg-surface-cardSoft p-3 sm:grid-cols-2">
           <div className="rounded-md border border-accent-blue/20 bg-accent-blue/5 p-3 text-xs leading-5 text-slate-300 sm:col-span-2">
-            안정형은 실전 판단용 기본값이고, 빠른 감지형과 윅 기준은 차트 미리보기용입니다.
-                          차트 레이더 후보는 무리한 감지를 줄이기 위해 닫힌 봉 + MSB 종가 기준으로 별도 고정합니다.
+            이 설정은 실제 판독값에 반영됩니다. 안정형은 닫힌 봉 기준으로 늦지만 덜 흔들리고, 빠른 감지형은 진행 중 봉까지 반영해 더 빨리 흔들릴 수 있습니다.
+            차트 표시 설정은 아래 차트 표시 섹션에서 따로 조절합니다.
           </div>
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -1933,34 +2021,70 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
               MSB 윅 감지
             </button>
           </div>
+          <div className="grid gap-2 sm:col-span-2 sm:grid-cols-3">
+            {structureSensitivityOptions.map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                onClick={() => setStructureSensitivity(item.value)}
+                className={`min-h-14 rounded-md border px-3 text-left text-sm font-bold transition ${
+                  structureSensitivity === item.value
+                    ? "border-accent-blue bg-accent-blue text-slate-950"
+                    : "border-surface-line bg-black/20 text-slate-300 hover:border-accent-blue/60"
+                }`}
+              >
+                {item.label}
+                <span className="mt-0.5 block text-[10px] font-semibold opacity-75">ZigZag {item.value} · {item.description}</span>
+              </button>
+            ))}
+          </div>
           <div className="rounded-md border border-white/10 bg-black/20 p-3 sm:col-span-2">
-            <p className="text-xs font-semibold text-slate-400">차트 오버레이</p>
+            <p className="text-xs font-semibold text-slate-400">차트 표시 설정</p>
+            <p className="mt-1 text-[11px] leading-5 text-slate-500">
+              이 항목은 차트에 무엇을 그릴지만 정합니다. 판독 결론 자체는 위의 판독 기준으로 계산됩니다.
+            </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={() => applyOverlayPreset("all")}
-                className="min-h-9 rounded-md border border-accent-blue/30 bg-accent-blue/10 px-3 text-xs font-bold text-accent-blue hover:bg-accent-blue/20"
+                className={`min-h-9 rounded-md border px-3 text-xs font-bold transition ${
+                  overlayPresetMatches(overlaySettings, "all")
+                    ? "border-accent-blue bg-accent-blue text-slate-950"
+                    : "border-accent-blue/30 bg-accent-blue/10 text-accent-blue hover:bg-accent-blue/20"
+                }`}
               >
                 전체
               </button>
               <button
                 type="button"
                 onClick={() => applyOverlayPreset("structure")}
-                className="min-h-9 rounded-md border border-white/10 bg-black/20 px-3 text-xs font-bold text-slate-300 hover:border-accent-blue/40"
+                className={`min-h-9 rounded-md border px-3 text-xs font-bold transition ${
+                  overlayPresetMatches(overlaySettings, "structure")
+                    ? "border-accent-blue bg-accent-blue text-slate-950"
+                    : "border-white/10 bg-black/20 text-slate-300 hover:border-accent-blue/40"
+                }`}
               >
                 구조 집중
               </button>
               <button
                 type="button"
                 onClick={() => applyOverlayPreset("zones")}
-                className="min-h-9 rounded-md border border-white/10 bg-black/20 px-3 text-xs font-bold text-slate-300 hover:border-accent-blue/40"
+                className={`min-h-9 rounded-md border px-3 text-xs font-bold transition ${
+                  overlayPresetMatches(overlaySettings, "zones")
+                    ? "border-accent-blue bg-accent-blue text-slate-950"
+                    : "border-white/10 bg-black/20 text-slate-300 hover:border-accent-blue/40"
+                }`}
               >
                 구간 집중
               </button>
               <button
                 type="button"
                 onClick={() => applyOverlayPreset("minimal")}
-                className="min-h-9 rounded-md border border-white/10 bg-black/20 px-3 text-xs font-bold text-slate-300 hover:border-accent-blue/40"
+                className={`min-h-9 rounded-md border px-3 text-xs font-bold transition ${
+                  overlayPresetMatches(overlaySettings, "minimal")
+                    ? "border-accent-blue bg-accent-blue text-slate-950"
+                    : "border-white/10 bg-black/20 text-slate-300 hover:border-accent-blue/40"
+                }`}
               >
                 미니멀
               </button>
@@ -2095,7 +2219,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
             {analysis ? (
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <div className={`rounded-md border px-3 py-3 ${readinessClasses(analysis.readiness)}`}>
-                  <span className="block text-xs font-semibold opacity-80">판독 상태</span>
+                  <span className="block text-xs font-semibold opacity-80">데이터 신뢰도</span>
                   <span className="mt-1 block text-lg font-black">{readinessLabel(analysis.readiness)}</span>
                 </div>
                 <div className="rounded-md border border-white/10 bg-black/15 p-3 text-sm leading-6 text-slate-100">
@@ -2197,15 +2321,14 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
                         </p>
                       </div>
                       <div className={`rounded-md border px-3 py-2 ${readinessClasses(analysis.readiness)}`}>
-                        <p className="text-[11px] font-bold opacity-80">판독 상태</p>
+                        <p className="text-[11px] font-bold opacity-80">데이터 신뢰도</p>
                         <p className="mt-1 text-base font-black">{readinessLabel(analysis.readiness)}</p>
                       </div>
                     </div>
                     <HighlightedBriefing text={marketBriefing.text} />
-                    <p className="mt-3 text-xs text-slate-500">
-                      model {marketBriefing.model}
-                      {marketBriefing.cached ? " · cached" : ""}
-                    </p>
+                    {marketBriefing.cached ? (
+                      <p className="mt-3 text-xs text-slate-500">방금 전 생성한 브리핑을 다시 보여드립니다.</p>
+                    ) : null}
                   </>
                 ) : null}
                 {marketBriefing.status === "error" ? (
@@ -2232,6 +2355,11 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
 
               <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <SignalMetric label="MSB" value={stateLabel(activeAnalysis.msb)} direction={activeAnalysis.msb} />
+                <SignalMetric
+                  label="BOS"
+                  value={activeAnalysis.latestMsbEvent ? `${eventDirectionLabel(activeAnalysis.latestMsbEvent.direction)} · ${barsAgoLabel(Math.max(0, candles.length - 1 - activeAnalysis.latestMsbEvent.index), activeTimeframe)}` : "없음"}
+                  direction={activeAnalysis.latestMsbEvent?.direction}
+                />
                 <SignalMetric label="CHoCH" value={stateLabel(activeAnalysis.choch)} direction={activeAnalysis.choch} />
                 <SignalMetric
                   label="OB"
@@ -2284,9 +2412,9 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
                   <p className="mt-2 text-sm leading-6 text-slate-300">{analysis.summaryLine}</p>
                 </div>
                 <div className="rounded-lg border border-white/10 bg-black/20 p-4">
-                  <h4 className="text-base font-black text-white">ZigZag 5 기준</h4>
+                  <h4 className="text-base font-black text-white">구조 민감도 {structureSensitivity}</h4>
                   <p className="mt-2 text-sm leading-6 text-slate-300">
-                    현재 구조 민감도는 기존 지표와 맞추기 위해 5로 유지했습니다. 5는 15분과 1시간에서는 빠른 구조 감지에 좋지만, 5분에서는 노이즈가 늘 수 있고 4시간 이상에서는 큰 스윙을 놓칠 수 있어 이후 3, 5, 8 프리셋 검증이 필요합니다.
+                    현재는 {structureSensitivityLabel(structureSensitivity)} 기준입니다. 값이 낮을수록 빠르게 변화를 감지하고, 값이 높을수록 큰 구조만 천천히 확인합니다.
                   </p>
                 </div>
               </div>
@@ -2313,6 +2441,11 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
                   <h4 className="mt-1 text-base font-black text-white">ICT 구조 코어</h4>
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <SignalMetric label="MSB" value={stateLabel(activeAnalysis.msb)} direction={activeAnalysis.msb} />
+                    <SignalMetric
+                      label="BOS"
+                      value={activeAnalysis.latestMsbEvent ? `${eventDirectionLabel(activeAnalysis.latestMsbEvent.direction)} · ${barsAgoLabel(Math.max(0, candles.length - 1 - activeAnalysis.latestMsbEvent.index), activeTimeframe)}` : "없음"}
+                      direction={activeAnalysis.latestMsbEvent?.direction}
+                    />
                     <SignalMetric label="CHoCH" value={stateLabel(activeAnalysis.choch)} direction={activeAnalysis.choch} />
                     <SignalMetric
                       label="OB"
@@ -2815,7 +2948,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
             <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
               <h3 className="text-sm font-bold text-white">분석 기준</h3>
               <div className="mt-3 grid grid-cols-2 gap-3">
-                <MiniMetric label="구조 민감도" value="ZigZag 5" />
+                <MiniMetric label="구조 민감도" value={`${structureSensitivityLabel(structureSensitivity)} · ZigZag ${structureSensitivity}`} />
                 <MiniMetric label="MSB 판정" value={msbMode === "close" ? "종가 돌파" : "윅 포함 돌파"} />
                 <MiniMetric label="CHoCH 판정" value="윅 돌파" />
                 <MiniMetric label="OTE 기준" value="4시간 20봉 범위" />
@@ -2827,7 +2960,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
                 <MiniMetric label="4H EMA200" value={fourHourAnalysis ? stateLabel(fourHourAnalysis.ema200Side) : "-"} />
                 <MiniMetric label="현재 킬존" value={killzoneLabel(analysis.killzone)} />
                 <MiniMetric label="최근 갱신" value={formatUpdatedAt(analysis.updatedAt)} />
-                <MiniMetric label="판독 상태" value={readinessLabel(analysis.readiness)} />
+                <MiniMetric label="데이터 신뢰도" value={readinessLabel(analysis.readiness)} />
               </div>
             </div>
           ) : null}
@@ -3051,34 +3184,9 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
               ) : null}
             </div>
           ) : null}
-
-          {showDetailedReadout && analysis ? (
-            <div id="service-notice" className="scroll-mt-24 rounded-lg border border-accent-blue/25 bg-accent-blue/10 p-4">
-              <div className="flex items-start gap-3">
-                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-accent-blue/25 bg-black/20 text-accent-blue">
-                  <LockKeyhole size={17} aria-hidden />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white">서비스 기능 안내</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-300">
-                    현재는 분석 시나리오, AI 코멘트, 복기 저장을 기본 기능으로 제공합니다.
-                    중요한 복기와 저장 데이터는 계정 상태와 브라우저 환경을 함께 확인해 주세요.
-                  </p>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                    <p className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs leading-5 text-slate-300">
-                      제공 중: 롱/숏 우세도, MSB/CHoCH, OB/FVG/iFVG, Sweep/CISD, POC, PD, 위험 신호
-                    </p>
-                    <p className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs leading-5 text-slate-300">
-                      주의: 저장 데이터는 네트워크와 로그인 상태에 따라 동기화 시간이 달라질 수 있습니다.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : null}
         </div>
       </div>
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-surface-line bg-slate-950/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-20px_50px_rgba(0,0,0,0.45)] backdrop-blur">
+      <div className="hidden">
         <div className="mx-auto max-w-6xl space-y-2 sm:grid sm:grid-cols-[minmax(0,1fr)_260px] sm:items-center sm:gap-2 sm:space-y-0 lg:grid-cols-[230px_220px_330px_110px]">
           <div className={`relative grid gap-2 ${majorOnly ? "grid-cols-2" : "grid-cols-3"}`}>
             {primarySymbols.map((item) => (

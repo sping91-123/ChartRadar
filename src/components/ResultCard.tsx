@@ -73,8 +73,8 @@ export function ResultCard({ result }: ResultCardProps) {
           </div>
         </div>
         <div className="shrink-0 rounded-md border border-white/10 bg-black/20 px-3 py-2 text-right">
-          <p className="text-xs font-semibold text-slate-400">위험 점수</p>
-          <p className="text-2xl font-black text-white">{result.riskScore}</p>
+          <p className="text-xs font-semibold text-slate-400">진입 위험도</p>
+          <p className="text-2xl font-black text-white">{result.riskScore}%</p>
         </div>
       </div>
 
@@ -136,7 +136,7 @@ export function ResultCard({ result }: ResultCardProps) {
 
       {result.missingRequiredValues ? (
         <p className="mt-4 rounded-md border border-signal-warning/30 bg-signal-warning/10 p-3 text-sm leading-6 text-signal-warning">
-          일부 필수 값이 비어 있어 위험 점수와 계산값이 보수적으로 반영됐습니다.
+          일부 필수 값이 비어 있어 진입 위험도와 계산값이 보수적으로 반영됐습니다.
         </p>
       ) : null}
 
