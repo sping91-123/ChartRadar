@@ -43,7 +43,10 @@ npm run dev
 ```bash
 npm run lint
 npm run build
+npm run smoke:routes
 ```
+
+`npm run smoke:routes`는 개발 서버가 켜진 상태에서 핵심 페이지, 정책 페이지, 결제 진입 API가 정상 응답하는지 빠르게 확인합니다.
 
 빌드 검증 후 브라우저에서 계속 개발 화면을 볼 때는 dev 서버를 한 번 재시작합니다.
 
