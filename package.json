@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "smoke:routes": "node scripts/smoke-routes.mjs",
     "backtest:btc": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/backtest-btc-regimes.js",
     "app:add:android": "npx cap add android",
     "app:sync": "npx cap sync",
