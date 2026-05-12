@@ -53,7 +53,7 @@ export const billingPlans: BillingPlan[] = [
   {
     id: "crypto_monthly",
     marketScope: "crypto",
-    name: "Crypto Radar",
+    name: "코인 Pro",
     badge: "코인",
     priceLabel: "월 14,900원",
     billingAmount: 14900,
@@ -72,14 +72,14 @@ export const billingPlans: BillingPlan[] = [
   {
     id: "crypto_yearly",
     marketScope: "crypto",
-    name: "Crypto Radar Yearly",
+    name: "코인 Pro 연간",
     badge: "코인 연간",
     priceLabel: "연 149,000원",
     billingAmount: 149000,
     monthlyValue: 12417,
     appStoreProductId: "chart_radar_crypto_yearly",
     description: "코인 레이더를 매일 쓰는 사용자를 위한 연간 플랜입니다.",
-    highlights: ["Crypto Radar 전체 기능", "월 환산 12,417원", "신규 코인 레이더 기능 우선 적용"],
+    highlights: ["코인 Pro 전체 기능", "월 환산 12,417원", "신규 코인 레이더 기능 우선 적용"],
     limits: {
       radarScans: "코인 범위 내 넉넉하게",
       aiBriefings: "일 40회",
@@ -91,77 +91,77 @@ export const billingPlans: BillingPlan[] = [
   {
     id: "stocks_monthly",
     marketScope: "stocks",
-    name: "Stock Radar",
-    badge: "해외주식",
+    name: "글로벌 Pro",
+    badge: "글로벌",
     priceLabel: "월 14,900원",
     billingAmount: 14900,
     monthlyValue: 14900,
-    appStoreProductId: "chart_radar_stocks_monthly",
-    description: "미국주식, ETF, 지수 흐름과 매크로 이슈를 따로 감시하는 해외주식 전용 플랜입니다.",
-    highlights: ["미국 주요 종목과 ETF 감시", "실적, 금리, 섹터 뉴스 브리핑", "주식 전용 알림 조건"],
+    appStoreProductId: "chart_radar_global_monthly",
+    description: "미국주식, ETF, 지수, 원자재 흐름과 매크로 이슈를 따로 감시하는 글로벌 전용 플랜입니다.",
+    highlights: ["미국 주요 종목과 ETF 감시", "실적, 금리, 섹터 뉴스 브리핑", "글로벌 전용 알림 조건"],
     limits: {
-      radarScans: "해외주식 범위 내 넉넉하게",
+      radarScans: "글로벌 범위 내 넉넉하게",
       aiBriefings: "일 30회",
-      watchlist: "주식 50개",
-      alerts: "주식 조건별 알림",
-      markets: "해외주식"
+      watchlist: "글로벌 종목 50개",
+      alerts: "글로벌 조건별 알림",
+      markets: "글로벌"
     }
   },
   {
     id: "stocks_yearly",
     marketScope: "stocks",
-    name: "Stock Radar Yearly",
-    badge: "주식 연간",
+    name: "글로벌 Pro 연간",
+    badge: "글로벌 연간",
     priceLabel: "연 149,000원",
     billingAmount: 149000,
     monthlyValue: 12417,
-    appStoreProductId: "chart_radar_stocks_yearly",
-    description: "해외주식 레이더를 꾸준히 쓰는 사용자를 위한 연간 플랜입니다.",
-    highlights: ["Stock Radar 전체 기능", "월 환산 12,417원", "매크로와 섹터 레이더 우선 적용"],
+    appStoreProductId: "chart_radar_global_yearly",
+    description: "글로벌 레이더를 꾸준히 쓰는 사용자를 위한 연간 플랜입니다.",
+    highlights: ["글로벌 Pro 전체 기능", "월 환산 12,417원", "매크로와 섹터 레이더 우선 적용"],
     limits: {
-      radarScans: "해외주식 범위 내 넉넉하게",
+      radarScans: "글로벌 범위 내 넉넉하게",
       aiBriefings: "일 40회",
-      watchlist: "주식 100개",
-      alerts: "주식 조건별 알림",
-      markets: "해외주식"
+      watchlist: "글로벌 종목 100개",
+      alerts: "글로벌 조건별 알림",
+      markets: "글로벌"
     }
   },
   {
     id: "bundle_monthly",
     marketScope: "bundle",
-    name: "All Market Radar",
+    name: "올마켓 Pro",
     badge: "추천",
     priceLabel: "월 24,900원",
     billingAmount: 24900,
     monthlyValue: 24900,
     appStoreProductId: "chart_radar_bundle_monthly",
-    description: "코인과 해외주식을 모두 보는 사용자를 위한 번들 플랜입니다. 따로 결제하는 것보다 할인됩니다.",
-    highlights: ["코인 + 해외주식 전체 레이더", "시장별 뉴스와 알림 분리", "두 시장을 오가는 사용자에게 최적"],
+    description: "코인과 글로벌 시장을 모두 보는 사용자를 위한 번들 플랜입니다. 따로 결제하는 것보다 할인됩니다.",
+    highlights: ["코인 + 글로벌 전체 레이더", "시장별 뉴스와 알림 분리", "두 시장을 오가는 사용자에게 최적"],
     limits: {
       radarScans: "두 시장 모두 넉넉하게",
       aiBriefings: "일 60회",
       watchlist: "코인 100개 + 주식 100개",
       alerts: "시장별 조건 알림",
-      markets: "코인 + 해외주식"
+      markets: "코인 + 글로벌"
     }
   },
   {
     id: "bundle_yearly",
     marketScope: "bundle",
-    name: "All Market Radar Yearly",
+    name: "올마켓 Pro 연간",
     badge: "최대 할인",
     priceLabel: "연 249,000원",
     billingAmount: 249000,
     monthlyValue: 20750,
     appStoreProductId: "chart_radar_bundle_yearly",
-    description: "코인과 해외주식을 모두 장기적으로 쓰는 사용자를 위한 연간 번들입니다.",
-    highlights: ["All Market Radar 전체 기능", "월 환산 20,750원", "향후 확장 시장 기능 우선 적용"],
+    description: "코인과 글로벌 시장을 모두 장기적으로 쓰는 사용자를 위한 연간 번들입니다.",
+    highlights: ["올마켓 Pro 전체 기능", "월 환산 20,750원", "향후 확장 시장 기능 우선 적용"],
     limits: {
       radarScans: "두 시장 모두 넉넉하게",
       aiBriefings: "일 80회",
       watchlist: "코인 150개 + 주식 150개",
       alerts: "시장별 조건 알림",
-      markets: "코인 + 해외주식 + 확장 시장"
+      markets: "코인 + 글로벌 + 확장 시장"
     }
   }
 ];
@@ -202,7 +202,7 @@ export function isYearlyBillingPlan(planId: BillingPlanId) {
 }
 
 export const subscriptionTrustNotes = [
-  "코인과 해외주식은 별도 상품으로 운영하고, 두 시장을 모두 쓰는 사용자는 번들 플랜으로 할인받을 수 있습니다.",
+  "코인과 글로벌 시장은 별도 상품으로 운영하고, 두 시장을 모두 쓰는 사용자는 올마켓 플랜으로 할인받을 수 있습니다.",
   "앱스토어 출시 후에는 각 상품이 App Store 구독 상품 ID와 연결됩니다.",
   "Chart Radar는 매수·매도 신호가 아니라 시장 구조와 위험 요소를 빠르게 정리하는 분석 도구입니다."
 ];

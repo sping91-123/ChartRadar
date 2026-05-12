@@ -18,16 +18,16 @@ type RadarNewsMarket = "crypto" | "stocks";
 
 const marketCopy = {
   crypto: {
-    eyebrow: "Crypto Radar News",
+    eyebrow: "Coin Radar News",
     title: "코인 레이더뉴스",
     description: "코인 시장 주요 뉴스와 공개 이슈를 모아 시장 영향, 위험 요인, 오늘 확인할 포인트를 한국어로 정리합니다.",
     summaryTitle: "오늘의 코인 이슈 요약"
   },
   stocks: {
-    eyebrow: "Stock Radar News",
-    title: "해외주식 레이더뉴스",
-    description: "미국주식, ETF, 금리, 실적, 매크로 이슈를 중심으로 시장 영향과 오늘 확인할 포인트를 한국어로 정리합니다.",
-    summaryTitle: "오늘의 해외주식 이슈 요약"
+    eyebrow: "Global Radar News",
+    title: "글로벌 레이더뉴스",
+    description: "미국주식, ETF, 금리, 실적, 지수, 원자재 이슈를 중심으로 시장 영향과 오늘 확인할 포인트를 한국어로 정리합니다.",
+    summaryTitle: "오늘의 글로벌 이슈 요약"
   }
 } satisfies Record<RadarNewsMarket, { eyebrow: string; title: string; description: string; summaryTitle: string }>;
 

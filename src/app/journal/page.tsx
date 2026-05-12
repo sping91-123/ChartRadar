@@ -47,6 +47,7 @@ const stockSymbols = new Set(["SPY", "QQQ", "DIA", "IWM", "AAPL", "MSFT", "NVDA"
 
 function detectEntryMarket(entry: JournalEntry): "crypto" | "stocks" | "unknown" {
   if (entry.market) return entry.market;
+  if (entry.verdict?.includes("글로벌")) return "stocks";
   if (entry.verdict?.includes("해외주식")) return "stocks";
   if (entry.verdict?.includes("코인")) return "crypto";
   if (!entry.symbol) return "unknown";
@@ -227,9 +228,9 @@ function SectionList({
 }
 
 export default function JournalPage({ searchParams }: { searchParams?: { market?: string } }) {
-  const initialMarket = searchParams?.market === "stocks" ? "stocks" : "crypto";
+  const initialMarket = searchParams?.market === "stocks" || searchParams?.market === "global" ? "stocks" : "crypto";
   const [market, setMarket] = useState<"crypto" | "stocks">(initialMarket);
-  const marketLabel = market === "stocks" ? "해외주식" : "코인";
+  const marketLabel = market === "stocks" ? "글로벌" : "코인";
   const { session, user, profile, isLoading: isLoadingAuth } = useSupabaseAuth();
   const profilePlanLabel = profile?.plan && profile.plan !== "free" ? profile.plan.toUpperCase() : "PRO 미리보기";
   const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -243,7 +244,8 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
   const [shouldAutoSync, setShouldAutoSync] = useState(false);
 
   useEffect(() => {
-    setMarket(new URLSearchParams(window.location.search).get("market") === "stocks" ? "stocks" : "crypto");
+    const marketParam = new URLSearchParams(window.location.search).get("market");
+    setMarket(marketParam === "stocks" || marketParam === "global" ? "stocks" : "crypto");
     const savedLocal = loadJournalEntries();
     setLocalEntries(savedLocal);
     setEntries(savedLocal);

@@ -169,7 +169,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
 
     return (
       <Link
-        href={market === "stocks" ? "/news?market=stocks" : "/news?market=crypto"}
+        href={market === "stocks" ? "/news?market=global" : "/news?market=crypto"}
         className="group flex min-h-10 items-center gap-2 rounded-md border border-accent-blue/15 bg-surface-card/78 px-2.5 py-2 shadow-[0_10px_34px_rgba(0,0,0,0.18)] transition hover:border-accent-blue/35 hover:bg-surface-card"
       >
         <div className="inline-flex shrink-0 items-center gap-1.5 rounded border border-accent-blue/20 bg-accent-blue/10 px-2 py-1 text-[11px] font-black text-accent-blue">

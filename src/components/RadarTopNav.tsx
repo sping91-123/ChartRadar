@@ -16,15 +16,15 @@ const cryptoNavItems = [
 ] as const;
 
 const stockNavItems = [
-  { label: "해외주식", icon: TrendingUp, href: "/stocks", match: ["/stocks"] },
-  { label: "주식뉴스", icon: Newspaper, href: "/news?market=stocks", match: ["/news"] },
-  { label: "주식알림", icon: BellRing, href: "/alerts?market=stocks", match: ["/alerts"] },
-  { label: "주식복기", icon: History, href: "/journal?market=stocks", match: ["/journal"] },
-  { label: "계산기", icon: Calculator, href: "/calculator?market=stocks", match: ["/calculator"] }
+  { label: "글로벌", icon: TrendingUp, href: "/global", match: ["/stocks", "/global"] },
+  { label: "글로벌뉴스", icon: Newspaper, href: "/news?market=global", match: ["/news"] },
+  { label: "글로벌알림", icon: BellRing, href: "/alerts?market=global", match: ["/alerts"] },
+  { label: "글로벌복기", icon: History, href: "/journal?market=global", match: ["/journal"] },
+  { label: "계산기", icon: Calculator, href: "/calculator?market=global", match: ["/calculator"] }
 ] as const;
 
 function inferMarket(pathname: string): MarketScope {
-  if (pathname === "/stocks") return "stocks";
+  if (pathname === "/stocks" || pathname === "/global") return "stocks";
   return "crypto";
 }
 

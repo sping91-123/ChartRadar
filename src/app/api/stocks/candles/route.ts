@@ -1,4 +1,4 @@
-// 해외주식 주요 종목의 캔들 데이터를 제공하는 API 라우트.
+// 글로벌 시장 주요 종목의 캔들 데이터를 제공하는 API 라우트.
 import { NextResponse } from "next/server";
 import { fetchStockCandles, findStockSymbol, normalizeStockSymbol, stockSymbols } from "@/lib/stockMarket";
 import { chartTimeframes, type ChartTimeframe } from "@/lib/marketAnalysis";
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   const limit = rateLimit(request, { key: "stocks-candles", limit: 50, windowMs: 5 * 60 * 1000 });
   if (!limit.allowed) {
     return NextResponse.json(
-      { error: "해외주식 데이터 요청이 너무 많습니다. 잠시 후 다시 시도하세요." },
+      { error: "글로벌 시장 데이터 요청이 너무 많습니다. 잠시 후 다시 시도하세요." },
       { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
     );
   }
@@ -37,7 +37,7 @@ export async function GET(request: Request) {
       cachedAt: Date.now()
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "해외주식 데이터를 불러오지 못했습니다.";
+    const message = error instanceof Error ? error.message : "글로벌 시장 데이터를 불러오지 못했습니다.";
     console.error("[api/stocks/candles] 오류:", error);
     return NextResponse.json(
       {

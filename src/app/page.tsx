@@ -1,22 +1,22 @@
-// 첫 진입에서 코인과 해외주식 시장을 분리해 선택하게 하는 게이트 화면.
+// 첫 진입에서 코인과 글로벌 시장을 분리해 선택하게 하는 게이트 화면.
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Coins, TrendingUp } from "lucide-react";
 
 const marketEntries = [
   {
-    title: "Crypto Radar",
+    title: "코인 레이더",
     href: "/survival",
-    label: "BTC·ETH·알트코인 전용",
+    label: "BTC·ETH·알트코인",
     icon: Coins,
     accent: "from-cyan-300/22 via-blue-500/12 to-transparent",
     iconClass: "border-cyan-300/35 bg-cyan-300/12 text-cyan-200",
     buttonClass: "bg-cyan-300 text-slate-950 group-hover:bg-cyan-200"
   },
   {
-    title: "Stock Radar",
-    href: "/stocks",
-    label: "미국주식·ETF 전용",
+    title: "글로벌 레이더",
+    href: "/global",
+    label: "미국주식·지수·원자재",
     icon: TrendingUp,
     accent: "from-emerald-300/20 via-sky-400/10 to-transparent",
     iconClass: "border-emerald-300/35 bg-emerald-300/12 text-emerald-200",
@@ -44,7 +44,7 @@ export default function Home() {
             <h1 className="mt-4 text-3xl font-black tracking-normal text-white sm:mt-5 sm:text-5xl">Chart Radar</h1>
             <p className="mt-2 text-sm font-bold text-slate-400 sm:mt-3 sm:text-base">먼저 분석할 시장을 선택하세요.</p>
             <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
-              코인과 해외주식은 알림, 뉴스, 복기, 결제 구조가 따로 운영됩니다.
+              코인과 글로벌 시장은 알림, 뉴스, 복기, 결제 구조가 따로 운영됩니다.
             </p>
           </div>
 

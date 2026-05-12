@@ -1,4 +1,4 @@
-// 해외주식 레이더에 필요한 주요 종목과 캔들 공급자를 관리한다.
+// 글로벌 레이더에 필요한 주요 종목과 캔들 공급자를 관리한다.
 import type { Candle, ChartTimeframe } from "@/lib/marketAnalysis";
 
 export interface StockSymbolInfo {
@@ -139,7 +139,7 @@ export async function fetchStockCandles(symbol: string, timeframe: ChartTimefram
   const result = payload.chart?.result?.[0];
   const timestamps = result?.timestamp ?? [];
   const quote = result?.indicators?.quote?.[0];
-  if (!quote || !timestamps.length) throw new Error(payload.chart?.error?.description ?? "해외주식 캔들을 찾지 못했습니다.");
+  if (!quote || !timestamps.length) throw new Error(payload.chart?.error?.description ?? "글로벌 시장 캔들을 찾지 못했습니다.");
 
   const candles = timestamps
     .map((timestamp, index) => {

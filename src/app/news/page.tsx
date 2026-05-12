@@ -6,7 +6,7 @@ import { RadarNewsPanel } from "@/components/RadarNewsPanel";
 import { RadarTopNav } from "@/components/RadarTopNav";
 
 export default function NewsPage({ searchParams }: { searchParams?: { market?: string } }) {
-  const market = searchParams?.market === "stocks" ? "stocks" : "crypto";
+  const market = searchParams?.market === "stocks" || searchParams?.market === "global" ? "stocks" : "crypto";
 
   return (
     <main className="min-h-screen px-4 pb-10">

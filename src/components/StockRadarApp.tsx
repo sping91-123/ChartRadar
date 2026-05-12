@@ -1,5 +1,5 @@
 "use client";
-// 해외주식 주요 종목을 차트와 기술지표 레이더로 보여주는 화면.
+// 글로벌 시장 주요 종목을 차트와 기술지표 레이더로 보여주는 화면.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CandlestickSeries, createChart, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { Activity, AlertTriangle, BarChart3, Gauge, Loader2, RefreshCw, Shield } from "lucide-react";
@@ -83,13 +83,13 @@ function StockSnapshot({
       <div className={`rounded-lg border p-4 lg:col-span-2 ${toneBadgeClass(tone)}`}>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] opacity-80">오늘의 주식 레이더</p>
+            <p className="text-xs font-black uppercase tracking-[0.2em] opacity-80">오늘의 글로벌 레이더</p>
             <h3 className="mt-2 text-2xl font-black text-white">{report?.trendLabel ?? "데이터 확인 중"}</h3>
           </div>
           <Gauge size={24} aria-hidden />
         </div>
         <p className="mt-3 text-sm leading-6 text-slate-200">
-          {report?.summary ?? "해외주식 캔들을 불러오면 추세, 모멘텀, 변동성, 거래량을 요약합니다."}
+          {report?.summary ?? "글로벌 시장 캔들을 불러오면 추세, 모멘텀, 변동성, 거래량을 요약합니다."}
         </p>
         <div className="mt-4 grid grid-cols-3 gap-2 text-center">
           <div className="rounded-md bg-black/20 p-2">
@@ -182,12 +182,12 @@ export function StockRadarApp() {
       setState({
         status: "ready",
         candles: data.candles,
-        dataSource: data.dataSource ?? "해외주식 지연 데이터",
+        dataSource: data.dataSource ?? "글로벌 시장 데이터",
         cachedAt: data.cachedAt ?? Date.now()
       });
       recordUsageEvent("stockRadar");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "해외주식 데이터를 불러오지 못했습니다.";
+      const message = error instanceof Error ? error.message : "글로벌 시장 데이터를 불러오지 못했습니다.";
       setState({ status: "error", message });
     }
   }, [symbol, timeframe]);
@@ -265,8 +265,8 @@ export function StockRadarApp() {
             <BarChart3 size={21} aria-hidden />
           </div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-accent-blue">Global Stocks</p>
-            <h2 className="mt-1 text-xl font-black text-white">해외주식 레이더</h2>
+            <p className="text-xs font-bold uppercase tracking-[0.24em] text-accent-blue">Global Radar</p>
+            <h2 className="mt-1 text-xl font-black text-white">글로벌 레이더</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
               미국 주요 주식, 지수 ETF, 반도체, 성장주, 원자재 ETF를 기술지표 중심으로 빠르게 훑습니다.
               종목별 추세, 모멘텀, 변동성, 거래량을 한 화면에서 정리해 관심종목 선별과 장전 점검에 활용할 수 있습니다.
@@ -357,7 +357,7 @@ export function StockRadarApp() {
           <div className="grid h-[360px] place-items-center rounded-md border border-white/10 bg-white/[0.02] text-sm text-slate-400">
             <span className="inline-flex items-center gap-2">
               <Loader2 className="animate-spin" size={16} aria-hidden />
-              해외주식 데이터를 불러오는 중입니다.
+              글로벌 시장 데이터를 불러오는 중입니다.
             </span>
           </div>
         ) : state.status === "error" ? (
@@ -372,7 +372,7 @@ export function StockRadarApp() {
       {state.status === "ready" ? (
         <>
           <p className="mt-3 text-xs leading-5 text-slate-500">
-            데이터 기준: {state.dataSource}. 미국 주식 실시간 거래소 데이터는 정식 데이터 계약 전까지 지연될 수 있습니다.
+            데이터 기준: {state.dataSource}. 차트 판독과 관심종목 선별을 위한 보조 데이터입니다.
           </p>
           <div className="mt-5">
             <TechnicalRadarPanel candles={state.candles} timeframe={timeframe} />

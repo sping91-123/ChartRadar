@@ -32,14 +32,14 @@ type AlertMarket = "crypto" | "stocks";
 
 const alertMarketCopy = {
   crypto: {
-    eyebrow: "Crypto Radar Alerts",
+    eyebrow: "Coin Radar Alerts",
     title: "코인 변동만 따로 감시합니다",
     description: "BTC·ETH와 알트코인 급변, A급 후보, 청산 압력, 코인 뉴스 흐름을 따로 감시하도록 준비하는 알림 센터입니다."
   },
   stocks: {
-    eyebrow: "Stock Radar Alerts",
-    title: "해외주식 변동만 따로 감시합니다",
-    description: "미국주식, ETF, 실적, 매크로 발표, 장전·장후 급변을 따로 감시하도록 준비하는 알림 센터입니다."
+    eyebrow: "Global Radar Alerts",
+    title: "글로벌 시장 변동만 따로 감시합니다",
+    description: "미국주식, ETF, 실적, 매크로 발표, 지수·원자재 급변을 따로 감시하도록 준비하는 알림 센터입니다."
   }
 } satisfies Record<AlertMarket, { eyebrow: string; title: string; description: string }>;
 
@@ -65,7 +65,7 @@ function getPermissionState(): PermissionState {
 
 function categoryLabel(category: RadarAlertRule["category"]) {
   if (category === "crypto") return "코인";
-  if (category === "stocks") return "해외주식";
+  if (category === "stocks") return "글로벌";
   if (category === "news") return "뉴스";
   return "시스템";
 }
@@ -484,7 +484,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
 
       {compact ? (
         <Link
-          href={market === "stocks" ? "/alerts?market=stocks" : "/alerts?market=crypto"}
+          href={market === "stocks" ? "/alerts?market=global" : "/alerts?market=crypto"}
           className="mt-4 inline-flex min-h-10 w-full items-center justify-center rounded-md border border-cyan-300/30 bg-cyan-300/10 px-4 text-sm font-black text-cyan-200 transition hover:bg-cyan-300 hover:text-slate-950"
         >
           알림 조건 전체 설정하기

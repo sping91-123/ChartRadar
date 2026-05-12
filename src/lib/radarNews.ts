@@ -127,7 +127,7 @@ function getNewsRuleSet(market: RadarNewsMarket) {
         bullishRules: stockBullishRules,
         bearishRules: stockBearishRules,
         defaultAsset: "미국시장 전체",
-        defaultTag: "주식 뉴스"
+        defaultTag: "글로벌 뉴스"
       }
     : {
         assetRules,
@@ -200,10 +200,10 @@ export function analyzeNewsText(input: string, market: RadarNewsMarket = "crypto
   if (market === "stocks") {
     const stockHeadline =
       direction === "bullish"
-        ? "주식시장에 우호적인 뉴스입니다."
+        ? "글로벌 시장에 우호적인 뉴스입니다."
         : direction === "bearish"
-          ? "주식시장 변동성에 주의할 뉴스입니다."
-          : "방향보다 확인이 필요한 주식 뉴스입니다.";
+          ? "글로벌 시장 변동성에 주의할 뉴스입니다."
+          : "방향보다 확인이 필요한 글로벌 뉴스입니다.";
     const stockSummary =
       direction === "bullish"
         ? `${assetLabel}에 실적, 수급, 금리, 섹터 모멘텀 측면의 우호 재료가 감지됩니다. 다만 개장 전후 변동성과 지수 방향을 함께 확인해야 합니다.`

@@ -74,12 +74,12 @@ export const radarAlertRules: RadarAlertRule[] = [
     id: "stock-momentum",
     category: "stocks",
     tier: "pro",
-    title: "해외주식 모멘텀 전환",
-    shortTitle: "미장 모멘텀",
-    description: "미국 주요 종목과 ETF의 추세·모멘텀 전환을 알려줍니다.",
+    title: "글로벌 모멘텀 전환",
+    shortTitle: "글로벌 모멘텀",
+    description: "미국 주요 종목, ETF, 지수·원자재 흐름의 추세·모멘텀 전환을 알려줍니다.",
     trigger: "주요 종목 기술지표 점수 급변, 섹터 강도 변화",
     cadence: "미장 정규장 중심",
-    value: "코인과 미장을 동시에 보는 사용자에게 별도 앱을 켜는 시간을 줄여줍니다.",
+    value: "코인과 글로벌 시장을 동시에 보는 사용자에게 별도 앱을 켜는 시간을 줄여줍니다.",
     defaultEnabled: false
   }
 ];

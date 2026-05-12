@@ -5,7 +5,7 @@ import { RadarAlertCenter } from "@/components/RadarAlertCenter";
 import { RadarTopNav } from "@/components/RadarTopNav";
 
 export default function AlertsPage({ searchParams }: { searchParams?: { market?: string } }) {
-  const market = searchParams?.market === "stocks" ? "stocks" : "crypto";
+  const market = searchParams?.market === "stocks" || searchParams?.market === "global" ? "stocks" : "crypto";
 
   return (
     <main className="min-h-screen px-4 pb-10">

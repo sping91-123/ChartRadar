@@ -16,8 +16,8 @@ function getPaymentUrl(planId: string) {
   const paymentUrlByPlan: Record<string, string | undefined> = {
     crypto_monthly: process.env.NEXT_PUBLIC_CRYPTO_MONTHLY_PAYMENT_URL,
     crypto_yearly: process.env.NEXT_PUBLIC_CRYPTO_YEARLY_PAYMENT_URL,
-    stocks_monthly: process.env.NEXT_PUBLIC_STOCKS_MONTHLY_PAYMENT_URL,
-    stocks_yearly: process.env.NEXT_PUBLIC_STOCKS_YEARLY_PAYMENT_URL,
+    stocks_monthly: process.env.NEXT_PUBLIC_GLOBAL_MONTHLY_PAYMENT_URL ?? process.env.NEXT_PUBLIC_STOCKS_MONTHLY_PAYMENT_URL,
+    stocks_yearly: process.env.NEXT_PUBLIC_GLOBAL_YEARLY_PAYMENT_URL ?? process.env.NEXT_PUBLIC_STOCKS_YEARLY_PAYMENT_URL,
     bundle_monthly: process.env.NEXT_PUBLIC_BUNDLE_MONTHLY_PAYMENT_URL,
     bundle_yearly: process.env.NEXT_PUBLIC_BUNDLE_YEARLY_PAYMENT_URL
   };

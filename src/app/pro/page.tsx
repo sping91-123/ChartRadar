@@ -7,7 +7,7 @@ import type { BillingPageScope } from "@/lib/billing";
 
 function normalizeBillingScope(market: string | undefined): BillingPageScope {
   if (market === "crypto" || market === "coin") return "crypto";
-  if (market === "stocks" || market === "stock") return "stocks";
+  if (market === "stocks" || market === "stock" || market === "global") return "stocks";
   return "all";
 }
 

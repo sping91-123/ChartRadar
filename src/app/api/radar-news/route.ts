@@ -287,8 +287,8 @@ function fallbackNewsBriefing(items: RadarNewsItem[], model = "rules", market: R
   if (market === "stocks") {
     const overview =
       items.length === 0
-        ? "현재 불러온 해외주식 뉴스가 부족합니다. 주요 지수, 금리, 실적 캘린더를 먼저 확인하는 편이 좋습니다."
-        : `현재 수집된 해외주식 뉴스는 상방 우호 ${bullish}개, 하방 주의 ${bearish}개, 중립 확인 ${neutral}개로 정리됩니다. ${assets.length ? `${assets.join(", ")} 관련 이슈가 많이 잡히고 있으며, ` : ""}${urgent ? `즉시 확인할 만한 이슈가 ${urgent}개 있습니다.` : "아직은 단일 방향으로 강하게 쏠린 뉴스는 제한적입니다."}`;
+        ? "현재 불러온 글로벌 뉴스가 부족합니다. 주요 지수, 금리, 실적 캘린더를 먼저 확인하는 편이 좋습니다."
+        : `현재 수집된 글로벌 뉴스는 상방 우호 ${bullish}개, 하방 주의 ${bearish}개, 중립 확인 ${neutral}개로 정리됩니다. ${assets.length ? `${assets.join(", ")} 관련 이슈가 많이 잡히고 있으며, ` : ""}${urgent ? `즉시 확인할 만한 이슈가 ${urgent}개 있습니다.` : "아직은 단일 방향으로 강하게 쏠린 뉴스는 제한적입니다."}`;
 
     return {
       generatedAt: new Date().toISOString(),
@@ -301,7 +301,7 @@ function fallbackNewsBriefing(items: RadarNewsItem[], model = "rules", market: R
       })),
       marketImpact: [
         leadingTone === "bullish"
-          ? "주식 뉴스 흐름은 단기적으로 위험자산에 우호적입니다. 다만 이미 오른 종목은 장중 변동성을 함께 확인해야 합니다."
+          ? "글로벌 뉴스 흐름은 단기적으로 위험자산에 우호적입니다. 다만 이미 오른 종목은 장중 변동성을 함께 확인해야 합니다."
           : leadingTone === "bearish"
             ? "주의 뉴스가 더 많아 지수 하락과 섹터별 차별화 가능성을 먼저 봐야 합니다."
             : "뉴스 방향성이 엇갈려 지수보다 섹터, 실적, 금리 민감도를 나눠 보는 편이 좋습니다.",
@@ -360,7 +360,7 @@ function fallbackNewsBriefing(items: RadarNewsItem[], model = "rules", market: R
 }
 
 function buildNewsBriefingPrompt(items: RadarNewsItem[], market: RadarNewsMarket) {
-  const marketLabel = market === "stocks" ? "미국주식·ETF" : "코인";
+  const marketLabel = market === "stocks" ? "글로벌 시장" : "코인";
   const headlines = items
     .slice(0, 10)
     .map((item, index) => {

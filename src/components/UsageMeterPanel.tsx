@@ -92,7 +92,7 @@ export function UsageMeterPanel({ compact = false }: { compact?: boolean }) {
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400 [word-break:keep-all]">
               {isProPreview
                 ? "정식 결제 전 데모를 위해 로그인 사용자에게 PRO 미리보기 한도를 보여드립니다. 결제 연동 후에는 실제 구독 권한으로 전환됩니다."
-                : "Free는 핵심 흐름을 확인하는 체험 모드이고, Pro는 코인·해외주식·AI·알림을 매일 여러 번 돌리는 운영 모드입니다."}
+                : "Free는 핵심 흐름을 확인하는 체험 모드이고, Pro는 코인·글로벌·AI·알림을 매일 여러 번 돌리는 운영 모드입니다."}
             </p>
           </div>
         </div>

@@ -14,13 +14,14 @@ export const metadata: Metadata = {
     default: "Chart Radar",
     template: "%s | Chart Radar"
   },
-  description: "코인과 해외주식의 차트 구조, 기술지표, 시장 이슈를 빠르게 확인하는 분석 레이더",
+  description: "코인과 글로벌 시장의 차트 구조, 기술지표, 시장 이슈를 빠르게 확인하는 분석 레이더",
   applicationName: "Chart Radar",
   keywords: [
     "Chart Radar",
     "차트 레이더",
     "코인 분석",
-    "해외주식 분석",
+    "글로벌 시장 분석",
+    "미국주식 분석",
     "미국주식",
     "ETF",
     "MSB",
@@ -32,7 +33,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "Chart Radar",
-    description: "코인과 해외주식의 차트 구조, 기술지표, 시장 이슈를 빠르게 확인하세요.",
+    description: "코인과 글로벌 시장의 차트 구조, 기술지표, 시장 이슈를 빠르게 확인하세요.",
     type: "website",
     locale: "ko_KR",
     images: [{ url: appIcon, width: 1024, height: 1024, alt: "Chart Radar app icon" }]
@@ -44,7 +45,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Chart Radar",
-    description: "코인과 해외주식의 차트 구조와 시장 이슈를 빠르게 확인하세요.",
+    description: "코인과 글로벌 시장의 차트 구조와 시장 이슈를 빠르게 확인하세요.",
     images: [appIcon]
   },
   appleWebApp: {

@@ -52,9 +52,9 @@ export const usageBuckets: UsageBucket[] = [
   },
   {
     id: "stockRadar",
-    label: "해외주식 레이더",
+    label: "글로벌 레이더",
     shortLabel: "주식",
-    description: "미국 주식과 ETF 레이더를 불러온 횟수입니다.",
+    description: "미국 주식, ETF, 글로벌 레이더를 불러온 횟수입니다.",
     freeDailyLimit: 5,
     proDailyLimit: 100
   },

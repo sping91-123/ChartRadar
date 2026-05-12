@@ -8,7 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/survival",
     name: "Chart Radar",
     short_name: "Chart Radar",
-    description: "코인과 해외주식의 차트 흐름을 빠르게 감지하는 분석 레이더",
+    description: "코인과 글로벌 시장의 차트 흐름을 빠르게 감지하는 분석 레이더",
     start_url: "/survival?source=pwa",
     scope: "/",
     display: "standalone",
@@ -19,8 +19,8 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "ko-KR",
     shortcuts: [
       {
-        name: "Crypto Radar",
-        short_name: "Crypto",
+        name: "Coin Radar",
+        short_name: "Coin",
         description: "BTC와 ETH 시장 레이더를 바로 엽니다.",
         url: "/survival?source=pwa-shortcut",
         icons: [{ src: icon, sizes: "1024x1024", type: "image/png" }]
@@ -30,6 +30,13 @@ export default function manifest(): MetadataRoute.Manifest {
         short_name: "Altcoin",
         description: "알트코인 감지 목록을 바로 확인합니다.",
         url: "/alts?source=pwa-shortcut",
+        icons: [{ src: icon, sizes: "1024x1024", type: "image/png" }]
+      },
+      {
+        name: "Global Radar",
+        short_name: "Global",
+        description: "글로벌 시장 레이더를 바로 엽니다.",
+        url: "/global?source=pwa-shortcut",
         icons: [{ src: icon, sizes: "1024x1024", type: "image/png" }]
       },
       {

@@ -1,4 +1,4 @@
-// 해외주식 레이더 페이지를 렌더링한다.
+// 글로벌 레이더 페이지를 렌더링한다.
 import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
 import { MacroTicker } from "@/components/MacroTicker";

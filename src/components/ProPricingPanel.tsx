@@ -22,7 +22,7 @@ const conversionPoints = [
   {
     icon: Radar,
     title: "시장 먼저 훑기",
-    body: "코인과 해외주식에서 오늘 먼저 봐야 할 종목, 방향 쏠림, 위험 구간을 압축합니다."
+    body: "코인과 글로벌 시장에서 오늘 먼저 봐야 할 종목, 방향 쏠림, 위험 구간을 압축합니다."
   },
   {
     icon: Sparkles,
@@ -71,34 +71,34 @@ const scopeCopy: Record<
     eyebrow: "Chart Radar Pro",
     title: "매일 시장을 확인하는 시간을 줄이고, 놓칠 만한 변화는 먼저 띄워드립니다.",
     body:
-      "무료로 핵심 흐름을 먼저 확인하고, Pro에서는 전체 코인 레이더, 해외주식 레이더, AI 브리핑, 관심종목 알림과 저장 기능을 더 넓게 사용합니다. 신호를 판매하는 서비스가 아니라, 매일 시장을 빠르게 정리하는 레이더입니다.",
+      "무료로 핵심 흐름을 먼저 확인하고, Pro에서는 전체 코인 레이더, 글로벌 레이더, AI 브리핑, 관심종목 알림과 저장 기능을 더 넓게 사용합니다. 신호를 판매하는 서비스가 아니라, 매일 시장을 빠르게 정리하는 레이더입니다.",
     representativePrice: "월 24,900원",
-    representativeBody: "자주 켜는 사용자에게 필요한 코인, 해외주식, AI 브리핑, 관심종목 알림을 하나로 묶었습니다.",
+    representativeBody: "자주 켜는 사용자에게 필요한 코인, 글로벌 시장, AI 브리핑, 관심종목 알림을 하나로 묶었습니다.",
     highlightedPlanId: "bundle_monthly",
     freeHref: "/survival",
-    filterNotice: "전체 요금제를 보고 있습니다. 코인과 해외주식을 모두 쓰면 올마켓 플랜이 유리합니다."
+    filterNotice: "전체 요금제를 보고 있습니다. 코인과 글로벌 시장을 모두 쓰면 올마켓 플랜이 유리합니다."
   },
   crypto: {
-    eyebrow: "Crypto Radar Pro",
+    eyebrow: "Coin Radar Pro",
     title: "코인 화면에서는 코인 전용 플랜과 올마켓 플랜만 보여드립니다.",
     body:
-      "BTC·ETH, 알트코인, 코인뉴스, 코인알림을 중심으로 쓰는 사용자라면 코인 전용 플랜으로 충분합니다. 해외주식까지 함께 볼 예정이면 올마켓 플랜을 선택하면 됩니다.",
+      "BTC·ETH, 알트코인, 코인뉴스, 코인알림을 중심으로 쓰는 사용자라면 코인 전용 플랜으로 충분합니다. 글로벌 시장까지 함께 볼 예정이면 올마켓 플랜을 선택하면 됩니다.",
     representativePrice: "월 14,900원",
     representativeBody: "코인 레이더, ICT 판독, 기술지표, 코인뉴스, 코인알림을 코인 시장에 맞춰 엽니다.",
     highlightedPlanId: "crypto_monthly",
     freeHref: "/survival",
-    filterNotice: "코인 전용 화면입니다. 해외주식 전용 플랜은 숨기고, 올마켓 플랜만 함께 보여드립니다."
+    filterNotice: "코인 전용 화면입니다. 글로벌 전용 플랜은 숨기고, 올마켓 플랜만 함께 보여드립니다."
   },
   stocks: {
-    eyebrow: "Stock Radar Pro",
-    title: "해외주식 화면에서는 해외주식 전용 플랜과 올마켓 플랜만 보여드립니다.",
+    eyebrow: "Global Radar Pro",
+    title: "글로벌 화면에서는 글로벌 전용 플랜과 올마켓 플랜만 보여드립니다.",
     body:
-      "미국주식, ETF, 지수, 실적과 매크로 흐름을 중심으로 쓰는 사용자라면 해외주식 전용 플랜으로 충분합니다. 코인까지 함께 볼 예정이면 올마켓 플랜을 선택하면 됩니다.",
+      "미국주식, ETF, 지수, 실적, 원자재와 매크로 흐름을 중심으로 쓰는 사용자라면 글로벌 전용 플랜으로 충분합니다. 코인까지 함께 볼 예정이면 올마켓 플랜을 선택하면 됩니다.",
     representativePrice: "월 14,900원",
-    representativeBody: "해외주식 레이더, 기술지표, 주식뉴스, 매크로 브리핑, 주식알림을 주식 시장에 맞춰 엽니다.",
+    representativeBody: "글로벌 레이더, 기술지표, 글로벌뉴스, 매크로 브리핑, 글로벌알림을 한 화면으로 엽니다.",
     highlightedPlanId: "stocks_monthly",
-    freeHref: "/stocks",
-    filterNotice: "해외주식 전용 화면입니다. 코인 전용 플랜은 숨기고, 올마켓 플랜만 함께 보여드립니다."
+    freeHref: "/global",
+    filterNotice: "글로벌 전용 화면입니다. 코인 전용 플랜은 숨기고, 올마켓 플랜만 함께 보여드립니다."
   }
 };
 

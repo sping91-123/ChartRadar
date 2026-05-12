@@ -6,6 +6,7 @@ const routes = [
   "",
   "/survival",
   "/alts",
+  "/global",
   "/stocks",
   "/news",
   "/alerts",

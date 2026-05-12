@@ -39,13 +39,13 @@ function Field({
 }
 
 export default function CalculatorPage({ searchParams }: { searchParams?: { market?: string } }) {
-  const initialMarket = searchParams?.market === "stocks" ? "stocks" : "crypto";
+  const initialMarket = searchParams?.market === "stocks" || searchParams?.market === "global" ? "stocks" : "crypto";
   const [market, setMarket] = useState<"crypto" | "stocks">(initialMarket);
   const marketCopy =
     market === "stocks"
       ? {
-          title: "해외주식 포지션 계산",
-          intro: "해외주식과 ETF의 손절폭 기준 수량, 예상 손실, 손익비를 계산해보세요.",
+          title: "글로벌 포지션 계산",
+          intro: "글로벌 시장 종목과 ETF의 손절폭 기준 수량, 예상 손실, 손익비를 계산해보세요.",
           leverageLabel: "증거금 배수",
           leveragePlaceholder: "예: 1"
         }
@@ -64,7 +64,8 @@ export default function CalculatorPage({ searchParams }: { searchParams?: { mark
   const [targetPrice, setTargetPrice] = useState("");
 
   useEffect(() => {
-    const nextMarket = new URLSearchParams(window.location.search).get("market") === "stocks" ? "stocks" : "crypto";
+    const marketParam = new URLSearchParams(window.location.search).get("market");
+    const nextMarket = marketParam === "stocks" || marketParam === "global" ? "stocks" : "crypto";
     setMarket(nextMarket);
     if (nextMarket === "stocks") setLeverage((current) => (current === "3" ? "1" : current));
   }, []);
