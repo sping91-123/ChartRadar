@@ -158,7 +158,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ status: "login_required", message: "Pro 권한을 반영하려면 로그인 상태가 필요합니다." }, { status: 401 });
   }
 
-  const user = await fetchSupabaseUserOnServer(accessToken);
+  let user: Awaited<ReturnType<typeof fetchSupabaseUserOnServer>>;
+  try {
+    user = await fetchSupabaseUserOnServer(accessToken);
+  } catch {
+    return NextResponse.json({ status: "login_required", message: "로그인 정보를 확인하지 못했습니다. 다시 로그인한 뒤 새로고침해 주세요." }, { status: 401 });
+  }
 
   if (!body.paymentKey) {
     return NextResponse.json({
@@ -167,11 +172,19 @@ export async function POST(request: Request) {
     });
   }
 
-  const tossResult = await confirmTossPayment({
-    paymentKey: body.paymentKey,
-    orderId: body.orderId,
-    amount
-  });
+  let tossResult: Awaited<ReturnType<typeof confirmTossPayment>>;
+  try {
+    tossResult = await confirmTossPayment({
+      paymentKey: body.paymentKey,
+      orderId: body.orderId,
+      amount
+    });
+  } catch (error) {
+    return NextResponse.json({
+      status: "pending",
+      message: error instanceof Error ? error.message : "결제 승인 확인 중 오류가 발생했습니다."
+    }, { status: 502 });
+  }
 
   if (!tossResult.configured) {
     return NextResponse.json({
@@ -200,12 +213,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ status: "pending", message: `결제 상태가 아직 완료가 아닙니다. 현재 상태는 ${payment.status}입니다.` });
   }
 
-  await grantEntitlement({
-    userId: user.id,
-    planId: plan.id,
-    orderId: body.orderId,
-    providerPaymentId: payment.paymentKey ?? body.paymentKey
-  });
+  try {
+    await grantEntitlement({
+      userId: user.id,
+      planId: plan.id,
+      orderId: body.orderId,
+      providerPaymentId: payment.paymentKey ?? body.paymentKey
+    });
+  } catch {
+    return NextResponse.json({
+      status: "setup_required",
+      planId: plan.id,
+      orderId: body.orderId,
+      message: "결제는 확인했지만 Pro 권한 반영 중 오류가 발생했습니다. 관리자 확인이 필요합니다."
+    }, { status: 500 });
+  }
 
   return NextResponse.json({
     status: "active",

@@ -499,4 +499,5 @@
 - 토스페이먼츠는 `paymentKey`, `orderId`, `amount`를 `https://api.tosspayments.com/v1/payments/confirm`으로 확인하는 구조를 사용한다. `TOSS_PAYMENTS_SECRET_KEY`가 없으면 실제 승인은 보류 상태로 남긴다.
 - Supabase 권한 반영은 `SUPABASE_SERVICE_ROLE_KEY`가 있을 때만 실행한다. 결제가 확인되면 `profiles.plan`을 갱신하고 `subscriptions`에 provider 주문번호를 저장한다.
 - 같은 주문번호가 중복 반영되지 않도록 `subscriptions.provider_order_id` 고유 인덱스를 추가했다.
+- 결제 승인 확인, 로그인 확인, 권한 반영 오류가 그대로 500으로 새어 나가지 않게 JSON 응답으로 정리했다.
 - 이 단계는 실제 키를 넣기 전 안전한 골격이다. 운영 출시 전에는 토스 성공 URL과 실패 URL, App Store 인앱구독 서버 검증, 실제 키 환경변수를 연결해야 한다.
