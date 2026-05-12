@@ -1,4 +1,4 @@
-// 출시용 구독 상품 ID와 결제 환경변수 구성을 빠르게 점검하는 로컬 스모크 테스트다.
+// 출시 전 구독 상품 ID와 결제 환경변수 구성을 빠르게 점검하는 로컬 스모크 테스트입니다.
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -29,9 +29,11 @@ function expectIncludes(source, value, label, fileName) {
 
 const billing = read("src/lib/billing.ts");
 const envExample = read(".env.example");
+const confirmRoute = read("src/app/api/billing/confirm/route.ts");
 
 if (!billing) fail("결제 플랜 소스", "src/lib/billing.ts 파일을 읽지 못했습니다.");
 if (!envExample) fail("환경변수 예시", ".env.example 파일을 읽지 못했습니다.");
+if (!confirmRoute) fail("결제 승인 확인 API", "src/app/api/billing/confirm/route.ts 파일을 읽지 못했습니다.");
 
 const planIds = [
   "free",
@@ -63,7 +65,9 @@ const paymentEnvNames = [
   "NEXT_PUBLIC_STOCKS_MONTHLY_PAYMENT_URL",
   "NEXT_PUBLIC_STOCKS_YEARLY_PAYMENT_URL",
   "NEXT_PUBLIC_BUNDLE_MONTHLY_PAYMENT_URL",
-  "NEXT_PUBLIC_BUNDLE_YEARLY_PAYMENT_URL"
+  "NEXT_PUBLIC_BUNDLE_YEARLY_PAYMENT_URL",
+  "TOSS_PAYMENTS_SECRET_KEY",
+  "SUPABASE_SERVICE_ROLE_KEY"
 ];
 
 for (const planId of planIds) {
@@ -77,6 +81,9 @@ for (const productId of productIds) {
 for (const envName of paymentEnvNames) {
   expectIncludes(envExample, envName, `결제 환경변수 ${envName}`, ".env.example");
 }
+
+expectIncludes(confirmRoute, "https://api.tosspayments.com/v1/payments/confirm", "토스 승인 확인 엔드포인트", "src/app/api/billing/confirm/route.ts");
+expectIncludes(confirmRoute, "supabaseAdminRest", "Supabase 권한 반영 경로", "src/app/api/billing/confirm/route.ts");
 
 const cryptoAmount = /id:\s*"crypto_monthly"[\s\S]*?billingAmount:\s*(\d+)/.exec(billing)?.[1];
 const stocksAmount = /id:\s*"stocks_monthly"[\s\S]*?billingAmount:\s*(\d+)/.exec(billing)?.[1];
@@ -99,7 +106,7 @@ if (Number(stocksAmount) === 14900) {
 if (Number(bundleAmount) === 24900 && Number(bundleAmount) < Number(cryptoAmount) + Number(stocksAmount)) {
   pass("번들 월간 할인 구조", "개별 결제보다 낮은 24,900원.");
 } else {
-  fail("번들 월간 할인 구조", "코인+주식 개별 결제보다 번들 가격이 낮아야 합니다.");
+  fail("번들 월간 할인 구조", "코인+글로벌 개별 결제보다 번들 가격이 낮아야 합니다.");
 }
 
 if (Number(bundleYearlyMonthlyValue) > 0 && Number(bundleYearlyMonthlyValue) < Number(bundleYearlyAmount)) {

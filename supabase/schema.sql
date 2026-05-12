@@ -72,6 +72,10 @@ create table if not exists public.subscriptions (
   updated_at timestamptz not null default now()
 );
 
+create unique index if not exists subscriptions_provider_order_id_idx
+on public.subscriptions(provider_order_id)
+where provider_order_id is not null;
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql

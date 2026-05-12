@@ -492,3 +492,11 @@
 - 결제 API만이 아니라 `src/lib/billing.ts`, `src/components/ProPricingPanel.tsx`, `src/app/pro/page.tsx`에도 실제 깨진 한국어가 남아 있었다.
 - 결제 화면은 출시 전 신뢰를 가장 크게 좌우하므로, 플랜명, 가격 설명, 안내 문구, 버튼 문구를 모두 정상 한국어로 다시 작성했다.
 - 결제 화면에서는 환불 링크를 다시 전면 노출하지 않고 약관과 개인정보 처리방침만 연결했다. 실제 결제사 연결 전까지는 권한 자동 부여를 하지 않는 방향을 유지한다.
+
+## 2026-05-13 결제 승인 검증 골격.
+
+- 결제 성공 페이지가 곧바로 권한을 여는 방식은 위험하므로, `/api/billing/confirm`을 추가해 서버에서 다시 확인하는 흐름을 만들었다.
+- 토스페이먼츠는 `paymentKey`, `orderId`, `amount`를 `https://api.tosspayments.com/v1/payments/confirm`으로 확인하는 구조를 사용한다. `TOSS_PAYMENTS_SECRET_KEY`가 없으면 실제 승인은 보류 상태로 남긴다.
+- Supabase 권한 반영은 `SUPABASE_SERVICE_ROLE_KEY`가 있을 때만 실행한다. 결제가 확인되면 `profiles.plan`을 갱신하고 `subscriptions`에 provider 주문번호를 저장한다.
+- 같은 주문번호가 중복 반영되지 않도록 `subscriptions.provider_order_id` 고유 인덱스를 추가했다.
+- 이 단계는 실제 키를 넣기 전 안전한 골격이다. 운영 출시 전에는 토스 성공 URL과 실패 URL, App Store 인앱구독 서버 검증, 실제 키 환경변수를 연결해야 한다.

@@ -180,6 +180,10 @@ export function getBillingPlansByScope(scope: BillingMarketScope) {
   return billingPlans.filter((plan) => plan.marketScope === scope);
 }
 
+export function getMarketScopeForPlan(planId: BillingPlanId): BillingMarketScope {
+  return findBillingPlan(planId)?.marketScope ?? "trial";
+}
+
 export function getBillingPlansForPage(scope: BillingPageScope) {
   if (scope === "crypto") {
     return billingPlans.filter((plan) => plan.marketScope === "trial" || plan.marketScope === "crypto" || plan.marketScope === "bundle");
@@ -226,6 +230,17 @@ export function getEntitlementLabel(planId: BillingEntitlementPlan) {
 
 export function isYearlyBillingPlan(planId: BillingPlanId) {
   return planId.endsWith("_yearly");
+}
+
+export function parsePlanIdFromOrderId(orderId: string | null | undefined): BillingPlanId | null {
+  if (!orderId?.startsWith("cr_")) return null;
+  const body = orderId.slice(3);
+  const matched = billingPlans
+    .map((plan) => plan.id)
+    .filter((planId) => body.startsWith(`${planId}_`))
+    .sort((a, b) => b.length - a.length)[0];
+
+  return matched ?? null;
 }
 
 export const subscriptionTrustNotes = [
