@@ -1,4 +1,4 @@
-// 바이낸스 24시간 티커로 시장 보드 데이터를 제공하는 API 라우트
+﻿// 바이낸스 24시간 티커로 코인 시장 보드 데이터를 제공하는 API 라우트.
 import { NextResponse } from "next/server";
 import { rateLimit } from "@/lib/server/rateLimit";
 
@@ -54,10 +54,10 @@ function toItem(ticker: BinanceTicker): MarketBoardItem {
 }
 
 export async function GET(request: Request) {
-  const limit = rateLimit(request, { key: "market-board", limit: 45, windowMs: 5 * 60 * 1000 });
+  const limit = await rateLimit(request, { key: "market-board", limit: 45, windowMs: 5 * 60 * 1000 });
   if (!limit.allowed) {
     return NextResponse.json(
-      { error: "시장 보드 요청이 너무 많습니다. 잠시 후 다시 시도하세요." },
+      { error: "?쒖옣 蹂대뱶 ?붿껌???덈Т 留롮뒿?덈떎. ?좎떆 ???ㅼ떆 ?쒕룄?섏꽭??" },
       { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
     );
   }
@@ -83,10 +83,10 @@ export async function GET(request: Request) {
     cachedAt = Date.now();
     return NextResponse.json({ items, cachedAt, cached: false });
   } catch (error) {
-    console.error("[api/market-board] 오류:", error);
+    console.error("[api/market-board] ?ㅻ쪟:", error);
     if (cachedItems.length > 0) {
       return NextResponse.json({ items: cachedItems, cachedAt, cached: true, stale: true });
     }
-    return NextResponse.json({ error: "시장 보드를 불러오지 못했습니다." }, { status: 500 });
+    return NextResponse.json({ error: "?쒖옣 蹂대뱶瑜?遺덈윭?ㅼ? 紐삵뻽?듬땲??" }, { status: 500 });
   }
 }

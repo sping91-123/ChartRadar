@@ -1,4 +1,4 @@
-// 차트 판독 전체 데이터를 받아 AI 종합 피드백을 생성하는 API 라우트
+﻿// 차트 판독 데이터를 받아 AI 종합 브리핑을 생성하는 API 라우트.
 import { NextResponse } from "next/server";
 import { AIProviderError, getAIProvider, type MarketBriefingInput } from "@/lib/ai";
 import { generateFallbackMarketBriefing } from "@/lib/ai/fallback";
@@ -63,27 +63,27 @@ function cacheKey(input: MarketBriefingInput) {
 }
 
 export async function POST(request: Request) {
-  const limit = rateLimit(request, { key: "ai-market-briefing", limit: 12, windowMs: 10 * 60 * 1000 });
+  const limit = await rateLimit(request, { key: "ai-market-briefing", limit: 12, windowMs: 10 * 60 * 1000 });
   if (!limit.allowed) {
     return NextResponse.json(
-      { error: "AI 피드백 요청이 너무 많습니다. 잠시 후 다시 시도하세요." },
+      { error: "AI ?쇰뱶諛??붿껌???덈Т 留롮뒿?덈떎. ?좎떆 ???ㅼ떆 ?쒕룄?섏꽭??" },
       { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
     );
   }
 
   if (isBodyTooLarge(request, 80_000)) {
-    return NextResponse.json({ error: "요청 본문이 너무 큽니다." }, { status: 413 });
+    return NextResponse.json({ error: "?붿껌 蹂몃Ц???덈Т ?쎈땲??" }, { status: 413 });
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "유효한 JSON 본문이 필요합니다." }, { status: 400 });
+    return NextResponse.json({ error: "?좏슚??JSON 蹂몃Ц???꾩슂?⑸땲??" }, { status: 400 });
   }
 
   if (!isValidInput(body)) {
-    return NextResponse.json({ error: "AI 종합 피드백 입력값이 부족합니다." }, { status: 400 });
+    return NextResponse.json({ error: "AI 醫낇빀 ?쇰뱶諛??낅젰媛믪씠 遺議깊빀?덈떎." }, { status: 400 });
   }
 
   const input = body as MarketBriefingInput;
@@ -102,9 +102,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ briefing: text, model: provider.model, cached: false });
   } catch (error) {
     if (error instanceof AIProviderError) {
-      console.warn(`[ai/market-briefing] ${error.provider} 실패, 폴백 사용.`, error.message);
+      console.warn(`[ai/market-briefing] ${error.provider} ?ㅽ뙣, ?대갚 ?ъ슜.`, error.message);
     } else {
-      console.warn("[ai/market-briefing] Provider 없음 또는 알 수 없는 오류, 폴백 사용.", error);
+      console.warn("[ai/market-briefing] Provider ?놁쓬 ?먮뒗 ?????녿뒗 ?ㅻ쪟, ?대갚 ?ъ슜.", error);
     }
 
     const fallback = generateFallbackMarketBriefing(input);

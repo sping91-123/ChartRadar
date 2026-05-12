@@ -1,4 +1,4 @@
-// 바이낸스에서 거래 중인 USDT-M 코인 목록을 제공하는 API 라우트.
+﻿// 諛붿씠?몄뒪?먯꽌 嫄곕옒 以묒씤 USDT-M 肄붿씤 紐⑸줉???쒓났?섎뒗 API ?쇱슦??
 import { NextResponse } from "next/server";
 import { getCryptoSymbols } from "@/lib/cryptoUniverse";
 import { rateLimit } from "@/lib/server/rateLimit";
@@ -7,10 +7,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const limit = rateLimit(request, { key: "crypto-symbols", limit: 60, windowMs: 5 * 60 * 1000 });
+  const limit = await rateLimit(request, { key: "crypto-symbols", limit: 60, windowMs: 5 * 60 * 1000 });
   if (!limit.allowed) {
     return NextResponse.json(
-      { error: "코인 목록 요청이 너무 많습니다. 잠시 후 다시 시도하세요." },
+      { error: "肄붿씤 紐⑸줉 ?붿껌???덈Т 留롮뒿?덈떎. ?좎떆 ???ㅼ떆 ?쒕룄?섏꽭??" },
       { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
     );
   }
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
       cachedAt: Date.now()
     });
   } catch (error) {
-    console.error("[api/crypto-symbols] 오류:", error);
-    return NextResponse.json({ error: "바이낸스 코인 목록을 불러오지 못했습니다." }, { status: 500 });
+    console.error("[api/crypto-symbols] ?ㅻ쪟:", error);
+    return NextResponse.json({ error: "諛붿씠?몄뒪 肄붿씤 紐⑸줉??遺덈윭?ㅼ? 紐삵뻽?듬땲??" }, { status: 500 });
   }
 }

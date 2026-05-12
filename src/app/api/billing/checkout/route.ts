@@ -1,4 +1,4 @@
-// 웹 결제 시작에 필요한 주문 정보를 만들고 결제 연결 상태를 알려준다.
+﻿// ??寃곗젣 ?쒖옉???꾩슂??二쇰Ц ?뺣낫瑜?留뚮뱾怨?寃곗젣 ?곌껐 ?곹깭瑜??뚮젮以??
 import { NextResponse } from "next/server";
 import { findBillingPlan } from "@/lib/billing";
 
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
   const plan = findBillingPlan(body.planId);
 
   if (!plan || plan.id === "free") {
-    return NextResponse.json({ error: "결제할 플랜을 다시 선택해 주세요." }, { status: 400 });
+    return NextResponse.json({ error: "寃곗젣???뚮옖???ㅼ떆 ?좏깮??二쇱꽭??" }, { status: 400 });
   }
 
   if (body.platform === "ios") {
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       configured: false,
       mode: "app_store",
       productId: plan.appStoreProductId,
-      message: "iOS 앱에서는 App Store 구독 상품으로 연결해야 합니다. App Store Connect에서 상품 ID를 만든 뒤 네이티브 결제 모듈과 연결하세요."
+      message: "iOS ?깆뿉?쒕뒗 App Store 援щ룆 ?곹뭹?쇰줈 ?곌껐?댁빞 ?⑸땲?? App Store Connect?먯꽌 ?곹뭹 ID瑜?留뚮뱺 ???ㅼ씠?곕툕 寃곗젣 紐⑤뱢怨??곌껐?섏꽭??"
     });
   }
 
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
         orderId,
         amount: plan.billingAmount,
         orderName: plan.name,
-        message: "결제 URL 형식이 올바르지 않습니다. NEXT_PUBLIC_PRO_PAYMENT_URL 값을 https://로 시작하는 전체 주소로 확인해 주세요."
+        message: "寃곗젣 URL ?뺤떇???щ컮瑜댁? ?딆뒿?덈떎. NEXT_PUBLIC_PRO_PAYMENT_URL 媛믪쓣 https://濡??쒖옉?섎뒗 ?꾩껜 二쇱냼濡??뺤씤??二쇱꽭??"
       });
     }
 
@@ -86,6 +86,6 @@ export async function POST(request: Request) {
     amount: plan.billingAmount,
     orderName: plan.name,
     message:
-      "현재 결제창을 점검하고 있습니다. 운영 결제 URL이 연결되면 같은 버튼에서 바로 결제 화면으로 이동합니다."
+      "?꾩옱 寃곗젣李쎌쓣 ?먭??섍퀬 ?덉뒿?덈떎. ?댁쁺 寃곗젣 URL???곌껐?섎㈃ 媛숈? 踰꾪듉?먯꽌 諛붾줈 寃곗젣 ?붾㈃?쇰줈 ?대룞?⑸땲??"
   });
 }

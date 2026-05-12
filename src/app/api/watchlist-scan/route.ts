@@ -1,12 +1,12 @@
-/**
+﻿/**
  * POST /api/watchlist-scan
  *
- * 관심 코인 목록을 받아 레이더 판독 결과를 반환.
+ * 愿??肄붿씤 紐⑸줉??諛쏆븘 ?덉씠???먮룆 寃곌낵瑜?諛섑솚.
  * Body: { symbols: string[] }
  *
- * - 종목 수 최대 10개 (서버 부하 방지)
- * - 3분 인메모리 캐시 (정렬된 심볼 문자열 키)
- * - 인증 없음 — plan gating은 클라이언트가 처리
+ * - 醫낅ぉ ??理쒕? 10媛?(?쒕쾭 遺??諛⑹?)
+ * - 3遺??몃찓紐⑤━ 罹먯떆 (?뺣젹???щ낵 臾몄옄????
+ * - ?몄쬆 ?놁쓬 ??plan gating? ?대씪?댁뼵?멸? 泥섎━
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -17,7 +17,7 @@ import { isBodyTooLarge, rateLimit } from "@/lib/server/rateLimit";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const CACHE_TTL_MS = 3 * 60 * 1000; // 3분
+const CACHE_TTL_MS = 3 * 60 * 1000;
 const MAX_SYMBOLS = 10;
 
 interface CacheEntry {
@@ -25,7 +25,7 @@ interface CacheEntry {
   cachedAt: number;
 }
 
-// 심볼 조합별 캐시
+// ?щ낵 議고빀蹂?罹먯떆
 const cacheMap = new Map<string, CacheEntry>();
 const inflightMap = new Map<string, Promise<ScoutSetup[]>>();
 
@@ -34,35 +34,35 @@ function makeCacheKey(symbols: string[]): string {
 }
 
 export async function POST(req: NextRequest) {
-  const limit = rateLimit(req, { key: "watchlist-scan", limit: 20, windowMs: 5 * 60 * 1000 });
+  const limit = await rateLimit(req, { key: "watchlist-scan", limit: 20, windowMs: 5 * 60 * 1000 });
   if (!limit.allowed) {
     return NextResponse.json(
-        { error: "관심 코인 레이더 요청이 너무 많습니다. 잠시 후 다시 시도하세요." },
+        { error: "愿??肄붿씤 ?덉씠???붿껌???덈Т 留롮뒿?덈떎. ?좎떆 ???ㅼ떆 ?쒕룄?섏꽭??" },
       { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
     );
   }
 
   if (isBodyTooLarge(req, 12_000)) {
-    return NextResponse.json({ error: "요청 본문이 너무 큽니다." }, { status: 413 });
+    return NextResponse.json({ error: "?붿껌 蹂몃Ц???덈Т ?쎈땲??" }, { status: 413 });
   }
 
   let body: unknown;
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "요청 형식이 올바르지 않습니다." }, { status: 400 });
+    return NextResponse.json({ error: "?붿껌 ?뺤떇???щ컮瑜댁? ?딆뒿?덈떎." }, { status: 400 });
   }
 
   if (typeof body !== "object" || body === null || !("symbols" in body)) {
-    return NextResponse.json({ error: "symbols 필드가 필요합니다." }, { status: 400 });
+    return NextResponse.json({ error: "symbols ?꾨뱶媛 ?꾩슂?⑸땲??" }, { status: 400 });
   }
 
   const rawSymbols = (body as { symbols: unknown }).symbols;
   if (!Array.isArray(rawSymbols)) {
-    return NextResponse.json({ error: "symbols는 배열이어야 합니다." }, { status: 400 });
+    return NextResponse.json({ error: "symbols??諛곗뿴?댁뼱???⑸땲??" }, { status: 400 });
   }
 
-  // 바이낸스 전체 USDT-M 심볼 형식만 허용한다. 실제 존재 여부는 스캔 단계에서 자연스럽게 걸러진다.
+  // 諛붿씠?몄뒪 ?꾩껜 USDT-M ?щ낵 ?뺤떇留??덉슜?쒕떎. ?ㅼ젣 議댁옱 ?щ????ㅼ틪 ?④퀎?먯꽌 ?먯뿰?ㅻ읇寃?嫄몃윭吏꾨떎.
   const symbols: string[] = (rawSymbols as unknown[])
     .filter((s): s is string => typeof s === "string" && isLikelyUsdtPerpSymbol(s))
     .slice(0, MAX_SYMBOLS);
@@ -74,13 +74,13 @@ export async function POST(req: NextRequest) {
   const key = makeCacheKey(symbols);
   const now = Date.now();
 
-  // 캐시 확인
+  // 罹먯떆 ?뺤씤
   const cached = cacheMap.get(key);
   if (cached && now - cached.cachedAt < CACHE_TTL_MS) {
     return NextResponse.json({ setups: cached.setups, cachedAt: cached.cachedAt, cached: true });
   }
 
-  // thundering-herd 방지
+  // thundering-herd 諛⑹?
   let inflight = inflightMap.get(key);
   if (!inflight) {
     inflight = scanAllSetups({ symbols })
@@ -103,8 +103,8 @@ export async function POST(req: NextRequest) {
       cached: false
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "레이더 판독에 실패했습니다.";
-    console.error("[api/watchlist-scan] 오류:", error);
+    const message = error instanceof Error ? error.message : "?덉씠???먮룆???ㅽ뙣?덉뒿?덈떎.";
+    console.error("[api/watchlist-scan] ?ㅻ쪟:", error);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

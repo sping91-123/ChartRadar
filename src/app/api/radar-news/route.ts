@@ -1,4 +1,4 @@
-// 공개 RSS 뉴스 제목을 수집해 레이더뉴스 카드 데이터로 변환하는 API.
+﻿// 怨듦컻 RSS ?댁뒪 ?쒕ぉ???섏쭛???덉씠?붾돱??移대뱶 ?곗씠?곕줈 蹂?섑븯??API.
 import { NextResponse } from "next/server";
 import { XMLParser } from "fast-xml-parser";
 import {
@@ -104,23 +104,23 @@ function toIsoDate(value: string) {
 }
 
 function hasKorean(value: string) {
-  return /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(value);
+  return /[가-힣]/.test(value);
 }
 
 function knownCryptoTitle(title: string) {
   const normalized = title.toLowerCase();
 
   if (normalized.includes("kraken parent") && normalized.includes("occ charter")) {
-    return "크라켄 모회사, 연방 암호화 은행 인가 신청";
+    return "크라켄 모회사, 은행 라이선스 관련 이슈 부각";
   }
-  if (normalized.includes("coinbase bulls") && normalized.includes("stablecoin")) {
-    return "코인베이스 강세론자들, 실적 부진 뒤 암호화폐 법안과 스테이블코인에 주목";
+  if (normalized.includes("coinbase") && normalized.includes("stablecoin")) {
+    return "코인베이스와 스테이블코인 이슈가 시장 관심을 받는 중";
   }
   if (normalized.includes("kelp dao exploit")) {
-    return "Kelp DAO 해킹 이슈, DeFi 오라클 리스크 재점검 촉발";
+    return "Kelp DAO 보안 이슈, DeFi 리스크 점검 필요";
   }
-  if (normalized.includes("mstr stock") && normalized.includes("rally")) {
-    return "스트래티지 MSTR 주가, 1분기 손실에도 랠리 가능성 부각";
+  if (normalized.includes("mstr") || normalized.includes("strategy")) {
+    return "Strategy 관련 뉴스, 비트코인 보유 기업 흐름 점검";
   }
 
   return null;
@@ -129,17 +129,12 @@ function knownCryptoTitle(title: string) {
 function localTranslateTitle(title: string) {
   return title
     .replace(/\bBitcoin\b/gi, "비트코인")
-    .replace(/\bBTC\b/g, "BTC")
     .replace(/\bEthereum\b/gi, "이더리움")
-    .replace(/\bETH\b/g, "ETH")
     .replace(/\bSolana\b/gi, "솔라나")
-    .replace(/\bXRP\b/g, "XRP")
-    .replace(/\bETF\b/g, "ETF")
-    .replace(/\bSEC\b/g, "SEC")
-    .replace(/\bFed\b/g, "연준")
+    .replace(/\bFed\b/gi, "연준")
     .replace(/\binflows?\b/gi, "자금 유입")
     .replace(/\boutflows?\b/gi, "자금 유출")
-    .replace(/\brally\b/gi, "랠리")
+    .replace(/\brally\b/gi, "상승")
     .replace(/\bsurge\b/gi, "급등")
     .replace(/\bplunge\b/gi, "급락")
     .replace(/\bhack\b/gi, "해킹")
@@ -149,19 +144,7 @@ function localTranslateTitle(title: string) {
 }
 
 function polishKoreanTitle(title: string) {
-  return title
-    .replace(/크라켄 부모/g, "크라켄 모회사")
-    .replace(/부모는/g, "모회사는")
-    .replace(/OCC 헌장/g, "OCC 인가")
-    .replace(/헌장을 신청/g, "인가를 신청")
-    .replace(/코인베이스 불은/g, "코인베이스 강세론자들은")
-    .replace(/전략의 MSTR 재고/g, "스트래티지 MSTR 주가")
-    .replace(/\b재고\b/g, "주가")
-    .replace(/오라클 제공자/g, "오라클 제공업체")
-    .replace(/익스플로잇/g, "해킹 이슈")
-    .replace(/\s+%/g, "%")
-    .replace(/\s+/g, " ")
-    .trim();
+  return title.replace(/\s+%/g, "%").replace(/\s+/g, " ").trim();
 }
 
 async function translateTitleToKorean(title: string) {
@@ -192,7 +175,7 @@ async function translateTitleToKorean(title: string) {
       }
     }
   } catch {
-    // 무료 번역 API가 지연되면 아래의 로컬 용어 치환으로 대체한다.
+    // 臾대즺 踰덉뿭 API媛 吏?곕릺硫??꾨옒??濡쒖뺄 ?⑹뼱 移섑솚?쇰줈 ?泥댄븳??
   }
 
   const fallback = polishKoreanTitle(localTranslateTitle(title));
@@ -251,9 +234,9 @@ function itemTitle(item: RadarNewsItem) {
 }
 
 function toneLabel(tone: RadarNewsDirection) {
-  if (tone === "bullish") return "상방 우호";
-  if (tone === "bearish") return "하방 주의";
-  return "중립 확인";
+  if (tone === "bullish") return "?곷갑 ?고샇";
+  if (tone === "bearish") return "?섎갑 二쇱쓽";
+  return "以묐┰ ?뺤씤";
 }
 
 function mostCommonAssets(items: RadarNewsItem[]) {
@@ -287,8 +270,8 @@ function fallbackNewsBriefing(items: RadarNewsItem[], model = "rules", market: R
   if (market === "stocks") {
     const overview =
       items.length === 0
-        ? "현재 불러온 글로벌 뉴스가 부족합니다. 주요 지수, 금리, 실적 캘린더를 먼저 확인하는 편이 좋습니다."
-        : `현재 수집된 글로벌 뉴스는 상방 우호 ${bullish}개, 하방 주의 ${bearish}개, 중립 확인 ${neutral}개로 정리됩니다. ${assets.length ? `${assets.join(", ")} 관련 이슈가 많이 잡히고 있으며, ` : ""}${urgent ? `즉시 확인할 만한 이슈가 ${urgent}개 있습니다.` : "아직은 단일 방향으로 강하게 쏠린 뉴스는 제한적입니다."}`;
+        ? "?꾩옱 遺덈윭??湲濡쒕쾶 ?댁뒪媛 遺議깊빀?덈떎. 二쇱슂 吏?? 湲덈━, ?ㅼ쟻 罹섎┛?붾? 癒쇱? ?뺤씤?섎뒗 ?몄씠 醫뗭뒿?덈떎."
+        : `?꾩옱 ?섏쭛??湲濡쒕쾶 ?댁뒪???곷갑 ?고샇 ${bullish}媛? ?섎갑 二쇱쓽 ${bearish}媛? 以묐┰ ?뺤씤 ${neutral}媛쒕줈 ?뺣━?⑸땲?? ${assets.length ? `${assets.join(", ")} 愿???댁뒋媛 留롮씠 ?≫엳怨??덉쑝硫? ` : ""}${urgent ? `利됱떆 ?뺤씤??留뚰븳 ?댁뒋媛 ${urgent}媛??덉뒿?덈떎.` : "?꾩쭅? ?⑥씪 諛⑺뼢?쇰줈 媛뺥븯寃??좊┛ ?댁뒪???쒗븳?곸엯?덈떎."}`;
 
     return {
       generatedAt: new Date().toISOString(),
@@ -296,36 +279,36 @@ function fallbackNewsBriefing(items: RadarNewsItem[], model = "rules", market: R
       overview,
       keyIssues: topItems.map((item) => ({
         title: itemTitle(item),
-        detail: `${item.source} 기준 ${toneLabel(item.direction)} 이슈입니다. ${item.summary}`,
+        detail: `${item.source} 湲곗? ${toneLabel(item.direction)} ?댁뒋?낅땲?? ${item.summary}`,
         tone: item.direction
       })),
       marketImpact: [
         leadingTone === "bullish"
-          ? "글로벌 뉴스 흐름은 단기적으로 위험자산에 우호적입니다. 다만 이미 오른 종목은 장중 변동성을 함께 확인해야 합니다."
+          ? "湲濡쒕쾶 ?댁뒪 ?먮쫫? ?④린?곸쑝濡??꾪뿕?먯궛???고샇?곸엯?덈떎. ?ㅻ쭔 ?대? ?ㅻⅨ 醫낅ぉ? ?μ쨷 蹂?숈꽦???④퍡 ?뺤씤?댁빞 ?⑸땲??"
           : leadingTone === "bearish"
-            ? "주의 뉴스가 더 많아 지수 하락과 섹터별 차별화 가능성을 먼저 봐야 합니다."
-            : "뉴스 방향성이 엇갈려 지수보다 섹터, 실적, 금리 민감도를 나눠 보는 편이 좋습니다.",
-        "나스닥, S&P500, 달러, 미국 10년물 금리의 동시 흐름을 함께 확인하세요.",
-        "뉴스만으로 진입하기보다 차트 레이더의 추세와 변동성 상태를 같이 확인하는 편이 안전합니다."
+            ? "二쇱쓽 ?댁뒪媛 ??留롮븘 吏???섎씫怨??뱁꽣蹂?李⑤퀎??媛?μ꽦??癒쇱? 遊먯빞 ?⑸땲??"
+            : "?댁뒪 諛⑺뼢?깆씠 ?뉕컝??吏?섎낫???뱁꽣, ?ㅼ쟻, 湲덈━ 誘쇨컧?꾨? ?섎닠 蹂대뒗 ?몄씠 醫뗭뒿?덈떎.",
+        "?섏뒪?? S&P500, ?щ윭, 誘멸뎅 10?꾨Ъ 湲덈━???숈떆 ?먮쫫???④퍡 ?뺤씤?섏꽭??",
+        "?댁뒪留뚯쑝濡?吏꾩엯?섍린蹂대떎 李⑦듃 ?덉씠?붿쓽 異붿꽭? 蹂?숈꽦 ?곹깭瑜?媛숈씠 ?뺤씤?섎뒗 ?몄씠 ?덉쟾?⑸땲??"
       ],
       strategyNotes: [
-        "장 시작 전후에는 스프레드와 급변동이 커질 수 있으니 추격보다 관찰이 우선입니다.",
-        "실적·가이던스 이슈가 있는 종목은 기술적 지표보다 이벤트 리스크가 더 크게 작동할 수 있습니다.",
-        "ETF와 개별주는 같은 방향이라도 변동성이 다르므로 손절폭과 수량을 분리해서 계산하세요."
+        "???쒖옉 ?꾪썑?먮뒗 ?ㅽ봽?덈뱶? 湲됰??숈씠 而ㅼ쭏 ???덉쑝??異붽꺽蹂대떎 愿李곗씠 ?곗꽑?낅땲??",
+        "?ㅼ쟻쨌媛?대뜕???댁뒋媛 ?덈뒗 醫낅ぉ? 湲곗닠??吏?쒕낫???대깽??由ъ뒪?ш? ???ш쾶 ?묐룞?????덉뒿?덈떎.",
+        "ETF? 媛쒕퀎二쇰뒗 媛숈? 諛⑺뼢?대씪??蹂?숈꽦???ㅻⅤ誘濡??먯젅??낵 ?섎웾??遺꾨━?댁꽌 怨꾩궛?섏꽭??"
       ],
       finalSummary:
         leadingTone === "bullish"
-          ? "정리하면, 뉴스 흐름은 다소 긍정적이지만 추격보다 지수와 섹터 확인이 먼저입니다."
+          ? "?뺣━?섎㈃, ?댁뒪 ?먮쫫? ?ㅼ냼 湲띿젙?곸씠吏留?異붽꺽蹂대떎 吏?섏? ?뱁꽣 ?뺤씤??癒쇱??낅땲??"
           : leadingTone === "bearish"
-            ? "정리하면, 방어적인 관찰이 필요한 구간입니다. 지수 지지선과 금리 반응을 먼저 보세요."
-            : "정리하면, 뉴스만으로 방향을 확정하기보다 차트와 매크로 확인이 필요한 구간입니다."
+            ? "?뺣━?섎㈃, 諛⑹뼱?곸씤 愿李곗씠 ?꾩슂??援ш컙?낅땲?? 吏??吏吏?좉낵 湲덈━ 諛섏쓳??癒쇱? 蹂댁꽭??"
+            : "?뺣━?섎㈃, ?댁뒪留뚯쑝濡?諛⑺뼢???뺤젙?섍린蹂대떎 李⑦듃? 留ㅽ겕濡??뺤씤???꾩슂??援ш컙?낅땲??"
     };
   }
 
   const overview =
     items.length === 0
-      ? "현재 불러온 뉴스가 부족합니다. 차트 흐름과 주요 거래소 공지를 먼저 확인하는 편이 좋습니다."
-      : `현재 수집된 코인 뉴스는 상방 우호 ${bullish}개, 하방 주의 ${bearish}개, 중립 확인 ${neutral}개로 정리됩니다. ${assets.length ? `${assets.join(", ")} 관련 이슈가 가장 많이 잡히고 있으며, ` : ""}${urgent ? `즉시 확인할 만한 이슈가 ${urgent}개 있습니다.` : "아직은 단일 방향으로 강하게 쏠린 뉴스는 제한적입니다."}`;
+      ? "?꾩옱 遺덈윭???댁뒪媛 遺議깊빀?덈떎. 李⑦듃 ?먮쫫怨?二쇱슂 嫄곕옒??怨듭?瑜?癒쇱? ?뺤씤?섎뒗 ?몄씠 醫뗭뒿?덈떎."
+      : `?꾩옱 ?섏쭛??肄붿씤 ?댁뒪???곷갑 ?고샇 ${bullish}媛? ?섎갑 二쇱쓽 ${bearish}媛? 以묐┰ ?뺤씤 ${neutral}媛쒕줈 ?뺣━?⑸땲?? ${assets.length ? `${assets.join(", ")} 愿???댁뒋媛 媛??留롮씠 ?≫엳怨??덉쑝硫? ` : ""}${urgent ? `利됱떆 ?뺤씤??留뚰븳 ?댁뒋媛 ${urgent}媛??덉뒿?덈떎.` : "?꾩쭅? ?⑥씪 諛⑺뼢?쇰줈 媛뺥븯寃??좊┛ ?댁뒪???쒗븳?곸엯?덈떎."}`;
 
   return {
     generatedAt: new Date().toISOString(),
@@ -333,69 +316,69 @@ function fallbackNewsBriefing(items: RadarNewsItem[], model = "rules", market: R
     overview,
     keyIssues: topItems.map((item) => ({
       title: itemTitle(item),
-      detail: `${item.source} 기준 ${toneLabel(item.direction)} 이슈입니다. ${item.summary}`,
+      detail: `${item.source} 湲곗? ${toneLabel(item.direction)} ?댁뒋?낅땲?? ${item.summary}`,
       tone: item.direction
     })),
     marketImpact: [
       leadingTone === "bullish"
-        ? "긍정 뉴스가 더 많아 단기 심리는 우호적으로 해석될 수 있습니다. 다만 이미 오른 자리라면 추격보다 눌림과 지지 확인이 중요합니다."
+        ? "湲띿젙 ?댁뒪媛 ??留롮븘 ?④린 ?щ━???고샇?곸쑝濡??댁꽍?????덉뒿?덈떎. ?ㅻ쭔 ?대? ?ㅻⅨ ?먮━?쇰㈃ 異붽꺽蹂대떎 ?뚮┝怨?吏吏 ?뺤씤??以묒슂?⑸땲??"
         : leadingTone === "bearish"
-          ? "주의 뉴스가 더 많아 변동성 확대와 지지 이탈 가능성을 먼저 봐야 합니다. 반등이 나와도 거래량과 되돌림 강도를 같이 확인해야 합니다."
-          : "뉴스 방향성이 엇갈려 차트 구조 확인이 더 중요합니다. 가격이 박스 상단과 하단 중 어디를 먼저 돌파하는지 확인하는 편이 안전합니다.",
-      "뉴스만으로 진입 방향을 확정하기보다 BTC와 ETH의 반응, 도미넌스 변화, 거래량 증가 여부를 함께 확인하는 것이 좋습니다.",
-      "알트코인은 같은 뉴스에도 과하게 반응할 수 있으므로 손절 기준과 포지션 크기를 먼저 줄여서 보는 것이 좋습니다."
+          ? "二쇱쓽 ?댁뒪媛 ??留롮븘 蹂?숈꽦 ?뺣?? 吏吏 ?댄깉 媛?μ꽦??癒쇱? 遊먯빞 ?⑸땲?? 諛섎벑???섏???嫄곕옒?됯낵 ?섎룎由?媛뺣룄瑜?媛숈씠 ?뺤씤?댁빞 ?⑸땲??"
+          : "?댁뒪 諛⑺뼢?깆씠 ?뉕컝??李⑦듃 援ъ“ ?뺤씤????以묒슂?⑸땲?? 媛寃⑹씠 諛뺤뒪 ?곷떒怨??섎떒 以??대뵒瑜?癒쇱? ?뚰뙆?섎뒗吏 ?뺤씤?섎뒗 ?몄씠 ?덉쟾?⑸땲??",
+      "?댁뒪留뚯쑝濡?吏꾩엯 諛⑺뼢???뺤젙?섍린蹂대떎 BTC? ETH??諛섏쓳, ?꾨??뚯뒪 蹂?? 嫄곕옒??利앷? ?щ?瑜??④퍡 ?뺤씤?섎뒗 寃껋씠 醫뗭뒿?덈떎.",
+      "?뚰듃肄붿씤? 媛숈? ?댁뒪?먮룄 怨쇳븯寃?諛섏쓳?????덉쑝誘濡??먯젅 湲곗?怨??ъ????ш린瑜?癒쇱? 以꾩뿬??蹂대뒗 寃껋씠 醫뗭뒿?덈떎."
     ],
     strategyNotes: [
-      "강한 호재가 나와도 이미 장대 양봉 이후라면 추격 진입보다 되돌림 지지 확인을 우선하세요.",
-      "악재성 뉴스가 많을 때는 숏만 보겠다는 뜻이 아니라, 롱 진입 조건을 더 엄격하게 보겠다는 의미로 쓰는 편이 좋습니다.",
-      "뉴스 브리핑은 매수·매도 신호가 아니라 오늘 차트에서 무엇을 더 조심해서 볼지 정하는 체크리스트로 활용하세요."
+      "媛뺥븳 ?몄옱媛 ?섏????대? ?λ? ?묐큺 ?댄썑?쇰㈃ 異붽꺽 吏꾩엯蹂대떎 ?섎룎由?吏吏 ?뺤씤???곗꽑?섏꽭??",
+      "?낆옱???댁뒪媛 留롮쓣 ?뚮뒗 ?뤿쭔 蹂닿쿋?ㅻ뒗 ?살씠 ?꾨땲?? 濡?吏꾩엯 議곌굔?????꾧꺽?섍쾶 蹂닿쿋?ㅻ뒗 ?섎?濡??곕뒗 ?몄씠 醫뗭뒿?덈떎.",
+      "?댁뒪 釉뚮━?묒? 留ㅼ닔쨌留ㅻ룄 ?좏샇媛 ?꾨땲???ㅻ뒛 李⑦듃?먯꽌 臾댁뾿????議곗떖?댁꽌 蹂쇱? ?뺥븯??泥댄겕由ъ뒪?몃줈 ?쒖슜?섏꽭??"
     ],
     finalSummary:
       leadingTone === "bullish"
-        ? "정리하면, 뉴스 심리는 다소 긍정적이지만 추격 매수보다 구조 확인이 먼저입니다."
+        ? "?뺣━?섎㈃, ?댁뒪 ?щ━???ㅼ냼 湲띿젙?곸씠吏留?異붽꺽 留ㅼ닔蹂대떎 援ъ“ ?뺤씤??癒쇱??낅땲??"
         : leadingTone === "bearish"
-          ? "정리하면, 방어적인 관찰이 필요한 흐름입니다. 지지 이탈과 청산성 변동성을 우선 체크하세요."
-          : "정리하면, 뉴스만으로 방향을 단정하기 어렵습니다. 차트 레이더의 구조 판독과 함께 확인하는 구간입니다."
+          ? "?뺣━?섎㈃, 諛⑹뼱?곸씤 愿李곗씠 ?꾩슂???먮쫫?낅땲?? 吏吏 ?댄깉怨?泥?궛??蹂?숈꽦???곗꽑 泥댄겕?섏꽭??"
+          : "?뺣━?섎㈃, ?댁뒪留뚯쑝濡?諛⑺뼢???⑥젙?섍린 ?대졄?듬땲?? 李⑦듃 ?덉씠?붿쓽 援ъ“ ?먮룆怨??④퍡 ?뺤씤?섎뒗 援ш컙?낅땲??"
   };
 }
 
 function buildNewsBriefingPrompt(items: RadarNewsItem[], market: RadarNewsMarket) {
-  const marketLabel = market === "stocks" ? "글로벌 시장" : "코인";
+  const marketLabel = market === "stocks" ? "湲濡쒕쾶 ?쒖옣" : "肄붿씤";
   const headlines = items
     .slice(0, 10)
     .map((item, index) => {
       return `${index + 1}. [${item.source}] ${itemTitle(item)}
-원문: ${item.title}
-방향: ${toneLabel(item.direction)}
-점수: ${item.score}
-태그: ${item.tags.join(", ")}
-요약: ${item.summary}`;
+?먮Ц: ${item.title}
+諛⑺뼢: ${toneLabel(item.direction)}
+?먯닔: ${item.score}
+?쒓렇: ${item.tags.join(", ")}
+?붿빟: ${item.summary}`;
     })
     .join("\n\n");
 
-  return `아래 ${marketLabel} 관련 뉴스 제목과 1차 분류를 바탕으로 한국어 시장 브리핑을 작성해 주세요.
+  return `?꾨옒 ${marketLabel} 愿???댁뒪 ?쒕ぉ怨?1李?遺꾨쪟瑜?諛뷀깢?쇰줈 ?쒓뎅???쒖옣 釉뚮━?묒쓣 ?묒꽦??二쇱꽭??
 
-출력은 반드시 JSON 하나만 반환하세요. 마크다운 문법은 쓰지 마세요.
-스키마는 다음과 같습니다.
+異쒕젰? 諛섎뱶??JSON ?섎굹留?諛섑솚?섏꽭?? 留덊겕?ㅼ슫 臾몃쾿? ?곗? 留덉꽭??
+?ㅽ궎留덈뒗 ?ㅼ쓬怨?媛숈뒿?덈떎.
 {
-  "overview": "오늘 시장을 한 문단으로 요약",
+  "overview": "?ㅻ뒛 ?쒖옣????臾몃떒?쇰줈 ?붿빟",
   "keyIssues": [
-    { "title": "주요 이슈 제목", "detail": "왜 중요한지와 확인할 점", "tone": "bullish|bearish|neutral" }
+    { "title": "二쇱슂 ?댁뒋 ?쒕ぉ", "detail": "??以묒슂?쒖?? ?뺤씤????, "tone": "bullish|bearish|neutral" }
   ],
-  "marketImpact": ["시장에 미칠 수 있는 영향 3개"],
-  "strategyNotes": ["투자 판단 시 참고할 점 3개"],
-  "finalSummary": "마지막 한 줄 정리"
+  "marketImpact": ["?쒖옣??誘몄튌 ???덈뒗 ?곹뼢 3媛?],
+  "strategyNotes": ["?ъ옄 ?먮떒 ??李멸퀬????3媛?],
+  "finalSummary": "留덉?留???以??뺣━"
 }
 
-규칙.
-- 모든 문장은 한국어로 작성하세요.
-- 직접적인 매수·매도 신호, 수익 보장, 특정 진입 지시는 금지입니다.
-- 대신 오늘 시장에서 조심할 점, 확인할 조건, 리스크 관리 관점으로 정리하세요.
-- keyIssues는 3개에서 5개 사이로 작성하세요.
-- marketImpact와 strategyNotes는 각각 3개로 작성하세요.
+洹쒖튃.
+- 紐⑤뱺 臾몄옣? ?쒓뎅?대줈 ?묒꽦?섏꽭??
+- 吏곸젒?곸씤 留ㅼ닔쨌留ㅻ룄 ?좏샇, ?섏씡 蹂댁옣, ?뱀젙 吏꾩엯 吏?쒕뒗 湲덉??낅땲??
+- ????ㅻ뒛 ?쒖옣?먯꽌 議곗떖???? ?뺤씤??議곌굔, 由ъ뒪??愿由?愿?먯쑝濡??뺣━?섏꽭??
+- keyIssues??3媛쒖뿉??5媛??ъ씠濡??묒꽦?섏꽭??
+- marketImpact? strategyNotes??媛곴컖 3媛쒕줈 ?묒꽦?섏꽭??
 
-뉴스 재료.
-${headlines || "수집된 뉴스가 부족합니다."}`;
+?댁뒪 ?щ즺.
+${headlines || "?섏쭛???댁뒪媛 遺議깊빀?덈떎."}`;
 }
 
 function asBriefingIssue(value: unknown): RadarNewsBriefing["keyIssues"][number] | null {
@@ -533,7 +516,7 @@ async function generateGeminiNewsBriefing(items: RadarNewsItem[], market: RadarN
 }
 
 export async function GET(request: Request) {
-  const limited = rateLimit(request, {
+  const limited = await rateLimit(request, {
     key: "radar-news",
     limit: 60,
     windowMs: 60_000
@@ -541,7 +524,7 @@ export async function GET(request: Request) {
 
   if (!limited.allowed) {
     return NextResponse.json(
-      { error: "뉴스 레이더 요청이 잠시 많습니다.", retryAfter: limited.retryAfter },
+      { error: "?댁뒪 ?덉씠???붿껌???좎떆 留롮뒿?덈떎.", retryAfter: limited.retryAfter },
       { status: 429 }
     );
   }
