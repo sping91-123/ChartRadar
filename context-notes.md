@@ -1,5 +1,11 @@
 # 작업 맥락 메모
 
+## 2026-05-13 6시간 반복 점검 18차.
+
+- `/api/health`가 결제 설정을 판단할 때 실제 결제 API와 다른 환경변수 이름을 보고 있었습니다.
+- 결제 API, `.env.example`, 결제 문서가 모두 `TOSS_PAYMENTS_SECRET_KEY`, `NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY`를 쓰므로 헬스체크도 같은 기준으로 맞췄습니다.
+- 운영자가 결제 키를 넣었는데도 헬스체크가 `not-configured`로 오판하는 일을 막는 수정입니다.
+
 ## 2026-05-13 6시간 반복 점검 17차.
 
 - 출시 전 점검은 사람이 기억해서 `smoke:ops`, `smoke:mobile`, `smoke:billing`, `smoke:api`, `smoke:routes`를 각각 실행하면 빠뜨리기 쉽습니다.

@@ -21,8 +21,8 @@ export async function GET() {
   const macroAgeHours = hoursSince(macroCalendarUpdatedAtIso);
   const hasGroq = hasValue(process.env.GROQ_API_KEY);
   const hasGemini = hasValue(process.env.GEMINI_API_KEY);
-  const hasTossSecret = hasValue(process.env.TOSS_SECRET_KEY);
-  const hasTossClient = hasValue(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY);
+  const hasTossSecret = hasValue(process.env.TOSS_PAYMENTS_SECRET_KEY);
+  const hasTossClient = hasValue(process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY);
   const hasSupabaseUrl = hasValue(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const hasSupabaseKey = hasValue(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
 
