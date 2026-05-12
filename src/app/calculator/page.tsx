@@ -1,5 +1,5 @@
 "use client";
-
+// 시장별 포지션 크기와 손익비를 빠르게 계산하는 페이지.
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Calculator, ShieldAlert } from "lucide-react";
@@ -38,22 +38,31 @@ function Field({
   );
 }
 
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-surface-line bg-surface-cardSoft p-3">
+      <p className="text-xs font-semibold text-slate-500">{label}</p>
+      <p className="mt-1 text-base font-bold text-white">{value}</p>
+    </div>
+  );
+}
+
 export default function CalculatorPage({ searchParams }: { searchParams?: { market?: string } }) {
   const initialMarket = searchParams?.market === "stocks" || searchParams?.market === "global" ? "stocks" : "crypto";
   const [market, setMarket] = useState<"crypto" | "stocks">(initialMarket);
   const marketCopy =
     market === "stocks"
       ? {
-          title: "글로벌 포지션 계산",
-          intro: "글로벌 시장 종목과 ETF의 손절폭 기준 수량, 예상 손실, 손익비를 계산해보세요.",
+          title: "글로벌 포지션 계산기",
+          intro: "미국 주식, ETF, 해외선물 관찰 구간을 기준으로 수량, 예상 손실, 손익비를 계산해보세요.",
           leverageLabel: "증거금 배수",
-          leveragePlaceholder: "예: 1"
+          leveragePlaceholder: "예. 1"
         }
       : {
-          title: "코인 포지션 계산",
-          intro: "코인 레이더에서 관찰 구간과 리스크 기준을 확인한 뒤, 시드·손절폭 기준 포지션 크기와 손익비를 계산해보세요.",
+          title: "코인 포지션 계산기",
+          intro: "코인 레이더에서 본 관찰 구간과 손절 기준으로 포지션 크기와 손익비를 계산해보세요.",
           leverageLabel: "레버리지",
-          leveragePlaceholder: "예: 3"
+          leveragePlaceholder: "예. 3"
         };
   const [seed, setSeed] = useState("");
   const [direction, setDirection] = useState<"long" | "short">("long");
@@ -111,9 +120,9 @@ export default function CalculatorPage({ searchParams }: { searchParams?: { mark
         <RadarTopNav market={market} />
 
         <div className="rounded-lg border border-accent-blue/20 bg-accent-blue/5 px-4 py-3 text-xs leading-6 text-slate-400">
-          <span className="font-bold text-accent-blue">Chart Radar</span>에서 관찰 구간과 리스크 기준을 확인한 뒤,
-          여기서 시장별 포지션 크기와 손익비를 계산해보세요.
-          진입 점검은 <Link href="/diagnosis" className="font-bold text-accent-blue underline underline-offset-2">진입 점검</Link>에서 확인할 수 있습니다.
+          <span className="font-bold text-accent-blue">Chart Radar</span>에서 관찰 구간과 손절 기준을 확인한 뒤,
+          시장별 포지션 크기와 손익비를 계산해보세요.
+          진입 위험도는 <Link href="/diagnosis" className="font-bold text-accent-blue underline underline-offset-2">진입 진단</Link>에서 확인할 수 있습니다.
         </div>
 
         <section className="rounded-lg border border-surface-line bg-surface-card p-4 shadow-glow sm:p-5">
@@ -123,9 +132,7 @@ export default function CalculatorPage({ searchParams }: { searchParams?: { mark
             </div>
             <div>
               <h2 className="text-lg font-bold text-white">{marketCopy.title}</h2>
-              <p className="mt-1 text-sm leading-6 text-slate-400">
-                {marketCopy.intro}
-              </p>
+              <p className="mt-1 text-sm leading-6 text-slate-400">{marketCopy.intro}</p>
             </div>
           </div>
 
@@ -152,12 +159,12 @@ export default function CalculatorPage({ searchParams }: { searchParams?: { mark
                 ))}
               </div>
             </div>
-            <Field label="총 시드" value={seed} onChange={setSeed} placeholder="예: 1000000" />
-            <Field label="허용 손실률 (%)" value={riskPercent} onChange={setRiskPercent} placeholder="예: 1" />
-            <Field label="진입가" value={entryPrice} onChange={setEntryPrice} placeholder="예: 68000" />
-            <Field label="손절가" value={stopPrice} onChange={setStopPrice} placeholder="예: 66500" />
+            <Field label="총 시드" value={seed} onChange={setSeed} placeholder="예. 1000000" />
+            <Field label="허용 손실률 (%)" value={riskPercent} onChange={setRiskPercent} placeholder="예. 1" />
+            <Field label="진입가" value={entryPrice} onChange={setEntryPrice} placeholder="예. 68000" />
+            <Field label="손절가" value={stopPrice} onChange={setStopPrice} placeholder="예. 66500" />
             <Field label={marketCopy.leverageLabel} value={leverage} onChange={setLeverage} placeholder={marketCopy.leveragePlaceholder} />
-            <Field label="목표가 (선택)" value={targetPrice} onChange={setTargetPrice} placeholder="예: 71000" />
+            <Field label="목표가 선택" value={targetPrice} onChange={setTargetPrice} placeholder="예. 71000" />
           </div>
 
           <div className="mt-5 rounded-lg border border-white/10 bg-black/20 p-4">
@@ -171,17 +178,14 @@ export default function CalculatorPage({ searchParams }: { searchParams?: { mark
                 <Metric label="허용 손실 금액" value={formatCurrency(result.allowedLoss)} />
                 <Metric label="적정 포지션 명목가" value={formatCurrency(result.notional)} />
                 <Metric label="필요 증거금" value={formatCurrency(result.margin)} />
-                <Metric label="손절 폭" value={formatPercent(result.stopGapRate * 100)} />
+                <Metric label="손절폭" value={formatPercent(result.stopGapRate * 100)} />
                 <Metric label="손익비 예시" value={result.rr ? `1 : ${result.rr.toFixed(2)}` : "목표가 입력 필요"} />
-                <Metric
-                  label="레버리지 코멘트"
-                  value={Number(leverage) >= 10 ? "높음" : Number(leverage) >= 5 ? "주의" : "보통"}
-                />
+                <Metric label="배율 코멘트" value={Number(leverage) >= 10 ? "높음" : Number(leverage) >= 5 ? "주의" : "보통"} />
               </div>
             ) : (
               <div className="flex items-start gap-3 text-sm leading-6 text-slate-300">
                 <ShieldAlert className="mt-0.5 shrink-0 text-accent-blue" size={18} aria-hidden />
-                총 시드, 허용 손실률, 진입가, 손절가, 레버리지를 넣으면 계산값이 표시됩니다.
+                총 시드, 허용 손실률, 진입가, 손절가, 배율을 넣으면 계산값이 표시됩니다.
               </div>
             )}
           </div>
@@ -189,14 +193,5 @@ export default function CalculatorPage({ searchParams }: { searchParams?: { mark
         <AppFooter />
       </div>
     </main>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border border-surface-line bg-surface-cardSoft p-3">
-      <p className="text-xs font-semibold text-slate-500">{label}</p>
-      <p className="mt-1 text-base font-bold text-white">{value}</p>
-    </div>
   );
 }

@@ -1,5 +1,5 @@
 "use client";
-
+// 진입 전 리스크 진단에 필요한 값을 입력받는 폼.
 import { AlertTriangle, ChevronRight } from "lucide-react";
 import type { DiagnosisFormValues } from "@/types";
 
@@ -16,15 +16,7 @@ interface DiagnosisFormProps {
   onSubmit: () => void;
 }
 
-function SectionTitle({
-  step,
-  title,
-  description
-}: {
-  step: string;
-  title: string;
-  description: string;
-}) {
+function SectionTitle({ step, title, description }: { step: string; title: string; description: string }) {
   return (
     <div className="space-y-1">
       <div className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] font-bold text-slate-400">
@@ -95,6 +87,7 @@ function TextInput({
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
       disabled={disabled}
+      inputMode="decimal"
       className="min-h-12 w-full rounded-md border border-surface-line bg-surface-cardSoft px-4 text-base text-white outline-none transition placeholder:text-slate-600 focus:border-accent-blue disabled:cursor-not-allowed disabled:opacity-45"
     />
   );
@@ -113,8 +106,7 @@ export function DiagnosisForm({ values, onChange, onSubmit }: DiagnosisFormProps
       <div className="mb-5 flex items-start gap-3 rounded-lg border border-accent-blue/20 bg-accent-blue/10 p-3">
         <AlertTriangle className="mt-0.5 shrink-0 text-accent-blue" size={18} aria-hidden />
         <p className="text-sm leading-6 text-slate-300">
-          이 진단은 매매를 더 많이 하게 만드는 도구가 아니라, 지금 자리가 위험한지 먼저 걸러내는
-          체크용입니다.
+          이 진단은 매매를 더 많이 하게 만드는 도구가 아니라, 지금 자리가 위험한지 먼저 걸러내는 체크표입니다.
         </p>
       </div>
 
@@ -130,80 +122,49 @@ export function DiagnosisForm({ values, onChange, onSubmit }: DiagnosisFormProps
       </div>
 
       <div className="space-y-6">
-        <SectionTitle step="1" title="기본 상황" description="코인과 방향만 먼저 정합니다." />
+        <SectionTitle step="1" title="기본 상황" description="종목과 방향만 먼저 정합니다." />
 
-        <div className="grid gap-6">
-          <FieldGroup label="코인">
-            <PillGroup value={values.coin} options={coinOptions} onChange={(value) => onChange("coin", value)} />
-            {values.coin === "직접입력" ? (
-              <TextInput
-                value={values.customCoin}
-                onChange={(value) => onChange("customCoin", value)}
-                placeholder="예: AVAX"
-              />
-            ) : null}
-          </FieldGroup>
+        <FieldGroup label="종목">
+          <PillGroup value={values.coin} options={coinOptions} onChange={(value) => onChange("coin", value)} />
+          {values.coin === "직접입력" ? (
+            <TextInput value={values.customCoin} onChange={(value) => onChange("customCoin", value)} placeholder="예. AVAX" />
+          ) : null}
+        </FieldGroup>
 
-          <div className="grid gap-6">
-            <FieldGroup label="방향">
-              <PillGroup
-                value={values.direction}
-                options={directionOptions}
-                onChange={(value) => onChange("direction", value)}
-              />
-            </FieldGroup>
-          </div>
-        </div>
+        <FieldGroup label="방향">
+          <PillGroup value={values.direction} options={directionOptions} onChange={(value) => onChange("direction", value)} />
+        </FieldGroup>
 
-        <SectionTitle step="2" title="자리 확인" description="상위 추세와 지금 위치가 추격인지 아닌지만 판단합니다." />
+        <SectionTitle step="2" title="자리 확인" description="상위 추세와 현재 위치가 추격인지 아닌지 판단합니다." />
 
-        <div className="grid gap-6">
-          <FieldGroup label="상위 시간대 추세">
-            <PillGroup
-              value={values.higherTrend}
-              options={trendOptions}
-              onChange={(value) => onChange("higherTrend", value)}
-            />
-          </FieldGroup>
+        <FieldGroup label="상위 시간대 추세">
+          <PillGroup value={values.higherTrend} options={trendOptions} onChange={(value) => onChange("higherTrend", value)} />
+        </FieldGroup>
 
-          <FieldGroup label="현재 위치">
-            <PillGroup
-              value={values.currentLocation}
-              options={locationOptions}
-              onChange={(value) => onChange("currentLocation", value)}
-            />
-          </FieldGroup>
-        </div>
+        <FieldGroup label="현재 위치">
+          <PillGroup value={values.currentLocation} options={locationOptions} onChange={(value) => onChange("currentLocation", value)} />
+        </FieldGroup>
 
-        <SectionTitle step="3" title="리스크 숫자" description="손절, 시드, 레버리지까지 넣으면 포지션 크기도 같이 계산합니다." />
+        <SectionTitle step="3" title="리스크 숫자" description="손절, 시드, 레버리지까지 넣으면 적정 포지션 크기도 계산합니다." />
 
         <FieldGroup label="손절가 설정 여부">
-          <PillGroup
-            value={values.stopLossStatus}
-            options={stopLossOptions}
-            onChange={(value) => onChange("stopLossStatus", value)}
-          />
+          <PillGroup value={values.stopLossStatus} options={stopLossOptions} onChange={(value) => onChange("stopLossStatus", value)} />
           {values.stopLossStatus === "없음" ? (
             <p className="rounded-md border border-signal-warning/25 bg-signal-warning/10 px-3 py-2 text-xs leading-5 text-signal-warning">
-              손절가가 없으면 이 진단은 기본적으로 진입 위험도를 크게 올립니다.
+              손절가가 없으면 진단은 기본적으로 위험하게 평가합니다.
             </p>
           ) : null}
         </FieldGroup>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <FieldGroup label="진입가">
-            <TextInput
-              value={values.entryPrice}
-              onChange={(value) => onChange("entryPrice", value)}
-              placeholder="예: 68000"
-            />
+            <TextInput value={values.entryPrice} onChange={(value) => onChange("entryPrice", value)} placeholder="예. 68000" />
           </FieldGroup>
-
           <FieldGroup label="손절가">
             <TextInput
               value={values.stopLossPrice}
               onChange={(value) => onChange("stopLossPrice", value)}
-              placeholder="예: 66500"
+              placeholder="예. 66500"
               disabled={values.stopLossStatus === "없음"}
             />
           </FieldGroup>
@@ -211,34 +172,17 @@ export function DiagnosisForm({ values, onChange, onSubmit }: DiagnosisFormProps
 
         <div className="grid gap-4 sm:grid-cols-2">
           <FieldGroup label="총 시드">
-            <TextInput
-              value={values.totalSeed}
-              onChange={(value) => onChange("totalSeed", value)}
-              placeholder="예: 1000000"
-            />
+            <TextInput value={values.totalSeed} onChange={(value) => onChange("totalSeed", value)} placeholder="예. 1000000" />
           </FieldGroup>
-
           <FieldGroup label="레버리지">
-            <TextInput
-              value={values.leverage}
-              onChange={(value) => onChange("leverage", value)}
-              placeholder="예: 3"
-            />
+            <TextInput value={values.leverage} onChange={(value) => onChange("leverage", value)} placeholder="예. 3" />
           </FieldGroup>
         </div>
 
         <FieldGroup label="허용 손실률">
-          <PillGroup
-            value={values.riskPercentPreset}
-            options={riskOptions}
-            onChange={(value) => onChange("riskPercentPreset", value)}
-          />
+          <PillGroup value={values.riskPercentPreset} options={riskOptions} onChange={(value) => onChange("riskPercentPreset", value)} />
           {values.riskPercentPreset === "직접입력" ? (
-            <TextInput
-              value={values.customRiskPercent}
-              onChange={(value) => onChange("customRiskPercent", value)}
-              placeholder="예: 1.5"
-            />
+            <TextInput value={values.customRiskPercent} onChange={(value) => onChange("customRiskPercent", value)} placeholder="예. 1.5" />
           ) : null}
         </FieldGroup>
 
@@ -247,7 +191,7 @@ export function DiagnosisForm({ values, onChange, onSubmit }: DiagnosisFormProps
           onClick={onSubmit}
           className="flex min-h-14 w-full items-center justify-center gap-2 rounded-md bg-accent-blue px-5 text-base font-extrabold text-slate-950 transition hover:bg-sky-300 focus:outline-none focus:ring-2 focus:ring-accent-blue focus:ring-offset-2 focus:ring-offset-surface-base"
         >
-          진입 전 점검하기
+          진입 전 리스크 점검하기
           <ChevronRight size={20} aria-hidden />
         </button>
       </div>

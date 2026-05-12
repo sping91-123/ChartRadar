@@ -1,5 +1,5 @@
 "use client";
-
+// 진입 전 리스크 진단 페이지를 렌더링한다.
 import { useState } from "react";
 import Link from "next/link";
 import { AdviceCard } from "@/components/AdviceCard";
@@ -59,14 +59,14 @@ export default function DiagnosisPage() {
         <RadarTopNav />
 
         <div className="rounded-lg border border-accent-blue/20 bg-accent-blue/5 px-4 py-3 text-xs leading-6 text-slate-400">
-          <span className="font-bold text-accent-blue">차트 레이더</span>에서 후보를 확인한 뒤,
-          지금 보려는 자리가 원칙에 맞는지 이 진입 점검으로 검토해보세요.
-          점검 후 포지션 크기는 <Link href="/calculator" className="font-bold text-accent-blue underline underline-offset-2">계산기</Link>에서 확인할 수 있습니다.
+          <span className="font-bold text-accent-blue">Chart Radar</span>에서 후보를 확인한 뒤,
+          지금 보려는 자리가 내 리스크 기준에 맞는지 진입 전 진단으로 점검해보세요.
+          포지션 크기만 빠르게 보고 싶다면 <Link href="/calculator" className="font-bold text-accent-blue underline underline-offset-2">계산기</Link>를 사용하면 됩니다.
         </div>
 
         <div className="rounded-lg border border-surface-line bg-surface-card p-4 text-sm leading-6 text-slate-300">
-          최대한 빠르게 판단할 수 있게 입력 항목을 줄였습니다. 지금 손대려는 자리가 위험한지,
-          아니면 그래도 볼 만한 자리인지에 집중합니다.
+          초보자는 “롱인지 숏인지, 손절은 어디인지, 시드의 몇 퍼센트까지 잃을 수 있는지”만 입력해도 됩니다.
+          익숙한 사용자는 상위 추세와 현재 위치까지 함께 넣어 더 보수적으로 확인하세요.
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)] lg:items-start">

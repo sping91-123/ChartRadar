@@ -1,3 +1,4 @@
+// 진입 진단 결과에 따른 리스크 코멘트를 보여준다.
 import { MessageSquareWarning } from "lucide-react";
 import type { DiagnosisResult } from "@/types";
 
@@ -15,7 +16,7 @@ export function AdviceCard({ result }: AdviceCardProps) {
       <p className="mt-3 text-sm leading-7 text-slate-300">
         {result
           ? result.advice
-          : "진단을 실행하면 지금 자리에서 가장 먼저 조심해야 할 부분을 짧고 분명하게 정리해드립니다."}
+          : "진단을 실행하면 지금 자리에서 가장 먼저 조절해야 할 부분을 짚고, 다음 행동을 더 분명하게 정리해드립니다."}
       </p>
     </section>
   );

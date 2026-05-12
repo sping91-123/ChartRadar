@@ -1,4 +1,4 @@
-// 레이더뉴스 독립 페이지를 렌더링한다.
+// 레이더 뉴스와 매크로 브리핑을 보여주는 페이지.
 import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
 import { MacroTicker } from "@/components/MacroTicker";

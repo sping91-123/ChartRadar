@@ -1,3 +1,4 @@
+// 진입 전 리스크 점수와 적정 포지션 크기를 계산한다.
 import type {
   DiagnosisFormValues,
   DiagnosisResult,
@@ -7,9 +8,7 @@ import type {
 
 function toNumber(value: string): number | null {
   const normalized = value.replaceAll(",", "").trim();
-  if (!normalized) {
-    return null;
-  }
+  if (!normalized) return null;
 
   const parsed = Number(normalized);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
@@ -22,47 +21,50 @@ function getRiskPercent(values: DiagnosisFormValues): number | null {
 }
 
 function getVerdict(riskScore: number): Verdict {
-  if (riskScore >= 75) {
-    return "진입 금지";
-  }
-  if (riskScore >= 45) {
-    return "관찰 필요";
-  }
+  if (riskScore >= 75) return "진입 금지";
+  if (riskScore >= 45) return "관찰 필요";
   return "검토 가능";
 }
 
 function getAdvice(verdict: Verdict): string {
   if (verdict === "진입 금지") {
-    return "지금은 기회를 찾는 자리보다 리스크를 줄여야 하는 자리입니다. 손절 기준이 없거나 추세에 역행하는 추격 구간이라면, 들어가지 않는 쪽이 더 좋습니다.";
+    return "지금은 기회를 찾기보다 손실 가능성을 먼저 줄여야 하는 자리입니다. 손절 기준, 상위 추세, 진입 위치가 다시 정리되기 전까지는 무리하게 들어가지 않는 편이 좋습니다.";
   }
 
   if (verdict === "관찰 필요") {
-    return "아예 못 볼 자리는 아니지만 아직 바로 들어가면 흔들릴 수 있는 자리입니다. 손절 위치와 포지션 크기를 먼저 정리한 뒤 다시 확인해보세요.";
+    return "완전히 나쁜 자리는 아니지만 바로 진입하기에는 흔들릴 수 있는 요소가 남아 있습니다. 손절 위치와 포지션 크기를 먼저 줄이고, 한 번 더 구조를 확인해 보세요.";
   }
 
-  return "기본적인 위험 요소는 비교적 관리되고 있습니다. 다만 진입 자체보다 손절 기준과 포지션 크기를 끝까지 지키는 쪽에 집중하세요.";
+  return "기본적인 위험 요소는 비교적 관리되고 있습니다. 다만 진입 자체보다 손절 기준과 포지션 크기를 끝까지 지키는 쪽에 집중해 주세요.";
 }
 
 function getLeverageWarning(leverage: number | null): string {
   if (leverage === null) {
-    return "레버리지를 입력하면 과도한 배율인지 여부를 더 정확하게 확인할 수 있습니다.";
+    return "레버리지를 입력하면 과도한 배율인지 함께 확인할 수 있습니다.";
   }
 
   if (leverage >= 10) {
-    return "레버리지가 높습니다. 작은 변동에도 계획을 어길 가능성이 커집니다.";
+    return "레버리지가 높습니다. 작은 변동에도 계획이 무너질 수 있으니 손절폭과 포지션 크기를 보수적으로 줄이는 편이 좋습니다.";
   }
 
   if (leverage >= 5) {
-    return "레버리지가 다소 높습니다. 손절가와 포지션 크기를 반드시 함께 확인하세요.";
+    return "레버리지가 다소 높습니다. 손절가와 허용 손실 금액을 반드시 같이 확인해 주세요.";
   }
 
-  return "레버리지 수준은 비교적 안정적입니다. 그래도 손절 기준은 꼭 필요합니다.";
+  return "레버리지는 비교적 안정적인 편입니다. 그래도 손절 기준은 반드시 필요합니다.";
+}
+
+function isStopLossDirectionValid(
+  direction: DiagnosisFormValues["direction"],
+  entryPrice: number | null,
+  stopLossPrice: number | null
+) {
+  if (!entryPrice || !stopLossPrice) return true;
+  return direction === "롱" ? stopLossPrice < entryPrice : stopLossPrice > entryPrice;
 }
 
 function calculatePositionSizing(values: DiagnosisFormValues): PositionSizing | null {
-  if (values.stopLossStatus !== "있음") {
-    return null;
-  }
+  if (values.stopLossStatus !== "있음") return null;
 
   const entryPrice = toNumber(values.entryPrice);
   const stopLossPrice = toNumber(values.stopLossPrice);
@@ -70,18 +72,11 @@ function calculatePositionSizing(values: DiagnosisFormValues): PositionSizing | 
   const riskPercent = getRiskPercent(values);
   const leverage = toNumber(values.leverage);
 
-  if (!entryPrice || !stopLossPrice || !totalSeed || !riskPercent || !leverage) {
-    return null;
-  }
-
-  if (!isStopLossDirectionValid(values.direction, entryPrice, stopLossPrice)) {
-    return null;
-  }
+  if (!entryPrice || !stopLossPrice || !totalSeed || !riskPercent || !leverage) return null;
+  if (!isStopLossDirectionValid(values.direction, entryPrice, stopLossPrice)) return null;
 
   const priceGapRate = Math.abs(entryPrice - stopLossPrice) / entryPrice;
-  if (priceGapRate <= 0) {
-    return null;
-  }
+  if (priceGapRate <= 0) return null;
 
   const allowedLossAmount = (totalSeed * riskPercent) / 100;
   const positionNotional = allowedLossAmount / priceGapRate;
@@ -95,11 +90,6 @@ function calculatePositionSizing(values: DiagnosisFormValues): PositionSizing | 
     seedLossRate: riskPercent,
     priceGapRate
   };
-}
-
-function isStopLossDirectionValid(direction: DiagnosisFormValues["direction"], entryPrice: number | null, stopLossPrice: number | null) {
-  if (!entryPrice || !stopLossPrice) return true;
-  return direction === "롱" ? stopLossPrice < entryPrice : stopLossPrice > entryPrice;
 }
 
 export function diagnoseTrade(values: DiagnosisFormValues): DiagnosisResult {
@@ -119,24 +109,24 @@ export function diagnoseTrade(values: DiagnosisFormValues): DiagnosisResult {
     !leverage;
 
   if (values.stopLossStatus === "없음") {
-    riskScore += 25;
+    riskScore += 30;
     violations.push("손절 기준 없음");
   }
 
   if (leverage !== null && leverage >= 10) {
-    riskScore += 20;
+    riskScore += 22;
     violations.push("고배율 위험");
   } else if (leverage !== null && leverage >= 5) {
     riskScore += 10;
   }
 
   if (values.currentLocation === "고점 추격") {
-    riskScore += 20;
+    riskScore += 22;
     violations.push("고점 추격 위험");
   }
 
   if (values.currentLocation === "저점 추격") {
-    riskScore += 20;
+    riskScore += 22;
     violations.push("저점 추격 위험");
   }
 
@@ -166,7 +156,7 @@ export function diagnoseTrade(values: DiagnosisFormValues): DiagnosisResult {
   }
 
   if (needsStopLossPrice && !isStopLossDirectionValid(values.direction, entryPrice, stopLossPrice)) {
-    riskScore += 20;
+    riskScore += 25;
     violations.push(values.direction === "롱" ? "롱 기준 손절가가 진입가보다 높음" : "숏 기준 손절가가 진입가보다 낮음");
   }
 

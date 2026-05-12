@@ -1,5 +1,5 @@
 "use client";
-// 차트 레이더의 핵심 페이지로 이동하는 상단 앱 메뉴.
+// Chart Radar의 시장별 주요 페이지로 이동하는 상단 메뉴.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BellRing, Calculator, Coins, History, Newspaper, Radar, TrendingUp } from "lucide-react";

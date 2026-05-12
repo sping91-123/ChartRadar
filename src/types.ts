@@ -1,3 +1,4 @@
+// 진입 진단 폼과 결과에서 사용하는 공통 타입을 정의한다.
 export type CoinOption = "BTC" | "ETH" | "SOL" | "XRP" | "DOGE" | "직접입력";
 export type Direction = "롱" | "숏";
 export type TimeFrame = "5m" | "15m" | "1h" | "4h" | "1d";
