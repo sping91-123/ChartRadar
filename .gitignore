@@ -10,6 +10,7 @@ reports
 .tools
 .next-dev*.log
 dev-server*.log
+prod-server*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

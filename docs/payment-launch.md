@@ -101,12 +101,12 @@ npm.cmd run build
 브라우저에서는 다크 모드와 라이트 모드 모두 확인합니다. 특히 `/pro`, `/news`, `/stocks`, `/survival`은 결제 전환과 반복 사용에 직접 연결되는 화면이므로 모바일 폭에서도 반드시 확인합니다.
 # 2026-05-11 최신 결제 상품 구조.
 
-현재 결제 상품은 코인과 해외주식을 별도 앱처럼 운영하기 위해 아래처럼 분리합니다.
+현재 결제 상품은 코인과 글로벌 시장을 별도 앱처럼 운영하기 위해 아래처럼 분리합니다.
 
 | 상품 | 월간 상품 ID | 연간 상품 ID | 권장 웹 결제 환경변수 |
 | --- | --- | --- | --- |
 | Crypto Radar | `chart_radar_crypto_monthly` | `chart_radar_crypto_yearly` | `NEXT_PUBLIC_CRYPTO_MONTHLY_PAYMENT_URL`, `NEXT_PUBLIC_CRYPTO_YEARLY_PAYMENT_URL` |
-| Stock Radar | `chart_radar_stocks_monthly` | `chart_radar_stocks_yearly` | `NEXT_PUBLIC_STOCKS_MONTHLY_PAYMENT_URL`, `NEXT_PUBLIC_STOCKS_YEARLY_PAYMENT_URL` |
+| Global Radar | `chart_radar_global_monthly` | `chart_radar_global_yearly` | `NEXT_PUBLIC_GLOBAL_MONTHLY_PAYMENT_URL`, `NEXT_PUBLIC_GLOBAL_YEARLY_PAYMENT_URL` |
 | All Market Radar | `chart_radar_bundle_monthly` | `chart_radar_bundle_yearly` | `NEXT_PUBLIC_BUNDLE_MONTHLY_PAYMENT_URL`, `NEXT_PUBLIC_BUNDLE_YEARLY_PAYMENT_URL` |
 
-기존 `NEXT_PUBLIC_PRO_PAYMENT_URL`, `NEXT_PUBLIC_PRO_MONTHLY_PAYMENT_URL`, `NEXT_PUBLIC_PRO_YEARLY_PAYMENT_URL`은 과거 호환 fallback으로만 남깁니다. 정식 출시 설정에서는 상품별 URL을 우선 입력하세요.
+기존 `NEXT_PUBLIC_PRO_PAYMENT_URL`, `NEXT_PUBLIC_PRO_MONTHLY_PAYMENT_URL`, `NEXT_PUBLIC_PRO_YEARLY_PAYMENT_URL`, `NEXT_PUBLIC_STOCKS_MONTHLY_PAYMENT_URL`, `NEXT_PUBLIC_STOCKS_YEARLY_PAYMENT_URL`은 과거 호환 fallback으로만 남깁니다. 정식 출시 설정에서는 상품별 URL을 우선 입력하세요.

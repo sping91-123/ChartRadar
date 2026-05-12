@@ -1,5 +1,5 @@
 "use client";
-// 로그인 상태와 PRO 미리보기 권한을 상단에 표시한다.
+// 로그인 상태와 체험 권한을 상단에 표시한다.
 import Link from "next/link";
 import { Crown, Loader2, LogIn, LogOut } from "lucide-react";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
@@ -40,10 +40,10 @@ export function AuthStatus() {
             ? "border-amber-300/35 bg-amber-300/10 text-amber-200"
             : "border-cyan-300/35 bg-cyan-300/10 text-cyan-200"
         }`}
-        title={isPaid ? `${plan.toUpperCase()} 권한` : "결제 전 로그인 사용자에게 제공되는 PRO 미리보기입니다."}
+        title={isPaid ? `${plan.toUpperCase()} 권한` : "로그인 사용자에게 제공되는 체험 권한입니다."}
       >
         <Crown size={13} aria-hidden />
-        {isPaid ? plan.toUpperCase() : "PRO 미리보기"}
+        {isPaid ? plan.toUpperCase() : "체험 권한"}
       </span>
       <button
         type="button"

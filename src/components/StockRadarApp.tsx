@@ -2,7 +2,7 @@
 // 글로벌 시장 주요 종목을 차트와 기술지표 레이더로 보여주는 화면.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CandlestickSeries, createChart, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
-import { Activity, AlertTriangle, BarChart3, Gauge, Loader2, RefreshCw, Shield } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, Gauge, Loader2, RefreshCw, Search, Shield, Sparkles } from "lucide-react";
 import { TechnicalRadarPanel } from "@/components/TechnicalRadarPanel";
 import { chartTimeframes, type Candle, type ChartTimeframe } from "@/lib/marketAnalysis";
 import { analyzeTechnicalRadar, type TechnicalRadarReport } from "@/lib/technicalRadar";
@@ -30,6 +30,7 @@ const groupLabels: Record<StockSymbolInfo["group"], string> = {
 };
 
 const groupOrder: StockSymbolInfo["group"][] = ["index_etf", "mega_cap", "ai_chip", "growth", "finance", "commodity"];
+const featuredSymbols = ["SPY", "QQQ", "NVDA", "AAPL", "TSLA", "GLD"];
 
 type LoadState =
   | { status: "idle" }
@@ -144,22 +145,22 @@ export function StockRadarApp() {
   const [symbol, setSymbol] = useState("QQQ");
   const [timeframe, setTimeframe] = useState<ChartTimeframe>("1d");
   const [universe, setUniverse] = useState<StockSymbolInfo[]>(fallbackUniverse);
+  const [selectedGroup, setSelectedGroup] = useState<StockSymbolInfo["group"] | "all">("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [state, setState] = useState<LoadState>({ status: "idle" });
 
-  const groupedUniverse = useMemo(() => {
-    const initialGroups = groupOrder.reduce<Record<StockSymbolInfo["group"], StockSymbolInfo[]>>((groups, group) => {
-      groups[group] = [];
-      return groups;
-    }, {} as Record<StockSymbolInfo["group"], StockSymbolInfo[]>);
-
-    return universe.reduce<Record<StockSymbolInfo["group"], StockSymbolInfo[]>>(
-      (groups, item) => {
-        groups[item.group].push(item);
-        return groups;
-      },
-      initialGroups
-    );
-  }, [universe]);
+  const selectedInfo = useMemo(() => universe.find((item) => item.symbol === symbol) ?? null, [symbol, universe]);
+  const featuredItems = useMemo(
+    () => featuredSymbols.map((featuredSymbol) => universe.find((item) => item.symbol === featuredSymbol)).filter(Boolean) as StockSymbolInfo[],
+    [universe]
+  );
+  const visibleUniverse = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return universe
+      .filter((item) => selectedGroup === "all" || item.group === selectedGroup)
+      .filter((item) => !query || item.symbol.toLowerCase().includes(query) || item.name.toLowerCase().includes(query))
+      .slice(0, 24);
+  }, [searchQuery, selectedGroup, universe]);
 
   const load = useCallback(async () => {
     setState({ status: "loading" });
@@ -283,33 +284,96 @@ export function StockRadarApp() {
         </button>
       </div>
 
-      <div className="mt-5 space-y-4">
-        {groupOrder.map((group) => {
-          const items = groupedUniverse[group];
-          return (
-          items.length ? (
-            <div key={group}>
-              <p className="mb-2 text-xs font-black text-slate-500">{groupLabels[group as StockSymbolInfo["group"]]}</p>
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {items.map((item) => (
-                  <button
-                    key={item.symbol}
-                    type="button"
-                    onClick={() => setSymbol(item.symbol)}
-                    className={`min-h-10 shrink-0 rounded-md border px-3 text-xs font-black transition ${
-                      symbol === item.symbol
-                        ? "border-accent-blue bg-accent-blue text-slate-950"
-                        : "border-surface-line bg-surface-cardSoft text-slate-300 hover:border-accent-blue/60"
-                    }`}
-                  >
-                    {item.symbol}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null
-          );
-        })}
+      <div className="mt-5 rounded-lg border border-accent-blue/20 bg-accent-blue/[0.06] p-3 sm:p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.18em] text-accent-blue">
+              <Sparkles size={13} aria-hidden />
+              오늘 볼 글로벌 시장
+            </p>
+            <h3 className="mt-2 text-2xl font-black text-white">
+              {symbol}
+              <span className="ml-2 text-base font-bold text-slate-400">{selectedInfo?.name ?? symbol}</span>
+            </h3>
+            <p className="mt-1 text-xs font-bold text-slate-500">
+              {selectedInfo ? groupLabels[selectedInfo.group] : "관심 시장"} · {timeframe} 기준 판독
+            </p>
+          </div>
+          <label className="relative block lg:w-80">
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={15} aria-hidden />
+            <input
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="티커나 이름 검색"
+              className="h-11 w-full rounded-md border border-surface-line bg-surface-cardSoft pl-9 pr-3 text-sm font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-accent-blue/70"
+            />
+          </label>
+        </div>
+
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+          {featuredItems.map((item) => (
+            <button
+              key={item.symbol}
+              type="button"
+              onClick={() => {
+                setSymbol(item.symbol);
+                setSearchQuery("");
+              }}
+              className={`min-h-11 shrink-0 rounded-md border px-3 text-left transition ${
+                symbol === item.symbol
+                  ? "border-accent-blue bg-accent-blue text-slate-950"
+                  : "border-surface-line bg-surface-cardSoft text-slate-200 hover:border-accent-blue/60"
+              }`}
+            >
+              <span className="block text-sm font-black">{item.symbol}</span>
+              <span className={`block text-[10px] font-bold ${symbol === item.symbol ? "text-slate-800" : "text-slate-500"}`}>
+                {groupLabels[item.group]}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {(["all", ...groupOrder] as Array<StockSymbolInfo["group"] | "all">).map((group) => (
+            <button
+              key={group}
+              type="button"
+              onClick={() => setSelectedGroup(group)}
+              className={`min-h-8 rounded-md border px-2.5 text-[11px] font-black transition ${
+                selectedGroup === group
+                  ? "border-white/20 bg-white text-slate-950"
+                  : "border-white/10 bg-black/20 text-slate-300 hover:border-accent-blue/60"
+              }`}
+            >
+              {group === "all" ? "전체" : groupLabels[group]}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          {visibleUniverse.map((item) => (
+            <button
+              key={item.symbol}
+              type="button"
+              onClick={() => setSymbol(item.symbol)}
+              className={`min-h-12 rounded-md border px-2.5 text-left transition ${
+                symbol === item.symbol
+                  ? "border-accent-blue bg-accent-blue/90 text-slate-950"
+                  : "border-white/10 bg-black/20 text-slate-200 hover:border-accent-blue/60"
+              }`}
+            >
+              <span className="block text-sm font-black">{item.symbol}</span>
+              <span className={`block truncate text-[11px] font-bold ${symbol === item.symbol ? "text-slate-800" : "text-slate-500"}`}>
+                {item.name}
+              </span>
+            </button>
+          ))}
+        </div>
+        {visibleUniverse.length === 0 ? (
+          <p className="mt-3 rounded-md border border-white/10 bg-black/20 p-3 text-xs font-bold text-slate-500">
+            검색 결과가 없습니다. 티커를 조금 짧게 입력해 보세요.
+          </p>
+        ) : null}
       </div>
 
       <div className="mt-5 grid grid-cols-5 gap-2">

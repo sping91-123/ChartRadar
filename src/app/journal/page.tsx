@@ -232,7 +232,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
   const [market, setMarket] = useState<"crypto" | "stocks">(initialMarket);
   const marketLabel = market === "stocks" ? "글로벌" : "코인";
   const { session, user, profile, isLoading: isLoadingAuth } = useSupabaseAuth();
-  const profilePlanLabel = profile?.plan && profile.plan !== "free" ? profile.plan.toUpperCase() : "PRO 미리보기";
+  const profilePlanLabel = profile?.plan && profile.plan !== "free" ? profile.plan.toUpperCase() : "체험 권한";
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [localEntries, setLocalEntries] = useState<JournalEntry[]>([]);
   const [title, setTitle] = useState("");

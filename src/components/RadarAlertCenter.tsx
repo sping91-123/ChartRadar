@@ -345,7 +345,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             {permissionLabel(permission)}
           </p>
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            현재 단계에서는 권한 확인과 데모 알림까지만 처리합니다. 실제 자동 알림은 서버 스케줄러와 앱 푸시 연결 후 작동합니다.
+            웹에서는 브라우저 알림으로 먼저 확인합니다. 앱 출시 후에는 같은 조건을 앱 푸시와 서버 감시로 확장합니다.
           </p>
         </div>
         <button

@@ -45,7 +45,7 @@ function UsageRow({ state, isProPreview }: { state: ReturnType<typeof getUsageBu
         <div className={`h-full rounded-full ${barColor(activePercent, isOverActiveLimit)}`} style={{ width: `${activePercent}%` }} />
       </div>
       <div className="mt-2 flex items-center justify-between text-[11px] font-bold text-slate-500">
-        <span>{isProPreview ? "PRO 미리보기" : "Free"} 잔여 {activeRemaining}회</span>
+        <span>{isProPreview ? "로그인 체험" : "Free"} 잔여 {activeRemaining}회</span>
         <span>Free {state.freeDailyLimit}회 · Pro {state.proDailyLimit}회</span>
       </div>
     </div>
@@ -72,7 +72,7 @@ export function UsageMeterPanel({ compact = false }: { compact?: boolean }) {
   const visibleStates = compact ? summary.states.slice(0, 3) : summary.states;
   const title =
     isProPreview
-      ? "로그인 계정은 PRO 미리보기 한도로 표시됩니다."
+      ? "로그인 계정은 체험 한도로 표시됩니다."
       : summary.overCount > 0
       ? "오늘 무료 기준을 넘긴 항목이 있습니다."
       : summary.usedTotal > 0
@@ -91,7 +91,7 @@ export function UsageMeterPanel({ compact = false }: { compact?: boolean }) {
             <h2 className="mt-1 text-lg font-black text-white">{title}</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400 [word-break:keep-all]">
               {isProPreview
-                ? "정식 결제 전 데모를 위해 로그인 사용자에게 PRO 미리보기 한도를 보여드립니다. 결제 연동 후에는 실제 구독 권한으로 전환됩니다."
+                ? "로그인 사용자에게는 정식 구독 전에도 핵심 흐름을 충분히 확인할 수 있는 체험 한도를 제공합니다. 결제 연동 후에는 실제 구독 권한으로 전환됩니다."
                 : "Free는 핵심 흐름을 확인하는 체험 모드이고, Pro는 코인·글로벌·AI·알림을 매일 여러 번 돌리는 운영 모드입니다."}
             </p>
           </div>
