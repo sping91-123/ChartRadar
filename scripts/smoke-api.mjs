@@ -38,6 +38,22 @@ const checks = [
     path: "/api/scout?mode=invalid&risk=radar&scope=major",
     method: "GET",
     expectedStatus: [400]
+  },
+  {
+    label: "결제 시작 대용량 요청 차단",
+    path: "/api/billing/checkout",
+    method: "POST",
+    rawBody: "x".repeat(8_001),
+    headers: { "content-type": "text/plain" },
+    expectedStatus: [413]
+  },
+  {
+    label: "결제 승인 대용량 요청 차단",
+    path: "/api/billing/confirm",
+    method: "POST",
+    rawBody: "x".repeat(8_001),
+    headers: { "content-type": "text/plain" },
+    expectedStatus: [413]
   }
 ];
 

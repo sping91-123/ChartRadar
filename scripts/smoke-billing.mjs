@@ -147,8 +147,12 @@ for (const [fileName, source] of [
 
 expectIncludes(confirmRoute, "https://api.tosspayments.com/v1/payments/confirm", "토스 승인 확인 엔드포인트", "src/app/api/billing/confirm/route.ts");
 expectIncludes(confirmRoute, "supabaseAdminRest", "Supabase 권한 반영 경로", "src/app/api/billing/confirm/route.ts");
+expectIncludes(confirmRoute, "rateLimit(request", "결제 승인 호출 제한", "src/app/api/billing/confirm/route.ts");
+expectIncludes(confirmRoute, "isBodyTooLarge(request, 8_000)", "결제 승인 본문 크기 제한", "src/app/api/billing/confirm/route.ts");
 expectIncludes(checkoutRoute, "fetchSupabaseUserOnServer", "결제 시작 전 로그인 검증", "src/app/api/billing/checkout/route.ts");
 expectIncludes(checkoutRoute, "결제를 시작하려면 먼저 로그인해 주세요.", "비로그인 결제 차단 문구", "src/app/api/billing/checkout/route.ts");
+expectIncludes(checkoutRoute, "rateLimit(request", "결제 시작 호출 제한", "src/app/api/billing/checkout/route.ts");
+expectIncludes(checkoutRoute, "isBodyTooLarge(request, 8_000)", "결제 시작 본문 크기 제한", "src/app/api/billing/checkout/route.ts");
 expectIncludes(proPricingPanel, "Authorization: `Bearer ${session.accessToken}`", "결제 시작 요청 세션 전달", "src/components/ProPricingPanel.tsx");
 expectIncludes(proPricingPanel, "결제 후 Pro 권한을 바로 열려면 먼저 구글 로그인이 필요합니다.", "결제 전 로그인 안내", "src/components/ProPricingPanel.tsx");
 expectIncludes(supabaseClient, "supabaseAuthRefreshEvent", "권한 갱신 이벤트 상수", "src/lib/supabase.ts");

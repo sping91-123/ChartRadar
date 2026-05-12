@@ -1,6 +1,7 @@
 // 결제 시작에 필요한 주문 정보를 만들고 결제 링크 상태를 반환합니다.
 import { NextResponse } from "next/server";
 import { findBillingPlan } from "@/lib/billing";
+import { isBodyTooLarge, rateLimit } from "@/lib/server/rateLimit";
 import { fetchSupabaseUserOnServer } from "@/lib/server/supabaseAdmin";
 
 interface CheckoutRequest {
@@ -39,6 +40,18 @@ function getBearerToken(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const limit = await rateLimit(request, { key: "billing-checkout", limit: 20, windowMs: 10 * 60 * 1000 });
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "결제 요청이 잠시 많습니다. 잠시 후 다시 시도해 주세요." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
+    );
+  }
+
+  if (isBodyTooLarge(request, 8_000)) {
+    return NextResponse.json({ error: "결제 요청 본문이 너무 큽니다." }, { status: 413 });
+  }
+
   const body = (await request.json().catch(() => ({}))) as CheckoutRequest;
   const plan = findBillingPlan(body.planId);
 

@@ -11,6 +11,7 @@ import {
   isSupabaseAdminConfigured,
   supabaseAdminRest
 } from "@/lib/server/supabaseAdmin";
+import { isBodyTooLarge, rateLimit } from "@/lib/server/rateLimit";
 
 interface ConfirmRequest {
   paymentKey?: string;
@@ -136,6 +137,18 @@ async function grantEntitlement(params: {
 }
 
 export async function POST(request: Request) {
+  const limit = await rateLimit(request, { key: "billing-confirm", limit: 30, windowMs: 10 * 60 * 1000 });
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { status: "rate_limited", message: "결제 확인 요청이 잠시 많습니다. 잠시 후 다시 시도해 주세요." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
+    );
+  }
+
+  if (isBodyTooLarge(request, 8_000)) {
+    return NextResponse.json({ status: "rejected", message: "결제 확인 요청 본문이 너무 큽니다." }, { status: 413 });
+  }
+
   const body = (await request.json().catch(() => ({}))) as ConfirmRequest;
   const accessToken = getBearerToken(request);
   const planId = resolvePlanId(body);
