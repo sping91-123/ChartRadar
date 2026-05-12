@@ -11,6 +11,7 @@
     "smoke:routes": "node scripts/smoke-routes.mjs",
     "smoke:mobile": "node scripts/smoke-mobile.mjs",
     "smoke:billing": "node scripts/smoke-billing.mjs",
+    "smoke:api": "node scripts/smoke-api.mjs",
     "smoke:ops": "node scripts/smoke-ops.mjs",
     "backtest:btc": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/backtest-btc-regimes.js",
     "app:add:android": "npx cap add android",

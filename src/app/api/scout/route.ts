@@ -28,20 +28,25 @@ type ScoutScope = "all" | "major" | "alts";
 
 const majorSymbols = new Set(["BTCUSDT.P", "ETHUSDT.P"]);
 
-function parseMode(request: Request): TradingMode {
-  const raw = new URL(request.url).searchParams.get("mode");
-  return raw === "swing" ? "swing" : "scalp";
+function parseMode(searchParams: URLSearchParams): TradingMode | null {
+  const raw = searchParams.get("mode");
+  if (raw === null) return "scalp";
+  if (raw === "scalp" || raw === "swing") return raw;
+  return null;
 }
 
-function parseRiskProfile(request: Request): ScoutRiskProfile {
-  const raw = new URL(request.url).searchParams.get("risk");
-  return raw === "radar" ? "radar" : "guard";
+function parseRiskProfile(searchParams: URLSearchParams): ScoutRiskProfile | null {
+  const raw = searchParams.get("risk");
+  if (raw === null) return "guard";
+  if (raw === "guard" || raw === "radar") return raw;
+  return null;
 }
 
-function parseScope(request: Request): ScoutScope {
-  const raw = new URL(request.url).searchParams.get("scope");
-  if (raw === "major" || raw === "alts") return raw;
-  return "all";
+function parseScope(searchParams: URLSearchParams): ScoutScope | null {
+  const raw = searchParams.get("scope");
+  if (raw === null) return "all";
+  if (raw === "all" || raw === "major" || raw === "alts") return raw;
+  return null;
 }
 
 function setupInScope(setup: ScoutSetup, scope: ScoutScope) {
@@ -65,9 +70,16 @@ export async function GET(request: Request) {
     );
   }
 
-  const mode = parseMode(request);
-  const riskProfile = parseRiskProfile(request);
-  const scope = parseScope(request);
+  const searchParams = new URL(request.url).searchParams;
+  const mode = parseMode(searchParams);
+  const riskProfile = parseRiskProfile(searchParams);
+  const scope = parseScope(searchParams);
+  if (!mode || !riskProfile || !scope) {
+    return NextResponse.json(
+      { error: "지원하지 않는 레이더 요청입니다. mode, risk, scope 값을 확인해 주세요." },
+      { status: 400 }
+    );
+  }
   const cacheKey = `${mode}:${riskProfile}:${scope}`;
   const now = Date.now();
   const cache = cacheByKey.get(cacheKey) ?? null;
