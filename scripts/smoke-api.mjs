@@ -41,6 +41,12 @@ const checks = [
     expectedStatus: [400]
   },
   {
+    label: "레이더 뉴스 비정상 시장 차단",
+    path: "/api/radar-news?market=forex",
+    method: "GET",
+    expectedStatus: [400]
+  },
+  {
     label: "결제 시작 대용량 요청 차단",
     path: "/api/billing/checkout",
     method: "POST",

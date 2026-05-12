@@ -571,7 +571,11 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const market: RadarNewsMarket = searchParams.get("market") === "stocks" ? "stocks" : "crypto";
+  const rawMarket = searchParams.get("market") ?? "crypto";
+  if (rawMarket !== "crypto" && rawMarket !== "stocks") {
+    return NextResponse.json({ error: "지원하지 않는 뉴스 시장입니다." }, { status: 400 });
+  }
+  const market: RadarNewsMarket = rawMarket;
   const feeds = market === "stocks" ? STOCK_FEEDS : CRYPTO_FEEDS;
   const now = Date.now();
   if (cache[market] && now - cache[market]!.updatedAt < CACHE_MS) {
