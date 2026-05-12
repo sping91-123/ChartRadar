@@ -17,14 +17,14 @@
 
 ## 2. 앱 소개 문구 초안
 
-Chart Radar는 코인과 주요 해외주식 시장을 한 화면에서 빠르게 점검할 수 있는 시장 분석 앱입니다. 실시간 시세, ICT 구조 판독, 기술지표 레이더, 청산 압력 추정, AI 뉴스 브리핑, 관심종목 알림을 통해 사용자가 매일 시장을 확인할 이유를 만들어줍니다.
+Chart Radar는 코인과 글로벌 시장을 빠르게 점검할 수 있는 시장 분석 앱입니다. 실시간 시세, ICT 구조 판독, 기술지표 레이더, 청산 압력 추정, AI 뉴스 브리핑, 관심종목 알림을 통해 사용자가 매일 시장을 확인할 이유를 만들어줍니다.
 
 Chart Radar는 매수·매도 신호를 대신 내려주는 앱이 아닙니다. 사용자가 차트 구조, 변동성, 시장 뉴스, 위험 요소를 더 빠르게 정리할 수 있도록 돕는 분석 보조 도구입니다.
 
 ## 3. 키워드 초안
 
 ```text
-차트, 코인, 비트코인, 이더리움, 해외주식, 투자분석, 기술지표, ICT, 레이더, AI뉴스, 트레이딩, 알림
+차트, 코인, 비트코인, 이더리움, 글로벌시장, 투자분석, 기술지표, ICT, 레이더, AI뉴스, 트레이딩, 알림
 ```
 
 ## 4. 스크린샷 구성
@@ -37,8 +37,8 @@ Chart Radar는 매수·매도 신호를 대신 내려주는 앱이 아닙니다.
    - 코인 선택, 타임프레임, ICT / 기술지표 전환이 보이는 화면.
 3. 알트코인 레이더.
    - 전체 알트 중 강한 감지 후보를 찾는 화면.
-4. 해외주식 레이더.
-   - 주요 미국 주식과 섹터 요약이 보이는 화면.
+4. 글로벌 레이더.
+   - 주요 미국 주식, 지수, ETF, 섹터 요약이 보이는 화면.
 5. 레이더뉴스.
    - 매크로 전광판과 AI 시장 브리핑이 함께 보이는 화면.
 6. 알림 센터.
@@ -69,13 +69,17 @@ App Store Connect에 아래 상품을 만듭니다.
 
 | 상품 | 상품 ID | 표시 이름 |
 | --- | --- | --- |
-| 월간 Pro | `chart_radar_pro_monthly` | Chart Radar Pro 월간 |
-| 연간 Pro | `chart_radar_pro_yearly` | Chart Radar Pro 연간 |
+| 코인 월간 | `chart_radar_crypto_monthly` | Chart Radar Coin 월간 |
+| 코인 연간 | `chart_radar_crypto_yearly` | Chart Radar Coin 연간 |
+| 글로벌 월간 | `chart_radar_global_monthly` | Chart Radar Global 월간 |
+| 글로벌 연간 | `chart_radar_global_yearly` | Chart Radar Global 연간 |
+| 올마켓 월간 | `chart_radar_bundle_monthly` | Chart Radar All Market 월간 |
+| 올마켓 연간 | `chart_radar_bundle_yearly` | Chart Radar All Market 연간 |
 
 구독 설명에는 아래 내용을 포함합니다.
 
 - 전체 코인 레이더 감지.
-- 해외주식 레이더 확장.
+- 글로벌 레이더 확장.
 - AI 브리핑 사용량 확대.
 - 관심종목과 조건 알림.
 - 반복 확인용 시장 관제실.
@@ -107,14 +111,14 @@ Chart Radar is a market analysis and education tool. It provides market structur
 - 앱 설명에 수익 보장, 매수 신호, 자동매매처럼 오해될 표현이 없음.
 # 2026-05-11 App Store 상품 ID 최신 구조.
 
-정식 출시용 구독 상품은 코인, 해외주식, 번들로 나눕니다.
+정식 출시용 구독 상품은 코인, 글로벌, 올마켓으로 나눕니다.
 
 | 상품 | 상품 ID | 표시 이름 |
 | --- | --- | --- |
 | Crypto 월간 | `chart_radar_crypto_monthly` | Chart Radar Crypto 월간 |
 | Crypto 연간 | `chart_radar_crypto_yearly` | Chart Radar Crypto 연간 |
-| Stock 월간 | `chart_radar_stocks_monthly` | Chart Radar Stock 월간 |
-| Stock 연간 | `chart_radar_stocks_yearly` | Chart Radar Stock 연간 |
+| Global 월간 | `chart_radar_global_monthly` | Chart Radar Global 월간 |
+| Global 연간 | `chart_radar_global_yearly` | Chart Radar Global 연간 |
 | Bundle 월간 | `chart_radar_bundle_monthly` | Chart Radar All Market 월간 |
 | Bundle 연간 | `chart_radar_bundle_yearly` | Chart Radar All Market 연간 |
 

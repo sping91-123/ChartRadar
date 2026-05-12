@@ -46,8 +46,8 @@ const planIds = [
 const productIds = [
   "chart_radar_crypto_monthly",
   "chart_radar_crypto_yearly",
-  "chart_radar_stocks_monthly",
-  "chart_radar_stocks_yearly",
+  "chart_radar_global_monthly",
+  "chart_radar_global_yearly",
   "chart_radar_bundle_monthly",
   "chart_radar_bundle_yearly"
 ];
@@ -58,6 +58,8 @@ const paymentEnvNames = [
   "NEXT_PUBLIC_PRO_YEARLY_PAYMENT_URL",
   "NEXT_PUBLIC_CRYPTO_MONTHLY_PAYMENT_URL",
   "NEXT_PUBLIC_CRYPTO_YEARLY_PAYMENT_URL",
+  "NEXT_PUBLIC_GLOBAL_MONTHLY_PAYMENT_URL",
+  "NEXT_PUBLIC_GLOBAL_YEARLY_PAYMENT_URL",
   "NEXT_PUBLIC_STOCKS_MONTHLY_PAYMENT_URL",
   "NEXT_PUBLIC_STOCKS_YEARLY_PAYMENT_URL",
   "NEXT_PUBLIC_BUNDLE_MONTHLY_PAYMENT_URL",
@@ -89,9 +91,9 @@ if (Number(cryptoAmount) === 14900) {
 }
 
 if (Number(stocksAmount) === 14900) {
-  pass("해외주식 월간 청구 금액", "14,900원.");
+  pass("글로벌 월간 청구 금액", "14,900원.");
 } else {
-  fail("해외주식 월간 청구 금액", `예상 14900, 현재 ${stocksAmount ?? "미확인"}.`);
+  fail("글로벌 월간 청구 금액", `예상 14900, 현재 ${stocksAmount ?? "미확인"}.`);
 }
 
 if (Number(bundleAmount) === 24900 && Number(bundleAmount) < Number(cryptoAmount) + Number(stocksAmount)) {
