@@ -59,6 +59,18 @@ const checks = [
     expectedStatus: [400]
   },
   {
+    label: "청산 압력 비정상 심볼 차단",
+    path: "/api/liquidation-pressure?symbol=***&period=15m",
+    method: "GET",
+    expectedStatus: [400]
+  },
+  {
+    label: "청산 압력 비정상 기간 차단",
+    path: "/api/liquidation-pressure?symbol=BTCUSDT.P&period=bad",
+    method: "GET",
+    expectedStatus: [400]
+  },
+  {
     label: "결제 시작 대용량 요청 차단",
     path: "/api/billing/checkout",
     method: "POST",

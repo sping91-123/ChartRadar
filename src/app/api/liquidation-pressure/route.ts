@@ -51,13 +51,45 @@ function normalizeSymbol(raw: string | null) {
   const fallback = "BTCUSDT";
   if (!raw) return fallback;
   const cleaned = raw.toUpperCase().replace(".P", "").replace("/", "").trim();
-  if (!/^[A-Z0-9]{5,30}$/.test(cleaned)) return fallback;
+  if (!/^[A-Z0-9]{2,30}$/.test(cleaned)) return null;
   return cleaned.endsWith("USDT") ? cleaned : `${cleaned}USDT`;
 }
 
 function normalizePeriod(raw: string | null) {
-  if (raw && allowedPeriods.has(raw)) return raw;
-  return "15m";
+  if (!raw) return "15m";
+  if (allowedPeriods.has(raw)) return raw;
+  return null;
+}
+
+function invalidParam(message: string) {
+  return NextResponse.json({ error: message }, { status: 400 });
+}
+
+function parseQuery(url: URL) {
+  const rawSymbol = url.searchParams.get("symbol");
+  const rawPeriod = url.searchParams.get("period");
+  const symbol = normalizeSymbol(rawSymbol);
+  const period = normalizePeriod(rawPeriod);
+
+  if (!symbol) {
+    return {
+      error: invalidParam("지원하지 않는 코인 심볼입니다.")
+    };
+  }
+
+  if (!period) {
+    return {
+      error: NextResponse.json(
+        {
+          error: "지원하지 않는 기간입니다.",
+          allowedPeriods: Array.from(allowedPeriods)
+        },
+        { status: 400 }
+      )
+    };
+  }
+
+  return { symbol, period };
 }
 
 function toNumber(value: unknown) {
@@ -134,8 +166,10 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
-  const symbol = normalizeSymbol(url.searchParams.get("symbol"));
-  const period = normalizePeriod(url.searchParams.get("period"));
+  const parsedQuery = parseQuery(url);
+  if ("error" in parsedQuery) return parsedQuery.error;
+
+  const { symbol, period } = parsedQuery;
   const cacheKey = `${symbol}:${period}`;
   const now = Date.now();
   const cached = cache.get(cacheKey);
