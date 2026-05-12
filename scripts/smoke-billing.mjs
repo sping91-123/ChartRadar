@@ -30,6 +30,8 @@ function expectIncludes(source, value, label, fileName) {
 const billing = read("src/lib/billing.ts");
 const envExample = read(".env.example");
 const confirmRoute = read("src/app/api/billing/confirm/route.ts");
+const checkoutRoute = read("src/app/api/billing/checkout/route.ts");
+const proPricingPanel = read("src/components/ProPricingPanel.tsx");
 const watchlist = read("src/lib/watchlist.ts");
 const watchlistPanel = read("src/components/WatchlistPanel.tsx");
 const launchChecklist = read("LAUNCH_CHECKLIST.md");
@@ -39,6 +41,8 @@ const appStoreGuide = read("docs/app-store-release.md");
 if (!billing) fail("결제 플랜 소스", "src/lib/billing.ts 파일을 읽지 못했습니다.");
 if (!envExample) fail("환경변수 예시", ".env.example 파일을 읽지 못했습니다.");
 if (!confirmRoute) fail("결제 승인 확인 API", "src/app/api/billing/confirm/route.ts 파일을 읽지 못했습니다.");
+if (!checkoutRoute) fail("결제 시작 API", "src/app/api/billing/checkout/route.ts 파일을 읽지 못했습니다.");
+if (!proPricingPanel) fail("Pro 결제 패널", "src/components/ProPricingPanel.tsx 파일을 읽지 못했습니다.");
 if (!watchlist) fail("관심코인 한도 소스", "src/lib/watchlist.ts 파일을 읽지 못했습니다.");
 if (!watchlistPanel) fail("관심코인 패널", "src/components/WatchlistPanel.tsx 파일을 읽지 못했습니다.");
 if (!launchChecklist) fail("출시 체크리스트", "LAUNCH_CHECKLIST.md 파일을 읽지 못했습니다.");
@@ -137,6 +141,10 @@ for (const [fileName, source] of [
 
 expectIncludes(confirmRoute, "https://api.tosspayments.com/v1/payments/confirm", "토스 승인 확인 엔드포인트", "src/app/api/billing/confirm/route.ts");
 expectIncludes(confirmRoute, "supabaseAdminRest", "Supabase 권한 반영 경로", "src/app/api/billing/confirm/route.ts");
+expectIncludes(checkoutRoute, "fetchSupabaseUserOnServer", "결제 시작 전 로그인 검증", "src/app/api/billing/checkout/route.ts");
+expectIncludes(checkoutRoute, "결제를 시작하려면 먼저 로그인해 주세요.", "비로그인 결제 차단 문구", "src/app/api/billing/checkout/route.ts");
+expectIncludes(proPricingPanel, "Authorization: `Bearer ${session.accessToken}`", "결제 시작 요청 세션 전달", "src/components/ProPricingPanel.tsx");
+expectIncludes(proPricingPanel, "결제 후 Pro 권한을 바로 열려면 먼저 구글 로그인이 필요합니다.", "결제 전 로그인 안내", "src/components/ProPricingPanel.tsx");
 
 const cryptoAmount = /id:\s*"crypto_monthly"[\s\S]*?billingAmount:\s*(\d+)/.exec(billing)?.[1];
 const stocksAmount = /id:\s*"stocks_monthly"[\s\S]*?billingAmount:\s*(\d+)/.exec(billing)?.[1];

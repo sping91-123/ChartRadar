@@ -12,6 +12,7 @@ import {
   type BillingPageScope,
   type BillingPlanId
 } from "@/lib/billing";
+import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 type CheckoutState =
   | { status: "idle" }
@@ -114,16 +115,38 @@ const scopeCopy: Record<
 
 export function ProPricingPanel({ marketScope = "all" }: { marketScope?: BillingPageScope } = {}) {
   const [checkoutState, setCheckoutState] = useState<CheckoutState>({ status: "idle" });
+  const { session, isLoading: isAuthLoading } = useSupabaseAuth();
   const visiblePlans = getBillingPlansForPage(marketScope);
   const copy = scopeCopy[marketScope];
 
   async function startCheckout(planId: BillingPlanId) {
+    if (isAuthLoading) {
+      setCheckoutState({
+        status: "message",
+        tone: "info",
+        text: "로그인 상태를 확인하고 있습니다. 잠시 후 다시 눌러 주세요."
+      });
+      return;
+    }
+
+    if (!session?.accessToken) {
+      setCheckoutState({
+        status: "message",
+        tone: "info",
+        text: "결제 후 Pro 권한을 바로 열려면 먼저 구글 로그인이 필요합니다. 로그인 후 다시 결제를 시작해 주세요."
+      });
+      return;
+    }
+
     setCheckoutState({ status: "loading", planId });
 
     try {
       const response = await fetch("/api/billing/checkout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({ planId, platform: "web" })
       });
       const data = (await response.json().catch(() => ({}))) as {
@@ -283,9 +306,9 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
                 </Link>
               ) : (
                 <button
-                  type="button"
-                  onClick={() => startCheckout(plan.id)}
-                  disabled={checkoutState.status === "loading"}
+          type="button"
+          onClick={() => startCheckout(plan.id)}
+          disabled={checkoutState.status === "loading" || isAuthLoading}
                   className={`mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md px-4 text-sm font-black transition ${
                     highlighted
                       ? "bg-cyan-300 text-slate-950 hover:bg-cyan-200"
@@ -293,7 +316,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
                   } disabled:cursor-wait disabled:opacity-70`}
                 >
                   {isLoading ? <Loader2 className="animate-spin" size={16} aria-hidden /> : null}
-                  {isLoading ? "결제 상태 확인 중" : isYearly ? "연간으로 시작하기" : "월간으로 시작하기"}
+          {isAuthLoading ? "로그인 확인 중" : isLoading ? "결제 상태 확인 중" : isYearly ? "연간으로 시작하기" : "월간으로 시작하기"}
                 </button>
               )}
             </article>

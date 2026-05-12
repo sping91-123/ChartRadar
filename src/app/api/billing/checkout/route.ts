@@ -1,6 +1,7 @@
 // 결제 시작에 필요한 주문 정보를 만들고 결제 링크 상태를 반환합니다.
 import { NextResponse } from "next/server";
 import { findBillingPlan } from "@/lib/billing";
+import { fetchSupabaseUserOnServer } from "@/lib/server/supabaseAdmin";
 
 interface CheckoutRequest {
   planId?: string;
@@ -31,12 +32,29 @@ function getPaymentUrl(planId: string) {
   );
 }
 
+function getBearerToken(request: Request) {
+  const authorization = request.headers.get("authorization") ?? "";
+  const [type, token] = authorization.split(" ");
+  return type?.toLowerCase() === "bearer" ? token : "";
+}
+
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as CheckoutRequest;
   const plan = findBillingPlan(body.planId);
 
   if (!plan || plan.id === "free") {
     return NextResponse.json({ error: "결제할 플랜을 다시 선택해 주세요." }, { status: 400 });
+  }
+
+  const accessToken = getBearerToken(request);
+  if (!accessToken) {
+    return NextResponse.json({ error: "결제를 시작하려면 먼저 로그인해 주세요." }, { status: 401 });
+  }
+
+  try {
+    await fetchSupabaseUserOnServer(accessToken);
+  } catch {
+    return NextResponse.json({ error: "로그인 상태를 확인하지 못했습니다. 다시 로그인한 뒤 결제를 시작해 주세요." }, { status: 401 });
   }
 
   if (body.platform === "ios") {
