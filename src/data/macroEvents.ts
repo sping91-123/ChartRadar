@@ -19,6 +19,7 @@ export type MacroEventItem = {
 };
 
 export const macroCalendarUpdatedAt = "2026년 5월 13일 02:00 기준";
+export const macroCalendarUpdatedAtIso = "2026-05-13T02:00:00+09:00";
 
 export const macroCalendarSourceNote =
   "화면 시간은 모두 한국시간입니다. 실제 발표값은 공식 발표 후 24시간 동안 최근 발표 영역에 남기고, 정식 자동 캘린더 연동 전까지 주요 일정은 수동으로 갱신합니다.";

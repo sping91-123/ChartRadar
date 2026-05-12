@@ -5,6 +5,7 @@ import { CalendarClock, ChevronDown, ChevronRight, Clock3, ExternalLink, Radio, 
 import {
   macroCalendarSourceNote,
   macroCalendarUpdatedAt,
+  macroCalendarUpdatedAtIso,
   macroItems,
   type MacroEventImportance,
   type MacroEventItem,
@@ -13,6 +14,37 @@ import {
 
 const RECENT_RELEASE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const EMPTY_ACTUAL_VALUES = new Set(["발표 전", "결과 확인 중", "회의 전", "미정", "-"]);
+const MACRO_FRESHNESS_WARN_MS = 36 * 60 * 60 * 1000;
+const MACRO_FRESHNESS_STALE_MS = 72 * 60 * 60 * 1000;
+
+function getMacroFreshness() {
+  const updatedAt = new Date(macroCalendarUpdatedAtIso).getTime();
+  if (!Number.isFinite(updatedAt)) {
+    return {
+      label: "갱신 확인 필요",
+      className: "border-signal-warning/25 bg-signal-warning/10 text-signal-warning"
+    };
+  }
+
+  const ageMs = Date.now() - updatedAt;
+  if (ageMs >= MACRO_FRESHNESS_STALE_MS) {
+    return {
+      label: "갱신 필요",
+      className: "border-signal-danger/25 bg-signal-danger/10 text-signal-danger"
+    };
+  }
+  if (ageMs >= MACRO_FRESHNESS_WARN_MS) {
+    return {
+      label: "갱신 확인 권장",
+      className: "border-signal-warning/25 bg-signal-warning/10 text-signal-warning"
+    };
+  }
+
+  return {
+    label: "최신 확인",
+    className: "border-signal-success/25 bg-signal-success/10 text-signal-success"
+  };
+}
 
 function hasActualValue(item: MacroEventItem) {
   if (!item.actual) return false;
@@ -163,6 +195,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
   const nearestUpcoming = upcomingItems[0];
   const laterUpcomingItems = upcomingItems.slice(1, 7);
   const latestRelease = releasedItems[0];
+  const freshness = getMacroFreshness();
 
   if (compact) {
     const item = getCompactItem();
@@ -198,10 +231,20 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
         <div className="min-w-0">
           <p className="text-xs font-black text-white">매크로 레이더</p>
           <p className="truncate text-[11px] font-bold text-slate-500">{macroCalendarUpdatedAt}. 모든 발표 시간은 한국시간 기준입니다.</p>
+          <span className={`mt-1 inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[10px] font-black sm:hidden ${freshness.className}`}>
+            <TimerReset size={11} aria-hidden />
+            {freshness.label}
+          </span>
         </div>
-        <div className="ml-auto hidden items-center gap-1 rounded border border-signal-warning/20 bg-signal-warning/10 px-2 py-1 text-[11px] font-black text-signal-warning sm:flex">
-          <ShieldAlert size={12} aria-hidden />
-          발표 전후 변동성 주의
+        <div className="ml-auto hidden items-center gap-2 sm:flex">
+          <div className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-black ${freshness.className}`}>
+            <TimerReset size={12} aria-hidden />
+            {freshness.label}
+          </div>
+          <div className="inline-flex items-center gap-1 rounded border border-signal-warning/20 bg-signal-warning/10 px-2 py-1 text-[11px] font-black text-signal-warning">
+            <ShieldAlert size={12} aria-hidden />
+            발표 전후 변동성 주의
+          </div>
         </div>
       </div>
 

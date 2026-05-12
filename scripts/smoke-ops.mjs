@@ -68,6 +68,7 @@ expectIncludes(envExample, "SUPABASE_SERVICE_ROLE_KEY=", "서버 권한 반영 �
 expectIncludes(envExample, "NEWS_TRANSLATION_PROVIDER=", "뉴스 번역 속도 옵션", ".env.example");
 expectIncludes(envExample, "ENABLE_GEMINI_NEWS_FALLBACK=", "뉴스 AI fallback 옵션", ".env.example");
 expectIncludes(macroEvents, "macroCalendarUpdatedAt", "매크로 갱신 기준 표시", "src/data/macroEvents.ts");
+expectIncludes(macroEvents, "macroCalendarUpdatedAtIso", "매크로 갱신 ISO 기준", "src/data/macroEvents.ts");
 expectIncludes(radarNewsApi, "fallbackNewsBriefing", "레이더뉴스 fallback 브리핑", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsApi, "GROQ_API_KEY", "레이더뉴스 Groq 우선 호출", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsApi, "불·베어 사이클 지표", "레이더뉴스 번역 품질 보강", "src/app/api/radar-news/route.ts");
