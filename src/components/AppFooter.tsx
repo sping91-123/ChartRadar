@@ -13,8 +13,8 @@ export function AppFooter() {
             레버리지 거래는 원금 손실과 청산 위험이 있으며 모든 투자 판단과 책임은 사용자 본인에게 있습니다.
           </p>
           <p>
-            코인 데이터는 Binance 가격을 기준으로 판독합니다.
-            글로벌 시장 데이터는 주요 종목의 방향 점검과 관심종목 선별을 돕는 보조 정보로 제공합니다.
+            시장별 가격 데이터는 공개 데이터 제공처를 기준으로 판독합니다.
+            자산군마다 데이터 출처와 갱신 주기가 다를 수 있으니 최종 주문 전에는 거래 화면에서 다시 확인해 주세요.
           </p>
           <nav className="flex flex-wrap gap-x-3 gap-y-1 text-slate-400" aria-label="서비스 정책">
             <Link href="/terms" className="hover:text-white">

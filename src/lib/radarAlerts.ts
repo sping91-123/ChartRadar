@@ -79,7 +79,7 @@ export const radarAlertRules: RadarAlertRule[] = [
     description: "미국 주요 종목, ETF, 지수·원자재 흐름의 추세·모멘텀 전환을 알려줍니다.",
     trigger: "주요 종목 기술지표 점수 급변, 섹터 강도 변화",
     cadence: "미장 정규장 중심",
-    value: "코인과 글로벌 시장을 동시에 보는 사용자에게 별도 앱을 켜는 시간을 줄여줍니다.",
+    value: "여러 글로벌 자산군을 따로 새로고침하지 않고 한 화면에서 감시하게 돕습니다.",
     defaultEnabled: true
   }
 ];
