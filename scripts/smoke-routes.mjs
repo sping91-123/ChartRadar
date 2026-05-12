@@ -21,16 +21,18 @@ const checks = [
   { label: "사이트맵", path: "/sitemap.xml" },
   { label: "웹앱 매니페스트", path: "/manifest.webmanifest" },
   {
-    label: "월간 결제 진입",
+    label: "월간 결제 로그인 보호",
     path: "/api/billing/checkout",
     method: "POST",
     body: { planId: "crypto_monthly", platform: "web" },
+    expectedStatus: [401],
   },
   {
-    label: "연간 결제 진입",
+    label: "연간 결제 로그인 보호",
     path: "/api/billing/checkout",
     method: "POST",
     body: { planId: "bundle_yearly", platform: "web" },
+    expectedStatus: [401],
   },
   {
     label: "결제 승인 로그인 보호",
