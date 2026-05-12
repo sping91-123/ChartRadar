@@ -2,6 +2,7 @@
 // 로그인 상태와 체험 권한을 상단에 표시한다.
 import Link from "next/link";
 import { Crown, Loader2, LogIn, LogOut } from "lucide-react";
+import { getEntitlementLabel, hasAnyPaidEntitlement } from "@/lib/billing";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 export function AuthStatus() {
@@ -30,7 +31,8 @@ export function AuthStatus() {
 
   const name = user.user_metadata?.name ?? user.user_metadata?.full_name ?? user.email ?? "회원";
   const plan = profile?.plan ?? "free";
-  const isPaid = plan === "member" || plan === "premium" || plan === "admin";
+  const isPaid = hasAnyPaidEntitlement(plan);
+  const planLabel = getEntitlementLabel(plan);
 
   return (
     <div className="flex flex-col items-end gap-1 sm:flex-row sm:items-center">
@@ -40,10 +42,10 @@ export function AuthStatus() {
             ? "border-amber-300/35 bg-amber-300/10 text-amber-200"
             : "border-cyan-300/35 bg-cyan-300/10 text-cyan-200"
         }`}
-        title={isPaid ? `${plan.toUpperCase()} 권한` : "로그인 사용자에게 제공되는 체험 권한입니다."}
+        title={isPaid ? `${planLabel} 권한` : "무료 체험 권한입니다."}
       >
         <Crown size={13} aria-hidden />
-        {isPaid ? plan.toUpperCase() : "체험 권한"}
+        <span className="max-w-32 truncate">{isPaid ? planLabel : "체험 권한"}</span>
       </span>
       <button
         type="button"

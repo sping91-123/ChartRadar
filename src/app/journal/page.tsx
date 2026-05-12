@@ -17,6 +17,7 @@ import {
 import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
 import { RadarTopNav } from "@/components/RadarTopNav";
+import { getEntitlementLabel, hasAnyPaidEntitlement } from "@/lib/billing";
 import {
   appendJournalEntry,
   loadJournalEntries,
@@ -158,7 +159,8 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
   const [syncMessage, setSyncMessage] = useState("");
 
   const marketLabel = market === "stocks" ? "글로벌" : "코인";
-  const profilePlanLabel = profile?.plan === "admin" ? "관리자" : profile?.plan === "premium" ? "프리미엄" : profile?.plan === "member" ? "멤버" : "무료";
+  const profilePlan = profile?.plan ?? "free";
+  const profilePlanLabel = hasAnyPaidEntitlement(profilePlan) ? getEntitlementLabel(profilePlan) : "무료";
 
   const refreshRemote = useCallback(async () => {
     if (!session?.accessToken) return;
