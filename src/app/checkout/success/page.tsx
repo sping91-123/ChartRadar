@@ -23,7 +23,7 @@ export default function CheckoutSuccessPage({ searchParams }: CheckoutSuccessPag
     <main className="min-h-screen px-4 pb-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
         <Header />
-        <RadarTopNav />
+        <RadarTopNav market="all" />
         <section className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 p-6">
           <div className="text-center">
             <CheckCircle2 className="mx-auto text-emerald-300" size={42} aria-hidden />

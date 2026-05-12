@@ -13,12 +13,13 @@ function normalizeBillingScope(market: string | undefined): BillingPageScope {
 
 export default function ProPage({ searchParams }: { searchParams?: { market?: string } }) {
   const marketScope = normalizeBillingScope(searchParams?.market);
-  const navMarket = marketScope === "stocks" ? "stocks" : "crypto";
+  const navMarket = marketScope === "stocks" ? "stocks" : marketScope === "crypto" ? "crypto" : "all";
+  const headerMarket = marketScope === "stocks" ? "stocks" : marketScope === "crypto" ? "crypto" : undefined;
 
   return (
     <main className="min-h-screen px-4 pb-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
-        <Header market={navMarket} />
+        <Header market={headerMarket} />
         <RadarTopNav market={navMarket} />
         <ProPricingPanel marketScope={marketScope} />
         <AppFooter />

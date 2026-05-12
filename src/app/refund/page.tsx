@@ -37,7 +37,7 @@ export default function RefundPage() {
     <main className="min-h-screen px-4 pb-10">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
         <Header />
-        <RadarTopNav />
+        <RadarTopNav market="all" />
         <Link href="/pro" className="inline-flex w-fit items-center gap-2 text-sm font-bold text-slate-400 hover:text-white">
           <ArrowLeft size={16} aria-hidden />
           Pro 페이지로 돌아가기

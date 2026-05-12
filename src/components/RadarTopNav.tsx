@@ -2,9 +2,9 @@
 // Chart Radar의 시장별 주요 페이지로 이동하는 상단 메뉴.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BellRing, Calculator, Coins, History, Newspaper, Radar, TrendingUp } from "lucide-react";
+import { BellRing, Calculator, Coins, Crown, History, Newspaper, Radar, TrendingUp } from "lucide-react";
 
-type MarketScope = "crypto" | "stocks";
+type MarketScope = "crypto" | "stocks" | "all";
 
 const cryptoNavItems = [
   { label: "BTC·ETH", icon: Radar, href: "/survival", match: ["/survival"] },
@@ -23,6 +23,12 @@ const stockNavItems = [
   { label: "계산기", icon: Calculator, href: "/calculator?market=global", match: ["/calculator"] }
 ] as const;
 
+const allNavItems = [
+  { label: "코인 레이더", icon: Radar, href: "/survival", match: ["/survival", "/alts"] },
+  { label: "글로벌 레이더", icon: TrendingUp, href: "/global", match: ["/stocks", "/global"] },
+  { label: "요금제", icon: Crown, href: "/pro", match: ["/pro", "/checkout/success", "/checkout/fail", "/refund"] }
+] as const;
+
 function inferMarket(pathname: string): MarketScope {
   if (pathname === "/stocks" || pathname === "/global") return "stocks";
   return "crypto";
@@ -31,7 +37,7 @@ function inferMarket(pathname: string): MarketScope {
 export function RadarTopNav({ market: forcedMarket }: { market?: MarketScope } = {}) {
   const pathname = usePathname();
   const market = forcedMarket ?? inferMarket(pathname);
-  const navItems = market === "stocks" ? stockNavItems : cryptoNavItems;
+  const navItems = market === "all" ? allNavItems : market === "stocks" ? stockNavItems : cryptoNavItems;
 
   return (
     <nav className="sticky top-0 z-30 rounded-lg border border-surface-line bg-slate-950/88 p-1.5 shadow-[0_16px_44px_rgba(0,0,0,0.34)] backdrop-blur">
