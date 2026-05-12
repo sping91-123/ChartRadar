@@ -21,37 +21,43 @@ type CheckoutState =
 const conversionPoints = [
   {
     icon: Radar,
-    title: "시장 먼저 읽기",
-    body: "선택한 시장에서 오늘 먼저 봐야 할 자산, 방향, 위험 구간을 정리합니다."
+    title: "오늘 볼 자산부터 압축",
+    body: "상승률만 보는 화면이 아니라 거래대금, 구조, 변동성, 뉴스 영향을 합쳐 먼저 볼 대상을 줄여줍니다."
   },
   {
     icon: Sparkles,
-    title: "AI 해석을 깔끔하게",
-    body: "뉴스, 레이더 결과, 관심종목 흐름을 긴 문장으로 다시 정리해 줍니다."
+    title: "근거를 실행 언어로 정리",
+    body: "차트와 뉴스가 따로 놀지 않게 지금 우세한 방향, 위험 요인, 다음 확인 조건을 한 번에 정리합니다."
   },
   {
     icon: BellRing,
-    title: "놓치지 않는 알림",
-    body: "관심종목 구조 변화, 큰 변동, 뉴스 브리핑을 매번 직접 찾지 않아도 되게 도와줍니다."
+    title: "켜두면 대신 감시",
+    body: "관심종목 구조 변화, 큰 변동, 브리핑 업데이트를 직접 새로고침하지 않아도 확인하게 돕습니다."
   }
 ];
 
 const valueRows = [
   {
     icon: TimerReset,
-    title: "하루 여러 번 켜는 구조",
-    body: "아침에는 시장 온도, 장중에는 TOP 감지, 자기 전에는 관심종목과 뉴스 브리핑을 확인하는 흐름을 만들었습니다."
+    title: "아침에는 큰 흐름",
+    body: "매크로 일정, 시장 온도, 주요 자산 흐름을 먼저 보고 오늘 조심해야 할 구간을 정리합니다."
   },
   {
     icon: ShieldCheck,
-    title: "매수 강요보다 위험 정리",
-    body: "어느 쪽 근거가 강한지, 무엇을 확인해야 하는지 먼저 보여주는 분석형 서비스입니다."
+    title: "장중에는 변화 감시",
+    body: "TOP 레이더, 관심종목, 알림 조건으로 지금 움직이는 자산과 변동성 확대 구간을 빠르게 확인합니다."
   },
   {
     icon: Crown,
-    title: "Pro는 넓이와 빈도",
-    body: "더 많은 종목, 더 많은 AI 브리핑, 더 많은 알림 규칙으로 반복 사용의 마찰을 줄입니다."
+    title: "마감 전에는 복기",
+    body: "오늘 본 근거와 실제 움직임을 복기해 다음 매매에서 반복할 것과 피할 것을 남깁니다."
   }
+];
+
+const proDifferenceRows = [
+  "무료는 핵심 흐름 확인용, Pro는 매일 감시 범위와 AI 해석 빈도를 넓히는 용도입니다.",
+  "Pro는 더 많은 종목, 더 많은 브리핑, 더 많은 알림 규칙으로 직접 찾아보는 시간을 줄입니다.",
+  "차트 신호를 단정하지 않고 시장 구조, 위험도, 확인 조건을 함께 보여주는 분석형 구독입니다."
 ];
 
 const scopeCopy: Record<
@@ -65,6 +71,7 @@ const scopeCopy: Record<
     highlightedPlanId: BillingPlanId;
     freeHref: string;
     filterNotice: string;
+    priceAnchor: string;
   }
 > = {
   all: {
@@ -76,7 +83,8 @@ const scopeCopy: Record<
     representativeBody: "두 시장을 모두 보는 사용자에게 코인, 글로벌 시장, AI 브리핑, 관심종목 알림을 하나로 묶었습니다.",
     highlightedPlanId: "bundle_monthly",
     freeHref: "/survival",
-    filterNotice: "전체 요금제를 보고 있습니다. 코인과 글로벌 시장을 모두 보면 All Market 플랜이 유리합니다."
+    filterNotice: "전체 요금제를 보고 있습니다. 코인과 글로벌 시장을 모두 보면 All Market 플랜이 유리합니다.",
+    priceAnchor: "코인과 글로벌을 따로 결제하는 것보다 월 4,900원을 줄이면서 두 시장을 함께 감시합니다."
   },
   crypto: {
     eyebrow: "Coin Radar Pro",
@@ -87,7 +95,8 @@ const scopeCopy: Record<
     representativeBody: "코인 레이더, ICT 판독, 기술지표, 코인뉴스, 코인알림을 코인 시장에 맞춰 씁니다.",
     highlightedPlanId: "crypto_monthly",
     freeHref: "/survival",
-    filterNotice: "코인 전용 화면입니다. 글로벌 전용 플랜은 숨기고 All Market 플랜만 함께 보여드립니다."
+    filterNotice: "코인 전용 화면입니다. 글로벌 전용 플랜은 숨기고 All Market 플랜만 함께 보여드립니다.",
+    priceAnchor: "하루 500원대 비용으로 코인 레이더, 뉴스 브리핑, 관심종목 알림을 매일 확인하는 구조입니다."
   },
   stocks: {
     eyebrow: "Global Radar Pro",
@@ -98,7 +107,8 @@ const scopeCopy: Record<
     representativeBody: "글로벌 레이더, 기술지표, 글로벌뉴스, 매크로 브리핑, 관심 자산 알림을 한 화면으로 씁니다.",
     highlightedPlanId: "stocks_monthly",
     freeHref: "/global",
-    filterNotice: "글로벌 전용 화면입니다. 코인 전용 플랜은 숨기고 All Market 플랜만 함께 보여드립니다."
+    filterNotice: "글로벌 전용 화면입니다. 코인 전용 플랜은 숨기고 All Market 플랜만 함께 보여드립니다.",
+    priceAnchor: "하루 500원대 비용으로 미국장, ETF, 지수, 매크로 이벤트를 한 화면에서 점검합니다."
   }
 };
 
@@ -184,8 +194,17 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
         </div>
       </div>
 
-      <div className="rounded-lg border border-cyan-300/20 bg-cyan-300/10 p-4 text-sm leading-6 text-cyan-100">
-        {copy.filterNotice}
+      <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="rounded-lg border border-cyan-300/20 bg-cyan-300/10 p-4 text-sm leading-6 text-cyan-100">
+          <p className="font-black text-cyan-50">{copy.filterNotice}</p>
+          <p className="mt-2 text-cyan-100/85">{copy.priceAnchor}</p>
+        </div>
+        <div className="rounded-lg border border-surface-line bg-surface-card p-4 text-sm leading-6 text-slate-300">
+          <p className="font-black text-white">무료와 Pro의 차이</p>
+          <p className="mt-2 text-slate-400">
+            무료는 맛보기, Pro는 반복 감시와 저장을 위한 작업 공간입니다.
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-3 lg:grid-cols-3">
@@ -196,6 +215,17 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
             <p className="mt-2 text-sm leading-6 text-slate-400">{body}</p>
           </div>
         ))}
+      </div>
+
+      <div className="rounded-lg border border-surface-line bg-surface-card p-4">
+        <p className="font-black text-white">Pro가 필요한 순간</p>
+        <div className="mt-3 grid gap-2 lg:grid-cols-3">
+          {proDifferenceRows.map((item) => (
+            <p key={item} className="rounded-md border border-white/10 bg-black/20 p-3 text-sm leading-6 text-slate-300">
+              {item}
+            </p>
+          ))}
+        </div>
       </div>
 
       <div id="plans" className="grid scroll-mt-28 gap-4 lg:grid-cols-3">

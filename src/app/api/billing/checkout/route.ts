@@ -91,6 +91,6 @@ export async function POST(request: Request) {
     orderName: plan.name,
     confirmationRequired: true,
     message:
-      "아직 운영 결제 링크가 연결되지 않았습니다. 결제 URL을 연결하면 같은 버튼에서 바로 결제 화면으로 이동합니다."
+      "결제창 연결 상태를 확인하고 있습니다. 잠시 후 다시 시도해 주세요."
   });
 }
