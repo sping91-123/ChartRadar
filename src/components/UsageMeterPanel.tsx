@@ -53,9 +53,11 @@ function UsageRow({ state, isPaid }: { state: ReturnType<typeof getUsageBucketSt
   );
 }
 
+const initialUsageSnapshot: UsageSnapshot = { dateKey: "", counts: {} };
+
 export function UsageMeterPanel({ compact = false }: { compact?: boolean }) {
   const { profile } = useSupabaseAuth();
-  const [snapshot, setSnapshot] = useState<UsageSnapshot>(() => readUsageSnapshot());
+  const [snapshot, setSnapshot] = useState<UsageSnapshot>(initialUsageSnapshot);
   const isPaid = hasAnyPaidEntitlement(profile?.plan);
   const entitlementLabel = getEntitlementLabel(profile?.plan);
 

@@ -193,8 +193,9 @@ function RuleCard({
 export function RadarAlertCenter({ compact = false, market = "crypto" }: { compact?: boolean; market?: AlertMarket }) {
   const copy = alertMarketCopy[market];
   const isGlobal = market === "stocks";
-  const [enabledRuleIds, setEnabledRuleIds] = useState<RadarAlertRuleId[]>(() => readStoredRuleIds(market));
+  const [enabledRuleIds, setEnabledRuleIds] = useState<RadarAlertRuleId[]>(() => getMarketDefaultRuleIds(market));
   const [rulesMarket, setRulesMarket] = useState<AlertMarket>(market);
+  const [hasLoadedStoredRules, setHasLoadedStoredRules] = useState(false);
   const [setupPresets, setSetupPresets] = useState<SetupAlertPreset[]>([]);
   const [setupMatches, setSetupMatches] = useState<SetupAlertMatch[]>([]);
   const [monitorStatus, setMonitorStatus] = useState<SetupAlertMonitorStatus | null>(null);
@@ -206,6 +207,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
   useEffect(() => {
     setEnabledRuleIds(readStoredRuleIds(market));
     setRulesMarket(market);
+    setHasLoadedStoredRules(true);
     setSetupPresets(readSetupAlertPresets(market));
     setSetupMatches(readSetupAlertMatches(market));
     setMonitorStatus(readSetupAlertMonitorStatus(market));
@@ -250,9 +252,10 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!hasLoadedStoredRules) return;
     if (rulesMarket !== market) return;
     window.localStorage.setItem(getMarketRuleStorageKey(market), JSON.stringify(enabledRuleIds));
-  }, [enabledRuleIds, market, rulesMarket]);
+  }, [enabledRuleIds, hasLoadedStoredRules, market, rulesMarket]);
 
   const scopedRules = useMemo(
     () =>

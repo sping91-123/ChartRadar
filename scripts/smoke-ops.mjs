@@ -49,6 +49,7 @@ const macroEvents = read("src/data/macroEvents.ts");
 const radarNewsApi = read("src/app/api/radar-news/route.ts");
 const radarNewsPanel = read("src/components/RadarNewsPanel.tsx");
 const radarAlertCenter = read("src/components/RadarAlertCenter.tsx");
+const usageMeterPanel = read("src/components/UsageMeterPanel.tsx");
 const radarAlerts = read("src/lib/radarAlerts.ts");
 const supabaseClient = read("src/lib/supabase.ts");
 const launchCopyFiles = [
@@ -95,6 +96,10 @@ expectIncludes(radarNewsPanel, "오늘의 코인 이슈 요약", "코인 뉴스 
 expectIncludes(radarNewsPanel, "참고 뉴스", "참고 뉴스 목록 화면", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarAlertCenter, "getMarketRuleStorageKey", "알림 규칙 시장별 저장 키", "src/components/RadarAlertCenter.tsx");
 expectIncludes(radarAlertCenter, "`${baseStorageKey}.${market}`", "알림 규칙 시장별 localStorage", "src/components/RadarAlertCenter.tsx");
+expectIncludes(radarAlertCenter, "useState<RadarAlertRuleId[]>(() => getMarketDefaultRuleIds(market))", "알림 hydration 안정화", "첫 렌더에서 localStorage 알림 값을 직접 읽지 않습니다.");
+expectIncludes(radarAlertCenter, "if (!hasLoadedStoredRules) return;", "알림 저장 시점 보호", "저장된 알림을 읽기 전 기본값으로 localStorage를 덮어쓰지 않습니다.");
+expectIncludes(usageMeterPanel, "const initialUsageSnapshot", "사용량 hydration 안정화", "첫 렌더에서 localStorage 사용량 값을 직접 읽지 않습니다.");
+expectIncludes(usageMeterPanel, "const refresh = () => setSnapshot(readUsageSnapshot());", "사용량 마운트 후 갱신", "브라우저 마운트 뒤 실제 사용량을 반영합니다.");
 expectIncludes(radarAlerts, 'id: "stock-momentum"', "글로벌 모멘텀 알림 규칙", "src/lib/radarAlerts.ts");
 expectIncludes(radarAlerts, "글로벌 모멘텀 전환", "글로벌 모멘텀 알림 문구", "src/lib/radarAlerts.ts");
 expectIncludes(radarAlerts, "defaultEnabled: true", "기본 알림 활성화 유지", "src/lib/radarAlerts.ts");
