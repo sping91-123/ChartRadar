@@ -44,6 +44,8 @@ function hasMojibake(source) {
 const rateLimit = read("src/lib/server/rateLimit.ts");
 const envExample = read(".env.example");
 const macroEvents = read("src/data/macroEvents.ts");
+const radarNewsApi = read("src/app/api/radar-news/route.ts");
+const radarNewsPanel = read("src/components/RadarNewsPanel.tsx");
 const apiRoutes = walk("src/app/api", [".ts"]);
 const userFacingSources = [
   ...walk("src/app", [".ts", ".tsx"]),
@@ -62,6 +64,10 @@ expectIncludes(envExample, "UPSTASH_REDIS_REST_TOKEN=", "환경변수 예시 토
 expectIncludes(envExample, "NEXT_PUBLIC_ALLOW_LOCAL_REFRESH_TOKEN=", "로컬 refresh token 보호 옵션", ".env.example");
 expectIncludes(envExample, "SUPABASE_SERVICE_ROLE_KEY=", "서버 권한 반영 키 예시", ".env.example");
 expectIncludes(macroEvents, "macroCalendarUpdatedAt", "매크로 갱신 기준 표시", "src/data/macroEvents.ts");
+expectIncludes(radarNewsApi, "fallbackNewsBriefing", "레이더뉴스 fallback 브리핑", "src/app/api/radar-news/route.ts");
+expectIncludes(radarNewsApi, "GROQ_API_KEY", "레이더뉴스 Groq 우선 호출", "src/app/api/radar-news/route.ts");
+expectIncludes(radarNewsPanel, "오늘의 코인 이슈 요약", "코인 뉴스 요약 화면", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "참고 뉴스", "참고 뉴스 목록 화면", "src/components/RadarNewsPanel.tsx");
 
 const releaseMatches = [...macroEvents.matchAll(/releaseAt:\s*"([^"]+)"/g)].map((match) => Date.parse(match[1]));
 if (releaseMatches.some((time) => Number.isFinite(time) && time > Date.now())) {

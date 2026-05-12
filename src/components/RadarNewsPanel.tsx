@@ -187,6 +187,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
   }, [payload]);
 
   const briefing = payload?.briefing;
+  const isInitialLoading = status === "loading" && !payload;
   const leadingTone =
     digest.bullish > digest.bearish ? "상방 우호" : digest.bearish > digest.bullish ? "하방 주의" : "중립 확인";
   const leadingToneClass =
@@ -226,33 +227,43 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
 
         <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div className="rounded-lg border border-signal-success/20 bg-signal-success/10 p-3">
-            <p className="text-2xl font-black text-signal-success">{digest.bullish}</p>
+            <p className={isInitialLoading ? "text-base font-black text-signal-success" : "text-2xl font-black text-signal-success"}>
+              {isInitialLoading ? "확인 중" : digest.bullish}
+            </p>
             <p className="text-xs font-bold text-slate-400">상방 우호</p>
           </div>
           <div className="rounded-lg border border-signal-danger/20 bg-signal-danger/10 p-3">
-            <p className="text-2xl font-black text-signal-danger">{digest.bearish}</p>
+            <p className={isInitialLoading ? "text-base font-black text-signal-danger" : "text-2xl font-black text-signal-danger"}>
+              {isInitialLoading ? "확인 중" : digest.bearish}
+            </p>
             <p className="text-xs font-bold text-slate-400">하방 주의</p>
           </div>
           <div className="rounded-lg border border-signal-warning/20 bg-signal-warning/10 p-3">
-            <p className="text-2xl font-black text-signal-warning">{digest.neutral}</p>
+            <p className={isInitialLoading ? "text-base font-black text-signal-warning" : "text-2xl font-black text-signal-warning"}>
+              {isInitialLoading ? "확인 중" : digest.neutral}
+            </p>
             <p className="text-xs font-bold text-slate-400">중립 확인</p>
           </div>
           <div className="rounded-lg border border-accent-blue/20 bg-accent-blue/10 p-3">
-            <p className="text-2xl font-black text-accent-blue">{digest.urgent}</p>
+            <p className={isInitialLoading ? "text-base font-black text-accent-blue" : "text-2xl font-black text-accent-blue"}>
+              {isInitialLoading ? "확인 중" : digest.urgent}
+            </p>
             <p className="text-xs font-bold text-slate-400">중요 이슈</p>
           </div>
         </div>
 
-        {briefing ? (
+        {briefing || isInitialLoading ? (
           <div className="mt-4 grid gap-2 lg:grid-cols-3">
             <div className="rounded-md border border-white/10 bg-black/25 p-3">
               <p className="text-[11px] font-bold text-slate-500">뉴스 톤</p>
-              <p className={`mt-1 text-lg font-black ${leadingToneClass}`}>{leadingTone}</p>
+              <p className={`mt-1 text-lg font-black ${isInitialLoading ? "text-slate-300" : leadingToneClass}`}>
+                {isInitialLoading ? "수집 중" : leadingTone}
+              </p>
             </div>
             <div className="rounded-md border border-white/10 bg-black/25 p-3 lg:col-span-2">
               <p className="text-[11px] font-bold text-slate-500">먼저 볼 이슈</p>
               <p className="mt-1 line-clamp-2 text-sm font-black leading-5 text-white [word-break:keep-all]">
-                {topIssue?.title ?? "뉴스를 불러오면 핵심 이슈를 먼저 정리합니다."}
+                {isInitialLoading ? "공개 뉴스와 매크로 이슈를 수집하고 있습니다." : topIssue?.title ?? "뉴스를 불러오면 핵심 이슈를 먼저 정리합니다."}
               </p>
             </div>
           </div>
@@ -344,9 +355,15 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
           <p className="text-xs font-bold text-slate-500">{payload ? `${payload.items.length}개 수집` : "수집 대기"}</p>
         </div>
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
-          {(payload?.items ?? []).slice(0, 10).map((item) => (
-            <NewsSourceCard key={item.id} item={item} />
-          ))}
+          {isInitialLoading ? (
+            <div className="rounded-md border border-dashed border-accent-blue/25 bg-accent-blue/5 p-4 text-sm font-bold text-slate-400 lg:col-span-2">
+              참고 뉴스 목록을 정리하는 중입니다. 잠시만 기다려 주세요.
+            </div>
+          ) : (
+            (payload?.items ?? []).slice(0, 10).map((item) => (
+              <NewsSourceCard key={item.id} item={item} />
+            ))
+          )}
         </div>
       </div>
 
