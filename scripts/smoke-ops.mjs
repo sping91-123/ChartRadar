@@ -174,6 +174,26 @@ if (releasedWithoutActual.length === 0) {
   fail("매크로 발표 완료 실제값", `${releasedWithoutActual.join(", ")} 항목에 실제 발표값이 없습니다.`);
 }
 
+const macroBlocks = [...macroEvents.matchAll(/\{\s*\n\s*label:\s*"([^"]+)"[\s\S]*?\n\s*\}/g)];
+const unresolvedPastMacroEvents = macroBlocks
+  .map((match) => {
+    const block = match[0];
+    const label = match[1];
+    const releaseAt = /releaseAt:\s*"([^"]+)"/.exec(block)?.[1];
+    const actual = /actual:\s*"([^"]+)"/.exec(block)?.[1]?.trim();
+    const releaseMs = releaseAt ? Date.parse(releaseAt) : NaN;
+    const graceMs = 2 * 60 * 60 * 1000;
+    if (!Number.isFinite(releaseMs) || Date.now() - releaseMs < graceMs) return null;
+    return actual && !["발표 전", "결과 확인 중", "회의 전", "미정", "-"].includes(actual) ? null : label;
+  })
+  .filter(Boolean);
+
+if (unresolvedPastMacroEvents.length === 0) {
+  pass("매크로 지난 발표 실제값", "발표 후 2시간이 지난 항목에는 실제값이 있습니다.");
+} else {
+  fail("매크로 지난 발표 실제값", `${unresolvedPastMacroEvents.join(", ")} 항목이 발표 후에도 실제값 없이 남아 있습니다.`);
+}
+
 const rateLimitOffenders = [];
 for (const route of apiRoutes) {
   const source = read(route);
