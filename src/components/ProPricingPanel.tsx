@@ -22,7 +22,7 @@ const conversionPoints = [
   {
     icon: Radar,
     title: "시장 먼저 훑기",
-    body: "코인과 글로벌 시장에서 오늘 먼저 봐야 할 종목, 방향 쏠림, 위험 구간을 압축합니다."
+    body: "선택한 시장에서 오늘 먼저 봐야 할 자산, 방향 쏠림, 위험 구간을 압축합니다."
   },
   {
     icon: Sparkles,
@@ -93,12 +93,12 @@ const scopeCopy: Record<
     eyebrow: "Global Radar Pro",
     title: "글로벌 화면에서는 글로벌 전용 플랜과 올마켓 플랜만 보여드립니다.",
     body:
-      "미국주식, ETF, 지수, 실적, 원자재와 매크로 흐름을 중심으로 쓰는 사용자라면 글로벌 전용 플랜으로 충분합니다. 코인까지 함께 볼 예정이면 올마켓 플랜을 선택하면 됩니다.",
+      "미국주식, ETF, 지수, 실적, 원자재와 매크로 흐름을 중심으로 쓰는 사용자라면 글로벌 전용 플랜으로 충분합니다. 장전 점검, 장중 기준선 확인, 매크로 브리핑, 관심 자산 알림을 한 흐름으로 묶어 매일 켜는 용도로 설계했습니다.",
     representativePrice: "월 14,900원",
-    representativeBody: "글로벌 레이더, 기술지표, 글로벌뉴스, 매크로 브리핑, 글로벌알림을 한 화면으로 엽니다.",
+    representativeBody: "글로벌 레이더, 기술지표, 글로벌뉴스, 매크로 브리핑, 관심 자산 알림을 한 화면으로 엽니다.",
     highlightedPlanId: "stocks_monthly",
     freeHref: "/global",
-    filterNotice: "글로벌 전용 화면입니다. 코인 전용 플랜은 숨기고, 올마켓 플랜만 함께 보여드립니다."
+    filterNotice: "글로벌 전용 화면입니다. 다른 단일 시장 플랜은 숨기고, 올마켓 플랜만 함께 보여드립니다."
   }
 };
 

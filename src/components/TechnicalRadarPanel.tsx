@@ -59,7 +59,17 @@ function IndicatorSection({ title, items }: { title: string; items: IndicatorRea
   );
 }
 
-export function TechnicalRadarPanel({ candles, timeframe }: { candles: Candle[]; timeframe: ChartTimeframe }) {
+export function TechnicalRadarPanel({
+  candles,
+  timeframe,
+  assetLabel = "선택 코인",
+  intro = "ICT 구조와 분리해서 이동평균, MACD, RSI, 일목균형표, Supertrend, 거래량, 변동성 지표를 한 번에 확인합니다."
+}: {
+  candles: Candle[];
+  timeframe: ChartTimeframe;
+  assetLabel?: string;
+  intro?: string;
+}) {
   const report = useMemo(() => analyzeTechnicalRadar(candles), [candles]);
 
   return (
@@ -68,9 +78,7 @@ export function TechnicalRadarPanel({ candles, timeframe }: { candles: Candle[];
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-accent-blue">Technical Radar</p>
           <h3 className="mt-1 text-lg font-black text-white">기술지표 레이더</h3>
-          <p className="mt-2 text-sm leading-6 text-slate-400">
-            ICT 구조와 분리해서 이동평균, MACD, RSI, 일목균형표, Supertrend, 거래량, 변동성 지표를 한 번에 확인합니다.
-          </p>
+          <p className="mt-2 text-sm leading-6 text-slate-400">{intro}</p>
         </div>
         <span className="inline-flex w-fit rounded-md border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-bold text-slate-300">
           {timeframe} 기준
@@ -117,7 +125,7 @@ export function TechnicalRadarPanel({ candles, timeframe }: { candles: Candle[];
               <p className="pb-1 text-sm font-black text-accent-blue">{report.fearGreed.label}</p>
             </div>
             <p className="mt-3 text-xs leading-5 text-slate-400">
-              {report.fearGreed.description} 공식 공포와 탐욕 지수가 아니라 선택 코인의 캔들로 만든 참고값입니다.
+              {report.fearGreed.description} 공식 공포와 탐욕 지수가 아니라 {assetLabel}의 캔들로 만든 참고값입니다.
             </p>
           </div>
         </div>

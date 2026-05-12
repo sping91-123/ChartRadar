@@ -8,6 +8,12 @@ type HeaderMarket = "crypto" | "stocks";
 
 export function Header({ market }: { market?: HeaderMarket } = {}) {
   const proHref = market === "crypto" ? "/pro?market=crypto" : market === "stocks" ? "/pro?market=global" : "/pro";
+  const subtitle =
+    market === "crypto"
+      ? "코인 시장의 차트 구조와 변동 흐름을 빠르게 감지하세요."
+      : market === "stocks"
+        ? "글로벌 시장의 차트 흐름과 매크로 변화를 빠르게 감지하세요."
+        : "차트 흐름과 시장 변화를 빠르게 감지하세요.";
 
   return (
     <header className="space-y-4 pt-6">
@@ -26,7 +32,7 @@ export function Header({ market }: { market?: HeaderMarket } = {}) {
           </div>
           <div className="min-w-0">
             <h1 className="truncate text-xl font-black tracking-normal text-white sm:text-2xl">Chart Radar</h1>
-            <p className="mt-1 text-sm leading-6 text-slate-400">코인과 글로벌 시장의 차트 흐름을 빠르게 감지하세요.</p>
+            <p className="mt-1 text-sm leading-6 text-slate-400">{subtitle}</p>
           </div>
         </Link>
         <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">

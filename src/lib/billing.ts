@@ -97,8 +97,8 @@ export const billingPlans: BillingPlan[] = [
     billingAmount: 14900,
     monthlyValue: 14900,
     appStoreProductId: "chart_radar_global_monthly",
-    description: "미국주식, ETF, 지수, 원자재 흐름과 매크로 이슈를 따로 감시하는 글로벌 전용 플랜입니다.",
-    highlights: ["미국 주요 종목과 ETF 감시", "실적, 금리, 섹터 뉴스 브리핑", "글로벌 전용 알림 조건"],
+    description: "미국주식, ETF, 지수, 원자재 흐름과 매크로 이슈를 장전·장중·마감 후 따로 감시하는 글로벌 전용 플랜입니다.",
+    highlights: ["미국 주요 종목, ETF, 원자재 ETF 감시", "미국장 시간대별 관제와 기준선 체크", "매크로, 실적, 섹터 뉴스 브리핑"],
     limits: {
       radarScans: "글로벌 범위 내 넉넉하게",
       aiBriefings: "일 30회",
@@ -117,7 +117,7 @@ export const billingPlans: BillingPlan[] = [
     monthlyValue: 12417,
     appStoreProductId: "chart_radar_global_yearly",
     description: "글로벌 레이더를 꾸준히 쓰는 사용자를 위한 연간 플랜입니다.",
-    highlights: ["글로벌 Pro 전체 기능", "월 환산 12,417원", "매크로와 섹터 레이더 우선 적용"],
+    highlights: ["글로벌 Pro 전체 기능", "월 환산 12,417원", "매크로, 섹터, 미국장 시간대별 레이더 우선 적용"],
     limits: {
       radarScans: "글로벌 범위 내 넉넉하게",
       aiBriefings: "일 40회",
@@ -140,7 +140,7 @@ export const billingPlans: BillingPlan[] = [
     limits: {
       radarScans: "두 시장 모두 넉넉하게",
       aiBriefings: "일 60회",
-      watchlist: "코인 100개 + 주식 100개",
+      watchlist: "코인 100개 + 글로벌 100개",
       alerts: "시장별 조건 알림",
       markets: "코인 + 글로벌"
     }
@@ -159,7 +159,7 @@ export const billingPlans: BillingPlan[] = [
     limits: {
       radarScans: "두 시장 모두 넉넉하게",
       aiBriefings: "일 80회",
-      watchlist: "코인 150개 + 주식 150개",
+      watchlist: "코인 150개 + 글로벌 150개",
       alerts: "시장별 조건 알림",
       markets: "코인 + 글로벌 + 확장 시장"
     }

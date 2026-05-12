@@ -2,7 +2,7 @@
 // 글로벌 시장 주요 종목을 차트와 기술지표 레이더로 보여주는 화면.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CandlestickSeries, createChart, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
-import { Activity, AlertTriangle, BarChart3, Gauge, Loader2, RefreshCw, Search, Shield, Sparkles } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, Clock3, Compass, Gauge, Loader2, RefreshCw, Search, Shield, Sparkles, Target } from "lucide-react";
 import { TechnicalRadarPanel } from "@/components/TechnicalRadarPanel";
 import { chartTimeframes, type Candle, type ChartTimeframe } from "@/lib/marketAnalysis";
 import { analyzeTechnicalRadar, type TechnicalRadarReport } from "@/lib/technicalRadar";
@@ -64,6 +64,124 @@ function toneBadgeClass(tone: "bullish" | "bearish" | "neutral") {
   if (tone === "bullish") return "border-emerald-400/25 bg-emerald-500/10 text-emerald-200";
   if (tone === "bearish") return "border-rose-400/25 bg-rose-500/10 text-rose-200";
   return "border-sky-300/25 bg-sky-400/10 text-sky-100";
+}
+
+function isOvernightRange(minutes: number, start: number, end: number) {
+  return start <= end ? minutes >= start && minutes < end : minutes >= start || minutes < end;
+}
+
+function getGlobalSessionState(now = new Date()) {
+  const kstMinutes = ((now.getUTCHours() + 9) % 24) * 60 + now.getUTCMinutes();
+  const isUsDst = now.getUTCMonth() >= 2 && now.getUTCMonth() <= 10;
+  const regularStart = isUsDst ? 22 * 60 + 30 : 23 * 60 + 30;
+  const regularEnd = isUsDst ? 5 * 60 : 6 * 60;
+  const preStart = isUsDst ? 17 * 60 : 18 * 60;
+  const afterEnd = isUsDst ? 9 * 60 : 10 * 60;
+
+  if (isOvernightRange(kstMinutes, regularStart, regularEnd)) {
+    return {
+      title: "미국 정규장 진행 중",
+      detail: "가격 반응과 거래량이 가장 잘 살아나는 구간입니다. 돌파 후 지지 전환과 장중 변동성을 함께 보세요.",
+      tone: "bullish" as const
+    };
+  }
+
+  if (kstMinutes >= preStart && kstMinutes < regularStart) {
+    return {
+      title: "프리마켓 관찰 구간",
+      detail: "정규장 전에 갭 방향과 주요 뉴스 반응을 먼저 확인하는 시간입니다. 확정은 정규장 초반 거래량까지 보는 편이 좋습니다.",
+      tone: "neutral" as const
+    };
+  }
+
+  if (isOvernightRange(kstMinutes, regularEnd, afterEnd)) {
+    return {
+      title: "애프터마켓 확인 구간",
+      detail: "실적과 장마감 뉴스가 가격에 반영되는 구간입니다. 다음 정규장 기준선을 미리 정리하기 좋습니다.",
+      tone: "neutral" as const
+    };
+  }
+
+  return {
+    title: "장 마감·장전 준비 구간",
+    detail: "새 캔들이 적은 시간대입니다. 지금은 후보 선별과 지지·저항 기준선 정리에 더 적합합니다.",
+    tone: "neutral" as const
+  };
+}
+
+function groupPlaybook(group: StockSymbolInfo["group"] | undefined) {
+  if (group === "index_etf") return "지수 ETF는 전체 시장 방향의 기준선입니다. SPY와 QQQ가 같은 방향이면 개별 종목 신뢰도가 올라갑니다.";
+  if (group === "mega_cap") return "빅테크는 실적, 금리, 나스닥 흐름에 민감합니다. 지수보다 강한지 약한지를 먼저 비교하세요.";
+  if (group === "ai_chip") return "AI·반도체는 변동성이 큽니다. 강한 추세에서는 좋지만 과열 구간 추격은 위험도가 빠르게 올라갑니다.";
+  if (group === "growth") return "성장주는 금리와 리스크온 심리에 민감합니다. 반등이 빨라도 지수와 거래량 확인이 중요합니다.";
+  if (group === "finance") return "금융·섹터주는 금리와 경기 기대를 같이 봐야 합니다. 지수와 다른 움직임이면 섹터 이슈를 확인하세요.";
+  if (group === "commodity") return "원자재 ETF는 달러, 금리, 지정학 이슈 영향을 크게 받습니다. 차트와 매크로 캘린더를 같이 보세요.";
+  return "선택한 자산의 그룹 특성을 확인하고, 지수 흐름과 비교해 상대 강도를 판단하세요.";
+}
+
+function GlobalPlaybook({
+  report,
+  latest,
+  changePercent,
+  selectedInfo,
+  sessionState
+}: {
+  report: TechnicalRadarReport | null;
+  latest: Candle | null;
+  changePercent: number | null;
+  selectedInfo: StockSymbolInfo | null;
+  sessionState: ReturnType<typeof getGlobalSessionState> | null;
+}) {
+  const supportDistance = report?.supportResistance.supportDistancePercent ?? null;
+  const resistanceDistance = report?.supportResistance.resistanceDistancePercent ?? null;
+  const tone = directionTone(report);
+  const riskScore = report ? Math.min(100, Math.max(0, report.fearGreed.score + Math.max(0, report.bearishCount - report.bullishCount) * 6)) : null;
+  const focus =
+    tone === "bullish"
+      ? "상승 추세 유지 여부"
+      : tone === "bearish"
+        ? "하락 압력 방어 여부"
+        : "방향 확정 전 기준선 반응";
+  const basis =
+    resistanceDistance !== null && resistanceDistance <= 1.2
+      ? "저항선이 가깝습니다. 돌파 후 안착하지 못하면 단기 되돌림을 먼저 의심하세요."
+      : supportDistance !== null && supportDistance <= 1.2
+        ? "지지선이 가깝습니다. 지지 반응과 거래량 회복이 같이 나오는지 보세요."
+        : "지지와 저항 사이 중간 구간입니다. 추격보다 다음 기준선까지의 여유를 먼저 확인하세요.";
+
+  return (
+    <div className="mt-5 grid gap-3 lg:grid-cols-4">
+      <article className={`rounded-lg border p-4 ${toneBadgeClass(sessionState?.tone ?? "neutral")}`}>
+        <Clock3 size={20} aria-hidden />
+        <p className="mt-3 text-xs font-black uppercase tracking-[0.18em] opacity-80">Market Clock</p>
+        <h3 className="mt-2 text-base font-black text-white">{sessionState?.title ?? "미국장 시간 확인 중"}</h3>
+        <p className="mt-2 text-xs leading-5 text-slate-300">{sessionState?.detail ?? "현재 한국 시간 기준 미국장 구간을 확인하고 있습니다."}</p>
+      </article>
+
+      <article className={`rounded-lg border p-4 ${toneBadgeClass(tone)}`}>
+        <Compass size={20} aria-hidden />
+        <p className="mt-3 text-xs font-black uppercase tracking-[0.18em] opacity-80">Priority</p>
+        <h3 className="mt-2 text-base font-black text-white">{focus}</h3>
+        <p className="mt-2 text-xs leading-5 text-slate-300">
+          {selectedInfo?.symbol ?? "선택 자산"} {latest ? formatPrice(latest.close) : "가격 확인 중"} · {formatPercent(changePercent)}
+        </p>
+      </article>
+
+      <article className="rounded-lg border border-white/10 bg-black/20 p-4">
+        <Target className="text-cyan-300" size={20} aria-hidden />
+        <p className="mt-3 text-xs font-black uppercase tracking-[0.18em] text-slate-400">Action Line</p>
+        <h3 className="mt-2 text-base font-black text-white">기준선 행동</h3>
+        <p className="mt-2 text-xs leading-5 text-slate-300">{basis}</p>
+      </article>
+
+      <article className="rounded-lg border border-white/10 bg-black/20 p-4">
+        <Shield className="text-cyan-300" size={20} aria-hidden />
+        <p className="mt-3 text-xs font-black uppercase tracking-[0.18em] text-slate-400">Risk Memo</p>
+        <h3 className="mt-2 text-base font-black text-white">위험도 {riskScore === null ? "확인 중" : `${Math.round(riskScore)}%`}</h3>
+        <p className="mt-2 text-xs leading-5 text-slate-300">{groupPlaybook(selectedInfo?.group)}</p>
+      </article>
+    </div>
+  );
 }
 
 function StockSnapshot({
@@ -148,6 +266,7 @@ export function StockRadarApp() {
   const [selectedGroup, setSelectedGroup] = useState<StockSymbolInfo["group"] | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [state, setState] = useState<LoadState>({ status: "idle" });
+  const [sessionState, setSessionState] = useState<ReturnType<typeof getGlobalSessionState> | null>(null);
 
   const selectedInfo = useMemo(() => universe.find((item) => item.symbol === symbol) ?? null, [symbol, universe]);
   const featuredItems = useMemo(
@@ -196,6 +315,12 @@ export function StockRadarApp() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    setSessionState(getGlobalSessionState());
+    const timer = window.setInterval(() => setSessionState(getGlobalSessionState()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!chartRef.current) return;
@@ -396,6 +521,13 @@ export function StockRadarApp() {
       {state.status === "ready" ? (
         <div className="mt-5">
           <StockSnapshot report={technicalReport} latest={latest} changePercent={changePercent} />
+          <GlobalPlaybook
+            report={technicalReport}
+            latest={latest}
+            changePercent={changePercent}
+            selectedInfo={selectedInfo}
+            sessionState={sessionState}
+          />
         </div>
       ) : null}
 
@@ -439,7 +571,12 @@ export function StockRadarApp() {
             데이터 기준: {state.dataSource}. 차트 판독과 관심종목 선별을 위한 보조 데이터입니다.
           </p>
           <div className="mt-5">
-            <TechnicalRadarPanel candles={state.candles} timeframe={timeframe} />
+            <TechnicalRadarPanel
+              candles={state.candles}
+              timeframe={timeframe}
+              assetLabel={selectedInfo?.name ? `${selectedInfo.name}(${symbol})` : symbol}
+              intro="이동평균, MACD, RSI, 일목균형표, Supertrend, 거래량, 변동성 지표로 글로벌 자산의 방향과 과열도를 확인합니다."
+            />
           </div>
         </>
       ) : null}

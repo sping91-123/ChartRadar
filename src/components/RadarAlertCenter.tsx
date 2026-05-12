@@ -169,6 +169,7 @@ function RuleCard({
 
 export function RadarAlertCenter({ compact = false, market = "crypto" }: { compact?: boolean; market?: AlertMarket }) {
   const copy = alertMarketCopy[market];
+  const isGlobal = market === "stocks";
   const [enabledRuleIds, setEnabledRuleIds] = useState<RadarAlertRuleId[]>(() => getDefaultRadarAlertRuleIds());
   const [setupPresets, setSetupPresets] = useState<SetupAlertPreset[]>([]);
   const [setupMatches, setSetupMatches] = useState<SetupAlertMatch[]>([]);
@@ -323,13 +324,17 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
       <div className="mt-4 grid gap-3 md:grid-cols-3">
         <div className="rounded-lg border border-cyan-300/20 bg-cyan-300/10 p-4">
           <Radar className="text-cyan-300" size={20} aria-hidden />
-          <p className="mt-3 text-sm font-black text-white">레이더 감지</p>
-          <p className="mt-2 text-xs leading-5 text-slate-400">A급 후보와 관심코인 변화를 빠르게 확인합니다.</p>
+          <p className="mt-3 text-sm font-black text-white">{isGlobal ? "관심 자산 감지" : "레이더 감지"}</p>
+          <p className="mt-2 text-xs leading-5 text-slate-400">
+            {isGlobal ? "ETF, 빅테크, 원자재 ETF의 급변과 저장한 조건을 빠르게 확인합니다." : "A급 후보와 관심코인 변화를 빠르게 확인합니다."}
+          </p>
         </div>
         <div className="rounded-lg border border-orange-300/20 bg-orange-300/10 p-4">
           <Zap className="text-orange-200" size={20} aria-hidden />
-          <p className="mt-3 text-sm font-black text-white">위험 압력</p>
-          <p className="mt-2 text-xs leading-5 text-slate-400">청산 압력과 과열 구간을 추격 전에 먼저 봅니다.</p>
+          <p className="mt-3 text-sm font-black text-white">{isGlobal ? "매크로 압력" : "위험 압력"}</p>
+          <p className="mt-2 text-xs leading-5 text-slate-400">
+            {isGlobal ? "금리, 지수, 섹터, 원자재 변동이 선택 자산에 주는 압력을 분리합니다." : "청산 압력과 과열 구간을 추격 전에 먼저 봅니다."}
+          </p>
         </div>
         <div className="rounded-lg border border-emerald-300/20 bg-emerald-300/10 p-4">
           <Smartphone className="text-emerald-200" size={20} aria-hidden />
