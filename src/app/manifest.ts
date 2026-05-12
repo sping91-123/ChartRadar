@@ -9,7 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Chart Radar",
     short_name: "Chart Radar",
     description: "코인과 글로벌 시장의 차트 흐름을 빠르게 감지하는 분석 레이더",
-    start_url: "/survival?source=pwa",
+    start_url: "/?source=pwa",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
