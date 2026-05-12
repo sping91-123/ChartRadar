@@ -53,7 +53,7 @@ export async function GET(request: Request) {
       timeframe,
       candles,
       universe: stockSymbols,
-      dataSource: "Yahoo Finance 비공식 지연 데이터",
+      dataSource: "글로벌 시장 데이터",
       cachedAt: Date.now()
     });
   } catch (error) {

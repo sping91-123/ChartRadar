@@ -982,6 +982,6 @@ export function analyzeTechnicalRadar(candles: Candle[]): TechnicalRadarReport {
     volatilityIndicators,
     volumeIndicators,
     fibonacci: fib,
-    summary: `기술지표 기준으로는 ${trendLabel}에 가깝고, 모멘텀은 ${momentumLabel}입니다. ICT 구조와 별도로 과열, 거래량, 평균 회귀 위험을 빠르게 확인하는 보조 판독으로 활용하세요.`
+    summary: `기술지표 기준으로는 ${trendLabel}에 가깝고, 모멘텀은 ${momentumLabel}입니다. 과열, 거래량, 평균 회귀 위험을 빠르게 확인하는 기술지표 판독으로 활용하세요.`
   };
 }
