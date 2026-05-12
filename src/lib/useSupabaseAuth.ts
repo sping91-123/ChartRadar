@@ -7,6 +7,7 @@ import {
   fetchSupabaseUser,
   getSupabaseSession,
   refreshSupabaseSession,
+  supabaseAuthRefreshEvent,
   type SupabaseProfile,
   type SupabaseSession,
   type SupabaseUser
@@ -20,18 +21,20 @@ export function useSupabaseAuth() {
 
   useEffect(() => {
     let isMounted = true;
-    const storedSession = getSupabaseSession();
-
-    if (!storedSession) {
-      setIsLoading(false);
-      return () => {
-        isMounted = false;
-      };
-    }
-
-    const baseSession = storedSession;
 
     async function loadAuth() {
+      const baseSession = getSupabaseSession();
+
+      if (!baseSession) {
+        if (isMounted) {
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setIsLoading(false);
+        }
+        return;
+      }
+
       const now = Math.floor(Date.now() / 1000);
       const activeSession =
         baseSession.expiresAt && baseSession.expiresAt <= now
@@ -54,26 +57,37 @@ export function useSupabaseAuth() {
       ]);
     }
 
-    loadAuth()
-      .then((result) => {
+    function applyAuthResult(result: Awaited<ReturnType<typeof loadAuth>>) {
         if (!isMounted || !result) return;
         const [nextUser, nextProfile] = result;
         setUser(nextUser);
         setProfile(nextProfile ?? null);
-      })
-      .catch(() => {
+    }
+
+    function handleAuthError() {
         clearSupabaseSession();
         if (!isMounted) return;
         setSession(null);
         setUser(null);
         setProfile(null);
-      })
-      .finally(() => {
-        if (isMounted) setIsLoading(false);
-      });
+    }
+
+    function refreshAuth() {
+      setIsLoading(true);
+      loadAuth()
+        .then(applyAuthResult)
+        .catch(handleAuthError)
+        .finally(() => {
+          if (isMounted) setIsLoading(false);
+        });
+    }
+
+    refreshAuth();
+    window.addEventListener(supabaseAuthRefreshEvent, refreshAuth);
 
     return () => {
       isMounted = false;
+      window.removeEventListener(supabaseAuthRefreshEvent, refreshAuth);
     };
   }, []);
 

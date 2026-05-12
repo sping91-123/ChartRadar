@@ -2,7 +2,7 @@
 // 결제 성공 후 서버 승인 확인 결과를 사용자에게 보여주는 패널입니다.
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
-import { getActiveSupabaseSession } from "@/lib/supabase";
+import { getActiveSupabaseSession, supabaseAuthRefreshEvent } from "@/lib/supabase";
 
 interface CheckoutConfirmationPanelProps {
   orderId?: string;
@@ -94,6 +94,7 @@ export function CheckoutConfirmationPanel({ orderId, paymentKey, amount, planId 
             status: "active",
             message: payload.message ?? "Pro 권한이 활성화되었습니다."
           });
+          window.dispatchEvent(new Event(supabaseAuthRefreshEvent));
           return;
         }
 
