@@ -7,8 +7,8 @@ import { rateLimit } from "@/lib/server/rateLimit";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function parseTimeframe(value: string | null): ChartTimeframe {
-  return chartTimeframes.includes(value as ChartTimeframe) ? (value as ChartTimeframe) : "1d";
+function isChartTimeframe(value: string): value is ChartTimeframe {
+  return chartTimeframes.includes(value as ChartTimeframe);
 }
 
 export async function GET(request: Request) {
@@ -22,8 +22,28 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const symbol = normalizeStockSymbol(url.searchParams.get("symbol") ?? "QQQ");
-  const timeframe = parseTimeframe(url.searchParams.get("timeframe"));
+  const timeframeParam = url.searchParams.get("timeframe");
+  if (timeframeParam && !isChartTimeframe(timeframeParam)) {
+    return NextResponse.json(
+      {
+        error: "지원하지 않는 타임프레임입니다.",
+        allowedTimeframes: chartTimeframes
+      },
+      { status: 400 }
+    );
+  }
+
+  const timeframe: ChartTimeframe = timeframeParam ? (timeframeParam as ChartTimeframe) : "1d";
   const info = findStockSymbol(symbol);
+  if (!symbol || !info) {
+    return NextResponse.json(
+      {
+        error: "지원하지 않는 글로벌 종목입니다.",
+        universe: stockSymbols
+      },
+      { status: 400 }
+    );
+  }
 
   try {
     const candles = await fetchStockCandles(symbol, timeframe);

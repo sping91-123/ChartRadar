@@ -47,6 +47,18 @@ const checks = [
     expectedStatus: [400]
   },
   {
+    label: "글로벌 캔들 비정상 타임프레임 차단",
+    path: "/api/stocks/candles?symbol=QQQ&timeframe=bad",
+    method: "GET",
+    expectedStatus: [400]
+  },
+  {
+    label: "글로벌 캔들 미지원 종목 차단",
+    path: "/api/stocks/candles?symbol=NOTREAL&timeframe=1d",
+    method: "GET",
+    expectedStatus: [400]
+  },
+  {
     label: "결제 시작 대용량 요청 차단",
     path: "/api/billing/checkout",
     method: "POST",
