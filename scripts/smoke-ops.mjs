@@ -133,6 +133,31 @@ if (releaseMatches.some((time) => Number.isFinite(time) && time > Date.now())) {
   fail("매크로 미래 일정 유지", "등록된 매크로 일정이 모두 과거입니다. src/data/macroEvents.ts를 갱신해 주세요.");
 }
 
+const updatedAtMatch = /macroCalendarUpdatedAtIso\s*=\s*"([^"]+)"/.exec(macroEvents);
+const updatedAtMs = updatedAtMatch ? Date.parse(updatedAtMatch[1]) : NaN;
+const maxMacroAgeMs = 72 * 60 * 60 * 1000;
+if (Number.isFinite(updatedAtMs) && Date.now() - updatedAtMs <= maxMacroAgeMs) {
+  pass("매크로 갱신 신선도", "macroCalendarUpdatedAtIso가 72시간 이내입니다.");
+} else {
+  fail("매크로 갱신 신선도", "macroCalendarUpdatedAtIso가 없거나 72시간보다 오래되었습니다.");
+}
+
+const releasedBlocks = [...macroEvents.matchAll(/\{\s*\n\s*label:\s*"([^"]+)"[\s\S]*?\n\s*\}/g)]
+  .filter((match) => /state:\s*"released"/.test(match[0]));
+const releasedWithoutActual = releasedBlocks
+  .map((match) => {
+    const block = match[0];
+    const actual = /actual:\s*"([^"]+)"/.exec(block)?.[1]?.trim();
+    return actual && !["발표 전", "결과 확인 중", "회의 전", "미정", "-"].includes(actual) ? null : match[1];
+  })
+  .filter(Boolean);
+
+if (releasedWithoutActual.length === 0) {
+  pass("매크로 발표 완료 실제값", "released 항목에는 실제 발표값이 있습니다.");
+} else {
+  fail("매크로 발표 완료 실제값", `${releasedWithoutActual.join(", ")} 항목에 실제 발표값이 없습니다.`);
+}
+
 const rateLimitOffenders = [];
 for (const route of apiRoutes) {
   const source = read(route);
