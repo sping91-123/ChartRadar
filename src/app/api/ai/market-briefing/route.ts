@@ -1,6 +1,6 @@
 // 차트 판독 데이터를 받아 AI 종합 브리핑을 생성하는 API 라우트.
 import { NextResponse } from "next/server";
-import { AIProviderError, getAIProvider, type MarketBriefingInput } from "@/lib/ai";
+import { AIProviderError, getAIProviderCandidates, type MarketBriefingInput } from "@/lib/ai";
 import { generateFallbackMarketBriefing } from "@/lib/ai/fallback";
 import { isBodyTooLarge, rateLimit } from "@/lib/server/rateLimit";
 
@@ -96,19 +96,25 @@ export async function POST(request: Request) {
   }
 
   try {
-    const provider = getAIProvider();
-    const text = await provider.generateMarketBriefing(input);
-    cache.set(key, { text, expiresAt: now + CACHE_TTL_MS });
-    return NextResponse.json({ briefing: text, model: provider.model, cached: false });
-  } catch (error) {
-    if (error instanceof AIProviderError) {
-      console.warn(`[ai/market-briefing] ${error.provider} 실패, 폴백 사용.`, error.message);
-    } else {
-      console.warn("[ai/market-briefing] Provider 없음 또는 알 수 없는 오류, 폴백 사용.", error);
+    const providers = getAIProviderCandidates();
+    for (const provider of providers) {
+      try {
+        const text = await provider.generateMarketBriefing(input);
+        cache.set(key, { text, expiresAt: now + CACHE_TTL_MS });
+        return NextResponse.json({ briefing: text, model: provider.model, cached: false });
+      } catch (error) {
+        if (error instanceof AIProviderError) {
+          console.warn(`[ai/market-briefing] ${error.provider} 실패, 다음 후보 확인.`, error.message);
+        } else {
+          console.warn("[ai/market-briefing] Provider 호출 실패, 다음 후보 확인.", error);
+        }
+      }
     }
-
-    const fallback = generateFallbackMarketBriefing(input);
-    cache.set(key, { text: fallback, expiresAt: now + CACHE_TTL_MS });
-    return NextResponse.json({ briefing: fallback, model: "fallback", cached: false });
+  } catch (error) {
+    console.warn("[ai/market-briefing] Provider 없음, 폴백 사용.", error instanceof Error ? error.message : error);
   }
+
+  const fallback = generateFallbackMarketBriefing(input);
+  cache.set(key, { text: fallback, expiresAt: now + CACHE_TTL_MS });
+  return NextResponse.json({ briefing: fallback, model: "fallback", cached: false });
 }

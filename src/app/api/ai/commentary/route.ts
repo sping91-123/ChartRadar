@@ -12,7 +12,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { getAIProvider, AIProviderError, type CommentaryInput } from "@/lib/ai";
+import { getAIProviderCandidates, AIProviderError, type CommentaryInput } from "@/lib/ai";
 import { generateFallbackCommentary } from "@/lib/ai/fallback";
 import { isBodyTooLarge, rateLimit } from "@/lib/server/rateLimit";
 
@@ -103,9 +103,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ commentary: hit.text, model: "cache", cached: true });
   }
 
-  let provider;
+  let providers;
   try {
-    provider = getAIProvider();
+    providers = getAIProviderCandidates();
   } catch (error) {
     const message = error instanceof Error ? error.message : "AI Provider 초기화 실패";
     console.warn("[ai/commentary] Provider 없음, 폴백 사용:", message);
@@ -114,19 +114,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ commentary: fallback, model: "fallback", cached: false });
   }
 
-  try {
-    const text = await provider.generateCommentary(input);
-    cache.set(key, { text, expiresAt: now + CACHE_TTL_MS });
-    return NextResponse.json({ commentary: text, model: provider.model, cached: false });
-  } catch (error) {
-    if (error instanceof AIProviderError) {
-      console.warn(`[ai/commentary] ${error.provider} 실패, 폴백 사용:`, error.message);
-      const fallback = generateFallbackCommentary(input);
-      return NextResponse.json({ commentary: fallback, model: "fallback", cached: false });
+  for (const provider of providers) {
+    try {
+      const text = await provider.generateCommentary(input);
+      cache.set(key, { text, expiresAt: now + CACHE_TTL_MS });
+      return NextResponse.json({ commentary: text, model: provider.model, cached: false });
+    } catch (error) {
+      if (error instanceof AIProviderError) {
+        console.warn(`[ai/commentary] ${error.provider} 실패, 다음 후보 확인:`, error.message);
+      } else {
+        console.warn("[ai/commentary] Provider 호출 실패, 다음 후보 확인:", error);
+      }
     }
-    console.error("[ai/commentary] 알 수 없는 오류:", error);
-    // 알 수 없는 오류도 폴백으로 처리합니다.
-    const fallback = generateFallbackCommentary(input);
-    return NextResponse.json({ commentary: fallback, model: "fallback", cached: false });
   }
+
+  const fallback = generateFallbackCommentary(input);
+  cache.set(key, { text: fallback, expiresAt: now + CACHE_TTL_MS });
+  return NextResponse.json({ commentary: fallback, model: "fallback", cached: false });
 }

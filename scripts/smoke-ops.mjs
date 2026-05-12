@@ -52,6 +52,9 @@ const radarAlertCenter = read("src/components/RadarAlertCenter.tsx");
 const usageMeterPanel = read("src/components/UsageMeterPanel.tsx");
 const radarAlerts = read("src/lib/radarAlerts.ts");
 const supabaseClient = read("src/lib/supabase.ts");
+const aiProviderIndex = read("src/lib/ai/index.ts");
+const aiCommentaryRoute = read("src/app/api/ai/commentary/route.ts");
+const aiMarketBriefingRoute = read("src/app/api/ai/market-briefing/route.ts");
 const launchCopyFiles = [
   "src/components/UsageMeterPanel.tsx",
   "src/components/RadarAlertCenter.tsx",
@@ -107,6 +110,11 @@ expectIncludes(supabaseClient, 'process.env.NEXT_PUBLIC_ALLOW_LOCAL_REFRESH_TOKE
 expectIncludes(supabaseClient, "allowLocalRefreshToken", "refresh token 보호 분기", "src/lib/supabase.ts");
 expectIncludes(supabaseClient, "delete session.refreshToken", "저장된 refresh token 정리", "src/lib/supabase.ts");
 expectIncludes(supabaseClient, "clearSupabaseSession();", "만료 세션 정리", "src/lib/supabase.ts");
+expectIncludes(aiProviderIndex, "getAIProviderCandidates", "AI Provider 후보 목록", "src/lib/ai/index.ts");
+expectIncludes(aiProviderIndex, "providers.push(new GroqProvider", "Groq 우선 AI 후보", "src/lib/ai/index.ts");
+expectIncludes(aiProviderIndex, "providers.push(new GeminiProvider", "Gemini 예비 AI 후보", "src/lib/ai/index.ts");
+expectIncludes(aiCommentaryRoute, "다음 후보 확인", "AI 코멘트 후보 장애 대응", "src/app/api/ai/commentary/route.ts");
+expectIncludes(aiMarketBriefingRoute, "다음 후보 확인", "AI 브리핑 후보 장애 대응", "src/app/api/ai/market-briefing/route.ts");
 
 const launchRiskTerms = [
   "출시 단계",
