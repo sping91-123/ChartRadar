@@ -5,7 +5,7 @@ const icon = "/brand/chart-radar-icon.png";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    id: "/survival",
+    id: "/",
     name: "Chart Radar",
     short_name: "Chart Radar",
     description: "코인과 글로벌 시장의 차트 흐름을 빠르게 감지하는 분석 레이더",

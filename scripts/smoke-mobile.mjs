@@ -80,11 +80,17 @@ if (serviceWorker.includes("CACHE_NAME") && serviceWorker.includes("/offline.htm
   fail("서비스 워커 오프라인 fallback", "CACHE_NAME 또는 /offline.html이 빠졌습니다.");
 }
 
-const offlineHtml = readText("public/offline.html");
-if (offlineHtml.includes("Chart Radar") && offlineHtml.includes("/survival")) {
-  pass("오프라인 화면 복귀 링크", "Chart Radar 문구와 /survival 링크를 포함합니다.");
+if (serviceWorker.includes('"/global"')) {
+  pass("서비스 워커 글로벌 셸 캐시", "글로벌 레이더 시작 경로를 캐시에 포함합니다.");
 } else {
-  fail("오프라인 화면 복귀 링크", "Chart Radar 문구 또는 /survival 링크가 빠졌습니다.");
+  fail("서비스 워커 글로벌 셸 캐시", "글로벌 레이더 시작 경로가 캐시에 없습니다.");
+}
+
+const offlineHtml = readText("public/offline.html");
+if (offlineHtml.includes("Chart Radar") && offlineHtml.includes('href="/"')) {
+  pass("오프라인 화면 복귀 링크", "Chart Radar 문구와 홈 복귀 링크를 포함합니다.");
+} else {
+  fail("오프라인 화면 복귀 링크", "Chart Radar 문구 또는 홈 복귀 링크가 빠졌습니다.");
 }
 
 const capacitorConfig = readText("capacitor.config.ts");
