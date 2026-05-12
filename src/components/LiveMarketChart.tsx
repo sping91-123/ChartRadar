@@ -66,10 +66,14 @@ const symbols = [
 const majorSymbols = symbols.slice(0, 2);
 const altSymbols = symbols.slice(2);
 const timeframeScoreLimit = 6.25;
-const storagePrefix = "positionguard";
-const legacyStoragePrefix = "co" + "ters";
+const storagePrefix = "chartRadar";
+const legacyPositionGuardStoragePrefix = "positionguard";
+const legacyCotersStoragePrefix = "co" + "ters";
 const overlaySettingsStorageKey = `${storagePrefix}.overlaySettings.v1`;
-const legacyOverlaySettingsStorageKey = `${legacyStoragePrefix}.overlaySettings.v1`;
+const legacyOverlaySettingsStorageKeys = [
+  `${legacyPositionGuardStoragePrefix}.overlaySettings.v1`,
+  `${legacyCotersStoragePrefix}.overlaySettings.v1`
+];
 
 interface MarketCachePayload {
   analysis: MarketAnalysis;
@@ -329,33 +333,34 @@ function storageKey(name: string) {
   return `${storagePrefix}.${name}`;
 }
 
-function legacyStorageKey(name: string) {
-  return `${legacyStoragePrefix}.${name}`;
+function legacyStorageKeys(name: string) {
+  return [`${legacyPositionGuardStoragePrefix}.${name}`, `${legacyCotersStoragePrefix}.${name}`];
 }
 
-function readLocalStorageWithLegacy(primaryKey: string, legacyKey: string) {
+function readLocalStorageWithLegacy(primaryKey: string, legacyKeys: string[]) {
   const current = window.localStorage.getItem(primaryKey);
   if (current !== null) return current;
 
-  const legacy = window.localStorage.getItem(legacyKey);
+  const legacyKey = legacyKeys.find((key) => window.localStorage.getItem(key) !== null);
+  const legacy = legacyKey ? window.localStorage.getItem(legacyKey) : null;
   if (legacy !== null) {
     window.localStorage.setItem(primaryKey, legacy);
-    window.localStorage.removeItem(legacyKey);
+    legacyKeys.forEach((key) => window.localStorage.removeItem(key));
   }
 
   return legacy;
 }
 
-function writeLocalStorage(primaryKey: string, legacyKey: string, value: string) {
+function writeLocalStorage(primaryKey: string, legacyKeys: string[], value: string) {
   window.localStorage.setItem(primaryKey, value);
-  window.localStorage.removeItem(legacyKey);
+  legacyKeys.forEach((key) => window.localStorage.removeItem(key));
 }
 
 function readOverlaySettings(): OverlaySettings {
   if (typeof window === "undefined") return defaultOverlaySettings;
 
   try {
-    const raw = readLocalStorageWithLegacy(overlaySettingsStorageKey, legacyOverlaySettingsStorageKey);
+    const raw = readLocalStorageWithLegacy(overlaySettingsStorageKey, legacyOverlaySettingsStorageKeys);
     if (!raw) return defaultOverlaySettings;
     const parsed = JSON.parse(raw) as Partial<OverlaySettings>;
     return { ...defaultOverlaySettings, ...parsed };
@@ -788,12 +793,12 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
   }, [majorOnly, symbol]);
 
   useEffect(() => {
-    const storedSymbol = readLocalStorageWithLegacy(storageKey("symbol"), legacyStorageKey("symbol"));
-    const storedTimeframe = readLocalStorageWithLegacy(storageKey("timeframe"), legacyStorageKey("timeframe")) as ChartTimeframe | null;
-    const storedMode = readLocalStorageWithLegacy(storageKey("analysisMode"), legacyStorageKey("analysisMode")) as "confirmed" | "aggressive" | null;
-    const storedRadarProfile = readLocalStorageWithLegacy(storageKey("radarProfile"), legacyStorageKey("radarProfile")) as RadarProfile | null;
-    const storedMsbMode = readLocalStorageWithLegacy(storageKey("msbMode"), legacyStorageKey("msbMode")) as "close" | "wick" | null;
-    const storedStructureSensitivity = Number(readLocalStorageWithLegacy(storageKey("structureSensitivity"), legacyStorageKey("structureSensitivity"))) as StructureSensitivity;
+    const storedSymbol = readLocalStorageWithLegacy(storageKey("symbol"), legacyStorageKeys("symbol"));
+    const storedTimeframe = readLocalStorageWithLegacy(storageKey("timeframe"), legacyStorageKeys("timeframe")) as ChartTimeframe | null;
+    const storedMode = readLocalStorageWithLegacy(storageKey("analysisMode"), legacyStorageKeys("analysisMode")) as "confirmed" | "aggressive" | null;
+    const storedRadarProfile = readLocalStorageWithLegacy(storageKey("radarProfile"), legacyStorageKeys("radarProfile")) as RadarProfile | null;
+    const storedMsbMode = readLocalStorageWithLegacy(storageKey("msbMode"), legacyStorageKeys("msbMode")) as "close" | "wick" | null;
+    const storedStructureSensitivity = Number(readLocalStorageWithLegacy(storageKey("structureSensitivity"), legacyStorageKeys("structureSensitivity"))) as StructureSensitivity;
 
     if (storedSymbol && symbols.includes(storedSymbol)) {
       setSymbol(storedSymbol);
@@ -816,31 +821,31 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
   }, []);
 
   useEffect(() => {
-    writeLocalStorage(storageKey("symbol"), legacyStorageKey("symbol"), symbol);
+    writeLocalStorage(storageKey("symbol"), legacyStorageKeys("symbol"), symbol);
   }, [symbol]);
 
   useEffect(() => {
-    writeLocalStorage(storageKey("timeframe"), legacyStorageKey("timeframe"), activeTimeframe);
+    writeLocalStorage(storageKey("timeframe"), legacyStorageKeys("timeframe"), activeTimeframe);
   }, [activeTimeframe]);
 
   useEffect(() => {
-    writeLocalStorage(storageKey("analysisMode"), legacyStorageKey("analysisMode"), analysisMode);
+    writeLocalStorage(storageKey("analysisMode"), legacyStorageKeys("analysisMode"), analysisMode);
   }, [analysisMode]);
 
   useEffect(() => {
-    writeLocalStorage(storageKey("radarProfile"), legacyStorageKey("radarProfile"), radarProfile);
+    writeLocalStorage(storageKey("radarProfile"), legacyStorageKeys("radarProfile"), radarProfile);
   }, [radarProfile]);
 
   useEffect(() => {
-    writeLocalStorage(storageKey("msbMode"), legacyStorageKey("msbMode"), msbMode);
+    writeLocalStorage(storageKey("msbMode"), legacyStorageKeys("msbMode"), msbMode);
   }, [msbMode]);
 
   useEffect(() => {
-    writeLocalStorage(storageKey("structureSensitivity"), legacyStorageKey("structureSensitivity"), String(structureSensitivity));
+    writeLocalStorage(storageKey("structureSensitivity"), legacyStorageKeys("structureSensitivity"), String(structureSensitivity));
   }, [structureSensitivity]);
 
   useEffect(() => {
-    writeLocalStorage(overlaySettingsStorageKey, legacyOverlaySettingsStorageKey, JSON.stringify(overlaySettings));
+    writeLocalStorage(overlaySettingsStorageKey, legacyOverlaySettingsStorageKeys, JSON.stringify(overlaySettings));
   }, [overlaySettings]);
 
   useEffect(() => {

@@ -855,8 +855,8 @@ export function topSetups(setups: ScoutSetup[], n = 3): ScoutSetup[] {
 }
 
 /** 무료 티어 일일 제한용. localStorage 저장 키. */
-export const scoutCacheKey = "untitledRisk.setupScout.v8";
-const legacyScoutCacheKey = "positionguard.setupScout.v2";
+export const scoutCacheKey = "chartRadar.setupScout.v8";
+const legacyScoutBaseCacheKeys = ["untitledRisk.setupScout.v8", "positionguard.setupScout.v2"];
 export const scoutCacheTtlMs = 5 * 60 * 1000; // 5분
 
 interface ScoutCacheEntry {
@@ -881,14 +881,19 @@ export function readScoutCache(
   try {
     const scopedKey = scoutCacheKeyForMode(mode, riskProfile, scope);
     const legacyModeKey = `${scoutCacheKey}.${mode}.${riskProfile}`;
+    const legacyKeys = legacyScoutBaseCacheKeys.flatMap((baseKey) => [
+      `${baseKey}.${mode}.${riskProfile}.${scope}`,
+      `${baseKey}.${mode}.${riskProfile}`,
+      baseKey
+    ]);
     const raw =
       window.localStorage.getItem(scopedKey) ??
       window.localStorage.getItem(legacyModeKey) ??
-      window.localStorage.getItem(legacyScoutCacheKey);
+      legacyKeys.map((key) => window.localStorage.getItem(key)).find((value): value is string => value !== null);
     if (!raw) return null;
     window.localStorage.setItem(scopedKey, raw);
     window.localStorage.removeItem(legacyModeKey);
-    window.localStorage.removeItem(legacyScoutCacheKey);
+    legacyKeys.forEach((key) => window.localStorage.removeItem(key));
     const parsed = JSON.parse(raw) as ScoutCacheEntry;
     if (Date.now() - parsed.cachedAt > scoutCacheTtlMs) return null;
     return parsed;
@@ -907,7 +912,11 @@ export function writeScoutCache(
   try {
     const entry: ScoutCacheEntry = { setups, cachedAt: Date.now() };
     window.localStorage.setItem(scoutCacheKeyForMode(mode, riskProfile, scope), JSON.stringify(entry));
-    window.localStorage.removeItem(legacyScoutCacheKey);
+    legacyScoutBaseCacheKeys.forEach((baseKey) => {
+      window.localStorage.removeItem(baseKey);
+      window.localStorage.removeItem(`${baseKey}.${mode}.${riskProfile}`);
+      window.localStorage.removeItem(`${baseKey}.${mode}.${riskProfile}.${scope}`);
+    });
   } catch {
     // 용량 초과 등은 무시
   }

@@ -40,11 +40,19 @@ const numberFormatter = new Intl.NumberFormat("ko-KR", {
   maximumFractionDigits: 4,
   minimumFractionDigits: 2
 });
-const scoutRiskProfileStorageKey = "untitledRisk.scoutRiskProfile.v1";
+const scoutRiskProfileStorageKey = "chartRadar.scoutRiskProfile.v1";
+const legacyScoutRiskProfileStorageKeys = ["untitledRisk.scoutRiskProfile.v1", "positionguard.scoutRiskProfile.v1"];
 
 function readStoredScoutRiskProfile(): ScoutRiskProfile {
   if (typeof window === "undefined") return "radar";
-  return window.localStorage.getItem(scoutRiskProfileStorageKey) === "guard" ? "guard" : "radar";
+  const stored =
+    window.localStorage.getItem(scoutRiskProfileStorageKey) ??
+    legacyScoutRiskProfileStorageKeys.map((key) => window.localStorage.getItem(key)).find((value): value is string => value !== null);
+  if (stored) {
+    window.localStorage.setItem(scoutRiskProfileStorageKey, stored);
+    legacyScoutRiskProfileStorageKeys.forEach((key) => window.localStorage.removeItem(key));
+  }
+  return stored === "guard" ? "guard" : "radar";
 }
 
 function formatCachedAt(ms: number) {

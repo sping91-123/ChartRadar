@@ -33,7 +33,8 @@ export interface JournalEntry {
   outcomeAt?: string;
 }
 
-export const journalStorageKey = "untitledRisk.journal";
+export const journalStorageKey = "chartRadar.journal";
+const legacyUntitledRiskJournalStorageKey = "untitledRisk.journal";
 const legacyPositionGuardJournalStorageKey = "positionguard.journal";
 const legacyJournalStorageKey = "co" + "ters.journal";
 
@@ -43,10 +44,12 @@ export function loadJournalEntries(): JournalEntry[] {
   try {
     const saved =
       window.localStorage.getItem(journalStorageKey) ??
+      window.localStorage.getItem(legacyUntitledRiskJournalStorageKey) ??
       window.localStorage.getItem(legacyPositionGuardJournalStorageKey) ??
       window.localStorage.getItem(legacyJournalStorageKey);
     if (saved) {
       window.localStorage.setItem(journalStorageKey, saved);
+      window.localStorage.removeItem(legacyUntitledRiskJournalStorageKey);
       window.localStorage.removeItem(legacyPositionGuardJournalStorageKey);
       window.localStorage.removeItem(legacyJournalStorageKey);
     }
@@ -59,6 +62,7 @@ export function loadJournalEntries(): JournalEntry[] {
 export function saveJournalEntries(entries: JournalEntry[]) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(journalStorageKey, JSON.stringify(entries));
+  window.localStorage.removeItem(legacyUntitledRiskJournalStorageKey);
   window.localStorage.removeItem(legacyPositionGuardJournalStorageKey);
   window.localStorage.removeItem(legacyJournalStorageKey);
 }

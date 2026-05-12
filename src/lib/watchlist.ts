@@ -27,16 +27,21 @@ export const WATCHLIST_LIMIT: Record<string, number> = {
   stocks_yearly: 5
 };
 
-const STORAGE_KEY = "untitledRisk.watchlist.v1";
+const STORAGE_KEY = "chartRadar.watchlist.v1";
+const LEGACY_UNTITLED_RISK_STORAGE_KEY = "untitledRisk.watchlist.v1";
 const LEGACY_STORAGE_KEY = "coters.watchlist.v1";
 
 /** 저장된 관심 코인 목록 반환. 유효하지 않은 심볼은 자동 제거. */
 export function getWatchlist(): string[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_STORAGE_KEY);
+    const raw =
+      window.localStorage.getItem(STORAGE_KEY) ??
+      window.localStorage.getItem(LEGACY_UNTITLED_RISK_STORAGE_KEY) ??
+      window.localStorage.getItem(LEGACY_STORAGE_KEY);
     if (!raw) return [];
     window.localStorage.setItem(STORAGE_KEY, raw);
+    window.localStorage.removeItem(LEGACY_UNTITLED_RISK_STORAGE_KEY);
     window.localStorage.removeItem(LEGACY_STORAGE_KEY);
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -51,6 +56,7 @@ export function getWatchlist(): string[] {
 function saveWatchlist(list: string[]) {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    window.localStorage.removeItem(LEGACY_UNTITLED_RISK_STORAGE_KEY);
     window.localStorage.removeItem(LEGACY_STORAGE_KEY);
   } catch {
     // 용량 초과 등 무시
