@@ -30,10 +30,14 @@ function expectIncludes(source, value, label, fileName) {
 const billing = read("src/lib/billing.ts");
 const envExample = read(".env.example");
 const confirmRoute = read("src/app/api/billing/confirm/route.ts");
+const watchlist = read("src/lib/watchlist.ts");
+const watchlistPanel = read("src/components/WatchlistPanel.tsx");
 
 if (!billing) fail("결제 플랜 소스", "src/lib/billing.ts 파일을 읽지 못했습니다.");
 if (!envExample) fail("환경변수 예시", ".env.example 파일을 읽지 못했습니다.");
 if (!confirmRoute) fail("결제 승인 확인 API", "src/app/api/billing/confirm/route.ts 파일을 읽지 못했습니다.");
+if (!watchlist) fail("관심코인 한도 소스", "src/lib/watchlist.ts 파일을 읽지 못했습니다.");
+if (!watchlistPanel) fail("관심코인 패널", "src/components/WatchlistPanel.tsx 파일을 읽지 못했습니다.");
 
 const planIds = [
   "free",
@@ -113,6 +117,33 @@ if (Number(bundleYearlyMonthlyValue) > 0 && Number(bundleYearlyMonthlyValue) < N
   pass("연간 월 환산가 분리", `월 환산가 ${bundleYearlyMonthlyValue}원과 실제 청구 금액 ${bundleYearlyAmount}원이 분리되어 있습니다.`);
 } else {
   fail("연간 월 환산가 분리", "monthlyValue와 billingAmount 관계를 확인해 주세요.");
+}
+
+const watchlistLimitChecks = [
+  ["free", 5],
+  ["crypto_monthly", 50],
+  ["crypto_yearly", 100],
+  ["bundle_monthly", 100],
+  ["bundle_yearly", 150],
+  ["stocks_monthly", 5],
+  ["stocks_yearly", 5]
+];
+
+for (const [planId, expectedLimit] of watchlistLimitChecks) {
+  const pattern = new RegExp(`${planId}:\\s*${expectedLimit}`);
+  if (pattern.test(watchlist)) {
+    pass(`관심코인 한도 ${planId}`, `${expectedLimit}개.`);
+  } else {
+    fail(`관심코인 한도 ${planId}`, `src/lib/watchlist.ts에서 ${expectedLimit}개 설정을 찾지 못했습니다.`);
+  }
+}
+
+if (watchlistPanel.includes('const plan: WatchlistPlan = "admin"')) {
+  fail("관심코인 admin 고정 방지", "WatchlistPanel이 다시 admin 고정값을 사용하고 있습니다.");
+} else if (watchlistPanel.includes("getWatchlistLimit(plan)")) {
+  pass("관심코인 플랜 연동", "WatchlistPanel이 실제 플랜 한도를 사용합니다.");
+} else {
+  fail("관심코인 플랜 연동", "WatchlistPanel에서 getWatchlistLimit(plan)을 찾지 못했습니다.");
 }
 
 const failures = checks.filter((check) => !check.ok);
