@@ -1,6 +1,7 @@
 // AI와 공개 API의 입력 검증이 출시 전 안전하게 막히는지 확인하는 스모크 테스트입니다.
 const baseUrl = (process.env.SMOKE_BASE_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
 const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 15000);
+const smokeClientIp = `127.0.0.${Math.floor(Math.random() * 200) + 20}`;
 
 const checks = [
   {
@@ -64,7 +65,10 @@ async function fetchWithTimeout(check) {
   try {
     const hasJsonBody = Object.prototype.hasOwnProperty.call(check, "body");
     const body = hasJsonBody ? JSON.stringify(check.body) : check.rawBody;
-    const headers = check.headers ?? (hasJsonBody ? { "content-type": "application/json" } : undefined);
+    const headers = {
+      ...(check.headers ?? (hasJsonBody ? { "content-type": "application/json" } : {})),
+      "x-forwarded-for": smokeClientIp
+    };
     const response = await fetch(`${baseUrl}${check.path}`, {
       method: check.method ?? "GET",
       headers,

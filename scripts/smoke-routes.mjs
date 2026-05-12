@@ -1,6 +1,7 @@
 // 출시 전 핵심 페이지와 결제 진입 API 응답을 점검하는 로컬 스모크 테스트다.
 const baseUrl = (process.env.SMOKE_BASE_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
 const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 15000);
+const smokeClientIp = `127.0.1.${Math.floor(Math.random() * 200) + 20}`;
 
 const checks = [
   { label: "홈", path: "/" },
@@ -67,7 +68,10 @@ async function fetchWithTimeout(check) {
   try {
     const response = await fetch(`${baseUrl}${check.path}`, {
       method: check.method ?? "GET",
-      headers: check.body ? { "content-type": "application/json" } : undefined,
+      headers: {
+        ...(check.body ? { "content-type": "application/json" } : {}),
+        "x-forwarded-for": smokeClientIp
+      },
       body: check.body ? JSON.stringify(check.body) : undefined,
       signal: controller.signal,
     });
