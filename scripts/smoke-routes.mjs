@@ -31,6 +31,7 @@ const checks = [
   { label: "로봇 정책", path: "/robots.txt" },
   { label: "사이트맵", path: "/sitemap.xml" },
   { label: "웹앱 매니페스트", path: "/manifest.webmanifest" },
+  { label: "운영 헬스체크", path: "/api/health" },
   {
     label: "월간 결제 로그인 보호",
     path: "/api/billing/checkout",
