@@ -51,6 +51,7 @@ const radarNewsPanel = read("src/components/RadarNewsPanel.tsx");
 const radarAlertCenter = read("src/components/RadarAlertCenter.tsx");
 const usageMeterPanel = read("src/components/UsageMeterPanel.tsx");
 const stockRadarApp = read("src/components/StockRadarApp.tsx");
+const newsPage = read("src/app/news/page.tsx");
 const rootLayout = read("src/app/layout.tsx");
 const themeToggle = read("src/components/ThemeToggle.tsx");
 const radarAlerts = read("src/lib/radarAlerts.ts");
@@ -148,6 +149,12 @@ if (!technicalRadar.includes("ICT 구조와 별도로")) {
   pass("기술지표 화면 분리 문구", "기술지표 요약이 ICT 기준을 직접 언급하지 않습니다.");
 } else {
   fail("기술지표 화면 분리 문구", "src/lib/technicalRadar.ts의 기술지표 요약에 ICT 혼입 문구가 남아 있습니다.");
+}
+
+if (newsPage.includes("<MacroTicker market={market} />")) {
+  pass("뉴스 매크로 시장 범위", "뉴스 페이지의 매크로 전광판이 현재 시장 범위를 전달합니다.");
+} else {
+  fail("뉴스 매크로 시장 범위", "src/app/news/page.tsx에서 MacroTicker에 market 값을 전달해야 합니다.");
 }
 
 const launchRiskTerms = [

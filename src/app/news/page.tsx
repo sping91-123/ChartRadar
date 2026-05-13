@@ -13,7 +13,7 @@ export default function NewsPage({ searchParams }: { searchParams?: { market?: s
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
         <Header market={market} />
         <RadarTopNav market={market} />
-        <MacroTicker />
+        <MacroTicker market={market} />
         <RadarNewsPanel market={market} />
         <AppFooter />
       </div>
