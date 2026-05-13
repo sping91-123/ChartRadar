@@ -13,6 +13,7 @@ import {
   type BillingPlan,
   type BillingPlanId
 } from "@/lib/billing";
+import { isNativePurchaseAvailable, purchaseNativePlan } from "@/lib/mobilePurchases";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 type CheckoutState =
@@ -150,11 +151,13 @@ function getScopedDisplayPlan(plan: BillingPlan, scope: BillingPageScope): Billi
 
 export function ProPricingPanel({ marketScope = "all" }: { marketScope?: BillingPageScope } = {}) {
   const [checkoutState, setCheckoutState] = useState<CheckoutState>({ status: "idle" });
-  const { session, isLoading: isAuthLoading } = useSupabaseAuth();
+  const { session, user, isLoading: isAuthLoading } = useSupabaseAuth();
   const visiblePlans = getBillingPlansForPage(marketScope);
   const copy = scopeCopy[marketScope];
+  const nativePurchaseAvailable = isNativePurchaseAvailable();
 
-  async function startCheckout(planId: BillingPlanId) {
+  async function startCheckout(plan: BillingPlan) {
+    const planId = plan.id;
     if (isAuthLoading) {
       setCheckoutState({
         status: "message",
@@ -176,6 +179,21 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
     setCheckoutState({ status: "loading", planId });
 
     try {
+      if (nativePurchaseAvailable) {
+        if (!user?.id) throw new Error("앱 구독을 연결하려면 로그인 사용자 정보를 먼저 확인해야 합니다.");
+        const result = await purchaseNativePlan({
+          plan,
+          userId: user.id,
+          accessToken: session.accessToken
+        });
+        setCheckoutState({
+          status: "message",
+          tone: "info",
+          text: result.message
+        });
+        return;
+      }
+
       const response = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: {
@@ -343,7 +361,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
               ) : (
                 <button
           type="button"
-          onClick={() => startCheckout(plan.id)}
+          onClick={() => startCheckout(plan)}
           disabled={checkoutState.status === "loading" || isAuthLoading}
                   className={`mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md px-4 text-sm font-black transition ${
                     highlighted
@@ -352,7 +370,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
                   } disabled:cursor-wait disabled:opacity-70`}
                 >
                   {isLoading ? <Loader2 className="animate-spin" size={16} aria-hidden /> : null}
-          {isAuthLoading ? "로그인 확인 중" : isLoading ? "결제 상태 확인 중" : isYearly ? "연간으로 시작하기" : "월간으로 시작하기"}
+          {isAuthLoading ? "로그인 확인 중" : isLoading ? "결제 상태 확인 중" : nativePurchaseAvailable ? "앱 구독으로 시작하기" : isYearly ? "연간으로 시작하기" : "월간으로 시작하기"}
                 </button>
               )}
             </article>

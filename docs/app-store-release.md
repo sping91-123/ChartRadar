@@ -111,3 +111,47 @@ Chart Radar is a market analysis and education tool. It provides market structur
 - 알림 기능은 브라우저 알림 권한 요청 실패 시에도 앱이 멈추지 않음.
 - AI API 호출 제한이 켜져 있음.
 - 앱 설명에 수익 보장, 매수 신호, 자동매매처럼 오해될 표현이 없음.
+
+## 9. Android Google Play 구독 연결.
+
+Android 앱 안의 Pro 결제는 외부 웹 결제가 아니라 Google Play 구독으로 처리합니다. Chart Radar는 Capacitor 앱에서 RevenueCat SDK를 호출하고, 서버가 RevenueCat REST API로 실제 구독 상태를 다시 확인한 뒤 Supabase Pro 권한을 열어주는 구조를 사용합니다.
+
+### Google Play Console 상품 ID.
+
+아래 상품 ID는 `src/lib/billing.ts`의 `appStoreProductId`와 반드시 같아야 합니다.
+
+| 플랜 | Google Play 상품 ID |
+| --- | --- |
+| Coin Pro 월간 | `chart_radar_crypto_monthly` |
+| Coin Pro 연간 | `chart_radar_crypto_yearly` |
+| Global Pro 월간 | `chart_radar_global_monthly` |
+| Global Pro 연간 | `chart_radar_global_yearly` |
+| All Market 월간 | `chart_radar_bundle_monthly` |
+| All Market 연간 | `chart_radar_bundle_yearly` |
+
+### RevenueCat 설정.
+
+1. RevenueCat에서 Android 앱을 만들고 Google Play 앱과 연결합니다.
+2. 위 6개 상품 ID를 Products에 등록합니다.
+3. Entitlement는 최소 아래 이름으로 만듭니다.
+   - Coin Pro는 `coin_pro` 또는 `crypto_pro`.
+   - Global Pro는 `global_pro`.
+   - All Market은 `all_market_pro` 또는 `bundle_pro`.
+4. 운영 환경변수에 아래 값을 넣습니다.
+
+```text
+NEXT_PUBLIC_REVENUECAT_ANDROID_API_KEY=
+NEXT_PUBLIC_REVENUECAT_IOS_API_KEY=
+REVENUECAT_REST_API_KEY=
+```
+
+`NEXT_PUBLIC_REVENUECAT_ANDROID_API_KEY`는 앱 SDK용 공개 키입니다. `REVENUECAT_REST_API_KEY`는 서버에서만 쓰는 비밀 키라서 절대 브라우저에 노출하면 안 됩니다.
+
+### 앱 결제 테스트 순서.
+
+1. Google Play Console에서 내부 테스트 트랙을 만듭니다.
+2. 테스트 계정을 라이선스 테스터로 등록합니다.
+3. `.env.local`에 RevenueCat 키를 넣고 `npm run app:sync`를 실행합니다.
+4. Android Studio 또는 실제 기기에서 앱을 실행합니다.
+5. 앱에서 로그인 후 Pro 화면의 구독 버튼을 누릅니다.
+6. 구매가 끝나면 `/api/billing/app-store/sync`가 RevenueCat 상태를 확인하고 `profiles.plan`과 `subscriptions`를 갱신해야 합니다.

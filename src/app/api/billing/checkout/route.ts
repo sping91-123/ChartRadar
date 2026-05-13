@@ -70,14 +70,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "로그인 상태를 확인하지 못했습니다. 다시 로그인한 뒤 결제를 시작해 주세요." }, { status: 401 });
   }
 
-  if (body.platform === "ios") {
+  if (body.platform === "ios" || body.platform === "android") {
     return NextResponse.json({
-      configured: false,
-      mode: "app_store",
+      configured: Boolean(plan.appStoreProductId),
+      mode: body.platform === "android" ? "play_billing" : "app_store",
       productId: plan.appStoreProductId,
       confirmationRequired: true,
       message:
-        "iOS 앱에서는 App Store 구독 상품으로 결제해야 합니다. App Store Connect에서 상품 ID를 만든 뒤 앱 결제 모듈과 연결해 주세요."
+        body.platform === "android"
+          ? "Android 앱에서는 Google Play 구독 상품으로 결제합니다. 앱 상품 ID와 RevenueCat 연결 상태를 확인해 주세요."
+          : "iOS 앱에서는 App Store 구독 상품으로 결제해야 합니다. App Store Connect에서 상품 ID를 만든 뒤 앱 결제 모듈과 연결해 주세요."
     });
   }
 

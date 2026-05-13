@@ -2,15 +2,14 @@
 import { NextResponse } from "next/server";
 import {
   findBillingPlan,
-  getMarketScopeForPlan,
   parsePlanIdFromOrderId,
   type BillingPlanId
 } from "@/lib/billing";
 import {
   fetchSupabaseUserOnServer,
-  isSupabaseAdminConfigured,
-  supabaseAdminRest
+  isSupabaseAdminConfigured
 } from "@/lib/server/supabaseAdmin";
+import { grantBillingEntitlement } from "@/lib/server/billingEntitlements";
 import { isBodyTooLarge, rateLimit } from "@/lib/server/rateLimit";
 
 interface ConfirmRequest {
@@ -89,55 +88,6 @@ async function confirmTossPayment(body: Required<Pick<ConfirmRequest, "paymentKe
     configured: true,
     payment: payload
   };
-}
-
-async function grantEntitlement(params: {
-  userId: string;
-  planId: BillingPlanId;
-  orderId: string;
-  providerPaymentId?: string;
-}) {
-  const marketScope = getMarketScopeForPlan(params.planId);
-  const now = new Date();
-  const periodEnd = new Date(now);
-  periodEnd.setMonth(periodEnd.getMonth() + (params.planId.endsWith("_yearly") ? 12 : 1));
-
-  await supabaseAdminRest("profiles", {
-    method: "POST",
-    prefer: "resolution=merge-duplicates",
-    body: {
-      id: params.userId,
-      plan: params.planId
-    }
-  });
-
-  const existing = await supabaseAdminRest<Array<{ id: string }>>(
-    `subscriptions?select=id&provider_order_id=eq.${encodeURIComponent(params.orderId)}&limit=1`
-  );
-  const subscriptionBody = {
-    user_id: params.userId,
-    provider: "toss",
-    status: "active",
-    plan: params.planId,
-    market_scope: marketScope,
-    current_period_start: now.toISOString(),
-    current_period_end: periodEnd.toISOString(),
-    provider_subscription_id: params.providerPaymentId ?? null,
-    provider_order_id: params.orderId
-  };
-
-  if (existing[0]?.id) {
-    await supabaseAdminRest(`subscriptions?id=eq.${encodeURIComponent(existing[0].id)}`, {
-      method: "PATCH",
-      body: subscriptionBody
-    });
-    return;
-  }
-
-  await supabaseAdminRest("subscriptions", {
-    method: "POST",
-    body: subscriptionBody
-  });
 }
 
 export async function POST(request: Request) {
@@ -231,10 +181,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    await grantEntitlement({
+    await grantBillingEntitlement({
       userId: user.id,
       planId: plan.id,
-      orderId: body.orderId,
+      provider: "toss",
+      providerOrderId: body.orderId,
       providerPaymentId: payment.paymentKey ?? body.paymentKey
     });
   } catch {

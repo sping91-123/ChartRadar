@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@capacitor/core": "^8.3.3",
+    "@revenuecat/purchases-capacitor": "^13.1.0",
     "fast-xml-parser": "^5.7.3",
     "lightweight-charts": "^5.2.0",
     "lucide-react": "^0.468.0",

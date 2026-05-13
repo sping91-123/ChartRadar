@@ -176,6 +176,11 @@ export function findBillingPlan(planId: string | null | undefined) {
   return billingPlans.find((plan) => plan.id === planId) ?? null;
 }
 
+export function findBillingPlanByAppStoreProductId(productId: string | null | undefined) {
+  if (!productId) return null;
+  return paidBillingPlans.find((plan) => plan.appStoreProductId === productId) ?? null;
+}
+
 export function getBillingPlansByScope(scope: BillingMarketScope) {
   return billingPlans.filter((plan) => plan.marketScope === scope);
 }

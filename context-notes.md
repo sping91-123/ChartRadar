@@ -902,3 +902,11 @@
 
 - 사용자는 코인과 글로벌을 별도 앱처럼 분리하길 원한다. 설치 앱의 기본 시작 경로가 `/survival`이면 사용자가 코인 앱으로만 인식할 수 있으므로, PWA `start_url`은 시장 선택 홈(`/`)으로 맞춘다.
 - 같은 이유로 오프라인 화면의 복귀 링크와 PWA id도 홈 기준으로 맞춘다. 서비스 워커 캐시는 코인뿐 아니라 글로벌 화면도 함께 포함해 설치 앱에서 두 시장 분리 구조가 유지되게 한다.
+
+## 2026-05-13 안드로이드 인앱 구독 연결.
+
+- 앱 안에서 유료 구독을 판매하려면 Google Play Billing 또는 이를 감싼 결제 SDK가 필요합니다. 웹 토스 결제 링크는 브라우저 결제에는 유효하지만, 안드로이드 앱 심사에서는 디지털 콘텐츠 구독의 외부 결제 우회로 보일 수 있습니다.
+- 직접 Google Play Billing을 네이티브 코드로 붙이면 관리 포인트가 커지므로, 안드로이드와 iOS를 같이 갈 수 있는 RevenueCat Capacitor SDK를 우선 적용하는 방향이 가장 빠르고 안전합니다.
+- 권한은 앱 클라이언트에서 구매 성공을 받은 뒤 서버가 RevenueCat subscriber 상태를 확인하고 Supabase `profiles.plan`과 `subscriptions`를 갱신하는 구조가 맞습니다. 이렇게 해야 클라이언트 조작으로 Pro 권한이 열리는 위험을 줄일 수 있습니다.
+- 구현 결과는 `src/lib/mobilePurchases.ts`에서 RevenueCat 구매를 실행하고, `/api/billing/app-store/sync`에서 RevenueCat REST API로 실제 구독을 다시 확인한 뒤 `grantBillingEntitlement`로 권한을 반영하는 방식입니다.
+- Pro 화면은 Capacitor 네이티브 앱이면 앱 구독 흐름을 사용하고, 브라우저에서는 기존 웹 결제 흐름을 그대로 사용합니다.

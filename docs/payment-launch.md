@@ -62,6 +62,31 @@ SUPABASE_SERVICE_ROLE_KEY=
 
 두 값은 절대로 `NEXT_PUBLIC_` 이름으로 만들지 않습니다. 브라우저에 노출되면 안 되는 서버 전용 키입니다.
 
+## Android 앱 구독 결제.
+
+웹에서는 Toss 결제 링크를 사용하지만, Android 앱 안에서는 Google Play 구독을 사용합니다. 앱 심사에서 외부 결제 우회처럼 보이지 않도록 Pro 화면은 네이티브 앱 환경에서 RevenueCat SDK 구매 흐름으로 자동 전환됩니다.
+
+필요한 환경변수는 아래와 같습니다.
+
+```text
+NEXT_PUBLIC_REVENUECAT_ANDROID_API_KEY=
+NEXT_PUBLIC_REVENUECAT_IOS_API_KEY=
+REVENUECAT_REST_API_KEY=
+```
+
+Google Play Console과 RevenueCat에는 아래 상품 ID를 동일하게 등록합니다.
+
+```text
+chart_radar_crypto_monthly
+chart_radar_crypto_yearly
+chart_radar_global_monthly
+chart_radar_global_yearly
+chart_radar_bundle_monthly
+chart_radar_bundle_yearly
+```
+
+구매 성공 후 서버는 `/api/billing/app-store/sync`에서 RevenueCat 구독 상태를 확인하고 Supabase `profiles.plan`과 `subscriptions`를 갱신합니다. 이 단계가 성공해야 앱을 껐다 켜도 Pro 권한이 유지됩니다.
+
 ## 4. 앱스토어 구독 상품 ID
 
 iOS 앱에서 디지털 구독을 판매하려면 Apple In-App Purchase를 사용해야 합니다. 웹 결제 링크를 iOS 앱 내부에서 디지털 구독 결제로 우회하면 심사 리스크가 큽니다.
