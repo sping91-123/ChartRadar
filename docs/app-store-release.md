@@ -13,6 +13,7 @@
 | 고객센터 URL | `https://your-domain.kr` |
 | 개인정보 처리방침 URL | `https://your-domain.kr/privacy` |
 | 이용약관 URL | `https://your-domain.kr/terms` |
+| 계정·데이터 삭제 안내 URL | `https://your-domain.kr/account/delete` |
 | 구독 해지와 환불 안내 URL | `https://your-domain.kr/refund` |
 
 ## 2. 스토어 소개 문구
@@ -99,7 +100,7 @@ Chart Radar is a market analysis and education tool. It provides market structur
 ## 9. 제출 전 최종 점검
 
 - `NEXT_PUBLIC_SITE_URL`이 실제 도메인으로 설정되어 있습니다.
-- `/privacy`, `/terms`, `/refund`가 실제 운영 정보로 채워져 있습니다.
+- `/privacy`, `/terms`, `/account/delete`, `/refund`가 실제 운영 정보로 채워져 있습니다.
 - 앱 아이콘은 1024px 정사각형 기준으로 깨지지 않습니다.
 - 모바일 Chrome과 Android 앱에서 로그인, Pro 화면, 뉴스, 알림, 주요 레이더 화면이 열립니다.
 - Android 앱에서는 Google Play 구독 결제가 RevenueCat으로 연결됩니다.

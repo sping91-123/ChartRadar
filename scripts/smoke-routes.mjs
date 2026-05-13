@@ -1,4 +1,4 @@
-// 출시 전 핵심 페이지와 결제 진입 API 응답을 점검하는 로컬 스모크 테스트다.
+// 출시 전 핵심 페이지와 결제 보호 API가 정상 응답하는지 확인합니다.
 const baseUrl = (process.env.SMOKE_BASE_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
 const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 15000);
 const smokeClientIp = `127.0.1.${Math.floor(Math.random() * 200) + 20}`;
@@ -25,26 +25,27 @@ const checks = [
   { label: "계산기", path: "/calculator" },
   { label: "코인 계산기", path: "/calculator?market=crypto" },
   { label: "글로벌 계산기", path: "/calculator?market=global" },
-  { label: "약관", path: "/terms" },
-  { label: "개인정보", path: "/privacy" },
+  { label: "이용약관", path: "/terms" },
+  { label: "개인정보 처리방침", path: "/privacy" },
+  { label: "계정 삭제 안내", path: "/account/delete" },
   { label: "환불 안내", path: "/refund" },
   { label: "로봇 정책", path: "/robots.txt" },
   { label: "사이트맵", path: "/sitemap.xml" },
-  { label: "웹앱 매니페스트", path: "/manifest.webmanifest" },
+  { label: "앱 매니페스트", path: "/manifest.webmanifest" },
   { label: "운영 헬스체크", path: "/api/health" },
   {
     label: "월간 결제 로그인 보호",
     path: "/api/billing/checkout",
     method: "POST",
     body: { planId: "crypto_monthly", platform: "web" },
-    expectedStatus: [401],
+    expectedStatus: [401]
   },
   {
     label: "연간 결제 로그인 보호",
     path: "/api/billing/checkout",
     method: "POST",
     body: { planId: "bundle_yearly", platform: "web" },
-    expectedStatus: [401],
+    expectedStatus: [401]
   },
   {
     label: "결제 승인 로그인 보호",
@@ -54,9 +55,9 @@ const checks = [
       planId: "crypto_monthly",
       orderId: "cr_crypto_monthly_smoke",
       amount: 14900,
-      paymentKey: "smoke_payment_key",
+      paymentKey: "smoke_payment_key"
     },
-    expectedStatus: [401],
+    expectedStatus: [401]
   },
   {
     label: "결제 승인 금액 검증",
@@ -66,9 +67,9 @@ const checks = [
       planId: "crypto_monthly",
       orderId: "cr_crypto_monthly_smoke",
       amount: 1,
-      paymentKey: "smoke_payment_key",
+      paymentKey: "smoke_payment_key"
     },
-    expectedStatus: [400],
+    expectedStatus: [400]
   },
   {
     label: "결제 승인 플랜 불일치 검증",
@@ -78,10 +79,10 @@ const checks = [
       planId: "stocks_monthly",
       orderId: "cr_crypto_monthly_smoke",
       amount: 14900,
-      paymentKey: "smoke_payment_key",
+      paymentKey: "smoke_payment_key"
     },
-    expectedStatus: [400],
-  },
+    expectedStatus: [400]
+  }
 ];
 
 async function fetchWithTimeout(check) {
@@ -96,7 +97,7 @@ async function fetchWithTimeout(check) {
         "x-forwarded-for": smokeClientIp
       },
       body: check.body ? JSON.stringify(check.body) : undefined,
-      signal: controller.signal,
+      signal: controller.signal
     });
 
     const text = await response.text();
@@ -105,14 +106,14 @@ async function fetchWithTimeout(check) {
       check,
       ok: expectedStatus.includes(response.status),
       status: response.status,
-      detail: text.slice(0, 180).replace(/\s+/g, " ").trim(),
+      detail: text.slice(0, 180).replace(/\s+/g, " ").trim()
     };
   } catch (error) {
     return {
       check,
       ok: false,
       status: "ERR",
-      detail: error instanceof Error ? error.message : String(error),
+      detail: error instanceof Error ? error.message : String(error)
     };
   } finally {
     clearTimeout(timer);
@@ -136,4 +137,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`\n모든 핵심 경로가 정상 응답했습니다. 기준 URL은 ${baseUrl}입니다.`);
+console.log(`\n모든 출시 경로가 정상 응답했습니다. 기준 URL은 ${baseUrl}입니다.`);

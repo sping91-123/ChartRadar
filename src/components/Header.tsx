@@ -1,4 +1,4 @@
-// 앱 전체 상단에서 Chart Radar 브랜드와 상태 버튼을 보여준다.
+// 전체 상단에서 Chart Radar 브랜드와 계정 상태를 보여주는 헤더입니다.
 import Link from "next/link";
 import Image from "next/image";
 import { AuthStatus } from "@/components/AuthStatus";

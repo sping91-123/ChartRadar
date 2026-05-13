@@ -16,6 +16,7 @@ const routes = [
   "/journal",
   "/terms",
   "/privacy",
+  "/account/delete",
   "/refund"
 ];
 

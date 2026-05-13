@@ -925,3 +925,7 @@
 - 실제 Android 앱 ID는 `kr.chartradar.app`이므로 RevenueCat과 Google Play 등록 안내도 이 값으로 통일했습니다.
 - `scripts/smoke-billing.mjs`와 `scripts/smoke-mobile.mjs`의 출력 문구를 읽을 수 있게 정리했습니다.
 - Java 경로가 PowerShell 세션에 잡히지 않아도 Android Studio 내장 JDK를 찾아 디버그 APK를 만드는 `npm.cmd run app:android:debug` 명령을 추가했습니다.
+- Google Play 신원 확인이 끝나도 바로 출시되는 것은 아니고, 구독 상품 연결, 스토어 심사 자료, 계정 삭제 안내, 실제 결제 테스트가 남습니다.
+- 특히 Google Play는 계정 생성 기능이 있는 앱에 계정·데이터 삭제 방법을 요구하므로, 공개 URL로 접근 가능한 삭제 안내 페이지가 필요합니다.
+- 현재 개인정보 처리방침, 이용약관, 환불 안내, 푸터 일부 문구가 깨진 상태라 스토어 심사와 사용자 신뢰에 직접적인 리스크가 됩니다.
+- 이번 작업은 기능 확장이 아니라 출시 심사와 유료 상품 신뢰도를 위한 운영 문구 정리로 진행합니다.
