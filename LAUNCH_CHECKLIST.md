@@ -26,6 +26,10 @@ GEMINI_API_KEY=xxx
 NEWS_TRANSLATION_PROVIDER=
 ENABLE_GEMINI_NEWS_FALLBACK=
 
+TRADING_ECONOMICS_API_KEY=
+TRADING_ECONOMICS_CLIENT=
+TRADING_ECONOMICS_SECRET=
+
 NEXT_PUBLIC_PRO_PAYMENT_URL=
 NEXT_PUBLIC_PRO_MONTHLY_PAYMENT_URL=
 NEXT_PUBLIC_PRO_YEARLY_PAYMENT_URL=
@@ -49,6 +53,8 @@ CAPACITOR_SERVER_URL=https://your-domain.kr
 코인, 글로벌, 올마켓 상품 링크가 따로 있으면 상품별 환경변수를 우선 사용합니다. 기존 `NEXT_PUBLIC_PRO_*` 값은 임시 공통 결제 링크 fallback으로만 남깁니다.
 
 `SUPABASE_SERVICE_ROLE_KEY`, `TOSS_PAYMENTS_SECRET_KEY`, `UPSTASH_REDIS_*` 값은 서버에서만 사용합니다. 브라우저 코드나 `NEXT_PUBLIC_` 환경변수로 노출하지 않습니다.
+
+매크로 전광판을 자동 갱신하려면 Trading Economics 캘린더 키를 넣습니다. `TRADING_ECONOMICS_API_KEY`에는 `client:secret` 형식을 넣거나, `TRADING_ECONOMICS_CLIENT`와 `TRADING_ECONOMICS_SECRET`에 나눠 넣을 수 있습니다. 이 값이 없으면 앱은 백업 일정을 보여주지만 실제 발표값은 자동 반영되지 않습니다.
 
 ## 3. Supabase Auth 설정
 

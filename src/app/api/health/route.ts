@@ -53,6 +53,9 @@ export async function GET() {
   const hasSiteUrl = hasValue(getConfiguredSiteUrl());
   const hasAIProvider = hasGroq || hasGemini;
   const hasPaymentProvider = hasTossSecret && hasTossClient;
+  const hasMacroAutomation =
+    hasValue(process.env.TRADING_ECONOMICS_API_KEY) ||
+    (hasValue(process.env.TRADING_ECONOMICS_CLIENT) && hasValue(process.env.TRADING_ECONOMICS_SECRET));
   const planPaymentLinks = paidBillingPlans.map((plan) => {
     const directUrl = getDirectPaymentUrl(plan.id);
     const fallbackUrl = getFallbackPaymentUrl(plan.id);
@@ -70,8 +73,9 @@ export async function GET() {
   const missingPlanPaymentLinks = planPaymentLinks.filter((item) => !item.configured).map((item) => item.planId);
   const fallbackPlanPaymentLinks = planPaymentLinks.filter((item) => item.usesFallback).map((item) => item.planId);
   const isMacroStale = macroAgeHours === null ? true : macroAgeHours > macroStaleAfterHours;
-  const coreReady = hasSupabaseUrl && hasSupabaseKey && hasAIProvider && !isMacroStale;
-  const readyForPaidLaunch = coreReady && hasSiteUrl && hasPaymentProvider && paymentLinksReady;
+  const macroReady = hasMacroAutomation || !isMacroStale;
+  const coreReady = hasSupabaseUrl && hasSupabaseKey && hasAIProvider && macroReady;
+  const readyForPaidLaunch = coreReady && hasSiteUrl && hasPaymentProvider && paymentLinksReady && hasMacroAutomation;
   const warnings = [
     hasSupabaseUrl && hasSupabaseKey ? null : "Supabase public env is missing.",
     hasAIProvider ? null : "AI provider env is missing.",
@@ -79,7 +83,8 @@ export async function GET() {
     hasPaymentProvider ? null : "TossPayments env is missing.",
     paymentLinksReady ? null : `Plan payment links are missing: ${missingPlanPaymentLinks.join(", ")}.`,
     fallbackPlanPaymentLinks.length === 0 ? null : `Shared payment link fallback is used: ${fallbackPlanPaymentLinks.join(", ")}.`,
-    isMacroStale ? "Macro calendar is stale." : null
+    hasMacroAutomation ? null : "Trading Economics macro calendar env is missing. Static backup calendar is being used.",
+    !hasMacroAutomation && isMacroStale ? "Macro backup calendar is stale." : null
   ].filter((item): item is string => Boolean(item));
 
   return NextResponse.json({
@@ -95,13 +100,15 @@ export async function GET() {
       siteUrl: hasSiteUrl,
       aiProvider: hasGroq ? "groq" : hasGemini ? "gemini" : "not-configured",
       paymentProvider: hasPaymentProvider ? "toss-payments" : "not-configured",
+      macroProvider: hasMacroAutomation ? "trading-economics" : "curated-backup",
       paymentLinksReady,
       planPaymentLinks
     },
     macroCalendar: {
       updatedAtIso: macroCalendarUpdatedAtIso,
       ageHours: macroAgeHours,
-      stale: isMacroStale,
+      automatic: hasMacroAutomation,
+      stale: !hasMacroAutomation && isMacroStale,
       staleAfterHours: macroStaleAfterHours
     }
   });

@@ -1,7 +1,7 @@
 // 미국 주요 매크로 발표 일정을 한국시간 기준으로 관리하는 데이터입니다.
 export type MacroEventState = "upcoming" | "released" | "watch";
 export type MacroEventImportance = 1 | 2 | 3;
-export type MacroEventSource = "BLS" | "BEA" | "Fed" | "Census" | "NAR";
+export type MacroEventSource = "BLS" | "BEA" | "Fed" | "Census" | "NAR" | "TradingEconomics" | "Official";
 
 export type MacroEventItem = {
   label: string;
@@ -22,7 +22,7 @@ export const macroCalendarUpdatedAt = "2026년 5월 13일 02:00 기준";
 export const macroCalendarUpdatedAtIso = "2026-05-13T02:00:00+09:00";
 
 export const macroCalendarSourceNote =
-  "화면 시간은 모두 한국시간입니다. 실제 발표값은 공식 발표 후 24시간 동안 최근 발표 영역에 남기고, 정식 자동 캘린더 연동 전까지 주요 일정은 수동으로 갱신합니다.";
+  "화면 시간은 모두 한국시간입니다. 자동 캘린더가 연결되면 실제 발표값과 예상·이전 수치가 주기적으로 갱신되고, 장애 시에는 백업 일정으로 표시됩니다.";
 
 export const macroItems: MacroEventItem[] = [
   {
@@ -44,14 +44,14 @@ export const macroItems: MacroEventItem[] = [
     label: "PPI / Core PPI",
     releaseAt: "2026-05-13T21:30:00+09:00",
     dateKst: "5월 13일 21:30",
-    state: "upcoming",
+    state: "released",
     importance: 3,
-    actual: "발표 전",
-    forecast: "Core 일부 컨센서스 +3.7% YoY",
-    previous: "헤드라인 +0.5% MoM / +4.0% YoY",
-    summary: "CPI 직후 생산자물가가 비용 압력을 다시 확인하는 일정입니다. 에너지와 서비스 비용이 물가 우려를 이어갈지 봅니다.",
+    actual: "PPI +1.4% MoM / +6.0% YoY, Core +1.0% MoM / +5.2% YoY",
+    forecast: "PPI +0.5% MoM / +4.9% YoY, Core +0.3% MoM / +4.3% YoY",
+    previous: "PPI +0.5% MoM / +4.0% YoY, Core +0.2% MoM / +3.8% YoY",
+    summary: "4월 생산자물가는 예상보다 강하게 확인됐습니다. CPI 이후 비용 압력 우려가 다시 커진 발표입니다.",
     marketImpact:
-      "PPI가 높게 나오면 CPI 이후 인플레이션 우려가 이어져 금리와 달러 반응이 커질 수 있습니다. 예상보다 낮으면 위험자산 반등 명분이 생길 수 있습니다.",
+      "PPI가 예상보다 강하게 나오면 금리 인하 기대가 약해지고 달러와 국채금리 반응이 커질 수 있습니다. 코인과 성장주는 발표 후 변동성 확대를 조심해야 합니다.",
     source: "BLS",
     sourceUrl: "https://www.bls.gov/schedule/news_release/ppi.htm"
   },

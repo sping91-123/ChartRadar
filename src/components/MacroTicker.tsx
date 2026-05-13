@@ -1,6 +1,7 @@
 "use client";
 // 한국시간 기준의 주요 매크로 일정을 거래 화면과 뉴스 화면에 보여주는 컴포넌트입니다.
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { CalendarClock, ChevronDown, ChevronRight, Clock3, ExternalLink, Radio, ShieldAlert, TimerReset } from "lucide-react";
 import {
   macroCalendarSourceNote,
@@ -11,14 +12,33 @@ import {
   type MacroEventItem,
   type MacroEventSource
 } from "@/data/macroEvents";
+import { type MacroCalendarPayload } from "@/lib/macroCalendar";
 
 const RECENT_RELEASE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const EMPTY_ACTUAL_VALUES = new Set(["발표 전", "결과 확인 중", "회의 전", "미정", "-"]);
 const MACRO_FRESHNESS_WARN_MS = 36 * 60 * 60 * 1000;
 const MACRO_FRESHNESS_STALE_MS = 72 * 60 * 60 * 1000;
 
-function getMacroFreshness() {
-  const updatedAt = new Date(macroCalendarUpdatedAtIso).getTime();
+const fallbackCalendar: MacroCalendarPayload = {
+  updatedAt: macroCalendarUpdatedAtIso,
+  updatedAtLabel: macroCalendarUpdatedAt,
+  source: "curated",
+  sourceLabel: "백업 일정",
+  sourceNote: macroCalendarSourceNote,
+  isAutomatic: false,
+  nextRefreshMs: 10 * 60 * 1000,
+  items: macroItems
+};
+
+function getMacroFreshness(updatedAtIso: string, isAutomatic: boolean) {
+  if (isAutomatic) {
+    return {
+      label: "자동 갱신",
+      className: "border-signal-success/25 bg-signal-success/10 text-signal-success"
+    };
+  }
+
+  const updatedAt = new Date(updatedAtIso).getTime();
   if (!Number.isFinite(updatedAt)) {
     return {
       label: "갱신 확인 필요",
@@ -91,6 +111,7 @@ function sourceClass(source: MacroEventSource) {
   if (source === "BEA") return "border-emerald-300/25 bg-emerald-300/10 text-emerald-200";
   if (source === "Census") return "border-amber-300/25 bg-amber-300/10 text-amber-200";
   if (source === "NAR") return "border-cyan-300/25 bg-cyan-300/10 text-cyan-200";
+  if (source === "TradingEconomics") return "border-accent-blue/25 bg-accent-blue/10 text-accent-blue";
   return "border-sky-300/25 bg-sky-300/10 text-sky-200";
 }
 
@@ -131,23 +152,23 @@ function getKstDateKey(date: Date) {
   return Date.UTC(year, month - 1, day);
 }
 
-function getUpcomingItems() {
+function getUpcomingItems(items: MacroEventItem[]) {
   const now = Date.now();
-  return macroItems
+  return items
     .filter((item) => new Date(item.releaseAt).getTime() >= now || (item.state === "watch" && !hasReleaseTimePassed(item)))
     .sort((a, b) => new Date(a.releaseAt).getTime() - new Date(b.releaseAt).getTime());
 }
 
-function getRecentReleasedItems() {
-  return macroItems
+function getRecentReleasedItems(items: MacroEventItem[]) {
+  return items
     .filter((item) => isRecentlyReleased(item))
     .sort((a, b) => new Date(b.releaseAt).getTime() - new Date(a.releaseAt).getTime());
 }
 
-function getCompactItem() {
-  const recent = getRecentReleasedItems()[0];
-  const upcoming = getUpcomingItems()[0];
-  return recent ?? upcoming ?? macroItems[0];
+function getCompactItem(items: MacroEventItem[]) {
+  const recent = getRecentReleasedItems(items)[0];
+  const upcoming = getUpcomingItems(items)[0];
+  return recent ?? upcoming ?? items[0];
 }
 
 function ValuePill({ label, value, tone = "default" }: { label: string; value?: string; tone?: "default" | "pending" }) {
@@ -190,15 +211,49 @@ function MacroItemCard({ item, compact = false }: { item: MacroEventItem; compac
 }
 
 export function MacroTicker({ compact = false, market = "crypto" }: { compact?: boolean; market?: "crypto" | "stocks" } = {}) {
-  const upcomingItems = getUpcomingItems();
-  const releasedItems = getRecentReleasedItems().slice(0, 4);
+  const [calendar, setCalendar] = useState<MacroCalendarPayload>(fallbackCalendar);
+  const upcomingItems = getUpcomingItems(calendar.items);
+  const releasedItems = getRecentReleasedItems(calendar.items).slice(0, 4);
   const nearestUpcoming = upcomingItems[0];
   const laterUpcomingItems = upcomingItems.slice(1, 7);
   const latestRelease = releasedItems[0];
-  const freshness = getMacroFreshness();
+  const freshness = getMacroFreshness(calendar.updatedAt, calendar.isAutomatic);
+
+  useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const loadCalendar = async () => {
+      try {
+        const response = await fetch(`/api/macro-calendar?market=${market}`, {
+          cache: "no-store"
+        });
+        if (response.ok) {
+          const payload = (await response.json()) as MacroCalendarPayload;
+          if (!cancelled && Array.isArray(payload.items) && payload.items.length > 0) {
+            setCalendar(payload);
+            timer = setTimeout(loadCalendar, Math.max(60_000, Math.min(payload.nextRefreshMs ?? 600_000, 10 * 60_000)));
+            return;
+          }
+        }
+      } catch {
+        // 네트워크 장애 시 현재 표시 중인 캘린더를 유지합니다.
+      }
+
+      if (!cancelled) {
+        timer = setTimeout(loadCalendar, 5 * 60_000);
+      }
+    };
+
+    loadCalendar();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [market]);
 
   if (compact) {
-    const item = getCompactItem();
+    const item = getCompactItem(calendar.items);
 
     return (
       <Link
@@ -230,7 +285,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
         </div>
         <div className="min-w-0">
           <p className="text-xs font-black text-white">매크로 레이더</p>
-          <p className="truncate text-[11px] font-bold text-slate-500">{macroCalendarUpdatedAt}. 모든 발표 시간은 한국시간 기준입니다.</p>
+          <p className="truncate text-[11px] font-bold text-slate-500">{calendar.updatedAtLabel}. 모든 발표 시간은 한국시간 기준입니다.</p>
           <span className={`mt-1 inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[10px] font-black sm:hidden ${freshness.className}`}>
             <TimerReset size={11} aria-hidden />
             {freshness.label}
@@ -340,7 +395,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
 
       <div className="flex items-center gap-2 border-t border-white/10 px-3 py-2 text-[11px] leading-5 text-slate-500">
         <TimerReset size={13} className="shrink-0 text-accent-blue" aria-hidden />
-        <span className="[word-break:keep-all]">{macroCalendarSourceNote}</span>
+        <span className="[word-break:keep-all]">{calendar.sourceNote}</span>
         <CalendarClock size={13} className="ml-auto hidden shrink-0 text-slate-600 sm:block" aria-hidden />
       </div>
     </section>
