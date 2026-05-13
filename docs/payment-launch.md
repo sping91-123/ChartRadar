@@ -87,6 +87,8 @@ chart_radar_bundle_yearly
 
 구매 성공 후 서버는 `/api/billing/app-store/sync`에서 RevenueCat 구독 상태를 확인하고 Supabase `profiles.plan`과 `subscriptions`를 갱신합니다. 이 단계가 성공해야 앱을 껐다 켜도 Pro 권한이 유지됩니다.
 
+이미 구독한 사용자는 앱 Pro 화면의 구매 복원 버튼으로 RevenueCat 구독 상태를 다시 확인하고 같은 Supabase 계정에 Pro 권한을 재연결할 수 있습니다.
+
 ## 4. 앱스토어 구독 상품 ID
 
 iOS 앱에서 디지털 구독을 판매하려면 Apple In-App Purchase를 사용해야 합니다. 웹 결제 링크를 iOS 앱 내부에서 디지털 구독 결제로 우회하면 심사 리스크가 큽니다.

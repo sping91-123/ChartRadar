@@ -12,6 +12,11 @@ interface NativePurchaseParams {
   accessToken: string;
 }
 
+interface NativeRestoreParams {
+  userId: string;
+  accessToken: string;
+}
+
 interface AppStoreSyncResponse {
   active?: boolean;
   error?: string;
@@ -86,6 +91,31 @@ async function syncAppStoreEntitlement(params: NativePurchaseParams & { platform
   return data;
 }
 
+async function syncAnyAppStoreEntitlement(params: NativeRestoreParams & { platform: NativePurchasePlatform }) {
+  const response = await fetch("/api/billing/app-store/sync", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${params.accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      appUserId: params.userId,
+      platform: params.platform
+    })
+  });
+
+  const data = (await response.json().catch(() => ({}))) as AppStoreSyncResponse;
+  if (!response.ok || !data.active) {
+    throw new Error(data.error ?? data.message ?? "복원된 앱 구독 권한을 서버에 반영하지 못했습니다.");
+  }
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(supabaseAuthRefreshEvent));
+  }
+
+  return data;
+}
+
 function normalizePurchaseError(error: unknown) {
   if (
     error &&
@@ -141,4 +171,14 @@ export async function restoreNativePurchases(params: NativePurchaseParams) {
 
   await syncAppStoreEntitlement({ ...params, platform });
   return { message: "구독을 복원하고 Pro 권한을 다시 연결했습니다." };
+}
+
+export async function restoreNativeEntitlement(params: NativeRestoreParams) {
+  const platform = getNativePurchasePlatform();
+  if (!platform) throw new Error("구매 복원은 Android 또는 iOS 앱 안에서만 사용할 수 있습니다.");
+
+  await configurePurchases(platform, params.userId);
+  await Purchases.restorePurchases();
+  await syncAnyAppStoreEntitlement({ ...params, platform });
+  return { message: "활성 구독을 확인하고 Pro 권한을 다시 연결했습니다." };
 }

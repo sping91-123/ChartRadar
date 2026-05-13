@@ -830,3 +830,10 @@
 - [x] Pro 화면에서 네이티브 앱은 앱 결제, 웹은 기존 결제 API를 사용하게 분기한다.
 - [x] 안드로이드 출시 문서와 스모크 테스트를 갱신한다.
 - [x] 빌드와 결제 스모크로 검증한다.
+
+## 2026-05-13 앱 결제 설정 마감 보강.
+- [x] 앱 구독 구매 복원 버튼을 Pro 화면에 추가한다.
+- [x] RevenueCat, Supabase service role 환경변수 누락을 빠르게 잡는 점검 스크립트를 추가한다.
+- [ ] RevenueCat Android 공개 SDK 키와 REST API 키를 실제 값으로 `.env.local`에 입력한다.
+- [ ] Supabase service role key를 실제 운영 값으로 `.env.local`과 배포 환경변수에 입력한다.
+- [ ] Google Play Console 구독 상품 6개와 RevenueCat Products, Entitlements를 실제 계정에서 연결한다.

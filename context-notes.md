@@ -910,3 +910,9 @@
 - 권한은 앱 클라이언트에서 구매 성공을 받은 뒤 서버가 RevenueCat subscriber 상태를 확인하고 Supabase `profiles.plan`과 `subscriptions`를 갱신하는 구조가 맞습니다. 이렇게 해야 클라이언트 조작으로 Pro 권한이 열리는 위험을 줄일 수 있습니다.
 - 구현 결과는 `src/lib/mobilePurchases.ts`에서 RevenueCat 구매를 실행하고, `/api/billing/app-store/sync`에서 RevenueCat REST API로 실제 구독을 다시 확인한 뒤 `grantBillingEntitlement`로 권한을 반영하는 방식입니다.
 - Pro 화면은 Capacitor 네이티브 앱이면 앱 구독 흐름을 사용하고, 브라우저에서는 기존 웹 결제 흐름을 그대로 사용합니다.
+
+## 2026-05-13 앱 결제 설정 마감 보강.
+
+- 앱 결제는 구매뿐 아니라 복원 흐름도 필요합니다. RevenueCat의 `restorePurchases`를 호출한 뒤 서버 동기화 API가 활성 구독을 다시 확인하게 해 재설치, 기기 변경, 계정 재로그인 상황에서도 Pro 권한을 되살릴 수 있게 했습니다.
+- 실제 결제 완료 조건은 코드 커밋만으로 끝나지 않습니다. RevenueCat Android 공개 SDK 키, RevenueCat REST API 키, Supabase service role key, Google Play Console 구독 상품 6개가 모두 외부 대시보드에서 연결되어야 합니다.
+- `npm run check:app-billing`은 `.env.local`의 앱 결제 필수 키와 코드의 상품 ID 연결 여부를 빠르게 확인하는 운영 점검 명령입니다.

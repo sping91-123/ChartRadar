@@ -13,12 +13,13 @@ import {
   type BillingPlan,
   type BillingPlanId
 } from "@/lib/billing";
-import { isNativePurchaseAvailable, purchaseNativePlan } from "@/lib/mobilePurchases";
+import { isNativePurchaseAvailable, purchaseNativePlan, restoreNativeEntitlement } from "@/lib/mobilePurchases";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 type CheckoutState =
   | { status: "idle" }
   | { status: "loading"; planId: BillingPlanId }
+  | { status: "restoring" }
   | { status: "message"; tone: "info" | "error"; text: string };
 
 const conversionPoints = [
@@ -228,6 +229,48 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
     }
   }
 
+  async function restoreCheckout() {
+    if (!nativePurchaseAvailable) return;
+
+    if (isAuthLoading) {
+      setCheckoutState({
+        status: "message",
+        tone: "info",
+        text: "로그인 상태를 확인하고 있습니다. 잠시 후 다시 눌러 주세요."
+      });
+      return;
+    }
+
+    if (!session?.accessToken || !user?.id) {
+      setCheckoutState({
+        status: "message",
+        tone: "info",
+        text: "구매 복원을 하려면 먼저 구글 로그인이 필요합니다."
+      });
+      return;
+    }
+
+    setCheckoutState({ status: "restoring" });
+
+    try {
+      const result = await restoreNativeEntitlement({
+        userId: user.id,
+        accessToken: session.accessToken
+      });
+      setCheckoutState({
+        status: "message",
+        tone: "info",
+        text: result.message
+      });
+    } catch (error) {
+      setCheckoutState({
+        status: "message",
+        tone: "error",
+        text: error instanceof Error ? error.message : "구매 복원 상태를 확인하지 못했습니다."
+      });
+    }
+  }
+
   return (
     <section className="space-y-5">
       <div className="force-dark-card overflow-hidden rounded-lg border border-cyan-300/20 bg-[radial-gradient(circle_at_20%_10%,rgba(34,211,238,0.18),transparent_34%),linear-gradient(135deg,rgba(2,6,23,0.96),rgba(15,23,42,0.92))] p-5 shadow-glow">
@@ -303,6 +346,24 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
           ))}
         </div>
       </div>
+
+      {nativePurchaseAvailable ? (
+        <div className="rounded-lg border border-cyan-300/20 bg-cyan-300/10 p-4 text-sm leading-6 text-cyan-100">
+          <p className="font-black text-cyan-50">앱 구독 복원</p>
+          <p className="mt-2 text-cyan-100/85">
+            이미 Google Play에서 구독하셨다면 새 기기나 재설치 후에도 구매 복원으로 Pro 권한을 다시 연결할 수 있습니다.
+          </p>
+          <button
+            type="button"
+            onClick={restoreCheckout}
+            disabled={checkoutState.status === "loading" || checkoutState.status === "restoring" || isAuthLoading}
+            className="mt-3 inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-cyan-300/35 bg-black/20 px-4 text-sm font-black text-cyan-100 transition hover:bg-cyan-300 hover:text-slate-950 disabled:cursor-wait disabled:opacity-70"
+          >
+            {checkoutState.status === "restoring" ? <Loader2 className="animate-spin" size={16} aria-hidden /> : null}
+            {checkoutState.status === "restoring" ? "구매 복원 확인 중" : "구매 복원하기"}
+          </button>
+        </div>
+      ) : null}
 
       <div id="plans" className="grid scroll-mt-28 gap-4 lg:grid-cols-3">
         {visiblePlans.map((plan) => {

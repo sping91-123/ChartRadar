@@ -155,3 +155,4 @@ REVENUECAT_REST_API_KEY=
 4. Android Studio 또는 실제 기기에서 앱을 실행합니다.
 5. 앱에서 로그인 후 Pro 화면의 구독 버튼을 누릅니다.
 6. 구매가 끝나면 `/api/billing/app-store/sync`가 RevenueCat 상태를 확인하고 `profiles.plan`과 `subscriptions`를 갱신해야 합니다.
+7. 앱 재설치나 기기 변경 상황을 확인하려면 Pro 화면의 구매 복원 버튼을 눌러 같은 계정의 활성 구독이 다시 연결되는지 확인합니다.
