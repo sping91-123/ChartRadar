@@ -1,4 +1,4 @@
-// 외부 경제 캘린더와 백업 일정을 합쳐 매크로 레이더 데이터를 제공합니다.
+// 무료 공식 매크로 데이터와 백업 일정을 합쳐 레이더 캘린더를 제공합니다.
 import {
   macroCalendarSourceNote,
   macroCalendarUpdatedAt,
@@ -10,7 +10,7 @@ import {
   type MacroEventState
 } from "@/data/macroEvents";
 
-export type MacroCalendarSource = "trading-economics" | "curated";
+export type MacroCalendarSource = "official-bls" | "trading-economics" | "curated";
 
 export type MacroCalendarPayload = {
   updatedAt: string;
@@ -42,7 +42,44 @@ type TradingEconomicsCalendarItem = {
   Currency?: string;
 };
 
+type BlsPoint = {
+  year: string;
+  period: string;
+  periodName?: string;
+  latest?: string;
+  value: string;
+};
+
+type BlsSeries = {
+  seriesID: string;
+  data?: BlsPoint[];
+};
+
+type BlsApiResponse = {
+  status?: string;
+  message?: string[];
+  Results?: {
+    series?: BlsSeries[];
+  };
+};
+
+type OfficialInflationActual = {
+  label: "CPI / Core CPI" | "PPI / Core PPI";
+  actual: string;
+  monthName: string;
+  summary: string;
+  marketImpact: string;
+  sourceUrl: string;
+};
+
 const EMPTY_VALUES = new Set(["", "-", "null", "undefined"]);
+const BLS_PUBLIC_API_URL = "https://api.bls.gov/publicAPI/v2/timeseries/data/";
+const BLS_SERIES = {
+  cpi: "CUSR0000SA0",
+  coreCpi: "CUSR0000SA0L1E",
+  ppi: "WPSFD4",
+  corePpi: "WPSFD49116"
+} as const;
 const IMPORTANT_EVENT_KEYWORDS = [
   "cpi",
   "consumer price",
@@ -149,7 +186,7 @@ function buildSummary(item: TradingEconomicsCalendarItem, actual?: string, forec
 
   if (actual) {
     const comparison = forecast ? `예상치 ${forecast}와 비교해 실제값 ${actual}이 확인됐습니다.` : `실제값 ${actual}이 확인됐습니다.`;
-    return `${event} 발표가 나왔습니다. ${comparison} 이전값은 ${previous ?? "확인 필요"}입니다.`;
+    return `${event} 발표가 완료됐습니다. ${comparison} 이전값은 ${previous ?? "확인 필요"}입니다.`;
   }
 
   return `${event} 발표를 앞두고 있습니다. 예상치는 ${forecast ?? "확인 필요"}, 이전값은 ${previous ?? "확인 필요"}입니다.${category ? ` ${category} 흐름과 함께 확인해 주세요.` : ""}`;
@@ -158,8 +195,7 @@ function buildSummary(item: TradingEconomicsCalendarItem, actual?: string, forec
 function buildMarketImpact(item: TradingEconomicsCalendarItem, actual?: string, forecast?: string) {
   const joined = `${item.Category ?? ""} ${item.Event ?? ""}`.toLowerCase();
   const event = normalizeValue(item.Event) ?? "해당 지표";
-  const hasActual = Boolean(actual);
-  const action = hasActual ? "발표 직후에는" : "발표 전후에는";
+  const action = actual ? "발표 직후에는" : "발표 전후에는";
 
   if (joined.includes("cpi") || joined.includes("price") || joined.includes("pce")) {
     return `${action} 금리 기대, 달러, 나스닥 반응이 위험자산 방향을 크게 흔들 수 있습니다. 실제값이 예상치(${forecast ?? "미정"})보다 강하면 긴축 부담으로 해석될 수 있습니다.`;
@@ -250,6 +286,151 @@ function getRefreshMs(items: MacroEventItem[]) {
   return 10 * 60 * 1000;
 }
 
+function getBlsPeriodNumber(point: BlsPoint) {
+  return Number(point.period.replace("M", ""));
+}
+
+function sortBlsPoints(data: BlsPoint[] = []) {
+  return data
+    .filter((point) => /^M\d{2}$/.test(point.period) && Number.isFinite(Number(point.value)))
+    .sort((a, b) => {
+      const yearDiff = Number(b.year) - Number(a.year);
+      if (yearDiff !== 0) return yearDiff;
+      return getBlsPeriodNumber(b) - getBlsPeriodNumber(a);
+    });
+}
+
+function findYearAgoPoint(points: BlsPoint[], latest: BlsPoint) {
+  const targetYear = String(Number(latest.year) - 1);
+  return points.find((point) => point.year === targetYear && point.period === latest.period);
+}
+
+function pctChange(current: BlsPoint, base?: BlsPoint) {
+  const currentValue = Number(current.value);
+  const baseValue = Number(base?.value);
+  if (!Number.isFinite(currentValue) || !Number.isFinite(baseValue) || baseValue === 0) return null;
+  return ((currentValue - baseValue) / baseValue) * 100;
+}
+
+function formatPercent(value: number | null) {
+  if (value === null) return "확인 필요";
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(1)}%`;
+}
+
+function getSeriesPointMap(series: BlsSeries[]) {
+  return new Map(series.map((item) => [item.seriesID, sortBlsPoints(item.data)]));
+}
+
+function buildInflationLine(points: BlsPoint[] | undefined) {
+  if (!points || points.length < 2) return null;
+  const latest = points[0];
+  const previous = points[1];
+  const yearAgo = findYearAgoPoint(points, latest);
+  return {
+    latest,
+    mom: pctChange(latest, previous),
+    yoy: pctChange(latest, yearAgo)
+  };
+}
+
+function buildOfficialInflationActuals(series: BlsSeries[]): OfficialInflationActual[] {
+  const seriesMap = getSeriesPointMap(series);
+  const cpi = buildInflationLine(seriesMap.get(BLS_SERIES.cpi));
+  const coreCpi = buildInflationLine(seriesMap.get(BLS_SERIES.coreCpi));
+  const ppi = buildInflationLine(seriesMap.get(BLS_SERIES.ppi));
+  const corePpi = buildInflationLine(seriesMap.get(BLS_SERIES.corePpi));
+  const results: OfficialInflationActual[] = [];
+
+  if (cpi && coreCpi) {
+    results.push({
+      label: "CPI / Core CPI",
+      monthName: cpi.latest.periodName ?? `${cpi.latest.year}-${cpi.latest.period}`,
+      actual: `CPI ${formatPercent(cpi.mom)} MoM / ${formatPercent(cpi.yoy)} YoY, Core ${formatPercent(coreCpi.mom)} MoM / ${formatPercent(coreCpi.yoy)} YoY`,
+      summary: `${cpi.latest.periodName ?? "최근"} CPI 실제값이 BLS 공개 API 기준으로 확인됐습니다. 헤드라인과 근원 물가의 전월비, 전년비를 함께 보며 금리 기대 변화를 확인해야 합니다.`,
+      marketImpact:
+        "물가가 예상보다 강하게 나오면 달러와 국채금리 상승 압력이 커질 수 있고, 코인과 성장주에는 단기 부담이 될 수 있습니다. 반대로 둔화가 확인되면 위험자산 반등 재료가 될 수 있습니다.",
+      sourceUrl: "https://www.bls.gov/cpi/"
+    });
+  }
+
+  if (ppi && corePpi) {
+    results.push({
+      label: "PPI / Core PPI",
+      monthName: ppi.latest.periodName ?? `${ppi.latest.year}-${ppi.latest.period}`,
+      actual: `PPI ${formatPercent(ppi.mom)} MoM / ${formatPercent(ppi.yoy)} YoY, Core ${formatPercent(corePpi.mom)} MoM / ${formatPercent(corePpi.yoy)} YoY`,
+      summary: `${ppi.latest.periodName ?? "최근"} PPI 실제값이 BLS 공개 API 기준으로 확인됐습니다. 생산자 비용 압력이 소비자 물가와 금리 기대에 이어질 수 있는지 봐야 합니다.`,
+      marketImpact:
+        "PPI가 강하면 인플레이션 재가속 우려가 커질 수 있어 발표 직후 변동성이 확대될 수 있습니다. 수치 자체보다 달러, 국채금리, 나스닥의 동시 반응을 우선 확인하세요.",
+      sourceUrl: "https://www.bls.gov/ppi/"
+    });
+  }
+
+  return results;
+}
+
+function mergeOfficialInflationActuals(items: MacroEventItem[], actuals: OfficialInflationActual[]) {
+  const actualByLabel = new Map(actuals.map((item) => [item.label, item]));
+
+  return items.map((item) => {
+    const official = actualByLabel.get(item.label as OfficialInflationActual["label"]);
+    if (!official) return item;
+
+    return {
+      ...item,
+      state: "released" as const,
+      actual: official.actual,
+      summary: official.summary,
+      marketImpact: official.marketImpact,
+      source: "BLS" as const,
+      sourceUrl: official.sourceUrl
+    };
+  });
+}
+
+async function fetchOfficialBlsCalendar(): Promise<MacroCalendarPayload | null> {
+  const now = new Date();
+  const body = {
+    seriesid: Object.values(BLS_SERIES),
+    startyear: String(now.getUTCFullYear() - 1),
+    endyear: String(now.getUTCFullYear()),
+    calculations: false
+  };
+  const response = await fetch(BLS_PUBLIC_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error(`BLS public API ${response.status}`);
+  }
+
+  const payload = (await response.json()) as BlsApiResponse;
+  if (payload.status !== "REQUEST_SUCCEEDED") {
+    throw new Error(payload.message?.join(", ") || "BLS public API request failed.");
+  }
+
+  const series = payload.Results?.series ?? [];
+  const actuals = buildOfficialInflationActuals(series);
+  if (actuals.length === 0) return null;
+
+  const updatedAt = new Date().toISOString();
+  const items = sortedItems(mergeOfficialInflationActuals(macroItems, actuals));
+
+  return {
+    updatedAt,
+    updatedAtLabel: `${formatKstDateTime(updatedAt)} 자동 갱신`,
+    source: "official-bls",
+    sourceLabel: "공식 자동",
+    sourceNote: "BLS 무료 공개 API로 CPI와 PPI 실제값을 자동 확인하고, 그 외 일정과 예상치는 운영 백업 캘린더를 함께 사용합니다. 모든 시간은 한국시간입니다.",
+    isAutomatic: true,
+    nextRefreshMs: getRefreshMs(items),
+    items
+  };
+}
+
 async function fetchTradingEconomicsCalendar(): Promise<MacroCalendarPayload | null> {
   const key = getTradingEconomicsKey();
   if (!key) return null;
@@ -303,25 +484,32 @@ export async function getMacroCalendarPayload(): Promise<MacroCalendarPayload> {
   }
 
   try {
-    const automaticPayload = await fetchTradingEconomicsCalendar();
-    if (automaticPayload) {
+    const officialPayload = await fetchOfficialBlsCalendar();
+    if (officialPayload) {
       cachedPayload = {
-        payload: automaticPayload,
-        expiresAt: now + automaticPayload.nextRefreshMs
+        payload: officialPayload,
+        expiresAt: now + officialPayload.nextRefreshMs
       };
-      return automaticPayload;
+      return officialPayload;
     }
   } catch (error) {
-    console.warn("[macroCalendar] 자동 캘린더 갱신 실패. 백업 일정으로 대체합니다.", error);
-    const fallback = getFallbackPayload("자동 캘린더 연결에 실패해 백업 일정을 표시합니다.");
-    cachedPayload = {
-      payload: fallback,
-      expiresAt: now + 5 * 60 * 1000
-    };
-    return fallback;
+    console.warn("[macroCalendar] BLS 공개 API 갱신 실패. 보조 캘린더를 확인합니다.", error);
   }
 
-  const fallback = getFallbackPayload("TRADING_ECONOMICS_API_KEY가 없어 백업 일정을 표시합니다.");
+  try {
+    const paidProviderPayload = await fetchTradingEconomicsCalendar();
+    if (paidProviderPayload) {
+      cachedPayload = {
+        payload: paidProviderPayload,
+        expiresAt: now + paidProviderPayload.nextRefreshMs
+      };
+      return paidProviderPayload;
+    }
+  } catch (error) {
+    console.warn("[macroCalendar] 유료 보조 캘린더 갱신 실패. 백업 일정으로 대체합니다.", error);
+  }
+
+  const fallback = getFallbackPayload("BLS 공개 API 연결이 실패해 백업 일정을 표시합니다.");
   cachedPayload = {
     payload: fallback,
     expiresAt: now + fallback.nextRefreshMs

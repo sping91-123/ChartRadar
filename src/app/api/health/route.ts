@@ -1,7 +1,7 @@
 // 서비스 운영 상태와 주요 설정 신선도를 확인하는 헬스체크 API입니다.
 import { NextResponse } from "next/server";
-import { macroCalendarUpdatedAtIso } from "@/data/macroEvents";
 import { paidBillingPlans } from "@/lib/billing";
+import { getMacroCalendarPayload } from "@/lib/macroCalendar";
 import { getConfiguredSiteUrl } from "@/lib/siteUrl";
 
 export const runtime = "nodejs";
@@ -43,7 +43,8 @@ function getFallbackPaymentUrl(planId: string) {
 }
 
 export async function GET() {
-  const macroAgeHours = hoursSince(macroCalendarUpdatedAtIso);
+  const macroCalendarPayload = await getMacroCalendarPayload();
+  const macroAgeHours = hoursSince(macroCalendarPayload.updatedAt);
   const hasGroq = hasValue(process.env.GROQ_API_KEY);
   const hasGemini = hasValue(process.env.GEMINI_API_KEY);
   const hasTossSecret = hasValue(process.env.TOSS_PAYMENTS_SECRET_KEY);
@@ -53,7 +54,7 @@ export async function GET() {
   const hasSiteUrl = hasValue(getConfiguredSiteUrl());
   const hasAIProvider = hasGroq || hasGemini;
   const hasPaymentProvider = hasTossSecret && hasTossClient;
-  const hasMacroAutomation =
+  const hasPaidMacroProvider =
     hasValue(process.env.TRADING_ECONOMICS_API_KEY) ||
     (hasValue(process.env.TRADING_ECONOMICS_CLIENT) && hasValue(process.env.TRADING_ECONOMICS_SECRET));
   const planPaymentLinks = paidBillingPlans.map((plan) => {
@@ -73,9 +74,10 @@ export async function GET() {
   const missingPlanPaymentLinks = planPaymentLinks.filter((item) => !item.configured).map((item) => item.planId);
   const fallbackPlanPaymentLinks = planPaymentLinks.filter((item) => item.usesFallback).map((item) => item.planId);
   const isMacroStale = macroAgeHours === null ? true : macroAgeHours > macroStaleAfterHours;
-  const macroReady = hasMacroAutomation || !isMacroStale;
+  const hasFreeOfficialMacroProvider = true;
+  const macroReady = hasFreeOfficialMacroProvider || hasPaidMacroProvider || !isMacroStale;
   const coreReady = hasSupabaseUrl && hasSupabaseKey && hasAIProvider && macroReady;
-  const readyForPaidLaunch = coreReady && hasSiteUrl && hasPaymentProvider && paymentLinksReady && hasMacroAutomation;
+  const readyForPaidLaunch = coreReady && hasSiteUrl && hasPaymentProvider && paymentLinksReady;
   const warnings = [
     hasSupabaseUrl && hasSupabaseKey ? null : "Supabase public env is missing.",
     hasAIProvider ? null : "AI provider env is missing.",
@@ -83,8 +85,7 @@ export async function GET() {
     hasPaymentProvider ? null : "TossPayments env is missing.",
     paymentLinksReady ? null : `Plan payment links are missing: ${missingPlanPaymentLinks.join(", ")}.`,
     fallbackPlanPaymentLinks.length === 0 ? null : `Shared payment link fallback is used: ${fallbackPlanPaymentLinks.join(", ")}.`,
-    hasMacroAutomation ? null : "Trading Economics macro calendar env is missing. Static backup calendar is being used.",
-    !hasMacroAutomation && isMacroStale ? "Macro backup calendar is stale." : null
+    !hasFreeOfficialMacroProvider && !hasPaidMacroProvider && isMacroStale ? "Macro backup calendar is stale." : null
   ].filter((item): item is string => Boolean(item));
 
   return NextResponse.json({
@@ -100,15 +101,15 @@ export async function GET() {
       siteUrl: hasSiteUrl,
       aiProvider: hasGroq ? "groq" : hasGemini ? "gemini" : "not-configured",
       paymentProvider: hasPaymentProvider ? "toss-payments" : "not-configured",
-      macroProvider: hasMacroAutomation ? "trading-economics" : "curated-backup",
+      macroProvider: hasPaidMacroProvider ? `${macroCalendarPayload.source}-plus-trading-economics-option` : macroCalendarPayload.source,
       paymentLinksReady,
       planPaymentLinks
     },
     macroCalendar: {
-      updatedAtIso: macroCalendarUpdatedAtIso,
+      updatedAtIso: macroCalendarPayload.updatedAt,
       ageHours: macroAgeHours,
-      automatic: hasMacroAutomation,
-      stale: !hasMacroAutomation && isMacroStale,
+      automatic: macroCalendarPayload.isAutomatic,
+      stale: !hasFreeOfficialMacroProvider && !hasPaidMacroProvider && isMacroStale,
       staleAfterHours: macroStaleAfterHours
     }
   });

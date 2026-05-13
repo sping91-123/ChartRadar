@@ -54,7 +54,7 @@ CAPACITOR_SERVER_URL=https://your-domain.kr
 
 `SUPABASE_SERVICE_ROLE_KEY`, `TOSS_PAYMENTS_SECRET_KEY`, `UPSTASH_REDIS_*` 값은 서버에서만 사용합니다. 브라우저 코드나 `NEXT_PUBLIC_` 환경변수로 노출하지 않습니다.
 
-매크로 전광판을 자동 갱신하려면 Trading Economics 캘린더 키를 넣습니다. `TRADING_ECONOMICS_API_KEY`에는 `client:secret` 형식을 넣거나, `TRADING_ECONOMICS_CLIENT`와 `TRADING_ECONOMICS_SECRET`에 나눠 넣을 수 있습니다. 이 값이 없으면 앱은 백업 일정을 보여주지만 실제 발표값은 자동 반영되지 않습니다.
+매크로 전광판은 기본적으로 무료 BLS 공개 API를 사용해 CPI와 PPI 실제값을 자동 갱신합니다. Trading Economics 키는 더 넓은 경제 캘린더를 붙이고 싶을 때만 쓰는 선택형 유료 보강 옵션입니다. `TRADING_ECONOMICS_API_KEY`에는 `client:secret` 형식을 넣거나, `TRADING_ECONOMICS_CLIENT`와 `TRADING_ECONOMICS_SECRET`에 나눠 넣을 수 있습니다.
 
 ## 3. Supabase Auth 설정
 
