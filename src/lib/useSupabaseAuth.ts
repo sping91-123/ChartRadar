@@ -13,16 +13,30 @@ import {
   type SupabaseUser
 } from "@/lib/supabase";
 
-const ownerProEmails = (process.env.NEXT_PUBLIC_OWNER_PRO_EMAILS ?? "")
-  .split(",")
-  .map((email) => email.trim().toLowerCase())
-  .filter(Boolean);
+const supabaseMetadataPlans = new Set<SupabaseProfile["plan"]>([
+  "free",
+  "member",
+  "premium",
+  "admin",
+  "crypto_monthly",
+  "crypto_yearly",
+  "stocks_monthly",
+  "stocks_yearly",
+  "bundle_monthly",
+  "bundle_yearly"
+]);
 
-const ownerProPlan = process.env.NEXT_PUBLIC_OWNER_PRO_PLAN === "premium" ? "premium" : "admin";
+function resolveSupabaseMetadataPlan(user: SupabaseUser): SupabaseProfile["plan"] | null {
+  const plan = user.app_metadata?.plan;
+  if (typeof plan === "string" && supabaseMetadataPlans.has(plan as SupabaseProfile["plan"])) {
+    return plan as SupabaseProfile["plan"];
+  }
+  return user.app_metadata?.role === "admin" ? "admin" : null;
+}
 
-function applyOwnerProPreview(user: SupabaseUser, profile: SupabaseProfile | null) {
-  const email = user.email?.trim().toLowerCase();
-  if (!email || !ownerProEmails.includes(email)) return profile;
+function applySupabaseAuthEntitlement(user: SupabaseUser, profile: SupabaseProfile | null) {
+  const metadataPlan = resolveSupabaseMetadataPlan(user);
+  if (!metadataPlan) return profile;
 
   const now = new Date().toISOString();
   return {
@@ -30,7 +44,7 @@ function applyOwnerProPreview(user: SupabaseUser, profile: SupabaseProfile | nul
     email: user.email ?? profile?.email ?? null,
     display_name: profile?.display_name ?? user.user_metadata?.name ?? user.user_metadata?.full_name ?? null,
     avatar_url: profile?.avatar_url ?? user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null,
-    plan: ownerProPlan,
+    plan: metadataPlan,
     created_at: profile?.created_at ?? now,
     updated_at: profile?.updated_at ?? now
   } satisfies SupabaseProfile;
@@ -84,7 +98,7 @@ export function useSupabaseAuth() {
         if (!isMounted || !result) return;
         const [nextUser, nextProfile] = result;
         setUser(nextUser);
-        setProfile(applyOwnerProPreview(nextUser, nextProfile ?? null));
+        setProfile(applySupabaseAuthEntitlement(nextUser, nextProfile ?? null));
     }
 
     function handleAuthError() {

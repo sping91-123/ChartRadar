@@ -1013,3 +1013,16 @@
 - 현재 `.env.local`의 `SUPABASE_SERVICE_ROLE_KEY` 값은 PostgREST 관리자 요청에서 401이 발생하는 새 secret API key 형태다. 그래서 지금 도구 안에서 Supabase `profiles.plan`을 직접 수정하는 방식은 막혀 있다.
 - 운영자 계정으로 Pro 화면을 확인하는 목적이라면 결제 권한 테이블을 임의로 조작하기보다, 지정된 운영자 이메일이 로그인했을 때 앱에서 `admin` 권한으로 취급하는 미리보기 오버라이드가 더 빠르고 되돌리기 쉽다.
 - 이 오버라이드는 실제 유료 사용자 결제 상태를 대체하는 정식 과금 로직이 아니다. 운영자 검수와 스크린샷 확인용이며, 배포 환경에서도 쓰려면 환경변수에 운영자 이메일을 명시해야 한다.
+
+## 2026-05-14 Supabase 관리자 권한 원천 반영.
+
+- 사용자가 지적한 대로 최종 운영 구조에서는 Chart Radar 앱 코드의 이메일 오버라이드가 아니라 Supabase DB의 `profiles.plan`이 권한 원천이어야 한다.
+- 현재 로컬에 들어 있는 `sb_secret_...` 키는 Supabase PostgREST 관리자 수정에 사용할 수 없어 401이 난다. 정확한 DB 반영은 Supabase SQL Editor 또는 JWT 형식 service role key가 필요하다.
+- 운영자 계정은 `auth.users.email = 'sping91@gmail.com'`인 사용자를 찾아 `profiles`에 upsert하고 `plan = 'admin'`으로 반영하는 SQL로 처리하면 된다.
+
+## 2026-05-14 Supabase Auth 관리자 권한 반영.
+
+- Supabase PostgREST에는 현재 `sb_secret_...` 키로 직접 `profiles`를 수정할 수 없었지만, Supabase Auth Admin API는 정상 접근이 가능했습니다.
+- 그래서 운영자 계정 `sping91@gmail.com`의 `auth.users.app_metadata`에 `plan = admin`, `role = admin`, `market_scope = bundle`을 반영했습니다.
+- 앱은 더 이상 이메일 환경변수로 운영자를 우회하지 않고, Supabase Auth에서 내려오는 `app_metadata.plan` 또는 `app_metadata.role`을 권한 원천으로 읽습니다.
+- `scripts/set-owner-admin.sql`은 추후 SQL Editor에서 `profiles.plan`까지 같은 값으로 맞추고 싶을 때 쓰는 운영 보조 스크립트로 남겨둡니다.

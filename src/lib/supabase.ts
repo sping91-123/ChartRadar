@@ -20,6 +20,12 @@ export interface SupabaseSession {
 export interface SupabaseUser {
   id: string;
   email?: string;
+  app_metadata?: {
+    plan?: BillingEntitlementPlan | string;
+    role?: string;
+    market_scope?: string;
+    [key: string]: unknown;
+  };
   user_metadata?: {
     name?: string;
     full_name?: string;
