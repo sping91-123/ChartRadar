@@ -120,6 +120,8 @@ expectIncludes(rootLayout, "localStorage.getItem('chart-radar.theme')", "테마 
 expectIncludes(rootLayout, "getSiteUrlWithLocalFallback", "메타데이터 URL fallback", "src/app/layout.tsx");
 expectIncludes(robotsRoute, "getConfiguredSiteUrl", "robots URL fallback", "src/app/robots.ts");
 expectIncludes(sitemapRoute, "getSiteUrlWithLocalFallback", "sitemap URL fallback", "src/app/sitemap.ts");
+expectIncludes(sitemapRoute, '"/global"', "사이트맵 글로벌 핵심 경로", "src/app/sitemap.ts");
+expectIncludes(sitemapRoute, "dailyCoreRoutes", "사이트맵 핵심 경로 일간 갱신", "src/app/sitemap.ts");
 expectIncludes(siteUrlUtil, "process.env.VERCEL_URL", "Vercel URL fallback", "src/lib/siteUrl.ts");
 expectIncludes(themeToggle, 'const storageKey = "chart-radar.theme"', "테마 토글 저장 키", "src/components/ThemeToggle.tsx");
 expectIncludes(themeToggle, 'aria-label={isLight ? "다크 모드로 전환" : "라이트 모드로 전환"}', "테마 토글 접근성 라벨", "src/components/ThemeToggle.tsx");
