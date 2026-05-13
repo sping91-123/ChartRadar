@@ -45,6 +45,7 @@ const rateLimit = read("src/lib/server/rateLimit.ts");
 const envExample = read(".env.example");
 const packageJson = read("package.json");
 const restartDev = read("scripts/restart-dev.ps1");
+const smokeAll = read("scripts/smoke-all.mjs");
 const macroEvents = read("src/data/macroEvents.ts");
 const radarNewsApi = read("src/app/api/radar-news/route.ts");
 const radarNewsPanel = read("src/components/RadarNewsPanel.tsx");
@@ -101,6 +102,9 @@ expectIncludes(packageJson, '"dev:clean"', "개발 서버 복구 명령", "packa
 expectIncludes(restartDev, "Refusing to delete outside repo", "개발 캐시 삭제 보호", "scripts/restart-dev.ps1");
 expectIncludes(restartDev, "Remove-DirectoryWithRetry", "개발 캐시 삭제 재시도", "scripts/restart-dev.ps1");
 expectIncludes(restartDev, "Get-NetTCPConnection -LocalPort $port", "3000번 포트 정리", "scripts/restart-dev.ps1");
+expectIncludes(smokeAll, '"dev:clean"', "통합 스모크 서버 자동 복구", "scripts/smoke-all.mjs");
+expectIncludes(smokeAll, "waitForDevServer", "통합 스모크 서버 준비 대기", "scripts/smoke-all.mjs");
+expectIncludes(smokeAll, "/api/health", "통합 스모크 서버 헬스체크 대기", "scripts/smoke-all.mjs");
 expectIncludes(macroEvents, "macroCalendarUpdatedAt", "매크로 갱신 기준 표시", "src/data/macroEvents.ts");
 expectIncludes(macroEvents, "macroCalendarUpdatedAtIso", "매크로 갱신 ISO 기준", "src/data/macroEvents.ts");
 expectIncludes(radarNewsApi, "fallbackNewsBriefing", "레이더뉴스 fallback 브리핑", "src/app/api/radar-news/route.ts");
