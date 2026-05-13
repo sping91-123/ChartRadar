@@ -59,33 +59,37 @@ const valueRows = [
 ];
 
 const proDifferenceRows = [
-  "무료는 핵심 흐름 확인용, Pro는 매일 감시 범위와 AI 해석 빈도를 넓히는 용도입니다.",
-  "Pro는 더 많은 종목, 더 많은 브리핑, 더 많은 알림 규칙으로 직접 찾아보는 시간을 줄입니다.",
-  "차트 신호를 단정하지 않고 시장 구조, 위험도, 확인 조건을 함께 보여주는 분석형 구독입니다."
+  "무료는 하루 확인용입니다. Pro는 장중에 반복해서 레이더를 돌리고 변화가 생긴 자산을 계속 확인하는 용도입니다.",
+  "Pro는 AI 브리핑, 관심종목, 알림 규칙의 한도를 넓혀 직접 찾아보는 시간을 줄이는 구독입니다.",
+  "매수·매도 신호를 단정하지 않고 시장 구조, 뉴스, 매크로, 위험도를 함께 정리하는 분석형 작업 공간입니다."
 ];
 
-const freeVsProRows = [
-  {
-    label: "레이더 스캔",
-    free: "하루 몇 번 흐름 확인",
-    pro: "장중에도 반복 스캔"
-  },
-  {
-    label: "AI 브리핑",
-    free: "하루 1회 맛보기",
-    pro: "시장별 브리핑 여유"
-  },
-  {
-    label: "관심종목",
-    free: "2개만 저장",
-    pro: "관심 자산을 넓게 감시"
-  },
-  {
-    label: "알림",
-    free: "설정 체험 중심",
-    pro: "조건별 감시 루틴"
+function getFreeVsProRows(scope: BillingPageScope) {
+  if (scope === "crypto") {
+    return [
+      { label: "레이더 스캔", free: "코인 하루 3회", pro: "코인 하루 200회" },
+      { label: "AI 브리핑", free: "코인 하루 1회", pro: "코인 하루 30회" },
+      { label: "관심코인", free: "코인 2개 저장", pro: "코인 50개 감시" },
+      { label: "알림", free: "코인 조건 1개", pro: "코인 조건 20개" }
+    ];
   }
-];
+
+  if (scope === "stocks") {
+    return [
+      { label: "레이더 스캔", free: "글로벌 하루 2회", pro: "글로벌 하루 100회" },
+      { label: "AI 브리핑", free: "글로벌 하루 1회", pro: "글로벌 하루 30회" },
+      { label: "관심자산", free: "자산 2개 저장", pro: "자산 50개 감시" },
+      { label: "알림", free: "글로벌 조건 1개", pro: "글로벌 조건 20개" }
+    ];
+  }
+
+  return [
+    { label: "레이더 스캔", free: "코인 3회 · 글로벌 2회", pro: "코인 200회 · 글로벌 100회" },
+    { label: "AI 브리핑", free: "시장별 하루 1회", pro: "시장별 하루 30회" },
+    { label: "관심종목", free: "시장별 2개 저장", pro: "시장별 50개 이상 감시" },
+    { label: "알림", free: "시장별 조건 1개", pro: "시장별 조건 20개" }
+  ];
+}
 
 const scopeCopy: Record<
   BillingPageScope,
@@ -145,7 +149,7 @@ function getScopedDisplayPlan(plan: BillingPlan, scope: BillingPageScope): Billi
   if (scope === "stocks") {
     return {
       ...plan,
-      description: "글로벌 레이더의 흐름을 하루 몇 번 확인해 보는 체험 플랜입니다. 반복 감시와 알림은 Pro에서 열립니다.",
+      description: "글로벌 레이더의 핵심 흐름을 확인해 보는 체험 플랜입니다. 반복 감시와 알림은 Pro에서 열립니다.",
       highlights: ["QQQ / SPY 기본 레이더 맛보기", "글로벌 뉴스 제한 확인", "AI 브리핑 하루 1회 미리보기"],
       limits: {
         ...plan.limits,
@@ -160,7 +164,7 @@ function getScopedDisplayPlan(plan: BillingPlan, scope: BillingPageScope): Billi
   if (scope === "crypto") {
     return {
       ...plan,
-      description: "코인 레이더의 흐름을 하루 몇 번 확인해 보는 체험 플랜입니다. 반복 감시와 알림은 Pro에서 열립니다.",
+      description: "코인 레이더의 핵심 흐름을 확인해 보는 체험 플랜입니다. 반복 감시와 알림은 Pro에서 열립니다.",
       highlights: ["BTC / ETH 기본 레이더 맛보기", "주요 알트코인 제한 감시", "AI 브리핑 하루 1회 미리보기"],
       limits: {
         ...plan.limits,
@@ -181,6 +185,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
   const visiblePlans = getBillingPlansForPage(marketScope);
   const copy = scopeCopy[marketScope];
   const nativePurchaseAvailable = isNativePurchaseAvailable();
+  const freeVsProRows = getFreeVsProRows(marketScope);
 
   async function startCheckout(plan: BillingPlan) {
     const planId = plan.id;

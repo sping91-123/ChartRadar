@@ -43,8 +43,8 @@ export const billingPlans: BillingPlan[] = [
     priceLabel: "무료",
     billingAmount: 0,
     monthlyValue: 0,
-    description: "Chart Radar의 흐름을 하루에 몇 번 확인해 보는 체험 플랜입니다. 반복 감시와 알림은 Pro에서 열립니다.",
-    highlights: ["BTC / ETH 기본 레이더 맛보기", "알트코인·글로벌 레이더 제한 체험", "AI 브리핑 하루 1회 미리보기"],
+    description: "Chart Radar의 핵심 흐름을 확인해 보는 체험 플랜입니다. 반복 스캔, 관심종목 확장, 알림 루틴은 Pro에서 열립니다.",
+    highlights: ["BTC / ETH 기본 레이더 확인", "알트코인·글로벌 레이더 제한 체험", "AI 브리핑 하루 1회 미리보기"],
     limits: {
       radarScans: "일 3회",
       aiBriefings: "일 1회",
@@ -65,7 +65,7 @@ export const billingPlans: BillingPlan[] = [
     description: "코인 전용 레이더, ICT 판독, 기술지표, 뉴스 브리핑과 알림을 여는 플랜입니다.",
     highlights: ["바이낸스 주요 코인 감시", "BTC / ETH와 알트코인 분리 레이더", "코인 뉴스와 매크로 영향 브리핑"],
     limits: {
-      radarScans: "코인 범위 내 넉넉하게",
+      radarScans: "코인 레이더 일 200회",
       aiBriefings: "일 30회",
       watchlist: "코인 50개",
       alerts: "코인 조건별 알림",
@@ -84,7 +84,7 @@ export const billingPlans: BillingPlan[] = [
     description: "코인 레이더를 매일 쓰는 사용자에게 맞춘 연간 플랜입니다.",
     highlights: ["Coin Pro 전체 기능", "월 환산 12,417원", "신규 코인 레이더 기능 우선 적용"],
     limits: {
-      radarScans: "코인 범위 내 넉넉하게",
+      radarScans: "코인 레이더 일 200회",
       aiBriefings: "일 40회",
       watchlist: "코인 100개",
       alerts: "코인 조건별 알림",
@@ -103,7 +103,7 @@ export const billingPlans: BillingPlan[] = [
     description: "미국주식, ETF, 지수, 자산군 흐름과 매크로 이슈를 장전·장중·마감 기준으로 감시하는 글로벌 전용 플랜입니다.",
     highlights: ["미국 주요 종목, ETF, 자산군 ETF 감시", "미국장 시간대별 관심 지점 체크", "매크로, 실적, 섹터 뉴스 브리핑"],
     limits: {
-      radarScans: "글로벌 범위 내 넉넉하게",
+      radarScans: "글로벌 레이더 일 100회",
       aiBriefings: "일 30회",
       watchlist: "글로벌 종목 50개",
       alerts: "글로벌 조건별 알림",
@@ -122,7 +122,7 @@ export const billingPlans: BillingPlan[] = [
     description: "글로벌 레이더를 꾸준히 쓰는 사용자에게 맞춘 연간 플랜입니다.",
     highlights: ["Global Pro 전체 기능", "월 환산 12,417원", "매크로, 섹터, 미국장 시간대별 레이더 우선 적용"],
     limits: {
-      radarScans: "글로벌 범위 내 넉넉하게",
+      radarScans: "글로벌 레이더 일 100회",
       aiBriefings: "일 40회",
       watchlist: "글로벌 종목 100개",
       alerts: "글로벌 조건별 알림",
@@ -141,7 +141,7 @@ export const billingPlans: BillingPlan[] = [
     description: "코인과 글로벌 시장을 모두 보는 사용자를 위한 번들 플랜입니다. 따로 결제하는 것보다 할인됩니다.",
     highlights: ["코인 + 글로벌 전체 레이더", "시장별 뉴스와 알림 분리", "두 시장을 오가며 쓰는 사용자에게 최적"],
     limits: {
-      radarScans: "두 시장 모두 넉넉하게",
+      radarScans: "코인 200회 + 글로벌 100회",
       aiBriefings: "일 60회",
       watchlist: "코인 100개 + 글로벌 100개",
       alerts: "시장별 조건 알림",
@@ -160,7 +160,7 @@ export const billingPlans: BillingPlan[] = [
     description: "코인과 글로벌 시장을 모두 장기적으로 쓰는 사용자를 위한 연간 번들입니다.",
     highlights: ["All Market Pro 전체 기능", "월 환산 20,750원", "향후 확장 시장 기능 우선 적용"],
     limits: {
-      radarScans: "두 시장 모두 넉넉하게",
+      radarScans: "코인 200회 + 글로벌 100회",
       aiBriefings: "일 80회",
       watchlist: "코인 150개 + 글로벌 150개",
       alerts: "시장별 조건 알림",

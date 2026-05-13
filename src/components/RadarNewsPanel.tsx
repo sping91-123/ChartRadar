@@ -2,7 +2,7 @@
 // 레이더뉴스 브리핑과 참고 뉴스 목록을 보여주는 패널.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ExternalLink, Newspaper, Radar, RefreshCcw, ShieldAlert, Sparkles, Target, TrendingDown, TrendingUp } from "lucide-react";
-import type { RadarNewsBriefing, RadarNewsDirection, RadarNewsItem } from "@/lib/radarNews";
+import { displayNewsSource, localizeNewsSourceText, type RadarNewsBriefing, type RadarNewsDirection, type RadarNewsItem } from "@/lib/radarNews";
 import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { hasAnyPaidEntitlement } from "@/lib/billing";
@@ -34,7 +34,7 @@ const marketCopy = {
 } satisfies Record<RadarNewsMarket, { eyebrow: string; title: string; description: string; summaryTitle: string }>;
 
 function newsCacheKey(market: RadarNewsMarket) {
-  return `chart-radar.news.${market}.v1`;
+  return `chart-radar.news.${market}.v2`;
 }
 
 function canUseStorage() {
@@ -57,14 +57,6 @@ function readCachedNews(market: RadarNewsMarket): NewsPayload | null {
 function writeCachedNews(market: RadarNewsMarket, payload: NewsPayload) {
   if (!canUseStorage()) return;
   window.localStorage.setItem(newsCacheKey(market), JSON.stringify(payload));
-}
-
-function displaySource(source: string) {
-  if (source === "Official") return "공식 출처";
-  if (source === "Yahoo Finance") return "야후 파이낸스";
-  if (source === "CoinDesk") return "코인데스크";
-  if (source === "CryptoPanic") return "크립토패닉";
-  return source;
 }
 
 function directionStyle(direction: RadarNewsDirection) {
@@ -119,7 +111,7 @@ function NewsSourceCard({ item }: { item: RadarNewsItem }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-slate-500">
-            <span>{displaySource(item.source)}</span>
+            <span>{displayNewsSource(item.source)}</span>
             <span>{timeLabel(item.publishedAt)}</span>
             <span className={`rounded border px-1.5 py-0.5 ${style.pill}`}>{style.label}</span>
           </div>
@@ -163,7 +155,7 @@ function BriefingIssueCard({ issue }: { issue: RadarNewsBriefing["keyIssues"][nu
         <div>
           <p className={`text-[11px] font-black ${style.text}`}>{style.label}</p>
           <h4 className="mt-1 text-sm font-black leading-5 text-white [word-break:keep-all]">{issue.title}</h4>
-          <p className="mt-2 text-xs leading-5 text-slate-300 [word-break:keep-all]">{issue.detail}</p>
+          <p className="mt-2 text-xs leading-5 text-slate-300 [word-break:keep-all]">{localizeNewsSourceText(issue.detail)}</p>
         </div>
       </div>
     </div>
@@ -416,7 +408,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
 
       {payload?.failedSources.length ? (
         <div className="rounded-lg border border-signal-warning/20 bg-signal-warning/10 p-3 text-xs leading-5 text-signal-warning">
-          일부 뉴스 소스 연결이 지연되었습니다. 실패 소스는 {payload.failedSources.join(", ")}입니다.
+          일부 뉴스 소스 연결이 지연되었습니다. 실패 소스는 {payload.failedSources.map(displayNewsSource).join(", ")}입니다.
         </div>
       ) : null}
 

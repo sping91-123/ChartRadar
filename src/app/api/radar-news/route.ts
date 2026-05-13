@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { XMLParser } from "fast-xml-parser";
 import {
   createRadarNewsItem,
+  displayNewsSource,
+  localizeNewsSourceText,
   type RadarNewsBriefing,
   type RadarNewsDirection,
   type RadarNewsItem,
@@ -578,7 +580,7 @@ function fallbackNewsBriefing(items: RadarNewsItem[], model = "rules", market: R
     overview,
     keyIssues: topItems.map((item) => ({
       title: itemTitle(item),
-      detail: `${item.source} 기준 ${toneLabel(item.direction)} 이슈입니다. ${item.summary}`,
+      detail: `${displayNewsSource(item.source)} 기준 ${toneLabel(item.direction)} 이슈입니다. ${item.summary}`,
       tone: item.direction
     })),
     marketImpact: [
@@ -611,7 +613,7 @@ function buildNewsBriefingPrompt(items: RadarNewsItem[], market: RadarNewsMarket
   const headlines = items
     .slice(0, 10)
     .map((item, index) => {
-      return `${index + 1}. [${item.source}] ${itemTitle(item)}
+      return `${index + 1}. [${displayNewsSource(item.source)}] ${itemTitle(item)}
 방향: ${toneLabel(item.direction)}
 점수: ${item.score}
 태그: ${item.tags.join(", ")}
@@ -651,15 +653,18 @@ function asBriefingIssue(value: unknown): RadarNewsBriefing["keyIssues"][number]
   const tone = item.tone === "bullish" || item.tone === "bearish" || item.tone === "neutral" ? item.tone : "neutral";
   if (typeof item.title !== "string" || typeof item.detail !== "string") return null;
   return {
-    title: item.title.slice(0, 120),
-    detail: item.detail.slice(0, 360),
+    title: localizeNewsSourceText(item.title).slice(0, 120),
+    detail: localizeNewsSourceText(item.detail).slice(0, 360),
     tone
   };
 }
 
 function asStringList(value: unknown, limit: number) {
   if (!Array.isArray(value)) return [];
-  return value.filter((item): item is string => typeof item === "string").slice(0, limit).map((item) => item.slice(0, 260));
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .slice(0, limit)
+    .map((item) => localizeNewsSourceText(item).slice(0, 260));
 }
 
 function parseAIJsonBriefing(raw: string, items: RadarNewsItem[], model: string, market: RadarNewsMarket): RadarNewsBriefing {
@@ -678,11 +683,11 @@ function parseAIJsonBriefing(raw: string, items: RadarNewsItem[], model: string,
     return {
       generatedAt: new Date().toISOString(),
       model,
-      overview: typeof parsed.overview === "string" ? parsed.overview.slice(0, 700) : fallback.overview,
+      overview: typeof parsed.overview === "string" ? localizeNewsSourceText(parsed.overview).slice(0, 700) : fallback.overview,
       keyIssues: keyIssues.length ? keyIssues : fallback.keyIssues,
       marketImpact: marketImpact.length ? marketImpact : fallback.marketImpact,
       strategyNotes: strategyNotes.length ? strategyNotes : fallback.strategyNotes,
-      finalSummary: typeof parsed.finalSummary === "string" ? parsed.finalSummary.slice(0, 360) : fallback.finalSummary
+      finalSummary: typeof parsed.finalSummary === "string" ? localizeNewsSourceText(parsed.finalSummary).slice(0, 360) : fallback.finalSummary
     };
   } catch {
     return fallback;

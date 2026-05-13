@@ -39,6 +39,24 @@ export type RadarNewsBriefing = {
   finalSummary: string;
 };
 
+const sourceDisplayNames: Record<string, string> = {
+  Official: "공식 출처",
+  "Yahoo Finance": "야후 파이낸스",
+  CoinDesk: "코인데스크",
+  Cointelegraph: "코인텔레그래프",
+  CryptoPanic: "크립토패닉",
+  "CNBC Markets": "CNBC 마켓",
+  MarketWatch: "마켓워치"
+};
+
+export function displayNewsSource(source: string) {
+  return sourceDisplayNames[source] ?? source;
+}
+
+export function localizeNewsSourceText(text: string) {
+  return Object.entries(sourceDisplayNames).reduce((current, [source, label]) => current.replaceAll(source, label), text);
+}
+
 type KeywordRule = {
   keywords: string[];
   score: number;
