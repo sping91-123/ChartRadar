@@ -10,6 +10,7 @@ import {
   isYearlyBillingPlan,
   subscriptionTrustNotes,
   type BillingPageScope,
+  type BillingPlan,
   type BillingPlanId
 } from "@/lib/billing";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
@@ -112,6 +113,40 @@ const scopeCopy: Record<
     priceAnchor: "하루 500원대 비용으로 미국장, ETF, 지수, 매크로 이벤트를 한 화면에서 점검합니다."
   }
 };
+
+function getScopedDisplayPlan(plan: BillingPlan, scope: BillingPageScope): BillingPlan {
+  if (plan.id !== "free") return plan;
+
+  if (scope === "stocks") {
+    return {
+      ...plan,
+      description: "글로벌 레이더의 핵심 흐름과 시장 점검 방식을 먼저 확인하는 기본 플랜입니다.",
+      highlights: ["QQQ / SPY 기본 레이더", "글로벌 뉴스 일부 확인", "AI 브리핑 미리보기"],
+      limits: {
+        ...plan.limits,
+        radarScans: "일 10회",
+        watchlist: "글로벌 종목 5개",
+        alerts: "화면 알림만",
+        markets: "글로벌 중심"
+      }
+    };
+  }
+
+  if (scope === "crypto") {
+    return {
+      ...plan,
+      description: "코인 레이더의 핵심 흐름과 분석 방식을 먼저 확인하는 기본 플랜입니다.",
+      highlights: ["BTC / ETH 기본 레이더", "주요 알트코인 일부 감시", "AI 브리핑 미리보기"],
+      limits: {
+        ...plan.limits,
+        watchlist: "코인 5개",
+        markets: "코인 중심"
+      }
+    };
+  }
+
+  return plan;
+}
 
 export function ProPricingPanel({ marketScope = "all" }: { marketScope?: BillingPageScope } = {}) {
   const [checkoutState, setCheckoutState] = useState<CheckoutState>({ status: "idle" });
@@ -253,6 +288,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
 
       <div id="plans" className="grid scroll-mt-28 gap-4 lg:grid-cols-3">
         {visiblePlans.map((plan) => {
+          const displayPlan = getScopedDisplayPlan(plan, marketScope);
           const highlighted = plan.id === copy.highlightedPlanId;
           const isYearly = isYearlyBillingPlan(plan.id);
           const isLoading = checkoutState.status === "loading" && checkoutState.planId === plan.id;
@@ -271,18 +307,18 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
                   <span className="rounded-full border border-white/10 bg-black/25 px-2.5 py-1 text-xs font-black text-slate-300">
                     {plan.badge}
                   </span>
-                  <h3 className="mt-4 text-xl font-black text-white">{plan.name}</h3>
+                  <h3 className="mt-4 text-xl font-black text-white">{displayPlan.name}</h3>
                 </div>
                 {highlighted ? <Crown className="text-cyan-300" size={22} aria-hidden /> : null}
               </div>
-              <p className="mt-4 text-3xl font-black text-white">{plan.priceLabel}</p>
+              <p className="mt-4 text-3xl font-black text-white">{displayPlan.priceLabel}</p>
               {isYearly && plan.id !== "free" ? (
                 <p className="mt-1 text-xs font-bold text-cyan-200">월 환산 약 {plan.monthlyValue.toLocaleString("ko-KR")}원</p>
               ) : null}
-              <p className="mt-4 min-h-16 text-sm leading-6 text-slate-400">{plan.description}</p>
+              <p className="mt-4 min-h-16 text-sm leading-6 text-slate-400">{displayPlan.description}</p>
 
               <div className="mt-5 space-y-2">
-                {plan.highlights.map((item) => (
+                {displayPlan.highlights.map((item) => (
                   <p key={item} className="flex items-start gap-2 text-sm text-slate-200">
                     <Check className="mt-0.5 shrink-0 text-cyan-300" size={15} aria-hidden />
                     {item}
@@ -291,10 +327,10 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
               </div>
 
               <div className="mt-5 grid gap-2 rounded-md border border-white/10 bg-black/20 p-3 text-xs text-slate-400">
-                <p>레이더: <span className="font-bold text-slate-200">{plan.limits.radarScans}</span></p>
-                <p>AI 브리핑: <span className="font-bold text-slate-200">{plan.limits.aiBriefings}</span></p>
-                <p>관심종목: <span className="font-bold text-slate-200">{plan.limits.watchlist}</span></p>
-                <p>알림: <span className="font-bold text-slate-200">{plan.limits.alerts}</span></p>
+                <p>레이더: <span className="font-bold text-slate-200">{displayPlan.limits.radarScans}</span></p>
+                <p>AI 브리핑: <span className="font-bold text-slate-200">{displayPlan.limits.aiBriefings}</span></p>
+                <p>관심종목: <span className="font-bold text-slate-200">{displayPlan.limits.watchlist}</span></p>
+                <p>알림: <span className="font-bold text-slate-200">{displayPlan.limits.alerts}</span></p>
               </div>
 
               {plan.id === "free" ? (
@@ -324,7 +360,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
         })}
       </div>
 
-      <UsageMeterPanel />
+      <UsageMeterPanel marketScope={marketScope} />
 
       <RadarAlertCenter market={marketScope === "stocks" ? "stocks" : "crypto"} />
 

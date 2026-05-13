@@ -9,10 +9,11 @@ import {
   resetUsageSnapshot,
   summarizeUsage,
   USAGE_CHANGED_EVENT,
+  type UsageBucketId,
   type UsageSnapshot
 } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
-import { getEntitlementLabel, hasAnyPaidEntitlement } from "@/lib/billing";
+import { getEntitlementLabel, hasAnyPaidEntitlement, type BillingPageScope } from "@/lib/billing";
 
 function barColor(percent: number, isOverFree: boolean) {
   if (isOverFree) return "bg-rose-400";
@@ -55,11 +56,48 @@ function UsageRow({ state, isPaid }: { state: ReturnType<typeof getUsageBucketSt
 
 const initialUsageSnapshot: UsageSnapshot = { dateKey: "", counts: {} };
 
-export function UsageMeterPanel({ compact = false }: { compact?: boolean }) {
+const scopedUsageCopy: Record<BillingPageScope, { free: string; paid: string; proHref: string }> = {
+  all: {
+    free: "Free는 핵심 흐름을 확인하는 기본 모드이고, Pro는 코인·글로벌·AI·알림을 매일 여러 번 돌리는 운영 모드입니다.",
+    paid: "결제 권한이 확인된 계정은 Pro 기준 사용량으로 표시됩니다. 로그인 계정 기준으로 여러 기기에서도 같은 권한을 확인할 수 있습니다.",
+    proHref: "/pro"
+  },
+  crypto: {
+    free: "Free는 코인 레이더의 핵심 흐름을 확인하는 기본 모드입니다. Coin Pro는 코인 판독, 관심종목, AI 브리핑, 알림을 더 넓게 돌리는 운영 모드입니다.",
+    paid: "Coin Pro 또는 All Market 권한 기준으로 코인 레이더 사용량을 확인합니다. 코인 화면에서 쓰는 기능만 따로 모아 보여드립니다.",
+    proHref: "/pro?market=crypto"
+  },
+  stocks: {
+    free: "Free는 글로벌 레이더의 핵심 흐름을 확인하는 기본 모드입니다. Global Pro는 글로벌 종목, 매크로, 뉴스 브리핑, 알림을 더 넓게 돌리는 운영 모드입니다.",
+    paid: "Global Pro 또는 All Market 권한 기준으로 글로벌 레이더 사용량을 확인합니다. 글로벌 화면에서 쓰는 기능만 따로 모아 보여드립니다.",
+    proHref: "/pro?market=stocks"
+  }
+};
+
+function bucketMatchesScope(id: UsageBucketId, marketScope: BillingPageScope) {
+  if (marketScope === "crypto") {
+    return id === "radarScan" || id === "watchlistScan" || id === "aiBriefing" || id === "alertRule";
+  }
+
+  if (marketScope === "stocks") {
+    return id === "stockRadar" || id === "aiBriefing" || id === "alertRule";
+  }
+
+  return true;
+}
+
+export function UsageMeterPanel({
+  compact = false,
+  marketScope = "all"
+}: {
+  compact?: boolean;
+  marketScope?: BillingPageScope;
+}) {
   const { profile } = useSupabaseAuth();
   const [snapshot, setSnapshot] = useState<UsageSnapshot>(initialUsageSnapshot);
   const isPaid = hasAnyPaidEntitlement(profile?.plan);
   const entitlementLabel = getEntitlementLabel(profile?.plan);
+  const copy = scopedUsageCopy[marketScope];
 
   useEffect(() => {
     const refresh = () => setSnapshot(readUsageSnapshot());
@@ -73,13 +111,16 @@ export function UsageMeterPanel({ compact = false }: { compact?: boolean }) {
   }, []);
 
   const summary = useMemo(() => summarizeUsage(snapshot), [snapshot]);
-  const visibleStates = compact ? summary.states.slice(0, 3) : summary.states;
+  const scopedStates = summary.states.filter((state) => bucketMatchesScope(state.id, marketScope));
+  const visibleStates = compact ? scopedStates.slice(0, 3) : scopedStates;
+  const scopedUsedTotal = scopedStates.reduce((sum, state) => sum + state.used, 0);
+  const scopedOverCount = scopedStates.filter((state) => state.isOverFree).length;
   const title =
     isPaid
       ? `${entitlementLabel} 권한으로 사용 중입니다.`
-      : summary.overCount > 0
+      : scopedOverCount > 0
       ? "오늘 무료 기준을 넘긴 항목이 있습니다."
-      : summary.usedTotal > 0
+      : scopedUsedTotal > 0
         ? "오늘 레이더 사용량이 쌓이고 있습니다."
         : "오늘 사용할 레이더 한도가 열려 있습니다.";
 
@@ -94,9 +135,7 @@ export function UsageMeterPanel({ compact = false }: { compact?: boolean }) {
             <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">Usage Radar</p>
             <h2 className="mt-1 text-lg font-black text-white">{title}</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400 [word-break:keep-all]">
-              {isPaid
-                ? "결제 권한이 확인된 계정은 Pro 기준 사용량으로 표시됩니다. 로그인 계정 기준으로 사용 흐름을 관리해 여러 기기에서도 같은 권한을 확인할 수 있습니다."
-                : "Free는 핵심 흐름을 확인하는 기본 모드이고, Pro는 코인·글로벌·AI·알림을 매일 여러 번 돌리는 운영 모드입니다."}
+              {isPaid ? copy.paid : copy.free}
             </p>
           </div>
         </div>
@@ -110,7 +149,7 @@ export function UsageMeterPanel({ compact = false }: { compact?: boolean }) {
             초기화
           </button>
           <Link
-            href="/pro"
+            href={copy.proHref}
             className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-md bg-cyan-300 px-3 text-xs font-black text-slate-950 transition hover:bg-cyan-200"
           >
             <Crown size={13} aria-hidden />
@@ -131,7 +170,7 @@ export function UsageMeterPanel({ compact = false }: { compact?: boolean }) {
           로그인 계정 기준으로 Pro 한도와 사용량을 확인합니다.
         </span>
         {compact ? (
-          <Link href="/pro" className="font-black text-cyan-200 hover:text-white">
+          <Link href={copy.proHref} className="font-black text-cyan-200 hover:text-white">
             전체 플랜 보기
           </Link>
         ) : null}
