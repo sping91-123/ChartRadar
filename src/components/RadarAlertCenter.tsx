@@ -25,7 +25,7 @@ import {
 } from "@/lib/setupAlertPresets";
 import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
-import { hasAnyPaidEntitlement } from "@/lib/billing";
+import { hasMarketEntitlement } from "@/lib/billing";
 
 const baseStorageKey = "chartRadar.alertRules.v1";
 
@@ -194,7 +194,7 @@ function RuleCard({
 
 export function RadarAlertCenter({ compact = false, market = "crypto" }: { compact?: boolean; market?: AlertMarket }) {
   const { profile } = useSupabaseAuth();
-  const isPaid = hasAnyPaidEntitlement(profile?.plan);
+  const isPaid = hasMarketEntitlement(profile?.plan, market);
   const copy = alertMarketCopy[market];
   const isGlobal = market === "stocks";
   const [enabledRuleIds, setEnabledRuleIds] = useState<RadarAlertRuleId[]>(() => getMarketDefaultRuleIds(market));

@@ -26,9 +26,6 @@ GEMINI_API_KEY=xxx
 NEWS_TRANSLATION_PROVIDER=
 ENABLE_GEMINI_NEWS_FALLBACK=
 
-TRADING_ECONOMICS_API_KEY=
-TRADING_ECONOMICS_CLIENT=
-TRADING_ECONOMICS_SECRET=
 
 NEXT_PUBLIC_PRO_PAYMENT_URL=
 NEXT_PUBLIC_PRO_MONTHLY_PAYMENT_URL=
@@ -54,7 +51,7 @@ CAPACITOR_SERVER_URL=https://your-domain.kr
 
 `SUPABASE_SERVICE_ROLE_KEY`, `TOSS_PAYMENTS_SECRET_KEY`, `UPSTASH_REDIS_*` 값은 서버에서만 사용합니다. 브라우저 코드나 `NEXT_PUBLIC_` 환경변수로 노출하지 않습니다.
 
-매크로 전광판은 기본적으로 무료 BLS 공개 API를 사용해 CPI와 PPI 실제값을 자동 갱신합니다. Trading Economics 키는 더 넓은 경제 캘린더를 붙이고 싶을 때만 쓰는 선택형 유료 보강 옵션입니다. `TRADING_ECONOMICS_API_KEY`에는 `client:secret` 형식을 넣거나, `TRADING_ECONOMICS_CLIENT`와 `TRADING_ECONOMICS_SECRET`에 나눠 넣을 수 있습니다.
+매크로 전광판은 기본적으로 무료 BLS 공개 API를 사용해 CPI와 PPI 실제값을 자동 갱신합니다. 소매판매, 주택, FOMC 등 나머지 일정은 `src/data/macroEvents.ts`의 운영 백업 일정으로 관리합니다. 유료 캘린더 API를 필수 인프라로 두지 않습니다.
 
 ## 3. Supabase Auth 설정
 

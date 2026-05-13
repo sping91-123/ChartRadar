@@ -9,7 +9,7 @@ import { analyzeTechnicalRadar, type TechnicalRadarReport } from "@/lib/technica
 import type { StockSymbolInfo } from "@/lib/stockMarket";
 import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
-import { hasAnyPaidEntitlement } from "@/lib/billing";
+import { hasMarketEntitlement } from "@/lib/billing";
 import { getWatchlistLimit } from "@/lib/watchlist";
 
 const fallbackUniverse: StockSymbolInfo[] = [
@@ -282,7 +282,7 @@ function StockSnapshot({
 
 export function StockRadarApp() {
   const { profile } = useSupabaseAuth();
-  const isPaid = hasAnyPaidEntitlement(profile?.plan);
+  const isPaid = hasMarketEntitlement(profile?.plan, "stocks");
   const chartRef = useRef<HTMLDivElement | null>(null);
   const chartApiRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);

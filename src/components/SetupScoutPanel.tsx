@@ -26,7 +26,7 @@ import type { CommentaryInput } from "@/lib/ai/types";
 import type { TradingMode } from "@/lib/marketAnalysis";
 import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
-import { hasAnyPaidEntitlement } from "@/lib/billing";
+import { hasMarketEntitlement } from "@/lib/billing";
 
 type ScanState =
   | { status: "idle" }
@@ -655,7 +655,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
   const [riskProfile, setRiskProfile] = useState<ScoutRiskProfile>("radar");
   const [hasLoadedPreferences, setHasLoadedPreferences] = useState(false);
   const { profile } = useSupabaseAuth();
-  const isPaid = hasAnyPaidEntitlement(profile?.plan);
+  const isPaid = hasMarketEntitlement(profile?.plan, "crypto");
   const scoutScope: ScoutScope = excludeMajor ? "alts" : "all";
 
   useEffect(() => {

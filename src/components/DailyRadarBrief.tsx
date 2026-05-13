@@ -27,7 +27,7 @@ import {
 } from "@/lib/setupAlertPresets";
 import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
-import { hasAnyPaidEntitlement } from "@/lib/billing";
+import { hasMarketEntitlement } from "@/lib/billing";
 
 interface MarketBoardItem {
   symbol: string;
@@ -267,7 +267,7 @@ function MiniSetupCard({
 
 export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
   const { profile } = useSupabaseAuth();
-  const isPaid = hasAnyPaidEntitlement(profile?.plan);
+  const isPaid = hasMarketEntitlement(profile?.plan, "crypto");
   const [state, setState] = useState<DailyBriefState>({ status: "loading" });
   const [savedPresetIds, setSavedPresetIds] = useState<Set<string>>(() => new Set());
   const [alertToast, setAlertToast] = useState<string | null>(null);

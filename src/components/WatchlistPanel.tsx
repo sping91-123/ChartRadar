@@ -16,7 +16,7 @@ import {
 import { watchlistSymbolPool, type ScoutSetup } from "@/lib/setupScout";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
-import { hasAnyPaidEntitlement } from "@/lib/billing";
+import { hasMarketEntitlement } from "@/lib/billing";
 import {
   addToWatchlist,
   getWatchlistLimit,
@@ -228,7 +228,7 @@ type ScanState =
 export function WatchlistPanel() {
   const { profile } = useSupabaseAuth();
   const plan: WatchlistPlan = profile?.plan ?? "free";
-  const isPaid = hasAnyPaidEntitlement(profile?.plan);
+  const isPaid = hasMarketEntitlement(profile?.plan, "crypto");
   const limit = getWatchlistLimit(plan);
 
   const [watchlist, setWatchlist] = useState<string[]>([]);

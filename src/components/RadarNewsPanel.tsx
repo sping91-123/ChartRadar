@@ -1,11 +1,11 @@
 "use client";
-// 레이더뉴스 브리핑과 참고 뉴스 목록을 보여주는 패널.
+// 시장 뉴스 브리핑과 참고 뉴스 목록을 보여주는 패널입니다.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ExternalLink, Newspaper, Radar, RefreshCcw, ShieldAlert, Sparkles, Target, TrendingDown, TrendingUp } from "lucide-react";
+import { AlertTriangle, ExternalLink, Newspaper, Radar, RefreshCcw, Sparkles, Target, TrendingDown, TrendingUp } from "lucide-react";
 import { displayNewsSource, localizeNewsSourceText, type RadarNewsBriefing, type RadarNewsDirection, type RadarNewsItem } from "@/lib/radarNews";
 import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
-import { hasAnyPaidEntitlement } from "@/lib/billing";
+import { hasMarketEntitlement } from "@/lib/billing";
 
 type NewsPayload = {
   updatedAt: number;
@@ -21,20 +21,24 @@ type RadarNewsMarket = "crypto" | "stocks";
 const marketCopy = {
   crypto: {
     eyebrow: "코인 뉴스 레이더",
-    title: "코인 레이더뉴스",
-    description: "코인 시장 주요 뉴스와 공개 이슈를 모아 시장 영향, 위험 요인, 오늘 확인할 포인트를 한국어로 정리합니다.",
-    summaryTitle: "오늘의 코인 이슈 요약"
+    title: "코인 레이더 뉴스",
+    description: "코인 시장 주요 이슈를 한국어로 정리하고, 시장 영향과 오늘 확인할 포인트를 빠르게 보여드립니다.",
+    summaryTitle: "오늘의 코인 뉴스 브리핑",
+    proLine: "Pro에서는 뉴스 영향, 전략 포인트, 반복 브리핑을 더 넓게 확인할 수 있습니다.",
+    proBenefits: ["장중 반복 브리핑", "시장 영향 3줄 요약", "전략 판단 포인트"]
   },
   stocks: {
     eyebrow: "글로벌 뉴스 레이더",
-    title: "글로벌 레이더뉴스",
-    description: "미국주식, ETF, 금리, 실적, 지수, 원자재 이슈를 중심으로 시장 영향과 오늘 확인할 포인트를 한국어로 정리합니다.",
-    summaryTitle: "오늘의 글로벌 이슈 요약"
+    title: "글로벌 레이더 뉴스",
+    description: "미국주식, ETF, 금리, 실적, 매크로 이슈를 한국어로 정리하고 시장 영향까지 함께 보여드립니다.",
+    summaryTitle: "오늘의 글로벌 뉴스 브리핑",
+    proLine: "Global Pro에서는 매크로와 미국장 이슈를 장중 반복해서 정리할 수 있습니다.",
+    proBenefits: ["매크로 영향 정리", "미국장 이슈 반복 갱신", "관심 종목 연결"]
   }
-} satisfies Record<RadarNewsMarket, { eyebrow: string; title: string; description: string; summaryTitle: string }>;
+} satisfies Record<RadarNewsMarket, { eyebrow: string; title: string; description: string; summaryTitle: string; proLine: string; proBenefits: string[] }>;
 
 function newsCacheKey(market: RadarNewsMarket) {
-  return `chart-radar.news.${market}.v2`;
+  return `chart-radar.news.${market}.v6`;
 }
 
 function canUseStorage() {
@@ -69,6 +73,7 @@ function directionStyle(direction: RadarNewsDirection) {
       pill: "border-signal-success/25 bg-signal-success/15 text-signal-success"
     };
   }
+
   if (direction === "bearish") {
     return {
       label: "하방 주의",
@@ -78,6 +83,7 @@ function directionStyle(direction: RadarNewsDirection) {
       pill: "border-signal-danger/25 bg-signal-danger/15 text-signal-danger"
     };
   }
+
   return {
     label: "중립 확인",
     icon: Target,
@@ -98,18 +104,8 @@ function timeLabel(value: string | number) {
   }).format(date);
 }
 
-function hasKoreanText(value: string) {
-  return /[가-힣]/.test(value);
-}
-
 function itemTitle(item: RadarNewsItem) {
-  if (item.translatedTitle && hasKoreanText(item.translatedTitle)) return item.translatedTitle;
-  if (hasKoreanText(item.title)) return item.title;
-
-  const assetLabel = item.assets.slice(0, 2).join(", ") || "시장";
-  const directionLabel =
-    item.direction === "bullish" ? "상방 재료" : item.direction === "bearish" ? "하방 주의" : "중립 확인";
-  return `${assetLabel} 관련 ${directionLabel} 뉴스`;
+  return item.translatedTitle || "시장 이슈를 확인해 주세요.";
 }
 
 function NewsSourceCard({ item }: { item: RadarNewsItem }) {
@@ -129,6 +125,9 @@ function NewsSourceCard({ item }: { item: RadarNewsItem }) {
         </div>
         <Icon className={`mt-1 shrink-0 ${style.text}`} size={17} aria-hidden />
       </div>
+
+      <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-400 [word-break:keep-all]">{item.summary}</p>
+
       <div className="mt-3 flex flex-wrap gap-1.5">
         {item.assets.slice(0, 3).map((asset) => (
           <span key={asset} className="rounded border border-accent-blue/20 bg-accent-blue/10 px-1.5 py-0.5 text-[10px] font-black text-accent-blue">
@@ -141,12 +140,8 @@ function NewsSourceCard({ item }: { item: RadarNewsItem }) {
           </span>
         ))}
       </div>
-      <a
-        href={item.link}
-        target="_blank"
-        rel="noreferrer"
-        className="mt-3 inline-flex items-center gap-1 text-[11px] font-black text-accent-blue hover:text-sky-300"
-      >
+
+      <a href={item.link} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-[11px] font-black text-accent-blue hover:text-sky-300">
         원문 확인
         <ExternalLink size={12} aria-hidden />
       </a>
@@ -190,12 +185,23 @@ function BulletList({ items, tone = "blue" }: { items: string[]; tone?: "blue" |
 export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket } = {}) {
   const copy = marketCopy[market];
   const { profile } = useSupabaseAuth();
-  const isPaid = hasAnyPaidEntitlement(profile?.plan);
+  const isPaid = hasMarketEntitlement(profile?.plan, market);
   const usageBucketId = market === "stocks" ? "stocksAiBriefing" : "cryptoAiBriefing";
   const [payload, setPayload] = useState<NewsPayload | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [error, setError] = useState("");
   const [limitNotice, setLimitNotice] = useState("");
+
+  const fetchNewsPayload = useCallback(
+    async (mode: "full" | "preview") => {
+      const url = mode === "preview" ? `/api/radar-news?market=${market}&briefing=0` : `/api/radar-news?market=${market}`;
+      const response = await fetch(url, { cache: "no-store" });
+      const data = (await response.json()) as NewsPayload;
+      if (!response.ok) throw new Error(data.error ?? "레이더 뉴스를 불러오지 못했습니다.");
+      return data;
+    },
+    [market]
+  );
 
   const loadNews = useCallback(async () => {
     const usageGate = getUsageGate(usageBucketId, isPaid);
@@ -205,12 +211,21 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
         setPayload(cached);
         setStatus("ready");
         setError("");
-        setLimitNotice(`${usageGate.message} 아래 내용은 마지막으로 받아온 브리핑입니다.`);
+        setLimitNotice(`${usageGate.message} 무료 화면에서는 마지막 참고 뉴스와 간단 요약만 보여드립니다.`);
         return;
       }
 
-      setStatus("error");
-      setError(`${usageGate.message} 내일 다시 확인하거나 Pro에서 반복 브리핑을 열 수 있습니다.`);
+      setStatus("loading");
+      setError("");
+      try {
+        const preview = await fetchNewsPayload("preview");
+        setPayload(preview);
+        setStatus("ready");
+        setLimitNotice(`${usageGate.message} 무료 화면에서는 AI 영향 분석을 닫고, 오늘 참고할 뉴스 제목과 간단 요약만 먼저 보여드립니다.`);
+      } catch {
+        setStatus("error");
+        setError(`${usageGate.message} 내일 다시 확인하거나 Pro에서 반복 브리핑을 열 수 있습니다.`);
+      }
       return;
     }
 
@@ -218,18 +233,16 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
     setError("");
     setLimitNotice("");
     try {
-      const response = await fetch(`/api/radar-news?market=${market}`, { cache: "no-store" });
-      const data = (await response.json()) as NewsPayload;
-      if (!response.ok) throw new Error(data.error ?? "레이더뉴스를 불러오지 못했습니다.");
+      const data = await fetchNewsPayload("full");
       setPayload(data);
       writeCachedNews(market, data);
       setStatus("ready");
       recordUsageEvent(usageBucketId);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "레이더뉴스를 불러오지 못했습니다.");
+      setError(caught instanceof Error ? caught.message : "레이더 뉴스를 불러오지 못했습니다.");
       setStatus("error");
     }
-  }, [isPaid, market, usageBucketId]);
+  }, [fetchNewsPayload, isPaid, market, usageBucketId]);
 
   useEffect(() => {
     const cached = readCachedNews(market);
@@ -251,20 +264,16 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
   }, [payload]);
 
   const briefing = payload?.briefing;
+  const showFullBriefing = Boolean(briefing && !limitNotice);
   const isInitialLoading = status === "loading" && !payload;
-  const leadingTone =
-    digest.bullish > digest.bearish ? "상방 우호" : digest.bearish > digest.bullish ? "하방 주의" : "중립 확인";
+  const leadingTone = digest.bullish > digest.bearish ? "상방 우호" : digest.bearish > digest.bullish ? "하방 주의" : "중립 확인";
   const leadingToneClass =
-    digest.bullish > digest.bearish
-      ? "text-signal-success"
-      : digest.bearish > digest.bullish
-        ? "text-signal-danger"
-        : "text-signal-warning";
+    digest.bullish > digest.bearish ? "text-signal-success" : digest.bearish > digest.bullish ? "text-signal-danger" : "text-signal-warning";
   const topIssue = briefing?.keyIssues[0];
 
   return (
     <section className="space-y-5">
-      <div className="rounded-lg border border-accent-blue/25 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.18),rgba(15,23,42,0.94)_42%,rgba(2,6,23,0.96))] p-4 shadow-glow sm:p-5">
+      <div className="force-dark-card rounded-lg border border-accent-blue/25 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.18),rgba(15,23,42,0.94)_42%,rgba(2,6,23,0.96))] p-4 shadow-glow sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
             <div className="radar-mark grid h-11 w-11 shrink-0 place-items-center border border-accent-blue/35 text-accent-blue">
@@ -273,9 +282,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-accent-blue">{copy.eyebrow}</p>
               <h2 className="mt-1 text-xl font-black text-white">{copy.title}</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400 [word-break:keep-all]">
-                {copy.description}
-              </p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400 [word-break:keep-all]">{copy.description}</p>
             </div>
           </div>
           <button
@@ -291,27 +298,19 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
 
         <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div className="rounded-lg border border-signal-success/20 bg-signal-success/10 p-3">
-            <p className={isInitialLoading ? "text-base font-black text-signal-success" : "text-2xl font-black text-signal-success"}>
-              {isInitialLoading ? "확인 중" : digest.bullish}
-            </p>
+            <p className="text-2xl font-black text-signal-success">{isInitialLoading ? "…" : digest.bullish}</p>
             <p className="text-xs font-bold text-slate-400">상방 우호</p>
           </div>
           <div className="rounded-lg border border-signal-danger/20 bg-signal-danger/10 p-3">
-            <p className={isInitialLoading ? "text-base font-black text-signal-danger" : "text-2xl font-black text-signal-danger"}>
-              {isInitialLoading ? "확인 중" : digest.bearish}
-            </p>
+            <p className="text-2xl font-black text-signal-danger">{isInitialLoading ? "…" : digest.bearish}</p>
             <p className="text-xs font-bold text-slate-400">하방 주의</p>
           </div>
           <div className="rounded-lg border border-signal-warning/20 bg-signal-warning/10 p-3">
-            <p className={isInitialLoading ? "text-base font-black text-signal-warning" : "text-2xl font-black text-signal-warning"}>
-              {isInitialLoading ? "확인 중" : digest.neutral}
-            </p>
+            <p className="text-2xl font-black text-signal-warning">{isInitialLoading ? "…" : digest.neutral}</p>
             <p className="text-xs font-bold text-slate-400">중립 확인</p>
           </div>
           <div className="rounded-lg border border-accent-blue/20 bg-accent-blue/10 p-3">
-            <p className={isInitialLoading ? "text-base font-black text-accent-blue" : "text-2xl font-black text-accent-blue"}>
-              {isInitialLoading ? "확인 중" : digest.urgent}
-            </p>
+            <p className="text-2xl font-black text-accent-blue">{isInitialLoading ? "…" : digest.urgent}</p>
             <p className="text-xs font-bold text-slate-400">중요 이슈</p>
           </div>
         </div>
@@ -319,16 +318,32 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
         {briefing || isInitialLoading ? (
           <div className="mt-4 grid gap-2 lg:grid-cols-3">
             <div className="rounded-md border border-white/10 bg-black/25 p-3">
-              <p className="text-[11px] font-bold text-slate-500">뉴스 톤</p>
-              <p className={`mt-1 text-lg font-black ${isInitialLoading ? "text-slate-300" : leadingToneClass}`}>
-                {isInitialLoading ? "수집 중" : leadingTone}
-              </p>
+              <p className="text-[11px] font-bold text-slate-500">뉴스 방향</p>
+              <p className={`mt-1 text-lg font-black ${isInitialLoading ? "text-slate-300" : leadingToneClass}`}>{isInitialLoading ? "수집 중" : leadingTone}</p>
             </div>
             <div className="rounded-md border border-white/10 bg-black/25 p-3 lg:col-span-2">
               <p className="text-[11px] font-bold text-slate-500">먼저 볼 이슈</p>
               <p className="mt-1 line-clamp-2 text-sm font-black leading-5 text-white [word-break:keep-all]">
                 {isInitialLoading ? "공개 뉴스와 매크로 이슈를 수집하고 있습니다." : topIssue?.title ?? "뉴스를 불러오면 핵심 이슈를 먼저 정리합니다."}
               </p>
+            </div>
+          </div>
+        ) : null}
+
+        {!isPaid ? (
+          <div className="mt-4 rounded-md border border-accent-blue/20 bg-black/25 p-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[11px] font-black text-accent-blue">Pro에서 열리는 뉴스 레이더</p>
+                <p className="mt-1 text-sm leading-6 text-slate-300 [word-break:keep-all]">{copy.proLine}</p>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {copy.proBenefits.map((benefit) => (
+                  <span key={benefit} className="rounded border border-accent-blue/20 bg-accent-blue/10 px-2 py-1 text-[11px] font-black text-accent-blue">
+                    {benefit}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         ) : null}
@@ -352,18 +367,33 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
       ) : null}
 
       {limitNotice ? (
-        <div className="rounded-lg border border-cyan-300/25 bg-cyan-300/10 p-4 text-sm leading-6 text-cyan-100">
+        <div className="rounded-lg border border-accent-blue/35 bg-white p-4 text-sm leading-6 text-slate-950 shadow-[0_14px_40px_rgba(14,165,233,0.12)]">
           <div className="flex items-start gap-2">
-            <Sparkles className="mt-0.5 shrink-0 text-cyan-200" size={17} aria-hidden />
+            <Sparkles className="mt-0.5 shrink-0 text-accent-blue" size={17} aria-hidden />
             <div>
-              <p className="font-black text-cyan-50">오늘 무료 브리핑 한도를 모두 사용했습니다.</p>
-              <p className="mt-1 text-cyan-100/85">{limitNotice}</p>
+              <p className="font-black text-slate-950">오늘은 참고 뉴스 모드입니다.</p>
+              <p className="mt-1 font-semibold text-slate-800">{limitNotice}</p>
+              <p className="mt-2 text-xs font-bold text-slate-700">{copy.proLine}</p>
             </div>
           </div>
         </div>
       ) : null}
 
-      {briefing ? (
+      {briefing && limitNotice ? (
+        <div className="rounded-lg border border-accent-blue/20 bg-surface-card p-4 shadow-glow sm:p-5">
+          <div className="inline-flex items-center gap-2 rounded-md border border-accent-blue/20 bg-accent-blue/10 px-2 py-1 text-[11px] font-black text-accent-blue">
+            <Sparkles size={13} aria-hidden />
+            간단 요약
+          </div>
+          <h3 className="mt-3 text-xl font-black text-white">오늘은 참고 뉴스 중심으로 보여드립니다.</h3>
+          <p className="mt-3 text-sm leading-7 text-slate-300 [word-break:keep-all]">{briefing.overview}</p>
+          <p className="mt-4 rounded-md border border-accent-blue/20 bg-accent-blue/10 px-3 py-2 text-xs font-bold leading-5 text-accent-blue">
+            Pro에서는 핵심 이슈, 시장 영향, 전략 노트, 반복 갱신 브리핑까지 열립니다.
+          </p>
+        </div>
+      ) : null}
+
+      {briefing && showFullBriefing ? (
         <>
           <div className="rounded-lg border border-accent-blue/25 bg-surface-card p-4 shadow-glow sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -390,62 +420,48 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
 
           <div className="grid gap-5 lg:grid-cols-2">
             <div className="rounded-lg border border-surface-line bg-surface-card p-4 shadow-glow sm:p-5">
-              <h3 className="flex items-center gap-2 text-lg font-black text-white">
-                <Target className="text-accent-blue" size={19} aria-hidden />
-                시장에 미칠 수 있는 영향
-              </h3>
+              <h3 className="text-lg font-black text-white">시장 영향</h3>
               <div className="mt-3">
-                <BulletList items={briefing.marketImpact} />
+                <BulletList items={briefing.marketImpact.map(localizeNewsSourceText)} />
               </div>
             </div>
             <div className="rounded-lg border border-surface-line bg-surface-card p-4 shadow-glow sm:p-5">
-              <h3 className="flex items-center gap-2 text-lg font-black text-white">
-                <ShieldAlert className="text-signal-warning" size={19} aria-hidden />
-                투자 판단 포인트
-              </h3>
+              <h3 className="text-lg font-black text-white">투자 판단 포인트</h3>
               <div className="mt-3">
-                <BulletList items={briefing.strategyNotes} tone="yellow" />
+                <BulletList items={briefing.strategyNotes.map(localizeNewsSourceText)} tone="yellow" />
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg border border-white/10 bg-black/25 p-4 text-sm leading-6 text-slate-300">
-            <p className="font-black text-white">마지막 뉴스 정리</p>
-            <p className="mt-2 [word-break:keep-all]">{briefing.finalSummary}</p>
+          <div className="rounded-lg border border-surface-line bg-surface-card p-4 shadow-glow sm:p-5">
+            <h3 className="text-lg font-black text-white">마지막 정리</h3>
+            <p className="mt-3 text-sm leading-7 text-slate-300 [word-break:keep-all]">{localizeNewsSourceText(briefing.finalSummary)}</p>
           </div>
         </>
       ) : null}
 
-      {payload?.failedSources.length ? (
-        <div className="rounded-lg border border-signal-warning/20 bg-signal-warning/10 p-3 text-xs leading-5 text-signal-warning">
-          일부 뉴스 소스 연결이 지연되었습니다. 실패 소스는 {payload.failedSources.map(displayNewsSource).join(", ")}입니다.
+      {payload?.items.length ? (
+        <div className="rounded-lg border border-surface-line bg-surface-card p-4 shadow-glow sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-black text-white">참고 뉴스</h3>
+              <p className="mt-1 text-xs text-slate-500">원문은 확인 링크로 남기고, 화면에는 한국어 제목과 해석만 우선 표시합니다.</p>
+            </div>
+            <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-xs font-black text-slate-400">{payload.items.length}개 수집</span>
+          </div>
+          <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {payload.items.slice(0, limitNotice ? 9 : 12).map((item) => (
+              <NewsSourceCard key={item.id} item={item} />
+            ))}
+          </div>
         </div>
       ) : null}
 
-      <div className="rounded-lg border border-surface-line bg-surface-card p-4 shadow-glow sm:p-5">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h3 className="text-lg font-black text-white">참고 뉴스</h3>
-            <p className="mt-1 text-xs leading-5 text-slate-500">브리핑에 사용한 공개 뉴스 제목과 원문 링크입니다.</p>
-          </div>
-          <p className="text-xs font-bold text-slate-500">{payload ? `${payload.items.length}개 수집` : "수집 대기"}</p>
-        </div>
-        <div className="mt-4 grid gap-3 lg:grid-cols-2">
-          {isInitialLoading ? (
-            <div className="rounded-md border border-dashed border-accent-blue/25 bg-accent-blue/5 p-4 text-sm font-bold text-slate-400 lg:col-span-2">
-              참고 뉴스 목록을 정리하는 중입니다. 잠시만 기다려 주세요.
-            </div>
-          ) : (
-            (payload?.items ?? []).slice(0, 10).map((item) => (
-              <NewsSourceCard key={item.id} item={item} />
-            ))
-          )}
-        </div>
-      </div>
-
-      <div className="rounded-lg border border-white/10 bg-black/20 p-4 text-xs leading-5 text-slate-500">
-        레이더뉴스는 투자 조언이나 매수·매도 신호가 아닙니다. 공개 뉴스 제목과 시장 반응을 바탕으로 한 교육용 정리이며, 실제 판단은 차트 구조와 리스크 관리 기준을 함께 확인해 주세요.
-      </div>
+      {payload?.failedSources.length ? (
+        <p className="rounded-md border border-signal-warning/20 bg-signal-warning/10 px-3 py-2 text-xs leading-5 text-signal-warning">
+          일부 뉴스 소스 연결이 지연되었습니다. 실패 소스는 {payload.failedSources.map(displayNewsSource).join(", ")}입니다.
+        </p>
+      ) : null}
     </section>
   );
 }

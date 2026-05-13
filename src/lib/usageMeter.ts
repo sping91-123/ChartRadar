@@ -1,4 +1,4 @@
-// Chart Radar의 일일 사용량 기준과 브라우저 저장 로직을 관리한다.
+// 일일 사용량 기준과 브라우저 저장 로직을 관리합니다.
 export type UsageBucketId =
   | "radarScan"
   | "cryptoAiBriefing"
@@ -36,7 +36,7 @@ export const usageBuckets: UsageBucket[] = [
   {
     id: "radarScan",
     label: "코인 레이더",
-    shortLabel: "레이더",
+    shortLabel: "코인",
     description: "BTC, ETH, 알트코인 구조와 시장 감지를 불러온 횟수입니다.",
     freeDailyLimit: 3,
     proDailyLimit: 200
@@ -51,7 +51,7 @@ export const usageBuckets: UsageBucket[] = [
   },
   {
     id: "watchlistScan",
-    label: "관심종목 감시",
+    label: "관심코인 감시",
     shortLabel: "관심",
     description: "관심 코인 레이더를 갱신한 횟수입니다.",
     freeDailyLimit: 2,
@@ -60,8 +60,8 @@ export const usageBuckets: UsageBucket[] = [
   {
     id: "stockRadar",
     label: "글로벌 레이더",
-    shortLabel: "주식",
-    description: "미국 주식, ETF, 글로벌 레이더를 불러온 횟수입니다.",
+    shortLabel: "글로벌",
+    description: "미국주식, ETF, 글로벌 레이더를 불러온 횟수입니다.",
     freeDailyLimit: 2,
     proDailyLimit: 100
   },

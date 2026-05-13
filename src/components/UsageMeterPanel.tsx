@@ -12,7 +12,7 @@ import {
   type UsageSnapshot
 } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
-import { getEntitlementLabel, hasAnyPaidEntitlement, type BillingPageScope } from "@/lib/billing";
+import { getEntitlementLabel, hasScopedEntitlement, type BillingPageScope } from "@/lib/billing";
 
 function barColor(percent: number, isOverFree: boolean) {
   if (isOverFree) return "bg-rose-400";
@@ -94,7 +94,7 @@ export function UsageMeterPanel({
 }) {
   const { profile } = useSupabaseAuth();
   const [snapshot, setSnapshot] = useState<UsageSnapshot>(initialUsageSnapshot);
-  const isPaid = hasAnyPaidEntitlement(profile?.plan);
+  const isPaid = hasScopedEntitlement(profile?.plan, marketScope);
   const entitlementLabel = getEntitlementLabel(profile?.plan);
   const copy = scopedUsageCopy[marketScope];
 

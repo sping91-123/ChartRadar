@@ -1,10 +1,10 @@
 /**
  * GET /api/scout
  *
- * 서버 사이드 레이더 스캔 결과를 5분간 메모리 캐시합니다.
- * - 클라이언트가 Binance를 직접 때리지 않고 서버에서 한 번만 집계합니다.
- * - 권한 제한은 별도 사용량 시스템에서 처리합니다.
- * - rate limit과 inflight 재사용으로 급격한 중복 요청을 줄입니다.
+ * 서버에서 레이더 후보를 스캔하고 짧게 캐시해 중복 요청을 줄입니다.
+ * 클라이언트가 Binance를 직접 반복 호출하지 않도록 서버에서 한 번만 집계합니다.
+ * 사용량과 권한 제한은 별도 사용량 시스템에서 처리합니다.
+ * rate limit과 inflight 재사용으로 급격한 중복 요청을 줄입니다.
  */
 
 import { NextResponse } from "next/server";
@@ -16,7 +16,8 @@ import type { TradingMode } from "@/lib/marketAnalysis";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5분.
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5분
+
 interface ServerCache {
   setups: ScoutSetup[];
   cachedAt: number;
@@ -65,7 +66,7 @@ export async function GET(request: Request) {
   const limit = await rateLimit(request, { key: "scout", limit: 20, windowMs: 5 * 60 * 1000 });
   if (!limit.allowed) {
     return NextResponse.json(
-        { error: "레이더 요청이 잠시 많습니다. 잠시 후 다시 시도해 주세요." },
+      { error: "레이더 요청이 잠시 많습니다. 잠시 후 다시 시도해 주세요." },
       { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
     );
   }
@@ -80,6 +81,7 @@ export async function GET(request: Request) {
       { status: 400 }
     );
   }
+
   const cacheKey = `${mode}:${riskProfile}:${scope}`;
   const now = Date.now();
   const cache = cacheByKey.get(cacheKey) ?? null;
@@ -118,7 +120,7 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "레이더 자동 스캔에 실패했습니다.";
-    console.error("[api/scout] 레이더 오류:", error);
+    console.error("[api/scout] 레이더 스캔 오류:", error);
     if (cache) {
       return NextResponse.json({
         setups: cache.setups,

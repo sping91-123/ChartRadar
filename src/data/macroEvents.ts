@@ -1,7 +1,7 @@
 // 미국 주요 매크로 발표 일정을 한국시간 기준으로 관리하는 데이터입니다.
 export type MacroEventState = "upcoming" | "released" | "watch";
 export type MacroEventImportance = 1 | 2 | 3;
-export type MacroEventSource = "BLS" | "BEA" | "Fed" | "Census" | "NAR" | "TradingEconomics" | "Official";
+export type MacroEventSource = "BLS" | "BEA" | "Fed" | "Census" | "NAR" | "Official";
 
 export type MacroEventItem = {
   label: string;
@@ -18,11 +18,11 @@ export type MacroEventItem = {
   sourceUrl: string;
 };
 
-export const macroCalendarUpdatedAt = "2026년 5월 13일 02:00 기준";
-export const macroCalendarUpdatedAtIso = "2026-05-13T02:00:00+09:00";
+export const macroCalendarUpdatedAt = "2026년 5월 14일 09:00 기준";
+export const macroCalendarUpdatedAtIso = "2026-05-14T09:00:00+09:00";
 
 export const macroCalendarSourceNote =
-  "화면 시간은 모두 한국시간입니다. 자동 캘린더가 연결되면 실제 발표값과 예상·이전 수치가 주기적으로 갱신되고, 장애 시에는 백업 일정으로 표시됩니다.";
+  "화면 시간은 모두 한국시간입니다. CPI와 PPI 실제값은 BLS 무료 공개 API로 자동 확인하고, 나머지 일정은 운영 백업 캘린더로 표시합니다.";
 
 export const macroItems: MacroEventItem[] = [
   {

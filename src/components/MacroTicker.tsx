@@ -75,8 +75,20 @@ function hasReleaseTimePassed(item: MacroEventItem) {
   return new Date(item.releaseAt).getTime() <= Date.now();
 }
 
+function macroValueText(value?: string) {
+  if (!value) return undefined;
+  return value
+    .replace(/\bCore\b/g, "근원")
+    .replace(/\bRetail Sales\b/gi, "소매판매")
+    .replace(/\bExisting Home Sales\b/gi, "기존주택판매")
+    .replace(/\bInitial Jobless Claims\b/gi, "신규 실업수당 청구")
+    .replace(/\bPrevious\b/gi, "이전")
+    .replace(/\bForecast\b/gi, "예상")
+    .replace(/\bActual\b/gi, "실제");
+}
+
 function displayActual(item: MacroEventItem) {
-  if (hasActualValue(item)) return item.actual;
+  if (hasActualValue(item)) return macroValueText(item.actual);
   if (hasReleaseTimePassed(item)) return "결과 확인 중";
   return "발표 전";
 }
@@ -111,7 +123,6 @@ function sourceClass(source: MacroEventSource) {
   if (source === "BEA") return "border-emerald-300/25 bg-emerald-300/10 text-emerald-200";
   if (source === "Census") return "border-amber-300/25 bg-amber-300/10 text-amber-200";
   if (source === "NAR") return "border-cyan-300/25 bg-cyan-300/10 text-cyan-200";
-  if (source === "TradingEconomics") return "border-accent-blue/25 bg-accent-blue/10 text-accent-blue";
   return "border-sky-300/25 bg-sky-300/10 text-sky-200";
 }
 
@@ -121,7 +132,6 @@ function sourceLabel(source: MacroEventSource) {
   if (source === "Fed") return "연준";
   if (source === "Census") return "미 인구조사국";
   if (source === "NAR") return "미 부동산협회";
-  if (source === "TradingEconomics") return "자동 캘린더";
   return "공식 출처";
 }
 
@@ -220,8 +230,8 @@ function MacroItemCard({ item, compact = false }: { item: MacroEventItem; compac
       <p className="mt-1 text-[11px] font-bold text-slate-400">한국시간 {item.dateKst}</p>
       <div className="mt-2 grid grid-cols-3 gap-1 text-[10px] font-bold">
         <ValuePill label="실제" value={displayActual(item)} tone={!hasActualValue(item) && hasReleaseTimePassed(item) ? "pending" : "default"} />
-        <ValuePill label="예상" value={item.forecast} />
-        <ValuePill label="이전" value={item.previous} />
+        <ValuePill label="예상" value={macroValueText(item.forecast)} />
+        <ValuePill label="이전" value={macroValueText(item.previous)} />
       </div>
       <p className="mt-2 text-[11px] leading-5 text-slate-500 [word-break:keep-all]">{item.marketImpact}</p>
       {compact ? (

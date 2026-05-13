@@ -54,9 +54,6 @@ export async function GET() {
   const hasSiteUrl = hasValue(getConfiguredSiteUrl());
   const hasAIProvider = hasGroq || hasGemini;
   const hasPaymentProvider = hasTossSecret && hasTossClient;
-  const hasPaidMacroProvider =
-    hasValue(process.env.TRADING_ECONOMICS_API_KEY) ||
-    (hasValue(process.env.TRADING_ECONOMICS_CLIENT) && hasValue(process.env.TRADING_ECONOMICS_SECRET));
   const planPaymentLinks = paidBillingPlans.map((plan) => {
     const directUrl = getDirectPaymentUrl(plan.id);
     const fallbackUrl = getFallbackPaymentUrl(plan.id);
@@ -75,7 +72,7 @@ export async function GET() {
   const fallbackPlanPaymentLinks = planPaymentLinks.filter((item) => item.usesFallback).map((item) => item.planId);
   const isMacroStale = macroAgeHours === null ? true : macroAgeHours > macroStaleAfterHours;
   const hasFreeOfficialMacroProvider = true;
-  const macroReady = hasFreeOfficialMacroProvider || hasPaidMacroProvider || !isMacroStale;
+  const macroReady = hasFreeOfficialMacroProvider || !isMacroStale;
   const coreReady = hasSupabaseUrl && hasSupabaseKey && hasAIProvider && macroReady;
   const readyForPaidLaunch = coreReady && hasSiteUrl && hasPaymentProvider && paymentLinksReady;
   const warnings = [
@@ -85,7 +82,7 @@ export async function GET() {
     hasPaymentProvider ? null : "TossPayments env is missing.",
     paymentLinksReady ? null : `Plan payment links are missing: ${missingPlanPaymentLinks.join(", ")}.`,
     fallbackPlanPaymentLinks.length === 0 ? null : `Shared payment link fallback is used: ${fallbackPlanPaymentLinks.join(", ")}.`,
-    !hasFreeOfficialMacroProvider && !hasPaidMacroProvider && isMacroStale ? "Macro backup calendar is stale." : null
+    !hasFreeOfficialMacroProvider && isMacroStale ? "Macro backup calendar is stale." : null
   ].filter((item): item is string => Boolean(item));
 
   return NextResponse.json({
@@ -101,7 +98,7 @@ export async function GET() {
       siteUrl: hasSiteUrl,
       aiProvider: hasGroq ? "groq" : hasGemini ? "gemini" : "not-configured",
       paymentProvider: hasPaymentProvider ? "toss-payments" : "not-configured",
-      macroProvider: hasPaidMacroProvider ? `${macroCalendarPayload.source}-plus-trading-economics-option` : macroCalendarPayload.source,
+      macroProvider: macroCalendarPayload.source,
       paymentLinksReady,
       planPaymentLinks
     },
@@ -109,7 +106,7 @@ export async function GET() {
       updatedAtIso: macroCalendarPayload.updatedAt,
       ageHours: macroAgeHours,
       automatic: macroCalendarPayload.isAutomatic,
-      stale: !hasFreeOfficialMacroProvider && !hasPaidMacroProvider && isMacroStale,
+      stale: !hasFreeOfficialMacroProvider && isMacroStale,
       staleAfterHours: macroStaleAfterHours
     }
   });
