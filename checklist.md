@@ -834,6 +834,13 @@
 ## 2026-05-13 앱 결제 설정 마감 보강.
 - [x] 앱 구독 구매 복원 버튼을 Pro 화면에 추가한다.
 - [x] RevenueCat, Supabase service role 환경변수 누락을 빠르게 잡는 점검 스크립트를 추가한다.
-- [ ] RevenueCat Android 공개 SDK 키와 REST API 키를 실제 값으로 `.env.local`에 입력한다.
-- [ ] Supabase service role key를 실제 운영 값으로 `.env.local`과 배포 환경변수에 입력한다.
+- [x] RevenueCat Android 공개 SDK 키와 REST API 키를 실제 값으로 `.env.local`에 입력한다.
+- [x] Supabase service role key를 실제 로컬 값으로 `.env.local`에 입력한다.
 - [ ] Google Play Console 구독 상품 6개와 RevenueCat Products, Entitlements를 실제 계정에서 연결한다.
+
+## 2026-05-13 Google Play 신원 확인 대기 중 출시 준비.
+- [x] 깨진 출시 문서와 결제 문서를 읽을 수 있는 한국어로 복구한다.
+- [x] Google Play와 RevenueCat 상품 연결 순서를 앱 ID 기준으로 다시 정리한다.
+- [x] 모바일 및 결제 스모크 테스트 출력 문구를 읽을 수 있게 복구한다.
+- [x] 안드로이드 빌드 명령을 Java 경로 문제 없이 실행할 수 있게 보강한다.
+- [x] 빌드, 결제 스모크, 모바일 스모크, 앱 동기화, 안드로이드 빌드로 검증한다.

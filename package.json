@@ -19,6 +19,7 @@
     "app:add:android": "npx cap add android",
     "app:sync": "npx cap sync",
     "app:android": "npx cap open android",
+    "app:android:debug": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-android-debug.ps1",
     "app:doctor": "npx cap doctor"
   },
   "dependencies": {

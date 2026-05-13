@@ -916,3 +916,12 @@
 - 앱 결제는 구매뿐 아니라 복원 흐름도 필요합니다. RevenueCat의 `restorePurchases`를 호출한 뒤 서버 동기화 API가 활성 구독을 다시 확인하게 해 재설치, 기기 변경, 계정 재로그인 상황에서도 Pro 권한을 되살릴 수 있게 했습니다.
 - 실제 결제 완료 조건은 코드 커밋만으로 끝나지 않습니다. RevenueCat Android 공개 SDK 키, RevenueCat REST API 키, Supabase service role key, Google Play Console 구독 상품 6개가 모두 외부 대시보드에서 연결되어야 합니다.
 - `npm run check:app-billing`은 `.env.local`의 앱 결제 필수 키와 코드의 상품 ID 연결 여부를 빠르게 확인하는 운영 점검 명령입니다.
+
+## 2026-05-13 Google Play 신원 확인 대기 중 출시 준비.
+
+- Google Play Console 신원 확인이 끝나기 전에는 실제 Google Play 구독 상품 생성과 결제 테스트가 제한됩니다.
+- 이 대기 시간에는 코드 결제 흐름보다 운영 자료와 반복 검증 명령을 정리하는 편이 출시 속도를 높입니다.
+- `docs/app-store-release.md`와 `docs/payment-launch.md`가 일부 깨진 문자열로 보이던 상태를 읽을 수 있는 한국어 문서로 복구했습니다.
+- 실제 Android 앱 ID는 `kr.chartradar.app`이므로 RevenueCat과 Google Play 등록 안내도 이 값으로 통일했습니다.
+- `scripts/smoke-billing.mjs`와 `scripts/smoke-mobile.mjs`의 출력 문구를 읽을 수 있게 정리했습니다.
+- Java 경로가 PowerShell 세션에 잡히지 않아도 Android Studio 내장 JDK를 찾아 디버그 APK를 만드는 `npm.cmd run app:android:debug` 명령을 추가했습니다.

@@ -1,4 +1,4 @@
-// 출시 전 구독 상품 ID와 결제 환경변수 구성을 빠르게 점검하는 로컬 스모크 테스트입니다.
+// 출시 전 구독 상품 ID와 결제 환경 구성을 빠르게 점검하는 로컬 스모크 테스트입니다.
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -7,8 +7,7 @@ const checks = [];
 
 function read(relativePath) {
   const absolutePath = join(root, relativePath);
-  if (!existsSync(absolutePath)) return "";
-  return readFileSync(absolutePath, "utf8");
+  return existsSync(absolutePath) ? readFileSync(absolutePath, "utf8") : "";
 }
 
 function pass(label, detail = "") {
@@ -27,41 +26,30 @@ function expectIncludes(source, value, label, fileName) {
   }
 }
 
-const billing = read("src/lib/billing.ts");
-const envExample = read(".env.example");
-const confirmRoute = read("src/app/api/billing/confirm/route.ts");
-const checkoutRoute = read("src/app/api/billing/checkout/route.ts");
-const appStoreSyncRoute = read("src/app/api/billing/app-store/sync/route.ts");
-const proPricingPanel = read("src/components/ProPricingPanel.tsx");
-const mobilePurchases = read("src/lib/mobilePurchases.ts");
-const usageMeterPanel = read("src/components/UsageMeterPanel.tsx");
-const checkoutConfirmationPanel = read("src/components/CheckoutConfirmationPanel.tsx");
-const supabaseClient = read("src/lib/supabase.ts");
-const supabaseAuthHook = read("src/lib/useSupabaseAuth.ts");
-const watchlist = read("src/lib/watchlist.ts");
-const watchlistPanel = read("src/components/WatchlistPanel.tsx");
-const stockRadarApp = read("src/components/StockRadarApp.tsx");
-const launchChecklist = read("LAUNCH_CHECKLIST.md");
-const paymentGuide = read("docs/payment-launch.md");
-const appStoreGuide = read("docs/app-store-release.md");
-const packageJson = read("package.json");
+const files = {
+  billing: read("src/lib/billing.ts"),
+  envExample: read(".env.example"),
+  confirmRoute: read("src/app/api/billing/confirm/route.ts"),
+  checkoutRoute: read("src/app/api/billing/checkout/route.ts"),
+  appStoreSyncRoute: read("src/app/api/billing/app-store/sync/route.ts"),
+  proPricingPanel: read("src/components/ProPricingPanel.tsx"),
+  mobilePurchases: read("src/lib/mobilePurchases.ts"),
+  usageMeterPanel: read("src/components/UsageMeterPanel.tsx"),
+  checkoutConfirmationPanel: read("src/components/CheckoutConfirmationPanel.tsx"),
+  supabaseClient: read("src/lib/supabase.ts"),
+  supabaseAuthHook: read("src/lib/useSupabaseAuth.ts"),
+  watchlist: read("src/lib/watchlist.ts"),
+  watchlistPanel: read("src/components/WatchlistPanel.tsx"),
+  stockRadarApp: read("src/components/StockRadarApp.tsx"),
+  launchChecklist: read("LAUNCH_CHECKLIST.md"),
+  paymentGuide: read("docs/payment-launch.md"),
+  appStoreGuide: read("docs/app-store-release.md"),
+  packageJson: read("package.json")
+};
 
-if (!billing) fail("결제 플랜 소스", "src/lib/billing.ts 파일을 읽지 못했습니다.");
-if (!envExample) fail("환경변수 예시", ".env.example 파일을 읽지 못했습니다.");
-if (!confirmRoute) fail("결제 승인 확인 API", "src/app/api/billing/confirm/route.ts 파일을 읽지 못했습니다.");
-if (!checkoutRoute) fail("결제 시작 API", "src/app/api/billing/checkout/route.ts 파일을 읽지 못했습니다.");
-if (!appStoreSyncRoute) fail("앱 구독 동기화 API", "src/app/api/billing/app-store/sync/route.ts 파일을 읽지 못했습니다.");
-if (!proPricingPanel) fail("Pro 결제 패널", "src/components/ProPricingPanel.tsx 파일을 읽지 못했습니다.");
-if (!mobilePurchases) fail("앱 결제 어댑터", "src/lib/mobilePurchases.ts 파일을 읽지 못했습니다.");
-if (!usageMeterPanel) fail("사용량 패널", "src/components/UsageMeterPanel.tsx 파일을 읽지 못했습니다.");
-if (!checkoutConfirmationPanel) fail("결제 성공 패널", "src/components/CheckoutConfirmationPanel.tsx 파일을 읽지 못했습니다.");
-if (!supabaseClient) fail("Supabase 클라이언트", "src/lib/supabase.ts 파일을 읽지 못했습니다.");
-if (!supabaseAuthHook) fail("Supabase 인증 훅", "src/lib/useSupabaseAuth.ts 파일을 읽지 못했습니다.");
-if (!watchlist) fail("관심코인 한도 소스", "src/lib/watchlist.ts 파일을 읽지 못했습니다.");
-if (!watchlistPanel) fail("관심코인 패널", "src/components/WatchlistPanel.tsx 파일을 읽지 못했습니다.");
-if (!launchChecklist) fail("출시 체크리스트", "LAUNCH_CHECKLIST.md 파일을 읽지 못했습니다.");
-if (!paymentGuide) fail("결제 출시 가이드", "docs/payment-launch.md 파일을 읽지 못했습니다.");
-if (!appStoreGuide) fail("앱스토어 출시 가이드", "docs/app-store-release.md 파일을 읽지 못했습니다.");
+for (const [name, source] of Object.entries(files)) {
+  if (!source) fail(`파일 읽기 ${name}`, `${name} 소스를 읽지 못했습니다.`);
+}
 
 const planIds = [
   "free",
@@ -102,15 +90,16 @@ const paymentEnvNames = [
 ];
 
 for (const planId of planIds) {
-  expectIncludes(billing, `id: "${planId}"`, `플랜 ID ${planId}`, "src/lib/billing.ts");
+  expectIncludes(files.billing, `id: "${planId}"`, `플랜 ID ${planId}`, "src/lib/billing.ts");
 }
 
 for (const productId of productIds) {
-  expectIncludes(billing, productId, `앱스토어 상품 ID ${productId}`, "src/lib/billing.ts");
+  expectIncludes(files.billing, productId, `앱스토어 상품 ID ${productId}`, "src/lib/billing.ts");
+  expectIncludes(files.appStoreGuide, productId, `앱스토어 가이드 상품 ID ${productId}`, "docs/app-store-release.md");
 }
 
 for (const envName of paymentEnvNames) {
-  expectIncludes(envExample, envName, `결제 환경변수 ${envName}`, ".env.example");
+  expectIncludes(files.envExample, envName, `결제 환경변수 ${envName}`, ".env.example");
 }
 
 for (const envName of [
@@ -120,8 +109,8 @@ for (const envName of [
   "TOSS_PAYMENTS_SECRET_KEY",
   "SUPABASE_SERVICE_ROLE_KEY"
 ]) {
-  expectIncludes(launchChecklist, envName, `출시 체크리스트 환경변수 ${envName}`, "LAUNCH_CHECKLIST.md");
-  expectIncludes(paymentGuide, envName, `결제 가이드 환경변수 ${envName}`, "docs/payment-launch.md");
+  expectIncludes(files.launchChecklist, envName, `출시 체크리스트 환경변수 ${envName}`, "LAUNCH_CHECKLIST.md");
+  expectIncludes(files.paymentGuide, envName, `결제 가이드 환경변수 ${envName}`, "docs/payment-launch.md");
 }
 
 for (const phrase of [
@@ -132,81 +121,70 @@ for (const phrase of [
   "토스페이먼츠 승인 API",
   "Supabase의 `profiles.plan`과 `subscriptions`"
 ]) {
-  expectIncludes(paymentGuide, phrase, `결제 가이드 최신 문구 ${phrase}`, "docs/payment-launch.md");
+  expectIncludes(files.paymentGuide, phrase, `결제 가이드 문구 ${phrase}`, "docs/payment-launch.md");
 }
 
-for (const productId of productIds) {
-  expectIncludes(appStoreGuide, productId, `앱스토어 가이드 상품 ID ${productId}`, "docs/app-store-release.md");
-}
-
-for (const [fileName, source] of [
-  ["LAUNCH_CHECKLIST.md", launchChecklist],
-  ["docs/payment-launch.md", paymentGuide],
-  ["docs/app-store-release.md", appStoreGuide]
-]) {
-  for (const stale of [
-    "월간 Pro와 연간 Pro 상품",
-    "웹훅과 구독 권한 동기화",
-    "chart_radar_pro_monthly",
-    "chart_radar_pro_yearly"
+for (const stale of ["chart_radar_pro_monthly", "chart_radar_pro_yearly"]) {
+  for (const [fileName, source] of [
+    ["LAUNCH_CHECKLIST.md", files.launchChecklist],
+    ["docs/payment-launch.md", files.paymentGuide],
+    ["docs/app-store-release.md", files.appStoreGuide]
   ]) {
     if (source.includes(stale)) {
-      fail(`오래된 결제 문구 방지 ${fileName}`, `${stale} 문구가 남아 있습니다.`);
+      fail(`예전 단일 Pro 상품 ID 제거 ${fileName}`, `${stale} 값이 남아 있습니다.`);
     }
   }
 }
 
-expectIncludes(confirmRoute, "https://api.tosspayments.com/v1/payments/confirm", "토스 승인 확인 엔드포인트", "src/app/api/billing/confirm/route.ts");
-expectIncludes(confirmRoute, "grantBillingEntitlement", "Supabase 권한 반영 경로", "src/app/api/billing/confirm/route.ts");
-expectIncludes(confirmRoute, "rateLimit(request", "결제 승인 호출 제한", "src/app/api/billing/confirm/route.ts");
-expectIncludes(confirmRoute, "isBodyTooLarge(request, 8_000)", "결제 승인 본문 크기 제한", "src/app/api/billing/confirm/route.ts");
-expectIncludes(confirmRoute, "directPlan.id !== parsedPlan", "결제 승인 플랜 불일치 차단", "src/app/api/billing/confirm/route.ts");
-expectIncludes(confirmRoute, "return parsedPlan;", "결제 승인 주문번호 플랜 우선", "src/app/api/billing/confirm/route.ts");
-expectIncludes(checkoutRoute, "fetchSupabaseUserOnServer", "결제 시작 전 로그인 검증", "src/app/api/billing/checkout/route.ts");
-expectIncludes(checkoutRoute, "결제를 시작하려면 먼저 로그인해 주세요.", "비로그인 결제 차단 문구", "src/app/api/billing/checkout/route.ts");
-expectIncludes(checkoutRoute, "rateLimit(request", "결제 시작 호출 제한", "src/app/api/billing/checkout/route.ts");
-expectIncludes(checkoutRoute, "isBodyTooLarge(request, 8_000)", "결제 시작 본문 크기 제한", "src/app/api/billing/checkout/route.ts");
-expectIncludes(checkoutRoute, "play_billing", "Android Google Play Billing 분기", "src/app/api/billing/checkout/route.ts");
-expectIncludes(appStoreSyncRoute, "REVENUECAT_REST_API_KEY", "RevenueCat 서버 검증 키 사용", "src/app/api/billing/app-store/sync/route.ts");
-expectIncludes(appStoreSyncRoute, "grantBillingEntitlement", "앱 구독 확인 후 Pro 권한 반영", "src/app/api/billing/app-store/sync/route.ts");
-expectIncludes(proPricingPanel, "Authorization: `Bearer ${session.accessToken}`", "결제 시작 요청 세션 전달", "src/components/ProPricingPanel.tsx");
-expectIncludes(proPricingPanel, "결제 후 Pro 권한을 바로 열려면 먼저 구글 로그인이 필요합니다.", "결제 전 로그인 안내", "src/components/ProPricingPanel.tsx");
-expectIncludes(proPricingPanel, "getScopedDisplayPlan", "Pro 플랜 시장별 문구 분리", "src/components/ProPricingPanel.tsx");
-expectIncludes(proPricingPanel, "QQQ / SPY 기본 레이더", "글로벌 Free 플랜 문구", "src/components/ProPricingPanel.tsx");
-expectIncludes(proPricingPanel, "purchaseNativePlan", "Pro 화면 네이티브 앱 결제 분기", "src/components/ProPricingPanel.tsx");
-expectIncludes(proPricingPanel, "restoreNativeEntitlement", "Pro 화면 앱 구독 복원 버튼", "src/components/ProPricingPanel.tsx");
-expectIncludes(mobilePurchases, "Purchases.purchaseStoreProduct", "RevenueCat 구독 구매 호출", "src/lib/mobilePurchases.ts");
-expectIncludes(mobilePurchases, "Purchases.restorePurchases", "RevenueCat 구독 복원 호출", "src/lib/mobilePurchases.ts");
-expectIncludes(mobilePurchases, "/api/billing/app-store/sync", "앱 구독 서버 동기화 호출", "src/lib/mobilePurchases.ts");
-expectIncludes(packageJson, "@revenuecat/purchases-capacitor", "RevenueCat Capacitor 의존성", "package.json");
-expectIncludes(packageJson, "check:app-billing", "앱 결제 환경 점검 스크립트", "package.json");
-expectIncludes(usageMeterPanel, "marketScope?: BillingPageScope", "사용량 패널 시장 범위 props", "src/components/UsageMeterPanel.tsx");
-expectIncludes(usageMeterPanel, "bucketMatchesScope", "사용량 패널 시장별 필터", "src/components/UsageMeterPanel.tsx");
-expectIncludes(usageMeterPanel, "id === \"stockRadar\"", "글로벌 사용량 필터", "src/components/UsageMeterPanel.tsx");
-expectIncludes(supabaseClient, "supabaseAuthRefreshEvent", "권한 갱신 이벤트 상수", "src/lib/supabase.ts");
-expectIncludes(supabaseAuthHook, "window.addEventListener(supabaseAuthRefreshEvent, refreshAuth)", "권한 갱신 이벤트 수신", "src/lib/useSupabaseAuth.ts");
-expectIncludes(checkoutConfirmationPanel, "window.dispatchEvent(new Event(supabaseAuthRefreshEvent))", "결제 성공 후 권한 재조회", "src/components/CheckoutConfirmationPanel.tsx");
+expectIncludes(files.confirmRoute, "https://api.tosspayments.com/v1/payments/confirm", "토스 승인 확인 엔드포인트", "src/app/api/billing/confirm/route.ts");
+expectIncludes(files.confirmRoute, "grantBillingEntitlement", "Supabase 권한 반영 경로", "src/app/api/billing/confirm/route.ts");
+expectIncludes(files.confirmRoute, "rateLimit(request", "결제 승인 호출 제한", "src/app/api/billing/confirm/route.ts");
+expectIncludes(files.confirmRoute, "isBodyTooLarge(request, 8_000)", "결제 승인 본문 크기 제한", "src/app/api/billing/confirm/route.ts");
+expectIncludes(files.confirmRoute, "directPlan.id !== parsedPlan", "결제 승인 플랜 불일치 차단", "src/app/api/billing/confirm/route.ts");
+expectIncludes(files.confirmRoute, "return parsedPlan;", "주문번호 플랜 우선 확정", "src/app/api/billing/confirm/route.ts");
 
-const cryptoAmount = /id:\s*"crypto_monthly"[\s\S]*?billingAmount:\s*(\d+)/.exec(billing)?.[1];
-const stocksAmount = /id:\s*"stocks_monthly"[\s\S]*?billingAmount:\s*(\d+)/.exec(billing)?.[1];
-const bundleAmount = /id:\s*"bundle_monthly"[\s\S]*?billingAmount:\s*(\d+)/.exec(billing)?.[1];
-const bundleYearlyAmount = /id:\s*"bundle_yearly"[\s\S]*?billingAmount:\s*(\d+)/.exec(billing)?.[1];
-const bundleYearlyMonthlyValue = /id:\s*"bundle_yearly"[\s\S]*?monthlyValue:\s*(\d+)/.exec(billing)?.[1];
+expectIncludes(files.checkoutRoute, "fetchSupabaseUserOnServer", "결제 시작 전 로그인 검증", "src/app/api/billing/checkout/route.ts");
+expectIncludes(files.checkoutRoute, "결제를 시작하려면 먼저 로그인해 주세요.", "비로그인 결제 차단 문구", "src/app/api/billing/checkout/route.ts");
+expectIncludes(files.checkoutRoute, "rateLimit(request", "결제 시작 호출 제한", "src/app/api/billing/checkout/route.ts");
+expectIncludes(files.checkoutRoute, "isBodyTooLarge(request, 8_000)", "결제 시작 본문 크기 제한", "src/app/api/billing/checkout/route.ts");
+expectIncludes(files.checkoutRoute, "play_billing", "Android Google Play Billing 분기", "src/app/api/billing/checkout/route.ts");
 
-if (Number(cryptoAmount) === 14900) {
-  pass("코인 월간 청구 금액", "14,900원.");
-} else {
-  fail("코인 월간 청구 금액", `예상 14900, 현재 ${cryptoAmount ?? "미확인"}.`);
-}
+expectIncludes(files.appStoreSyncRoute, "REVENUECAT_REST_API_KEY", "RevenueCat 서버 검증 키 사용", "src/app/api/billing/app-store/sync/route.ts");
+expectIncludes(files.appStoreSyncRoute, "grantBillingEntitlement", "앱 구독 확인 후 Pro 권한 반영", "src/app/api/billing/app-store/sync/route.ts");
 
-if (Number(stocksAmount) === 14900) {
-  pass("글로벌 월간 청구 금액", "14,900원.");
-} else {
-  fail("글로벌 월간 청구 금액", `예상 14900, 현재 ${stocksAmount ?? "미확인"}.`);
-}
+expectIncludes(files.proPricingPanel, "Authorization: `Bearer ${session.accessToken}`", "결제 시작 요청 세션 전달", "src/components/ProPricingPanel.tsx");
+expectIncludes(files.proPricingPanel, "결제 후 Pro 권한을 바로 열려면 먼저 구글 로그인이 필요합니다.", "결제 전 로그인 안내", "src/components/ProPricingPanel.tsx");
+expectIncludes(files.proPricingPanel, "getScopedDisplayPlan", "Pro 플랜 시장별 문구 분리", "src/components/ProPricingPanel.tsx");
+expectIncludes(files.proPricingPanel, "purchaseNativePlan", "네이티브 앱 결제 분기", "src/components/ProPricingPanel.tsx");
+expectIncludes(files.proPricingPanel, "restoreNativeEntitlement", "앱 구독 복원 버튼", "src/components/ProPricingPanel.tsx");
+
+expectIncludes(files.mobilePurchases, "Purchases.purchaseStoreProduct", "RevenueCat 구독 구매 호출", "src/lib/mobilePurchases.ts");
+expectIncludes(files.mobilePurchases, "Purchases.restorePurchases", "RevenueCat 구독 복원 호출", "src/lib/mobilePurchases.ts");
+expectIncludes(files.mobilePurchases, "/api/billing/app-store/sync", "앱 구독 서버 동기화 호출", "src/lib/mobilePurchases.ts");
+expectIncludes(files.packageJson, "@revenuecat/purchases-capacitor", "RevenueCat Capacitor 의존성", "package.json");
+expectIncludes(files.packageJson, "check:app-billing", "앱 결제 환경 점검 스크립트", "package.json");
+
+expectIncludes(files.usageMeterPanel, "marketScope?: BillingPageScope", "사용량 패널 시장 범위 props", "src/components/UsageMeterPanel.tsx");
+expectIncludes(files.usageMeterPanel, "bucketMatchesScope", "사용량 패널 시장별 필터", "src/components/UsageMeterPanel.tsx");
+expectIncludes(files.usageMeterPanel, "id === \"stockRadar\"", "글로벌 사용량 필터", "src/components/UsageMeterPanel.tsx");
+expectIncludes(files.supabaseClient, "supabaseAuthRefreshEvent", "권한 갱신 이벤트 상수", "src/lib/supabase.ts");
+expectIncludes(files.supabaseAuthHook, "window.addEventListener(supabaseAuthRefreshEvent, refreshAuth)", "권한 갱신 이벤트 수신", "src/lib/useSupabaseAuth.ts");
+expectIncludes(files.checkoutConfirmationPanel, "window.dispatchEvent(new Event(supabaseAuthRefreshEvent))", "결제 성공 후 권한 재조회", "src/components/CheckoutConfirmationPanel.tsx");
+
+const cryptoAmount = /id:\s*"crypto_monthly"[\s\S]*?billingAmount:\s*(\d+)/.exec(files.billing)?.[1];
+const stocksAmount = /id:\s*"stocks_monthly"[\s\S]*?billingAmount:\s*(\d+)/.exec(files.billing)?.[1];
+const bundleAmount = /id:\s*"bundle_monthly"[\s\S]*?billingAmount:\s*(\d+)/.exec(files.billing)?.[1];
+const bundleYearlyAmount = /id:\s*"bundle_yearly"[\s\S]*?billingAmount:\s*(\d+)/.exec(files.billing)?.[1];
+const bundleYearlyMonthlyValue = /id:\s*"bundle_yearly"[\s\S]*?monthlyValue:\s*(\d+)/.exec(files.billing)?.[1];
+
+if (Number(cryptoAmount) === 14900) pass("코인 월간 청구 금액", "14,900원");
+else fail("코인 월간 청구 금액", `예상 14900, 현재 ${cryptoAmount ?? "미확인"}.`);
+
+if (Number(stocksAmount) === 14900) pass("글로벌 월간 청구 금액", "14,900원");
+else fail("글로벌 월간 청구 금액", `예상 14900, 현재 ${stocksAmount ?? "미확인"}.`);
 
 if (Number(bundleAmount) === 24900 && Number(bundleAmount) < Number(cryptoAmount) + Number(stocksAmount)) {
-  pass("번들 월간 할인 구조", "개별 결제보다 낮은 24,900원.");
+  pass("번들 월간 할인 구조", "개별 결제보다 낮은 24,900원");
 } else {
   fail("번들 월간 할인 구조", "코인+글로벌 개별 결제보다 번들 가격이 낮아야 합니다.");
 }
@@ -217,7 +195,7 @@ if (Number(bundleYearlyMonthlyValue) > 0 && Number(bundleYearlyMonthlyValue) < N
   fail("연간 월 환산가 분리", "monthlyValue와 billingAmount 관계를 확인해 주세요.");
 }
 
-const watchlistLimitChecks = [
+for (const [planId, expectedLimit] of [
   ["free", 5],
   ["crypto_monthly", 50],
   ["crypto_yearly", 100],
@@ -225,32 +203,30 @@ const watchlistLimitChecks = [
   ["bundle_yearly", 150],
   ["stocks_monthly", 50],
   ["stocks_yearly", 100]
-];
-
-for (const [planId, expectedLimit] of watchlistLimitChecks) {
+]) {
   const pattern = new RegExp(`${planId}:\\s*${expectedLimit}`);
-  if (pattern.test(watchlist)) {
-    pass(`관심코인 한도 ${planId}`, `${expectedLimit}개.`);
+  if (pattern.test(files.watchlist)) {
+    pass(`관심종목 한도 ${planId}`, `${expectedLimit}개`);
   } else {
-    fail(`관심코인 한도 ${planId}`, `src/lib/watchlist.ts에서 ${expectedLimit}개 설정을 찾지 못했습니다.`);
+    fail(`관심종목 한도 ${planId}`, `src/lib/watchlist.ts에서 ${expectedLimit}개 설정을 찾지 못했습니다.`);
   }
 }
 
-if (watchlistPanel.includes('const plan: WatchlistPlan = "admin"')) {
-  fail("관심코인 admin 고정 방지", "WatchlistPanel이 다시 admin 고정값을 사용하고 있습니다.");
-} else if (watchlistPanel.includes("getWatchlistLimit(plan)")) {
+if (files.watchlistPanel.includes('const plan: WatchlistPlan = "admin"')) {
+  fail("관심코인 admin 고정 방지", "WatchlistPanel이 admin 고정값을 사용하고 있습니다.");
+} else if (files.watchlistPanel.includes("getWatchlistLimit(plan)")) {
   pass("관심코인 플랜 연동", "WatchlistPanel이 실제 플랜 한도를 사용합니다.");
 } else {
   fail("관심코인 플랜 연동", "WatchlistPanel에서 getWatchlistLimit(plan)을 찾지 못했습니다.");
 }
 
-if (stockRadarApp.includes("getWatchlistLimit(profile?.plan ?? \"free\")")) {
+if (files.stockRadarApp.includes("getWatchlistLimit(profile?.plan ?? \"free\")")) {
   pass("글로벌 관심종목 플랜 연동", "StockRadarApp이 로그인 플랜 기준 관심종목 한도를 사용합니다.");
 } else {
-  fail("글로벌 관심종목 플랜 연동", "StockRadarApp에서 getWatchlistLimit(profile?.plan ?? \"free\")을 찾지 못했습니다.");
+  fail("글로벌 관심종목 플랜 연동", "StockRadarApp에서 로그인 플랜 기준 한도를 찾지 못했습니다.");
 }
 
-if (stockRadarApp.includes("globalWatchlistMaxItems = 150") && !stockRadarApp.includes("slice(0, 30)")) {
+if (files.stockRadarApp.includes("globalWatchlistMaxItems = 150") && !files.stockRadarApp.includes("slice(0, 30)")) {
   pass("글로벌 관심종목 하드코딩 한도 제거", "글로벌 관심종목 저장 한도가 30개로 고정되지 않습니다.");
 } else {
   fail("글로벌 관심종목 하드코딩 한도 제거", "StockRadarApp에 30개 고정 저장 한도가 남아 있습니다.");

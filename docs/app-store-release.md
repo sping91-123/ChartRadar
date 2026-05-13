@@ -1,158 +1,109 @@
 # Chart Radar 앱스토어 출시 준비 가이드
 
-이 문서는 Chart Radar를 5월 안에 App Store와 Google Play에 정식 출시하기 위한 제출 자료 초안입니다. 실제 등록 전에는 사업자 정보, 고객지원 이메일, 개인정보 처리 항목을 최종 운영 값으로 바꿉니다.
+이 문서는 Chart Radar를 Google Play와 App Store에 제출하기 전에 필요한 등록 자료와 점검 순서를 정리합니다. 실제 등록 전에는 사업자 정보, 고객센터 이메일, 개인정보 처리 항목, 가격, 환불 기준을 운영 값으로 다시 확인해야 합니다.
 
-## 1. 앱 기본 정보 초안
+## 1. 앱 기본 정보
 
 | 항목 | 권장 값 |
 | --- | --- |
 | 앱 이름 | Chart Radar |
-| 부제 | 시장 구조와 위험 신호를 빠르게 확인하는 AI 레이더 |
+| 패키지명 | `kr.chartradar.app` |
 | 카테고리 | Finance |
-| 연령 등급 | 투자 정보와 금융 데이터가 포함되므로 성인 사용자 기준으로 점검 |
 | 지원 언어 | 한국어 우선 |
-| 고객지원 URL | `https://your-domain.kr` |
-| 개인정보처리방침 URL | `https://your-domain.kr/privacy` |
+| 고객센터 URL | `https://your-domain.kr` |
+| 개인정보 처리방침 URL | `https://your-domain.kr/privacy` |
 | 이용약관 URL | `https://your-domain.kr/terms` |
+| 구독 해지와 환불 안내 URL | `https://your-domain.kr/refund` |
 
-## 2. 앱 소개 문구 초안
+## 2. 스토어 소개 문구
 
-Chart Radar는 코인과 글로벌 시장을 빠르게 점검할 수 있는 시장 분석 앱입니다. 실시간 시세, ICT 구조 판독, 기술지표 레이더, 청산 압력 추정, AI 뉴스 브리핑, 관심종목 알림을 통해 사용자가 매일 시장을 확인할 이유를 만들어줍니다.
+Chart Radar는 코인과 글로벌 시장을 빠르게 점검하는 시장 분석 앱입니다. 실시간 시세, ICT 구조 판독, 기술지표 레이더, 청산 압력 추정, AI 뉴스 브리핑, 관심종목, 알림 설정을 한 화면 흐름으로 묶어 매일 시장을 확인할 이유를 만들어 줍니다.
 
-Chart Radar는 매수·매도 신호를 대신 내려주는 앱이 아닙니다. 사용자가 차트 구조, 변동성, 시장 뉴스, 위험 요소를 더 빠르게 정리할 수 있도록 돕는 분석 보조 도구입니다.
+Chart Radar는 매수·매도 신호를 보장하거나 자동매매를 실행하지 않습니다. 사용자가 시장 구조, 변동성, 주요 일정, 위험 요소를 더 빠르게 정리하도록 돕는 분석 보조 도구입니다.
 
 ## 3. 키워드 초안
 
 ```text
-차트, 코인, 비트코인, 이더리움, 글로벌시장, 투자분석, 기술지표, ICT, 레이더, AI뉴스, 트레이딩, 알림
+차트, 코인, 비트코인, 이더리움, 글로벌시장, 미국주식, 투자분석, 기술지표, ICT, AI뉴스, 트레이딩, 알림
 ```
 
 ## 4. 스크린샷 구성
 
-스토어 첫인상은 기능 나열보다 사용 장면이 더 중요합니다. 아래 순서로 캡처합니다.
+스토어 첫인상은 기능 나열보다 사용 장면이 중요합니다. 아래 순서로 캡처합니다.
 
-1. 홈 관제실.
-   - 시장 온도, 거래대금 중심, 오늘의 레이더 노트가 보이는 화면.
-2. BTC / ETH 레이더.
-   - 코인 선택, 타임프레임, ICT / 기술지표 전환이 보이는 화면.
+1. 시장 선택 홈.
+   - 코인과 글로벌 시장이 분리되어 보이는 첫 화면.
+2. 코인 레이더.
+   - BTC / ETH, 타임프레임, 종합 / ICT / 기술지표 전환이 보이는 화면.
 3. 알트코인 레이더.
-   - 전체 알트 중 강한 감지 후보를 찾는 화면.
+   - 여러 코인 중 강한 후보를 찾는 화면.
 4. 글로벌 레이더.
-   - 주요 미국 주식, 지수, ETF, 섹터 요약이 보이는 화면.
-5. 레이더뉴스.
-   - 매크로 전광판과 AI 시장 브리핑이 함께 보이는 화면.
+   - 주요 미국주식, ETF, 선물 대체 지표 요약이 보이는 화면.
+5. 레이더 뉴스.
+   - 매크로 일정과 AI 시장 브리핑이 함께 보이는 화면.
 6. 알림 센터.
-   - Pro 가치가 되는 조건 알림 설정 화면.
+   - Pro 가치가 보이는 조건 알림 설정 화면.
 7. Pro 구독.
-   - 월간, 연간 플랜과 제공 가치가 한눈에 보이는 화면.
+   - Coin Pro, Global Pro, All Market Pro 가격과 가치가 보이는 화면.
 
-라이트 모드와 다크 모드가 모두 있지만 스토어 스크린샷은 다크 모드 중심으로 통일하는 편이 브랜드 아이콘과 더 잘 맞습니다.
+다크 모드 이미지를 중심으로 준비하고, 라이트 모드는 보조 스크린샷으로 사용합니다.
 
 ## 5. 개인정보 라벨 초안
-
-실제 수집 항목은 최종 구현 기준으로 다시 점검해야 합니다. 현재 앱 기준으로는 아래 항목을 예상합니다.
 
 | 항목 | 사용 목적 | 비고 |
 | --- | --- | --- |
 | 이메일 | 로그인과 계정 식별 | Google 로그인 사용 시 수집 |
-| 사용자 ID | 복기, 관심종목, 사용량 연결 | Supabase 계정 ID |
-| 관심종목 | 개인화된 레이더 화면 | 사용자가 직접 저장 |
-| 매매 복기 | 사용자의 기록 저장 | 사용자가 직접 입력 |
-| 사용량 기록 | Free 기준과 Pro 전환 안내 | 기능 사용 횟수 |
-| 결제 상태 | Pro 권한 확인 | 웹 결제 또는 앱스토어 구독 |
+| 사용자 ID | 복기, 관심종목, 구독 권한 연결 | Supabase 계정 ID |
+| 관심종목 | 개인화된 레이더 화면 제공 | 사용자가 직접 저장 |
+| 매매 복기 | 사용자가 입력한 기록 저장 | 사용자가 직접 입력 |
+| 사용량 기록 | Free 기준과 Pro 권한 안내 | 기능 사용 횟수 |
+| 결제 상태 | Pro 권한 확인 | 웹 결제 또는 앱 구독 |
 
-정확한 위치 정보, 연락처, 건강 정보, 광고 추적 ID는 현재 제품 방향상 수집하지 않는 것이 좋습니다.
+현재 제품 방향에서는 정확한 위치 정보, 연락처, 건강 정보, 광고 추적 ID를 수집하지 않는 편이 좋습니다.
 
-## 6. 구독 상품 심사 체크
+## 6. Google Play 구독 상품
 
-App Store Connect에 아래 상품을 만듭니다.
+Google Play Console에는 아래 상품 ID를 그대로 만듭니다. 코드의 `src/lib/billing.ts`에 들어 있는 `appStoreProductId`와 반드시 같아야 합니다.
 
 | 상품 | 상품 ID | 표시 이름 |
 | --- | --- | --- |
-| 코인 월간 | `chart_radar_crypto_monthly` | Chart Radar Coin 월간 |
-| 코인 연간 | `chart_radar_crypto_yearly` | Chart Radar Coin 연간 |
-| 글로벌 월간 | `chart_radar_global_monthly` | Chart Radar Global 월간 |
-| 글로벌 연간 | `chart_radar_global_yearly` | Chart Radar Global 연간 |
-| 올마켓 월간 | `chart_radar_bundle_monthly` | Chart Radar All Market 월간 |
-| 올마켓 연간 | `chart_radar_bundle_yearly` | Chart Radar All Market 연간 |
+| Coin Pro 월간 | `chart_radar_crypto_monthly` | Chart Radar Coin Pro 월간 |
+| Coin Pro 연간 | `chart_radar_crypto_yearly` | Chart Radar Coin Pro 연간 |
+| Global Pro 월간 | `chart_radar_global_monthly` | Chart Radar Global Pro 월간 |
+| Global Pro 연간 | `chart_radar_global_yearly` | Chart Radar Global Pro 연간 |
+| All Market Pro 월간 | `chart_radar_bundle_monthly` | Chart Radar All Market Pro 월간 |
+| All Market Pro 연간 | `chart_radar_bundle_yearly` | Chart Radar All Market Pro 연간 |
 
-구독 설명에는 아래 내용을 포함합니다.
+## 7. RevenueCat 연결 순서
 
-- 전체 코인 레이더 감지.
-- 글로벌 레이더 확장.
-- AI 브리핑 사용량 확대.
-- 관심종목과 조건 알림.
-- 반복 확인용 시장 관제실.
-
-구독은 앱스토어 계정에서 해지할 수 있다는 문구를 반드시 포함합니다.
-
-## 7. 심사 메모 초안
-
-아래 내용은 App Review 메모에 넣을 수 있는 초안입니다.
-
-```text
-Chart Radar is a market analysis and education tool. It provides market structure summaries, technical indicator dashboards, AI news briefings, watchlists, and alert settings for crypto and selected US stocks. It does not execute trades, connect to exchanges for trading, or provide guaranteed buy/sell signals. Subscription unlocks higher usage limits and advanced analysis screens.
-```
-
-테스트 계정이 필요하면 심사용 Google 계정을 하나 만들고, Pro 권한이 필요한 경우 임시 테스트 권한을 부여합니다.
-
-## 8. 제출 전 최종 확인
-
-아래 항목이 모두 준비되어야 앱 심사 지연을 줄일 수 있습니다.
-
-- `NEXT_PUBLIC_SITE_URL`이 실제 도메인으로 설정되어 있음.
-- `/privacy`, `/terms`, `/refund`가 운영 정보로 채워져 있음.
-- 앱 아이콘이 1024px 정사각형 기준으로 깨지지 않음.
-- 모바일 Safari와 Android Chrome에서 결제, 로그인, 주요 페이지가 열림.
-- iOS 앱에서는 디지털 구독 결제가 App Store IAP로 연결됨.
-- 웹에서는 코인, 글로벌, 올마켓 상품별 결제 URL이 실제 결제 링크로 연결됨.
-- 웹 결제 성공 후 `/api/billing/confirm`이 결제 승인과 Supabase 권한 반영을 확인함.
-- `TOSS_PAYMENTS_SECRET_KEY`와 `SUPABASE_SERVICE_ROLE_KEY`가 운영 서버에만 설정되어 있음.
-- 알림 기능은 브라우저 알림 권한 요청 실패 시에도 앱이 멈추지 않음.
-- AI API 호출 제한이 켜져 있음.
-- 앱 설명에 수익 보장, 매수 신호, 자동매매처럼 오해될 표현이 없음.
-
-## 9. Android Google Play 구독 연결.
-
-Android 앱 안의 Pro 결제는 외부 웹 결제가 아니라 Google Play 구독으로 처리합니다. Chart Radar는 Capacitor 앱에서 RevenueCat SDK를 호출하고, 서버가 RevenueCat REST API로 실제 구독 상태를 다시 확인한 뒤 Supabase Pro 권한을 열어주는 구조를 사용합니다.
-
-### Google Play Console 상품 ID.
-
-아래 상품 ID는 `src/lib/billing.ts`의 `appStoreProductId`와 반드시 같아야 합니다.
-
-| 플랜 | Google Play 상품 ID |
-| --- | --- |
-| Coin Pro 월간 | `chart_radar_crypto_monthly` |
-| Coin Pro 연간 | `chart_radar_crypto_yearly` |
-| Global Pro 월간 | `chart_radar_global_monthly` |
-| Global Pro 연간 | `chart_radar_global_yearly` |
-| All Market 월간 | `chart_radar_bundle_monthly` |
-| All Market 연간 | `chart_radar_bundle_yearly` |
-
-### RevenueCat 설정.
-
-1. RevenueCat에서 Android 앱을 만들고 Google Play 앱과 연결합니다.
-2. 위 6개 상품 ID를 Products에 등록합니다.
-3. Entitlement는 최소 아래 이름으로 만듭니다.
-   - Coin Pro는 `coin_pro` 또는 `crypto_pro`.
+1. RevenueCat 프로젝트 이름은 `Chart Radar`로 둡니다.
+2. Android 앱은 패키지명 `kr.chartradar.app`로 추가합니다.
+3. Google Play Console 신원 확인이 끝나면 Google Play 앱과 RevenueCat을 연결합니다.
+4. 위 6개 상품 ID를 RevenueCat Product catalog에 등록합니다.
+5. Entitlement는 아래처럼 분리합니다.
+   - Coin Pro는 `coin_pro`.
    - Global Pro는 `global_pro`.
-   - All Market은 `all_market_pro` 또는 `bundle_pro`.
-4. 운영 환경변수에 아래 값을 넣습니다.
+   - All Market Pro는 `all_market_pro`.
+6. Offering은 기본값 하나로 시작해도 되지만, 상품은 월간과 연간을 모두 포함해야 합니다.
+7. RevenueCat의 Android Public SDK key를 `.env.local`과 배포 환경변수의 `NEXT_PUBLIC_REVENUECAT_ANDROID_API_KEY`에 넣습니다.
+8. RevenueCat Secret API key를 `REVENUECAT_REST_API_KEY`에 넣습니다.
+
+## 8. 심사 메모 초안
 
 ```text
-NEXT_PUBLIC_REVENUECAT_ANDROID_API_KEY=
-NEXT_PUBLIC_REVENUECAT_IOS_API_KEY=
-REVENUECAT_REST_API_KEY=
+Chart Radar is a market analysis and education tool. It provides market structure summaries, technical indicator dashboards, AI news briefings, watchlists, and alert settings for crypto and selected global markets. It does not execute trades, connect to exchanges for trading, or provide guaranteed buy/sell signals. Subscriptions unlock higher usage limits and advanced analysis screens.
 ```
 
-`NEXT_PUBLIC_REVENUECAT_ANDROID_API_KEY`는 앱 SDK용 공개 키입니다. `REVENUECAT_REST_API_KEY`는 서버에서만 쓰는 비밀 키라서 절대 브라우저에 노출하면 안 됩니다.
+테스트 계정이 필요하면 Google 계정 하나를 심사용으로 만들고, 필요 시 Supabase에서 임시 Pro 권한을 부여합니다.
 
-### 앱 결제 테스트 순서.
+## 9. 제출 전 최종 점검
 
-1. Google Play Console에서 내부 테스트 트랙을 만듭니다.
-2. 테스트 계정을 라이선스 테스터로 등록합니다.
-3. `.env.local`에 RevenueCat 키를 넣고 `npm run app:sync`를 실행합니다.
-4. Android Studio 또는 실제 기기에서 앱을 실행합니다.
-5. 앱에서 로그인 후 Pro 화면의 구독 버튼을 누릅니다.
-6. 구매가 끝나면 `/api/billing/app-store/sync`가 RevenueCat 상태를 확인하고 `profiles.plan`과 `subscriptions`를 갱신해야 합니다.
-7. 앱 재설치나 기기 변경 상황을 확인하려면 Pro 화면의 구매 복원 버튼을 눌러 같은 계정의 활성 구독이 다시 연결되는지 확인합니다.
+- `NEXT_PUBLIC_SITE_URL`이 실제 도메인으로 설정되어 있습니다.
+- `/privacy`, `/terms`, `/refund`가 실제 운영 정보로 채워져 있습니다.
+- 앱 아이콘은 1024px 정사각형 기준으로 깨지지 않습니다.
+- 모바일 Chrome과 Android 앱에서 로그인, Pro 화면, 뉴스, 알림, 주요 레이더 화면이 열립니다.
+- Android 앱에서는 Google Play 구독 결제가 RevenueCat으로 연결됩니다.
+- 결제 성공 후 `/api/billing/app-store/sync`가 RevenueCat 구독 상태를 확인하고 Supabase 권한을 반영합니다.
+- `TOSS_PAYMENTS_SECRET_KEY`와 `SUPABASE_SERVICE_ROLE_KEY`는 서버 환경변수에만 들어 있습니다.
+- AI API와 스캐너 API의 호출 제한이 켜져 있습니다.
+- 앱 설명에 수익 보장, 확정 매수 신호, 자동매매처럼 오해될 표현이 없습니다.

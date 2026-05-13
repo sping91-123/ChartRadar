@@ -1,4 +1,4 @@
-// 모바일 앱 출시 전 PWA와 Capacitor 포장 파일을 점검하는 로컬 스모크 테스트다.
+// 모바일 앱 출시 포장 파일을 빠르게 점검하는 로컬 스모크 테스트입니다.
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
@@ -45,7 +45,7 @@ function readPngSize(relativePath) {
 
   return {
     width: buffer.readUInt32BE(16),
-    height: buffer.readUInt32BE(20),
+    height: buffer.readUInt32BE(20)
   };
 }
 
@@ -70,27 +70,27 @@ const manifestSource = readText("src/app/manifest.ts");
 if (manifestSource.includes("Chart Radar") && manifestSource.includes("/brand/chart-radar-icon.png")) {
   pass("manifest 브랜드 연결", "Chart Radar 이름과 앱 아이콘을 포함합니다.");
 } else {
-  fail("manifest 브랜드 연결", "Chart Radar 이름 또는 앱 아이콘 경로가 빠졌습니다.");
+  fail("manifest 브랜드 연결", "Chart Radar 이름 또는 앱 아이콘 경로가 빠져 있습니다.");
 }
 
 const serviceWorker = readText("public/sw.js");
 if (serviceWorker.includes("CACHE_NAME") && serviceWorker.includes("/offline.html")) {
   pass("서비스 워커 오프라인 fallback", "캐시 이름과 offline 화면을 포함합니다.");
 } else {
-  fail("서비스 워커 오프라인 fallback", "CACHE_NAME 또는 /offline.html이 빠졌습니다.");
+  fail("서비스 워커 오프라인 fallback", "CACHE_NAME 또는 /offline.html이 빠져 있습니다.");
 }
 
 if (serviceWorker.includes('"/global"')) {
-  pass("서비스 워커 글로벌 셸 캐시", "글로벌 레이더 시작 경로를 캐시에 포함합니다.");
+  pass("서비스 워커 글로벌 경로 캐시", "글로벌 레이더 시작 경로를 캐시에 포함합니다.");
 } else {
-  fail("서비스 워커 글로벌 셸 캐시", "글로벌 레이더 시작 경로가 캐시에 없습니다.");
+  fail("서비스 워커 글로벌 경로 캐시", "글로벌 레이더 시작 경로가 캐시에 없습니다.");
 }
 
 const offlineHtml = readText("public/offline.html");
 if (offlineHtml.includes("Chart Radar") && offlineHtml.includes('href="/"')) {
   pass("오프라인 화면 복귀 링크", "Chart Radar 문구와 홈 복귀 링크를 포함합니다.");
 } else {
-  fail("오프라인 화면 복귀 링크", "Chart Radar 문구 또는 홈 복귀 링크가 빠졌습니다.");
+  fail("오프라인 화면 복귀 링크", "Chart Radar 문구 또는 홈 복귀 링크가 빠져 있습니다.");
 }
 
 const capacitorConfig = readText("capacitor.config.ts");
@@ -108,7 +108,7 @@ const mobileShell = readText("mobile-shell/index.html");
 if (mobileShell.includes("Chart Radar") && mobileShell.includes("CAPACITOR_SERVER_URL")) {
   pass("모바일 shell 안내", "Chart Radar와 CAPACITOR_SERVER_URL 안내를 포함합니다.");
 } else {
-  fail("모바일 shell 안내", "모바일 shell에 앱 이름 또는 서버 URL 안내가 빠졌습니다.");
+  fail("모바일 shell 안내", "모바일 shell에 앱 이름 또는 서버 URL 안내가 빠져 있습니다.");
 }
 
 const failures = checks.filter((check) => !check.ok);
