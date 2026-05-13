@@ -56,7 +56,7 @@ function GlobalProRoutine() {
             글로벌 알림 설정
           </Link>
           <Link
-            href="/pro?market=global"
+            href="/pro?market=stocks"
             className="inline-flex min-h-10 items-center justify-center rounded-md bg-cyan-300 px-3 text-xs font-black text-slate-950 transition hover:bg-cyan-200"
           >
             글로벌 Pro 보기
