@@ -89,6 +89,13 @@ chart_radar_bundle_yearly
 
 이미 구독한 사용자는 앱 Pro 화면의 구매 복원 버튼으로 RevenueCat 구독 상태를 다시 확인하고 같은 Supabase 계정에 Pro 권한을 재연결할 수 있습니다.
 
+로컬에서 앱 결제 키를 안전하게 입력하고 누락 여부를 확인하려면 아래 명령을 사용합니다.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-app-billing-env.ps1
+npm.cmd run check:app-billing
+```
+
 ## 4. 앱스토어 구독 상품 ID
 
 iOS 앱에서 디지털 구독을 판매하려면 Apple In-App Purchase를 사용해야 합니다. 웹 결제 링크를 iOS 앱 내부에서 디지털 구독 결제로 우회하면 심사 리스크가 큽니다.
