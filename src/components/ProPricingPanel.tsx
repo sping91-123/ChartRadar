@@ -64,6 +64,29 @@ const proDifferenceRows = [
   "차트 신호를 단정하지 않고 시장 구조, 위험도, 확인 조건을 함께 보여주는 분석형 구독입니다."
 ];
 
+const freeVsProRows = [
+  {
+    label: "레이더 스캔",
+    free: "하루 몇 번 흐름 확인",
+    pro: "장중에도 반복 스캔"
+  },
+  {
+    label: "AI 브리핑",
+    free: "하루 1회 맛보기",
+    pro: "시장별 브리핑 여유"
+  },
+  {
+    label: "관심종목",
+    free: "2개만 저장",
+    pro: "관심 자산을 넓게 감시"
+  },
+  {
+    label: "알림",
+    free: "설정 체험 중심",
+    pro: "조건별 감시 루틴"
+  }
+];
+
 const scopeCopy: Record<
   BillingPageScope,
   {
@@ -325,6 +348,30 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
           <p className="mt-2 text-slate-400">
             무료는 핵심 확인, Pro는 반복 감시와 저장을 위한 작업 공간입니다.
           </p>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-lg border border-surface-line bg-surface-card">
+        <div className="border-b border-white/10 p-4">
+          <p className="text-lg font-black text-white">무료는 확인용, Pro는 매일 쓰는 레이더입니다.</p>
+          <p className="mt-2 text-sm leading-6 text-slate-400">
+            무료에서도 방향은 볼 수 있게 열어두되, 반복 확인과 감시 자동화는 Pro에서 차이가 나도록 설계했습니다.
+          </p>
+        </div>
+        <div className="grid divide-y divide-white/10 text-sm md:grid-cols-4 md:divide-x md:divide-y-0">
+          {freeVsProRows.map((row) => (
+            <div key={row.label} className="p-4">
+              <p className="font-black text-cyan-200">{row.label}</p>
+              <div className="mt-3 space-y-2">
+                <p className="rounded-md border border-white/10 bg-black/20 p-2 text-slate-400">
+                  Free · {row.free}
+                </p>
+                <p className="rounded-md border border-cyan-300/25 bg-cyan-300/10 p-2 font-bold text-cyan-100">
+                  Pro · {row.pro}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
