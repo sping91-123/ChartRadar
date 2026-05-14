@@ -732,14 +732,15 @@ function timeframeSignalSummary(item: TimeframeAnalysis) {
   return parts.length ? parts.slice(0, 3).join(" / ") : "겹치는 신호 없음";
 }
 
-export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } = {}) {
+export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorOnly?: boolean; altOnly?: boolean } = {}) {
+  const initialSymbol = altOnly ? altSymbols[0] : majorSymbols[0];
   const chartRef = useRef<HTMLDivElement | null>(null);
   const chartApiRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const priceLinesRef = useRef<IPriceLine[]>([]);
   const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
 
-  const [symbol, setSymbol] = useState("BTCUSDT.P");
+  const [symbol, setSymbol] = useState(initialSymbol);
   const [activeTimeframe, setActiveTimeframe] = useState<ChartTimeframe>("15m");
   const [candles, setCandles] = useState<Candle[]>([]);
   const [analysis, setAnalysis] = useState<MarketAnalysis | null>(null);
@@ -762,10 +763,16 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
   const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>(defaultOverlaySettings);
   const effectiveTradingMode: TradingMode = activeTimeframe === "5m" || activeTimeframe === "15m" ? "scalp" : "swing";
   const modeTimeframes = chartTimeframes;
-  const primarySymbols = majorSymbols;
+  const primarySymbols = altOnly ? altSymbols.slice(0, 5) : majorSymbols;
   const allSelectableSymbols = dynamicSymbols.length > 0 ? dynamicSymbols : symbols;
-  const otherSymbols = majorOnly ? [] : allSelectableSymbols.filter((item) => !majorSymbols.includes(item)).slice(0, 220);
+  const otherSymbols = majorOnly
+    ? []
+    : allSelectableSymbols.filter((item) => !majorSymbols.includes(item) && !primarySymbols.includes(item)).slice(0, 220);
   const isOtherSymbolActive = otherSymbols.includes(symbol);
+  const chartTitle = altOnly ? "알트코인 레이더" : "코인 레이더";
+  const chartDescription = altOnly
+    ? "선택한 알트코인의 구조, 과열, 변동성, 브리핑을 BTC/ETH와 같은 방식으로 확인합니다."
+    : "ICT 구조를 먼저 보고, 보조지표는 과열과 추격 위험만 참고합니다.";
 
   const cacheKey = `${storagePrefix}.marketCache.${symbol}.${activeTimeframe}.${analysisMode}.${msbMode}.${structureSensitivity}`;
 
@@ -798,7 +805,11 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
       setSymbol(majorSymbols[0]);
       setShowOtherSymbols(false);
     }
-  }, [majorOnly, symbol]);
+    if (altOnly && majorSymbols.includes(symbol)) {
+      setSymbol(altSymbols[0]);
+      setShowOtherSymbols(false);
+    }
+  }, [altOnly, majorOnly, symbol]);
 
   useEffect(() => {
     const storedSymbol = readLocalStorageWithLegacy(storageKey("symbol"), legacyStorageKeys("symbol"));
@@ -808,7 +819,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
     const storedMsbMode = readLocalStorageWithLegacy(storageKey("msbMode"), legacyStorageKeys("msbMode")) as "close" | "wick" | null;
     const storedStructureSensitivity = Number(readLocalStorageWithLegacy(storageKey("structureSensitivity"), legacyStorageKeys("structureSensitivity"))) as StructureSensitivity;
 
-    if (storedSymbol && symbols.includes(storedSymbol)) {
+    if (storedSymbol && symbols.includes(storedSymbol) && (!altOnly || !majorSymbols.includes(storedSymbol))) {
       setSymbol(storedSymbol);
     }
     if (storedTimeframe && chartTimeframes.includes(storedTimeframe)) {
@@ -826,7 +837,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
     if ([5, 7, 9].includes(storedStructureSensitivity)) {
       setStructureSensitivity(storedStructureSensitivity);
     }
-  }, []);
+  }, [altOnly]);
 
   useEffect(() => {
     writeLocalStorage(storageKey("symbol"), legacyStorageKeys("symbol"), symbol);
@@ -1787,7 +1798,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-xl font-black text-white">코인 레이더</h2>
+                <h2 className="text-xl font-black text-white">{chartTitle}</h2>
                 <span className="rounded border border-accent-blue/30 bg-accent-blue/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-accent-blue">
                   Live
                 </span>
@@ -1796,7 +1807,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
                 </span>
               </div>
               <p className="mt-1 text-sm leading-6 text-slate-400 [word-break:keep-all]">
-                ICT 구조를 먼저 보고, 보조지표는 과열과 추격 위험만 참고합니다.
+                {chartDescription}
               </p>
             </div>
           </div>
@@ -1812,7 +1823,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
 
       </div>
 
-      <div className={`relative mt-4 grid gap-2 ${majorOnly ? "grid-cols-2" : "grid-cols-3"}`}>
+      <div className={`relative mt-4 grid gap-2 ${majorOnly ? "grid-cols-2" : altOnly ? "grid-cols-3 sm:grid-cols-6" : "grid-cols-3"}`}>
         {primarySymbols.map((item) => (
           <button
             key={item}

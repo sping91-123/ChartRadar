@@ -1350,3 +1350,6 @@ The Pro page hero and representative plan card now use Korean word-break preserv
 
 ### 2026-05-14 continuous improvement 61 News notice tone.
 The news usage-limit notice no longer switches to a bright white card inside the dark news screen. Keeping this notice in the same dark cyan visual language makes the page feel less like a pasted system alert and more like one coherent paid product surface.
+
+### 2026-05-14 continuous improvement 62 Altcoin single-symbol analysis.
+The altcoin page now reuses the same chart analysis surface as BTC and ETH, but in an alt-only mode. This keeps BTC and ETH as the major-market page while letting users open XRP, SOL, DOGE, ADA, LINK, or another liquid altcoin and see the same timeframe analysis, ICT/technical split, and briefing flow instead of only a scanner list.
