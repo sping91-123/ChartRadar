@@ -1446,3 +1446,8 @@
 ## 2026-05-14 continuous improvement 40 operations entitlement guard.
 - [x] Add browser auth token and server Pro entitlement checks to the operations smoke.
 - [x] Verify with operations smoke.
+
+## 2026-05-14 continuous improvement 41 app billing health split.
+- [x] Split health readiness into web, Android app, and iOS app launch paths.
+- [x] Add RevenueCat Android, RevenueCat REST, and Supabase admin checks to ops smoke.
+- [x] Verify with operations smoke, app billing check, and production build.

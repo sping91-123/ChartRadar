@@ -1287,3 +1287,6 @@ The launch score should check that paid API protections exist, not just that gen
 
 ### 2026-05-14 continuous improvement 40 operations entitlement guard.
 The operations smoke now checks the same paid-access wiring from a different angle. It verifies that browser requests can carry the login token, the server can resolve market-specific Pro entitlement, and the scanner route actually uses that resolver before choosing rate limits and result windows.
+
+### 2026-05-14 continuous improvement 41 app billing health split.
+Android app launch can be ready before Toss web payment links are ready. The health endpoint now reports web, Android, and iOS paid-launch readiness separately, and overall paid readiness can pass through the first complete channel. This keeps the app-store launch path honest without blocking it on unfinished web checkout setup.
