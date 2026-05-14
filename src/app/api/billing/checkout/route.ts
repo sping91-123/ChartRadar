@@ -78,8 +78,8 @@ export async function POST(request: Request) {
       confirmationRequired: true,
       message:
         body.platform === "android"
-          ? "Android 앱에서는 Google Play 구독 상품으로 결제합니다. 앱 상품 ID와 RevenueCat 연결 상태를 확인해 주세요."
-          : "iOS 앱에서는 App Store 구독 상품으로 결제해야 합니다. App Store Connect에서 상품 ID를 만든 뒤 앱 결제 모듈과 연결해 주세요."
+          ? "Android 앱에서는 Google Play 구독으로 결제합니다. 앱에서 결제창이 열리지 않으면 잠시 후 다시 시도해 주세요."
+          : "iOS 앱에서는 App Store 구독으로 결제합니다. 앱에서 결제창이 열리지 않으면 잠시 후 다시 시도해 주세요."
     });
   }
 
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
         amount: plan.billingAmount,
         orderName: plan.name,
         confirmationRequired: true,
-        message: "결제 URL 형식이 올바르지 않습니다. 결제 링크 환경변수가 https://로 시작하는 전체 주소인지 확인해 주세요."
+        message: "결제창 연결 주소를 확인하지 못했습니다. 잠시 후 다시 시도하거나 고객센터로 문의해 주세요."
       });
     }
 

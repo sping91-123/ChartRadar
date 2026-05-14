@@ -77,7 +77,7 @@ async function syncAppStoreEntitlement(params: NativePurchaseParams & { platform
 
   const data = (await response.json().catch(() => ({}))) as AppStoreSyncResponse;
   if (!response.ok || !data.active) {
-    throw new Error(data.error ?? data.message ?? "앱 구독 권한을 서버에 반영하지 못했습니다.");
+    throw new Error(data.error ?? data.message ?? "앱 구독 상태를 계정에 연결하지 못했습니다. 잠시 후 다시 확인해 주세요.");
   }
 
   if (typeof window !== "undefined") {
@@ -102,7 +102,7 @@ async function syncAnyAppStoreEntitlement(params: NativeRestoreParams & { platfo
 
   const data = (await response.json().catch(() => ({}))) as AppStoreSyncResponse;
   if (!response.ok || !data.active) {
-    throw new Error(data.error ?? data.message ?? "복원된 앱 구독 권한을 서버에 반영하지 못했습니다.");
+    throw new Error(data.error ?? data.message ?? "복원된 구독 상태를 계정에 연결하지 못했습니다. 잠시 후 다시 확인해 주세요.");
   }
 
   if (typeof window !== "undefined") {
@@ -129,7 +129,7 @@ function normalizePurchaseError(error: unknown) {
 export async function purchaseNativePlan(params: NativePurchaseParams) {
   const platform = getNativePurchasePlatform();
   if (!platform) throw new Error("앱 결제는 Android 또는 iOS 앱 안에서만 사용할 수 있습니다.");
-  if (!params.plan.appStoreProductId) throw new Error("이 요금제의 앱 상품 ID가 아직 연결되지 않았습니다.");
+  if (!params.plan.appStoreProductId) throw new Error("이 요금제는 앱 결제가 아직 준비 중입니다.");
 
   try {
     await configurePurchases(platform, params.userId);
@@ -138,7 +138,7 @@ export async function purchaseNativePlan(params: NativePurchaseParams) {
     });
 
     const product = products[0];
-    if (!product) throw new Error("Google Play에 등록된 구독 상품을 찾지 못했습니다.");
+    if (!product) throw new Error("스토어에서 구독 상품을 찾지 못했습니다. 잠시 후 다시 시도해 주세요.");
 
     const result = await Purchases.purchaseStoreProduct({ product });
     if (!hasActivePlan(result.customerInfo, params.plan)) {
