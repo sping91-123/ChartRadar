@@ -326,7 +326,7 @@ function buildJournalNote(setup: ScoutSetup) {
   const opportunities = setup.analysis.opportunityFlags.slice(0, 5);
 
   return [
-    `차트 레이더 저장: ${setup.headline}`,
+    `Chart Radar 저장: ${setup.headline}`,
     `현재가: ${formatPriceWithSymbol(setup.currentPrice)}`,
     `관찰 구간: ${formatPriceWithSymbol(setup.plan.entryLow)} ~ ${formatPriceWithSymbol(setup.plan.entryHigh)}`,
     `깨지면 무효 기준: ${formatPriceWithSymbol(setup.plan.invalidation)}`,

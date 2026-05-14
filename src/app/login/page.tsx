@@ -18,14 +18,14 @@ export default function LoginPage() {
       <div className="mx-auto flex w-full max-w-md flex-col gap-5">
         <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-white">
           <ArrowLeft size={16} aria-hidden />
-          차트 레이더로 돌아가기
+          Chart Radar로 돌아가기
         </Link>
 
         <section className="rounded-lg border border-surface-line bg-surface-card p-5 shadow-glow">
           <div className="grid h-12 w-12 place-items-center rounded-lg border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
             <KeyRound size={24} aria-hidden />
           </div>
-          <h1 className="mt-5 text-2xl font-black text-white">차트 레이더 로그인</h1>
+          <h1 className="mt-5 text-2xl font-black text-white">Chart Radar 로그인</h1>
           <p className="mt-2 text-sm leading-6 text-slate-400">
             복기, Pro 이용, 레이더 알림을 한 계정에서 이어 쓰기 위한 로그인입니다.
           </p>

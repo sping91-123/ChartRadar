@@ -61,7 +61,7 @@ const valueRows = [
 const proDifferenceRows = [
   "Basic은 하루 핵심 흐름을 확인하는 용도입니다. Pro는 장중에 레이더를 반복 실행하고 변화가 생긴 자산을 계속 따라가기 위한 구독입니다.",
   "Pro는 AI 브리핑, 관심종목, 알림 규칙의 한도를 넓혀 직접 찾아보는 시간을 줄여줍니다.",
-  "Chart Radar는 매수와 매도를 대신 결정하지 않습니다. 대신 시장 구조, 뉴스, 매크로, 위험 요소를 빠르게 모아 판단 시간을 줄여줍니다."
+  "Chart Radar가 진입 버튼을 대신 누르지는 않지만, 시장 구조, 뉴스, 매크로, 위험 요소를 한 화면에 모아 판단 시간을 줄여줍니다."
 ];
 
 function getFreeVsProRows(scope: BillingPageScope) {
@@ -150,7 +150,7 @@ function getScopedDisplayPlan(plan: BillingPlan, scope: BillingPageScope): Billi
     return {
       ...plan,
       description: "글로벌 레이더의 핵심 흐름을 먼저 확인합니다. 반복 감시와 알림은 Pro에서 넓어집니다.",
-      highlights: ["QQQ / SPY 핵심 레이더 확인", "글로벌 뉴스 제한 확인", "AI 브리핑 하루 1회"],
+      highlights: ["QQQ / SPY 핵심 레이더 확인", "주요 글로벌 뉴스 확인", "AI 브리핑 하루 1회"],
       limits: {
         ...plan.limits,
         radarScans: "하루 2회",
@@ -165,7 +165,7 @@ function getScopedDisplayPlan(plan: BillingPlan, scope: BillingPageScope): Billi
     return {
       ...plan,
       description: "코인 레이더의 핵심 흐름을 먼저 확인합니다. 반복 감시와 알림은 Pro에서 넓어집니다.",
-      highlights: ["BTC / ETH 핵심 레이더 확인", "주요 알트코인 제한 감시", "AI 브리핑 하루 1회"],
+      highlights: ["BTC / ETH 핵심 레이더 확인", "주요 알트코인 흐름 확인", "AI 브리핑 하루 1회"],
       limits: {
         ...plan.limits,
         radarScans: "하루 3회",

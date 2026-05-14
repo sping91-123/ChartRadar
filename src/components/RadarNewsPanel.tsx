@@ -2,7 +2,14 @@
 // 시장 뉴스 브리핑과 참고 뉴스 목록을 보여주는 패널입니다.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ExternalLink, Newspaper, Radar, RefreshCcw, Sparkles, Target, TrendingDown, TrendingUp } from "lucide-react";
-import { displayNewsSource, localizeNewsSourceText, type RadarNewsBriefing, type RadarNewsDirection, type RadarNewsItem } from "@/lib/radarNews";
+import {
+  displayNewsSource,
+  fallbackKoreanNewsTitle,
+  localizeNewsSourceText,
+  type RadarNewsBriefing,
+  type RadarNewsDirection,
+  type RadarNewsItem
+} from "@/lib/radarNews";
 import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { hasMarketEntitlement } from "@/lib/billing";
@@ -104,11 +111,17 @@ function timeLabel(value: string | number) {
   }).format(date);
 }
 
-function itemTitle(item: RadarNewsItem) {
-  return item.translatedTitle || "시장 이슈를 확인해 주세요.";
+function hasKoreanText(value: string) {
+  return /[가-힣]/.test(value);
 }
 
-function NewsSourceCard({ item }: { item: RadarNewsItem }) {
+function itemTitle(item: RadarNewsItem, market: RadarNewsMarket) {
+  const title = item.translatedTitle?.trim();
+  if (title && hasKoreanText(title)) return title;
+  return fallbackKoreanNewsTitle(item.title, market);
+}
+
+function NewsSourceCard({ item, market }: { item: RadarNewsItem; market: RadarNewsMarket }) {
   const style = directionStyle(item.direction);
   const Icon = style.icon;
 
@@ -121,7 +134,7 @@ function NewsSourceCard({ item }: { item: RadarNewsItem }) {
             <span>{timeLabel(item.publishedAt)}</span>
             <span className={`rounded border px-1.5 py-0.5 ${style.pill}`}>{style.label}</span>
           </div>
-          <h4 className="mt-2 line-clamp-2 text-sm font-black leading-5 text-white [word-break:keep-all]">{itemTitle(item)}</h4>
+          <h4 className="mt-2 line-clamp-2 text-sm font-black leading-5 text-white [word-break:keep-all]">{itemTitle(item, market)}</h4>
         </div>
         <Icon className={`mt-1 shrink-0 ${style.text}`} size={17} aria-hidden />
       </div>
@@ -221,7 +234,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
         const preview = await fetchNewsPayload("preview");
         setPayload(preview);
         setStatus("ready");
-        setLimitNotice(`${usageGate.message} 지금은 AI 영향 분석 대신 오늘 참고할 뉴스 제목과 간단 요약을 먼저 보여줍니다.`);
+        setLimitNotice(`${usageGate.message} 지금은 심층 영향 분석 대신 오늘 참고할 뉴스 제목과 간단 요약을 먼저 보여줍니다.`);
       } catch {
         setStatus("error");
         setError(`${usageGate.message} 내일 다시 확인하거나 Pro에서 반복 브리핑을 열 수 있습니다.`);
@@ -353,7 +366,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
         <div className="rounded-lg border border-surface-line bg-surface-card p-6 text-center">
           <Radar className="mx-auto animate-spin text-accent-blue" size={34} aria-hidden />
           <p className="mt-3 text-sm font-black text-white">뉴스 레이더가 주요 이슈를 정리하고 있습니다.</p>
-          <p className="mt-1 text-xs text-slate-500">AI 응답이 늦으면 간단 요약을 먼저 띄웁니다.</p>
+          <p className="mt-1 text-xs text-slate-500">브리핑이 늦으면 간단 요약을 먼저 보여드립니다.</p>
         </div>
       ) : null}
 
@@ -371,7 +384,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
           <div className="flex items-start gap-2">
             <Sparkles className="mt-0.5 shrink-0 text-accent-blue" size={17} aria-hidden />
             <div>
-              <p className="font-black text-slate-950">오늘은 참고 뉴스 모드입니다.</p>
+              <p className="font-black text-slate-950">오늘은 주요 뉴스 먼저 보여드립니다.</p>
               <p className="mt-1 font-semibold text-slate-800">{limitNotice}</p>
               <p className="mt-2 text-xs font-bold text-slate-700">{copy.proLine}</p>
             </div>
@@ -451,7 +464,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
           </div>
           <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {payload.items.slice(0, limitNotice ? 9 : 12).map((item) => (
-              <NewsSourceCard key={item.id} item={item} />
+              <NewsSourceCard key={item.id} item={item} market={market} />
             ))}
           </div>
         </div>

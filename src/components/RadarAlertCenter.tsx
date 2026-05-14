@@ -398,7 +398,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             {permissionLabel(permission)}
           </p>
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            브라우저에서는 이 화면의 알림을 켜고, 앱에서는 같은 조건을 푸시 알림으로 받을 수 있습니다.
+            웹에서는 이 화면에서 조건을 확인하고, 앱에서는 같은 조건을 푸시 알림으로 받을 수 있습니다.
           </p>
         </div>
         <button

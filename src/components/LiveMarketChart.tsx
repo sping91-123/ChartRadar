@@ -1764,7 +1764,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
         window.setTimeout(() => setSavedMessage(""), 1800);
         return;
       } catch {
-        setSavedMessage("복기에 먼저 저장했습니다. 로그인 상태가 안정되면 이어서 확인할 수 있습니다.");
+        setSavedMessage("이 기기에 먼저 저장했습니다. 계정 연결 후 다시 저장하면 다른 기기에서도 이어볼 수 있습니다.");
       }
     }
 
