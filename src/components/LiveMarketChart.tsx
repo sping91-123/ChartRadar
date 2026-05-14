@@ -642,6 +642,17 @@ function formatIndicatorValue(value: number | null, digits = 2, suffix = "") {
 }
 
 function conditionLabel(value: string) {
+  if (value === "trendUp") return "상승 추세";
+  if (value === "trendDown") return "하락 추세";
+  if (value === "range") return "횡보";
+  if (value === "compression") return "변동성 압축";
+  if (value === "expansion") return "변동성 확장";
+  if (value === "mixed") return "혼조";
+  if (value === "bullish") return "상승 우세";
+  if (value === "bearish") return "하락 우세";
+  if (value === "flat") return "기울기 약함";
+  if (value === "breakoutUp") return "상단 돌파";
+  if (value === "breakoutDown") return "하단 이탈";
   if (value === "overbought") return "과열권";
   if (value === "oversold") return "침체권";
   if (value === "rising") return "상승 모멘텀";
@@ -660,6 +671,15 @@ function conditionLabel(value: string) {
 }
 
 function conditionTone(value: string) {
+  if (value === "bullish" || value === "trendUp" || value === "breakoutUp") {
+    return "border-signal-success/25 bg-signal-success/10 text-signal-success";
+  }
+  if (value === "bearish" || value === "trendDown" || value === "breakoutDown") {
+    return "border-signal-warning/25 bg-signal-warning/10 text-signal-warning";
+  }
+  if (value === "compression" || value === "expansion") {
+    return "border-accent-blue/25 bg-accent-blue/10 text-accent-blue";
+  }
   if (value === "rising" || value === "lower" || value === "outsideLower") {
     return "border-signal-success/25 bg-signal-success/10 text-signal-success";
   }
@@ -689,6 +709,17 @@ function aiStateLabel(value?: string | null) {
 }
 
 function aiConditionLabel(value?: string | null) {
+  if (value === "trendUp") return "상승 추세";
+  if (value === "trendDown") return "하락 추세";
+  if (value === "range") return "횡보";
+  if (value === "compression") return "변동성 압축";
+  if (value === "expansion") return "변동성 확장";
+  if (value === "mixed") return "혼조";
+  if (value === "bullish") return "상승 우세";
+  if (value === "bearish") return "하락 우세";
+  if (value === "flat") return "기울기 약함";
+  if (value === "breakoutUp") return "상단 돌파";
+  if (value === "breakoutDown") return "하단 이탈";
   if (value === "overbought") return "과열권";
   if (value === "oversold") return "침체권";
   if (value === "rising") return "상승 모멘텀";
@@ -1237,6 +1268,13 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         poc: activeAnalysis.volumeProfile
           ? `${aiStateLabel(activeAnalysis.volumeProfile.position)} ${Math.abs(activeAnalysis.volumeProfile.distancePercent).toFixed(2)}%`
           : "없음",
+        regime: aiConditionLabel(activeAnalysis.condition.regime),
+        dmi: `${formatIndicatorValue(activeAnalysis.condition.adx14, 1)} ${aiConditionLabel(activeAnalysis.condition.dmiState)}`,
+        supertrend: aiConditionLabel(activeAnalysis.condition.supertrendDirection),
+        donchian: aiConditionLabel(activeAnalysis.condition.donchianPosition),
+        keltner: aiConditionLabel(activeAnalysis.condition.keltnerPosition),
+        emaStack: aiConditionLabel(activeAnalysis.condition.emaStack),
+        bollingerWidth: formatIndicatorValue(activeAnalysis.condition.bollingerWidthPercentile, 1, "%"),
         rsi: `${formatIndicatorValue(activeAnalysis.condition.rsi14, 1)} ${aiConditionLabel(activeAnalysis.condition.rsiState)}`,
         macd: aiConditionLabel(activeAnalysis.condition.macdState),
         volatility: `${formatIndicatorValue(activeAnalysis.condition.atrPercent, 2, "%")} ${aiConditionLabel(activeAnalysis.condition.volatilityState)}`,
@@ -2707,6 +2745,36 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   <p className="text-xs font-bold text-slate-400">추세 환경 보조 도구</p>
                   <h4 className="mt-1 text-base font-black text-white">보조지표 참고값</h4>
                   <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div className={`rounded-md border p-3 sm:col-span-2 ${conditionTone(activeAnalysis.condition.regime)}`}>
+                      <p className="text-xs font-semibold opacity-80">시장 국면</p>
+                      <p className="mt-1 text-sm font-black">
+                        {conditionLabel(activeAnalysis.condition.regime)} · {formatIndicatorValue(activeAnalysis.condition.regimeScore, 2)}
+                      </p>
+                    </div>
+                    <div className={`rounded-md border p-3 ${conditionTone(activeAnalysis.condition.dmiState)}`}>
+                      <p className="text-xs font-semibold opacity-80">DMI / ADX</p>
+                      <p className="mt-1 text-sm font-black">
+                        {formatIndicatorValue(activeAnalysis.condition.adx14, 1)} · {conditionLabel(activeAnalysis.condition.dmiState)}
+                      </p>
+                    </div>
+                    <div className={`rounded-md border p-3 ${conditionTone(activeAnalysis.condition.supertrendDirection)}`}>
+                      <p className="text-xs font-semibold opacity-80">Supertrend</p>
+                      <p className="mt-1 text-sm font-black">{conditionLabel(activeAnalysis.condition.supertrendDirection)}</p>
+                    </div>
+                    <div className={`rounded-md border p-3 ${conditionTone(activeAnalysis.condition.donchianPosition)}`}>
+                      <p className="text-xs font-semibold opacity-80">Donchian 20</p>
+                      <p className="mt-1 text-sm font-black">{conditionLabel(activeAnalysis.condition.donchianPosition)}</p>
+                    </div>
+                    <div className={`rounded-md border p-3 ${conditionTone(activeAnalysis.condition.keltnerPosition)}`}>
+                      <p className="text-xs font-semibold opacity-80">Keltner</p>
+                      <p className="mt-1 text-sm font-black">{conditionLabel(activeAnalysis.condition.keltnerPosition)}</p>
+                    </div>
+                    <div className={`rounded-md border p-3 ${conditionTone(activeAnalysis.condition.emaStack)}`}>
+                      <p className="text-xs font-semibold opacity-80">EMA 배열</p>
+                      <p className="mt-1 text-sm font-black">
+                        {conditionLabel(activeAnalysis.condition.emaStack)} · {conditionLabel(activeAnalysis.condition.emaSlope)}
+                      </p>
+                    </div>
                     <div className={`rounded-md border p-3 ${conditionTone(activeAnalysis.condition.rsiState)}`}>
                       <p className="text-xs font-semibold opacity-80">RSI 14</p>
                       <p className="mt-1 text-sm font-black">
@@ -2731,7 +2799,9 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                     </div>
                     <div className={`rounded-md border p-3 sm:col-span-2 ${conditionTone(activeAnalysis.condition.bollingerPosition)}`}>
                       <p className="text-xs font-semibold opacity-80">볼린저 위치</p>
-                      <p className="mt-1 text-sm font-black">{conditionLabel(activeAnalysis.condition.bollingerPosition)}</p>
+                      <p className="mt-1 text-sm font-black">
+                        {conditionLabel(activeAnalysis.condition.bollingerPosition)} · 폭 {formatIndicatorValue(activeAnalysis.condition.bollingerWidthPercentile, 1, "%")}
+                      </p>
                     </div>
                   </div>
                 </div>

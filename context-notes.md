@@ -1375,3 +1375,11 @@ The health endpoint now reports a launch readiness score and structured blocking
 - `GROQ_MODEL`은 응답 속도와 비용 부담을 우선해 `llama-3.1-8b-instant`로 맞췄다.
 - 기존 `src/lib/ai/groq.ts`의 한국어 시스템 프롬프트가 깨진 상태라 AI 답변 품질이 흔들릴 수 있었고, 이를 정상 한국어 프롬프트로 교체했다.
 - Qwen 모델을 다시 쓰더라도 `<think>` 출력이 화면에 노출되지 않도록 Groq 응답 정리 로직을 추가했다.
+
+## 2026-05-15 판독 기준 개선 1차.
+
+- 단순히 RSI, MACD를 더 붙이는 방식은 유료 상품 신뢰도를 올리기 어렵다고 판단했다.
+- 먼저 시장 국면을 분류하고, ICT와 기술지표가 서로 확인 또는 충돌하는 구조로 가야 한다.
+- 이번 1차 작업은 기존 엔진을 크게 뒤집지 않고 `condition`에 신뢰도 높은 기술지표와 국면 값을 추가하는 방향으로 진행한다.
+- ADX/DMI, Supertrend, Donchian, Keltner, EMA 배열, 볼린저 폭 백분위를 추가했고, 국면 값은 점수에 약하게만 반영했다. ICT 구조 점수를 대체하지 않고 보조 확인값으로 쓰려는 의도다.
+- `/survival` DOM에서 시장 국면과 DMI/ADX 카드가 실제로 렌더링되는 것을 확인했다.

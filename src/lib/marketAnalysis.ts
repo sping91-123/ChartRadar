@@ -3,6 +3,7 @@ export type DirectionState = "bullish" | "bearish" | "neutral" | "unknown";
 export type BiasSide = "long" | "short" | "neutral";
 export type ReasonTone = "bullish" | "bearish" | "neutral";
 export type TradingMode = "swing" | "scalp";
+export type MarketRegime = "trendUp" | "trendDown" | "range" | "compression" | "expansion" | "mixed" | "unknown";
 
 export interface Candle {
   time: number;
@@ -118,12 +119,32 @@ export interface StructureDebug {
 }
 
 export interface MarketCondition {
+  regime: MarketRegime;
+  regimeScore: number | null;
   rsi14: number | null;
   rsiState: "overbought" | "neutral" | "oversold" | "unknown";
   macdLine: number | null;
   macdSignal: number | null;
   macdHistogram: number | null;
   macdState: "rising" | "falling" | "neutral" | "unknown";
+  ema20: number | null;
+  ema50: number | null;
+  ema200: number | null;
+  emaStack: "bullish" | "bearish" | "mixed" | "unknown";
+  emaSlope: "rising" | "falling" | "flat" | "unknown";
+  adx14: number | null;
+  plusDi14: number | null;
+  minusDi14: number | null;
+  dmiState: "bullish" | "bearish" | "neutral" | "unknown";
+  supertrendDirection: "bullish" | "bearish" | "unknown";
+  supertrendValue: number | null;
+  donchianHigh: number | null;
+  donchianLow: number | null;
+  donchianPosition: "breakoutUp" | "breakoutDown" | "upper" | "middle" | "lower" | "unknown";
+  keltnerMiddle: number | null;
+  keltnerUpper: number | null;
+  keltnerLower: number | null;
+  keltnerPosition: "upper" | "middle" | "lower" | "outsideUpper" | "outsideLower" | "unknown";
   atr14: number | null;
   atrPercent: number | null;
   volatilityState: "expanded" | "normal" | "compressed" | "unknown";
@@ -133,6 +154,7 @@ export interface MarketCondition {
   bollingerUpper: number | null;
   bollingerLower: number | null;
   bollingerPosition: "upper" | "middle" | "lower" | "outsideUpper" | "outsideLower" | "unknown";
+  bollingerWidthPercentile: number | null;
 }
 
 export interface TimeframeAnalysis {
@@ -512,6 +534,235 @@ function calculateBollinger(values: number[], length = 20, multiplier = 2) {
   return { middle, upper, lower, position };
 }
 
+function calculateBollingerWidthPercentile(values: number[], length = 20, lookback = 120) {
+  if (values.length < length + 5) return null;
+  const widths: number[] = [];
+
+  for (let index = length - 1; index < values.length; index += 1) {
+    const window = values.slice(index - length + 1, index + 1);
+    const middle = average(window);
+    if (!middle || middle <= 0) continue;
+    const variance = average(window.map((value) => (value - middle) ** 2)) ?? 0;
+    const stdev = Math.sqrt(variance);
+    widths.push(((stdev * 4) / middle) * 100);
+  }
+
+  const latest = widths[widths.length - 1];
+  if (!widths.length || latest === undefined) return null;
+  const sample = widths.slice(-lookback);
+  const belowOrEqual = sample.filter((value) => value <= latest).length;
+  return (belowOrEqual / sample.length) * 100;
+}
+
+function calculateDmi(candles: Candle[], length = 14) {
+  if (candles.length <= length + 1) {
+    return { adx: null, plusDi: null, minusDi: null, state: "unknown" as MarketCondition["dmiState"] };
+  }
+
+  const trueRanges: number[] = [];
+  const plusDm: number[] = [];
+  const minusDm: number[] = [];
+
+  for (let index = 1; index < candles.length; index += 1) {
+    const current = candles[index];
+    const previous = candles[index - 1];
+    const upMove = current.high - previous.high;
+    const downMove = previous.low - current.low;
+    const tr = Math.max(
+      current.high - current.low,
+      Math.abs(current.high - previous.close),
+      Math.abs(current.low - previous.close)
+    );
+
+    trueRanges.push(tr);
+    plusDm.push(upMove > downMove && upMove > 0 ? upMove : 0);
+    minusDm.push(downMove > upMove && downMove > 0 ? downMove : 0);
+  }
+
+  let smoothedTr = trueRanges.slice(0, length).reduce((sum, value) => sum + value, 0);
+  let smoothedPlus = plusDm.slice(0, length).reduce((sum, value) => sum + value, 0);
+  let smoothedMinus = minusDm.slice(0, length).reduce((sum, value) => sum + value, 0);
+  const dxValues: number[] = [];
+  let latestPlusDi: number | null = null;
+  let latestMinusDi: number | null = null;
+
+  for (let index = length; index < trueRanges.length; index += 1) {
+    smoothedTr = smoothedTr - smoothedTr / length + trueRanges[index];
+    smoothedPlus = smoothedPlus - smoothedPlus / length + plusDm[index];
+    smoothedMinus = smoothedMinus - smoothedMinus / length + minusDm[index];
+
+    const plusDi = smoothedTr > 0 ? (100 * smoothedPlus) / smoothedTr : 0;
+    const minusDi = smoothedTr > 0 ? (100 * smoothedMinus) / smoothedTr : 0;
+    const diSum = plusDi + minusDi;
+    const dx = diSum > 0 ? (100 * Math.abs(plusDi - minusDi)) / diSum : 0;
+    dxValues.push(dx);
+    latestPlusDi = plusDi;
+    latestMinusDi = minusDi;
+  }
+
+  const adx = calculateRmaLatest(dxValues, length);
+  const state: MarketCondition["dmiState"] =
+    adx === null || latestPlusDi === null || latestMinusDi === null
+      ? "unknown"
+      : Math.abs(latestPlusDi - latestMinusDi) < 3
+        ? "neutral"
+        : latestPlusDi > latestMinusDi
+          ? "bullish"
+          : "bearish";
+
+  return { adx, plusDi: latestPlusDi, minusDi: latestMinusDi, state };
+}
+
+function calculateRmaLatest(values: number[], length: number) {
+  if (values.length < length) return null;
+  let current = values.slice(0, length).reduce((sum, value) => sum + value, 0) / length;
+  for (let index = length; index < values.length; index += 1) {
+    current = (current * (length - 1) + values[index]) / length;
+  }
+  return current;
+}
+
+function calculateDonchian(candles: Candle[], length = 20) {
+  if (candles.length < length + 1) {
+    return {
+      high: null,
+      low: null,
+      position: "unknown" as MarketCondition["donchianPosition"]
+    };
+  }
+
+  const latest = candles[candles.length - 1];
+  const previousWindow = candles.slice(-length - 1, -1);
+  const high = Math.max(...previousWindow.map((candle) => candle.high));
+  const low = Math.min(...previousWindow.map((candle) => candle.low));
+  const width = high - low;
+  let position: MarketCondition["donchianPosition"] = "middle";
+
+  if (latest.close > high) position = "breakoutUp";
+  else if (latest.close < low) position = "breakoutDown";
+  else if (width <= 0) position = "unknown";
+  else {
+    const ratio = (latest.close - low) / width;
+    if (ratio >= 0.66) position = "upper";
+    else if (ratio <= 0.34) position = "lower";
+  }
+
+  return { high, low, position };
+}
+
+function calculateKeltner(candles: Candle[], closes: number[], atr14: number | null, length = 20, multiplier = 1.5) {
+  const middle = ema(closes, length);
+  if (middle === null || atr14 === null || candles.length < length) {
+    return {
+      middle,
+      upper: null,
+      lower: null,
+      position: "unknown" as MarketCondition["keltnerPosition"]
+    };
+  }
+
+  const latest = candles[candles.length - 1];
+  const upper = middle + atr14 * multiplier;
+  const lower = middle - atr14 * multiplier;
+  const width = upper - lower;
+  let position: MarketCondition["keltnerPosition"] = "middle";
+
+  if (latest.close > upper) position = "outsideUpper";
+  else if (latest.close < lower) position = "outsideLower";
+  else if (width <= 0) position = "unknown";
+  else {
+    const ratio = (latest.close - lower) / width;
+    if (ratio >= 0.66) position = "upper";
+    else if (ratio <= 0.34) position = "lower";
+  }
+
+  return { middle, upper, lower, position };
+}
+
+function calculateSupertrend(candles: Candle[], atrValues: Array<number | null>, length = 10, multiplier = 3) {
+  if (candles.length < length + 2) {
+    return { direction: "unknown" as MarketCondition["supertrendDirection"], value: null };
+  }
+
+  let finalUpper = 0;
+  let finalLower = 0;
+  let direction: MarketCondition["supertrendDirection"] = "unknown";
+  let value: number | null = null;
+
+  for (let index = 0; index < candles.length; index += 1) {
+    const atr = atrValues[index];
+    if (atr === null) continue;
+
+    const candle = candles[index];
+    const median = (candle.high + candle.low) / 2;
+    const basicUpper = median + multiplier * atr;
+    const basicLower = median - multiplier * atr;
+
+    if (direction === "unknown") {
+      finalUpper = basicUpper;
+      finalLower = basicLower;
+      direction = candle.close >= median ? "bullish" : "bearish";
+      value = direction === "bullish" ? finalLower : finalUpper;
+      continue;
+    }
+
+    const previousClose = candles[index - 1].close;
+    finalUpper = basicUpper < finalUpper || previousClose > finalUpper ? basicUpper : finalUpper;
+    finalLower = basicLower > finalLower || previousClose < finalLower ? basicLower : finalLower;
+
+    if (direction === "bearish" && candle.close > finalUpper) direction = "bullish";
+    else if (direction === "bullish" && candle.close < finalLower) direction = "bearish";
+
+    value = direction === "bullish" ? finalLower : finalUpper;
+  }
+
+  return { direction, value };
+}
+
+function classifyMarketRegime(args: {
+  latestClose: number;
+  emaStack: MarketCondition["emaStack"];
+  emaSlope: MarketCondition["emaSlope"];
+  dmiState: MarketCondition["dmiState"];
+  adx: number | null;
+  volatilityState: MarketCondition["volatilityState"];
+  bollingerWidthPercentile: number | null;
+  donchianPosition: MarketCondition["donchianPosition"];
+  supertrendDirection: MarketCondition["supertrendDirection"];
+}) {
+  const trendStrength = args.adx === null ? 0 : args.adx >= 28 ? 2 : args.adx >= 20 ? 1 : 0;
+  const compression =
+    args.volatilityState === "compressed" ||
+    (args.bollingerWidthPercentile !== null && args.bollingerWidthPercentile <= 20);
+  const expansion =
+    args.volatilityState === "expanded" ||
+    (args.bollingerWidthPercentile !== null && args.bollingerWidthPercentile >= 80);
+
+  let bullishScore = 0;
+  let bearishScore = 0;
+  if (args.emaStack === "bullish") bullishScore += 1.2;
+  if (args.emaStack === "bearish") bearishScore += 1.2;
+  if (args.emaSlope === "rising") bullishScore += 0.8;
+  if (args.emaSlope === "falling") bearishScore += 0.8;
+  if (args.dmiState === "bullish") bullishScore += 1 + trendStrength * 0.35;
+  if (args.dmiState === "bearish") bearishScore += 1 + trendStrength * 0.35;
+  if (args.supertrendDirection === "bullish") bullishScore += 0.8;
+  if (args.supertrendDirection === "bearish") bearishScore += 0.8;
+  if (args.donchianPosition === "breakoutUp") bullishScore += 0.9;
+  if (args.donchianPosition === "breakoutDown") bearishScore += 0.9;
+
+  const netScore = bullishScore - bearishScore;
+  let regime: MarketRegime = "mixed";
+
+  if (compression && trendStrength === 0) regime = "compression";
+  else if (expansion && Math.abs(netScore) < 1.2) regime = "expansion";
+  else if (trendStrength === 0 && Math.abs(netScore) < 1.1) regime = "range";
+  else if (netScore >= 1.6) regime = "trendUp";
+  else if (netScore <= -1.6) regime = "trendDown";
+
+  return { regime, regimeScore: netScore };
+}
+
 function buildMarketCondition(candles: Candle[], closes: number[]): MarketCondition {
   const latest = candles[candles.length - 1];
   const volumes = candles.map((candle) => candle.volume);
@@ -523,25 +774,83 @@ function buildMarketCondition(candles: Candle[], closes: number[]): MarketCondit
   const rsi14 = calculateRsi(closes, 14);
   const macd = calculateMacd(closes);
   const bollinger = calculateBollinger(closes, 20, 2);
+  const bollingerWidthPercentile = calculateBollingerWidthPercentile(closes, 20, 120);
+  const ema20 = ema(closes, 20);
+  const ema50 = ema(closes, 50);
+  const ema200 = ema(closes, 200);
+  const ema20Series = emaSeries(closes, 20);
+  const currentEma20 = lastNumber(ema20Series);
+  const previousEma20 = lastNumber(ema20Series.slice(0, -5));
+  const dmi = calculateDmi(candles, 14);
+  const donchian = calculateDonchian(candles, 20);
+  const keltner = calculateKeltner(candles, closes, atr14, 20, 1.5);
+  const supertrend = calculateSupertrend(candles, atrValues, 10, 3);
 
   const atrPercent = atr14 !== null && latest?.close ? (atr14 / latest.close) * 100 : null;
   const atrRatio = atr14 !== null && atrBaseline ? atr14 / atrBaseline : null;
   const volumeRatio = volumeSma && latest?.volume ? latest.volume / volumeSma : null;
 
+  const emaStack: MarketCondition["emaStack"] =
+    ema20 === null || ema50 === null || ema200 === null
+      ? "unknown"
+      : ema20 > ema50 && ema50 > ema200
+        ? "bullish"
+        : ema20 < ema50 && ema50 < ema200
+          ? "bearish"
+          : "mixed";
+  const emaSlope: MarketCondition["emaSlope"] =
+    currentEma20 === null || previousEma20 === null
+      ? "unknown"
+      : Math.abs(currentEma20 - previousEma20) / latest.close < 0.0005
+        ? "flat"
+        : currentEma20 > previousEma20
+          ? "rising"
+          : "falling";
   const rsiState: MarketCondition["rsiState"] =
     rsi14 === null ? "unknown" : rsi14 >= 70 ? "overbought" : rsi14 <= 30 ? "oversold" : "neutral";
   const volatilityState: MarketCondition["volatilityState"] =
     atrRatio === null ? "unknown" : atrRatio >= 1.2 ? "expanded" : atrRatio <= 0.75 ? "compressed" : "normal";
   const volumeState: MarketCondition["volumeState"] =
     volumeRatio === null ? "unknown" : volumeRatio >= 1.5 ? "high" : volumeRatio <= 0.7 ? "low" : "normal";
+  const { regime, regimeScore } = classifyMarketRegime({
+    latestClose: latest.close,
+    emaStack,
+    emaSlope,
+    dmiState: dmi.state,
+    adx: dmi.adx,
+    volatilityState,
+    bollingerWidthPercentile,
+    donchianPosition: donchian.position,
+    supertrendDirection: supertrend.direction
+  });
 
   return {
+    regime,
+    regimeScore: roundMetric(regimeScore, 2),
     rsi14: roundMetric(rsi14, 1),
     rsiState,
     macdLine: roundMetric(macd.line, 5),
     macdSignal: roundMetric(macd.signal, 5),
     macdHistogram: roundMetric(macd.histogram, 5),
     macdState: macd.state,
+    ema20: roundMetric(ema20, 5),
+    ema50: roundMetric(ema50, 5),
+    ema200: roundMetric(ema200, 5),
+    emaStack,
+    emaSlope,
+    adx14: roundMetric(dmi.adx, 2),
+    plusDi14: roundMetric(dmi.plusDi, 2),
+    minusDi14: roundMetric(dmi.minusDi, 2),
+    dmiState: dmi.state,
+    supertrendDirection: supertrend.direction,
+    supertrendValue: roundMetric(supertrend.value, 5),
+    donchianHigh: roundMetric(donchian.high, 5),
+    donchianLow: roundMetric(donchian.low, 5),
+    donchianPosition: donchian.position,
+    keltnerMiddle: roundMetric(keltner.middle, 5),
+    keltnerUpper: roundMetric(keltner.upper, 5),
+    keltnerLower: roundMetric(keltner.lower, 5),
+    keltnerPosition: keltner.position,
     atr14: roundMetric(atr14, 5),
     atrPercent: roundMetric(atrPercent, 2),
     volatilityState,
@@ -550,7 +859,8 @@ function buildMarketCondition(candles: Candle[], closes: number[]): MarketCondit
     bollingerMiddle: roundMetric(bollinger.middle, 5),
     bollingerUpper: roundMetric(bollinger.upper, 5),
     bollingerLower: roundMetric(bollinger.lower, 5),
-    bollingerPosition: bollinger.position
+    bollingerPosition: bollinger.position,
+    bollingerWidthPercentile: roundMetric(bollingerWidthPercentile, 1)
   };
 }
 
@@ -1983,6 +2293,13 @@ export function analyzeTimeframe(
   if (dealingRange.position === "premium") score -= 0.15;
   if (oteZone === "long") score += 0.5;
   if (oteZone === "short") score -= 0.5;
+  if (condition.regime === "trendUp") score += 0.55;
+  if (condition.regime === "trendDown") score -= 0.55;
+  if (condition.supertrendDirection === "bullish") score += 0.2;
+  if (condition.supertrendDirection === "bearish") score -= 0.2;
+  if (condition.donchianPosition === "breakoutUp") score += 0.25;
+  if (condition.donchianPosition === "breakoutDown") score -= 0.25;
+  if (condition.regime === "compression") score *= 0.82;
 
   return {
     timeframe,
