@@ -66,6 +66,13 @@ function getMacroFreshness(updatedAtIso: string, isAutomatic: boolean) {
   };
 }
 
+function getRefreshLabel(nextRefreshMs?: number) {
+  const refreshMs = nextRefreshMs ?? 10 * 60 * 1000;
+  if (refreshMs <= 60_000) return "발표 전후 1분 단위 확인";
+  if (refreshMs <= 3 * 60_000) return "근접 일정 3분 단위 확인";
+  return "주요 일정 10분 단위 확인";
+}
+
 function hasActualValue(item: MacroEventItem) {
   if (!item.actual) return false;
   return !EMPTY_ACTUAL_VALUES.has(item.actual.trim());
@@ -269,6 +276,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
   const laterUpcomingItems = upcomingItems.slice(1, 7);
   const latestRelease = releasedItems[0];
   const freshness = getMacroFreshness(calendar.updatedAt, calendar.isAutomatic);
+  const refreshLabel = getRefreshLabel(calendar.nextRefreshMs);
 
   useEffect(() => {
     let cancelled = false;
@@ -320,7 +328,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
             {isRecentlyReleased(item) ? "최근 발표" : "다음 발표"} · <span className={compactStateClass(item)}>{stateLabel(item)}</span> · {macroLabel(item.label)}
           </p>
           <p className="mt-0.5 truncate text-[11px] font-bold text-slate-500">
-            한국시간 {item.dateKst} · 실제 {displayActual(item)} · 예상 {macroValueText(item.forecast) ?? "미정"} · 이전 {macroValueText(item.previous) ?? "미정"}
+            한국시간 {item.dateKst} · {refreshLabel} · 실제 {displayActual(item)} · 예상 {macroValueText(item.forecast) ?? "미정"} · 이전 {macroValueText(item.previous) ?? "미정"}
           </p>
         </div>
         <ChevronRight size={14} className="shrink-0 text-slate-600 transition group-hover:text-accent-blue" aria-hidden />
@@ -336,7 +344,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
         </div>
         <div className="min-w-0">
           <p className="text-xs font-black text-white">매크로 레이더</p>
-          <p className="truncate text-[11px] font-bold text-slate-500">{calendar.updatedAtLabel}. 모든 발표 시간은 한국시간 기준입니다.</p>
+          <p className="truncate text-[11px] font-bold text-slate-500">{calendar.updatedAtLabel}. {refreshLabel}.</p>
           <span className={`mt-1 inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[10px] font-black sm:hidden ${freshness.className}`}>
             <TimerReset size={11} aria-hidden />
             {freshness.label}
@@ -346,6 +354,10 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
           <div className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-[11px] font-black ${freshness.className}`}>
             <TimerReset size={12} aria-hidden />
             {freshness.label}
+          </div>
+          <div className="inline-flex items-center gap-1 rounded border border-accent-blue/20 bg-accent-blue/10 px-2 py-1 text-[11px] font-black text-accent-blue">
+            <Clock3 size={12} aria-hidden />
+            {refreshLabel}
           </div>
           <div className="inline-flex items-center gap-1 rounded border border-signal-warning/20 bg-signal-warning/10 px-2 py-1 text-[11px] font-black text-signal-warning">
             <ShieldAlert size={12} aria-hidden />
@@ -425,7 +437,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
             </article>
           ) : (
             <p className="rounded-md border border-white/10 bg-black/25 p-3 text-[11px] leading-5 text-slate-500">
-              현재 등록된 다음 일정이 없습니다. 일정 데이터가 갱신되면 이 영역에 표시됩니다.
+              다가오는 일정이 잡히면 이곳에 먼저 표시됩니다. 지금은 최근 발표 결과와 시장 반응을 우선 확인해 주세요.
             </p>
           )}
           {laterUpcomingItems.length > 0 ? (
@@ -446,7 +458,9 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
 
       <div className="flex items-center gap-2 border-t border-white/10 px-3 py-2 text-[11px] leading-5 text-slate-500">
         <TimerReset size={13} className="shrink-0 text-accent-blue" aria-hidden />
-        <span className="[word-break:keep-all]">{calendar.sourceNote}</span>
+        <span className="[word-break:keep-all]">
+          {calendar.sourceNote} 발표가 가까워지면 확인 간격을 자동으로 좁힙니다.
+        </span>
         <CalendarClock size={13} className="ml-auto hidden shrink-0 text-slate-600 sm:block" aria-hidden />
       </div>
     </section>
