@@ -43,10 +43,10 @@ export const billingPlans: BillingPlan[] = [
     priceLabel: "무료",
     billingAmount: 0,
     monthlyValue: 0,
-    description: "Chart Radar의 핵심 흐름을 먼저 확인하는 플랜입니다. 장중 반복 감시, 관심종목 확장, 알림 조건은 Pro에서 넓어집니다.",
-    highlights: ["주요 화면 핵심 확인", "AI 브리핑 하루 1회", "관심종목 1개 저장"],
+    description: "Chart Radar의 핵심 흐름을 먼저 확인하는 플랜입니다. 알트 개별 분석, 장중 반복 감시, 관심종목 확장, 알림 조건은 Pro에서 넓어집니다.",
+    highlights: ["주요 화면 핵심 확인", "알트 개별 분석 하루 3개", "AI 브리핑 하루 1회"],
     limits: {
-      radarScans: "코인 2회 · 글로벌 1회",
+      radarScans: "코인 2회 · 알트 3개 · 글로벌 1회",
       aiBriefings: "시장별 1회",
       watchlist: "시장별 1개",
       alerts: "시장별 1개",
@@ -63,9 +63,9 @@ export const billingPlans: BillingPlan[] = [
     monthlyValue: 14900,
     appStoreProductId: "chart_radar_crypto_monthly",
     description: "코인 전용 레이더입니다. BTC, ETH, 알트코인, ICT 구조, 기술지표, 코인 뉴스와 알림을 장중 반복 감시합니다.",
-    highlights: ["코인 레이더 하루 200회", "AI 코인 브리핑 하루 30회", "관심코인 50개와 알림 조건 20개"],
+    highlights: ["코인 레이더 하루 200회", "알트 개별 분석 사실상 무제한", "관심코인 50개와 알림 조건 20개"],
     limits: {
-      radarScans: "코인 200회",
+      radarScans: "코인 200회 · 알트 300개",
       aiBriefings: "코인 30회",
       watchlist: "코인 50개",
       alerts: "코인 조건 20개",
@@ -84,7 +84,7 @@ export const billingPlans: BillingPlan[] = [
     description: "코인 시장을 매일 보는 사용자에게 맞춘 연간 플랜입니다.",
     highlights: ["Coin Pro 전체 기능", "월 환산 약 12,417원", "신규 코인 레이더 기능 우선 적용"],
     limits: {
-      radarScans: "코인 200회",
+      radarScans: "코인 200회 · 알트 300개",
       aiBriefings: "코인 40회",
       watchlist: "코인 100개",
       alerts: "코인 조건 30개",
@@ -141,7 +141,7 @@ export const billingPlans: BillingPlan[] = [
     description: "코인과 글로벌 시장을 모두 보는 사용자를 위한 번들 플랜입니다. 두 시장을 따로 결제하는 것보다 유리합니다.",
     highlights: ["코인과 글로벌 전체 레이더", "시장별 뉴스와 알림 분리", "두 시장을 함께 보는 사용자에게 최적"],
     limits: {
-      radarScans: "코인 200회 · 글로벌 100회",
+      radarScans: "코인 200회 · 알트 300개 · 글로벌 100회",
       aiBriefings: "총 60회",
       watchlist: "코인 100개 · 글로벌 100개",
       alerts: "시장별 조건 30개",
@@ -160,7 +160,7 @@ export const billingPlans: BillingPlan[] = [
     description: "코인과 글로벌 시장을 장기적으로 함께 보는 사용자를 위한 연간 번들입니다.",
     highlights: ["All Market Pro 전체 기능", "월 환산 약 20,750원", "향후 확장 시장 기능 우선 적용"],
     limits: {
-      radarScans: "코인 200회 · 글로벌 100회",
+      radarScans: "코인 200회 · 알트 300개 · 글로벌 100회",
       aiBriefings: "총 80회",
       watchlist: "코인 150개 · 글로벌 150개",
       alerts: "시장별 조건 40개",

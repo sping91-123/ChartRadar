@@ -80,7 +80,7 @@ const scopedUsageCopy: Record<BillingPageScope, { free: string; paid: string; pr
 
 function bucketMatchesScope(id: UsageBucketId, marketScope: BillingPageScope) {
   if (marketScope === "crypto") {
-    return id === "radarScan" || id === "watchlistScan" || id === "cryptoAiBriefing" || id === "cryptoAlertRule";
+    return id === "radarScan" || id === "altIndividualAnalysis" || id === "watchlistScan" || id === "cryptoAiBriefing" || id === "cryptoAlertRule";
   }
 
   if (marketScope === "stocks") {

@@ -78,6 +78,7 @@ function getFreeVsProRows(scope: BillingPageScope) {
   if (scope === "crypto") {
     return [
       { label: "레이더 스캔", free: "코인 하루 2회", pro: "코인 하루 200회" },
+      { label: "알트 개별 분석", free: "하루 3개", pro: "하루 300개" },
       { label: "AI 브리핑", free: "코인 하루 1회", pro: "코인 하루 30회" },
       { label: "관심코인", free: "코인 1개 저장", pro: "코인 50개 감시" },
       { label: "알림", free: "코인 조건 1개", pro: "코인 조건 20개" }
@@ -94,7 +95,7 @@ function getFreeVsProRows(scope: BillingPageScope) {
   }
 
   return [
-    { label: "레이더 스캔", free: "코인 2회, 글로벌 1회", pro: "코인 200회, 글로벌 100회" },
+    { label: "레이더 스캔", free: "코인 2회, 알트 3개, 글로벌 1회", pro: "코인 200회, 알트 300개, 글로벌 100회" },
     { label: "AI 브리핑", free: "시장별 하루 1회", pro: "시장별 하루 30회 이상" },
     { label: "관심종목", free: "시장별 1개 저장", pro: "시장별 50개 이상 감시" },
     { label: "알림", free: "시장별 조건 1개", pro: "시장별 조건 20개 이상" }

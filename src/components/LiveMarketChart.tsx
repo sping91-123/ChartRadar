@@ -22,6 +22,7 @@ import {
   Bug,
   Calculator,
   Copy,
+  Crown,
   History,
   HelpCircle,
   RefreshCcw,
@@ -50,6 +51,9 @@ import { getActiveSupabaseSession } from "@/lib/supabase";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import { TechnicalRadarPanel } from "@/components/TechnicalRadarPanel";
 import { LiquidationPressurePanel } from "@/components/LiquidationPressurePanel";
+import { hasMarketEntitlement } from "@/lib/billing";
+import { recordUsageEvent } from "@/lib/usageMeter";
+import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 const symbols = [
   "BTCUSDT.P",
@@ -65,8 +69,10 @@ const symbols = [
 ];
 const majorSymbols = symbols.slice(0, 2);
 const altSymbols = symbols.slice(2);
+const altAnalysisFreeLimit = 3;
 const timeframeScoreLimit = 6.25;
 const storagePrefix = "chartRadar";
+const altAnalysisUsageStorageKey = `${storagePrefix}.altAnalysisUsage.v1`;
 const legacyPreviousBrandStoragePrefix = "position" + "guard";
 const legacyChannelStoragePrefix = "co" + "ters";
 const overlaySettingsStorageKey = `${storagePrefix}.overlaySettings.v1`;
@@ -79,6 +85,107 @@ const showPineParityTools = process.env.NEXT_PUBLIC_SHOW_PINE_PARITY_TOOLS === "
 interface MarketCachePayload {
   analysis: MarketAnalysis;
   candles: Candle[];
+}
+
+interface AltAnalysisUsageSnapshot {
+  dateKey: string;
+  symbols: string[];
+}
+
+interface AltAnalysisGate {
+  allowed: boolean;
+  used: number;
+  limit: number;
+  remaining: number;
+  symbols: string[];
+}
+
+function localDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function emptyAltAnalysisUsage(): AltAnalysisUsageSnapshot {
+  return { dateKey: localDateKey(), symbols: [] };
+}
+
+function readAltAnalysisUsage(): AltAnalysisUsageSnapshot {
+  if (typeof window === "undefined") return emptyAltAnalysisUsage();
+
+  try {
+    const raw = window.localStorage.getItem(altAnalysisUsageStorageKey);
+    if (!raw) return emptyAltAnalysisUsage();
+
+    const parsed = JSON.parse(raw) as Partial<AltAnalysisUsageSnapshot>;
+    if (parsed.dateKey !== localDateKey() || !Array.isArray(parsed.symbols)) return emptyAltAnalysisUsage();
+
+    return {
+      dateKey: parsed.dateKey,
+      symbols: Array.from(new Set(parsed.symbols.filter((item): item is string => typeof item === "string")))
+    };
+  } catch {
+    return emptyAltAnalysisUsage();
+  }
+}
+
+function writeAltAnalysisUsage(snapshot: AltAnalysisUsageSnapshot) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(altAnalysisUsageStorageKey, JSON.stringify(snapshot));
+}
+
+function getAltAnalysisGate(isPaid: boolean): AltAnalysisGate {
+  const snapshot = readAltAnalysisUsage();
+  if (isPaid) {
+    return {
+      allowed: true,
+      used: snapshot.symbols.length,
+      limit: 300,
+      remaining: 300,
+      symbols: snapshot.symbols
+    };
+  }
+
+  return {
+    allowed: snapshot.symbols.length < altAnalysisFreeLimit,
+    used: snapshot.symbols.length,
+    limit: altAnalysisFreeLimit,
+    remaining: Math.max(0, altAnalysisFreeLimit - snapshot.symbols.length),
+    symbols: snapshot.symbols
+  };
+}
+
+function registerAltAnalysisSymbol(symbol: string, isPaid: boolean): AltAnalysisGate {
+  const snapshot = readAltAnalysisUsage();
+  if (isPaid || snapshot.symbols.includes(symbol)) {
+    return getAltAnalysisGate(isPaid);
+  }
+
+  if (snapshot.symbols.length >= altAnalysisFreeLimit) {
+    return {
+      allowed: false,
+      used: snapshot.symbols.length,
+      limit: altAnalysisFreeLimit,
+      remaining: 0,
+      symbols: snapshot.symbols
+    };
+  }
+
+  const next = {
+    dateKey: snapshot.dateKey,
+    symbols: [...snapshot.symbols, symbol]
+  };
+  writeAltAnalysisUsage(next);
+  recordUsageEvent("altIndividualAnalysis");
+
+  return {
+    allowed: true,
+    used: next.symbols.length,
+    limit: altAnalysisFreeLimit,
+    remaining: Math.max(0, altAnalysisFreeLimit - next.symbols.length),
+    symbols: next.symbols
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -734,6 +841,8 @@ function timeframeSignalSummary(item: TimeframeAnalysis) {
 
 export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorOnly?: boolean; altOnly?: boolean } = {}) {
   const initialSymbol = altOnly ? altSymbols[0] : majorSymbols[0];
+  const { profile } = useSupabaseAuth();
+  const hasCoinPro = hasMarketEntitlement(profile?.plan, "crypto");
   const chartRef = useRef<HTMLDivElement | null>(null);
   const chartApiRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -761,6 +870,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
   const [savedMessage, setSavedMessage] = useState("");
   const [marketBriefing, setMarketBriefing] = useState<MarketBriefingState>({ status: "idle" });
   const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>(defaultOverlaySettings);
+  const [altAnalysisGate, setAltAnalysisGate] = useState<AltAnalysisGate>(() => getAltAnalysisGate(false));
   const effectiveTradingMode: TradingMode = activeTimeframe === "5m" || activeTimeframe === "15m" ? "scalp" : "swing";
   const modeTimeframes = chartTimeframes;
   const primarySymbols = altOnly ? altSymbols.slice(0, 5) : majorSymbols;
@@ -779,6 +889,11 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
   useEffect(() => {
     setOverlaySettings(readOverlaySettings());
   }, []);
+
+  useEffect(() => {
+    if (!altOnly) return;
+    setAltAnalysisGate(getAltAnalysisGate(hasCoinPro));
+  }, [altOnly, hasCoinPro]);
 
   useEffect(() => {
     if (majorOnly) return;
@@ -883,6 +998,18 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
     setError("");
 
     try {
+      if (altOnly) {
+        const nextGate = registerAltAnalysisSymbol(symbol, hasCoinPro);
+        setAltAnalysisGate(nextGate);
+
+        if (!nextGate.allowed) {
+          setCandles([]);
+          setAnalysis(null);
+          setMarketBriefing({ status: "idle" });
+          return;
+        }
+      }
+
       const candleSets = await Promise.all(
         chartTimeframes.map(async (timeframe) => ({
           timeframe,
@@ -932,7 +1059,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
     } finally {
       setIsLoading(false);
     }
-  }, [activeTimeframe, analysisMode, cacheKey, effectiveTradingMode, msbMode, structureSensitivity, symbol]);
+  }, [activeTimeframe, altOnly, analysisMode, cacheKey, effectiveTradingMode, hasCoinPro, msbMode, structureSensitivity, symbol]);
 
   useEffect(() => {
     loadMarket();
@@ -1877,6 +2004,40 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         ) : null}
       </div>
 
+      {altOnly ? (
+        <div
+          className={`mt-3 rounded-lg border p-3 ${
+            altAnalysisGate.allowed
+              ? "border-cyan-300/20 bg-cyan-300/10"
+              : "border-amber-300/35 bg-amber-300/10"
+          }`}
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className={`text-xs font-black ${altAnalysisGate.allowed ? "text-cyan-200" : "text-amber-200"}`}>
+                {hasCoinPro ? "Coin Pro 알트 분석 무제한" : `오늘 무료 알트 분석 ${Math.min(altAnalysisGate.used, altAnalysisGate.limit)}/${altAnalysisGate.limit}개`}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-slate-400 [word-break:keep-all]">
+                {hasCoinPro
+                  ? "관심 있는 알트코인을 제한 없이 바꿔가며 구조와 브리핑을 확인할 수 있습니다."
+                  : altAnalysisGate.allowed
+                    ? `무료에서는 하루 ${altAnalysisGate.limit}개의 알트를 개별 분석할 수 있습니다. 같은 알트는 다시 열어도 차감되지 않습니다.`
+                    : "오늘 무료 알트 분석을 모두 사용했습니다. Coin Pro에서는 알트코인을 제한 없이 확인할 수 있습니다."}
+              </p>
+            </div>
+            {!hasCoinPro ? (
+              <Link
+                href="/pro?market=crypto"
+                className="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-md bg-cyan-300 px-3 text-xs font-black text-slate-950 transition hover:bg-cyan-200"
+              >
+                <Crown size={13} aria-hidden />
+                Coin Pro 보기
+              </Link>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       <div className="mt-3 rounded-lg border border-surface-line bg-surface-cardSoft p-3">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -1937,7 +2098,41 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         ))}
       </div>
 
-      {analysis ? (
+      {altOnly && !altAnalysisGate.allowed ? (
+        <div className="mt-4 rounded-lg border border-amber-300/30 bg-amber-300/10 p-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-black text-amber-200">오늘 무료 알트 분석 완료</p>
+              <h3 className="mt-2 text-2xl font-black text-white">새 알트 분석은 Coin Pro에서 계속 열립니다.</h3>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 [word-break:keep-all]">
+                무료에서는 하루 {altAnalysisGate.limit}개의 알트를 개별 분석할 수 있어요. 이미 확인한 알트는 다시 열 수 있고,
+                새로운 알트까지 계속 비교하려면 Coin Pro가 필요합니다.
+              </p>
+            </div>
+            <Link
+              href="/pro?market=crypto"
+              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-cyan-300 px-4 text-sm font-black text-slate-950 transition hover:bg-cyan-200"
+            >
+              <Crown size={16} aria-hidden />
+              Coin Pro 보기
+            </Link>
+          </div>
+          {altAnalysisGate.symbols.length > 0 ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {altAnalysisGate.symbols.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setSymbol(item)}
+                  className="rounded border border-white/10 bg-black/20 px-2 py-1 text-xs font-black text-slate-200 hover:border-cyan-300/60"
+                >
+                  다시 보기: {symbolLabel(item)}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : analysis ? (
         <div className={`mt-4 rounded-lg border p-4 ${biasClasses(analysis.bias)}`}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>

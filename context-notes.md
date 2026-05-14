@@ -1353,3 +1353,6 @@ The news usage-limit notice no longer switches to a bright white card inside the
 
 ### 2026-05-14 continuous improvement 62 Altcoin single-symbol analysis.
 The altcoin page now reuses the same chart analysis surface as BTC and ETH, but in an alt-only mode. This keeps BTC and ETH as the major-market page while letting users open XRP, SOL, DOGE, ADA, LINK, or another liquid altcoin and see the same timeframe analysis, ICT/technical split, and briefing flow instead of only a scanner list.
+
+### 2026-05-14 continuous improvement 63 Altcoin free usage gate.
+Altcoin single-symbol analysis is now treated as a monetizable Coin Pro value: Basic users can inspect three distinct altcoins per day, while Coin Pro and bundle users can continue without the practical Basic gate. The gate counts unique alt symbols per local day rather than refresh clicks so revisiting the same coin does not feel punitive.
