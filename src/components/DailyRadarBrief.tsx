@@ -514,7 +514,7 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
                 </Link>
               </div>
               <p className="mt-3 text-xs leading-5 text-slate-500 [word-break:keep-all]">
-                이 화면은 매수·매도 신호가 아니라, 오늘 시장에서 먼저 확인할 순서를 줄여주는 관제실입니다. 마음에 드는 감지는 저장해두면 알림 센터에서 다시 볼 수 있습니다.
+                이 화면은 오늘 시장에서 먼저 확인할 순서를 줄여주는 관제실입니다. 중요해 보이는 감지는 저장해두면 알림 센터에서 다시 확인할 수 있습니다.
               </p>
             </div>
           </div>
