@@ -360,7 +360,7 @@ export function StockRadarApp() {
       });
       recordUsageEvent("stockRadar");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "글로벌 시장 데이터를 불러오지 못했습니다.";
+      const message = error instanceof Error ? error.message : "글로벌 시장 흐름을 잠시 확인하지 못했습니다.";
       setState({ status: "error", message });
     }
   }, [isPaid, symbol, timeframe]);

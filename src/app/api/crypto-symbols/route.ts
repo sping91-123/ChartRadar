@@ -23,6 +23,6 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("[api/crypto-symbols] 오류:", error);
-    return NextResponse.json({ error: "바이낸스 코인 목록을 불러오지 못했습니다." }, { status: 500 });
+    return NextResponse.json({ error: "코인 목록을 잠시 확인하지 못했습니다." }, { status: 500 });
   }
 }

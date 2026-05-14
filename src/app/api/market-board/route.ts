@@ -87,6 +87,6 @@ export async function GET(request: Request) {
     if (cachedItems.length > 0) {
       return NextResponse.json({ items: cachedItems, cachedAt, cached: true, stale: true });
     }
-    return NextResponse.json({ error: "시장 보드를 불러오지 못했습니다." }, { status: 500 });
+    return NextResponse.json({ error: "시장 흐름을 잠시 확인하지 못했습니다." }, { status: 500 });
   }
 }

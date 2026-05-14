@@ -170,7 +170,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
       setEntries(remoteEntries);
       setSyncMessage("저장된 복기 기록을 불러왔습니다.");
     } catch {
-      setSyncMessage("저장된 복기 기록을 불러오지 못했습니다. 이 기기의 기록은 유지됩니다.");
+      setSyncMessage("저장된 복기 기록을 잠시 확인하지 못했습니다. 이 기기의 기록은 유지됩니다.");
     } finally {
       setIsLoadingRemote(false);
     }

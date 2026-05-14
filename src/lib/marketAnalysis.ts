@@ -293,7 +293,7 @@ export async function fetchBinanceCandles(
 
   const response = await fetch(`https://fapi.binance.com/fapi/v1/klines?${params.toString()}`);
   if (!response.ok) {
-    throw new Error("캔들 데이터를 불러오지 못했습니다.");
+    throw new Error("캔들 흐름을 잠시 확인하지 못했습니다.");
   }
 
   const rows = (await response.json()) as Array<

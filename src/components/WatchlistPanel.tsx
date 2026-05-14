@@ -288,7 +288,7 @@ export function WatchlistPanel() {
       setScanState({ status: "ready", setups: data.setups, cachedAt: data.cachedAt });
       recordUsageEvent("watchlistScan");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "레이더 판독을 불러오지 못했습니다. 잠시 뒤 다시 확인해 주세요.";
+      const message = error instanceof Error ? error.message : "레이더 판독을 잠시 확인하지 못했습니다. 잠시 뒤 다시 확인해 주세요.";
       setScanState({ status: "error", message });
     }
   }, [isPaid]);

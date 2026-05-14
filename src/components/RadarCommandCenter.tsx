@@ -147,7 +147,7 @@ export function RadarCommandCenter() {
             error?: string;
           };
           if (!response.ok || !Array.isArray(payload.setups)) {
-            throw new Error(payload.error ?? "시장 레이더를 불러오지 못했습니다.");
+            throw new Error(payload.error ?? "시장 레이더를 잠시 확인하지 못했습니다.");
           }
           return payload;
         })
@@ -159,7 +159,7 @@ export function RadarCommandCenter() {
     } catch (error) {
       setState({
         status: "error",
-        message: error instanceof Error ? error.message : "시장 레이더를 불러오지 못했습니다."
+        message: error instanceof Error ? error.message : "시장 레이더를 잠시 확인하지 못했습니다."
       });
     }
   }, []);

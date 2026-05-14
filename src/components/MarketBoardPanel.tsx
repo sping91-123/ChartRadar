@@ -97,11 +97,11 @@ export function MarketBoardPanel() {
         error?: string;
       };
       if (!response.ok || !Array.isArray(payload.items)) {
-        throw new Error(payload.error ?? "시장 보드를 불러오지 못했습니다.");
+        throw new Error(payload.error ?? "시장 흐름을 잠시 확인하지 못했습니다.");
       }
       setState({ status: "ready", items: payload.items, cachedAt: payload.cachedAt ?? Date.now() });
     } catch (error) {
-      setState({ status: "error", message: error instanceof Error ? error.message : "시장 보드를 불러오지 못했습니다." });
+      setState({ status: "error", message: error instanceof Error ? error.message : "시장 흐름을 잠시 확인하지 못했습니다." });
     }
   }, []);
 

@@ -708,7 +708,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
       });
       recordUsageEvent("radarScan");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "레이더 판독을 불러오지 못했습니다. 잠시 뒤 다시 확인해 주세요.";
+      const message = error instanceof Error ? error.message : "레이더 판독을 잠시 확인하지 못했습니다. 잠시 뒤 다시 확인해 주세요.";
       setState({ status: "error", message });
     }
   }, [excludeMajor, isPaid, riskProfile, scoutScope]);

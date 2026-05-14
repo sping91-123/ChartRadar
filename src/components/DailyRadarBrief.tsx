@@ -291,7 +291,7 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
             error?: string;
           };
           if (!response.ok || !Array.isArray(payload.setups)) {
-            throw new Error(payload.error ?? "레이더 감지값을 불러오지 못했습니다.");
+            throw new Error(payload.error ?? "레이더 감지값을 잠시 확인하지 못했습니다.");
           }
           return payload;
         })
@@ -304,7 +304,7 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
       };
 
       if (!boardResponse.ok || !Array.isArray(boardPayload.items)) {
-        throw new Error(boardPayload.error ?? "시장 보드를 불러오지 못했습니다.");
+        throw new Error(boardPayload.error ?? "시장 흐름을 잠시 확인하지 못했습니다.");
       }
 
       const scanPayloads = scanResults
@@ -321,7 +321,7 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
     } catch (error) {
       setState({
         status: "error",
-        message: error instanceof Error ? error.message : "오늘의 레이더를 불러오지 못했습니다."
+        message: error instanceof Error ? error.message : "오늘의 레이더 브리핑을 잠시 확인하지 못했습니다."
       });
     }
   }, [isPaid, scope]);

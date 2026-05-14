@@ -210,7 +210,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
       const url = mode === "preview" ? `/api/radar-news?market=${market}&briefing=0` : `/api/radar-news?market=${market}`;
       const response = await fetch(url, { cache: "no-store" });
       const data = (await response.json()) as NewsPayload;
-      if (!response.ok) throw new Error(data.error ?? "레이더 뉴스를 불러오지 못했습니다.");
+      if (!response.ok) throw new Error(data.error ?? "레이더 뉴스 브리핑을 잠시 확인하지 못했습니다.");
       return data;
     },
     [market]
@@ -252,7 +252,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
       setStatus("ready");
       recordUsageEvent(usageBucketId);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "레이더 뉴스를 불러오지 못했습니다.");
+      setError(caught instanceof Error ? caught.message : "레이더 뉴스 브리핑을 잠시 확인하지 못했습니다.");
       setStatus("error");
     }
   }, [fetchNewsPayload, isPaid, market, usageBucketId]);

@@ -915,7 +915,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
         setIsUsingCachedData(true);
         setError("실시간 데이터를 잠시 불러오지 못해 최근 레이더 판독값을 보여주고 있습니다.");
       } else {
-        setError(loadError instanceof Error ? loadError.message : "시장 데이터를 불러오지 못했습니다.");
+        setError(loadError instanceof Error ? loadError.message : "시장 흐름을 잠시 확인하지 못했습니다.");
       }
     } finally {
       setIsLoading(false);
@@ -1150,7 +1150,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
     } catch (briefingError) {
       setMarketBriefing({
         status: "error",
-        message: briefingError instanceof Error ? briefingError.message : "AI 종합 피드백을 불러오지 못했습니다. 잠시 뒤 다시 시도해 주세요."
+        message: briefingError instanceof Error ? briefingError.message : "AI 종합 피드백을 잠시 확인하지 못했습니다. 잠시 뒤 다시 시도해 주세요."
       });
     }
   }, [marketBriefingInput]);

@@ -193,7 +193,7 @@ export async function fetchSupabaseUser(accessToken: string) {
     }
   });
 
-  if (!response.ok) throw new Error("로그인 정보를 불러오지 못했습니다.");
+  if (!response.ok) throw new Error("로그인 정보를 잠시 확인하지 못했습니다.");
   return (await response.json()) as SupabaseUser;
 }
 
