@@ -1457,3 +1457,9 @@
 - [x] Add a billing smoke guard so the native purchase flow cannot silently miss the active flag.
 - [x] Verify with billing smoke and app billing check.
 - [x] Verify with production build.
+
+## 2026-05-14 continuous improvement 43 active subscription entitlement.
+- [x] Read active subscription rows with non-expired periods when resolving server-side Pro access.
+- [x] Keep admin and legacy paid grants separate from normal expiring subscription access.
+- [x] Add billing smoke guards for active subscription entitlement wiring.
+- [x] Verify with billing smoke, operations smoke, and production build.

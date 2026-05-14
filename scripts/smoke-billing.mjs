@@ -32,6 +32,7 @@ const files = {
   confirmRoute: read("src/app/api/billing/confirm/route.ts"),
   checkoutRoute: read("src/app/api/billing/checkout/route.ts"),
   appStoreSyncRoute: read("src/app/api/billing/app-store/sync/route.ts"),
+  requestEntitlement: read("src/lib/server/requestEntitlement.ts"),
   proPricingPanel: read("src/components/ProPricingPanel.tsx"),
   mobilePurchases: read("src/lib/mobilePurchases.ts"),
   usageMeterPanel: read("src/components/UsageMeterPanel.tsx"),
@@ -153,6 +154,9 @@ expectIncludes(files.checkoutRoute, "play_billing", "Android Google Play Billing
 expectIncludes(files.appStoreSyncRoute, "REVENUECAT_REST_API_KEY", "RevenueCat 서버 검증 키 사용", "src/app/api/billing/app-store/sync/route.ts");
 expectIncludes(files.appStoreSyncRoute, "grantBillingEntitlement", "앱 구독 확인 후 Pro 권한 반영", "src/app/api/billing/app-store/sync/route.ts");
 expectIncludes(files.appStoreSyncRoute, "active: true", "앱 구독 성공 응답 active 플래그", "src/app/api/billing/app-store/sync/route.ts");
+expectIncludes(files.requestEntitlement, "fetchSupabaseActiveSubscriptions", "서버 권한 활성 구독 조회", "src/lib/server/requestEntitlement.ts");
+expectIncludes(files.requestEntitlement, "activeSubscriptionPlan", "서버 권한 활성 플랜 우선 판정", "src/lib/server/requestEntitlement.ts");
+expectIncludes(files.requestEntitlement, "isLegacyAlwaysPaidPlan", "서버 권한 레거시 관리자 플랜 분리", "src/lib/server/requestEntitlement.ts");
 
 expectIncludes(files.proPricingPanel, "Authorization: `Bearer ${session.accessToken}`", "결제 시작 요청 세션 전달", "src/components/ProPricingPanel.tsx");
 expectIncludes(files.proPricingPanel, "결제 후 Pro 기능을 바로 이용하려면 먼저 구글 로그인이 필요합니다.", "결제 전 로그인 안내", "src/components/ProPricingPanel.tsx");

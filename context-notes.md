@@ -1293,3 +1293,6 @@ Android app launch can be ready before Toss web payment links are ready. The hea
 
 ### 2026-05-14 continuous improvement 42 app subscription sync response.
 The native purchase helper expects the server subscription sync response to include `active: true`. The server previously returned only `status: "active"`, which could make a successful app-store purchase look like a failed account sync. The sync API now returns an explicit active boolean for both success and non-active states, and billing smoke checks the success flag.
+
+### 2026-05-14 continuous improvement 43 active subscription entitlement.
+Paid API access should not rely only on `profiles.plan`, because that field can become stale after a subscription expires. The server entitlement resolver now also reads active `subscriptions` rows whose `current_period_end` is still in the future, then prefers a matching active paid plan for the requested market. Admin and legacy manually granted plans stay separate so owner access remains stable.

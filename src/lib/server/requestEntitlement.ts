@@ -5,11 +5,20 @@ import {
   type BillingEntitlementPlan,
   type BillingPageScope
 } from "@/lib/billing";
-import { fetchSupabaseProfile, fetchSupabaseUser, isSupabaseConfigured, type SupabaseProfile, type SupabaseUser } from "@/lib/supabase";
+import {
+  fetchSupabaseActiveSubscriptions,
+  fetchSupabaseProfile,
+  fetchSupabaseUser,
+  isSupabaseConfigured,
+  type SupabaseProfile,
+  type SupabaseSubscription,
+  type SupabaseUser
+} from "@/lib/supabase";
 
 interface EntitlementCacheEntry {
   user: SupabaseUser;
   profile: SupabaseProfile | null;
+  subscriptions: SupabaseSubscription[];
   expiresAt: number;
 }
 
@@ -51,13 +60,32 @@ function planFromUser(user: SupabaseUser) {
   return normalizePlan(user.app_metadata?.plan) ?? (user.app_metadata?.role === "admin" ? "admin" : null);
 }
 
+function isLegacyAlwaysPaidPlan(plan: BillingEntitlementPlan) {
+  return plan === "member" || plan === "premium";
+}
+
+function activeSubscriptionPlan(subscriptions: SupabaseSubscription[], scope: BillingPageScope): BillingEntitlementPlan {
+  const plans = subscriptions.map((subscription) => normalizePlan(subscription.plan)).filter(Boolean);
+  const priorityByScope: Record<BillingPageScope, NonNullable<BillingEntitlementPlan>[]> = {
+    all: ["bundle_yearly", "bundle_monthly", "crypto_yearly", "stocks_yearly", "crypto_monthly", "stocks_monthly"],
+    crypto: ["bundle_yearly", "bundle_monthly", "crypto_yearly", "crypto_monthly"],
+    stocks: ["bundle_yearly", "bundle_monthly", "stocks_yearly", "stocks_monthly"]
+  };
+
+  return priorityByScope[scope].find((plan) => plans.includes(plan)) ?? null;
+}
+
 async function loadEntitlementFromToken(token: string) {
   const now = Date.now();
   const cached = entitlementCache.get(token);
   if (cached && cached.expiresAt > now) return cached;
 
-  const [user, profile] = await Promise.all([fetchSupabaseUser(token), fetchSupabaseProfile(token).catch(() => null)]);
-  const entry = { user, profile, expiresAt: now + entitlementCacheTtlMs };
+  const user = await fetchSupabaseUser(token);
+  const [profile, subscriptions] = await Promise.all([
+    fetchSupabaseProfile(token).catch(() => null),
+    fetchSupabaseActiveSubscriptions(token, user.id).catch(() => [])
+  ]);
+  const entry = { user, profile, subscriptions, expiresAt: now + entitlementCacheTtlMs };
   entitlementCache.set(token, entry);
   return entry;
 }
@@ -69,8 +97,12 @@ export async function getRequestEntitlement(request: Request, scope: BillingPage
   }
 
   try {
-    const { user, profile } = await loadEntitlementFromToken(token);
-    const plan = planFromUser(user) ?? normalizePlan(profile?.plan) ?? "free";
+    const { user, profile, subscriptions } = await loadEntitlementFromToken(token);
+    const accountPlan = planFromUser(user) ?? normalizePlan(profile?.plan);
+    const plan =
+      accountPlan === "admin"
+        ? "admin"
+        : activeSubscriptionPlan(subscriptions, scope) ?? (isLegacyAlwaysPaidPlan(accountPlan) ? accountPlan : "free");
     const isPaid = scope === "all" ? hasAnyPaidEntitlement(plan) : hasMarketEntitlement(plan, scope);
 
     return {

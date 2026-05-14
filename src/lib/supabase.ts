@@ -44,6 +44,22 @@ export interface SupabaseProfile {
   updated_at: string;
 }
 
+export interface SupabaseSubscription {
+  id: string;
+  user_id: string;
+  provider: string | null;
+  status: string | null;
+  plan: BillingEntitlementPlan;
+  market_scope: "trial" | "crypto" | "stocks" | "bundle" | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  provider_customer_id: string | null;
+  provider_subscription_id: string | null;
+  provider_order_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export function isSupabaseConfigured() {
   return Boolean(supabaseUrl && supabasePublishableKey);
 }
@@ -205,6 +221,18 @@ export async function fetchSupabaseProfile(accessToken: string) {
   );
 
   return rows[0] ?? null;
+}
+
+export async function fetchSupabaseActiveSubscriptions(accessToken: string, userId?: string) {
+  const user = userId ? null : await fetchSupabaseUser(accessToken);
+  const resolvedUserId = userId ?? user?.id;
+  if (!resolvedUserId) return [];
+
+  const now = encodeURIComponent(new Date().toISOString());
+  return supabaseRest<SupabaseSubscription[]>(
+    `subscriptions?select=*&user_id=eq.${encodeURIComponent(resolvedUserId)}&status=in.(active,trialing)&current_period_end=gt.${now}&order=current_period_end.desc`,
+    { accessToken }
+  );
 }
 
 export async function supabaseRest<T>(
