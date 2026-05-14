@@ -2321,7 +2321,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
                     </div>
                     <HighlightedBriefing text={marketBriefing.text} />
                     {marketBriefing.cached ? (
-                      <p className="mt-3 text-xs text-slate-500">방금 전 생성한 브리핑을 다시 보여드립니다.</p>
+                      <p className="mt-3 text-xs text-slate-500">방금 전 생성한 브리핑을 다시 불러왔습니다.</p>
                     ) : null}
                   </>
                 ) : null}
