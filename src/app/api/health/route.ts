@@ -1,4 +1,4 @@
-// 서비스 운영 상태와 주요 설정 신선도를 확인하는 헬스체크 API입니다.
+// 서비스 운영 상태와 주요 출시 준비 항목을 확인하는 헬스체크 API입니다.
 import { NextResponse } from "next/server";
 import { paidBillingPlans } from "@/lib/billing";
 import { getMacroCalendarPayload } from "@/lib/macroCalendar";
@@ -7,7 +7,7 @@ import { getConfiguredSiteUrl } from "@/lib/siteUrl";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const macroStaleAfterHours = 72;
+const macroStaleAfterHours = 12;
 
 function hasValue(value: string | undefined) {
   return typeof value === "string" && value.trim().length > 0;
@@ -48,10 +48,10 @@ function scoreLaunchReadiness(checks: Record<string, boolean>) {
     supabaseAdmin: 15,
     aiProvider: 12,
     siteUrl: 10,
-    macroReady: 8,
-    webPaymentProvider: 14,
-    webPaymentLinks: 10,
-    androidBilling: 12,
+    macroReady: 14,
+    webPaymentProvider: 12,
+    webPaymentLinks: 8,
+    androidBilling: 10,
     iosBilling: 4
   };
 
@@ -95,7 +95,7 @@ export async function GET() {
   const fallbackPlanPaymentLinks = planPaymentLinks.filter((item) => item.usesFallback).map((item) => item.planId);
   const isMacroStale = macroAgeHours === null ? true : macroAgeHours > macroStaleAfterHours;
   const hasAutomaticMacroRefresh = macroCalendarPayload.isAutomatic;
-  const macroReady = hasAutomaticMacroRefresh || !isMacroStale;
+  const macroReady = hasAutomaticMacroRefresh && !isMacroStale;
   const coreReady = hasSupabaseUrl && hasSupabaseKey && hasAIProvider && macroReady;
   const readyForWebPaidLaunch = coreReady && hasSiteUrl && hasPaymentProvider && paymentLinksReady;
   const readyForAndroidLaunch = coreReady && hasSiteUrl && hasAndroidBillingProvider;
@@ -119,7 +119,7 @@ export async function GET() {
           area: "public_url",
           label: "공개 URL 설정",
           env: "NEXT_PUBLIC_SITE_URL",
-          reason: "결제 성공, 약관, 개인정보처리방침, 앱스토어 심사용 링크가 같은 도메인을 바라봐야 합니다."
+          reason: "결제 성공, 약관, 개인정보처리방침, 앱스토어 심사 링크가 같은 도메인을 바라봐야 합니다."
         },
     hasPaymentProvider || hasAndroidBillingProvider || hasIosBillingProvider
       ? null
@@ -127,13 +127,13 @@ export async function GET() {
           area: "payment_provider",
           label: "결제 제공자 연결",
           env: "TOSS_PAYMENTS_SECRET_KEY 또는 REVENUECAT_REST_API_KEY",
-          reason: "유료 결제 확인과 Pro 권한 반영을 서버에서 검증해야 합니다."
+          reason: "유료 결제 확인과 Pro 권한 반영은 서버에서 검증해야 합니다."
         },
     readyForWebPaidLaunch || paymentLinksReady || readyForAndroidLaunch || readyForIosLaunch
       ? null
       : {
           area: "web_payment_links",
-          label: "웹 플랜별 결제 링크 설정",
+          label: "플랜별 결제 링크 설정",
           env: "NEXT_PUBLIC_CRYPTO_MONTHLY_PAYMENT_URL 등",
           reason: "웹에서 요금제를 누르면 실제 결제창으로 이동해야 합니다."
         },
@@ -141,19 +141,19 @@ export async function GET() {
       ? null
       : {
           area: "macro_calendar",
-          label: "매크로 일정 갱신",
-          env: "매크로 데이터 소스 또는 수동 일정 갱신",
+          label: "매크로 일정 자동 갱신",
+          env: "공개 경제 캘린더 또는 공식 통계 데이터",
           reason: "매크로 일정이 오래되면 첫 화면 신뢰도가 떨어집니다."
         }
   ].filter((item): item is { area: string; label: string; env: string; reason: string } => Boolean(item));
   const warnings = [
     hasSupabaseUrl && hasSupabaseKey ? null : "로그인 연결 정보가 아직 준비되지 않았습니다.",
-    hasAIProvider ? null : "AI 제공자 키가 아직 연결되지 않았습니다.",
+    hasAIProvider ? null : "AI 제공자가 아직 연결되지 않았습니다.",
     hasSiteUrl ? null : "서비스 공개 URL이 아직 설정되지 않았습니다.",
-    hasPaymentProvider || hasAppPaymentProvider ? null : "웹 결제 또는 앱 구독 결제 키가 아직 연결되지 않았습니다.",
-    paymentLinksReady || readyForAndroidLaunch || readyForIosLaunch ? null : `웹 플랜별 결제 링크가 아직 비어 있습니다. ${missingPlanPaymentLinks.join(", ")}`,
-    fallbackPlanPaymentLinks.length === 0 ? null : `공용 결제 링크로 대신 연결되는 플랜이 있습니다. ${fallbackPlanPaymentLinks.join(", ")}`,
-    !hasAutomaticMacroRefresh && isMacroStale ? "매크로 일정이 오래되었습니다. 다음 발표 전에 일정을 갱신해 주세요." : null
+    hasPaymentProvider || hasAppPaymentProvider ? null : "웹 결제 또는 앱 구독 결제 도구가 아직 연결되지 않았습니다.",
+    paymentLinksReady || readyForAndroidLaunch || readyForIosLaunch ? null : `플랜별 결제 링크가 아직 비어 있습니다. ${missingPlanPaymentLinks.join(", ")}`,
+    fallbackPlanPaymentLinks.length === 0 ? null : `공용 결제 링크로 대체 연결되는 플랜이 있습니다. ${fallbackPlanPaymentLinks.join(", ")}`,
+    !macroReady ? "매크로 자동 캘린더 연결 상태를 확인해 주세요." : null
   ].filter((item): item is string => Boolean(item));
 
   return NextResponse.json({
@@ -190,8 +190,9 @@ export async function GET() {
       updatedAtIso: macroCalendarPayload.updatedAt,
       ageHours: macroAgeHours,
       automatic: macroCalendarPayload.isAutomatic,
-      stale: !hasAutomaticMacroRefresh && isMacroStale,
-      staleAfterHours: macroStaleAfterHours
+      stale: isMacroStale,
+      staleAfterHours: macroStaleAfterHours,
+      sourceLabel: macroCalendarPayload.sourceLabel
     }
   });
 }

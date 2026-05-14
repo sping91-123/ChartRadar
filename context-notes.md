@@ -1359,3 +1359,12 @@ Altcoin single-symbol analysis is now treated as a monetizable Coin Pro value: B
 
 ### 2026-05-14 continuous improvement 64 Payment launch readiness health check.
 The health endpoint now reports a launch readiness score and structured blocking actions. This makes it clearer whether web checkout, RevenueCat app subscriptions, public URL, Supabase admin, AI provider, and macro freshness are actually ready before paid launch.
+## 2026-05-15 매크로·뉴스 자동화 보강
+
+- 매크로를 운영자가 직접 입력하는 방식으로 두면 제품 신뢰도가 무너진다고 판단해, `src/data/macroEvents.ts`의 수동 일정표 의존을 제거했다.
+- `/api/macro-calendar`는 ForexFactory 공개 JSON에서 USD 주요 발표 일정, 예상치, 이전치를 자동 수집한다.
+- CPI/PPI는 BLS 공식 public API로 실제값을 자동 보강한다.
+- Retail Sales, Jobless Claims 등 무료 공식 API로 즉시 안정 수집하기 어려운 실제값은 거짓 실제값을 만들지 않고 `공식값 확인 중`으로 표시한다.
+- 뉴스는 RSS 자동 수집을 유지하되, 깨진 한글 문자열을 정리하고 Groq 번역 실패 시 규칙 기반 한국어 제목으로 즉시 대체하도록 했다.
+- 현재 `.env.local`의 Groq 키가 401 invalid key로 응답하는 것을 확인했다. 키가 정상화되면 AI 번역이 우선 적용되고, 그 전까지는 영어 원문을 제목에 길게 붙이지 않는 한국어 fallback을 쓴다.
+- 헬스체크의 매크로 점수는 `자동 갱신이며 12시간 이내`일 때만 통과하도록 강화했다.
