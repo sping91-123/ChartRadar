@@ -77,7 +77,7 @@ export const usageBuckets: UsageBucket[] = [
     id: "cryptoAlertRule",
     label: "코인 알림 설정",
     shortLabel: "코인 알림",
-    description: "코인 레이더 알림 조건을 설정하거나 테스트한 횟수입니다.",
+    description: "코인 레이더 알림 조건을 설정하거나 확인한 횟수입니다.",
     freeDailyLimit: 1,
     proDailyLimit: 20
   },
@@ -85,7 +85,7 @@ export const usageBuckets: UsageBucket[] = [
     id: "stocksAlertRule",
     label: "글로벌 알림 설정",
     shortLabel: "글로벌 알림",
-    description: "글로벌 레이더 알림 조건을 설정하거나 테스트한 횟수입니다.",
+    description: "글로벌 레이더 알림 조건을 설정하거나 확인한 횟수입니다.",
     freeDailyLimit: 1,
     proDailyLimit: 20
   }
