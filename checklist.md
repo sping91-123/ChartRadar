@@ -1404,4 +1404,9 @@
 ## 2026-05-14 3시간 지속 개선 32차 사용자 화면 문구 스모크 추가.
 - [x] 사용자 화면에 남기지 않을 약한 문구와 내부 모델명을 검사하는 스모크를 추가한다.
 - [x] 통합 스모크가 문구 검사를 먼저 실행하도록 연결한다.
-- [ ] 문구 스모크, 린트, 통합 스모크로 검증한다.
+- [x] 문구 스모크, 린트, 통합 스모크로 검증한다.
+
+## 2026-05-14 continuous improvement 33 Pro conversion copy.
+- [x] Clarify Basic as first-check mode and Pro as intraday work mode in the usage panel.
+- [x] Strengthen Pro pricing copy around repeated monitoring, fewer missed changes, watchlist, and alerts.
+- [x] Verify with lint, copy smoke, and billing smoke.

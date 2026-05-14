@@ -25,18 +25,18 @@ type CheckoutState =
 const conversionPoints = [
   {
     icon: Radar,
-    title: "오늘 볼 자산부터 압축",
-    body: "상승률만 보는 화면이 아니라 거래대금, 구조, 변동성, 뉴스 영향을 합쳐 먼저 볼 대상을 줄여줍니다."
+    title: "오늘 볼 대상부터 압축",
+    body: "상승률 목록을 훑는 대신 거래대금, 구조, 변동성, 뉴스 영향을 합쳐 먼저 확인할 자산을 줄여줍니다."
   },
   {
     icon: Sparkles,
-    title: "근거를 실행 언어로 정리",
-    body: "차트와 뉴스가 따로 놀지 않게 지금 우세 방향, 위험 요인, 다음 확인 조건을 한 번에 정리합니다."
+    title: "근거를 행동 언어로 정리",
+    body: "차트와 뉴스가 따로 놀지 않게 우세 방향, 위험 요인, 다음 확인 조건을 한 번에 정리합니다."
   },
   {
     icon: BellRing,
-    title: "켜두면 대신 감시",
-    body: "관심종목, 구조 변화, 뉴스 브리핑 업데이트를 직접 새로고침하지 않아도 확인할 수 있게 만듭니다."
+    title: "놓치기 쉬운 변화를 감시",
+    body: "관심종목, 구조 변화, 뉴스 브리핑 업데이트를 매번 직접 찾아보지 않아도 따라갈 수 있게 만듭니다."
   }
 ];
 
@@ -59,9 +59,9 @@ const valueRows = [
 ];
 
 const proDifferenceRows = [
-  "Basic은 하루 핵심 흐름을 확인하는 용도입니다. Pro는 장중에 레이더를 반복 실행하고 변화가 생긴 자산을 계속 따라가기 위한 구독입니다.",
-  "Pro는 AI 브리핑, 관심종목, 알림 규칙의 한도를 넓혀 직접 찾아보는 시간을 줄여줍니다.",
-  "Chart Radar가 진입 버튼을 대신 누르지는 않지만, 시장 구조, 뉴스, 매크로, 위험 요소를 한 화면에 모아 판단 시간을 줄여줍니다."
+  "Basic은 하루 첫 점검에 맞춰져 있습니다. Pro는 장중에 레이더를 반복 실행하고 변화가 생긴 자산을 계속 따라가기 위한 작업 모드입니다.",
+  "Pro는 AI 브리핑, 관심종목, 알림 규칙의 한도를 넓혀 직접 찾아보는 시간을 줄이고 다시 확인할 자산을 놓치지 않게 돕습니다.",
+  "Chart Radar의 유료 가치는 더 많은 예측 문장이 아니라, 시장 구조, 뉴스, 매크로, 위험 요소를 한 화면에서 빠르게 좁혀보는 데 있습니다."
 ];
 
 function getFreeVsProRows(scope: BillingPageScope) {
@@ -107,9 +107,9 @@ const scopeCopy: Record<
 > = {
   all: {
     eyebrow: "Chart Radar Pro",
-    title: "매일 시장을 확인하는 시간을 줄이고, 놓치기 쉬운 변화는 먼저 띄워드립니다.",
+    title: "매일 시장을 훑는 시간을 줄이고, 놓치기 쉬운 변화는 먼저 띄워드립니다.",
     body:
-      "Basic으로 핵심 흐름을 먼저 확인하고, Pro에서는 코인, 글로벌, AI 브리핑, 관심종목, 알림을 더 넉넉하게 사용합니다. 매일 여러 시장을 빠르게 정리하고 중요한 변화를 덜 놓치기 위한 레이더입니다.",
+      "Basic으로 핵심 흐름을 먼저 확인하고, Pro에서는 코인, 글로벌, AI 브리핑, 관심종목, 알림을 더 넉넉하게 사용합니다. 여러 시장을 매번 직접 뒤지는 대신 중요한 변화부터 좁혀보는 레이더입니다.",
     representativePrice: "월 24,900원",
     representativeBody: "두 시장을 모두 보는 사용자에게 코인, 글로벌 시장, AI 브리핑, 관심종목, 알림을 하나로 묶었습니다.",
     highlightedPlanId: "bundle_monthly",
@@ -119,7 +119,7 @@ const scopeCopy: Record<
   },
   crypto: {
     eyebrow: "Coin Radar Pro",
-    title: "코인만 집중해서 본다면 Coin Pro, 전체 시장까지 보려면 All Market Pro가 맞습니다.",
+    title: "코인만 집중해서 본다면 Coin Pro, 전체 시장까지 함께 보려면 All Market Pro가 맞습니다.",
     body:
       "BTC, ETH, 알트코인, 코인뉴스, 코인 알림을 중심으로 쓰는 사용자라면 Coin Pro로 충분합니다. 글로벌 시장까지 함께 확인한다면 All Market Pro가 더 유리합니다.",
     representativePrice: "월 14,900원",
@@ -351,7 +351,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
         <div className="rounded-lg border border-surface-line bg-surface-card p-4 text-sm leading-6 text-slate-300">
           <p className="font-black text-white">Basic과 Pro의 차이</p>
           <p className="mt-2 text-slate-400">
-            Basic은 핵심 확인에 가깝고, Pro는 장중 반복 확인과 알림까지 이어가는 작업 공간입니다.
+            Basic은 첫 확인에 가깝고, Pro는 장중 반복 확인과 알림까지 이어가는 작업 공간입니다.
           </p>
         </div>
       </div>
@@ -478,7 +478,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
       <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="rounded-lg border border-surface-line bg-surface-card p-5">
           <p className="text-xs font-black tracking-[0.2em] text-cyan-300">WHY PAY</p>
-          <h3 className="mt-2 text-xl font-black text-white">유료 상품의 핵심은 더 많은 예측이 아니라 더 적은 누락입니다.</h3>
+          <h3 className="mt-2 text-xl font-black text-white">유료 상품의 핵심은 더 많은 예측 문장이 아니라 더 적은 누락입니다.</h3>
           <div className="mt-4 space-y-3">
             {proDifferenceRows.map((row) => (
               <p key={row} className="text-sm leading-6 text-slate-400">{row}</p>

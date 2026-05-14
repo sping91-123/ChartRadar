@@ -27,8 +27,8 @@ function UsageRow({ state, isPaid }: { state: ReturnType<typeof getUsageBucketSt
   const activePercent = Math.min(100, Math.round((state.used / activeLimit) * 100));
   const isOverActiveLimit = state.used >= activeLimit;
   const limitCopy = isPaid
-    ? `Pro는 오늘 ${state.proDailyLimit}회까지 장중 반복 확인이 가능합니다.`
-    : `Basic ${state.freeDailyLimit}회 이후에는 Pro에서 ${state.proDailyLimit}회까지 확장됩니다.`;
+    ? `오늘 ${state.proDailyLimit}회까지 같은 항목을 다시 확인할 수 있습니다.`
+    : `첫 확인 ${state.freeDailyLimit}회 이후에는 Pro에서 장중 재확인이 열립니다.`;
 
   return (
     <div className="rounded-md border border-white/10 bg-black/20 p-3">
@@ -62,18 +62,18 @@ const initialUsageSnapshot: UsageSnapshot = { dateKey: "", counts: {} };
 
 const scopedUsageCopy: Record<BillingPageScope, { free: string; paid: string; proHref: string }> = {
   all: {
-    free: "Basic은 오늘 큰 흐름을 확인하는 용도입니다. 장중에 여러 번 레이더를 돌리고 관심종목과 알림까지 이어가려면 Pro가 필요합니다.",
-    paid: "Pro가 열려 있습니다. 코인, 글로벌, AI 브리핑, 관심종목, 알림을 장중에도 끊기지 않게 반복 확인할 수 있습니다.",
+    free: "Basic은 오늘 시장을 처음 훑어보는 용도입니다. 장중에 다시 돌려보고, 관심종목을 쌓고, 변화 알림까지 받으려면 Pro가 필요합니다.",
+    paid: "Pro 모드가 열려 있습니다. 코인, 글로벌, AI 브리핑, 관심종목, 알림을 장중에도 끊기지 않게 이어갈 수 있습니다.",
     proHref: "/pro"
   },
   crypto: {
-    free: "Basic은 코인 시장의 큰 흐름을 확인하는 용도입니다. 장중 후보 재확인, 관심코인, 코인 알림까지 챙기려면 Coin Pro가 필요합니다.",
-    paid: "Coin Pro가 열려 있습니다. 코인 스캔, 관심코인, AI 브리핑, 알림을 장중에도 끊기지 않게 확인할 수 있습니다.",
+    free: "Basic은 코인 시장을 처음 훑어보는 용도입니다. 장중 후보 재확인, 관심코인 누적, 코인 알림까지 챙기려면 Coin Pro가 필요합니다.",
+    paid: "Coin Pro 모드가 열려 있습니다. 코인 스캔, 관심코인, AI 브리핑, 알림을 장중에도 끊기지 않게 이어갈 수 있습니다.",
     proHref: "/pro?market=crypto"
   },
   stocks: {
-    free: "Basic은 글로벌 시장의 큰 흐름을 확인하는 용도입니다. 장중 미국주식, 해외선물, ETF, 매크로 브리핑과 알림을 반복 확인하려면 Global Pro가 필요합니다.",
-    paid: "Global Pro가 열려 있습니다. 미국주식, 해외선물, ETF, 매크로 브리핑과 알림을 장중에도 끊기지 않게 확인할 수 있습니다.",
+    free: "Basic은 글로벌 시장을 처음 훑어보는 용도입니다. 장중 미국주식, 해외선물, ETF, 매크로 브리핑과 알림을 반복 확인하려면 Global Pro가 필요합니다.",
+    paid: "Global Pro 모드가 열려 있습니다. 미국주식, 해외선물, ETF, 매크로 브리핑과 알림을 장중에도 끊기지 않게 이어갈 수 있습니다.",
     proHref: "/pro?market=stocks"
   }
 };
@@ -121,7 +121,7 @@ export function UsageMeterPanel({
   const scopedOverCount = scopedStates.filter((state) => state.isOverFree).length;
   const title =
     isPaid
-      ? `${entitlementLabel} 이용 중입니다.`
+      ? `${entitlementLabel} 작업 모드입니다.`
       : scopedOverCount > 0
         ? "오늘 Basic 한도를 모두 사용했습니다."
         : scopedUsedTotal > 0
@@ -163,7 +163,7 @@ export function UsageMeterPanel({
       <div className="mt-4 flex flex-col gap-2 rounded-md border border-cyan-300/20 bg-cyan-300/10 p-3 text-xs leading-5 text-cyan-100 sm:flex-row sm:items-center sm:justify-between">
         <span className="flex items-start gap-2">
           <Zap className="mt-0.5 shrink-0" size={14} aria-hidden />
-          Basic은 하루 흐름 확인용이고, Pro는 장중 반복 감시용입니다.
+          Basic은 첫 확인용이고, Pro는 장중 재확인과 알림까지 이어지는 작업 모드입니다.
         </span>
           {compact ? (
           <Link href={copy.proHref} className="font-black text-cyan-200 hover:text-white">
