@@ -9,14 +9,16 @@ const checks = [
     path: "/api/ai/commentary",
     method: "POST",
     body: {},
-    expectedStatus: [400]
+    expectedStatus: [400],
+    expectedText: "입력값"
   },
   {
     label: "AI 종합 브리핑 빈 요청 차단",
     path: "/api/ai/market-briefing",
     method: "POST",
     body: {},
-    expectedStatus: [400]
+    expectedStatus: [400],
+    expectedText: "입력값"
   },
   {
     label: "AI 카드 코멘트 대용량 요청 차단",
@@ -24,7 +26,8 @@ const checks = [
     method: "POST",
     rawBody: "x".repeat(40_001),
     headers: { "content-type": "text/plain" },
-    expectedStatus: [413]
+    expectedStatus: [413],
+    expectedText: "너무 큽니다"
   },
   {
     label: "AI 종합 브리핑 대용량 요청 차단",
@@ -32,50 +35,58 @@ const checks = [
     method: "POST",
     rawBody: "x".repeat(80_001),
     headers: { "content-type": "text/plain" },
-    expectedStatus: [413]
+    expectedStatus: [413],
+    expectedText: "너무 큽니다"
   },
   {
     label: "스캐너 비정상 모드 차단",
     path: "/api/scout?mode=invalid&risk=radar&scope=major",
     method: "GET",
-    expectedStatus: [400]
+    expectedStatus: [400],
+    expectedText: "지원하지 않는 레이더"
   },
   {
     label: "레이더 뉴스 비정상 시장 차단",
     path: "/api/radar-news?market=forex",
     method: "GET",
-    expectedStatus: [400]
+    expectedStatus: [400],
+    expectedText: "지원하지 않는 뉴스 시장"
   },
   {
     label: "글로벌 캔들 비정상 타임프레임 차단",
     path: "/api/stocks/candles?symbol=QQQ&timeframe=bad",
     method: "GET",
-    expectedStatus: [400]
+    expectedStatus: [400],
+    expectedText: "타임프레임"
   },
   {
     label: "글로벌 캔들 미지원 종목 차단",
     path: "/api/stocks/candles?symbol=NOTREAL&timeframe=1d",
     method: "GET",
-    expectedStatus: [400]
+    expectedStatus: [400],
+    expectedText: "지원하지 않는"
   },
   {
     label: "청산 압력 비정상 심볼 차단",
     path: "/api/liquidation-pressure?symbol=***&period=15m",
     method: "GET",
-    expectedStatus: [400]
+    expectedStatus: [400],
+    expectedText: "심볼"
   },
   {
     label: "청산 압력 비정상 기간 차단",
     path: "/api/liquidation-pressure?symbol=BTCUSDT.P&period=bad",
     method: "GET",
-    expectedStatus: [400]
+    expectedStatus: [400],
+    expectedText: "기간"
   },
   {
     label: "관심코인 스캔 비정상 심볼 차단",
     path: "/api/watchlist-scan",
     method: "POST",
     body: { symbols: ["BTCUSDT.P", "NOTREAL"] },
-    expectedStatus: [400]
+    expectedStatus: [400],
+    expectedText: "관심코인"
   },
   {
     label: "결제 시작 대용량 요청 차단",
@@ -83,7 +94,8 @@ const checks = [
     method: "POST",
     rawBody: "x".repeat(8_001),
     headers: { "content-type": "text/plain" },
-    expectedStatus: [413]
+    expectedStatus: [413],
+    expectedText: "너무 큽니다"
   },
   {
     label: "결제 승인 대용량 요청 차단",
@@ -91,7 +103,8 @@ const checks = [
     method: "POST",
     rawBody: "x".repeat(8_001),
     headers: { "content-type": "text/plain" },
-    expectedStatus: [413]
+    expectedStatus: [413],
+    expectedText: "너무 큽니다"
   }
 ];
 
@@ -114,9 +127,12 @@ async function fetchWithTimeout(check) {
     });
     const text = await response.text();
 
+    const hasExpectedStatus = check.expectedStatus.includes(response.status);
+    const hasExpectedText = check.expectedText ? text.includes(check.expectedText) : true;
+
     return {
       check,
-      ok: check.expectedStatus.includes(response.status),
+      ok: hasExpectedStatus && hasExpectedText,
       status: response.status,
       detail: text.slice(0, 220).replace(/\s+/g, " ").trim()
     };
@@ -139,7 +155,8 @@ for (const result of results) {
   const mark = result.ok ? "PASS" : "FAIL";
   console.log(`${mark.padEnd(4)} ${String(result.status).padEnd(4)} ${result.check.label} ${result.check.path}`);
   if (!result.ok && result.detail) {
-    console.log(`     ${result.detail}`);
+    const expectedText = result.check.expectedText ? ` / expected text: ${result.check.expectedText}` : "";
+    console.log(`     ${result.detail}${expectedText}`);
   }
 }
 

@@ -1487,3 +1487,12 @@
 - [x] Normalize payment failure messages so users see clear next steps instead of internal wording.
 - [x] Scan source files for mojibake-style broken Korean in user-facing code.
 - [x] Verify with lint, copy smoke, and billing smoke.
+
+## 2026-05-14 continuous improvement 48 product copy hardening.
+- [x] Replace remaining "용도입니다" Basic copy with outcome-focused first-check wording.
+- [x] Replace checkout fallback copy that sounded like unfinished setup.
+- [x] Add copy smoke guards for weak product phrasing.
+
+## 2026-05-14 continuous improvement 49 API response copy smoke.
+- [x] Extend API smoke checks beyond status codes to verify user-facing error copy.
+- [x] Cover AI, scanner, radar news, global candles, liquidation pressure, watchlist, and billing validation messages.

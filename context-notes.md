@@ -1308,3 +1308,9 @@ The app stores login state in the browser, so basic response hardening matters b
 
 ### 2026-05-14 continuous improvement 47 payment copy reliability.
 The payment path is where trust is most fragile, so user-facing failure states must read like product support rather than internal infrastructure. The Pro pricing panel, checkout API, confirm API, native purchase helper, Supabase auth helper, and admin entitlement helper now use clear Korean copy for login, payment setup, purchase restoration, and entitlement delay states. A source scan for broken Korean patterns in `src` returned no matches, and billing smoke still verifies the important payment guards.
+
+### 2026-05-14 continuous improvement 48 product copy hardening.
+Basic should not sound like a throwaway preview. Usage copy now says Basic checks the broad market first, while Pro expands repeated intraday checks, watchlists, and alerts. Checkout fallback copy also avoids "preparing" language so payment problems read like a clear connection failure rather than an unfinished product.
+
+### 2026-05-14 continuous improvement 49 API response copy smoke.
+Public API validation should not only return the right HTTP status; it should also return Korean, user-facing guidance that makes sense inside the product. The API smoke now verifies key response text for AI, scanner, news, candle, liquidation, watchlist, and billing validation failures.

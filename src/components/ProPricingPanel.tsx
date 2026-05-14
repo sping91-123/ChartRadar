@@ -253,7 +253,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
       setCheckoutState({
         status: "message",
         tone: "info",
-        text: data.message ?? "현재 결제창을 준비하는 중입니다. 잠시 후 다시 시도해 주세요."
+        text: data.message ?? "결제창 연결을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요."
       });
     } catch (error) {
       setCheckoutState({

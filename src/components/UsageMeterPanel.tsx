@@ -62,17 +62,17 @@ const initialUsageSnapshot: UsageSnapshot = { dateKey: "", counts: {} };
 
 const scopedUsageCopy: Record<BillingPageScope, { free: string; paid: string; proHref: string }> = {
   all: {
-    free: "Basic은 오늘 시장을 처음 훑어보는 용도입니다. 장중에 다시 돌려보고, 관심종목을 쌓고, 변화 알림까지 받으려면 Pro가 필요합니다.",
+    free: "Basic에서는 오늘 시장의 큰 흐름을 먼저 확인합니다. 장중에 다시 돌려보고, 관심종목을 쌓고, 변화 알림까지 받으려면 Pro가 필요합니다.",
     paid: "Pro 모드가 열려 있습니다. 코인, 글로벌, AI 브리핑, 관심종목, 알림을 장중에도 끊기지 않게 이어갈 수 있습니다.",
     proHref: "/pro"
   },
   crypto: {
-    free: "Basic은 코인 시장을 처음 훑어보는 용도입니다. 장중 후보 재확인, 관심코인 누적, 코인 알림까지 챙기려면 Coin Pro가 필요합니다.",
+    free: "Basic에서는 코인 시장의 큰 흐름을 먼저 확인합니다. 장중 후보 재확인, 관심코인 누적, 코인 알림까지 챙기려면 Coin Pro가 필요합니다.",
     paid: "Coin Pro 모드가 열려 있습니다. 코인 스캔, 관심코인, AI 브리핑, 알림을 장중에도 끊기지 않게 이어갈 수 있습니다.",
     proHref: "/pro?market=crypto"
   },
   stocks: {
-    free: "Basic은 글로벌 시장을 처음 훑어보는 용도입니다. 장중 미국주식, 해외선물, ETF, 매크로 브리핑과 알림을 반복 확인하려면 Global Pro가 필요합니다.",
+    free: "Basic에서는 글로벌 시장의 큰 흐름을 먼저 확인합니다. 장중 미국주식, 해외선물, ETF, 매크로 브리핑과 알림을 반복 확인하려면 Global Pro가 필요합니다.",
     paid: "Global Pro 모드가 열려 있습니다. 미국주식, 해외선물, ETF, 매크로 브리핑과 알림을 장중에도 끊기지 않게 이어갈 수 있습니다.",
     proHref: "/pro?market=stocks"
   }
