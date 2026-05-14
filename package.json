@@ -12,6 +12,7 @@
     "smoke:mobile": "node scripts/smoke-mobile.mjs",
     "smoke:billing": "node scripts/smoke-billing.mjs",
     "smoke:api": "node scripts/smoke-api.mjs",
+    "smoke:css": "node scripts/smoke-css.mjs",
     "smoke:ops": "node scripts/smoke-ops.mjs",
     "smoke:all": "node scripts/smoke-all.mjs",
     "check:app-billing": "node scripts/check-app-billing-env.mjs",

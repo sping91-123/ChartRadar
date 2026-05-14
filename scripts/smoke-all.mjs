@@ -55,6 +55,16 @@ for (const [check, command, args] of checks) {
     console.log(`개발 서버 준비 상태를 확인합니다. 기준 URL은 ${serverBaseUrl}입니다.`);
     await waitForDevServer();
     console.log("개발 서버가 준비되었습니다.");
+    console.log("\n=== smoke:css ===");
+    const cssResult = spawnSync("node", ["scripts/smoke-css.mjs"], {
+      stdio: "inherit",
+      shell: false
+    });
+    if (cssResult.status !== 0) {
+      if (cssResult.error) console.error(cssResult.error);
+      console.error("\nsmoke:css 점검에 실패했습니다. 스타일 파일 응답을 확인해 주세요.");
+      process.exit(cssResult.status ?? 1);
+    }
   }
 }
 
