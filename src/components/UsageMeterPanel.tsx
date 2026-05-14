@@ -31,7 +31,7 @@ function UsageRow({ state, isPaid }: { state: ReturnType<typeof getUsageBucketSt
     : `첫 확인 ${state.freeDailyLimit}회 이후에는 Pro에서 장중 재확인이 열립니다.`;
 
   return (
-    <div className="rounded-md border border-white/10 bg-black/20 p-3">
+    <div className="rounded-xl border border-surface-line bg-surface-cardSoft p-3">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-black text-white">{state.label}</p>
@@ -41,7 +41,7 @@ function UsageRow({ state, isPaid }: { state: ReturnType<typeof getUsageBucketSt
           className={`shrink-0 rounded border px-2 py-1 text-[11px] font-black ${
             isOverActiveLimit
               ? "border-rose-400/30 bg-rose-500/10 text-rose-300"
-              : "border-cyan-300/30 bg-cyan-300/10 text-cyan-200"
+              : "border-accent-blue/30 bg-accent-blue/10 text-accent-blue"
           }`}
         >
           {displayedUsed}/{activeLimit}
@@ -129,14 +129,14 @@ export function UsageMeterPanel({
           : "오늘 레이더를 아직 쓰지 않았습니다.";
 
   return (
-    <section className="rounded-lg border border-cyan-300/25 bg-surface-card p-4 shadow-glow sm:p-5">
+    <section className="enterprise-panel p-4 sm:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-cyan-300/30 bg-cyan-300/10 text-cyan-300">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
             <Gauge size={20} aria-hidden />
           </div>
           <div>
-            <p className="text-xs font-black tracking-[0.2em] text-cyan-300">오늘 이용 현황</p>
+            <p className="text-xs font-black tracking-[0.2em] text-accent-blue">오늘 이용 현황</p>
             <h2 className="mt-1 text-lg font-black text-white">{title}</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400 [word-break:keep-all]">
               {isPaid ? copy.paid : copy.free}
@@ -146,7 +146,7 @@ export function UsageMeterPanel({
         <div className="flex shrink-0 gap-2">
           <Link
             href={copy.proHref}
-            className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-md bg-cyan-300 px-3 text-xs font-black text-slate-950 transition hover:bg-cyan-200"
+            className="enterprise-button inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-black"
           >
             <Crown size={13} aria-hidden />
             Pro 보기
@@ -160,13 +160,13 @@ export function UsageMeterPanel({
         ))}
       </div>
 
-      <div className="mt-4 flex flex-col gap-2 rounded-md border border-cyan-300/20 bg-cyan-300/10 p-3 text-xs leading-5 text-cyan-100 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-4 flex flex-col gap-2 rounded-xl border border-accent-blue/20 bg-accent-blue/10 p-3 text-xs leading-5 text-accent-blue sm:flex-row sm:items-center sm:justify-between">
         <span className="flex items-start gap-2">
           <Zap className="mt-0.5 shrink-0" size={14} aria-hidden />
           Basic은 첫 확인용이고, Pro는 장중 재확인과 알림까지 이어지는 실전 감시 모드입니다.
         </span>
           {compact ? (
-          <Link href={copy.proHref} className="font-black text-cyan-200 hover:text-white">
+          <Link href={copy.proHref} className="font-black text-accent-blue hover:text-white">
             Pro 플랜 보기
           </Link>
         ) : null}

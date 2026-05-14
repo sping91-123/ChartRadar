@@ -147,7 +147,7 @@ function RuleCard({
   onToggle: (ruleId: RadarAlertRuleId) => void;
 }) {
   return (
-    <article className={`rounded-lg border p-4 transition ${enabled ? "border-cyan-300/25 bg-cyan-300/10" : "border-surface-line bg-surface-cardSoft"}`}>
+    <article className={`rounded-xl border p-4 transition ${enabled ? "border-accent-blue/35 bg-accent-blue/10" : "border-surface-line bg-surface-cardSoft"}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -346,10 +346,10 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
   }
 
   return (
-    <section className="rounded-lg border border-cyan-300/25 bg-surface-card p-4 shadow-glow sm:p-5">
+    <section className="enterprise-panel p-4 sm:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-3">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-cyan-300/30 bg-cyan-300/12 text-cyan-200">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
             <BellRing size={22} aria-hidden />
           </div>
           <div>
@@ -360,14 +360,14 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             </p>
           </div>
         </div>
-        <div className="rounded-lg border border-white/10 bg-black/25 p-3 lg:w-72">
+        <div className="rounded-xl border border-surface-line bg-surface-cardSoft p-3 lg:w-72">
           <div className="flex items-center justify-between gap-3">
             <span className="text-xs font-bold text-slate-400">켜진 알림</span>
             <span className="text-lg font-black text-cyan-200">{summary.enabledCount}개</span>
           </div>
           <p className="mt-2 text-xs leading-5 text-slate-400 [word-break:keep-all]">{summary.headline}</p>
           <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] font-bold">
-            <span className="rounded-md border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-cyan-200">
+            <span className="rounded-md border border-accent-blue/25 bg-accent-blue/10 px-2 py-1 text-accent-blue">
               Pro {summary.proCount}
             </span>
             <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-slate-300">
@@ -378,28 +378,28 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
       </div>
 
       <div className="mt-4 grid gap-3 md:grid-cols-3">
-        <div className="rounded-lg border border-cyan-300/20 bg-cyan-300/10 p-4">
+        <div className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
           <Radar className="text-cyan-300" size={20} aria-hidden />
           <p className="mt-3 text-sm font-black text-white">{isGlobal ? "관심 자산 감지" : "레이더 감지"}</p>
           <p className="mt-2 text-xs leading-5 text-slate-400">
             {isGlobal ? "ETF, 빅테크, 해외선물의 급변과 저장한 조건을 빠르게 확인합니다." : "A급 후보와 관심코인 변화를 빠르게 확인합니다."}
           </p>
         </div>
-        <div className="rounded-lg border border-orange-300/20 bg-orange-300/10 p-4">
+        <div className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
           <Zap className="text-orange-200" size={20} aria-hidden />
           <p className="mt-3 text-sm font-black text-white">{isGlobal ? "매크로 압력" : "위험 압력"}</p>
           <p className="mt-2 text-xs leading-5 text-slate-400">
             {isGlobal ? "금리, 지표, 원자재 변화가 선택 자산에 주는 압력을 분리합니다." : "청산 압력과 과열 구간을 추격 전에 먼저 봅니다."}
           </p>
         </div>
-        <div className="rounded-lg border border-emerald-300/20 bg-emerald-300/10 p-4">
+        <div className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
           <Smartphone className="text-emerald-200" size={20} aria-hidden />
           <p className="mt-3 text-sm font-black text-white">놓친 조건 재확인</p>
           <p className="mt-2 text-xs leading-5 text-slate-400">저장한 조건이 다시 맞아떨어지면 최근 감지에 남겨 바로 확인할 수 있습니다.</p>
         </div>
       </div>
 
-      <div className="mt-4 flex flex-col gap-3 rounded-lg border border-surface-line bg-surface-cardSoft p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-4 flex flex-col gap-3 rounded-xl border border-surface-line bg-surface-cardSoft p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="flex items-center gap-2 text-sm font-black text-white">
             <ShieldCheck size={16} className="text-cyan-300" aria-hidden />
@@ -413,7 +413,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
           type="button"
           onClick={requestNotificationPermission}
           disabled={isRequesting || permission === "unsupported"}
-          className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-md bg-cyan-300 px-4 text-sm font-black text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
+          className="enterprise-button inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg px-4 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isRequesting ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <CheckCircle2 size={16} aria-hidden />}
           알림 켜기
@@ -421,12 +421,12 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
       </div>
 
       {toast ? (
-        <p className="mt-3 rounded-md border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-xs leading-5 text-cyan-100">
+        <p className="mt-3 rounded-xl border border-accent-blue/20 bg-accent-blue/10 px-3 py-2 text-xs leading-5 text-accent-blue">
           {toast}
         </p>
       ) : null}
 
-      <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-4">
+      <div className="mt-4 rounded-xl border border-surface-line bg-surface-cardSoft p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-black text-white">내가 저장한 레이더 감시</p>
@@ -434,7 +434,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
               관심 있는 자산과 조건만 모아두고, 다시 맞아떨어지는 순간을 빠르게 확인합니다.
             </p>
           </div>
-          <span className="rounded-md border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-xs font-black text-cyan-200">
+          <span className="rounded-md border border-accent-blue/25 bg-accent-blue/10 px-2 py-1 text-xs font-black text-accent-blue">
             {setupPresets.length}개 저장
           </span>
         </div>
@@ -442,7 +442,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
           type="button"
           onClick={requestManualAlertCheck}
           disabled={isManualChecking}
-          className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-emerald-300/30 bg-emerald-300/10 px-3 text-sm font-black text-emerald-200 transition hover:bg-emerald-300 hover:text-slate-950 disabled:cursor-wait disabled:opacity-70"
+          className="enterprise-button mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg px-3 text-sm font-black disabled:cursor-wait disabled:opacity-70"
         >
           {isManualChecking ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Radar size={16} aria-hidden />}
           저장 조건 다시 확인

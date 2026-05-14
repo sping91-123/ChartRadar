@@ -119,13 +119,13 @@ function NewsSourceCard({ item, market }: { item: RadarNewsItem; market: RadarNe
   const Icon = style.icon;
 
   return (
-    <article className="rounded-md border border-surface-line bg-surface-cardSoft p-3">
+    <article className="rounded-xl border border-surface-line bg-surface-cardSoft p-4 transition hover:border-accent-blue/35">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-slate-500">
             <span>{displayNewsSource(item.source)}</span>
             <span>{timeLabel(item.publishedAt)}</span>
-            <span className={`rounded border px-1.5 py-0.5 ${style.pill}`}>{style.label}</span>
+            <span className={`rounded-md border px-1.5 py-0.5 ${style.pill}`}>{style.label}</span>
           </div>
           <h4 className="mt-2 line-clamp-2 text-sm font-black leading-5 text-white [word-break:keep-all]">{itemTitle(item, market)}</h4>
         </div>
@@ -160,7 +160,7 @@ function BriefingIssueCard({ issue }: { issue: RadarNewsBriefing["keyIssues"][nu
   const Icon = style.icon;
 
   return (
-    <div className={`rounded-md border p-3 ${style.bg}`}>
+    <div className={`rounded-xl border p-4 ${style.bg}`}>
       <div className="flex items-start gap-2">
         <Icon className={`mt-0.5 shrink-0 ${style.text}`} size={17} aria-hidden />
         <div>
@@ -266,10 +266,10 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
 
   return (
     <section className="space-y-5">
-      <div className="force-dark-card rounded-lg border border-accent-blue/25 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.18),rgba(15,23,42,0.94)_42%,rgba(2,6,23,0.96))] p-4 shadow-glow sm:p-5">
+      <div className="enterprise-panel p-4 sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
-            <div className="radar-mark grid h-11 w-11 shrink-0 place-items-center border border-accent-blue/35 text-accent-blue">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
               <Newspaper size={21} aria-hidden />
             </div>
             <div>
@@ -282,7 +282,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
             type="button"
             onClick={loadNews}
             disabled={status === "loading"}
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-accent-blue/30 bg-accent-blue/10 px-3 text-sm font-black text-accent-blue hover:bg-accent-blue/20 disabled:cursor-not-allowed disabled:opacity-60"
+            className="enterprise-button inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
           >
             <RefreshCcw className={status === "loading" ? "animate-spin" : ""} size={16} aria-hidden />
             다시 분석
@@ -290,19 +290,19 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <div className="rounded-lg border border-signal-success/20 bg-signal-success/10 p-3">
+          <div className="rounded-xl border border-signal-success/20 bg-black/20 p-3">
             <p className="text-2xl font-black text-signal-success">{isInitialLoading ? "..." : digest.bullish}</p>
             <p className="text-xs font-bold text-slate-400">상방 우호</p>
           </div>
-          <div className="rounded-lg border border-signal-danger/20 bg-signal-danger/10 p-3">
+          <div className="rounded-xl border border-signal-danger/20 bg-black/20 p-3">
             <p className="text-2xl font-black text-signal-danger">{isInitialLoading ? "..." : digest.bearish}</p>
             <p className="text-xs font-bold text-slate-400">하방 주의</p>
           </div>
-          <div className="rounded-lg border border-signal-warning/20 bg-signal-warning/10 p-3">
+          <div className="rounded-xl border border-signal-warning/20 bg-black/20 p-3">
             <p className="text-2xl font-black text-signal-warning">{isInitialLoading ? "..." : digest.neutral}</p>
             <p className="text-xs font-bold text-slate-400">중립 확인</p>
           </div>
-          <div className="rounded-lg border border-accent-blue/20 bg-accent-blue/10 p-3">
+          <div className="rounded-xl border border-accent-blue/20 bg-black/20 p-3">
             <p className="text-2xl font-black text-accent-blue">{isInitialLoading ? "..." : digest.urgent}</p>
             <p className="text-xs font-bold text-slate-400">중요 이슈</p>
           </div>
@@ -310,17 +310,17 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
 
         {briefing || isInitialLoading ? (
           <div className="mt-4 grid gap-2 lg:grid-cols-4">
-            <div className="rounded-md border border-white/10 bg-black/25 p-3">
+            <div className="rounded-xl border border-surface-line bg-surface-cardSoft p-3">
               <p className="text-[11px] font-bold text-slate-500">뉴스 방향</p>
               <p className={`mt-1 text-lg font-black ${isInitialLoading ? "text-slate-300" : leadingToneClass}`}>{isInitialLoading ? "수집 중" : leadingTone}</p>
             </div>
-            <div className="rounded-md border border-white/10 bg-black/25 p-3 lg:col-span-2">
+            <div className="rounded-xl border border-surface-line bg-surface-cardSoft p-3 lg:col-span-2">
               <p className="text-[11px] font-bold text-slate-500">먼저 볼 이슈</p>
               <p className="mt-1 line-clamp-2 text-sm font-black leading-5 text-white [word-break:keep-all]">
                 {isInitialLoading ? "공개 뉴스와 매크로 이슈를 수집하고 있습니다." : topIssue?.title ?? "뉴스를 불러오면 핵심 이슈를 먼저 정리합니다."}
               </p>
             </div>
-            <div className="rounded-md border border-accent-blue/20 bg-accent-blue/10 p-3">
+            <div className="rounded-xl border border-accent-blue/20 bg-accent-blue/10 p-3">
               <p className="text-[11px] font-bold text-accent-blue">오늘 확인 순서</p>
               <p className="mt-1 line-clamp-2 text-sm font-bold leading-5 text-slate-100 [word-break:keep-all]">
                 {isInitialLoading ? "가격 반응과 후속 뉴스 흐름을 함께 정리하고 있습니다." : topAction || "가격 반응과 후속 뉴스가 같은 방향인지 먼저 확인하세요."}
@@ -330,18 +330,18 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
         ) : null}
 
         {!isPaid ? (
-          <div className="mt-4 rounded-md border border-accent-blue/20 bg-black/25 p-3">
+          <div className="mt-4 rounded-xl border border-accent-blue/20 bg-accent-blue/10 p-3">
             <p className="text-[11px] font-black text-accent-blue">Pro 뉴스 레이더</p>
             <p className="mt-1 text-sm leading-6 text-slate-300 [word-break:keep-all]">{copy.proLine}</p>
           </div>
         ) : null}
       </div>
 
-      {limitNotice ? <div className="rounded-md border border-signal-warning/25 bg-signal-warning/10 p-3 text-sm font-bold text-signal-warning">{limitNotice}</div> : null}
-      {error ? <div className="rounded-md border border-signal-danger/25 bg-signal-danger/10 p-3 text-sm font-bold text-signal-danger">{error}</div> : null}
+      {limitNotice ? <div className="rounded-xl border border-signal-warning/25 bg-signal-warning/10 p-3 text-sm font-bold text-signal-warning">{limitNotice}</div> : null}
+      {error ? <div className="rounded-xl border border-signal-danger/25 bg-signal-danger/10 p-3 text-sm font-bold text-signal-danger">{error}</div> : null}
 
       {briefing ? (
-        <div className="rounded-lg border border-surface-line bg-surface-card p-4">
+        <div className="enterprise-panel p-4">
           <h3 className="text-lg font-black text-white">AI 시장 브리핑</h3>
           <p className="mt-2 text-sm leading-6 text-slate-300 [word-break:keep-all]">{localizeNewsSourceText(briefing.overview)}</p>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -363,7 +363,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
               </div>
             </div>
           </div>
-          <p className="mt-5 rounded-md border border-accent-blue/20 bg-accent-blue/10 p-3 text-sm font-black leading-6 text-accent-blue [word-break:keep-all]">
+          <p className="mt-5 rounded-xl border border-accent-blue/20 bg-accent-blue/10 p-3 text-sm font-black leading-6 text-accent-blue [word-break:keep-all]">
             {localizeNewsSourceText(briefing.finalSummary)}
           </p>
         </div>

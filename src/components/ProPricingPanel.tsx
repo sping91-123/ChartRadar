@@ -305,22 +305,22 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
 
   return (
     <section className="space-y-5">
-      <div className="force-dark-card overflow-hidden rounded-lg border border-cyan-300/20 bg-[radial-gradient(circle_at_20%_10%,rgba(34,211,238,0.18),transparent_34%),linear-gradient(135deg,rgba(2,6,23,0.96),rgba(15,23,42,0.92))] p-5 shadow-glow">
+      <div className="enterprise-panel overflow-hidden p-5">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
-            <p className="inline-flex rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-xs font-black text-cyan-200">
+            <p className="inline-flex rounded-full border border-accent-blue/30 bg-accent-blue/10 px-3 py-1 text-xs font-black text-accent-blue">
               {copy.eyebrow}
             </p>
             <h2 className="mt-4 text-3xl font-black tracking-normal text-white [word-break:keep-all] sm:text-4xl">{copy.title}</h2>
             <p className="mt-4 text-sm leading-7 text-slate-300 [word-break:keep-all]">{copy.body}</p>
           </div>
-          <div className="rounded-lg border border-white/10 bg-black/25 p-4 text-sm text-slate-300 [word-break:keep-all] lg:w-72">
+          <div className="rounded-xl border border-surface-line bg-surface-cardSoft p-4 text-sm text-slate-300 [word-break:keep-all] lg:w-72">
             <p className="font-black text-white">대표 플랜</p>
-            <p className="mt-2 whitespace-nowrap text-2xl font-black text-cyan-200 sm:text-3xl">{copy.representativePrice}</p>
+            <p className="mt-2 whitespace-nowrap text-2xl font-black text-accent-blue sm:text-3xl">{copy.representativePrice}</p>
             <p className="mt-2 leading-6 text-slate-400">{copy.representativeBody}</p>
             <Link
               href="#plans"
-              className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-md bg-cyan-300 px-4 text-sm font-black text-slate-950 transition hover:bg-cyan-200"
+              className="enterprise-button mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg px-4 text-sm font-black"
             >
               플랜 보기
               <ArrowRight size={15} aria-hidden />
@@ -330,8 +330,8 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
 
         <div className="mt-6 grid gap-3 lg:grid-cols-3">
           {conversionPoints.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
-              <Icon className="text-cyan-300" size={20} aria-hidden />
+            <div key={title} className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
+              <Icon className="text-accent-blue" size={20} aria-hidden />
               <p className="mt-3 font-black text-white">{title}</p>
               <p className="mt-2 text-sm leading-6 text-slate-400">{body}</p>
             </div>
@@ -340,11 +340,11 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
       </div>
 
       <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-lg border border-cyan-300/25 bg-surface-card p-4 text-sm leading-6 text-slate-300">
+        <div className="rounded-xl border border-accent-blue/25 bg-accent-blue/10 p-4 text-sm leading-6 text-slate-300">
           <p className="font-black text-white">{copy.filterNotice}</p>
           <p className="mt-2 text-slate-400">{copy.priceAnchor}</p>
         </div>
-        <div className="rounded-lg border border-surface-line bg-surface-card p-4 text-sm leading-6 text-slate-300">
+        <div className="rounded-xl border border-surface-line bg-surface-card p-4 text-sm leading-6 text-slate-300">
           <p className="font-black text-white">Basic과 Pro의 차이</p>
           <p className="mt-2 text-slate-400">
             Basic은 처음 확인용입니다. Pro는 장중 반복 확인, 관심종목 감시, 알림 조건까지 이어지는 실전 감시 모드입니다.
@@ -352,9 +352,9 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-surface-line bg-surface-card">
+      <div className="overflow-hidden rounded-xl border border-surface-line bg-surface-card">
         <div className="border-b border-white/10 p-4">
-          <p className="text-xs font-black tracking-[0.2em] text-cyan-300">BASIC VS PRO</p>
+          <p className="text-xs font-black tracking-[0.2em] text-accent-blue">BASIC VS PRO</p>
           <h3 className="mt-1 text-xl font-black text-white">Pro에서 실제로 넓어지는 범위입니다.</h3>
         </div>
         <div className="grid divide-y divide-white/10 md:grid-cols-4 md:divide-x md:divide-y-0">
@@ -363,8 +363,8 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
               <p className="text-sm font-black text-white">{row.label}</p>
               <p className="mt-3 text-xs font-bold text-slate-500">Basic</p>
               <p className="mt-1 text-sm text-slate-300">{row.free}</p>
-              <p className="mt-3 text-xs font-bold text-cyan-300">Pro</p>
-              <p className="mt-1 text-sm font-black text-cyan-100">{row.pro}</p>
+              <p className="mt-3 text-xs font-bold text-accent-blue">Pro</p>
+              <p className="mt-1 text-sm font-black text-sky-100">{row.pro}</p>
             </div>
           ))}
         </div>
@@ -384,11 +384,11 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
             <article
               key={plan.id}
               className={`relative rounded-lg border p-5 ${
-                isHighlighted ? "border-cyan-300 bg-cyan-300/10 shadow-glow" : "border-surface-line bg-surface-card"
+                isHighlighted ? "border-accent-blue/45 bg-accent-blue/10 shadow-[0_16px_50px_rgba(14,165,233,0.16)]" : "border-surface-line bg-surface-card"
               }`}
             >
               <div className="flex items-center justify-between gap-3">
-                <span className={`rounded-full px-2.5 py-1 text-xs font-black ${isHighlighted ? "bg-cyan-300 text-slate-950" : "bg-white/10 text-slate-300"}`}>
+                <span className={`rounded-full px-2.5 py-1 text-xs font-black ${isHighlighted ? "bg-accent-blue text-slate-950" : "bg-white/10 text-slate-300"}`}>
                   {plan.badge}
                 </span>
                 {isYearly ? <span className="text-xs font-black text-amber-300">연간 할인</span> : null}
@@ -403,7 +403,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
               <div className="mt-4 space-y-2">
                 {plan.highlights.map((item) => (
                   <p key={item} className="flex gap-2 text-sm text-slate-300">
-                    <Check className="mt-0.5 shrink-0 text-cyan-300" size={15} aria-hidden />
+                    <Check className="mt-0.5 shrink-0 text-accent-blue" size={15} aria-hidden />
                     <span>{item}</span>
                   </p>
                 ))}
@@ -429,7 +429,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
                   onClick={() => startCheckout(plan)}
                   disabled={checkoutState.status === "loading" || isAuthLoading}
                   className={`mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md px-4 text-sm font-black transition ${
-                    isHighlighted ? "bg-cyan-300 text-slate-950 hover:bg-cyan-200" : "bg-white text-slate-950 hover:bg-slate-200"
+                    isHighlighted ? "bg-accent-blue text-slate-950 hover:bg-sky-300" : "bg-white text-slate-950 hover:bg-slate-200"
                   } disabled:cursor-not-allowed disabled:opacity-60`}
                 >
                   {isLoading ? <Loader2 className="animate-spin" size={16} aria-hidden /> : <Crown size={16} aria-hidden />}
@@ -460,7 +460,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
           className={`rounded-lg border p-4 text-sm leading-6 ${
             checkoutState.tone === "error"
               ? "border-rose-400/30 bg-rose-500/10 text-rose-100"
-              : "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
+              : "border-accent-blue/30 bg-accent-blue/10 text-accent-blue"
           }`}
         >
           {checkoutState.text}
@@ -468,8 +468,8 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-lg border border-surface-line bg-surface-card p-5">
-          <p className="text-xs font-black tracking-[0.2em] text-cyan-300">WHY PAY</p>
+        <div className="enterprise-panel p-5">
+          <p className="text-xs font-black tracking-[0.2em] text-accent-blue">WHY PAY</p>
           <h3 className="mt-2 text-xl font-black text-white">유료 상품의 핵심은 더 긴 글이 아니라 더 넓은 감시 범위입니다.</h3>
           <div className="mt-4 space-y-3">
             {proDifferenceRows.map((row) => (
@@ -481,9 +481,9 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
         </div>
         <div className="grid gap-3">
           {valueRows.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="rounded-lg border border-surface-line bg-surface-card p-4">
+            <div key={title} className="rounded-xl border border-surface-line bg-surface-card p-4">
               <div className="flex gap-3">
-                <Icon className="mt-1 shrink-0 text-cyan-300" size={20} aria-hidden />
+                <Icon className="mt-1 shrink-0 text-accent-blue" size={20} aria-hidden />
                 <div>
                   <p className="font-black text-white">{title}</p>
                   <p className="mt-1 text-sm leading-6 text-slate-400">{body}</p>
@@ -496,11 +496,11 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
 
       <RadarAlertCenter market={marketScope === "stocks" ? "stocks" : "crypto"} />
 
-      <div className="rounded-lg border border-surface-line bg-surface-card p-5">
-        <p className="text-xs font-black tracking-[0.2em] text-cyan-300">안심 기준</p>
+      <div className="enterprise-panel p-5">
+        <p className="text-xs font-black tracking-[0.2em] text-accent-blue">안심 기준</p>
         <div className="mt-3 grid gap-2 md:grid-cols-3">
           {subscriptionTrustNotes.map((note) => (
-            <p key={note} className="rounded-md border border-white/10 bg-black/20 p-3 text-sm leading-6 text-slate-400">
+            <p key={note} className="rounded-xl border border-surface-line bg-surface-cardSoft p-3 text-sm leading-6 text-slate-400">
               {note}
             </p>
           ))}
