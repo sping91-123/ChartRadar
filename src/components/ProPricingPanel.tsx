@@ -503,7 +503,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
       <RadarAlertCenter market={marketScope === "stocks" ? "stocks" : "crypto"} />
 
       <div className="rounded-lg border border-surface-line bg-surface-card p-5">
-        <p className="text-xs font-black tracking-[0.2em] text-cyan-300">운영 원칙</p>
+        <p className="text-xs font-black tracking-[0.2em] text-cyan-300">안심 기준</p>
         <div className="mt-3 grid gap-2 md:grid-cols-3">
           {subscriptionTrustNotes.map((note) => (
             <p key={note} className="rounded-md border border-white/10 bg-black/20 p-3 text-sm leading-6 text-slate-400">
