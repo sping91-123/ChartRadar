@@ -102,7 +102,7 @@ export function summarizeRadarAlerts(enabledIds: RadarAlertRuleId[]) {
       enabledRules.length >= 4
         ? "시장을 켜두지 않아도 핵심 변화는 대부분 잡히는 설정입니다."
         : enabledRules.length >= 2
-          ? "기본 감시는 켜졌지만, Pro 알림을 더 켜면 앱을 여는 이유가 더 강해집니다."
+          ? "기본 감시는 켜졌습니다. Pro 알림을 더 켜면 중요한 변화만 더 촘촘하게 받아볼 수 있습니다."
           : "아직 알림이 적습니다. 최소 뉴스 브리핑과 레이더 감지는 켜두는 편이 좋습니다."
   };
 }

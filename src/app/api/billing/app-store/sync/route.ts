@@ -97,23 +97,23 @@ export async function POST(request: Request) {
   const limit = await rateLimit(request, { key: "app-store-sync", limit: 30, windowMs: 10 * 60 * 1000 });
   if (!limit.allowed) {
     return NextResponse.json(
-      { status: "rate_limited", message: "구독 동기화 요청이 잠시 많습니다. 잠시 후 다시 시도해 주세요." },
+      { status: "rate_limited", message: "구독 확인 요청이 잠시 많습니다. 잠시 후 다시 시도해 주세요." },
       { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
     );
   }
 
   if (isBodyTooLarge(request, 8_000)) {
-    return NextResponse.json({ status: "rejected", message: "구독 동기화 요청 본문이 너무 큽니다." }, { status: 413 });
+    return NextResponse.json({ status: "rejected", message: "구독 확인 요청을 처리하지 못했습니다. 다시 시도해 주세요." }, { status: 413 });
   }
 
   const body = (await request.json().catch(() => ({}))) as AppStoreSyncRequest;
   const accessToken = getBearerToken(request);
   if (!accessToken) {
-    return NextResponse.json({ status: "login_required", message: "구독 권한을 동기화하려면 로그인이 필요합니다." }, { status: 401 });
+    return NextResponse.json({ status: "login_required", message: "구독 상태를 확인하려면 로그인이 필요합니다." }, { status: 401 });
   }
 
   if (body.platform !== "android" && body.platform !== "ios") {
-    return NextResponse.json({ status: "rejected", message: "앱 결제 플랫폼 값이 올바르지 않습니다." }, { status: 400 });
+    return NextResponse.json({ status: "rejected", message: "현재 기기에서는 앱 결제를 확인하지 못했습니다." }, { status: 400 });
   }
 
   let user: Awaited<ReturnType<typeof fetchSupabaseUserOnServer>>;
