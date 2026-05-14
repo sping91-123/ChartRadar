@@ -22,7 +22,7 @@ export const macroCalendarUpdatedAt = "2026년 5월 14일 09:00 기준";
 export const macroCalendarUpdatedAtIso = "2026-05-14T09:00:00+09:00";
 
 export const macroCalendarSourceNote =
-  "모든 발표 시간은 한국시간입니다. CPI와 PPI는 공식 발표값을 자동 반영하고, 나머지 일정도 발표 전후로 순차 갱신됩니다.";
+  "모든 발표 시간은 한국시간입니다. CPI와 PPI는 공식 발표값을 자동 확인하고, 그 외 일정은 공식 일정과 이전·예상 수치 중심으로 보여줍니다.";
 
 export const macroItems: MacroEventItem[] = [
   {
