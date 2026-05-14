@@ -42,7 +42,7 @@ export function AuthStatus() {
             ? "border-amber-300/35 bg-amber-300/10 text-amber-200"
             : "border-cyan-300/35 bg-cyan-300/10 text-cyan-200"
         }`}
-        title={isPaid ? `${planLabel} 이용 중` : "기본 모드 이용 중"}
+        title={isPaid ? `${planLabel} 이용 중` : "Basic 이용 중"}
       >
         <Crown size={13} aria-hidden />
         <span className="max-w-32 truncate">{isPaid ? planLabel : "기본"}</span>

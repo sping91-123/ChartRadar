@@ -109,7 +109,7 @@ const scopeCopy: Record<
     eyebrow: "Chart Radar Pro",
     title: "매일 시장을 확인하는 시간을 줄이고, 놓치기 쉬운 변화는 먼저 띄워드립니다.",
     body:
-      "기본 모드로 핵심 흐름을 먼저 확인하고, Pro에서는 코인, 글로벌, AI 브리핑, 관심종목, 알림을 더 넉넉하게 사용합니다. 신호를 대신 매매하는 서비스가 아니라 매일 시장을 빠르게 정리하는 레이더입니다.",
+      "Basic으로 핵심 흐름을 먼저 확인하고, Pro에서는 코인, 글로벌, AI 브리핑, 관심종목, 알림을 더 넉넉하게 사용합니다. 신호를 대신 매매하는 서비스가 아니라 매일 시장을 빠르게 정리하는 레이더입니다.",
     representativePrice: "월 24,900원",
     representativeBody: "두 시장을 모두 보는 사용자에게 코인, 글로벌 시장, AI 브리핑, 관심종목, 알림을 하나로 묶었습니다.",
     highlightedPlanId: "bundle_monthly",
@@ -150,13 +150,13 @@ function getScopedDisplayPlan(plan: BillingPlan, scope: BillingPageScope): Billi
     return {
       ...plan,
       description: "글로벌 레이더의 핵심 흐름을 먼저 확인합니다. 반복 감시와 알림은 Pro에서 넓어집니다.",
-      highlights: ["QQQ / SPY 기본 레이더 확인", "글로벌 뉴스 제한 확인", "AI 브리핑 하루 1회"],
+      highlights: ["QQQ / SPY 핵심 레이더 확인", "글로벌 뉴스 제한 확인", "AI 브리핑 하루 1회"],
       limits: {
         ...plan.limits,
         radarScans: "하루 2회",
         watchlist: "글로벌 자산 2개",
         alerts: "알림 조건 1개",
-        markets: "글로벌 기본 확인"
+        markets: "글로벌 핵심 확인"
       }
     };
   }
@@ -165,13 +165,13 @@ function getScopedDisplayPlan(plan: BillingPlan, scope: BillingPageScope): Billi
     return {
       ...plan,
       description: "코인 레이더의 핵심 흐름을 먼저 확인합니다. 반복 감시와 알림은 Pro에서 넓어집니다.",
-      highlights: ["BTC / ETH 기본 레이더 확인", "주요 알트코인 제한 감시", "AI 브리핑 하루 1회"],
+      highlights: ["BTC / ETH 핵심 레이더 확인", "주요 알트코인 제한 감시", "AI 브리핑 하루 1회"],
       limits: {
         ...plan.limits,
         radarScans: "하루 3회",
         watchlist: "코인 2개",
         alerts: "알림 조건 1개",
-        markets: "코인 기본 확인"
+        markets: "코인 핵심 확인"
       }
     };
   }
@@ -349,9 +349,9 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
           <p className="mt-2 text-slate-400">{copy.priceAnchor}</p>
         </div>
         <div className="rounded-lg border border-surface-line bg-surface-card p-4 text-sm leading-6 text-slate-300">
-          <p className="font-black text-white">기본과 Pro의 차이</p>
+          <p className="font-black text-white">Basic과 Pro의 차이</p>
           <p className="mt-2 text-slate-400">
-            기본은 핵심 확인에 가깝고, Pro는 장중 반복 확인과 알림까지 이어가는 작업 공간입니다.
+            Basic은 핵심 확인에 가깝고, Pro는 장중 반복 확인과 알림까지 이어가는 작업 공간입니다.
           </p>
         </div>
       </div>
@@ -365,7 +365,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
           {freeVsProRows.map((row) => (
             <div key={row.label} className="p-4">
               <p className="text-sm font-black text-white">{row.label}</p>
-              <p className="mt-3 text-xs font-bold text-slate-500">기본</p>
+              <p className="mt-3 text-xs font-bold text-slate-500">Basic</p>
               <p className="mt-1 text-sm text-slate-300">{row.free}</p>
               <p className="mt-3 text-xs font-bold text-cyan-300">Pro</p>
               <p className="mt-1 text-sm font-black text-cyan-100">{row.pro}</p>
@@ -427,7 +427,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
                   href={copy.freeHref}
                   className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-white/15 px-4 text-sm font-black text-white transition hover:bg-white/10"
                 >
-                  기본 레이더 보기
+                  핵심 레이더 보기
                 </Link>
               ) : (
                 <button
