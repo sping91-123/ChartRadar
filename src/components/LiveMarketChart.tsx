@@ -508,9 +508,15 @@ function killzoneLabel(value?: string) {
 }
 
 function biasClasses(bias?: string) {
-  if (bias === "long") return "border-signal-success/30 bg-signal-success/10 text-signal-success";
-  if (bias === "short") return "border-signal-danger/30 bg-signal-danger/10 text-signal-danger";
-  return "border-signal-warning/30 bg-signal-warning/10 text-signal-warning";
+  if (bias === "long") return "border-signal-success/25 bg-signal-success/10 text-signal-success";
+  if (bias === "short") return "border-signal-danger/25 bg-signal-danger/10 text-signal-danger";
+  return "border-signal-warning/25 bg-signal-warning/10 text-signal-warning";
+}
+
+function biasAccentLine(bias?: string) {
+  if (bias === "long") return "from-signal-success/80 via-signal-success/30 to-transparent";
+  if (bias === "short") return "from-signal-danger/80 via-signal-danger/30 to-transparent";
+  return "from-signal-warning/80 via-signal-warning/30 to-transparent";
 }
 
 function directionBadge(direction: DirectionState) {
@@ -620,10 +626,10 @@ function buildRadarPulse(analysis: MarketAnalysis, active?: TimeframeAnalysis): 
 }
 
 function radarPulseClasses(tone: RadarPulseTone) {
-  if (tone === "long") return "border-signal-success/25 bg-signal-success/10 text-signal-success";
-  if (tone === "short") return "border-signal-danger/25 bg-signal-danger/10 text-signal-danger";
-  if (tone === "warn") return "border-signal-warning/25 bg-signal-warning/10 text-signal-warning";
-  return "border-accent-blue/25 bg-accent-blue/10 text-accent-blue";
+  if (tone === "long") return "border-signal-success/20 bg-black/20 text-signal-success";
+  if (tone === "short") return "border-signal-danger/20 bg-black/20 text-signal-danger";
+  if (tone === "warn") return "border-signal-warning/20 bg-black/20 text-signal-warning";
+  return "border-white/10 bg-black/20 text-slate-200";
 }
 
 function decisionTone(value: string) {
@@ -2171,25 +2177,26 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           ) : null}
         </div>
       ) : analysis ? (
-        <div className={`mt-4 rounded-lg border p-4 ${biasClasses(analysis.bias)}`}>
+        <div className="relative mt-4 overflow-hidden rounded-xl border border-surface-line bg-surface-cardSoft p-4 shadow-[0_16px_48px_rgba(0,0,0,0.18)]">
+          <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${biasAccentLine(analysis.bias)}`} aria-hidden />
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs font-black opacity-80">{symbolLabel(symbol)} · {activeTimeframe} 오늘의 레이더 브리핑</p>
-              <h3 className="mt-2 text-2xl font-black sm:text-3xl">{analysis.verdict}</h3>
-              <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-200 [word-break:keep-all]">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">{symbolLabel(symbol)} · {activeTimeframe} Radar Briefing</p>
+              <h3 className="mt-2 text-2xl font-black tracking-tight text-white sm:text-3xl">{analysis.verdict}</h3>
+              <p className="mt-2 line-clamp-2 max-w-3xl text-sm leading-6 text-slate-400 [word-break:keep-all]">
                 {analysis.summaryLine}
               </p>
             </div>
-            <div className="shrink-0 rounded-md border border-current/25 bg-current/10 px-4 py-3 text-right">
-              <p className="text-xs font-bold opacity-75">방향</p>
+            <div className={`shrink-0 rounded-xl border px-4 py-3 text-right ${biasClasses(analysis.bias)}`}>
+              <p className="text-xs font-bold opacity-75">판독 방향</p>
               <p className="mt-1 text-lg font-black">{biasLabel(analysis.bias)}</p>
-              <p className="mt-1 text-xs font-bold opacity-75">점수 {analysis.biasScore}</p>
+              <p className="mt-1 text-xs font-bold opacity-75">종합 점수 {analysis.biasScore}</p>
             </div>
           </div>
 
           <div className="mt-4 grid gap-2 sm:grid-cols-3">
             {radarPulseItems.map((item) => (
-              <div key={item.label} className={`rounded-md border p-3 ${radarPulseClasses(item.tone)}`}>
+              <div key={item.label} className={`rounded-xl border p-3 ${radarPulseClasses(item.tone)}`}>
                 <p className="text-[11px] font-black opacity-80">{item.label}</p>
                 <p className="mt-1 text-base font-black">{item.title}</p>
                 <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-200 [word-break:keep-all]">
@@ -2200,7 +2207,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           </div>
 
           <div className="mt-4 grid gap-2 sm:grid-cols-3">
-            <div className="rounded-md border border-signal-success/25 bg-black/20 p-3">
+            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
               <div className="flex items-center justify-between text-xs font-bold text-signal-success">
                 <span>상승 근거</span>
                 <span>{radarSignalRatio.bullish}개 · {bullishPercent}%</span>
@@ -2209,7 +2216,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 <div className="h-full rounded-full bg-signal-success" style={{ width: `${bullishPercent}%` }} />
               </div>
             </div>
-            <div className="rounded-md border border-signal-danger/25 bg-black/20 p-3">
+            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
               <div className="flex items-center justify-between text-xs font-bold text-signal-danger">
                 <span>하락 근거</span>
                 <span>{radarSignalRatio.bearish}개 · {bearishPercent}%</span>
@@ -2218,7 +2225,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 <div className="h-full rounded-full bg-signal-danger" style={{ width: `${bearishPercent}%` }} />
               </div>
             </div>
-            <div className="rounded-md border border-signal-warning/25 bg-black/20 p-3">
+            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
               <div className="flex items-center justify-between text-xs font-bold text-signal-warning">
                 <span>횡보·주의</span>
                 <span>{radarSignalRatio.neutral}개 · {neutralPercent}%</span>
@@ -2230,15 +2237,15 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           </div>
 
           <div className="mt-4 grid gap-2 sm:grid-cols-3">
-            <div className={`rounded-md border p-3 ${decisionTone(userFacingRiskLabel(analysis))}`}>
+            <div className={`rounded-xl border p-3 ${decisionTone(userFacingRiskLabel(analysis))}`}>
               <p className="text-xs font-semibold opacity-75">진입 위험도</p>
               <p className="mt-1 text-base font-black">{userFacingRiskPercent(analysis)}% · {userFacingRiskLabel(analysis)}</p>
             </div>
-            <div className={`rounded-md border p-3 ${decisionTone(userFacingNextStep(analysis))}`}>
+            <div className={`rounded-xl border p-3 ${decisionTone(userFacingNextStep(analysis))}`}>
               <p className="text-xs font-semibold opacity-75">진입 전 확인</p>
               <p className="mt-1 text-base font-black">{userFacingNextStep(analysis)}</p>
             </div>
-            <div className={`rounded-md border p-3 ${readinessClasses(analysis.readiness)}`}>
+            <div className={`rounded-xl border p-3 ${readinessClasses(analysis.readiness)}`}>
               <p className="flex items-center gap-1 text-xs font-semibold opacity-75">
                 데이터 신뢰도
                 <span className="group relative inline-flex">

@@ -385,14 +385,14 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
   }, [scope, state]);
 
   return (
-    <section className="overflow-hidden rounded-lg border border-accent-blue/25 bg-surface-card shadow-glow">
-      <div className="relative border-b border-surface-line bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.18),transparent_30rem)] p-4 sm:p-5">
+    <section className="overflow-hidden rounded-xl border border-surface-line bg-surface-card shadow-[0_18px_58px_rgba(0,0,0,0.2)]">
+      <div className="relative border-b border-surface-line bg-[linear-gradient(135deg,rgba(15,23,42,0.9),rgba(8,13,23,0.72))] p-4 sm:p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-3">
-            <div className="radar-mark-lg h-16 w-16 shrink-0 border border-accent-blue/30" />
+            <div className="radar-mark-lg h-14 w-14 shrink-0 border border-accent-blue/25" />
             <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-widest text-accent-blue">Daily Radar</p>
-              <h2 className="mt-1 text-2xl font-black text-white">오늘의 레이더 브리핑</h2>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-accent-blue">Daily Radar</p>
+              <h2 className="mt-1 text-2xl font-black tracking-tight text-white">오늘의 레이더 브리핑</h2>
               <p className="mt-1 text-xs font-bold text-slate-500">Binance 기준 거래 흐름을 참고합니다.</p>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300 [word-break:keep-all]">
                 {summary?.sentence ?? (scope === "major" ? "BTC와 ETH 흐름을 먼저 훑어서 오늘 시장의 기준선을 정리하고 있습니다." : "주요 코인과 뉴스 흐름을 한 번에 훑어서 오늘 먼저 확인할 순서를 정리하고 있습니다.")}
@@ -403,7 +403,7 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
             type="button"
             onClick={loadBrief}
             disabled={state.status === "loading"}
-            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-md border border-accent-blue/35 bg-accent-blue/10 px-3 text-sm font-black text-accent-blue hover:bg-accent-blue hover:text-slate-950 disabled:cursor-wait disabled:opacity-70"
+            className="enterprise-button inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-accent-blue/30 bg-accent-blue/10 px-3 text-sm font-black text-accent-blue hover:bg-accent-blue hover:text-slate-950 disabled:cursor-wait disabled:opacity-70"
           >
             <RefreshCw size={15} className={state.status === "loading" ? "animate-spin" : ""} aria-hidden />
             레이더 새로고침
@@ -412,7 +412,7 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
 
         {state.status === "ready" && summary ? (
           <div className="mt-4 grid gap-2 md:grid-cols-4">
-            <div className={`rounded-md border p-3 ${toneClasses(summary.tone.tone)}`}>
+            <div className={`rounded-xl border p-3 ${toneClasses(summary.tone.tone)}`}>
               <p className="flex items-center gap-1.5 text-[11px] font-bold opacity-80">
                 <Gauge size={13} aria-hidden />
                 시장 온도
@@ -420,7 +420,7 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
               <p className="mt-1 text-lg font-black">{summary.tone.label}</p>
               <p className="mt-1 text-xs font-semibold opacity-80">{summary.tone.description}</p>
             </div>
-            <div className="rounded-md border border-white/10 bg-black/25 p-3">
+            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
               <p className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
                 <Activity size={13} aria-hidden />
                 거래대금 중심
@@ -432,7 +432,7 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
                   : "데이터 대기"}
               </p>
             </div>
-            <div className="rounded-md border border-white/10 bg-black/25 p-3">
+            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
               <p className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
                 <Star size={13} aria-hidden />
                 가장 큰 변동
@@ -442,7 +442,7 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
                 {summary.strongestMove ? `${summary.strongestMove.changePercent.toFixed(2)}%` : "-"}
               </p>
             </div>
-            <div className="rounded-md border border-signal-warning/25 bg-signal-warning/10 p-3 text-signal-warning">
+            <div className="rounded-xl border border-white/10 bg-black/20 p-3 text-signal-warning">
               <p className="flex items-center gap-1.5 text-[11px] font-bold opacity-80">
                 <ShieldAlert size={13} aria-hidden />
                 지금 확인할 것
@@ -455,14 +455,14 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
 
       <div className="p-4 sm:p-5">
         {state.status === "loading" ? (
-          <div className="flex min-h-32 items-center justify-center gap-2 rounded-md border border-surface-line bg-surface-cardSoft text-sm text-slate-400">
+          <div className="flex min-h-32 items-center justify-center gap-2 rounded-xl border border-surface-line bg-surface-cardSoft text-sm text-slate-400">
             <Loader2 size={18} className="animate-spin text-accent-blue" aria-hidden />
             오늘의 시장 레이더를 정리하는 중입니다.
           </div>
         ) : null}
 
         {state.status === "error" ? (
-          <div className="rounded-md border border-signal-danger/30 bg-signal-danger/10 p-4 text-sm text-signal-danger">
+          <div className="rounded-xl border border-signal-danger/30 bg-signal-danger/10 p-4 text-sm text-signal-danger">
             {state.message}
           </div>
         ) : null}
@@ -486,32 +486,32 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
                   ))}
                 </div>
               ) : (
-                <div className="mt-3 rounded-md border border-white/10 bg-black/25 p-4 text-sm leading-6 text-slate-300 [word-break:keep-all]">
+                <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-4 text-sm leading-6 text-slate-300 [word-break:keep-all]">
                   지금은 강한 레이더 감지가 많지 않습니다. 억지로 후보를 찾기보다 BTC와 ETH의 큰 흐름, 그리고 뉴스 이슈를 먼저 확인하는 장이 좋아 보입니다.
                 </div>
               )}
             </div>
 
-            <div className="rounded-md border border-white/10 bg-black/25 p-4">
+            <div className="rounded-xl border border-white/10 bg-black/20 p-4">
               <p className="text-sm font-black text-white">오늘 확인 루틴</p>
               <div className="mt-3 grid gap-2">
                 <Link
                   href="/survival"
-                  className="flex items-center justify-between rounded-md border border-white/10 bg-black/25 px-3 py-2 text-sm font-bold text-slate-200 hover:border-accent-blue/40 hover:text-white"
+                  className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm font-bold text-slate-200 hover:border-accent-blue/40 hover:text-white"
                 >
                   BTC / ETH 큰 흐름 확인
                   <Radar size={15} aria-hidden />
                 </Link>
                 <Link
                   href="/alts"
-                  className="flex items-center justify-between rounded-md border border-white/10 bg-black/25 px-3 py-2 text-sm font-bold text-slate-200 hover:border-accent-blue/40 hover:text-white"
+                  className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm font-bold text-slate-200 hover:border-accent-blue/40 hover:text-white"
                 >
                   알트코인 레이더에서 확산 확인
                   <ArrowUpRight size={15} aria-hidden />
                 </Link>
                 <Link
                   href="/news"
-                  className="flex items-center justify-between rounded-md border border-white/10 bg-black/25 px-3 py-2 text-sm font-bold text-slate-200 hover:border-accent-blue/40 hover:text-white"
+                  className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm font-bold text-slate-200 hover:border-accent-blue/40 hover:text-white"
                 >
                   레이더뉴스로 변동성 이슈 확인
                   <Newspaper size={15} aria-hidden />

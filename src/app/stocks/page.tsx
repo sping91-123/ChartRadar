@@ -34,7 +34,7 @@ const globalRoutineCards = [
 
 function GlobalProRoutine() {
   return (
-    <section className="rounded-lg border border-cyan-300/20 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.14),transparent_36%),rgba(15,23,42,0.72)] p-4 shadow-glow sm:p-5">
+    <section className="rounded-xl border border-surface-line bg-surface-card p-4 shadow-[0_18px_58px_rgba(0,0,0,0.18)] sm:p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-black tracking-[0.24em] text-cyan-300">
@@ -51,13 +51,13 @@ function GlobalProRoutine() {
         <div className="flex flex-wrap gap-2">
           <Link
             href="/alerts?market=global"
-            className="inline-flex min-h-10 items-center justify-center rounded-md border border-cyan-300/25 bg-cyan-300/10 px-3 text-xs font-black text-cyan-200 transition hover:bg-cyan-300 hover:text-slate-950"
+            className="enterprise-button inline-flex min-h-10 items-center justify-center rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-3 text-xs font-black text-cyan-200 transition hover:bg-cyan-300 hover:text-slate-950"
           >
             글로벌 알림 설정
           </Link>
           <Link
             href="/pro?market=stocks"
-            className="inline-flex min-h-10 items-center justify-center rounded-md bg-cyan-300 px-3 text-xs font-black text-slate-950 transition hover:bg-cyan-200"
+            className="enterprise-button inline-flex min-h-10 items-center justify-center rounded-lg bg-cyan-300 px-3 text-xs font-black text-slate-950 transition hover:bg-cyan-200"
           >
             글로벌 Pro 보기
           </Link>
@@ -65,7 +65,7 @@ function GlobalProRoutine() {
       </div>
       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {globalRoutineCards.map(({ icon: Icon, title, body }) => (
-          <article key={title} className="rounded-lg border border-white/10 bg-black/25 p-4">
+          <article key={title} className="rounded-xl border border-white/10 bg-black/20 p-4">
             <Icon className="text-cyan-300" size={20} aria-hidden />
             <h3 className="mt-3 text-sm font-black text-white">{title}</h3>
             <p className="mt-2 text-xs leading-5 text-slate-400 [word-break:keep-all]">{body}</p>
