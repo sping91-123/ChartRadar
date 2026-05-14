@@ -46,7 +46,7 @@ export default function Home() {
             <h1 className="mt-4 text-3xl font-black tracking-normal text-white sm:mt-5 sm:text-5xl">Chart Radar</h1>
             <p className="mt-2 text-sm font-bold text-slate-400 sm:mt-3 sm:text-base">오늘 먼저 확인할 시장을 선택하세요.</p>
             <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
-              코인과 글로벌은 뉴스, 알림, 복기, Pro 화면까지 각각 따로 움직입니다.
+              뉴스와 알림, 복기 기록까지 시장별로 따로 관리됩니다.
             </p>
           </div>
 
