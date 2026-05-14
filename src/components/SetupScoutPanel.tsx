@@ -582,8 +582,8 @@ function ScanSummary({
         </p>
         <p className="mt-1 text-xs leading-5 text-slate-300 [word-break:keep-all]">
           {isRadar
-            ? "공격적 분석은 정확도가 조금 떨어질 수 있지만 완화된 조건으로 더 많은 감지 결과를 보고 싶은 사용자를 위한 모드입니다."
-            : "강한 감지도 자동 매수·매도 신호가 아닙니다. 관찰 구간, 무효 기준, 포지션 크기를 확인한 뒤에만 판단하세요."}
+            ? "공격적 분석은 완화된 조건으로 움직임을 더 넓게 잡아냅니다. 빠른 변화를 먼저 보고 싶을 때 적합합니다."
+            : "보수적 분석은 구조가 더 분명한 감지만 남깁니다. 관찰 구간, 무효 기준, 포지션 크기까지 함께 확인하세요."}
         </p>
       </div>
     );
@@ -601,8 +601,8 @@ function ScanSummary({
       <p className="mt-1 text-xs leading-5 text-slate-300 [word-break:keep-all]">
         전체 타임프레임을 통틀어 바로 검토할 조건은 부족합니다.
         {isRadar
-          ? " 대신 공격적 분석은 완화된 조건으로 움직임 감지를 더 넓게 보여주며, 실제 진입 전에는 보수적 분석 기준으로 다시 걸러야 합니다."
-          : " 이 카드는 “매수·매도 자리”가 아니라 가격이 다시 올 때 확인할 체크포인트입니다."}
+          ? " 공격적 분석은 작은 움직임까지 넓게 보여주므로, 다시 돌려서 새로 올라오는 감지를 확인해 보세요."
+          : " 가격이 다시 관찰 구간에 접근할 때 확인할 체크포인트만 남겨두는 흐름입니다."}
       </p>
     </div>
   );
@@ -742,17 +742,17 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
               </span>
             </div>
             <p className="mt-1 text-sm leading-6 text-slate-400 [word-break:keep-all]">
-              전체 타임프레임에서 구조 변화가 선명한 코인만 추립니다. 신호가 아니라 시장 관찰용입니다.
+              전체 타임프레임에서 구조 변화가 선명한 코인을 먼저 추립니다. 오늘 무엇부터 볼지 줄여주는 레이더입니다.
             </p>
             <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold text-slate-300">
               <span className="whitespace-nowrap rounded-md border border-signal-warning/25 bg-signal-warning/10 px-2 py-1 text-signal-warning">
-                매수·매도 신호 아님
+                확인 순서 정리
               </span>
               <span className="whitespace-nowrap rounded-md border border-surface-line bg-black/20 px-2 py-1">
-                관찰은 대기 조건
+                관찰 구간 표시
               </span>
               <span className="whitespace-nowrap rounded-md border border-orange-400/20 bg-orange-400/10 px-2 py-1 text-orange-200">
-                공격적 분석은 감지 범위를 넓힘
+                공격적 분석은 더 넓게 감지
               </span>
             </div>
           </div>
@@ -834,9 +834,8 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
       </div>
 
       <p className="mt-3 text-[11px] leading-5 text-slate-500">
-        레이더 결과는 5분 단위로 갱신됩니다. 표시되는 감지는 구조 기반 분석 결과이며 매수·매도
-        추천이 아닙니다. 관찰 구간과 무효 기준은 반드시 본인의 차트 판독, 손절 원칙,
-        포지션 크기 기준으로 다시 확인하세요.
+        레이더 결과는 5분 단위로 갱신됩니다. 감지 카드는 오늘 먼저 확인할 순서를 줄여주는 기준이며,
+        관찰 구간과 무효 기준은 본인의 손절 원칙과 포지션 크기에 맞춰 다시 확인하세요.
       </p>
     </section>
   );

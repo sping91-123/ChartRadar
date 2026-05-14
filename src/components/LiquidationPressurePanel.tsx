@@ -223,12 +223,12 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
           </div>
         </div>
         <p className="mt-3 text-xs leading-5 text-slate-500 [word-break:keep-all]">
-          실제 청산맵이 아니라 Binance 공개 데이터로 추정한 압력입니다. 진입 신호가 아니라 변동성 위험을 보는 보조 지표입니다.
+          공개 시장 데이터로 위아래 변동성 압력을 추정합니다. 한쪽 압력이 높을수록 급격한 흔들림에 대비해야 합니다.
         </p>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <Metric label="현재 기준가" value={formatPrice(report.markPrice)} sub="Binance 기준 가격입니다." />
+        <Metric label="현재 기준가" value={formatPrice(report.markPrice)} sub="선물 시장에서 손익과 청산 계산에 쓰이는 기준 가격입니다." />
         <Metric label="펀딩비" value={formatPercent(report.fundingRatePercent, 4)} sub="한쪽 포지션 비용 부담입니다." />
         <Metric label="OI 변화" value={formatPercent(report.openInterestChangePercent)} sub={oiInterpretation(report)} />
         <Metric label="미결제약정" value={formatUsd(report.openInterestValue)} sub="시장에 남아 있는 포지션 규모입니다." />
@@ -264,7 +264,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
         <div className="rounded-lg border border-white/10 bg-black/20 p-4">
           <div className="flex items-center justify-between gap-2">
             <h4 className="text-sm font-black text-white">체결 쏠림</h4>
-            <TooltipLine>최근 시장가 매수와 시장가 매도 중 어느 쪽 체결이 더 강했는지 보는 값입니다. 방향 확정 신호가 아니라 단기 힘의 쏠림입니다.</TooltipLine>
+            <TooltipLine>최근 시장가 매수와 시장가 매도 중 어느 쪽 체결이 더 강했는지 보는 값입니다. 한쪽으로 치우치면 단기 변동성이 커질 수 있습니다.</TooltipLine>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Metric label="시장가 매수" value={formatPercent(report.takerFlow.buyPercent, 1)} sub={report.takerFlow.buyVolume === null ? "-" : report.takerFlow.buyVolume.toLocaleString("ko-KR", { maximumFractionDigits: 2 })} />

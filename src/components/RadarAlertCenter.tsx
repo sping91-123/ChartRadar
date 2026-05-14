@@ -385,8 +385,8 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
         </div>
         <div className="rounded-lg border border-emerald-300/20 bg-emerald-300/10 p-4">
           <Smartphone className="text-emerald-200" size={20} aria-hidden />
-          <p className="mt-3 text-sm font-black text-white">앱 알림 연결</p>
-          <p className="mt-2 text-xs leading-5 text-slate-400">앱에서는 같은 조건을 푸시 알림으로 이어 받을 수 있습니다.</p>
+          <p className="mt-3 text-sm font-black text-white">놓친 조건 재확인</p>
+          <p className="mt-2 text-xs leading-5 text-slate-400">저장한 조건이 다시 맞아떨어지면 최근 감지에 남겨 바로 확인할 수 있습니다.</p>
         </div>
       </div>
 
@@ -397,7 +397,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             {permissionLabel(permission)}
           </p>
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            웹에서는 조건 일치 여부를 확인하고, 앱에서는 같은 조건을 푸시 알림으로 이어 받을 수 있습니다.
+            저장한 조건을 현재 시장과 다시 대조합니다. 모바일 앱에서는 같은 조건을 푸시 알림으로 받을 수 있습니다.
           </p>
         </div>
         <button
@@ -422,7 +422,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
           <div>
             <p className="text-sm font-black text-white">내가 저장한 레이더 감시</p>
             <p className="mt-1 text-xs leading-5 text-slate-500">
-              저장한 조건을 기준으로 현재 시장을 다시 확인합니다. 조건이 다시 맞아떨어지면 최근 감지에 남깁니다.
+              관심 있는 자산과 조건만 모아두고, 다시 맞아떨어지는 순간을 빠르게 확인합니다.
             </p>
           </div>
           <span className="rounded-md border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-xs font-black text-cyan-200">
@@ -459,7 +459,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
           </div>
         ) : (
           <p className="mt-3 rounded-md border border-white/10 bg-black/25 p-3 text-xs leading-5 text-slate-500">
-            앱이 열리면 저장한 조건을 자동으로 확인하고, 마지막 확인 상태가 여기에 표시됩니다.
+            알림 화면을 열면 저장한 조건을 다시 훑고, 마지막 확인 상태가 여기에 표시됩니다.
           </p>
         )}
         {setupMatches.length > 0 ? (
@@ -490,7 +490,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
           </div>
         ) : (
           <p className="mt-3 rounded-md border border-white/10 bg-black/25 p-3 text-xs leading-5 text-slate-500">
-            저장 조건이 현재 레이더 결과와 다시 맞아떨어지면 최근 일치 감지로 표시됩니다.
+            저장 조건이 현재 레이더 결과와 다시 맞아떨어지면 최근 일치 감지로 모아 보여줍니다.
           </p>
         )}
         {setupPresets.length > 0 ? (
