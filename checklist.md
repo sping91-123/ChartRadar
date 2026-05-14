@@ -1528,3 +1528,8 @@
 - [x] Bump the browser news cache key so old generic cards are not reused.
 - [x] Update the operations smoke guard to require the new news cache version.
 - [x] Verify news API, browser news page, smoke checks, and production build.
+# 2026-05-14 지속 개선 57차 뉴스 분류 회귀 방지.
+
+- [x] 코인 뉴스의 실적 손실, 토큰화 금융, 지갑 복구, 여론조사, 저항 구간 분류가 다시 뭉개지지 않도록 운영 스모크에 고정 검사를 추가한다.
+- [x] 운영 스모크, 린트, 문구 스모크, 빌드로 변경을 검증한다.
+- [x] 변경 단위를 커밋한다.
