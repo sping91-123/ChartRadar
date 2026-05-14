@@ -193,7 +193,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
       setCheckoutState({
         status: "message",
         tone: "info",
-        text: "로그인 상태를 확인하고 있습니다. 잠시 후 다시 눌러 주세요."
+        text: "계정을 확인하는 중입니다. 잠시 후 다시 눌러 주세요."
       });
       return;
     }
@@ -266,7 +266,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
       setCheckoutState({
         status: "message",
         tone: "info",
-        text: "로그인 상태를 확인하고 있습니다. 잠시 후 다시 눌러 주세요."
+        text: "계정을 확인하는 중입니다. 잠시 후 다시 눌러 주세요."
       });
       return;
     }

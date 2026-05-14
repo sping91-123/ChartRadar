@@ -343,7 +343,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                 </div>
                 <div>
                   <p className="text-sm font-bold text-white">
-                    {isLoading ? "로그인 상태 확인 중" : session ? "계정 복기장 연결됨" : "현재는 이 기기에만 저장됩니다"}
+                    {isLoading ? "계정 확인 중" : session ? "계정 복기장 연결됨" : "현재는 이 기기에만 저장됩니다"}
                   </p>
                   <p className="mt-1 text-xs leading-5 text-slate-400">
                     {session

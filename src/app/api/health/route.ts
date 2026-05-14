@@ -76,7 +76,7 @@ export async function GET() {
   const coreReady = hasSupabaseUrl && hasSupabaseKey && hasAIProvider && macroReady;
   const readyForPaidLaunch = coreReady && hasSiteUrl && hasPaymentProvider && paymentLinksReady;
   const warnings = [
-    hasSupabaseUrl && hasSupabaseKey ? null : "로그인 공개 환경변수가 아직 연결되지 않았습니다.",
+    hasSupabaseUrl && hasSupabaseKey ? null : "로그인 연결 정보가 아직 준비되지 않았습니다.",
     hasAIProvider ? null : "AI 제공자 키가 아직 연결되지 않았습니다.",
     hasSiteUrl ? null : "서비스 공개 URL이 아직 설정되지 않았습니다.",
     hasPaymentProvider ? null : "토스페이먼츠 결제 키가 아직 연결되지 않았습니다.",

@@ -67,7 +67,7 @@ export async function POST(request: Request) {
   try {
     await fetchSupabaseUserOnServer(accessToken);
   } catch {
-    return NextResponse.json({ error: "로그인 상태를 확인하지 못했습니다. 다시 로그인한 뒤 결제를 시작해 주세요." }, { status: 401 });
+    return NextResponse.json({ error: "계정을 확인하지 못했습니다. 다시 로그인한 뒤 결제를 시작해 주세요." }, { status: 401 });
   }
 
   if (body.platform === "ios" || body.platform === "android") {

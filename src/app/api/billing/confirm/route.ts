@@ -122,7 +122,7 @@ export async function POST(request: Request) {
   }
 
   if (!accessToken) {
-    return NextResponse.json({ status: "login_required", message: "Pro 권한을 반영하려면 로그인 상태가 필요합니다." }, { status: 401 });
+    return NextResponse.json({ status: "login_required", message: "Pro 권한을 반영하려면 계정 확인이 필요합니다." }, { status: 401 });
   }
 
   let user: Awaited<ReturnType<typeof fetchSupabaseUserOnServer>>;
