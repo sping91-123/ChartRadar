@@ -256,5 +256,5 @@ export function parsePlanIdFromOrderId(orderId: string | null | undefined): Bill
 export const subscriptionTrustNotes = [
   "코인과 글로벌 시장은 따로 선택할 수 있고, 두 시장을 모두 보면 All Market Pro로 더 낮은 합산가에 이용할 수 있습니다.",
   "웹과 앱에서 결제해도 같은 계정으로 Pro 기능을 이어서 사용할 수 있습니다.",
-  "Chart Radar는 매수·매도 신호를 대신 결정하는 서비스가 아니라, 시장 구조와 위험 요소를 빠르게 정리하는 레이더입니다."
+  "Chart Radar는 시장 구조와 위험 요소를 빠르게 정리해 오늘의 판단 순서를 잡아주는 레이더입니다."
 ];

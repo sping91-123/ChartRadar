@@ -393,7 +393,7 @@ function buildWatchOnlyPlan(
     confidence,
     reason: "검토 후보는 아니지만, 구조상 계속 관찰할 만한 반응 구간입니다.",
     cautions: [
-      "관찰 대기입니다. 조건이 추가로 맞기 전까지 진입 신호로 보지 마세요.",
+      "관찰 대기입니다. 조건이 추가로 맞기 전까지는 실행보다 확인이 먼저입니다.",
       "MSB/CHoCH, 스윕/CISD, POC 위치를 다시 확인하세요.",
       ...market.riskFlags.slice(0, 2)
     ]
@@ -774,7 +774,7 @@ function computeScoutScore(
 
   if (active?.oteZone === plan.side) score += 4;
 
-  // 근접도는 "검토 가치"만 보정한다. 영역 내부를 진입 신호처럼 과대평가하지 않는다.
+  // 근접도는 "검토 가치"만 보정한다. 영역 내부를 실행 판단처럼 과대평가하지 않는다.
   if (proximityInfo.proximity === "ready") score -= 10;
   else if (proximityInfo.proximity === "near") score += 4;
   else if (proximityInfo.proximity === "wait") score -= 4;

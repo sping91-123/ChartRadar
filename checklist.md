@@ -1415,3 +1415,8 @@
 - [x] Reword usage bucket descriptions as user outcomes instead of raw counts.
 - [x] Reword Basic and Pro limit messages around daily limits and intraday rechecks.
 - [x] Verify with lint and copy smoke.
+
+## 2026-05-14 continuous improvement 35 defensive copy guard.
+- [x] Remove remaining "not a signal" style phrases from user-facing analysis copy.
+- [x] Repair the copy smoke script so blocked Korean phrases are checked correctly again.
+- [x] Verify with lint, copy smoke, and API smoke.

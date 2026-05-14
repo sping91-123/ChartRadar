@@ -1,17 +1,28 @@
-// 사용자 화면에 남기지 않을 내부 표현과 약한 상품 문구를 검사합니다.
-import { readFileSync, readdirSync, statSync } from "node:fs";
+// 사용자 화면에 숨기지 않을 내부 표현과 약한 상품 문구를 검사합니다.
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
 const targets = ["src/app", "src/components"];
+const extraUserFacingFiles = [
+  "src/lib/ai/fallback.ts",
+  "src/lib/billing.ts",
+  "src/lib/liquidationPressure.ts",
+  "src/lib/marketAnalysis.ts",
+  "src/lib/setupScout.ts"
+];
 
 const blockedPhrases = [
   "맛보는 용도",
   "샘플",
-  "신호가 아니라",
-  "진입 신호가 아니라",
+  "신호가 아니",
+  "진입 신호",
   "매수·매도 신호가 아닙니다",
+  "매수나 매도 지시가 아니라",
+  "매수·매도 지시가 아닙니다",
   "교육용 도구",
+  "용도로만 참고",
+  "대신 결정하는 서비스가 아니라",
   "Supabase에 저장",
   "RevenueCat",
   "Gemini",
@@ -24,12 +35,18 @@ function walk(dir) {
   return readdirSync(full).flatMap((entry) => {
     const absolute = path.join(full, entry);
     const relative = path.relative(root, absolute).replaceAll("\\", "/");
+    if (relative.startsWith("src/app/api/")) return [];
     if (statSync(absolute).isDirectory()) return walk(relative);
-    return relative.endsWith(".tsx") ? [relative] : [];
+    return relative.endsWith(".tsx") || relative.endsWith(".ts") ? [relative] : [];
   });
 }
 
-const files = targets.flatMap((target) => walk(target));
+const files = Array.from(
+  new Set([
+    ...targets.flatMap((target) => walk(target)),
+    ...extraUserFacingFiles.filter((file) => existsSync(path.join(root, file)))
+  ])
+);
 const failures = [];
 
 for (const file of files) {
@@ -42,7 +59,7 @@ for (const file of files) {
 }
 
 if (failures.length > 0) {
-  console.error("사용자 화면에 남기지 않을 문구가 발견됐습니다.");
+  console.error("사용자 화면에 숨기지 않을 문구가 발견되었습니다.");
   for (const failure of failures) {
     console.error(`FAIL ${failure.file} - ${failure.phrase}`);
   }

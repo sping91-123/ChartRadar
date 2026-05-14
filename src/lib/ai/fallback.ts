@@ -52,7 +52,7 @@ export function generateFallbackMarketBriefing(input: MarketBriefingInput): stri
   const second =
     `강점으로는 ${opportunity}를 볼 수 있고, 주의할 점은 ${risk}입니다. RSI는 ${active.rsi}, MACD는 ${active.macd}, 변동성은 ${active.volatility}, 거래량은 ${active.volume} 상태라 보조지표는 방향 신호라기보다 추세 과열과 변동성 확인용으로 참고하는 편이 좋습니다. ` +
     `${input.scenario ? `현재 분석 시나리오는 ${input.scenario.title}이며 관찰 구간은 ${input.scenario.entry}, 리스크 기준은 ${input.scenario.invalidation}입니다. ` : "아직 명확한 분석 시나리오는 생성되지 않았습니다. "}` +
-    `이 피드백은 매수·매도 신호가 아니라 구조 해석용이므로, 다음 캔들에서 MSB·CHoCH 변화와 OB/FVG 반응이 유지되는지 확인하는 쪽이 안전합니다.`;
+    `다음 캔들에서 MSB·CHoCH 변화와 OB/FVG 반응이 유지되는지 확인하면 판단 우선순위를 더 선명하게 잡을 수 있습니다.`;
 
   return `${first}\n\n${second}`;
 }

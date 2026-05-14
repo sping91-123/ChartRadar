@@ -1846,7 +1846,7 @@ function buildTradePlanCandidate(
   const cautions = [
     ...riskFlags.slice(0, 3),
     "시장가 추격이 아니라 해당 구간 반응 확인 후 판단",
-    "이 값은 교육용 시나리오 후보이며 매수·매도 지시가 아닙니다"
+    "현재 구조와 리스크 기준을 함께 확인한 뒤 실행 여부를 판단하세요"
   ];
 
   return {

@@ -1267,3 +1267,6 @@ The product value is clearer when Basic is framed as a first-check mode and Pro 
 
 ### 2026-05-14 continuous improvement 34 usage wording cleanup.
 Usage buckets should not feel like an internal quota table. They now describe what the user can recheck or monitor, while limit messages explain daily reset and Pro intraday recheck value more clearly.
+
+### 2026-05-14 continuous improvement 35 defensive copy guard.
+Some remaining copy still sounded like a legal disclaimer instead of a paid product. The wording is being shifted from "this is not a signal" to "here is the order of checks and what to confirm next." The copy smoke script was also repaired because the blocked Korean phrases had become unreadable in the script itself.

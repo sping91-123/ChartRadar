@@ -196,7 +196,7 @@ export function buildLiquidationPressureReport(input: BuildLiquidationPressureIn
     dominantSide: side,
     grade,
     summary: summaryFor(side, grade),
-    warning: "CoinGlass급 청산맵이 아니라 Binance 공개 데이터 기반 추정 보조 지표입니다. 진입 신호가 아니며, 레버리지 쏠림과 변동성 위험을 보는 용도로만 참고하세요.",
+    warning: "Binance 공개 데이터로 레버리지 쏠림과 변동성 압력을 추정합니다. 실제 청산맵처럼 단정하기보다 가격 반응과 함께 확인하세요.",
     bands: buildBands(markPrice),
     updatedAt: input.updatedAt ?? Date.now()
   };
