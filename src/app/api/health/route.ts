@@ -76,13 +76,13 @@ export async function GET() {
   const coreReady = hasSupabaseUrl && hasSupabaseKey && hasAIProvider && macroReady;
   const readyForPaidLaunch = coreReady && hasSiteUrl && hasPaymentProvider && paymentLinksReady;
   const warnings = [
-    hasSupabaseUrl && hasSupabaseKey ? null : "Supabase public env is missing.",
-    hasAIProvider ? null : "AI provider env is missing.",
-    hasSiteUrl ? null : "NEXT_PUBLIC_SITE_URL is missing.",
-    hasPaymentProvider ? null : "TossPayments env is missing.",
-    paymentLinksReady ? null : `Plan payment links are missing: ${missingPlanPaymentLinks.join(", ")}.`,
-    fallbackPlanPaymentLinks.length === 0 ? null : `Shared payment link fallback is used: ${fallbackPlanPaymentLinks.join(", ")}.`,
-    !hasFreeOfficialMacroProvider && isMacroStale ? "Macro backup calendar is stale." : null
+    hasSupabaseUrl && hasSupabaseKey ? null : "로그인 공개 환경변수가 아직 연결되지 않았습니다.",
+    hasAIProvider ? null : "AI 제공자 키가 아직 연결되지 않았습니다.",
+    hasSiteUrl ? null : "서비스 공개 URL이 아직 설정되지 않았습니다.",
+    hasPaymentProvider ? null : "토스페이먼츠 결제 키가 아직 연결되지 않았습니다.",
+    paymentLinksReady ? null : `플랜별 결제 링크가 아직 비어 있습니다. ${missingPlanPaymentLinks.join(", ")}`,
+    fallbackPlanPaymentLinks.length === 0 ? null : `공용 결제 링크로 대신 연결되는 플랜이 있습니다. ${fallbackPlanPaymentLinks.join(", ")}`,
+    !hasFreeOfficialMacroProvider && isMacroStale ? "매크로 보조 일정이 오래되었습니다." : null
   ].filter((item): item is string => Boolean(item));
 
   return NextResponse.json({
