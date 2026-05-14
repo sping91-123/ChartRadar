@@ -1,4 +1,4 @@
-// 앱 안에서 RevenueCat 구독 구매와 서버 권한 동기화를 처리합니다.
+// 앱에서 RevenueCat 구독 결제와 서버 권한 동기화를 처리합니다.
 import { Capacitor } from "@capacitor/core";
 import { Purchases, type CustomerInfo } from "@revenuecat/purchases-capacitor";
 import type { BillingPlan } from "@/lib/billing";
@@ -102,7 +102,7 @@ async function syncAnyAppStoreEntitlement(params: NativeRestoreParams & { platfo
 
   const data = (await response.json().catch(() => ({}))) as AppStoreSyncResponse;
   if (!response.ok || !data.active) {
-    throw new Error(data.error ?? data.message ?? "복원된 구독 상태를 계정에 연결하지 못했습니다. 잠시 후 다시 확인해 주세요.");
+    throw new Error(data.error ?? data.message ?? "복원한 구독 상태를 계정에 연결하지 못했습니다. 잠시 후 다시 확인해 주세요.");
   }
 
   if (typeof window !== "undefined") {
@@ -128,7 +128,7 @@ function normalizePurchaseError(error: unknown) {
 
 export async function purchaseNativePlan(params: NativePurchaseParams) {
   const platform = getNativePurchasePlatform();
-  if (!platform) throw new Error("앱 결제는 Android 또는 iOS 앱 안에서만 사용할 수 있습니다.");
+  if (!platform) throw new Error("앱 결제는 Android 또는 iOS 앱에서만 사용할 수 있습니다.");
   if (!params.plan.appStoreProductId) throw new Error("현재 앱에서는 이 요금제를 결제할 수 없습니다. 다른 요금제를 선택해 주세요.");
 
   try {
@@ -144,12 +144,12 @@ export async function purchaseNativePlan(params: NativePurchaseParams) {
     if (!hasActivePlan(result.customerInfo, params.plan)) {
       const { customerInfo } = await Purchases.getCustomerInfo();
       if (!hasActivePlan(customerInfo, params.plan)) {
-        throw new Error("결제는 완료됐지만 활성 구독 권한을 확인하지 못했습니다.");
+        throw new Error("결제는 완료되었지만 활성 구독 권한을 확인하지 못했습니다. 구매 복원을 눌러 다시 연결해 주세요.");
       }
     }
 
     await syncAppStoreEntitlement({ ...params, platform });
-    return { message: "구독이 확인되어 Pro 권한을 열었습니다." };
+    return { message: "구독이 확인되어 Pro 권한이 열렸습니다." };
   } catch (error) {
     throw normalizePurchaseError(error);
   }
@@ -157,7 +157,7 @@ export async function purchaseNativePlan(params: NativePurchaseParams) {
 
 export async function restoreNativePurchases(params: NativePurchaseParams) {
   const platform = getNativePurchasePlatform();
-  if (!platform) throw new Error("구매 복원은 Android 또는 iOS 앱 안에서만 사용할 수 있습니다.");
+  if (!platform) throw new Error("구매 복원은 Android 또는 iOS 앱에서만 사용할 수 있습니다.");
 
   await configurePurchases(platform, params.userId);
   const { customerInfo } = await Purchases.restorePurchases();
@@ -171,7 +171,7 @@ export async function restoreNativePurchases(params: NativePurchaseParams) {
 
 export async function restoreNativeEntitlement(params: NativeRestoreParams) {
   const platform = getNativePurchasePlatform();
-  if (!platform) throw new Error("구매 복원은 Android 또는 iOS 앱 안에서만 사용할 수 있습니다.");
+  if (!platform) throw new Error("구매 복원은 Android 또는 iOS 앱에서만 사용할 수 있습니다.");
 
   await configurePurchases(platform, params.userId);
   await Purchases.restorePurchases();

@@ -1,4 +1,4 @@
-// 결제 시작에 필요한 주문 정보를 만들고 결제 링크 상태를 반환합니다.
+// 결제 시작에 필요한 주문 정보와 결제 링크 상태를 반환합니다.
 import { NextResponse } from "next/server";
 import { findBillingPlan } from "@/lib/billing";
 import { isBodyTooLarge, rateLimit } from "@/lib/server/rateLimit";
@@ -123,7 +123,6 @@ export async function POST(request: Request) {
     amount: plan.billingAmount,
     orderName: plan.name,
     confirmationRequired: true,
-    message:
-      "결제창 연결 상태를 확인하고 있습니다. 잠시 후 다시 시도해 주세요."
+    message: "결제창 연결 상태를 확인하고 있습니다. 잠시 후 다시 시도해 주세요."
   });
 }

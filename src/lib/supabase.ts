@@ -1,3 +1,4 @@
+// Supabase 로그인 세션과 REST 호출을 관리합니다.
 import type { BillingEntitlementPlan } from "@/lib/billing";
 
 export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
@@ -209,7 +210,7 @@ export async function fetchSupabaseUser(accessToken: string) {
     }
   });
 
-  if (!response.ok) throw new Error("로그인 정보를 잠시 확인하지 못했습니다.");
+  if (!response.ok) throw new Error("로그인 정보를 다시 확인하지 못했습니다.");
   return (await response.json()) as SupabaseUser;
 }
 

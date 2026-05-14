@@ -1305,3 +1305,6 @@ RevenueCat already knows the real subscription expiry time, so app purchases sho
 
 ### 2026-05-14 continuous improvement 46 basic security headers.
 The app stores login state in the browser, so basic response hardening matters before public launch. We added conservative security headers for frame blocking, MIME sniffing protection, referrer trimming, browser permission lockdown, and HSTS. A full CSP is intentionally deferred because it can break chart/auth/app-shell flows if added too late without browser QA.
+
+### 2026-05-14 continuous improvement 47 payment copy reliability.
+The payment path is where trust is most fragile, so user-facing failure states must read like product support rather than internal infrastructure. The Pro pricing panel, checkout API, confirm API, native purchase helper, Supabase auth helper, and admin entitlement helper now use clear Korean copy for login, payment setup, purchase restoration, and entitlement delay states. A source scan for broken Korean patterns in `src` returned no matches, and billing smoke still verifies the important payment guards.

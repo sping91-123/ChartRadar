@@ -1481,3 +1481,9 @@
 - [x] Avoid strict CSP for now so chart, auth, and app shell flows are not broken late in launch prep.
 - [x] Add operations smoke guards for the security headers.
 - [x] Verify with operations smoke and production build.
+
+## 2026-05-14 continuous improvement 47 payment copy reliability.
+- [x] Re-check Pro pricing, checkout, confirm, mobile purchase, Supabase auth, and admin entitlement copy.
+- [x] Normalize payment failure messages so users see clear next steps instead of internal wording.
+- [x] Scan source files for mojibake-style broken Korean in user-facing code.
+- [x] Verify with lint, copy smoke, and billing smoke.

@@ -114,7 +114,7 @@ export async function POST(request: Request) {
   }
 
   if (!body.orderId || !amount) {
-    return NextResponse.json({ status: "rejected", message: "주문번호나 결제 금액이 부족합니다." }, { status: 400 });
+    return NextResponse.json({ status: "rejected", message: "주문번호와 결제 금액이 부족합니다." }, { status: 400 });
   }
 
   if (amount !== plan.billingAmount) {
@@ -167,13 +167,13 @@ export async function POST(request: Request) {
       status: "setup_required",
       planId: plan.id,
       orderId: body.orderId,
-      message: "결제는 확인했지만 Pro 기능을 여는 과정이 지연되고 있습니다. 고객센터로 문의해 주세요."
+      message: "결제는 확인됐지만 Pro 기능을 여는 과정이 지연되고 있습니다. 고객센터로 문의해 주세요."
     });
   }
 
   const payment = tossResult.payment;
   if (payment?.totalAmount !== plan.billingAmount || payment.orderId !== body.orderId) {
-    return NextResponse.json({ status: "rejected", message: "결제사 응답과 주문 정보가 일치하지 않습니다." }, { status: 400 });
+    return NextResponse.json({ status: "rejected", message: "결제 응답과 주문 정보가 일치하지 않습니다." }, { status: 400 });
   }
 
   if (payment.status && payment.status !== "DONE") {
@@ -193,7 +193,7 @@ export async function POST(request: Request) {
       status: "setup_required",
       planId: plan.id,
       orderId: body.orderId,
-      message: "결제는 확인했지만 Pro 기능을 여는 과정에서 문제가 발생했습니다. 고객센터로 문의해 주세요."
+      message: "결제는 확인됐지만 Pro 기능을 여는 과정에서 문제가 발생했습니다. 고객센터로 문의해 주세요."
     }, { status: 500 });
   }
 

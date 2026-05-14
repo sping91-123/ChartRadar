@@ -2,7 +2,17 @@
 // Pro 구독 플랜과 결제 시작 버튼을 보여주는 판매 패널입니다.
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, BellRing, Check, Crown, Loader2, Radar, ShieldCheck, Sparkles, TimerReset } from "lucide-react";
+import {
+  ArrowRight,
+  BellRing,
+  Check,
+  Crown,
+  Loader2,
+  Radar,
+  ShieldCheck,
+  Sparkles,
+  TimerReset
+} from "lucide-react";
 import { RadarAlertCenter } from "@/components/RadarAlertCenter";
 import { UsageMeterPanel } from "@/components/UsageMeterPanel";
 import {
@@ -25,43 +35,43 @@ type CheckoutState =
 const conversionPoints = [
   {
     icon: Radar,
-    title: "오늘 볼 대상부터 압축",
-    body: "상승률 목록을 훑는 대신 거래대금, 구조, 변동성, 뉴스 영향을 합쳐 먼저 확인할 자산을 줄여줍니다."
+    title: "오늘 볼 시장을 먼저 좁혀줍니다",
+    body: "여러 거래소와 차트를 오가며 확인하던 구조, 변동성, 뉴스 흐름을 한 화면에서 먼저 정리합니다."
   },
   {
     icon: Sparkles,
-    title: "근거를 행동 언어로 정리",
-    body: "차트와 뉴스가 따로 놀지 않게 우세 방향, 위험 요인, 다음 확인 조건을 한 번에 정리합니다."
+    title: "근거를 행동 언어로 바꿉니다",
+    body: "지금 강한 쪽, 조심해야 할 구간, 다음 확인 조건을 짧게 정리해 매매 전 판단 속도를 높입니다."
   },
   {
     icon: BellRing,
-    title: "놓치기 쉬운 변화를 감시",
-    body: "관심종목, 구조 변화, 뉴스 브리핑 업데이트를 매번 직접 찾아보지 않아도 따라갈 수 있게 만듭니다."
+    title: "놓치기 쉬운 변화를 계속 감시합니다",
+    body: "관심종목, 뉴스 브리핑, 레이더 알림 조건을 넓혀 장중에 다시 확인해야 할 대상을 줄여줍니다."
   }
 ];
 
 const valueRows = [
   {
     icon: TimerReset,
-    title: "아침에는 큰 흐름",
-    body: "매크로 일정, 시장 온도, 주요 자산 흐름을 먼저 보고 오늘 조심해야 할 구간을 정리합니다."
+    title: "장 시작 전 시장 정리",
+    body: "매크로 일정, 시장 온도, 주요 자산 흐름을 먼저 보고 오늘 조심해야 할 구간을 잡습니다."
   },
   {
     icon: ShieldCheck,
-    title: "장중에는 변화 감시",
-    body: "TOP 레이더, 관심종목, 알림 조건으로 지금 움직이는 자산과 변동성 높은 구간을 빠르게 확인합니다."
+    title: "장중 변화 감시",
+    body: "TOP 레이더와 관심종목 알림 조건으로 갑자기 좋아지거나 위험해지는 구간을 빠르게 확인합니다."
   },
   {
     icon: Crown,
-    title: "마감 전에는 복기",
-    body: "오늘 본 근거와 실제 움직임을 다음 매매에서 반복할 것과 버릴 것으로 나누기 쉽게 만듭니다."
+    title: "마감 전 복기 준비",
+    body: "오늘 본 근거와 실제 움직임을 다음 매매에서 반복하거나 피해야 할 기준으로 남길 수 있습니다."
   }
 ];
 
 const proDifferenceRows = [
-  "Basic은 하루 첫 점검에 맞춰져 있습니다. Pro는 장중에 레이더를 반복 실행하고 변화가 생긴 자산을 계속 따라가기 위한 작업 모드입니다.",
-  "Pro는 AI 브리핑, 관심종목, 알림 규칙의 한도를 넓혀 직접 찾아보는 시간을 줄이고 다시 확인할 자산을 놓치지 않게 돕습니다.",
-  "Chart Radar의 유료 가치는 더 많은 예측 문장이 아니라, 시장 구조, 뉴스, 매크로, 위험 요소를 한 화면에서 빠르게 좁혀보는 데 있습니다."
+  "Basic은 처음 확인용입니다. Pro는 장중에 여러 번 다시 확인하고, 관심종목과 알림까지 이어가는 작업 모드입니다.",
+  "Pro는 AI 브리핑, 관심종목, 알림 조건의 한도를 넓혀 직접 찾아보는 시간을 줄이고 중요한 변화를 놓치지 않게 돕습니다.",
+  "Chart Radar의 유료 가치는 더 많은 예측 문장이 아니라 시장 구조, 뉴스, 매크로, 위험 요소를 빠르게 종합해 보는 데 있습니다."
 ];
 
 function getFreeVsProRows(scope: BillingPageScope) {
@@ -84,7 +94,7 @@ function getFreeVsProRows(scope: BillingPageScope) {
   }
 
   return [
-    { label: "레이더 스캔", free: "코인 2회 · 글로벌 1회", pro: "코인 200회 · 글로벌 100회" },
+    { label: "레이더 스캔", free: "코인 2회, 글로벌 1회", pro: "코인 200회, 글로벌 100회" },
     { label: "AI 브리핑", free: "시장별 하루 1회", pro: "시장별 하루 30회 이상" },
     { label: "관심종목", free: "시장별 1개 저장", pro: "시장별 50개 이상 감시" },
     { label: "알림", free: "시장별 조건 1개", pro: "시장별 조건 20개 이상" }
@@ -107,23 +117,23 @@ const scopeCopy: Record<
 > = {
   all: {
     eyebrow: "Chart Radar Pro",
-    title: "매일 시장을 훑는 시간을 줄이고, 놓치기 쉬운 변화는 먼저 띄워드립니다.",
+    title: "매일 시장을 정리하는 시간을 줄이고, 놓치기 쉬운 변화는 먼저 보여드립니다.",
     body:
-      "Basic으로 핵심 흐름을 먼저 확인하고, Pro에서는 코인, 글로벌, AI 브리핑, 관심종목, 알림을 더 넉넉하게 사용합니다. 여러 시장을 매번 직접 뒤지는 대신 중요한 변화부터 좁혀보는 레이더입니다.",
+      "Basic으로 핵심 흐름을 먼저 확인하고, Pro에서는 코인, 글로벌, AI 브리핑, 관심종목, 알림을 더 넓게 사용합니다. 여러 시장을 직접 돌아다니는 시간을 줄이고 중요한 변화만 빠르게 모아보는 작업 공간입니다.",
     representativePrice: "월 24,900원",
-    representativeBody: "두 시장을 모두 보는 사용자에게 코인, 글로벌 시장, AI 브리핑, 관심종목, 알림을 하나로 묶었습니다.",
+    representativeBody: "코인과 글로벌 시장을 모두 보는 사용자에게 두 시장의 레이더, 뉴스, 브리핑, 알림을 하나로 묶었습니다.",
     highlightedPlanId: "bundle_monthly",
     freeHref: "/survival",
-    filterNotice: "전체 요금제를 보고 있습니다. 코인과 글로벌 시장을 모두 보면 All Market Pro가 유리합니다.",
+    filterNotice: "전체 요금제를 보고 있습니다. 코인과 글로벌 시장을 모두 보면 All Market Pro가 가장 효율적입니다.",
     priceAnchor: "코인과 글로벌을 따로 결제하는 것보다 월 4,900원을 줄이면서 두 시장을 함께 감시합니다."
   },
   crypto: {
     eyebrow: "Coin Radar Pro",
     title: "코인만 집중해서 본다면 Coin Pro, 전체 시장까지 함께 보려면 All Market Pro가 맞습니다.",
     body:
-      "BTC, ETH, 알트코인, 코인뉴스, 코인 알림을 중심으로 쓰는 사용자라면 Coin Pro로 충분합니다. 글로벌 시장까지 함께 확인한다면 All Market Pro가 더 유리합니다.",
+      "BTC, ETH, 알트코인, 코인 뉴스, 코인 알림을 중심으로 쓰는 사용자라면 Coin Pro로 충분합니다. 글로벌 시장까지 같이 확인한다면 All Market Pro가 더 효율적입니다.",
     representativePrice: "월 14,900원",
-    representativeBody: "코인 레이더, ICT 구조, 기술지표, 코인뉴스, 코인 알림을 코인 시장에 맞춰 엽니다.",
+    representativeBody: "코인 레이더, ICT 구조, 기술지표, 코인 뉴스, 코인 알림을 코인 시장에 맞춰 엽니다.",
     highlightedPlanId: "crypto_monthly",
     freeHref: "/survival",
     filterNotice: "코인 중심 사용자에게 필요한 요금제만 정리했습니다.",
@@ -133,9 +143,9 @@ const scopeCopy: Record<
     eyebrow: "Global Radar Pro",
     title: "미국주식, 해외선물, ETF와 매크로를 집중해서 본다면 Global Pro가 맞습니다.",
     body:
-      "미국주식, 해외선물, ETF, 지수, 원자재, 매크로 흐름을 중심으로 쓰는 사용자라면 Global Pro로 충분합니다. 코인까지 함께 확인한다면 All Market Pro가 더 유리합니다.",
+      "미국주식, 해외선물, ETF, 지수, 원자재와 매크로 흐름을 중심으로 쓰는 사용자라면 Global Pro로 충분합니다. 코인까지 함께 확인한다면 All Market Pro가 더 효율적입니다.",
     representativePrice: "월 14,900원",
-    representativeBody: "글로벌 레이더, 해외선물, 기술지표, 글로벌뉴스, 매크로 브리핑, 관심자산 알림을 한 화면으로 엽니다.",
+    representativeBody: "글로벌 레이더, 해외선물, 기술지표, 글로벌 뉴스, 매크로 브리핑, 관심자산 알림을 한 화면으로 엽니다.",
     highlightedPlanId: "stocks_monthly",
     freeHref: "/global",
     filterNotice: "글로벌 시장 중심 사용자에게 필요한 요금제만 정리했습니다.",
@@ -188,12 +198,11 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
   const freeVsProRows = getFreeVsProRows(marketScope);
 
   async function startCheckout(plan: BillingPlan) {
-    const planId = plan.id;
     if (isAuthLoading) {
       setCheckoutState({
         status: "message",
         tone: "info",
-        text: "계정을 확인하는 중입니다. 잠시 후 다시 눌러 주세요."
+        text: "계정 상태를 확인하는 중입니다. 잠시 후 다시 눌러 주세요."
       });
       return;
     }
@@ -202,26 +211,22 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
       setCheckoutState({
         status: "message",
         tone: "info",
-        text: "결제 후 Pro 기능을 바로 이용하려면 먼저 구글 로그인이 필요합니다. 로그인 후 다시 결제를 시작해 주세요."
+        text: "결제 후 Pro 기능을 바로 이용하려면 먼저 구글 로그인이 필요합니다. 로그인한 뒤 다시 결제를 시작해 주세요."
       });
       return;
     }
 
-    setCheckoutState({ status: "loading", planId });
+    setCheckoutState({ status: "loading", planId: plan.id });
 
     try {
       if (nativePurchaseAvailable) {
-        if (!user?.id) throw new Error("앱 구독을 연결하려면 로그인 사용자 정보를 먼저 확인해야 합니다.");
+        if (!user?.id) throw new Error("앱 구독을 연결하려면 로그인 정보를 먼저 확인해야 합니다.");
         const result = await purchaseNativePlan({
           plan,
           userId: user.id,
           accessToken: session.accessToken
         });
-        setCheckoutState({
-          status: "message",
-          tone: "info",
-          text: result.message
-        });
+        setCheckoutState({ status: "message", tone: "info", text: result.message });
         return;
       }
 
@@ -231,7 +236,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
           Authorization: `Bearer ${session.accessToken}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ planId, platform: "web" })
+        body: JSON.stringify({ planId: plan.id, platform: "web" })
       });
       const data = (await response.json().catch(() => ({}))) as {
         paymentUrl?: string;
@@ -239,7 +244,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
         error?: string;
       };
 
-      if (!response.ok) throw new Error(data.error ?? "결제창을 바로 열지 못했습니다. 잠시 뒤 다시 시도해 주세요.");
+      if (!response.ok) throw new Error(data.error ?? "결제창을 바로 열지 못했습니다. 잠시 후 다시 시도해 주세요.");
       if (data.paymentUrl) {
         window.location.href = data.paymentUrl;
         return;
@@ -248,7 +253,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
       setCheckoutState({
         status: "message",
         tone: "info",
-        text: data.message ?? "현재 결제창을 여는 중입니다. 잠시 후 다시 시도해 주세요."
+        text: data.message ?? "현재 결제창을 준비하는 중입니다. 잠시 후 다시 시도해 주세요."
       });
     } catch (error) {
       setCheckoutState({
@@ -266,7 +271,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
       setCheckoutState({
         status: "message",
         tone: "info",
-        text: "계정을 확인하는 중입니다. 잠시 후 다시 눌러 주세요."
+        text: "계정 상태를 확인하는 중입니다. 잠시 후 다시 눌러 주세요."
       });
       return;
     }
@@ -287,11 +292,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
         userId: user.id,
         accessToken: session.accessToken
       });
-      setCheckoutState({
-        status: "message",
-        tone: "info",
-        text: result.message
-      });
+      setCheckoutState({ status: "message", tone: "info", text: result.message });
     } catch (error) {
       setCheckoutState({
         status: "message",
@@ -309,19 +310,13 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
             <p className="inline-flex rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-xs font-black text-cyan-200">
               {copy.eyebrow}
             </p>
-            <h2 className="mt-4 text-3xl font-black tracking-normal text-white sm:text-4xl">
-              {copy.title}
-            </h2>
-            <p className="mt-4 text-sm leading-7 text-slate-300">
-              {copy.body}
-            </p>
+            <h2 className="mt-4 text-3xl font-black tracking-normal text-white sm:text-4xl">{copy.title}</h2>
+            <p className="mt-4 text-sm leading-7 text-slate-300">{copy.body}</p>
           </div>
           <div className="rounded-lg border border-white/10 bg-black/25 p-4 text-sm text-slate-300 lg:w-72">
             <p className="font-black text-white">대표 플랜</p>
             <p className="mt-2 whitespace-nowrap text-2xl font-black text-cyan-200 sm:text-3xl">{copy.representativePrice}</p>
-            <p className="mt-2 leading-6 text-slate-400">
-              {copy.representativeBody}
-            </p>
+            <p className="mt-2 leading-6 text-slate-400">{copy.representativeBody}</p>
             <Link
               href="#plans"
               className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-md bg-cyan-300 px-4 text-sm font-black text-slate-950 transition hover:bg-cyan-200"
@@ -351,7 +346,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
         <div className="rounded-lg border border-surface-line bg-surface-card p-4 text-sm leading-6 text-slate-300">
           <p className="font-black text-white">Basic과 Pro의 차이</p>
           <p className="mt-2 text-slate-400">
-            Basic은 첫 확인에 가깝고, Pro는 장중 반복 확인과 알림까지 이어가는 작업 공간입니다.
+            Basic은 처음 확인용입니다. Pro는 장중 반복 확인, 관심종목 감시, 알림 조건까지 이어지는 작업 공간입니다.
           </p>
         </div>
       </div>
@@ -388,9 +383,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
             <article
               key={plan.id}
               className={`relative rounded-lg border p-5 ${
-                isHighlighted
-                  ? "border-cyan-300 bg-cyan-300/10 shadow-glow"
-                  : "border-surface-line bg-surface-card"
+                isHighlighted ? "border-cyan-300 bg-cyan-300/10 shadow-glow" : "border-surface-line bg-surface-card"
               }`}
             >
               <div className="flex items-center justify-between gap-3">
@@ -435,9 +428,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
                   onClick={() => startCheckout(plan)}
                   disabled={checkoutState.status === "loading" || isAuthLoading}
                   className={`mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md px-4 text-sm font-black transition ${
-                    isHighlighted
-                      ? "bg-cyan-300 text-slate-950 hover:bg-cyan-200"
-                      : "bg-white text-slate-950 hover:bg-slate-200"
+                    isHighlighted ? "bg-cyan-300 text-slate-950 hover:bg-cyan-200" : "bg-white text-slate-950 hover:bg-slate-200"
                   } disabled:cursor-not-allowed disabled:opacity-60`}
                 >
                   {isLoading ? <Loader2 className="animate-spin" size={16} aria-hidden /> : <Crown size={16} aria-hidden />}
@@ -478,10 +469,12 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
       <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="rounded-lg border border-surface-line bg-surface-card p-5">
           <p className="text-xs font-black tracking-[0.2em] text-cyan-300">WHY PAY</p>
-          <h3 className="mt-2 text-xl font-black text-white">유료 상품의 핵심은 더 많은 예측 문장이 아니라 더 적은 누락입니다.</h3>
+          <h3 className="mt-2 text-xl font-black text-white">유료 상품의 핵심은 더 긴 글이 아니라 더 넓은 감시 범위입니다.</h3>
           <div className="mt-4 space-y-3">
             {proDifferenceRows.map((row) => (
-              <p key={row} className="text-sm leading-6 text-slate-400">{row}</p>
+              <p key={row} className="text-sm leading-6 text-slate-400">
+                {row}
+              </p>
             ))}
           </div>
         </div>
