@@ -1463,3 +1463,9 @@
 - [x] Keep admin and legacy paid grants separate from normal expiring subscription access.
 - [x] Add billing smoke guards for active subscription entitlement wiring.
 - [x] Verify with billing smoke, operations smoke, and production build.
+
+## 2026-05-14 continuous improvement 44 browser entitlement alignment.
+- [x] Make the browser auth hook also read active subscription rows.
+- [x] Keep the browser Pro label aligned with server entitlement rules.
+- [x] Add billing smoke guards for browser-side active subscription resolution.
+- [x] Verify with billing smoke and production build.

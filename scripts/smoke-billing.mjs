@@ -180,6 +180,8 @@ expectIncludes(files.usageMeterPanel, "marketScope?: BillingPageScope", "사용�
 expectIncludes(files.usageMeterPanel, "bucketMatchesScope", "사용량 패널 시장별 필터", "src/components/UsageMeterPanel.tsx");
 expectIncludes(files.usageMeterPanel, "id === \"stockRadar\"", "글로벌 사용량 필터", "src/components/UsageMeterPanel.tsx");
 expectIncludes(files.supabaseClient, "supabaseAuthRefreshEvent", "권한 갱신 이벤트 상수", "src/lib/supabase.ts");
+expectIncludes(files.supabaseAuthHook, "fetchSupabaseActiveSubscriptions", "브라우저 권한 활성 구독 조회", "src/lib/useSupabaseAuth.ts");
+expectIncludes(files.supabaseAuthHook, "resolveActiveSubscriptionPlan", "브라우저 권한 활성 플랜 우선 판정", "src/lib/useSupabaseAuth.ts");
 expectIncludes(files.supabaseAuthHook, "window.addEventListener(supabaseAuthRefreshEvent, refreshAuth)", "권한 갱신 이벤트 수신", "src/lib/useSupabaseAuth.ts");
 expectIncludes(files.checkoutConfirmationPanel, "window.dispatchEvent(new Event(supabaseAuthRefreshEvent))", "결제 성공 후 권한 재조회", "src/components/CheckoutConfirmationPanel.tsx");
 

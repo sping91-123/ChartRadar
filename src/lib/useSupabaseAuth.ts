@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   clearSupabaseSession,
+  fetchSupabaseActiveSubscriptions,
   fetchSupabaseProfile,
   fetchSupabaseUser,
   getSupabaseSession,
@@ -10,6 +11,7 @@ import {
   supabaseAuthRefreshEvent,
   type SupabaseProfile,
   type SupabaseSession,
+  type SupabaseSubscription,
   type SupabaseUser
 } from "@/lib/supabase";
 
@@ -34,9 +36,42 @@ function resolveSupabaseMetadataPlan(user: SupabaseUser): SupabaseProfile["plan"
   return user.app_metadata?.role === "admin" ? "admin" : null;
 }
 
-function applySupabaseAuthEntitlement(user: SupabaseUser, profile: SupabaseProfile | null) {
+function resolveActiveSubscriptionPlan(subscriptions: SupabaseSubscription[]): SupabaseProfile["plan"] | null {
+  const plans = subscriptions.map((subscription) => subscription.plan);
+  return (
+    [
+      "bundle_yearly",
+      "bundle_monthly",
+      "crypto_yearly",
+      "stocks_yearly",
+      "crypto_monthly",
+      "stocks_monthly"
+    ] as SupabaseProfile["plan"][]
+  ).find((plan) => plans.includes(plan)) ?? null;
+}
+
+function resolveLegacyPaidPlan(plan: SupabaseProfile["plan"] | null | undefined) {
+  return plan === "member" || plan === "premium" ? plan : null;
+}
+
+function applySupabaseAuthEntitlement(
+  user: SupabaseUser,
+  profile: SupabaseProfile | null,
+  subscriptions: SupabaseSubscription[]
+): SupabaseProfile | null {
   const metadataPlan = resolveSupabaseMetadataPlan(user);
-  if (!metadataPlan) return profile;
+  const activePlan = resolveActiveSubscriptionPlan(subscriptions);
+  const profilePlan = profile?.plan ?? null;
+  const resolvedPlan =
+    metadataPlan === "admin"
+      ? "admin"
+      : profilePlan === "admin"
+        ? "admin"
+        : activePlan ?? resolveLegacyPaidPlan(metadataPlan) ?? resolveLegacyPaidPlan(profilePlan);
+
+  if (!resolvedPlan) {
+    return profile ? { ...profile, plan: "free" as SupabaseProfile["plan"] } : profile;
+  }
 
   const now = new Date().toISOString();
   return {
@@ -44,7 +79,7 @@ function applySupabaseAuthEntitlement(user: SupabaseUser, profile: SupabaseProfi
     email: user.email ?? profile?.email ?? null,
     display_name: profile?.display_name ?? user.user_metadata?.name ?? user.user_metadata?.full_name ?? null,
     avatar_url: profile?.avatar_url ?? user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null,
-    plan: metadataPlan,
+    plan: resolvedPlan,
     created_at: profile?.created_at ?? now,
     updated_at: profile?.updated_at ?? now
   } satisfies SupabaseProfile;
@@ -90,15 +125,16 @@ export function useSupabaseAuth() {
 
       return Promise.all([
         fetchSupabaseUser(activeSession.accessToken),
-        fetchSupabaseProfile(activeSession.accessToken)
+        fetchSupabaseProfile(activeSession.accessToken),
+        fetchSupabaseActiveSubscriptions(activeSession.accessToken).catch(() => [])
       ]);
     }
 
     function applyAuthResult(result: Awaited<ReturnType<typeof loadAuth>>) {
         if (!isMounted || !result) return;
-        const [nextUser, nextProfile] = result;
+        const [nextUser, nextProfile, nextSubscriptions] = result;
         setUser(nextUser);
-        setProfile(applySupabaseAuthEntitlement(nextUser, nextProfile ?? null));
+        setProfile(applySupabaseAuthEntitlement(nextUser, nextProfile ?? null, nextSubscriptions));
     }
 
     function handleAuthError() {

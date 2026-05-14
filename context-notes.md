@@ -1296,3 +1296,6 @@ The native purchase helper expects the server subscription sync response to incl
 
 ### 2026-05-14 continuous improvement 43 active subscription entitlement.
 Paid API access should not rely only on `profiles.plan`, because that field can become stale after a subscription expires. The server entitlement resolver now also reads active `subscriptions` rows whose `current_period_end` is still in the future, then prefers a matching active paid plan for the requested market. Admin and legacy manually granted plans stay separate so owner access remains stable.
+
+### 2026-05-14 continuous improvement 44 browser entitlement alignment.
+The product UI should not show a paid state from a stale profile row while server APIs treat the account as Basic. The browser auth hook now follows the same broad rule as the server by checking active, non-expired subscription rows first, while keeping admin and legacy manual grants intact.
