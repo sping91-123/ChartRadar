@@ -26,6 +26,9 @@ function UsageRow({ state, isPaid }: { state: ReturnType<typeof getUsageBucketSt
   const activeRemaining = Math.max(0, activeLimit - state.used);
   const activePercent = Math.min(100, Math.round((state.used / activeLimit) * 100));
   const isOverActiveLimit = state.used >= activeLimit;
+  const limitCopy = isPaid
+    ? `Pro 기준 오늘 ${state.proDailyLimit}회까지 확인할 수 있습니다.`
+    : `Basic은 ${state.freeDailyLimit}회, Pro에서는 ${state.proDailyLimit}회까지 넓어집니다.`;
 
   return (
     <div className="rounded-md border border-white/10 bg-black/20 p-3">
@@ -49,7 +52,7 @@ function UsageRow({ state, isPaid }: { state: ReturnType<typeof getUsageBucketSt
       </div>
       <div className="mt-2 flex items-center justify-between text-[11px] font-bold text-slate-500">
         <span>오늘 남음 {activeRemaining}회</span>
-        <span>Basic {state.freeDailyLimit}회 · Pro {state.proDailyLimit}회</span>
+        <span className="text-right">{limitCopy}</span>
       </div>
     </div>
   );
