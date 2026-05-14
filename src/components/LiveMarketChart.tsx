@@ -47,6 +47,7 @@ import type { MarketBriefingInput } from "@/lib/ai/types";
 import { normalizePineDirection, parsePineSnapshot, pineDirectionForTimeframe, type PineSnapshot } from "@/lib/pineParity";
 import { createRemoteJournalEntry } from "@/lib/remoteJournal";
 import { getActiveSupabaseSession } from "@/lib/supabase";
+import { withSupabaseAuth } from "@/lib/authFetch";
 import { TechnicalRadarPanel } from "@/components/TechnicalRadarPanel";
 import { LiquidationPressurePanel } from "@/components/LiquidationPressurePanel";
 
@@ -1125,11 +1126,14 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
     setMarketBriefing({ status: "loading" });
 
     try {
-      const response = await fetch("/api/ai/market-briefing", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(marketBriefingInput)
-      });
+      const response = await fetch(
+        "/api/ai/market-briefing",
+        await withSupabaseAuth({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(marketBriefingInput)
+        })
+      );
       const payload = (await response.json().catch(() => ({}))) as {
         briefing?: string;
         model?: string;

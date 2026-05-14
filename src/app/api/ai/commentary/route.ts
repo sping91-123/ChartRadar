@@ -15,6 +15,7 @@ import { NextResponse } from "next/server";
 import { getAIProviderCandidates, AIProviderError, type CommentaryInput } from "@/lib/ai";
 import { generateFallbackCommentary } from "@/lib/ai/fallback";
 import { isBodyTooLarge, rateLimit } from "@/lib/server/rateLimit";
+import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -71,7 +72,12 @@ function isValidInput(value: unknown): value is CommentaryInput {
 }
 
 export async function POST(request: Request) {
-  const limit = await rateLimit(request, { key: "ai-commentary", limit: 30, windowMs: 10 * 60 * 1000 });
+  const entitlement = await getRequestEntitlement(request, "crypto");
+  const limit = await rateLimit(request, {
+    key: entitlementRateKey("ai-commentary", entitlement),
+    limit: entitlement.isPaid ? 150 : 30,
+    windowMs: 10 * 60 * 1000
+  });
   if (!limit.allowed) {
     return NextResponse.json(
       { error: "AI 코멘트 요청이 잠시 많습니다. 잠시 후 다시 시도해 주세요." },

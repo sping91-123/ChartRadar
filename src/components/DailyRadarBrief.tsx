@@ -28,6 +28,7 @@ import {
 import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { hasMarketEntitlement } from "@/lib/billing";
+import { withSupabaseAuth } from "@/lib/authFetch";
 
 interface MarketBoardItem {
   symbol: string;
@@ -284,7 +285,10 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
       const boardResponse = await fetch("/api/market-board", { cache: "no-store" });
       const scanResults = await Promise.allSettled(
         scanModes.map(async (mode) => {
-          const response = await fetch(`/api/scout?mode=${mode}&risk=radar&scope=${scope}`, { cache: "no-store" });
+          const response = await fetch(
+            `/api/scout?mode=${mode}&risk=radar&scope=${scope}`,
+            await withSupabaseAuth({ cache: "no-store" })
+          );
           const payload = (await response.json().catch(() => ({}))) as {
             setups?: ScoutSetup[];
             cachedAt?: number;

@@ -12,6 +12,7 @@ import {
   type RadarNewsMarket
 } from "@/lib/radarNews";
 import { rateLimit } from "@/lib/server/rateLimit";
+import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
 
 export const runtime = "nodejs";
 
@@ -510,16 +511,6 @@ async function generateNewsBriefing(items: RadarNewsItem[], market: RadarNewsMar
 }
 
 export async function GET(request: Request) {
-  const limited = await rateLimit(request, {
-    key: "radar-news",
-    limit: 60,
-    windowMs: 60_000
-  });
-
-  if (!limited.allowed) {
-    return NextResponse.json({ error: "뉴스 레이더 요청이 잠시 많습니다.", retryAfter: limited.retryAfter }, { status: 429 });
-  }
-
   const { searchParams } = new URL(request.url);
   const rawMarket = searchParams.get("market") ?? "crypto";
   if (rawMarket !== "crypto" && rawMarket !== "stocks") {
@@ -527,7 +518,19 @@ export async function GET(request: Request) {
   }
 
   const market: RadarNewsMarket = rawMarket;
-  const briefingMode = searchParams.get("briefing") === "0" ? "preview" : "full";
+  const entitlement = await getRequestEntitlement(request, market);
+  const limited = await rateLimit(request, {
+    key: entitlementRateKey(`radar-news:${market}`, entitlement),
+    limit: entitlement.isPaid ? 60 : 12,
+    windowMs: entitlement.isPaid ? 60_000 : 10 * 60_000
+  });
+
+  if (!limited.allowed) {
+    return NextResponse.json({ error: "뉴스 레이더 요청이 잠시 많습니다.", retryAfter: limited.retryAfter }, { status: 429 });
+  }
+
+  const requestedBriefingMode = searchParams.get("briefing") === "0" ? "preview" : "full";
+  const briefingMode = entitlement.isPaid ? requestedBriefingMode : "preview";
   const feeds = market === "stocks" ? STOCK_FEEDS : CRYPTO_FEEDS;
   const now = Date.now();
 

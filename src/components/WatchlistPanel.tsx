@@ -17,6 +17,7 @@ import { watchlistSymbolPool, type ScoutSetup } from "@/lib/setupScout";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
 import { hasMarketEntitlement } from "@/lib/billing";
+import { withSupabaseAuth } from "@/lib/authFetch";
 import {
   addToWatchlist,
   getWatchlistLimit,
@@ -274,12 +275,15 @@ export function WatchlistPanel() {
 
     setScanState({ status: "loading" });
     try {
-      const res = await fetch("/api/watchlist-scan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ symbols }),
-        cache: "no-store"
-      });
+      const res = await fetch(
+        "/api/watchlist-scan",
+        await withSupabaseAuth({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ symbols }),
+          cache: "no-store"
+        })
+      );
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(data.error ?? "관심코인 레이더를 잠시 확인하지 못했습니다. 잠시 뒤 다시 확인해 주세요.");

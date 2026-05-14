@@ -1276,3 +1276,8 @@ Legal wording belongs in legal pages, not in the main product flow. The footer a
 
 ### 2026-05-14 continuous improvement 37 launch review smoke.
 The product needs a repeatable scorecard instead of subjective "does it feel ready" checks. A launch review smoke now scores the key paid-product areas statically, and it will run inside the full smoke chain so regressions are visible before release.
+
+### 2026-05-14 continuous improvement 38 server-side Pro entitlement wiring.
+Client-only usage limits are not enough for a paid product. The browser now sends the Supabase access token to the key high-cost APIs, and the server resolves the user plan before choosing rate-limit keys, request ceilings, and result windows. Basic still works without login, but Pro users now get a measurable backend difference instead of only a local UI difference.
+
+The scanner UI should not hide that backend difference. Paid users skip the smaller Basic browser cache and can see a wider candidate window, while Basic keeps the tighter first-check list.

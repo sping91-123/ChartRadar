@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { chartTimeframes, type Candle, type ChartTimeframe, type TradingMode } from "@/lib/marketAnalysis";
 import type { ScoutSetup } from "@/lib/setupScout";
 import { analyzeTechnicalRadar } from "@/lib/technicalRadar";
+import { withSupabaseAuth } from "@/lib/authFetch";
 import {
   findSetupAlertMatches,
   readSetupAlertMatches,
@@ -138,7 +139,7 @@ async function fetchCurrentSetups(market: SetupAlertMarket, presets: ReturnType<
 
   const results = await Promise.allSettled(
     scanModes.map(async (mode) => {
-      const response = await fetch(`/api/scout?mode=${mode}&risk=radar&scope=all`, { cache: "no-store" });
+      const response = await fetch(`/api/scout?mode=${mode}&risk=radar&scope=all`, await withSupabaseAuth({ cache: "no-store" }));
       const payload = (await response.json().catch(() => ({}))) as { setups?: ScoutSetup[] };
       if (!response.ok || !Array.isArray(payload.setups)) return [];
       return payload.setups;

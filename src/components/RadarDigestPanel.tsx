@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Brain, HelpCircle, Loader2, Newspaper, Radar, Sparkles } from "lucide-react";
 import type { ScoutSetup } from "@/lib/setupScout";
 import type { TradingMode } from "@/lib/marketAnalysis";
+import { withSupabaseAuth } from "@/lib/authFetch";
 
 interface MarketBoardItem {
   symbol: string;
@@ -100,7 +101,7 @@ export function RadarDigestPanel() {
     try {
       const [boardResponse, ...scanResponses] = await Promise.all([
         fetch("/api/market-board", { cache: "no-store" }),
-        ...scanModes.map((mode) => fetch(`/api/scout?mode=${mode}&risk=radar`, { cache: "no-store" }))
+        ...scanModes.map(async (mode) => fetch(`/api/scout?mode=${mode}&risk=radar`, await withSupabaseAuth({ cache: "no-store" })))
       ]);
 
       const boardPayload = (await boardResponse.json().catch(() => ({}))) as {

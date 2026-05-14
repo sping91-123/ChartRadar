@@ -11,6 +11,7 @@ import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { hasMarketEntitlement } from "@/lib/billing";
 import { getWatchlistLimit } from "@/lib/watchlist";
+import { withSupabaseAuth } from "@/lib/authFetch";
 
 const fallbackUniverse: StockSymbolInfo[] = [
   { symbol: "NQ=F", name: "Nasdaq 100 Futures", group: "futures" },
@@ -343,9 +344,10 @@ export function StockRadarApp() {
 
     setState({ status: "loading" });
     try {
-      const response = await fetch(`/api/stocks/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}`, {
-        cache: "no-store"
-      });
+      const response = await fetch(
+        `/api/stocks/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}`,
+        await withSupabaseAuth({ cache: "no-store" })
+      );
       const data = (await response.json().catch(() => ({}))) as {
         candles?: Candle[];
         dataSource?: string;

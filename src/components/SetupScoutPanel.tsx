@@ -27,6 +27,7 @@ import type { TradingMode } from "@/lib/marketAnalysis";
 import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { hasMarketEntitlement } from "@/lib/billing";
+import { withSupabaseAuth } from "@/lib/authFetch";
 
 type ScanState =
   | { status: "idle" }
@@ -214,11 +215,12 @@ function useCommentary(setup: ScoutSetup): CommentaryState {
     let cancelled = false;
     setState({ status: "loading" });
 
-    fetch("/api/ai/commentary", {
+    withSupabaseAuth({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(buildCommentaryInput(setup))
     })
+      .then((init) => fetch("/api/ai/commentary", init))
       .then(async (res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json() as Promise<{ commentary: string; cached: boolean }>;
@@ -667,7 +669,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
     if (!excludeMajor) {
       window.localStorage.setItem(scoutRiskProfileStorageKey, riskProfile);
     }
-    if (!force) {
+    if (!force && !isPaid) {
       const cachedScalp = readScoutCache("scalp", riskProfile, scoutScope);
       const cachedSwing = readScoutCache("swing", riskProfile, scoutScope);
       if (cachedScalp && cachedSwing) {
@@ -690,7 +692,10 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
     setState({ status: "loading" });
     try {
       const fetchMode = async (mode: TradingMode) => {
-        const res = await fetch(`/api/scout?mode=${mode}&risk=${riskProfile}&scope=${scoutScope}`, { cache: "no-store" });
+        const res = await fetch(
+          `/api/scout?mode=${mode}&risk=${riskProfile}&scope=${scoutScope}`,
+          await withSupabaseAuth({ cache: "no-store" })
+        );
         if (!res.ok) {
           const data = (await res.json().catch(() => ({}))) as { error?: string };
           throw new Error(data.error ?? "레이더 후보를 잠시 확인하지 못했습니다. 잠시 뒤 다시 확인해 주세요.");
@@ -723,7 +728,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
     return formatCachedAt(state.cachedAt);
   }, [state]);
 
-  const visibleLimit = riskProfile === "radar" ? 6 : 3;
+  const visibleLimit = isPaid ? (riskProfile === "radar" ? 12 : 6) : riskProfile === "radar" ? 6 : 3;
   const rankedSetups = state.status === "ready" ? rankScoutSetups(state.setups) : [];
   const visibleSetups = state.status === "ready" ? uniqueTopSetupsBySymbol(state.setups, visibleLimit) : [];
 

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { AIProviderError, getAIProviderCandidates, type MarketBriefingInput } from "@/lib/ai";
 import { generateFallbackMarketBriefing } from "@/lib/ai/fallback";
 import { isBodyTooLarge, rateLimit } from "@/lib/server/rateLimit";
+import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,7 +64,12 @@ function cacheKey(input: MarketBriefingInput) {
 }
 
 export async function POST(request: Request) {
-  const limit = await rateLimit(request, { key: "ai-market-briefing", limit: 12, windowMs: 10 * 60 * 1000 });
+  const entitlement = await getRequestEntitlement(request, "crypto");
+  const limit = await rateLimit(request, {
+    key: entitlementRateKey("ai-market-briefing", entitlement),
+    limit: entitlement.isPaid ? 60 : 12,
+    windowMs: 10 * 60 * 1000
+  });
   if (!limit.allowed) {
     return NextResponse.json(
       { error: "AI 브리핑 요청이 잠시 많습니다. 잠시 후 다시 시도해 주세요." },

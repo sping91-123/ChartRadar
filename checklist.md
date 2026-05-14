@@ -1431,3 +1431,10 @@
 - [x] Add a static launch review score covering brand, market split, billing, paid value, API guards, copy, macro, news, alerts, mobile, visual system, and operations.
 - [x] Add the launch review to the full smoke chain.
 - [x] Verify with launch smoke, lint, and full smoke.
+
+## 2026-05-14 continuous improvement 38 server-side Pro entitlement wiring.
+- [x] Add a server helper that reads the logged-in user from the request token and resolves the current plan.
+- [x] Send the browser login token with scanner, watchlist, AI briefing, news, and global market requests.
+- [x] Give authenticated Pro users higher server-side request ceilings and larger scanner/watchlist result windows.
+- [x] Make paid scanner screens show the wider Pro candidate window instead of reusing the smaller Basic cache.
+- [x] Verify with lint, build, and smoke checks.

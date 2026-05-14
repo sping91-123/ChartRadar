@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { scanAllSetups, topSetups, type ScoutRiskProfile, type ScoutSetup } from "@/lib/setupScout";
 import { getLiquidCryptoSymbols } from "@/lib/cryptoUniverse";
 import { rateLimit } from "@/lib/server/rateLimit";
+import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
 import type { TradingMode } from "@/lib/marketAnalysis";
 
 export const runtime = "nodejs";
@@ -63,7 +64,12 @@ async function getScannerSymbols(scope: ScoutScope) {
 }
 
 export async function GET(request: Request) {
-  const limit = await rateLimit(request, { key: "scout", limit: 20, windowMs: 5 * 60 * 1000 });
+  const entitlement = await getRequestEntitlement(request, "crypto");
+  const limit = await rateLimit(request, {
+    key: entitlementRateKey("scout", entitlement),
+    limit: entitlement.isPaid ? 120 : 20,
+    windowMs: 5 * 60 * 1000
+  });
   if (!limit.allowed) {
     return NextResponse.json(
       { error: "레이더 요청이 잠시 많습니다. 잠시 후 다시 시도해 주세요." },
@@ -82,7 +88,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const cacheKey = `${mode}:${riskProfile}:${scope}`;
+  const cacheKey = `${mode}:${riskProfile}:${scope}:${entitlement.isPaid ? "pro" : "basic"}`;
   const now = Date.now();
   const cache = cacheByKey.get(cacheKey) ?? null;
 
@@ -91,7 +97,8 @@ export async function GET(request: Request) {
     return NextResponse.json({
       setups: cache.setups,
       cachedAt: cache.cachedAt,
-      cached: true
+      cached: true,
+      entitlement: { isPaid: entitlement.isPaid, plan: entitlement.plan }
     });
   }
 
@@ -101,7 +108,8 @@ export async function GET(request: Request) {
       .then((symbols) => scanAllSetups({ mode, riskProfile, symbols }))
       .then((all) => {
         const scoped = all.filter((setup) => setupInScope(setup, scope));
-        const top = topSetups(scoped, riskProfile === "radar" ? 6 : 3);
+        const topLimit = entitlement.isPaid ? (riskProfile === "radar" ? 12 : 6) : riskProfile === "radar" ? 6 : 3;
+        const top = topSetups(scoped, topLimit);
         cacheByKey.set(cacheKey, { setups: top, cachedAt: Date.now() });
         return top;
       })
@@ -116,7 +124,8 @@ export async function GET(request: Request) {
     return NextResponse.json({
       setups,
       cachedAt: cacheByKey.get(cacheKey)?.cachedAt ?? Date.now(),
-      cached: false
+      cached: false,
+      entitlement: { isPaid: entitlement.isPaid, plan: entitlement.plan }
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "레이더 자동 스캔에 실패했습니다.";

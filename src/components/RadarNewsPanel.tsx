@@ -13,6 +13,7 @@ import {
 import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { hasMarketEntitlement } from "@/lib/billing";
+import { withSupabaseAuth } from "@/lib/authFetch";
 
 type NewsPayload = {
   updatedAt: number;
@@ -208,7 +209,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
   const fetchNewsPayload = useCallback(
     async (mode: "full" | "preview") => {
       const url = mode === "preview" ? `/api/radar-news?market=${market}&briefing=0` : `/api/radar-news?market=${market}`;
-      const response = await fetch(url, { cache: "no-store" });
+      const response = await fetch(url, await withSupabaseAuth({ cache: "no-store" }));
       const data = (await response.json()) as NewsPayload;
       if (!response.ok) throw new Error(data.error ?? "레이더 뉴스 브리핑을 잠시 확인하지 못했습니다.");
       return data;

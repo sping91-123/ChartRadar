@@ -13,12 +13,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { scanAllSetups, type ScoutSetup } from "@/lib/setupScout";
 import { isLikelyUsdtPerpSymbol } from "@/lib/cryptoUniverse";
 import { isBodyTooLarge, rateLimit } from "@/lib/server/rateLimit";
+import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const CACHE_TTL_MS = 3 * 60 * 1000;
-const MAX_SYMBOLS = 10;
+const BASIC_MAX_SYMBOLS = 10;
+const PRO_MAX_SYMBOLS = 50;
 
 interface CacheEntry {
   setups: ScoutSetup[];
@@ -34,7 +36,12 @@ function makeCacheKey(symbols: string[]): string {
 }
 
 export async function POST(req: NextRequest) {
-  const limit = await rateLimit(req, { key: "watchlist-scan", limit: 20, windowMs: 5 * 60 * 1000 });
+  const entitlement = await getRequestEntitlement(req, "crypto");
+  const limit = await rateLimit(req, {
+    key: entitlementRateKey("watchlist-scan", entitlement),
+    limit: entitlement.isPaid ? 100 : 20,
+    windowMs: 5 * 60 * 1000
+  });
   if (!limit.allowed) {
     return NextResponse.json(
         { error: "관심코인 레이더 요청이 잠시 많습니다. 잠시 후 다시 시도해 주세요." },
@@ -70,10 +77,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const symbols = (rawSymbols as string[]).slice(0, MAX_SYMBOLS);
+  const maxSymbols = entitlement.isPaid ? PRO_MAX_SYMBOLS : BASIC_MAX_SYMBOLS;
+  const symbols = (rawSymbols as string[]).slice(0, maxSymbols);
 
   if (symbols.length === 0) {
-    return NextResponse.json({ setups: [], cachedAt: Date.now(), cached: false });
+    return NextResponse.json({ setups: [], cachedAt: Date.now(), cached: false, maxSymbols });
   }
 
   const key = makeCacheKey(symbols);
@@ -82,7 +90,7 @@ export async function POST(req: NextRequest) {
   // 캐시 확인.
   const cached = cacheMap.get(key);
   if (cached && now - cached.cachedAt < CACHE_TTL_MS) {
-    return NextResponse.json({ setups: cached.setups, cachedAt: cached.cachedAt, cached: true });
+    return NextResponse.json({ setups: cached.setups, cachedAt: cached.cachedAt, cached: true, maxSymbols });
   }
 
   // thundering-herd 방지.
@@ -105,7 +113,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       setups,
       cachedAt: entry?.cachedAt ?? Date.now(),
-      cached: false
+      cached: false,
+      maxSymbols,
+      entitlement: { isPaid: entitlement.isPaid, plan: entitlement.plan }
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "레이더 자동 스캔에 실패했습니다.";

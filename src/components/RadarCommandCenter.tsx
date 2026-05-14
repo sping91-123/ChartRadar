@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Activity, ArrowDownRight, ArrowUpRight, Loader2, Radar, RefreshCw, ShieldAlert } from "lucide-react";
 import type { TradingMode } from "@/lib/marketAnalysis";
 import type { ScoutSetup } from "@/lib/setupScout";
+import { withSupabaseAuth } from "@/lib/authFetch";
 
 type RadarState =
   | { status: "idle" }
@@ -140,7 +141,7 @@ export function RadarCommandCenter() {
     try {
       const results = await Promise.all(
         modes.map(async (mode) => {
-          const response = await fetch(`/api/scout?mode=${mode}&risk=radar`, { cache: "no-store" });
+          const response = await fetch(`/api/scout?mode=${mode}&risk=radar`, await withSupabaseAuth({ cache: "no-store" }));
           const payload = (await response.json().catch(() => ({}))) as {
             setups?: ScoutSetup[];
             cachedAt?: number;
