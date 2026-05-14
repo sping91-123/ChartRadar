@@ -219,6 +219,6 @@ export async function GET(request: Request) {
     if (cached) {
       return NextResponse.json({ report: cached.report, cachedAt: cached.cachedAt, cached: true, stale: true });
     }
-    return NextResponse.json({ error: "청산 압력 데이터를 불러오지 못했습니다." }, { status: 500 });
+    return NextResponse.json({ error: "청산 압력 흐름을 잠시 확인하지 못했습니다." }, { status: 500 });
   }
 }

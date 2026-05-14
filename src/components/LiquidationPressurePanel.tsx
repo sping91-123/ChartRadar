@@ -71,7 +71,7 @@ function dominantClasses(side: LiquidationPressureSide) {
 
 function oiInterpretation(report: LiquidationPressureReport) {
   const change = report.openInterestChangePercent;
-  if (change === null) return "OI 데이터를 확인하지 못했습니다.";
+  if (change === null) return "미결제약정 흐름은 아직 확인되지 않았습니다.";
   if (change > 2) return "미결제약정이 빠르게 늘고 있어 새 포지션이 들어오는 장입니다. 방향이 맞아도 흔들림이 커질 수 있습니다.";
   if (change > 0.3) return "미결제약정이 소폭 늘고 있습니다. 추세가 이어지는지 체결 쏠림과 함께 보세요.";
   if (change < -1) return "미결제약정이 줄고 있어 포지션 정리가 진행 중입니다. 추격보다는 다음 구조 형성을 기다리는 편이 좋습니다.";
@@ -81,7 +81,7 @@ function oiInterpretation(report: LiquidationPressureReport) {
 function takerInterpretation(report: LiquidationPressureReport) {
   const buy = report.takerFlow.buyPercent;
   const sell = report.takerFlow.sellPercent;
-  if (buy === null || sell === null) return "체결 쏠림 데이터를 확인하지 못했습니다.";
+  if (buy === null || sell === null) return "체결 쏠림은 아직 확인되지 않았습니다.";
   if (buy >= sell + 8) return "시장가 매수가 더 우세합니다. 다만 과열 구간에서는 매수 쏠림이 오히려 추격 위험이 될 수 있습니다.";
   if (sell >= buy + 8) return "시장가 매도가 더 우세합니다. 다만 지지 구간 근처에서는 매도 쏠림 후 반등도 조심해야 합니다.";
   return "매수와 매도 체결이 크게 한쪽으로 기울지 않았습니다.";
@@ -129,13 +129,13 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
         };
 
         if (!response.ok || !payload.report) {
-          throw new Error(payload.error ?? "청산 압력 데이터를 불러오지 못했습니다.");
+          throw new Error(payload.error ?? "청산 압력 흐름을 잠시 확인하지 못했습니다.");
         }
 
         if (alive) setState({ status: "ready", report: payload.report, cached: Boolean(payload.cached) });
       } catch (error) {
         if (!alive || controller.signal.aborted) return;
-        setState({ status: "error", message: error instanceof Error ? error.message : "청산 압력 데이터를 불러오지 못했습니다." });
+        setState({ status: "error", message: error instanceof Error ? error.message : "청산 압력 흐름을 잠시 확인하지 못했습니다." });
       }
     }
 
@@ -174,7 +174,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
         <div className="flex items-start gap-3">
           <AlertTriangle size={18} aria-hidden />
           <div>
-            <p className="text-sm font-black">청산 압력 데이터를 불러오지 못했습니다.</p>
+            <p className="text-sm font-black">청산 압력 흐름을 잠시 확인하지 못했습니다.</p>
             <p className="mt-1 text-xs leading-5 opacity-80">{state.message}</p>
           </div>
         </div>
