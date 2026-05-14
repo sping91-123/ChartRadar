@@ -1143,7 +1143,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
     } catch (briefingError) {
       setMarketBriefing({
         status: "error",
-        message: briefingError instanceof Error ? briefingError.message : "AI 종합 피드백 생성에 실패했습니다."
+        message: briefingError instanceof Error ? briefingError.message : "AI 종합 피드백을 불러오지 못했습니다. 잠시 뒤 다시 시도해 주세요."
       });
     }
   }, [marketBriefingInput]);
@@ -1756,7 +1756,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
         window.setTimeout(() => setSavedMessage(""), 1800);
         return;
       } catch {
-        setSavedMessage("계정 저장에 실패해 이 기기 복기에 저장했습니다.");
+        setSavedMessage("계정 저장이 잠시 지연되어 이 기기 복기에 먼저 저장했습니다.");
       }
     }
 

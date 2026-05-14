@@ -84,7 +84,7 @@ export function CheckoutConfirmationPanel({ orderId, paymentKey, amount, planId 
         if (!response.ok || payload.status === "rejected") {
           setState({
             status: "error",
-            message: payload.message ?? "결제 승인 확인에 실패했습니다."
+            message: payload.message ?? "결제 승인 상태를 바로 확인하지 못했습니다. 잠시 뒤 다시 확인해 주세요."
           });
           return;
         }

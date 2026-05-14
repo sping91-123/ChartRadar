@@ -349,7 +349,7 @@ export function StockRadarApp() {
       };
 
       if (Array.isArray(data.universe) && data.universe.length) setUniverse(data.universe);
-      if (!response.ok) throw new Error(data.error ?? `요청 실패 (${response.status})`);
+      if (!response.ok) throw new Error(data.error ?? `요청을 처리하지 못했습니다. 잠시 뒤 다시 확인해 주세요. (${response.status})`);
       if (!Array.isArray(data.candles) || data.candles.length === 0) throw new Error("캔들 데이터가 비어 있습니다.");
 
       setState({

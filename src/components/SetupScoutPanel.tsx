@@ -509,7 +509,7 @@ function SetupCard({
           : saveState === "saved"
             ? "복기에 저장됨"
             : saveState === "error"
-              ? "저장 실패"
+              ? "기기 저장"
               : "레이더 저장"}
       </button>
 
@@ -708,7 +708,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
       });
       recordUsageEvent("radarScan");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "레이더 판독에 실패했습니다.";
+      const message = error instanceof Error ? error.message : "레이더 판독을 불러오지 못했습니다. 잠시 뒤 다시 확인해 주세요.";
       setState({ status: "error", message });
     }
   }, [excludeMajor, isPaid, riskProfile, scoutScope]);

@@ -44,9 +44,9 @@ export default function CheckoutFailPage({ searchParams }: CheckoutFailPageProps
             </div>
             <div className="rounded-md border border-amber-500/20 bg-white/70 p-4 dark:border-white/10 dark:bg-black/20">
               <HelpCircle className="text-amber-300" size={19} aria-hidden />
-              <p className="mt-3 font-black text-slate-950 dark:text-white">오류 정보</p>
+              <p className="mt-3 font-black text-slate-950 dark:text-white">결제 안내</p>
               <p className="mt-2 break-all text-sm leading-6 text-slate-700 dark:text-amber-100/80">
-                {errorMessage ?? errorCode ?? "반복되면 화면에 표시된 결제 오류 문구를 보관해 주세요."}
+                {errorMessage ?? errorCode ?? "반복되면 화면에 표시된 문구를 고객센터에 알려 주세요."}
               </p>
             </div>
           </div>

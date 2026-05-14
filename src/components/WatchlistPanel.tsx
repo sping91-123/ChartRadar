@@ -282,13 +282,13 @@ export function WatchlistPanel() {
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(data.error ?? `요청 실패 (${res.status})`);
+        throw new Error(data.error ?? `요청을 처리하지 못했습니다. 잠시 뒤 다시 확인해 주세요. (${res.status})`);
       }
       const data = (await res.json()) as { setups: ScoutSetup[]; cachedAt: number };
       setScanState({ status: "ready", setups: data.setups, cachedAt: data.cachedAt });
       recordUsageEvent("watchlistScan");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "레이더 판독에 실패했습니다.";
+      const message = error instanceof Error ? error.message : "레이더 판독을 불러오지 못했습니다. 잠시 뒤 다시 확인해 주세요.";
       setScanState({ status: "error", message });
     }
   }, [isPaid]);
