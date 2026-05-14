@@ -191,7 +191,8 @@ expectIncludes(healthRoute, "NEXT_PUBLIC_REVENUECAT_ANDROID_API_KEY", "헬스체
 expectIncludes(healthRoute, "REVENUECAT_REST_API_KEY", "헬스체크 앱 구독 검증 기준", "src/app/api/health/route.ts");
 expectIncludes(healthRoute, "readyForAndroidLaunch", "헬스체크 Android 출시 준비 상태", "src/app/api/health/route.ts");
 expectIncludes(healthRoute, "macroStaleAfterHours", "헬스체크 매크로 신선도 기준", "src/app/api/health/route.ts");
-expectIncludes(healthRoute, "hasFreeOfficialMacroProvider", "헬스체크 공식 매크로 제공자", "src/app/api/health/route.ts");
+expectIncludes(healthRoute, "hasAutomaticMacroRefresh", "헬스체크 매크로 자동 갱신 기준", "src/app/api/health/route.ts");
+expectIncludes(healthRoute, "macroAutomaticRefresh", "헬스체크 매크로 자동 갱신 상태", "src/app/api/health/route.ts");
 expectIncludes(healthRoute, "macroProvider", "헬스체크 매크로 제공자 상태", "src/app/api/health/route.ts");
 expectIncludes(healthRoute, "readyForPaidLaunch", "헬스체크 유료 출시 준비 상태", "src/app/api/health/route.ts");
 expectIncludes(healthRoute, "warnings", "헬스체크 운영 경고 목록", "src/app/api/health/route.ts");

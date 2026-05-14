@@ -73,16 +73,17 @@ const checks = [
     weight: 8,
     pass:
       exists("scripts/smoke-api.mjs") &&
+      includes("scripts/smoke-api.mjs", "expectedText") &&
       includes("src/lib/server/rateLimit.ts", "Upstash") &&
       exists("src/lib/server/requestEntitlement.ts") &&
       exists("src/lib/authFetch.ts") &&
       includes("src/app/api/scout/route.ts", "getRequestEntitlement"),
-    detail: "공개 API 입력 검증과 rate limit 안전장치가 있습니다."
+    detail: "공개 API 입력 검증, 응답 문구 검증, rate limit 안전장치가 있습니다."
   },
   {
     area: "Copy Quality",
     weight: 8,
-    pass: exists("scripts/smoke-copy.mjs") && !/맛보는 용도|샘플|신호가 아니/.test(sourceText),
+    pass: exists("scripts/smoke-copy.mjs") && !/맛보는 용도|샘플|신호가 아니|용도입니다|준비하는 중/.test(sourceText),
     detail: "주요 화면에서 약한 상품 문구를 자동 검사합니다."
   },
   {

@@ -1314,3 +1314,9 @@ Basic should not sound like a throwaway preview. Usage copy now says Basic check
 
 ### 2026-05-14 continuous improvement 49 API response copy smoke.
 Public API validation should not only return the right HTTP status; it should also return Korean, user-facing guidance that makes sense inside the product. The API smoke now verifies key response text for AI, scanner, news, candle, liquidation, watchlist, and billing validation failures.
+
+### 2026-05-14 continuous improvement 50 launch score guard tightening.
+The launch score should not stay green if the API smoke only checks status codes or if weak product phrases return. The review now requires response-copy smoke coverage and blocks the same weak wording patterns that hurt paid-product confidence.
+
+### 2026-05-14 continuous improvement 51 macro health honesty.
+Macro freshness is a daily-trust feature, so the health check should not treat curated static schedules as automatically safe forever. The health endpoint now reports whether macro data refreshed automatically and marks stale curated schedules as an operational warning.

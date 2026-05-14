@@ -1496,3 +1496,12 @@
 ## 2026-05-14 continuous improvement 49 API response copy smoke.
 - [x] Extend API smoke checks beyond status codes to verify user-facing error copy.
 - [x] Cover AI, scanner, radar news, global candles, liquidation pressure, watchlist, and billing validation messages.
+
+## 2026-05-14 continuous improvement 50 launch score guard tightening.
+- [x] Make the launch review require API response text smoke checks.
+- [x] Make the launch review fail on weak product copy phrases that copy smoke now blocks.
+
+## 2026-05-14 continuous improvement 51 macro health honesty.
+- [x] Replace optimistic macro readiness with automatic-refresh and freshness based readiness.
+- [x] Add health output for macro automatic refresh state.
+- [x] Update operations smoke to guard the stricter macro health rule.

@@ -76,8 +76,8 @@ export async function GET() {
   const missingPlanPaymentLinks = planPaymentLinks.filter((item) => !item.configured).map((item) => item.planId);
   const fallbackPlanPaymentLinks = planPaymentLinks.filter((item) => item.usesFallback).map((item) => item.planId);
   const isMacroStale = macroAgeHours === null ? true : macroAgeHours > macroStaleAfterHours;
-  const hasFreeOfficialMacroProvider = true;
-  const macroReady = hasFreeOfficialMacroProvider || !isMacroStale;
+  const hasAutomaticMacroRefresh = macroCalendarPayload.isAutomatic;
+  const macroReady = hasAutomaticMacroRefresh || !isMacroStale;
   const coreReady = hasSupabaseUrl && hasSupabaseKey && hasAIProvider && macroReady;
   const readyForWebPaidLaunch = coreReady && hasSiteUrl && hasPaymentProvider && paymentLinksReady;
   const readyForAndroidLaunch = coreReady && hasSiteUrl && hasRevenueCatAndroid && hasRevenueCatRest && hasSupabaseAdmin;
@@ -90,7 +90,7 @@ export async function GET() {
     hasPaymentProvider || hasAppPaymentProvider ? null : "웹 결제 또는 앱 구독 결제 키가 아직 연결되지 않았습니다.",
     paymentLinksReady || readyForAndroidLaunch || readyForIosLaunch ? null : `웹 플랜별 결제 링크가 아직 비어 있습니다. ${missingPlanPaymentLinks.join(", ")}`,
     fallbackPlanPaymentLinks.length === 0 ? null : `공용 결제 링크로 대신 연결되는 플랜이 있습니다. ${fallbackPlanPaymentLinks.join(", ")}`,
-    !hasFreeOfficialMacroProvider && isMacroStale ? "매크로 보조 일정이 오래되었습니다." : null
+    !hasAutomaticMacroRefresh && isMacroStale ? "매크로 일정이 오래되었습니다. 다음 발표 전에 일정을 갱신해 주세요." : null
   ].filter((item): item is string => Boolean(item));
 
   return NextResponse.json({
@@ -111,6 +111,7 @@ export async function GET() {
       readyForAndroidLaunch,
       readyForIosLaunch,
       macroProvider: macroCalendarPayload.source,
+      macroAutomaticRefresh: hasAutomaticMacroRefresh,
       paymentLinksReady,
       planPaymentLinks,
       appBilling: {
@@ -124,7 +125,7 @@ export async function GET() {
       updatedAtIso: macroCalendarPayload.updatedAt,
       ageHours: macroAgeHours,
       automatic: macroCalendarPayload.isAutomatic,
-      stale: !hasFreeOfficialMacroProvider && isMacroStale,
+      stale: !hasAutomaticMacroRefresh && isMacroStale,
       staleAfterHours: macroStaleAfterHours
     }
   });
