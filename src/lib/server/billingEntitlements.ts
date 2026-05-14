@@ -11,11 +11,17 @@ export async function grantBillingEntitlement(params: {
   provider: "toss" | "revenuecat";
   providerOrderId: string;
   providerPaymentId?: string;
+  currentPeriodEndIso?: string;
 }) {
   const marketScope = getMarketScopeForPlan(params.planId);
   const now = new Date();
-  const periodEnd = new Date(now);
-  periodEnd.setMonth(periodEnd.getMonth() + (params.planId.endsWith("_yearly") ? 12 : 1));
+  const fallbackPeriodEnd = new Date(now);
+  fallbackPeriodEnd.setMonth(fallbackPeriodEnd.getMonth() + (params.planId.endsWith("_yearly") ? 12 : 1));
+  const providerPeriodEnd = params.currentPeriodEndIso ? new Date(params.currentPeriodEndIso) : null;
+  const periodEnd =
+    providerPeriodEnd && Number.isFinite(providerPeriodEnd.getTime()) && providerPeriodEnd.getTime() > now.getTime()
+      ? providerPeriodEnd
+      : fallbackPeriodEnd;
 
   await supabaseAdminRest("profiles", {
     method: "POST",

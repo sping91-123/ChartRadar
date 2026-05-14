@@ -25,6 +25,11 @@ interface RevenueCatSubscriberResponse {
   };
 }
 
+interface ResolvedAppStorePlan {
+  plan: NonNullable<ReturnType<typeof findBillingPlan>>;
+  expiresDate: string | null;
+}
+
 const entitlementFallbackPlans: Record<string, BillingPlanId> = {
   coin_pro: "crypto_monthly",
   crypto_pro: "crypto_monthly",
@@ -67,30 +72,35 @@ async function fetchRevenueCatSubscriber(appUserId: string) {
   return { configured: true, payload };
 }
 
-function resolveActivePlan(payload: RevenueCatSubscriberResponse, requestedPlanId?: string) {
+function resolveActivePlan(payload: RevenueCatSubscriberResponse, requestedPlanId?: string): ResolvedAppStorePlan | null {
   const requestedPlan = findBillingPlan(requestedPlanId);
   const subscriptions = payload.subscriber?.subscriptions ?? {};
   const activeProductIds = Object.entries(subscriptions)
     .filter(([, value]) => isStillActive(value.expires_date))
-    .map(([productId]) => productId);
+    .map(([productId, value]) => ({ productId, expiresDate: value.expires_date ?? null }));
 
   const activePlans = activeProductIds
-    .map((productId) => findBillingPlanByAppStoreProductId(productId))
-    .filter(Boolean);
+    .map(({ productId, expiresDate }) => {
+      const plan = findBillingPlanByAppStoreProductId(productId);
+      return plan ? { plan, expiresDate } : null;
+    })
+    .filter(Boolean) as ResolvedAppStorePlan[];
 
-  if (requestedPlan && requestedPlan.id !== "free" && activePlans.some((plan) => plan?.id === requestedPlan.id)) {
-    return requestedPlan;
+  if (requestedPlan && requestedPlan.id !== "free") {
+    const requestedActivePlan = activePlans.find((activePlan) => activePlan.plan.id === requestedPlan.id);
+    if (requestedActivePlan) return requestedActivePlan;
   }
 
-  const bundlePlan = activePlans.find((plan) => plan?.marketScope === "bundle");
+  const bundlePlan = activePlans.find((activePlan) => activePlan.plan.marketScope === "bundle");
   if (bundlePlan) return bundlePlan;
   if (activePlans[0]) return activePlans[0];
 
   const entitlements = payload.subscriber?.entitlements ?? {};
-  const activeEntitlement = Object.entries(entitlements)
-    .find(([, value]) => isStillActive(value.expires_date))?.[0];
-  const fallbackPlan = activeEntitlement ? findBillingPlan(entitlementFallbackPlans[activeEntitlement]) : null;
-  return fallbackPlan?.id === "free" ? null : fallbackPlan;
+  const activeEntitlement = Object.entries(entitlements).find(([, value]) => isStillActive(value.expires_date));
+  const fallbackPlan = activeEntitlement ? findBillingPlan(entitlementFallbackPlans[activeEntitlement[0]]) : null;
+  return fallbackPlan?.id === "free" || !fallbackPlan
+    ? null
+    : { plan: fallbackPlan, expiresDate: activeEntitlement?.[1]?.expires_date ?? null };
 }
 
 export async function POST(request: Request) {
@@ -145,8 +155,8 @@ export async function POST(request: Request) {
     });
   }
 
-  const plan = resolveActivePlan(revenueCatResult.payload ?? {}, body.planId);
-  if (!plan || plan.id === "free") {
+  const activePlan = resolveActivePlan(revenueCatResult.payload ?? {}, body.planId);
+  if (!activePlan || activePlan.plan.id === "free") {
     return NextResponse.json({ active: false, status: "not_active", message: "현재 활성화된 앱 구독을 찾지 못했습니다." }, { status: 404 });
   }
 
@@ -154,7 +164,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       active: false,
       status: "setup_required",
-      planId: plan.id,
+      planId: activePlan.plan.id,
       message: "앱 구독은 확인했지만 Pro 기능을 여는 과정이 지연되고 있습니다. 고객센터로 문의해 주세요."
     });
   }
@@ -162,14 +172,15 @@ export async function POST(request: Request) {
   try {
     await grantBillingEntitlement({
       userId: user.id,
-      planId: plan.id,
+      planId: activePlan.plan.id,
       provider: "revenuecat",
-      providerOrderId: `rc_${user.id}_${plan.id}`,
-      providerPaymentId: body.appUserId
+      providerOrderId: `rc_${user.id}_${activePlan.plan.id}`,
+      providerPaymentId: body.appUserId,
+      currentPeriodEndIso: activePlan.expiresDate ?? undefined
     });
   } catch {
     return NextResponse.json(
-      { active: false, status: "setup_required", planId: plan.id, message: "앱 구독은 확인했지만 Pro 기능을 여는 과정에서 문제가 발생했습니다." },
+      { active: false, status: "setup_required", planId: activePlan.plan.id, message: "앱 구독은 확인했지만 Pro 기능을 여는 과정에서 문제가 발생했습니다." },
       { status: 500 }
     );
   }
@@ -177,7 +188,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     active: true,
     status: "active",
-    planId: plan.id,
+    planId: activePlan.plan.id,
     message: "앱 구독이 확인되어 Pro 기능이 열렸습니다."
   });
 }

@@ -1299,3 +1299,6 @@ Paid API access should not rely only on `profiles.plan`, because that field can 
 
 ### 2026-05-14 continuous improvement 44 browser entitlement alignment.
 The product UI should not show a paid state from a stale profile row while server APIs treat the account as Basic. The browser auth hook now follows the same broad rule as the server by checking active, non-expired subscription rows first, while keeping admin and legacy manual grants intact.
+
+### 2026-05-14 continuous improvement 45 app subscription expiry alignment.
+RevenueCat already knows the real subscription expiry time, so app purchases should not invent a fresh period on every sync. The app subscription sync now carries the provider expiry into the shared entitlement grant, and the grant stores it when the value is valid and still in the future.

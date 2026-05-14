@@ -1469,3 +1469,9 @@
 - [x] Keep the browser Pro label aligned with server entitlement rules.
 - [x] Add billing smoke guards for browser-side active subscription resolution.
 - [x] Verify with billing smoke and production build.
+
+## 2026-05-14 continuous improvement 45 app subscription expiry alignment.
+- [x] Pass RevenueCat subscription expiry into the entitlement grant.
+- [x] Let entitlement grants store provider period end when it is valid.
+- [x] Add billing smoke guards for app subscription expiry wiring.
+- [x] Verify with billing smoke and production build.

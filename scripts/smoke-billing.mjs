@@ -33,6 +33,7 @@ const files = {
   checkoutRoute: read("src/app/api/billing/checkout/route.ts"),
   appStoreSyncRoute: read("src/app/api/billing/app-store/sync/route.ts"),
   requestEntitlement: read("src/lib/server/requestEntitlement.ts"),
+  billingEntitlements: read("src/lib/server/billingEntitlements.ts"),
   proPricingPanel: read("src/components/ProPricingPanel.tsx"),
   mobilePurchases: read("src/lib/mobilePurchases.ts"),
   usageMeterPanel: read("src/components/UsageMeterPanel.tsx"),
@@ -154,6 +155,8 @@ expectIncludes(files.checkoutRoute, "play_billing", "Android Google Play Billing
 expectIncludes(files.appStoreSyncRoute, "REVENUECAT_REST_API_KEY", "RevenueCat 서버 검증 키 사용", "src/app/api/billing/app-store/sync/route.ts");
 expectIncludes(files.appStoreSyncRoute, "grantBillingEntitlement", "앱 구독 확인 후 Pro 권한 반영", "src/app/api/billing/app-store/sync/route.ts");
 expectIncludes(files.appStoreSyncRoute, "active: true", "앱 구독 성공 응답 active 플래그", "src/app/api/billing/app-store/sync/route.ts");
+expectIncludes(files.appStoreSyncRoute, "currentPeriodEndIso: activePlan.expiresDate", "앱 구독 실제 만료일 반영", "src/app/api/billing/app-store/sync/route.ts");
+expectIncludes(files.billingEntitlements, "currentPeriodEndIso", "구독 권한 만료일 override 지원", "src/lib/server/billingEntitlements.ts");
 expectIncludes(files.requestEntitlement, "fetchSupabaseActiveSubscriptions", "서버 권한 활성 구독 조회", "src/lib/server/requestEntitlement.ts");
 expectIncludes(files.requestEntitlement, "activeSubscriptionPlan", "서버 권한 활성 플랜 우선 판정", "src/lib/server/requestEntitlement.ts");
 expectIncludes(files.requestEntitlement, "isLegacyAlwaysPaidPlan", "서버 권한 레거시 관리자 플랜 분리", "src/lib/server/requestEntitlement.ts");
