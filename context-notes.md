@@ -1341,3 +1341,6 @@ Crypto news quality is now part of the operations smoke test, not just a one-tim
 
 ### 2026-05-14 continuous improvement 58 RevenueCat setup clarity.
 The app billing guide now explains the difference between the Android Public SDK key and the Secret API key using the current RevenueCat navigation. This is important because a Test Store key can appear before a real Android app is connected, which made the setup flow confusing during launch preparation.
+
+### 2026-05-14 continuous improvement 59 Global Pro copy separation.
+The Global Pro page should feel like a separate market product, not a crypto page with extra assets. Its upsell wording now says "other markets" instead of naming crypto directly inside the global-only value proposition.

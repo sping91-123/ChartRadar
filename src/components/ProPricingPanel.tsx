@@ -143,7 +143,7 @@ const scopeCopy: Record<
     eyebrow: "Global Radar Pro",
     title: "미국주식, 해외선물, ETF와 매크로를 집중해서 본다면 Global Pro가 맞습니다.",
     body:
-      "미국주식, 해외선물, ETF, 지수, 원자재와 매크로 흐름을 중심으로 쓰는 사용자라면 Global Pro로 충분합니다. 코인까지 함께 확인한다면 All Market Pro가 더 효율적입니다.",
+      "미국주식, 해외선물, ETF, 지수, 원자재와 매크로 흐름을 중심으로 쓰는 사용자라면 Global Pro로 충분합니다. 다른 시장까지 함께 확인한다면 All Market Pro가 더 효율적입니다.",
     representativePrice: "월 14,900원",
     representativeBody: "글로벌 레이더, 해외선물, 기술지표, 글로벌 뉴스, 매크로 브리핑, 관심자산 알림을 한 화면으로 엽니다.",
     highlightedPlanId: "stocks_monthly",
