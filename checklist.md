@@ -1420,3 +1420,9 @@
 - [x] Remove remaining "not a signal" style phrases from user-facing analysis copy.
 - [x] Repair the copy smoke script so blocked Korean phrases are checked correctly again.
 - [x] Verify with lint, copy smoke, and API smoke.
+
+## 2026-05-14 continuous improvement 36 general screen copy polish.
+- [x] Reword footer product description from "education/support tool" to "market analysis tool."
+- [x] Reword technical indicator guidance so it explains how to use indicators instead of what they are not.
+- [x] Keep legal pages out of product-copy smoke checks so policy text can stay legally careful.
+- [x] Verify with lint and copy smoke.

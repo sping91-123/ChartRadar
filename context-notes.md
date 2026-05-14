@@ -1270,3 +1270,6 @@ Usage buckets should not feel like an internal quota table. They now describe wh
 
 ### 2026-05-14 continuous improvement 35 defensive copy guard.
 Some remaining copy still sounded like a legal disclaimer instead of a paid product. The wording is being shifted from "this is not a signal" to "here is the order of checks and what to confirm next." The copy smoke script was also repaired because the blocked Korean phrases had become unreadable in the script itself.
+
+### 2026-05-14 continuous improvement 36 general screen copy polish.
+Legal wording belongs in legal pages, not in the main product flow. The footer and chart guidance now sound more like a confident analysis product, while the smoke check excludes policy pages so required legal caution does not weaken the main UI copy standard.

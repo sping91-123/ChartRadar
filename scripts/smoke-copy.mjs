@@ -4,6 +4,7 @@ import path from "node:path";
 
 const root = process.cwd();
 const targets = ["src/app", "src/components"];
+const excludedFiles = new Set(["src/app/terms/page.tsx", "src/app/privacy/page.tsx", "src/app/refund/page.tsx"]);
 const extraUserFacingFiles = [
   "src/lib/ai/fallback.ts",
   "src/lib/billing.ts",
@@ -21,6 +22,7 @@ const blockedPhrases = [
   "매수나 매도 지시가 아니라",
   "매수·매도 지시가 아닙니다",
   "교육용 도구",
+  "교육·분석 보조 도구",
   "용도로만 참고",
   "대신 결정하는 서비스가 아니라",
   "Supabase에 저장",
@@ -35,6 +37,7 @@ function walk(dir) {
   return readdirSync(full).flatMap((entry) => {
     const absolute = path.join(full, entry);
     const relative = path.relative(root, absolute).replaceAll("\\", "/");
+    if (excludedFiles.has(relative)) return [];
     if (relative.startsWith("src/app/api/")) return [];
     if (statSync(absolute).isDirectory()) return walk(relative);
     return relative.endsWith(".tsx") || relative.endsWith(".ts") ? [relative] : [];

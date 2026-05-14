@@ -2528,7 +2528,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
               </div>
 
               <p className="mt-3 rounded-md border border-signal-warning/20 bg-signal-warning/10 px-3 py-2 text-xs leading-5 text-signal-warning">
-                RSI·MACD·볼린저·거래량은 매수·매도 근거가 아닙니다. ICT 구조가 먼저 맞은 뒤 과열, 변동성 확대, 추격 위험을 확인하는 보조 도구로 참고하세요.
+                RSI·MACD·볼린저·거래량은 ICT 구조가 먼저 맞은 뒤 과열, 변동성 확대, 추격 위험을 확인하는 보조 도구로 참고하세요.
               </p>
             </div>
           ) : null}
