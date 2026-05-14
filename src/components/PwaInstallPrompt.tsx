@@ -1,5 +1,5 @@
 "use client";
-// 모바일 홈 화면 설치 안내와 서비스워커 등록을 담당하는 컴포넌트.
+// 모바일 홈 화면 설치 안내와 서비스워커 등록을 관리하는 컴포넌트입니다.
 
 import { useEffect, useMemo, useState } from "react";
 import { Download, X } from "lucide-react";
@@ -11,6 +11,12 @@ type BeforeInstallPromptEvent = Event & {
 
 const dismissedKey = "chart-radar.pwa-install-dismissed.v1";
 
+declare global {
+  interface Navigator {
+    standalone?: boolean;
+  }
+}
+
 function isStandalone() {
   if (typeof window === "undefined") return false;
   return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
@@ -20,12 +26,6 @@ function isMobileSafari() {
   if (typeof window === "undefined") return false;
   const ua = window.navigator.userAgent;
   return /iPhone|iPad|iPod/i.test(ua) && /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS/i.test(ua);
-}
-
-declare global {
-  interface Navigator {
-    standalone?: boolean;
-  }
 }
 
 export function PwaInstallPrompt() {
@@ -103,11 +103,11 @@ export function PwaInstallPrompt() {
           <Download size={18} aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black">차트 레이더를 앱처럼 설치하세요.</p>
+          <p className="text-sm font-black">Chart Radar를 홈 화면에 추가하세요.</p>
           <p className="mt-1 text-xs leading-5 text-slate-400">
             {installEvent
-              ? "홈 화면에서 바로 열고, 브라우저 주소창 없이 레이더를 확인할 수 있습니다."
-              : "iPhone에서는 공유 버튼을 누른 뒤 '홈 화면에 추가'를 선택하면 됩니다."}
+              ? "브라우저 주소창 없이 레이더를 바로 열 수 있습니다."
+              : "iPhone에서는 공유 버튼을 누른 뒤 홈 화면에 추가를 선택하면 됩니다."}
           </p>
           {installEvent ? (
             <button
@@ -115,7 +115,7 @@ export function PwaInstallPrompt() {
               onClick={installApp}
               className="mt-3 inline-flex min-h-9 items-center rounded-md bg-accent-blue px-3 text-xs font-black text-slate-950"
             >
-              앱 설치하기
+              홈 화면에 추가
             </button>
           ) : null}
         </div>
@@ -123,7 +123,7 @@ export function PwaInstallPrompt() {
           type="button"
           onClick={dismiss}
           className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-white/10 text-slate-400 hover:text-white"
-          aria-label="앱 설치 안내 닫기"
+          aria-label="설치 안내 닫기"
         >
           <X size={15} aria-hidden />
         </button>
