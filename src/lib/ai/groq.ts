@@ -1,31 +1,32 @@
-// Groq OpenAI 호환 API로 레이더 브리핑과 짧은 코멘트를 생성하는 Provider.
+// Groq OpenAI 호환 API로 차트 브리핑과 짧은 코멘트를 생성하는 Provider입니다.
 import type { AIProvider, CommentaryInput, MarketBriefingInput } from "./types";
 import { AIProviderError } from "./types";
 
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
-const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
+const DEFAULT_GROQ_MODEL = "llama-3.1-8b-instant";
 
-const COMMENTARY_SYSTEM_INSTRUCTION = `당신은 한국어로 말하는 신중한 시장 구조 코치입니다.
+const COMMENTARY_SYSTEM_INSTRUCTION = `당신은 한국어로 말하는 차트 레이더 분석 비서입니다.
 
 규칙.
-- 60자 이내 한 문장으로 답합니다.
-- 매수, 매도, 수익 보장, 확정 표현은 피합니다.
+- 60자 안팎의 한 문장으로 답합니다.
+- 매수, 매도, 수익 보장, 확정 표현은 금지합니다.
 - 입력 데이터에 없는 가격이나 수치를 만들지 않습니다.
 - 강점 1개와 주의점 1개를 함께 담습니다.`;
 
-const BRIEFING_SYSTEM_INSTRUCTION = `당신은 한국어로 코인 시장 구조를 설명하는 분석 비서입니다.
+const BRIEFING_SYSTEM_INSTRUCTION = `당신은 한국어로 코인과 글로벌 시장 구조를 설명하는 분석 비서입니다.
 
 역할.
-- 사용자가 제공한 코인, 타임프레임, ICT 구조, POC/PD, 보조지표, 리스크 플래그를 종합해 긴 문장의 피드백을 작성합니다.
+- 사용자가 제공한 종목, 타임프레임, ICT 구조, POC/PD, 보조지표, 리스크 플래그를 종합해 긴 문장의 피드백을 작성합니다.
 - 글의 성격은 투자 추천이 아니라 시장 구조 해석과 리스크 점검입니다.
 
 출력 규칙.
 - 500자에서 900자 사이의 한국어 문단 2개로 작성합니다.
-- 첫 문단은 현재 시장 해석과 롱/숏 중 무엇이 우세해 보이는지 설명합니다.
-- 둘째 문단은 조심할 점, 다음에 확인할 조건, 보조지표를 어떻게 참고할지 설명합니다.
-- 직접적인 진입 지시, 매수/매도 신호, 수익 보장, 확정 표현은 피합니다.
-- 예측 가격을 만들지 말고, 입력의 시나리오와 참고 구간만 설명합니다.
-- 중요한 단어는 롱, 숏, 상승, 하락, 위험, 관찰, 보류처럼 화면에서 색상 처리하기 쉬운 단어로 자연스럽게 씁니다.`;
+- 첫 문단은 현재 시장 해석과 롱·숏 중 무엇이 우세해 보이는지 설명합니다.
+- 두 번째 문단은 조심할 점, 다음에 확인할 조건, 보조지표를 어떻게 참고할지 설명합니다.
+- 직접적인 진입 지시, 매수·매도 신호, 수익 보장, 확정 표현은 금지합니다.
+- 예측 가격을 만들지 말고, 입력된 시나리오와 참고 구간만 설명합니다.
+- 중요한 단어는 롱, 숏, 상승, 하락, 위험, 관찰, 보류처럼 화면에서 색상 처리하기 쉬운 단어로 자연스럽게 씁니다.
+- 생각 과정, XML 태그, 마크다운 제목, 코드블록은 출력하지 않습니다.`;
 
 interface GroqChatResponse {
   choices?: Array<{
@@ -35,18 +36,27 @@ interface GroqChatResponse {
   }>;
 }
 
+function normalizeGroqKey(apiKey: string) {
+  return apiKey.trim().replace(/^["']|["']$/g, "").replace(/^gsk_gsk_/, "gsk_");
+}
+
+function sideLabel(side: CommentaryInput["side"]) {
+  if (side === "long") return "롱";
+  if (side === "short") return "숏";
+  return "관찰";
+}
+
 function buildCommentaryPrompt(input: CommentaryInput): string {
   const sym = input.symbol.replace("USDT.P", "");
-  const sideLabel = input.side === "long" ? "롱" : input.side === "short" ? "숏" : "관찰";
   const proximityLabel =
     input.proximity === "ready"
-      ? "현재가가 검토 구간 내부"
+      ? "현재가가 검토 구간 안에 있음"
       : input.proximity === "near"
         ? `검토 구간까지 ${Math.abs(input.distancePercent).toFixed(2)}% 차이`
         : `검토 구간까지 ${Math.abs(input.distancePercent).toFixed(2)}% 이격`;
 
   return `종목 ${sym} ${input.timeframe}
-방향 ${sideLabel}
+방향 ${sideLabel(input.side)}
 점수 ${input.score}
 근접도 ${proximityLabel}
 상위 TF 정렬 ${input.context.higherTfAlignedCount}개
@@ -78,9 +88,9 @@ function buildMarketBriefingPrompt(input: MarketBriefingInput): string {
 종합 점수: ${input.biasScore} / ${input.scoreRange}
 데이터 신뢰도: ${input.readiness}
 요약: ${input.summaryLine}
-진입 전 확인: ${input.actionGuide}
+다음 확인: ${input.actionGuide}
 현재 위치: ${input.currentLocationLabel}
-킬존: ${input.killzone}
+세션: ${input.killzone}
 
 선택 TF 구조.
 MSB: ${input.active.msb}
@@ -116,12 +126,11 @@ ${scenario}`;
 
 export class GroqProvider implements AIProvider {
   readonly model: string;
+  private readonly normalizedApiKey: string;
 
-  constructor(
-    private readonly apiKey: string,
-    model?: string
-  ) {
-    if (!apiKey) {
+  constructor(apiKey: string, model?: string) {
+    this.normalizedApiKey = normalizeGroqKey(apiKey);
+    if (!this.normalizedApiKey) {
       throw new AIProviderError("GROQ_API_KEY 환경변수가 설정되지 않았습니다.", "groq");
     }
     this.model = model || DEFAULT_GROQ_MODEL;
@@ -143,7 +152,7 @@ export class GroqProvider implements AIProvider {
       response = await fetch(GROQ_ENDPOINT, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${this.apiKey}`,
+          Authorization: `Bearer ${this.normalizedApiKey}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -176,20 +185,29 @@ export class GroqProvider implements AIProvider {
     if (!text) {
       throw new AIProviderError("Groq 응답에 텍스트가 없습니다.", "groq");
     }
-    return text;
+    return stripReasoningTags(text);
   }
 }
 
+function stripReasoningTags(raw: string) {
+  return raw
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .replace(/<thinking>[\s\S]*?<\/thinking>/gi, "")
+    .replace(/```[\s\S]*?```/g, "")
+    .trim();
+}
+
 function sanitizeShortCommentary(raw: string): string {
-  let text = raw.replace(/[\r\n]+/g, " ").trim();
+  let text = stripReasoningTags(raw).replace(/[\r\n]+/g, " ").trim();
   text = text.replace(/^["'`]+|["'`]+$/g, "");
   if (text.length > 90) text = `${text.slice(0, 87)}...`;
   return text;
 }
 
 function sanitizeBriefing(raw: string): string {
-  let text = raw.replace(/\r/g, "").trim();
+  let text = stripReasoningTags(raw).replace(/\r/g, "").trim();
   text = text.replace(/^["'`]+|["'`]+$/g, "");
+  text = text.replace(/^#+\s*/gm, "");
   text = text.replace(/\n{3,}/g, "\n\n");
   if (text.length > 1200) text = `${text.slice(0, 1197)}...`;
   return text;

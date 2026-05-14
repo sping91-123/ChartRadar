@@ -1,4 +1,4 @@
-// AI Provider를 환경변수 우선순위에 따라 선택하는 팩토리.
+// 환경변수 우선순위에 따라 AI Provider를 선택하는 팩토리입니다.
 import type { AIProvider } from "./types";
 import { GeminiProvider } from "./gemini";
 import { GroqProvider } from "./groq";
@@ -32,7 +32,7 @@ export function getAIProvider(): AIProvider {
     return cached;
   }
 
-  throw new Error("AI 브리핑을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.");
+  throw new Error("AI 브리핑을 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.");
 }
 
 export function getAIProviderCandidates(): AIProvider[] {
@@ -41,7 +41,7 @@ export function getAIProviderCandidates(): AIProvider[] {
   cachedCandidates = buildAIProviderCandidates();
   if (cachedCandidates.length) return cachedCandidates;
 
-  throw new Error("AI 브리핑을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.");
+  throw new Error("AI 브리핑을 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.");
 }
 
 export type {

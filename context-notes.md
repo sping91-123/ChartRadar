@@ -1368,3 +1368,10 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 뉴스는 RSS 자동 수집을 유지하되, 깨진 한글 문자열을 정리하고 Groq 번역 실패 시 규칙 기반 한국어 제목으로 즉시 대체하도록 했다.
 - 현재 `.env.local`의 Groq 키가 401 invalid key로 응답하는 것을 확인했다. 키가 정상화되면 AI 번역이 우선 적용되고, 그 전까지는 영어 원문을 제목에 길게 붙이지 않는 한국어 fallback을 쓴다.
 - 헬스체크의 매크로 점수는 `자동 갱신이며 12시간 이내`일 때만 통과하도록 강화했다.
+
+## 2026-05-15 Groq 연결 정상화
+
+- `.env.local`에 들어간 Groq 키가 `gsk_gsk_`로 시작해 401 invalid key가 발생했다. 중복 prefix를 제거한 `gsk_` 키는 정상 응답을 확인했다.
+- `GROQ_MODEL`은 응답 속도와 비용 부담을 우선해 `llama-3.1-8b-instant`로 맞췄다.
+- 기존 `src/lib/ai/groq.ts`의 한국어 시스템 프롬프트가 깨진 상태라 AI 답변 품질이 흔들릴 수 있었고, 이를 정상 한국어 프롬프트로 교체했다.
+- Qwen 모델을 다시 쓰더라도 `<think>` 출력이 화면에 노출되지 않도록 Groq 응답 정리 로직을 추가했다.
