@@ -295,7 +295,9 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
           </div>
 
           <div className="mt-4 rounded-lg border border-cyan-300/25 bg-cyan-300/10 p-3 text-xs leading-5 text-cyan-100">
-            로그인하면 복기 기록을 계정에 보관할 수 있습니다. 로그인 전 기록은 이 기기에만 남으니, 중요한 복기는 계정 연결 후 저장해 주세요.
+            {session
+              ? "복기 기록이 계정에 보관되고 있습니다. 다른 기기에서도 같은 계정으로 이어볼 수 있습니다."
+              : "로그인을 연결하면 복기 기록을 계정에 보관할 수 있습니다. 로그인 전 기록은 이 기기에만 남습니다."}
           </div>
 
           {stats.scoutEntries.length > 0 ? (
@@ -341,7 +343,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                 </div>
                 <div>
                   <p className="text-sm font-bold text-white">
-                    {isLoading ? "로그인 상태 확인 중" : session ? "복기장 연결됨" : "현재는 이 기기에만 저장됩니다"}
+                    {isLoading ? "로그인 상태 확인 중" : session ? "계정 복기장 연결됨" : "현재는 이 기기에만 저장됩니다"}
                   </p>
                   <p className="mt-1 text-xs leading-5 text-slate-400">
                     {session
