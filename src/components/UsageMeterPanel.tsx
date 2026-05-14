@@ -47,7 +47,7 @@ function UsageRow({ state, isPaid }: { state: ReturnType<typeof getUsageBucketSt
         <div className={`h-full rounded-full ${barColor(activePercent, isOverActiveLimit)}`} style={{ width: `${activePercent}%` }} />
       </div>
       <div className="mt-2 flex items-center justify-between text-[11px] font-bold text-slate-500">
-        <span>{isPaid ? "Pro" : "기본"} 잔여 {activeRemaining}회</span>
+        <span>오늘 남음 {activeRemaining}회</span>
         <span>기본 {state.freeDailyLimit}회 · Pro {state.proDailyLimit}회</span>
       </div>
     </div>
@@ -58,18 +58,18 @@ const initialUsageSnapshot: UsageSnapshot = { dateKey: "", counts: {} };
 
 const scopedUsageCopy: Record<BillingPageScope, { free: string; paid: string; proHref: string }> = {
   all: {
-    free: "기본은 오늘 시장의 큰 흐름을 빠르게 확인하기에 좋습니다. 장중에 코인, 글로벌, AI 브리핑, 관심종목, 알림까지 계속 확인하려면 Pro 한도가 필요합니다.",
-    paid: "Pro 한도가 적용되어 있습니다. 코인, 글로벌, AI 브리핑, 관심종목, 알림을 장중에도 여유 있게 반복 확인할 수 있습니다.",
+    free: "기본은 오늘 시장의 큰 흐름을 빠르게 확인하기에 좋습니다. 장중에 코인, 글로벌, AI 브리핑, 관심종목, 알림까지 계속 확인하려면 Pro가 필요합니다.",
+    paid: "Pro가 적용되어 있습니다. 코인, 글로벌, AI 브리핑, 관심종목, 알림을 장중에도 여유 있게 반복 확인할 수 있습니다.",
     proHref: "/pro"
   },
   crypto: {
-    free: "기본은 코인 시장의 큰 흐름을 확인하기에 좋습니다. 장중에 후보를 다시 돌리고, 관심코인과 코인 알림까지 챙기려면 Coin Pro 한도가 필요합니다.",
-    paid: "Coin Pro 한도가 적용되어 있습니다. 코인 스캔, 관심코인, AI 브리핑, 알림을 더 여유 있게 반복 확인할 수 있습니다.",
+    free: "기본은 코인 시장의 큰 흐름을 확인하기에 좋습니다. 장중에 후보를 다시 돌리고, 관심코인과 코인 알림까지 챙기려면 Coin Pro가 필요합니다.",
+    paid: "Coin Pro가 적용되어 있습니다. 코인 스캔, 관심코인, AI 브리핑, 알림을 더 여유 있게 반복 확인할 수 있습니다.",
     proHref: "/pro?market=crypto"
   },
   stocks: {
-    free: "기본은 글로벌 시장의 큰 흐름을 확인하기에 좋습니다. 장중에 미국주식, ETF, 지수, 매크로 브리핑과 알림을 반복 확인하려면 Global Pro 한도가 필요합니다.",
-    paid: "Global Pro 한도가 적용되어 있습니다. 미국주식, ETF, 지수, 매크로 브리핑과 알림을 더 넓게 확인할 수 있습니다.",
+    free: "기본은 글로벌 시장의 큰 흐름을 확인하기에 좋습니다. 장중에 미국주식, ETF, 지수, 매크로 브리핑과 알림을 반복 확인하려면 Global Pro가 필요합니다.",
+    paid: "Global Pro가 적용되어 있습니다. 미국주식, ETF, 지수, 매크로 브리핑과 알림을 더 넓게 확인할 수 있습니다.",
     proHref: "/pro?market=stocks"
   }
 };
@@ -119,7 +119,7 @@ export function UsageMeterPanel({
     isPaid
       ? `${entitlementLabel} 이용 중입니다.`
       : scopedOverCount > 0
-        ? "오늘 기본 한도에 걸린 항목이 있습니다."
+        ? "오늘 더 확인하려면 Pro가 필요합니다."
         : scopedUsedTotal > 0
           ? "오늘 레이더를 사용하고 있습니다."
           : "오늘 사용할 레이더가 준비되어 있습니다.";
@@ -132,7 +132,7 @@ export function UsageMeterPanel({
             <Gauge size={20} aria-hidden />
           </div>
           <div>
-            <p className="text-xs font-black tracking-[0.2em] text-cyan-300">사용량 레이더</p>
+            <p className="text-xs font-black tracking-[0.2em] text-cyan-300">오늘 이용 현황</p>
             <h2 className="mt-1 text-lg font-black text-white">{title}</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400 [word-break:keep-all]">
               {isPaid ? copy.paid : copy.free}
@@ -159,7 +159,7 @@ export function UsageMeterPanel({
       <div className="mt-4 flex flex-col gap-2 rounded-md border border-cyan-300/20 bg-cyan-300/10 p-3 text-xs leading-5 text-cyan-100 sm:flex-row sm:items-center sm:justify-between">
         <span className="flex items-start gap-2">
           <Zap className="mt-0.5 shrink-0" size={14} aria-hidden />
-          오늘 남은 사용량을 확인하고, 부족한 항목은 Pro에서 더 넓게 열어둘 수 있습니다.
+          오늘 남은 확인 횟수를 보고, 더 자주 확인할 항목은 Pro에서 넓게 열어둘 수 있습니다.
         </span>
         {compact ? (
           <Link href={copy.proHref} className="font-black text-cyan-200 hover:text-white">
