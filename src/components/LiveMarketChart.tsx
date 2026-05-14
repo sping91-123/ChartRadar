@@ -74,6 +74,7 @@ const legacyOverlaySettingsStorageKeys = [
   `${legacyPreviousBrandStoragePrefix}.overlaySettings.v1`,
   `${legacyChannelStoragePrefix}.overlaySettings.v1`
 ];
+const showPineParityTools = process.env.NEXT_PUBLIC_SHOW_PINE_PARITY_TOOLS === "1";
 
 interface MarketCachePayload {
   analysis: MarketAnalysis;
@@ -2958,7 +2959,7 @@ export function LiveMarketChart({ majorOnly = false }: { majorOnly?: boolean } =
             </div>
           ) : null}
 
-          {showAdvancedControls && activeAnalysis ? (
+          {showPineParityTools && showAdvancedControls && activeAnalysis ? (
             <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">

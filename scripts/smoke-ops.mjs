@@ -75,6 +75,7 @@ const aiCommentaryRoute = read("src/app/api/ai/commentary/route.ts");
 const aiMarketBriefingRoute = read("src/app/api/ai/market-briefing/route.ts");
 const healthRoute = read("src/app/api/health/route.ts");
 const scoutRoute = read("src/app/api/scout/route.ts");
+const liveMarketChart = read("src/components/LiveMarketChart.tsx");
 const launchCopyFiles = [
   "src/components/AuthStatus.tsx",
   "src/components/UsageMeterPanel.tsx",
@@ -210,6 +211,15 @@ if (newsPage.includes("<MacroTicker market={market} />")) {
   pass("뉴스 매크로 시장 범위", "뉴스 페이지의 매크로 전광판이 현재 시장 범위를 전달합니다.");
 } else {
   fail("뉴스 매크로 시장 범위", "src/app/news/page.tsx에서 MacroTicker에 market 값을 전달해야 합니다.");
+}
+
+if (
+  liveMarketChart.includes("NEXT_PUBLIC_SHOW_PINE_PARITY_TOOLS") &&
+  liveMarketChart.includes("showPineParityTools && showAdvancedControls")
+) {
+  pass("Pine 검증 도구 공개 차단", "지표 일치율 검증 패널은 명시적으로 켰을 때만 화면에 노출됩니다.");
+} else {
+  fail("Pine 검증 도구 공개 차단", "src/components/LiveMarketChart.tsx의 Pine 검증 패널을 환경변수 뒤에 숨겨야 합니다.");
 }
 
 const launchRiskTerms = [
