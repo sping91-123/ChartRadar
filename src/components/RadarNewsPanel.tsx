@@ -283,6 +283,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
   const leadingToneClass =
     digest.bullish > digest.bearish ? "text-signal-success" : digest.bearish > digest.bullish ? "text-signal-danger" : "text-signal-warning";
   const topIssue = briefing?.keyIssues[0];
+  const topAction = briefing?.strategyNotes[0] ?? briefing?.marketImpact[0] ?? "";
 
   return (
     <section className="space-y-5">
@@ -329,7 +330,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
         </div>
 
         {briefing || isInitialLoading ? (
-          <div className="mt-4 grid gap-2 lg:grid-cols-3">
+          <div className="mt-4 grid gap-2 lg:grid-cols-4">
             <div className="rounded-md border border-white/10 bg-black/25 p-3">
               <p className="text-[11px] font-bold text-slate-500">뉴스 방향</p>
               <p className={`mt-1 text-lg font-black ${isInitialLoading ? "text-slate-300" : leadingToneClass}`}>{isInitialLoading ? "수집 중" : leadingTone}</p>
@@ -338,6 +339,12 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
               <p className="text-[11px] font-bold text-slate-500">먼저 볼 이슈</p>
               <p className="mt-1 line-clamp-2 text-sm font-black leading-5 text-white [word-break:keep-all]">
                 {isInitialLoading ? "공개 뉴스와 매크로 이슈를 수집하고 있습니다." : topIssue?.title ?? "뉴스를 불러오면 핵심 이슈를 먼저 정리합니다."}
+              </p>
+            </div>
+            <div className="rounded-md border border-accent-blue/20 bg-accent-blue/10 p-3">
+              <p className="text-[11px] font-bold text-accent-blue">오늘 확인 순서</p>
+              <p className="mt-1 line-clamp-2 text-sm font-bold leading-5 text-slate-100 [word-break:keep-all]">
+                {isInitialLoading ? "가격 반응과 후속 뉴스 흐름을 함께 정리하고 있습니다." : topAction || "가격 반응과 후속 뉴스가 같은 방향인지 먼저 확인하세요."}
               </p>
             </div>
           </div>
@@ -400,6 +407,11 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
           </div>
           <h3 className="mt-3 text-xl font-black text-white">오늘은 참고 뉴스 중심으로 정리합니다.</h3>
           <p className="mt-3 text-sm leading-7 text-slate-300 [word-break:keep-all]">{briefing.overview}</p>
+          {topAction ? (
+            <p className="mt-3 rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs font-bold leading-5 text-slate-200 [word-break:keep-all]">
+              먼저 볼 포인트. {topAction}
+            </p>
+          ) : null}
           <p className="mt-4 rounded-md border border-accent-blue/20 bg-accent-blue/10 px-3 py-2 text-xs font-bold leading-5 text-accent-blue">
             Pro에서는 핵심 이슈, 시장 영향, 전략 노트, 반복 갱신 브리핑까지 열립니다.
           </p>
