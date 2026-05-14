@@ -42,6 +42,8 @@ function hasMojibake(source) {
 }
 
 const rateLimit = read("src/lib/server/rateLimit.ts");
+const requestEntitlement = read("src/lib/server/requestEntitlement.ts");
+const authFetch = read("src/lib/authFetch.ts");
 const envExample = read(".env.example");
 const packageJson = read("package.json");
 const restartDev = read("scripts/restart-dev.ps1");
@@ -101,6 +103,10 @@ expectIncludes(rateLimit, "UPSTASH_REDIS_REST_URL", "Upstash URL 연결", "src/l
 expectIncludes(rateLimit, "UPSTASH_REDIS_REST_TOKEN", "Upstash 토큰 연결", "src/lib/server/rateLimit.ts");
 expectIncludes(rateLimit, "memoryRateLimit", "메모리 fallback 유지", "src/lib/server/rateLimit.ts");
 expectIncludes(rateLimit, "export async function rateLimit", "비동기 rateLimit export", "src/lib/server/rateLimit.ts");
+expectIncludes(requestEntitlement, "getRequestEntitlement", "서버 Pro 권한 판별", "src/lib/server/requestEntitlement.ts");
+expectIncludes(requestEntitlement, "hasMarketEntitlement", "시장별 Pro 권한 판별", "src/lib/server/requestEntitlement.ts");
+expectIncludes(authFetch, "Authorization", "브라우저 로그인 토큰 전달", "src/lib/authFetch.ts");
+expectIncludes(scoutRoute, "getRequestEntitlement", "스캐너 서버 권한 판별", "src/app/api/scout/route.ts");
 expectIncludes(envExample, "UPSTASH_REDIS_REST_URL=", "환경변수 예시 URL", ".env.example");
 expectIncludes(envExample, "UPSTASH_REDIS_REST_TOKEN=", "환경변수 예시 토큰", ".env.example");
 expectIncludes(envExample, "NEXT_PUBLIC_ALLOW_LOCAL_REFRESH_TOKEN=", "로컬 refresh token 보호 옵션", ".env.example");

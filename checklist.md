@@ -1442,3 +1442,7 @@
 ## 2026-05-14 continuous improvement 39 launch review entitlement guard.
 - [x] Add server entitlement wiring to the static launch review so paid API protections cannot disappear silently.
 - [x] Verify with launch smoke.
+
+## 2026-05-14 continuous improvement 40 operations entitlement guard.
+- [x] Add browser auth token and server Pro entitlement checks to the operations smoke.
+- [x] Verify with operations smoke.

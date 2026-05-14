@@ -1284,3 +1284,6 @@ The scanner UI should not hide that backend difference. Paid users skip the smal
 
 ### 2026-05-14 continuous improvement 39 launch review entitlement guard.
 The launch score should check that paid API protections exist, not just that generic rate limiting exists. The static review now looks for both the browser auth fetch helper and the server entitlement resolver.
+
+### 2026-05-14 continuous improvement 40 operations entitlement guard.
+The operations smoke now checks the same paid-access wiring from a different angle. It verifies that browser requests can carry the login token, the server can resolve market-specific Pro entitlement, and the scanner route actually uses that resolver before choosing rate limits and result windows.
