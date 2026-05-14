@@ -103,7 +103,7 @@ function categoryClass(category: RadarAlertRule["category"]) {
 }
 
 function permissionLabel(permission: PermissionState) {
-  if (permission === "granted") return "알림 받을 준비 완료";
+  if (permission === "granted") return "알림을 받을 수 있습니다";
   if (permission === "denied") return "알림이 꺼져 있습니다";
   if (permission === "unsupported") return "현재 환경에서는 알림을 켤 수 없습니다";
   return "알림을 켜기 전입니다";
@@ -384,8 +384,8 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
         </div>
         <div className="rounded-lg border border-emerald-300/20 bg-emerald-300/10 p-4">
           <Smartphone className="text-emerald-200" size={20} aria-hidden />
-          <p className="mt-3 text-sm font-black text-white">앱 알림 준비</p>
-          <p className="mt-2 text-xs leading-5 text-slate-400">앱에서는 같은 조건을 실시간 알림으로 이어서 받을 수 있습니다.</p>
+          <p className="mt-3 text-sm font-black text-white">앱 알림 연결</p>
+          <p className="mt-2 text-xs leading-5 text-slate-400">앱에서는 같은 조건을 푸시 알림으로 이어서 받을 수 있습니다.</p>
         </div>
       </div>
 
@@ -396,7 +396,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             {permissionLabel(permission)}
           </p>
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            지금은 이 화면에서 알림을 켜고, 앱에서는 같은 조건을 실시간 알림으로 받을 수 있습니다.
+            브라우저에서는 이 화면의 알림을 켜고, 앱에서는 같은 조건을 푸시 알림으로 받을 수 있습니다.
           </p>
         </div>
         <button
