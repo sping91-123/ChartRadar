@@ -270,6 +270,23 @@ export function fallbackKoreanNewsTitle(title: string, market: RadarNewsMarket =
   const normalized = title.replace(/[‘’]/g, "'").replace(/\s+/g, " ").trim();
 
   if (market === "stocks") {
+    if (/stock market today|wall street today|markets today/i.test(normalized)) return "오늘 미국 증시에서 확인할 주요 흐름입니다.";
+    if (/nasdaq.*(rise|gain|fall|drop|slip|decline|rally)|nasdaq/i.test(normalized)) return "나스닥 움직임이 성장주 흐름의 핵심 변수로 잡힙니다.";
+    if (/s&p|spx|s and p/i.test(normalized)) return "S&P500 흐름이 미국장 위험 선호를 보여주고 있습니다.";
+    if (/dow jones|dow industrial/i.test(normalized)) return "다우지수 흐름이 대형주 투자심리를 보여주고 있습니다.";
+    if (/nvidia|nvda/i.test(normalized)) return "엔비디아 이슈가 AI 반도체와 성장주 흐름을 흔들고 있습니다.";
+    if (/tesla|tsla/i.test(normalized)) return "테슬라 이슈가 전기차와 성장주 투자심리에 영향을 주고 있습니다.";
+    if (/apple|aapl|iphone/i.test(normalized)) return "애플 이슈가 대형 기술주 흐름의 변수로 떠오르고 있습니다.";
+    if (/microsoft|msft|azure/i.test(normalized)) return "마이크로소프트와 클라우드 흐름이 기술주 투자심리에 영향을 주고 있습니다.";
+    if (/amazon|amzn|aws/i.test(normalized)) return "아마존 실적과 소비 흐름이 대형 기술주 변수로 잡힙니다.";
+    if (/meta|facebook/i.test(normalized)) return "메타 이슈가 광고와 AI 성장주 흐름에 영향을 주고 있습니다.";
+    if (/google|alphabet|googl/i.test(normalized)) return "알파벳 이슈가 검색, 광고, AI 투자심리의 변수로 떠오릅니다.";
+    if (/oil|crude|wti|brent/i.test(normalized)) return "국제유가 움직임이 인플레이션과 에너지 섹터를 흔들고 있습니다.";
+    if (/gold|precious metal/i.test(normalized)) return "금 가격 흐름이 안전자산 선호와 달러 움직임을 보여주고 있습니다.";
+    if (/dollar|dxy/i.test(normalized)) return "달러 흐름이 글로벌 자금 이동과 위험자산 심리에 영향을 주고 있습니다.";
+    if (/retail sales/i.test(normalized)) return "미국 소매판매 지표가 소비 경기와 금리 기대의 변수로 떠오릅니다.";
+    if (/existing home sales|new home sales|housing/i.test(normalized)) return "미국 주택 지표가 경기 둔화와 금리 민감도를 확인하는 재료입니다.";
+    if (/jobless claims|employment|payrolls|jobs report/i.test(normalized)) return "미국 고용 지표가 금리 기대와 증시 변동성의 핵심 변수입니다.";
     if (/inflation|cpi|ppi|price/i.test(normalized)) return "미국 물가 이슈가 글로벌 시장 변동성에 영향을 주고 있습니다.";
     if (/fed|federal reserve|rate|treasury|yield/i.test(normalized)) return "연준과 금리 기대 변화가 글로벌 자산 흐름을 흔들고 있습니다.";
     if (/earnings|revenue|guidance|profit/i.test(normalized)) return "주요 기업 실적과 가이던스가 종목별 흐름을 가르고 있습니다.";
