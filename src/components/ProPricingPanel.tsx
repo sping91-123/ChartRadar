@@ -149,7 +149,7 @@ function getScopedDisplayPlan(plan: BillingPlan, scope: BillingPageScope): Billi
   if (scope === "stocks") {
     return {
       ...plan,
-      description: "글로벌 레이더의 핵심 흐름을 확인하는 기본 플랜입니다. 반복 감시와 알림은 Pro에서 열립니다.",
+      description: "글로벌 레이더의 핵심 흐름을 먼저 확인합니다. 반복 감시와 알림은 Pro에서 넓어집니다.",
       highlights: ["QQQ / SPY 기본 레이더 확인", "글로벌 뉴스 제한 확인", "AI 브리핑 하루 1회"],
       limits: {
         ...plan.limits,
@@ -164,7 +164,7 @@ function getScopedDisplayPlan(plan: BillingPlan, scope: BillingPageScope): Billi
   if (scope === "crypto") {
     return {
       ...plan,
-      description: "코인 레이더의 핵심 흐름을 확인하는 기본 플랜입니다. 반복 감시와 알림은 Pro에서 열립니다.",
+      description: "코인 레이더의 핵심 흐름을 먼저 확인합니다. 반복 감시와 알림은 Pro에서 넓어집니다.",
       highlights: ["BTC / ETH 기본 레이더 확인", "주요 알트코인 제한 감시", "AI 브리핑 하루 1회"],
       limits: {
         ...plan.limits,

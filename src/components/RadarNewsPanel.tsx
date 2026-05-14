@@ -211,7 +211,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
         setPayload(cached);
         setStatus("ready");
         setError("");
-        setLimitNotice(`${usageGate.message} 기본 화면에서는 마지막 참고 뉴스와 간단 요약만 열립니다.`);
+        setLimitNotice(`${usageGate.message} 지금은 마지막 참고 뉴스와 간단 요약을 먼저 보여줍니다.`);
         return;
       }
 
@@ -221,7 +221,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
         const preview = await fetchNewsPayload("preview");
         setPayload(preview);
         setStatus("ready");
-        setLimitNotice(`${usageGate.message} 기본 화면에서는 AI 영향 분석을 닫고, 오늘 참고할 뉴스 제목과 간단 요약만 먼저 엽니다.`);
+        setLimitNotice(`${usageGate.message} 지금은 AI 영향 분석 대신 오늘 참고할 뉴스 제목과 간단 요약을 먼저 보여줍니다.`);
       } catch {
         setStatus("error");
         setError(`${usageGate.message} 내일 다시 확인하거나 Pro에서 반복 브리핑을 열 수 있습니다.`);

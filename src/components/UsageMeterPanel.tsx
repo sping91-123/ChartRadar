@@ -122,7 +122,7 @@ export function UsageMeterPanel({
         ? "오늘 더 확인하려면 Pro가 필요합니다."
         : scopedUsedTotal > 0
           ? "오늘 레이더를 사용하고 있습니다."
-          : "오늘 사용할 레이더가 준비되어 있습니다.";
+          : "오늘 레이더를 아직 쓰지 않았습니다.";
 
   return (
     <section className="rounded-lg border border-cyan-300/25 bg-surface-card p-4 shadow-glow sm:p-5">
