@@ -51,7 +51,7 @@ CAPACITOR_SERVER_URL=https://your-domain.kr
 
 `SUPABASE_SERVICE_ROLE_KEY`, `TOSS_PAYMENTS_SECRET_KEY`, `UPSTASH_REDIS_*` 값은 서버에서만 사용합니다. 브라우저 코드나 `NEXT_PUBLIC_` 환경변수로 노출하지 않습니다.
 
-매크로 전광판은 기본적으로 무료 BLS 공개 API를 사용해 CPI와 PPI 실제값을 자동 갱신합니다. 소매판매, 주택, FOMC 등 나머지 일정은 `src/data/macroEvents.ts`의 운영 백업 일정으로 관리합니다. 유료 캘린더 API를 필수 인프라로 두지 않습니다.
+매크로 전광판은 미국 노동통계국 공식 데이터로 CPI와 PPI 실제값을 자동 확인합니다. 소매판매, 주택, FOMC 등 나머지 일정은 `src/data/macroEvents.ts`의 보조 캘린더로 관리합니다. 유료 캘린더 API를 필수 인프라로 두지 않습니다.
 
 ## 3. Supabase Auth 설정
 
