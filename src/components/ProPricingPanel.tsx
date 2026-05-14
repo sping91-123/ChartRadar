@@ -121,7 +121,7 @@ const scopeCopy: Record<
     eyebrow: "Coin Radar Pro",
     title: "코인만 집중해서 본다면 Coin Pro, 전체 시장까지 보려면 All Market Pro가 맞습니다.",
     body:
-      "BTC, ETH, 알트코인, 코인뉴스, 코인 알림을 중심으로 쓰는 사용자라면 Coin Pro로 충분합니다. 글로벌 시장까지 함께 볼 예정이라면 All Market Pro를 선택하면 됩니다.",
+      "BTC, ETH, 알트코인, 코인뉴스, 코인 알림을 중심으로 쓰는 사용자라면 Coin Pro로 충분합니다. 글로벌 시장까지 함께 확인한다면 All Market Pro가 더 유리합니다.",
     representativePrice: "월 14,900원",
     representativeBody: "코인 레이더, ICT 구조, 기술지표, 코인뉴스, 코인 알림을 코인 시장에 맞춰 엽니다.",
     highlightedPlanId: "crypto_monthly",
@@ -133,7 +133,7 @@ const scopeCopy: Record<
     eyebrow: "Global Radar Pro",
     title: "미국주식과 매크로를 집중해서 본다면 Global Pro, 코인까지 함께 보면 All Market Pro가 맞습니다.",
     body:
-      "미국주식, ETF, 지수, 매크로 흐름을 중심으로 쓰는 사용자라면 Global Pro로 충분합니다. 코인까지 함께 볼 예정이라면 All Market Pro를 선택하면 됩니다.",
+      "미국주식, ETF, 지수, 매크로 흐름을 중심으로 쓰는 사용자라면 Global Pro로 충분합니다. 코인까지 함께 확인한다면 All Market Pro가 더 유리합니다.",
     representativePrice: "월 14,900원",
     representativeBody: "글로벌 레이더, 기술지표, 글로벌뉴스, 매크로 브리핑, 관심자산 알림을 한 화면으로 엽니다.",
     highlightedPlanId: "stocks_monthly",
