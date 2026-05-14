@@ -1,4 +1,4 @@
-// Chart Radar 알림 조건을 설정하는 독립 페이지입니다.
+// Chart Radar 알림 조건을 설정하는 알림 페이지입니다.
 import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
 import { RadarAlertCenter } from "@/components/RadarAlertCenter";
