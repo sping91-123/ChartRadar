@@ -59,7 +59,7 @@ const valueRows = [
 ];
 
 const proDifferenceRows = [
-  "무료는 하루 핵심 흐름을 확인하는 기본 모드입니다. Pro는 장중에 반복해서 레이더를 돌리고 변화가 생긴 자산을 계속 확인하는 감시 모드입니다.",
+  "기본 모드는 하루 핵심 흐름을 확인하는 모드입니다. Pro는 장중에 반복해서 레이더를 돌리고 변화가 생긴 자산을 계속 확인하는 감시 모드입니다.",
   "Pro는 AI 브리핑, 관심종목, 알림 규칙의 한도를 넓혀 직접 찾아보는 시간을 줄이는 구독입니다.",
   "Chart Radar는 매수와 매도를 대신 결정하지 않습니다. 대신 시장 구조, 뉴스, 매크로, 위험 요소를 빠르게 모아 판단 시간을 줄여줍니다."
 ];
@@ -109,7 +109,7 @@ const scopeCopy: Record<
     eyebrow: "Chart Radar Pro",
     title: "매일 시장을 확인하는 시간을 줄이고, 놓치기 쉬운 변화는 먼저 띄워드립니다.",
     body:
-      "무료로 핵심 흐름을 먼저 확인하고, Pro에서는 코인, 글로벌, AI 브리핑, 관심종목, 알림을 더 넉넉하게 사용합니다. 신호를 대신 매매하는 서비스가 아니라 매일 시장을 빠르게 정리하는 레이더입니다.",
+      "기본 모드로 핵심 흐름을 먼저 확인하고, Pro에서는 코인, 글로벌, AI 브리핑, 관심종목, 알림을 더 넉넉하게 사용합니다. 신호를 대신 매매하는 서비스가 아니라 매일 시장을 빠르게 정리하는 레이더입니다.",
     representativePrice: "월 24,900원",
     representativeBody: "두 시장을 모두 보는 사용자에게 코인, 글로벌 시장, AI 브리핑, 관심종목, 알림을 하나로 묶었습니다.",
     highlightedPlanId: "bundle_monthly",
@@ -349,9 +349,9 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
           <p className="mt-2 text-slate-400">{copy.priceAnchor}</p>
         </div>
         <div className="rounded-lg border border-surface-line bg-surface-card p-4 text-sm leading-6 text-slate-300">
-          <p className="font-black text-white">무료와 Pro의 차이</p>
+          <p className="font-black text-white">기본과 Pro의 차이</p>
           <p className="mt-2 text-slate-400">
-            무료는 기본 확인, Pro는 장중 반복 감시와 알림을 위한 작업 공간입니다.
+            기본은 핵심 확인, Pro는 장중 반복 감시와 알림을 위한 작업 공간입니다.
           </p>
         </div>
       </div>
@@ -427,7 +427,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
                   href={copy.freeHref}
                   className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-white/15 px-4 text-sm font-black text-white transition hover:bg-white/10"
                 >
-                  무료로 먼저 보기
+                  기본 레이더 보기
                 </Link>
               ) : (
                 <button
