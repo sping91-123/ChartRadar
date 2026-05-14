@@ -1475,3 +1475,9 @@
 - [x] Let entitlement grants store provider period end when it is valid.
 - [x] Add billing smoke guards for app subscription expiry wiring.
 - [x] Verify with billing smoke and production build.
+
+## 2026-05-14 continuous improvement 46 basic security headers.
+- [x] Add frame, MIME sniffing, referrer, permissions, and HSTS headers.
+- [x] Avoid strict CSP for now so chart, auth, and app shell flows are not broken late in launch prep.
+- [x] Add operations smoke guards for the security headers.
+- [x] Verify with operations smoke and production build.

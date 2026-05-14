@@ -46,6 +46,7 @@ const requestEntitlement = read("src/lib/server/requestEntitlement.ts");
 const authFetch = read("src/lib/authFetch.ts");
 const envExample = read(".env.example");
 const packageJson = read("package.json");
+const nextConfig = read("next.config.mjs");
 const restartDev = read("scripts/restart-dev.ps1");
 const smokeAll = read("scripts/smoke-all.mjs");
 const macroEvents = read("src/data/macroEvents.ts");
@@ -114,6 +115,9 @@ expectIncludes(envExample, "SUPABASE_SERVICE_ROLE_KEY=", "서버 권한 반영 �
 expectIncludes(envExample, "NEWS_TRANSLATION_PROVIDER=", "뉴스 번역 속도 옵션", ".env.example");
 expectIncludes(envExample, "ENABLE_GEMINI_NEWS_FALLBACK=", "뉴스 AI fallback 옵션", ".env.example");
 expectIncludes(packageJson, '"dev:clean"', "개발 서버 복구 명령", "package.json");
+expectIncludes(nextConfig, "X-Frame-Options", "보안 헤더 iframe 차단", "next.config.mjs");
+expectIncludes(nextConfig, "X-Content-Type-Options", "보안 헤더 MIME 스니핑 차단", "next.config.mjs");
+expectIncludes(nextConfig, "Permissions-Policy", "보안 헤더 권한 제한", "next.config.mjs");
 expectIncludes(restartDev, "Refusing to delete outside repo", "개발 캐시 삭제 보호", "scripts/restart-dev.ps1");
 expectIncludes(restartDev, "Remove-DirectoryWithRetry", "개발 캐시 삭제 재시도", "scripts/restart-dev.ps1");
 expectIncludes(restartDev, "Get-NetTCPConnection -LocalPort $port", "3000번 포트 정리", "scripts/restart-dev.ps1");

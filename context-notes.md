@@ -1302,3 +1302,6 @@ The product UI should not show a paid state from a stale profile row while serve
 
 ### 2026-05-14 continuous improvement 45 app subscription expiry alignment.
 RevenueCat already knows the real subscription expiry time, so app purchases should not invent a fresh period on every sync. The app subscription sync now carries the provider expiry into the shared entitlement grant, and the grant stores it when the value is valid and still in the future.
+
+### 2026-05-14 continuous improvement 46 basic security headers.
+The app stores login state in the browser, so basic response hardening matters before public launch. We added conservative security headers for frame blocking, MIME sniffing protection, referrer trimming, browser permission lockdown, and HSTS. A full CSP is intentionally deferred because it can break chart/auth/app-shell flows if added too late without browser QA.
