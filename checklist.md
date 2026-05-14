@@ -1426,3 +1426,8 @@
 - [x] Reword technical indicator guidance so it explains how to use indicators instead of what they are not.
 - [x] Keep legal pages out of product-copy smoke checks so policy text can stay legally careful.
 - [x] Verify with lint and copy smoke.
+
+## 2026-05-14 continuous improvement 37 launch review smoke.
+- [x] Add a static launch review score covering brand, market split, billing, paid value, API guards, copy, macro, news, alerts, mobile, visual system, and operations.
+- [x] Add the launch review to the full smoke chain.
+- [x] Verify with launch smoke, lint, and full smoke.

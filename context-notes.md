@@ -1273,3 +1273,6 @@ Some remaining copy still sounded like a legal disclaimer instead of a paid prod
 
 ### 2026-05-14 continuous improvement 36 general screen copy polish.
 Legal wording belongs in legal pages, not in the main product flow. The footer and chart guidance now sound more like a confident analysis product, while the smoke check excludes policy pages so required legal caution does not weaken the main UI copy standard.
+
+### 2026-05-14 continuous improvement 37 launch review smoke.
+The product needs a repeatable scorecard instead of subjective "does it feel ready" checks. A launch review smoke now scores the key paid-product areas statically, and it will run inside the full smoke chain so regressions are visible before release.

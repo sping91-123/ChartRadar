@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 
 const checks = [
   ["smoke:copy", "node", ["scripts/smoke-copy.mjs"]],
+  ["smoke:launch", "node", ["scripts/launch-review.mjs"]],
   ["smoke:ops", "node", ["scripts/smoke-ops.mjs"]],
   ["smoke:mobile", "node", ["scripts/smoke-mobile.mjs"]],
   ["smoke:billing", "node", ["scripts/smoke-billing.mjs"]],
