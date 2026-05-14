@@ -344,9 +344,9 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
       </div>
 
       <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-lg border border-cyan-300/20 bg-cyan-300/10 p-4 text-sm leading-6 text-cyan-100">
-          <p className="font-black text-cyan-50">{copy.filterNotice}</p>
-          <p className="mt-2 text-cyan-100/85">{copy.priceAnchor}</p>
+        <div className="rounded-lg border border-cyan-300/25 bg-surface-card p-4 text-sm leading-6 text-slate-300">
+          <p className="font-black text-white">{copy.filterNotice}</p>
+          <p className="mt-2 text-slate-400">{copy.priceAnchor}</p>
         </div>
         <div className="rounded-lg border border-surface-line bg-surface-card p-4 text-sm leading-6 text-slate-300">
           <p className="font-black text-white">무료와 Pro의 차이</p>
