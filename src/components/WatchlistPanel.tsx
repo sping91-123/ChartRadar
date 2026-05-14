@@ -157,7 +157,7 @@ function AddCoinModal({
           </button>
         </div>
         <p className="mt-1.5 text-xs leading-5 text-slate-500">
-          현재 {watchlist.length}/{limit}개 · 바이낸스 USDT-M 전체 목록 기준입니다.
+          현재 {watchlist.length}/{limit}개 · 거래량이 충분한 주요 코인 목록 기준입니다.
         </p>
 
         <label className="mt-4 flex min-h-10 items-center gap-2 rounded-lg border border-surface-line bg-black/20 px-3 text-sm text-slate-300 focus-within:border-accent-blue">
