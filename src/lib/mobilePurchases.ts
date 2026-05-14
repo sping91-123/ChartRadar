@@ -129,7 +129,7 @@ function normalizePurchaseError(error: unknown) {
 export async function purchaseNativePlan(params: NativePurchaseParams) {
   const platform = getNativePurchasePlatform();
   if (!platform) throw new Error("앱 결제는 Android 또는 iOS 앱 안에서만 사용할 수 있습니다.");
-  if (!params.plan.appStoreProductId) throw new Error("이 요금제는 앱 결제가 아직 준비 중입니다.");
+  if (!params.plan.appStoreProductId) throw new Error("현재 앱에서는 이 요금제를 결제할 수 없습니다. 다른 요금제를 선택해 주세요.");
 
   try {
     await configurePurchases(platform, params.userId);
