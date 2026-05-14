@@ -1338,3 +1338,6 @@ News cards become less useful when several unrelated headlines collapse into the
 The browser news cache key was bumped as part of this change because otherwise returning users could keep seeing older generic cached cards even after the server classification improved.
 ### 2026-05-14 continuous improvement 57 news regression guard.
 Crypto news quality is now part of the operations smoke test, not just a one-time manual check. The guard covers net-loss earnings, tokenized finance, wallet recovery, crypto voter polling, and resistance-risk headlines so free-preview news cards do not quietly regress into generic neutral titles.
+
+### 2026-05-14 continuous improvement 58 RevenueCat setup clarity.
+The app billing guide now explains the difference between the Android Public SDK key and the Secret API key using the current RevenueCat navigation. This is important because a Test Store key can appear before a real Android app is connected, which made the setup flow confusing during launch preparation.

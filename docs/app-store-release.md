@@ -89,6 +89,31 @@ Google Play Console에는 아래 상품 ID를 그대로 만듭니다. 코드의 
 7. RevenueCat의 Android Public SDK key를 `.env.local`과 배포 환경변수의 `NEXT_PUBLIC_REVENUECAT_ANDROID_API_KEY`에 넣습니다.
 8. RevenueCat Secret API key를 `REVENUECAT_REST_API_KEY`에 넣습니다.
 
+### RevenueCat 화면에서 키를 찾는 법
+
+RevenueCat에는 키가 두 종류라서 헷갈리기 쉽습니다.
+
+| 필요한 값 | RevenueCat 위치 | Chart Radar 환경변수 |
+| --- | --- | --- |
+| Android Public SDK key | 왼쪽 메뉴 `Apps & providers` → `API keys` → `SDK API keys` 영역의 Android 앱 행에서 `Show key` | `NEXT_PUBLIC_REVENUECAT_ANDROID_API_KEY` |
+| Secret API key | 왼쪽 메뉴 `Apps & providers` → `API keys` → `Secret API keys` 영역의 `+ New secret API key` | `REVENUECAT_REST_API_KEY` |
+
+`Test Store`만 있는 상태에서는 Android 앱 키가 아니라 테스트용 SDK 키만 보일 수 있습니다. Google Play Console 앱을 만든 뒤 RevenueCat에 Android 앱을 추가해야 `kr.chartradar.app`용 Public SDK key를 받을 수 있습니다.
+
+Secret API key는 서버에서 구독 상태를 확인할 때만 씁니다. 이 값은 `.env.local`과 배포 서버 환경변수에만 넣고, 앱 코드나 브라우저 코드에는 넣지 않습니다.
+
+로컬에 키를 넣을 때는 아래 명령을 쓰면 `.env.local`에 필요한 줄만 안전하게 반영됩니다.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-app-billing-env.ps1
+```
+
+입력이 끝난 뒤 아래 명령으로 기본 설정을 확인합니다.
+
+```powershell
+npm run check:app-billing
+```
+
 ## 8. 심사 메모 초안
 
 ```text
