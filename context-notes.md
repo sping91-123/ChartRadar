@@ -1422,3 +1422,11 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 해당 화면들의 한국어가 파일 자체에서 깨져 있었기 때문에 디자인 보정보다 먼저 정상 문구로 복구했다.
 - 문구는 개발 단계 설명을 줄이고, 사용자가 다음에 무엇을 하면 되는지 바로 이해하는 운영 서비스 톤으로 정리했다.
 - 알림, 뉴스, Pro 페이지는 사용자 화면 문구는 컴포넌트에 있었지만 파일 첫 줄 설명이 깨져 있었다. 다음 세션의 탐색성을 위해 주석도 정상화했다.
+## 2026-05-15 운영 신뢰도 보강 완료.
+
+- 매크로와 뉴스는 사용자가 하루에도 여러 번 확인하는 신뢰 기능이라 깨진 한국어와 빈 fallback을 최우선으로 복구했다.
+- 매크로는 ForexFactory와 BLS 자동 수집을 유지하되, 외부 요청이 실패해도 예비 일정으로 화면이 비지 않도록 했다.
+- 실제값이 중요한 물가 지표는 BLS 공식 통계로 보강하는 흐름을 유지했다.
+- 뉴스는 Groq를 우선 사용하고, 실패해도 한국어 규칙 기반 제목과 브리핑으로 떨어지도록 정리했다.
+- 결제 플랜 문구는 코인, 글로벌, 올마켓 가치가 명확히 보이도록 다시 정리했다.
+- 이번 검증에서는 `lint`, `build`, `smoke:ops`, `smoke:copy`, `smoke:billing`, `smoke:api`, `smoke:routes`, `smoke:css`, `smoke:mobile`, `smoke:launch`, `smoke:all`을 통과 기준으로 삼았다.

@@ -1,5 +1,12 @@
-// 공개 경제 캘린더와 공식 통계 데이터를 자동으로 합쳐 매크로 일정을 제공합니다.
-import { macroCalendarSourceNote, type MacroEventImportance, type MacroEventItem } from "@/data/macroEvents";
+// 공개 경제 캘린더와 공식 통계 데이터를 합쳐 매크로 일정을 제공합니다.
+import {
+  macroCalendarSourceNote,
+  macroCalendarUpdatedAt,
+  macroCalendarUpdatedAtIso,
+  macroItems,
+  type MacroEventImportance,
+  type MacroEventItem
+} from "@/data/macroEvents";
 
 export type MacroCalendarSource = "forex-factory" | "official-bls" | "automatic-mixed";
 
@@ -28,7 +35,6 @@ type ForexFactoryEvent = {
 type BlsPoint = {
   year: string;
   period: string;
-  periodName?: string;
   value: string;
 };
 
@@ -42,7 +48,6 @@ type BlsApiResponse = {
   Results?: {
     series?: BlsSeries[];
   };
-  message?: string[];
 };
 
 type OfficialActual = {
@@ -55,6 +60,13 @@ const FOREX_FACTORY_THIS_WEEK = "https://nfs.faireconomy.media/ff_calendar_thisw
 const BLS_PUBLIC_API_URL = "https://api.bls.gov/publicAPI/v2/timeseries/data/";
 const KST_TIME_ZONE = "Asia/Seoul";
 const RECENT_RELEASE_MS = 24 * 60 * 60 * 1000;
+const BLS_SERIES = {
+  cpi: "CUSR0000SA0",
+  coreCpi: "CUSR0000SA0L1E",
+  ppi: "WPSFD4",
+  corePpi: "WPSFD49116"
+} as const;
+
 const IMPORTANT_USD_EVENTS = [
   /cpi/i,
   /ppi/i,
@@ -75,12 +87,6 @@ const IMPORTANT_USD_EVENTS = [
   /durable goods/i,
   /jolts/i
 ];
-const BLS_SERIES = {
-  cpi: "CUSR0000SA0",
-  coreCpi: "CUSR0000SA0L1E",
-  ppi: "WPSFD4",
-  corePpi: "WPSFD49116"
-} as const;
 
 let cachedPayload: { expiresAt: number; payload: MacroCalendarPayload } | null = null;
 
@@ -132,7 +138,8 @@ function importanceFromImpact(impact?: string): MacroEventImportance {
 
 function sourceFromTitle(title: string): MacroEventItem["source"] {
   if (/jobless|unemployment claims/i.test(title)) return "DOL";
-  if (/retail|home sales|durable goods/i.test(title)) return /home sales/i.test(title) ? "NAR" : "Census";
+  if (/existing home sales|new home sales/i.test(title)) return "NAR";
+  if (/retail|durable goods/i.test(title)) return "Census";
   if (/fomc|fed|powell/i.test(title)) return "Fed";
   if (/gdp|pce/i.test(title)) return "BEA";
   if (/cpi|ppi|nfp|payroll|unemployment rate|earnings|jolts/i.test(title)) return "BLS";
@@ -153,41 +160,35 @@ function sourceUrlFromTitle(title: string) {
 function eventState(releaseAt: string): MacroEventItem["state"] {
   const time = Date.parse(releaseAt);
   if (!Number.isFinite(time)) return "watch";
-  if (time <= Date.now()) return "released";
-  return "upcoming";
-}
-
-function isRecentReleased(item: MacroEventItem) {
-  const time = Date.parse(item.releaseAt);
-  return Number.isFinite(time) && time <= Date.now() && Date.now() - time <= RECENT_RELEASE_MS;
+  return time <= Date.now() ? "released" : "upcoming";
 }
 
 function eventSummary(title: string) {
-  if (/cpi/i.test(title)) return "미국 소비자물가 발표입니다. 물가가 예상보다 강하면 금리 부담이 커지고 위험자산 변동성이 커질 수 있습니다.";
+  if (/cpi/i.test(title)) return "미국 소비자물가 발표입니다. 예상보다 높으면 금리 부담이 커지고, 예상보다 낮으면 위험자산 반등 명분이 생길 수 있습니다.";
   if (/ppi/i.test(title)) return "미국 생산자물가 발표입니다. 기업 비용 압력과 향후 소비자물가 흐름을 가늠하는 자료입니다.";
-  if (/retail sales/i.test(title)) return "미국 소비 흐름을 확인하는 발표입니다. 예상보다 강하면 경기 체력은 긍정적이지만 금리 부담은 커질 수 있습니다.";
+  if (/retail sales/i.test(title)) return "미국 소비 흐름을 확인하는 발표입니다. 소비가 강하면 경기 체력은 좋지만 금리 부담도 다시 커질 수 있습니다.";
   if (/jobless|unemployment claims/i.test(title)) return "미국 고용 둔화 여부를 매주 확인하는 지표입니다. 청구건수가 급증하면 경기 둔화 우려가 커질 수 있습니다.";
   if (/fomc|fed|powell/i.test(title)) return "연준의 금리 경로와 유동성 기대가 바뀔 수 있는 이벤트입니다.";
-  if (/gdp/i.test(title)) return "미국 성장률을 확인하는 지표입니다. 성장 둔화와 물가 압력이 함께 해석됩니다.";
-  if (/pce/i.test(title)) return "연준이 중요하게 보는 물가 지표입니다. 금리 기대에 직접 영향을 줄 수 있습니다.";
-  if (/home sales/i.test(title)) return "주택시장 체력을 확인하는 지표입니다. 금리 부담과 소비 심리를 함께 볼 때 의미가 커집니다.";
-  return "미국 시장에 영향을 줄 수 있는 주요 매크로 일정입니다. 발표 직후 가격 반응과 금리, 달러 움직임을 함께 확인해야 합니다.";
+  if (/gdp/i.test(title)) return "미국 성장률을 확인하는 지표입니다. 성장 둔화와 물가 압력을 함께 해석해야 합니다.";
+  if (/pce/i.test(title)) return "연준이 중요하게 보는 물가 지표입니다. 금리 기대에 직접적인 영향을 줄 수 있습니다.";
+  if (/home sales/i.test(title)) return "주택시장 체력을 확인하는 지표입니다. 금리 부담과 소비 심리를 함께 볼 수 있습니다.";
+  return "미국 시장에 영향을 줄 수 있는 주요 매크로 일정입니다. 발표 직후 가격 반응과 거래량 변화를 함께 확인해야 합니다.";
 }
 
 function marketImpact(title: string) {
   if (/cpi|ppi|pce/i.test(title)) {
-    return "예상보다 높으면 금리 부담이 커져 코인과 성장주에는 단기 부담이 될 수 있습니다. 예상보다 낮으면 위험자산 반등 재료가 될 수 있습니다.";
+    return "예상보다 높으면 금리 부담이 커져 코인과 성장주에는 단기 부담이 될 수 있습니다. 예상보다 낮으면 위험자산 반등 명분이 생길 수 있습니다.";
   }
   if (/retail sales|gdp/i.test(title)) {
-    return "강한 수치는 경기 자신감에는 좋지만 금리 인하 기대를 낮출 수 있습니다. 약한 수치는 경기 둔화 우려와 금리 완화 기대가 동시에 나타날 수 있습니다.";
+    return "강한 수치는 경기 자신감에는 긍정적이지만 금리 인하 기대를 늦출 수 있습니다. 약한 수치는 경기 둔화 우려와 금리 완화 기대가 동시에 나올 수 있습니다.";
   }
   if (/jobless|unemployment|payroll|nfp/i.test(title)) {
     return "고용이 너무 강하면 금리 부담, 너무 약하면 경기 둔화 우려가 커집니다. 발표 직후에는 방향보다 변동성 관리가 먼저입니다.";
   }
   if (/fomc|fed|powell/i.test(title)) {
-    return "매파적 발언은 위험자산에 부담이고, 비둘기파적 발언은 유동성 기대를 키울 수 있습니다. 달러와 미국채 금리를 같이 봐야 합니다.";
+    return "매파적인 표현은 위험자산에 부담이고, 비둘기파적인 표현은 유동성 기대를 살릴 수 있습니다. 달러와 미국채 금리를 같이 봐야 합니다.";
   }
-  return "결과가 예상치와 크게 벌어지면 단기 변동성이 커질 수 있습니다. 차트 방향과 거래량 반응을 함께 확인하세요.";
+  return "결과가 예상치에서 크게 벗어나면 단기 변동성이 커질 수 있습니다. 차트 방향과 거래량 반응을 함께 확인하세요.";
 }
 
 function sortItems(items: MacroEventItem[]) {
@@ -219,7 +220,7 @@ function getRefreshMs(items: MacroEventItem[]) {
 
 async function fetchForexFactoryEvents() {
   const response = await fetch(FOREX_FACTORY_THIS_WEEK, {
-    headers: { "user-agent": "ChartRadarBot/1.0" },
+    headers: { "user-agent": "ChartRadarBot/1.0 (+https://chartradar.ai)" },
     cache: "no-store"
   });
   if (!response.ok) throw new Error(`ForexFactory calendar ${response.status}`);
@@ -247,17 +248,13 @@ function toMacroItem(event: ForexFactoryEvent): MacroEventItem | null {
   };
 }
 
-function getBlsPeriodNumber(point: BlsPoint) {
-  return Number(point.period.replace("M", ""));
-}
-
 function sortBlsPoints(data: BlsPoint[] = []) {
   return data
     .filter((point) => /^M\d{2}$/.test(point.period) && Number.isFinite(Number(point.value)))
     .sort((a, b) => {
       const yearDiff = Number(b.year) - Number(a.year);
       if (yearDiff !== 0) return yearDiff;
-      return getBlsPeriodNumber(b) - getBlsPeriodNumber(a);
+      return Number(b.period.replace("M", "")) - Number(a.period.replace("M", ""));
     });
 }
 
@@ -287,7 +284,7 @@ function buildBlsLine(points?: BlsPoint[]) {
   };
 }
 
-async function fetchBlsActuals(): Promise<OfficialActual[]> {
+export async function fetchOfficialBlsCalendar(): Promise<OfficialActual[]> {
   const now = new Date();
   const response = await fetch(BLS_PUBLIC_API_URL, {
     method: "POST",
@@ -314,7 +311,7 @@ async function fetchBlsActuals(): Promise<OfficialActual[]> {
   if (cpi && coreCpi) {
     actuals.push({
       matcher: /cpi/i,
-      actual: `CPI ${formatPercent(cpi.mom)} MoM / ${formatPercent(cpi.yoy)} YoY, Core ${formatPercent(coreCpi.mom)} MoM / ${formatPercent(coreCpi.yoy)} YoY`,
+      actual: `CPI ${formatPercent(cpi.mom)} 전월비 / ${formatPercent(cpi.yoy)} 전년비, 근원 ${formatPercent(coreCpi.mom)} 전월비 / ${formatPercent(coreCpi.yoy)} 전년비`,
       sourceUrl: "https://www.bls.gov/cpi/"
     });
   }
@@ -322,7 +319,7 @@ async function fetchBlsActuals(): Promise<OfficialActual[]> {
   if (ppi && corePpi) {
     actuals.push({
       matcher: /ppi/i,
-      actual: `PPI ${formatPercent(ppi.mom)} MoM / ${formatPercent(ppi.yoy)} YoY, Core ${formatPercent(corePpi.mom)} MoM / ${formatPercent(corePpi.yoy)} YoY`,
+      actual: `PPI ${formatPercent(ppi.mom)} 전월비 / ${formatPercent(ppi.yoy)} 전년비, 근원 ${formatPercent(corePpi.mom)} 전월비 / ${formatPercent(corePpi.yoy)} 전년비`,
       sourceUrl: "https://www.bls.gov/ppi/"
     });
   }
@@ -330,32 +327,38 @@ async function fetchBlsActuals(): Promise<OfficialActual[]> {
   return actuals;
 }
 
-function applyOfficialActuals(items: MacroEventItem[], actuals: OfficialActual[]) {
+export function mergeOfficialInflationActuals(items: MacroEventItem[], actuals: OfficialActual[]) {
   return items.map((item) => {
     const actual = actuals.find((candidate) => candidate.matcher.test(item.label));
-    if (!actual) return item;
-    if (Date.parse(item.releaseAt) > Date.now()) return item;
+    if (!actual || Date.parse(item.releaseAt) > Date.now()) return item;
     return {
       ...item,
       state: "released" as const,
       actual: actual.actual,
       sourceUrl: actual.sourceUrl,
-      summary: `${item.label}의 최신 공식 통계값을 확인했습니다. 예상치와 실제 발표값의 차이를 시장 반응과 함께 확인하세요.`
+      summary: `${item.label}의 최신 공식 통계값을 확인했습니다. 예상치와 실제 발표값 차이를 시장 반응과 함께 확인하세요.`
     };
   });
 }
 
-function getEmptyPayload(warning: string): MacroCalendarPayload {
-  const updatedAt = new Date().toISOString();
+export function getFallbackPayload(warning: string): MacroCalendarPayload {
+  const updatedAt = macroCalendarUpdatedAtIso || new Date().toISOString();
+  const items = sortItems(
+    macroItems.map((item) => ({
+      ...item,
+      state: eventState(item.releaseAt)
+    }))
+  );
+
   return {
     updatedAt,
-    updatedAtLabel: `${formatKstDateTime(updatedAt)} 자동 확인 실패`,
+    updatedAtLabel: macroCalendarUpdatedAt,
     source: "automatic-mixed",
-    sourceLabel: "자동 확인",
+    sourceLabel: "예비 일정 + 자동 재시도",
     sourceNote: macroCalendarSourceNote,
     isAutomatic: true,
-    nextRefreshMs: 3 * 60 * 1000,
-    items: [],
+    nextRefreshMs: getRefreshMs(items),
+    items,
     warning
   };
 }
@@ -365,8 +368,8 @@ export async function getMacroCalendarPayload(): Promise<MacroCalendarPayload> {
   if (cachedPayload && cachedPayload.expiresAt > now) return cachedPayload.payload;
 
   try {
-    const [events, actuals] = await Promise.all([fetchForexFactoryEvents(), fetchBlsActuals().catch(() => [])]);
-    const items = applyOfficialActuals(
+    const [events, actuals] = await Promise.all([fetchForexFactoryEvents(), fetchOfficialBlsCalendar().catch(() => [])]);
+    const items = mergeOfficialInflationActuals(
       events
         .filter(isImportantUsdEvent)
         .map(toMacroItem)
@@ -384,22 +387,22 @@ export async function getMacroCalendarPayload(): Promise<MacroCalendarPayload> {
       updatedAtLabel: `${formatKstDateTime(updatedAt)} 자동 갱신`,
       source: actuals.length ? "automatic-mixed" : "forex-factory",
       sourceLabel: actuals.length ? "공개 캘린더 + 공식 통계" : "공개 경제 캘린더",
-      sourceNote: "일정·예상치·이전치는 공개 경제 캘린더에서 자동 확인하고, CPI/PPI 실제값은 BLS 공식 통계로 보강합니다.",
+      sourceNote: "일정과 예상치는 공개 경제 캘린더에서 자동 확인하고, CPI/PPI 실제값은 BLS 공식 통계로 보강합니다.",
       isAutomatic: true,
       nextRefreshMs: getRefreshMs(sorted),
-      items: sorted,
+      items: sorted.length ? sorted : getFallbackPayload("공개 캘린더가 비어 있어 예비 일정을 표시합니다.").items,
       warning: actuals.length ? undefined : "일부 실제값은 공식 발표 반영까지 지연될 수 있습니다."
     };
 
     cachedPayload = { payload, expiresAt: now + payload.nextRefreshMs };
     return payload;
   } catch (error) {
-    const payload = getEmptyPayload(error instanceof Error ? error.message : "매크로 자동 갱신 실패");
+    const payload = getFallbackPayload(error instanceof Error ? error.message : "매크로 자동 갱신 실패");
     cachedPayload = { payload, expiresAt: now + payload.nextRefreshMs };
     return payload;
   }
 }
 
 export function getMacroCalendarFallbackPayload() {
-  return getEmptyPayload("자동 캘린더를 불러오는 중입니다.");
+  return getFallbackPayload("자동 캘린더를 불러오는 중입니다.");
 }

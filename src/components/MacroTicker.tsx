@@ -1,5 +1,5 @@
 "use client";
-// 자동 매크로 캘린더를 화면 상단과 뉴스 화면에 보여주는 패널입니다.
+// 자동 매크로 캘린더를 상단 전광판과 뉴스 화면에 표시하는 패널입니다.
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CalendarClock, ChevronDown, ChevronRight, Clock3, ExternalLink, Radio, TimerReset } from "lucide-react";
@@ -97,11 +97,11 @@ function sourceLabel(source: MacroEventSource) {
 
 function macroLabel(label: string) {
   const lower = label.toLowerCase();
-  if (lower.includes("core cpi")) return "근원 소비자물가";
-  if (lower.includes("cpi")) return "소비자물가";
-  if (lower.includes("core ppi")) return "근원 생산자물가";
-  if (lower.includes("ppi")) return "생산자물가";
-  if (lower.includes("retail sales")) return label.toLowerCase().includes("core") ? "근원 소매판매" : "소매판매";
+  if (lower.includes("core cpi")) return "근원 소비자물가지수(CPI)";
+  if (lower.includes("cpi")) return "소비자물가지수(CPI)";
+  if (lower.includes("core ppi")) return "근원 생산자물가지수(PPI)";
+  if (lower.includes("ppi")) return "생산자물가지수(PPI)";
+  if (lower.includes("retail sales")) return lower.includes("core") ? "근원 소매판매" : "소매판매";
   if (lower.includes("jobless") || lower.includes("unemployment claims")) return "신규 실업수당 청구";
   if (lower.includes("non-farm") || lower.includes("nonfarm")) return "비농업 고용";
   if (lower.includes("unemployment rate")) return "실업률";
@@ -110,6 +110,8 @@ function macroLabel(label: string) {
   if (lower.includes("gdp")) return "GDP";
   if (lower.includes("pce")) return "PCE 물가";
   if (lower.includes("existing home sales")) return "기존주택판매";
+  if (lower.includes("manufacturing pmi")) return "제조업 PMI";
+  if (lower.includes("consumer sentiment")) return "소비자심리지수";
   return label;
 }
 
@@ -196,7 +198,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
           }
         }
       } catch {
-        // 네트워크가 잠시 막히면 현재 캘린더를 유지하고 다시 시도합니다.
+        // 네트워크가 잠시 막혀도 현재 캘린더를 유지하고 다시 시도합니다.
       }
 
       if (!cancelled) timer = setTimeout(loadCalendar, 3 * 60_000);

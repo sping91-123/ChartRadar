@@ -14,10 +14,7 @@ export async function GET(request: Request) {
   });
 
   if (!limited.allowed) {
-    return NextResponse.json(
-      { error: "매크로 캘린더 요청이 잠시 많습니다.", retryAfter: limited.retryAfter },
-      { status: 429 }
-    );
+    return NextResponse.json({ error: "매크로 캘린더 요청이 잠시 많습니다.", retryAfter: limited.retryAfter }, { status: 429 });
   }
 
   const payload = await getMacroCalendarPayload();

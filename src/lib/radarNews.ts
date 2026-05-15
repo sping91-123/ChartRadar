@@ -48,7 +48,7 @@ const sourceDisplayNames: Record<string, string> = {
   NAR: "미 부동산협회",
   CoinDesk: "코인데스크",
   Cointelegraph: "코인텔레그래프",
-  "CNBC Markets": "CNBC 마켓",
+  "CNBC Markets": "미국 증시 뉴스",
   MarketWatch: "마켓워치"
 };
 
@@ -64,7 +64,7 @@ const cryptoAssets = [
   { asset: "XRP", keywords: ["xrp", "ripple", "리플"] },
   { asset: "SOL", keywords: ["sol", "solana", "솔라나"] },
   { asset: "DOGE", keywords: ["doge", "dogecoin", "도지"] },
-  { asset: "알트코인", keywords: ["altcoin", "alts", "memecoin", "defi", "layer 2"] }
+  { asset: "알트코인", keywords: ["altcoin", "alts", "memecoin", "defi", "layer 2", "token", "tokens"] }
 ];
 
 const stockAssets = [
@@ -87,15 +87,18 @@ const cryptoBullishRules: Rule[] = [
   { keywords: ["record high", "all-time high", "ath", "breakout", "rally", "surge", "soars"], score: 11, tag: "상승 모멘텀" },
   { keywords: ["institutional", "blackrock", "fidelity", "microstrategy", "treasury"], score: 9, tag: "기관 수요" },
   { keywords: ["rate cut", "cuts rates", "liquidity", "stimulus"], score: 8, tag: "유동성 완화" },
-  { keywords: ["partnership", "mainnet", "upgrade", "launches"], score: 6, tag: "프로젝트 호재" }
+  { keywords: ["partnership", "mainnet", "upgrade", "launches", "digitized finance"], score: 6, tag: "프로젝트 호재" },
+  { keywords: ["recover bitcoin", "recovering bitcoin", "wallet recovery"], score: 4, tag: "수급 이슈" }
 ];
 
 const cryptoBearishRules: Rule[] = [
   { keywords: ["hack", "exploit", "stolen", "drain"], score: -15, tag: "보안 리스크" },
   { keywords: ["lawsuit", "sues", "charges", "sec", "cftc", "regulation"], score: -12, tag: "규제 리스크" },
   { keywords: ["outflow", "outflows", "sell-off", "liquidation", "dump", "plunge", "slump", "drops"], score: -12, tag: "매도 압력" },
-  { keywords: ["bankruptcy", "insolvency", "delist"], score: -14, tag: "신용 리스크" },
-  { keywords: ["rate hike", "higher rates", "inflation", "hawkish"], score: -8, tag: "매크로 부담" }
+  { keywords: ["bankruptcy", "insolvency", "delist", "net loss"], score: -14, tag: "신용 리스크" },
+  { keywords: ["rate hike", "higher rates", "inflation", "hawkish"], score: -8, tag: "매크로 부담" },
+  { keywords: ["voter crypto", "voters crypto", "poll crypto"], score: -3, tag: "정책 여론" },
+  { keywords: ["bear market resistance"], score: -7, tag: "저항 구간" }
 ];
 
 const stockBullishRules: Rule[] = [
@@ -107,7 +110,7 @@ const stockBullishRules: Rule[] = [
 ];
 
 const stockBearishRules: Rule[] = [
-  { keywords: ["earnings miss", "misses estimates", "cuts guidance", "downgrade"], score: -13, tag: "실적 리스크" },
+  { keywords: ["earnings miss", "misses estimates", "cuts guidance", "downgrade", "net loss"], score: -13, tag: "실적 리스크" },
   { keywords: ["higher yields", "rate hike", "hawkish", "sticky inflation"], score: -11, tag: "금리 부담" },
   { keywords: ["sell-off", "plunge", "slumps", "correction", "bear market"], score: -10, tag: "가격 조정" },
   { keywords: ["antitrust", "lawsuit", "probe", "sec", "doj", "regulation"], score: -9, tag: "규제 리스크" },
@@ -159,32 +162,33 @@ export function localizeNewsSourceText(text: string) {
     .replace(/\bRate hikes?\b/gi, "금리 인상");
 }
 
+function hasKorean(value: string) {
+  return /[가-힣]/.test(value);
+}
+
 export function fallbackKoreanNewsTitle(title: string, market: RadarNewsMarket = "crypto") {
   const localized = localizeNewsSourceText(title).trim();
-  if (/[가-힣]/.test(localized)) return localized;
+  if (hasKorean(localized)) return localized;
 
   const text = localized.toLowerCase();
   if (market === "crypto") {
     const asset = cryptoAssets.find((rule) => rule.keywords.some((keyword) => text.includes(keyword)))?.asset ?? "코인 시장";
-    if (text.includes("etf")) return `${asset} ETF 흐름에 영향을 줄 수 있는 뉴스입니다.`;
+    if (text.includes("etf")) return `${asset} ETF 흐름이 시장에 영향을 줄 수 있는 뉴스입니다.`;
     if (text.includes("inflow") || text.includes("outflow")) return `${asset} 자금 유입과 유출 흐름을 확인해야 하는 뉴스입니다.`;
     if (text.includes("sec") || text.includes("lawsuit") || text.includes("regulation")) return `${asset} 규제 리스크를 확인해야 하는 뉴스입니다.`;
     if (text.includes("hack") || text.includes("exploit")) return `${asset} 보안 리스크가 감지된 뉴스입니다.`;
-    if (text.includes("chainlink")) return `${asset} 체인링크 연동과 인프라 변화 관련 뉴스입니다.`;
-    if (text.includes("kraken")) return `${asset} 거래소 인프라 변화 관련 뉴스입니다.`;
-    if (text.includes("bridge")) return `${asset} 브릿지와 크로스체인 흐름 관련 뉴스입니다.`;
     if (text.includes("rally") || text.includes("surge") || text.includes("breakout")) return `${asset} 상승 모멘텀을 확인해야 하는 뉴스입니다.`;
     if (text.includes("liquidation") || text.includes("sell-off") || text.includes("plunge")) return `${asset} 하방 변동성을 조심해야 하는 뉴스입니다.`;
-    return `${asset} 주요 이슈가 업데이트됐습니다.`;
+    return `${asset} 주요 이슈가 업데이트되었습니다.`;
   }
 
   const asset = stockAssets.find((rule) => rule.keywords.some((keyword) => text.includes(keyword)))?.asset ?? "글로벌 시장";
   if (text.includes("earnings") || text.includes("guidance")) return `${asset} 실적과 가이던스를 확인해야 하는 뉴스입니다.`;
   if (text.includes("fed") || text.includes("rate") || text.includes("yield")) return `${asset} 금리와 채권금리 영향을 확인해야 하는 뉴스입니다.`;
   if (text.includes("upgrade") || text.includes("downgrade")) return `${asset} 투자 의견 변화 관련 뉴스입니다.`;
-  if (text.includes("oil") || text.includes("crude")) return "원유 가격과 에너지 섹터 흐름을 확인해야 하는 뉴스입니다.";
+  if (text.includes("oil") || text.includes("crude")) return "유가와 에너지 섹터 흐름을 확인해야 하는 뉴스입니다.";
   if (text.includes("gold")) return "금 가격과 안전자산 흐름을 확인해야 하는 뉴스입니다.";
-  return `${asset} 주요 이슈가 업데이트됐습니다.`;
+  return `${asset} 주요 이슈가 업데이트되었습니다.`;
 }
 
 export function analyzeNewsText(input: string, market: RadarNewsMarket = "crypto"): RadarNewsSignal {
@@ -221,10 +225,10 @@ export function analyzeNewsText(input: string, market: RadarNewsMarket = "crypto
 
   const summary =
     direction === "bullish"
-      ? `${assetLabel}에 수요, 유동성, 실적 또는 모멘텀 측면의 우호 재료가 감지됩니다. 다만 실제 진입은 차트 구조와 거래량 반응을 함께 확인해야 합니다.`
+      ? `${assetLabel}에 수요, 유동성, 실적 또는 모멘텀 측면의 긍정 재료가 감지됩니다. 다만 실제 진입은 차트 구조와 거래량 반응까지 함께 확인해야 합니다.`
       : direction === "bearish"
-        ? `${assetLabel}에 규제, 매도 압력, 금리 또는 실적 리스크가 감지됩니다. 추격보다 지지선과 변동성 확대 여부를 먼저 확인하는 편이 안전합니다.`
-        : `${assetLabel} 관련 이슈지만 방향성은 아직 뚜렷하지 않습니다. 같은 방향의 추가 뉴스와 가격 반응이 이어지는지 확인해야 합니다.`;
+        ? `${assetLabel}에 규제, 매도 압력, 금리 또는 실적 리스크가 감지됩니다. 추격보다 지지선 이탈과 변동성 확대 여부를 먼저 확인하는 편이 안전합니다.`
+        : `${assetLabel} 관련 이슈지만 방향성은 아직 선명하지 않습니다. 같은 방향의 추가 뉴스와 가격 반응이 이어지는지 확인해야 합니다.`;
 
   const actionHint =
     direction === "bullish"

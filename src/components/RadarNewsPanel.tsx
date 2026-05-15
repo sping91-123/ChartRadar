@@ -1,5 +1,5 @@
 "use client";
-// 시장 뉴스 브리핑과 원문 뉴스 목록을 보여주는 패널입니다.
+// 시장 뉴스 브리핑과 참고 뉴스 목록을 보여주는 패널입니다.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ExternalLink, Newspaper, RefreshCcw, Target, TrendingDown, TrendingUp } from "lucide-react";
 import {
@@ -29,20 +29,20 @@ type RadarNewsMarket = "crypto" | "stocks";
 const marketCopy = {
   crypto: {
     eyebrow: "코인 뉴스 레이더",
-    title: "코인 뉴스 브리핑",
-    description: "코인 시장 주요 이슈를 한국어로 정리하고, 시장 영향과 오늘 확인할 포인트를 빠르게 보여줍니다.",
+    title: "오늘의 코인 뉴스 브리핑",
+    description: "코인 시장 주요 이슈를 한국어로 정리하고, 시장 영향과 오늘 확인할 사인을 빠르게 보여드립니다.",
     proLine: "Pro에서는 반복 브리핑, 시장 영향 정리, 전략 체크포인트를 더 자주 확인할 수 있습니다."
   },
   stocks: {
     eyebrow: "글로벌 뉴스 레이더",
-    title: "글로벌 뉴스 브리핑",
-    description: "미국주식, ETF, 금리, 실적, 매크로 이슈를 한국어로 정리하고 시장 영향까지 함께 보여줍니다.",
+    title: "오늘의 글로벌 뉴스 브리핑",
+    description: "미국주식, ETF, 금리, 실적, 매크로 이슈를 한국어로 정리하고 시장 영향까지 함께 보여드립니다.",
     proLine: "Global Pro에서는 글로벌 매크로와 미국장 이슈를 더 촘촘하게 확인할 수 있습니다."
   }
 } satisfies Record<RadarNewsMarket, { eyebrow: string; title: string; description: string; proLine: string }>;
 
 function newsCacheKey(market: RadarNewsMarket) {
-  return `chart-radar.news.${market}.v8`;
+  return `chart-radar.news.${market}.v9`;
 }
 
 function canUseStorage() {
@@ -217,7 +217,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
         setPayload(cached);
         setStatus("ready");
         setError("");
-        setLimitNotice(`${usageGate.message} 마지막 브리핑과 원문 뉴스만 먼저 보여드립니다.`);
+        setLimitNotice(`${usageGate.message} 마지막 브리핑과 참고 뉴스만 먼저 보여드립니다.`);
         return;
       }
     }
@@ -357,7 +357,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
               </div>
             </div>
             <div>
-              <h4 className="text-sm font-black text-white">확인할 점</h4>
+              <h4 className="text-sm font-black text-white">확인할 것</h4>
               <div className="mt-3">
                 <BulletList items={briefing.strategyNotes} tone="yellow" />
               </div>
@@ -369,10 +369,13 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
         </div>
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {(payload?.items ?? []).slice(0, 12).map((item) => (
-          <NewsSourceCard key={item.id} item={item} market={market} />
-        ))}
+      <div>
+        <h3 className="mb-3 text-sm font-black text-white">참고 뉴스</h3>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {(payload?.items ?? []).slice(0, 12).map((item) => (
+            <NewsSourceCard key={item.id} item={item} market={market} />
+          ))}
+        </div>
       </div>
     </section>
   );
