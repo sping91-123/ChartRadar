@@ -1,7 +1,7 @@
 "use client";
 // Binance 공개 데이터로 청산 압력과 고배율 위험 거리를 설명하는 코인 전용 패널입니다.
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { AlertTriangle, ArrowDown, ArrowUp, Gauge, HelpCircle, Loader2, ShieldAlert } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Gauge, HelpCircle, Loader2 } from "lucide-react";
 import type { ChartTimeframe } from "@/lib/marketAnalysis";
 import type { LiquidationPressureReport, LiquidationPressureSide } from "@/lib/liquidationPressure";
 
@@ -91,7 +91,7 @@ function TooltipLine({ children }: { children: ReactNode }) {
   return (
     <span className="group relative inline-flex items-center gap-1">
       <HelpCircle size={13} className="text-slate-500" aria-hidden />
-      <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-64 -translate-x-1/2 rounded-md border border-white/10 bg-slate-950 px-3 py-2 text-[11px] leading-5 text-slate-300 shadow-xl group-hover:block">
+      <span className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 hidden w-[min(18rem,calc(100vw-2rem))] rounded-md border border-white/10 bg-slate-950 px-3 py-2 text-[11px] leading-5 text-slate-300 shadow-xl group-hover:block sm:left-1/2 sm:right-auto sm:w-64 sm:-translate-x-1/2">
         {children}
       </span>
     </span>
@@ -276,30 +276,6 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
         </div>
       </div>
 
-      <details className="mt-3 rounded-lg border border-white/10 bg-black/20 p-4">
-        <summary className="cursor-pointer text-sm font-black text-white">고배율 위험 거리 보기</summary>
-        <p className="mt-2 text-xs leading-5 text-slate-500 [word-break:keep-all]">
-          이 값은 현재가에서 단순 계산한 고배율 위험 거리입니다. 실제 청산 물량 분포나 거래소별 유지증거금, 교차·격리 조건을 반영한 청산맵이 아닙니다.
-        </p>
-        <div className="mt-3 space-y-2">
-          {report.bands.map((band) => (
-            <div key={band.leverage} className="grid grid-cols-[3.5rem_1fr_1fr] items-center gap-2 text-xs">
-              <span className="rounded border border-white/10 bg-black/30 px-2 py-1 text-center font-black text-slate-300">{band.leverage}x</span>
-              <span className="rounded border border-signal-danger/20 bg-signal-danger/5 px-2 py-1 font-bold text-signal-danger">
-                롱 위험 {formatPrice(band.longLiquidationPrice)}
-              </span>
-              <span className="rounded border border-signal-success/20 bg-signal-success/5 px-2 py-1 font-bold text-signal-success">
-                숏 위험 {formatPrice(band.shortLiquidationPrice)}
-              </span>
-            </div>
-          ))}
-        </div>
-      </details>
-
-      <p className="mt-3 rounded-md border border-signal-warning/20 bg-signal-warning/10 px-3 py-2 text-xs leading-5 text-signal-warning [word-break:keep-all]">
-        <ShieldAlert className="mr-1 inline" size={13} aria-hidden />
-        {report.warning}
-      </p>
     </section>
   );
 }

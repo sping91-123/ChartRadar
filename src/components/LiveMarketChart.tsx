@@ -24,7 +24,6 @@ import {
   Crown,
   History,
   HelpCircle,
-  RefreshCcw,
   Settings2,
 } from "lucide-react";
 import {
@@ -1990,14 +1989,6 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => loadMarket()}
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-surface-line bg-surface-cardSoft px-3 text-sm font-bold text-slate-300 hover:border-accent-blue/60 hover:text-white"
-          >
-            <RefreshCcw size={16} className={isLoading ? "animate-spin" : ""} aria-hidden />
-            갱신
-          </button>
         </div>
 
       </div>
@@ -2104,10 +2095,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           {structureSensitivityOptions.map((item) => {
-            const active =
-              structureSensitivity === item.value &&
-              analysisMode === item.analysisMode &&
-              msbMode === item.msbMode;
+            const active = structureSensitivity === item.value;
             return (
               <button
                 key={item.value}
@@ -2244,7 +2232,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 데이터 신뢰도
                 <span className="group relative inline-flex">
                   <HelpCircle size={13} aria-hidden />
-                  <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-64 -translate-x-1/2 rounded-md border border-white/10 bg-slate-950 px-3 py-2 text-[11px] leading-5 text-slate-300 shadow-xl group-hover:block">
+                  <span className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 hidden w-[min(18rem,calc(100vw-2rem))] rounded-md border border-white/10 bg-slate-950 px-3 py-2 text-[11px] leading-5 text-slate-300 shadow-xl group-hover:block sm:left-1/2 sm:right-auto sm:w-64 sm:-translate-x-1/2">
                     여러 타임프레임 구조와 현재 위치가 얼마나 서로 맞는지 보는 값입니다. 높다고 무조건 진입이라는 뜻은 아닙니다.
                   </span>
                 </span>
