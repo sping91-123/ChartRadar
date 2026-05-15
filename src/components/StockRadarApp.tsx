@@ -343,14 +343,14 @@ function GlobalPlaybook({
     <div className="mt-5 grid gap-3 lg:grid-cols-4">
       <article className={`rounded-lg border p-4 ${toneBadgeClass(sessionState?.tone ?? "neutral")}`}>
         <Clock3 size={20} aria-hidden />
-        <p className="mt-3 text-xs font-black uppercase tracking-[0.18em] opacity-80">Market Clock</p>
+        <p className="mt-3 text-xs font-black opacity-80">미국장 구간</p>
         <h3 className="mt-2 text-base font-black text-white">{sessionState?.title ?? "미국장 시간 확인 중"}</h3>
         <p className="mt-2 text-xs leading-5 text-slate-300">{sessionState?.detail ?? "현재 한국 시간 기준 미국장 구간을 확인하고 있습니다."}</p>
       </article>
 
       <article className={`rounded-lg border p-4 ${toneBadgeClass(tone)}`}>
         <Compass size={20} aria-hidden />
-        <p className="mt-3 text-xs font-black uppercase tracking-[0.18em] opacity-80">Priority</p>
+        <p className="mt-3 text-xs font-black opacity-80">먼저 볼 것</p>
         <h3 className="mt-2 text-base font-black text-white">{focus}</h3>
         <p className="mt-2 text-xs leading-5 text-slate-300">
           {selectedInfo?.symbol ?? "선택 자산"} {latest ? formatPrice(latest.close) : "가격 확인 중"} · {formatPercent(changePercent)}
@@ -359,14 +359,14 @@ function GlobalPlaybook({
 
       <article className="rounded-lg border border-white/10 bg-black/20 p-4">
         <Target className="text-cyan-300" size={20} aria-hidden />
-        <p className="mt-3 text-xs font-black uppercase tracking-[0.18em] text-slate-400">Action Line</p>
+        <p className="mt-3 text-xs font-black text-slate-400">기준선</p>
         <h3 className="mt-2 text-base font-black text-white">기준선 행동</h3>
         <p className="mt-2 text-xs leading-5 text-slate-300">{basis}</p>
       </article>
 
       <article className="rounded-lg border border-white/10 bg-black/20 p-4">
         <Shield className="text-cyan-300" size={20} aria-hidden />
-        <p className="mt-3 text-xs font-black uppercase tracking-[0.18em] text-slate-400">Risk Memo</p>
+        <p className="mt-3 text-xs font-black text-slate-400">위험 메모</p>
         <h3 className="mt-2 text-base font-black text-white">위험도 {riskScore === null ? "확인 중" : `${Math.round(riskScore)}%`}</h3>
         <p className="mt-2 text-xs leading-5 text-slate-300">{groupPlaybook(selectedInfo?.group)}</p>
       </article>

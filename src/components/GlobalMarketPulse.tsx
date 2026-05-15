@@ -90,7 +90,7 @@ export function GlobalMarketPulse() {
             <Activity size={20} aria-hidden />
           </div>
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Global Pulse</p>
+            <p className="text-xs font-black text-cyan-300">글로벌 흐름</p>
             <h2 className="mt-1 text-xl font-black text-white">글로벌 시장 흐름</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400 [word-break:keep-all]">
               지수선물, 변동성, 채권, 달러, 원자재, 반도체 ETF를 먼저 훑어 오늘 시장의 압력이 어디에 있는지 정리합니다.

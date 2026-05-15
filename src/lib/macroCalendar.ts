@@ -88,6 +88,15 @@ const IMPORTANT_USD_EVENTS = [
   /jolts/i
 ];
 
+const FED_DECISION_EVENTS = [
+  /fomc statement/i,
+  /fomc press conference/i,
+  /fomc economic projections/i,
+  /federal funds rate/i,
+  /fed interest rate decision/i,
+  /fed rate decision/i
+];
+
 let cachedPayload: { expiresAt: number; payload: MacroCalendarPayload } | null = null;
 
 function formatKstDateTime(iso: string) {
@@ -126,7 +135,9 @@ function isImportantUsdEvent(event: ForexFactoryEvent) {
   if (event.country !== "USD") return false;
   const title = normalizeTitle(event.title ?? "");
   if (!title) return false;
-  if (/speaks|speech|testifies/i.test(title) && event.impact !== "High") return false;
+  if (/speaks|speech|testifies|testimony|member/i.test(title) && !FED_DECISION_EVENTS.some((pattern) => pattern.test(title))) {
+    return false;
+  }
   if (event.impact === "High") return true;
   return IMPORTANT_USD_EVENTS.some((pattern) => pattern.test(title));
 }

@@ -255,15 +255,9 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
             <div>
               <h2 className="text-lg font-bold text-white">{marketLabel} 매매 복기</h2>
               <p className="mt-1 text-sm leading-6 text-slate-400">
-                결과보다 원칙을 지켰는지 남기는 공간입니다. 계정을 연결하면 기기가 바뀌어도 이어볼 수 있습니다.
+                진입 이유, 지킨 원칙, 다음에 고칠 점만 짧게 남겨 다음 매매 전에 확인합니다.
               </p>
             </div>
-          </div>
-
-          <div className="mt-4 rounded-xl border border-accent-blue/20 bg-accent-blue/10 p-3 text-xs leading-5 text-accent-blue">
-            {session
-              ? "복기 기록이 계정에 연결되어 있습니다. 다른 기기에서도 같은 계정으로 이어볼 수 있습니다."
-              : "계정을 연결하면 복기 기록을 안전하게 이어갈 수 있습니다. 로그인 전 기록은 이 기기에만 남습니다."}
           </div>
 
           {stats.scoutEntries.length > 0 ? (

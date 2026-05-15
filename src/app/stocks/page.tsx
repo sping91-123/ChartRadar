@@ -8,10 +8,10 @@ import { StockRadarApp } from "@/components/StockRadarApp";
 
 export default function StocksPage() {
   return (
-    <main className="min-h-screen px-3 pb-10 sm:px-5">
+    <main className="min-h-screen px-3 pb-64 sm:px-5 sm:pb-44 lg:pb-36">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-5">
         <Header market="stocks" />
-        <RadarTopNav />
+        <RadarTopNav market="stocks" />
         <MacroTicker compact market="stocks" />
         <GlobalMarketPulse />
         <StockRadarApp />
