@@ -30,14 +30,14 @@ const marketCopy = {
   crypto: {
     eyebrow: "코인 뉴스 레이더",
     title: "오늘의 코인 뉴스 브리핑",
-    description: "코인 시장 주요 이슈를 한국어로 정리하고, 시장 영향과 오늘 확인할 사인을 빠르게 보여드립니다.",
+    description: "코인 시장 주요 이슈를 한국어로 정리하고, 시장 영향과 오늘 확인할 포인트를 빠르게 보여드립니다.",
     proLine: "Pro에서는 반복 브리핑, 시장 영향 정리, 전략 체크포인트를 더 자주 확인할 수 있습니다."
   },
   stocks: {
     eyebrow: "글로벌 뉴스 레이더",
     title: "오늘의 글로벌 뉴스 브리핑",
     description: "미국주식, ETF, 금리, 실적, 매크로 이슈를 한국어로 정리하고 시장 영향까지 함께 보여드립니다.",
-    proLine: "Global Pro에서는 글로벌 매크로와 미국장 이슈를 더 촘촘하게 확인할 수 있습니다."
+    proLine: "Global Pro에서는 글로벌 매크로와 미국장 이슈를 장중에도 반복해서 확인할 수 있습니다."
   }
 } satisfies Record<RadarNewsMarket, { eyebrow: string; title: string; description: string; proLine: string }>;
 
@@ -70,7 +70,7 @@ function writeCachedNews(market: RadarNewsMarket, payload: NewsPayload) {
 function directionStyle(direction: RadarNewsDirection) {
   if (direction === "bullish") {
     return {
-      label: "상방 우호",
+      label: "상방 신호",
       icon: TrendingUp,
       text: "text-signal-success",
       bg: "border-signal-success/25 bg-signal-success/10",
@@ -259,7 +259,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
 
   const briefing = payload?.briefing;
   const isInitialLoading = status === "loading" && !payload;
-  const leadingTone = digest.bullish > digest.bearish ? "상방 우호" : digest.bearish > digest.bullish ? "하방 주의" : "중립 확인";
+  const leadingTone = digest.bullish > digest.bearish ? "상방 신호" : digest.bearish > digest.bullish ? "하방 주의" : "중립 확인";
   const leadingToneClass = digest.bullish > digest.bearish ? "text-signal-success" : digest.bearish > digest.bullish ? "text-signal-danger" : "text-signal-warning";
   const topIssue = briefing?.keyIssues[0];
   const topAction = briefing?.strategyNotes[0] ?? briefing?.marketImpact[0] ?? "";
@@ -292,7 +292,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
         <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div className="rounded-xl border border-signal-success/20 bg-black/20 p-3">
             <p className="text-2xl font-black text-signal-success">{isInitialLoading ? "..." : digest.bullish}</p>
-            <p className="text-xs font-bold text-slate-400">상방 우호</p>
+            <p className="text-xs font-bold text-slate-400">상방 신호</p>
           </div>
           <div className="rounded-xl border border-signal-danger/20 bg-black/20 p-3">
             <p className="text-2xl font-black text-signal-danger">{isInitialLoading ? "..." : digest.bearish}</p>

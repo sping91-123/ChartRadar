@@ -1,4 +1,4 @@
-// 일일 사용량 기준과 브라우저 저장 로직을 관리합니다.
+// 일일 사용량 제한과 브라우저 저장 로직을 관리합니다.
 export type UsageBucketId =
   | "radarScan"
   | "altIndividualAnalysis"
@@ -46,7 +46,7 @@ export const usageBuckets: UsageBucket[] = [
     id: "altIndividualAnalysis",
     label: "알트 개별 분석",
     shortLabel: "알트",
-    description: "선택한 알트코인을 BTC, ETH처럼 개별로 판독합니다.",
+    description: "선택한 알트코인을 BTC, ETH처럼 개별로 분석합니다.",
     freeDailyLimit: 3,
     proDailyLimit: 300
   },

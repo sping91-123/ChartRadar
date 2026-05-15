@@ -1,5 +1,5 @@
 "use client";
-// Basic과 Pro의 일일 사용량 차이를 보여주는 패널입니다.
+// Basic과 Pro의 일일 사용 범위를 보여주는 패널입니다.
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Crown, Gauge, Zap } from "lucide-react";
@@ -27,8 +27,8 @@ function UsageRow({ state, isPaid }: { state: ReturnType<typeof getUsageBucketSt
   const activePercent = Math.min(100, Math.round((state.used / activeLimit) * 100));
   const isOverActiveLimit = state.used >= activeLimit;
   const limitCopy = isPaid
-    ? `오늘 ${state.proDailyLimit}회까지 같은 항목을 다시 확인할 수 있습니다.`
-    : `첫 확인 ${state.freeDailyLimit}회 이후에는 Pro에서 장중 재확인이 열립니다.`;
+    ? `오늘 ${state.proDailyLimit}회까지 반복 확인할 수 있습니다.`
+    : `처음 ${state.freeDailyLimit}회 이후에는 Pro에서 장중 재확인이 열립니다.`;
 
   return (
     <div className="rounded-xl border border-surface-line bg-surface-cardSoft p-3">
@@ -50,7 +50,7 @@ function UsageRow({ state, isPaid }: { state: ReturnType<typeof getUsageBucketSt
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
         <div className={`h-full rounded-full ${barColor(activePercent, isOverActiveLimit)}`} style={{ width: `${activePercent}%` }} />
       </div>
-      <div className="mt-2 flex items-center justify-between text-[11px] font-bold text-slate-500">
+      <div className="mt-2 flex items-center justify-between gap-3 text-[11px] font-bold text-slate-500">
         <span>오늘 남음 {activeRemaining}회</span>
         <span className="text-right">{limitCopy}</span>
       </div>
@@ -62,17 +62,17 @@ const initialUsageSnapshot: UsageSnapshot = { dateKey: "", counts: {} };
 
 const scopedUsageCopy: Record<BillingPageScope, { free: string; paid: string; proHref: string }> = {
   all: {
-    free: "Basic에서는 오늘 시장의 큰 흐름을 먼저 확인합니다. 장중에 다시 돌려보고, 관심종목을 쌓고, 변화 알림까지 받으려면 Pro가 필요합니다.",
+    free: "Basic에서는 오늘 시장의 첫 흐름을 먼저 확인합니다. 장중에 다시 돌려보고, 관심종목을 넓히고, 알림까지 받고 싶다면 Pro가 필요합니다.",
     paid: "Pro 실전 감시 모드가 열려 있습니다. 코인, 글로벌, AI 브리핑, 관심종목, 알림을 장중에도 끊기지 않게 이어갈 수 있습니다.",
     proHref: "/pro"
   },
   crypto: {
-    free: "Basic에서는 코인 시장의 큰 흐름을 먼저 확인합니다. 장중 후보 재확인, 관심코인 누적, 코인 알림까지 챙기려면 Coin Pro가 필요합니다.",
+    free: "Basic에서는 코인 시장의 첫 흐름을 먼저 확인합니다. 장중 후보 재확인, 관심코인 추적, 코인 알림까지 챙기려면 Coin Pro가 필요합니다.",
     paid: "Coin Pro 실전 감시 모드가 열려 있습니다. 코인 스캔, 관심코인, AI 브리핑, 알림을 장중에도 끊기지 않게 이어갈 수 있습니다.",
     proHref: "/pro?market=crypto"
   },
   stocks: {
-    free: "Basic에서는 글로벌 시장의 큰 흐름을 먼저 확인합니다. 장중 미국주식, 해외선물, ETF, 매크로 브리핑과 알림을 반복 확인하려면 Global Pro가 필요합니다.",
+    free: "Basic에서는 글로벌 시장의 첫 흐름을 먼저 확인합니다. 장중 미국주식, 해외선물, ETF, 매크로 브리핑과 알림을 반복 확인하려면 Global Pro가 필요합니다.",
     paid: "Global Pro 실전 감시 모드가 열려 있습니다. 미국주식, 해외선물, ETF, 매크로 브리핑과 알림을 장중에도 끊기지 않게 이어갈 수 있습니다.",
     proHref: "/pro?market=stocks"
   }
@@ -119,14 +119,13 @@ export function UsageMeterPanel({
   const visibleStates = compact ? scopedStates.slice(0, 3) : scopedStates;
   const scopedUsedTotal = scopedStates.reduce((sum, state) => sum + state.used, 0);
   const scopedOverCount = scopedStates.filter((state) => state.isOverFree).length;
-  const title =
-    isPaid
-      ? `${entitlementLabel} 실전 감시 모드입니다.`
-      : scopedOverCount > 0
-        ? "오늘 Basic 한도를 모두 사용했습니다."
-        : scopedUsedTotal > 0
-          ? "오늘 레이더를 사용하고 있습니다."
-          : "오늘 레이더를 아직 쓰지 않았습니다.";
+  const title = isPaid
+    ? `${entitlementLabel} 실전 감시 모드입니다.`
+    : scopedOverCount > 0
+      ? "오늘 Basic 한도를 모두 사용했습니다."
+      : scopedUsedTotal > 0
+        ? "오늘 레이더를 사용하고 있습니다."
+        : "오늘 레이더를 아직 쓰지 않았습니다.";
 
   return (
     <section className="enterprise-panel p-4 sm:p-5">
@@ -144,10 +143,7 @@ export function UsageMeterPanel({
           </div>
         </div>
         <div className="flex shrink-0 gap-2">
-          <Link
-            href={copy.proHref}
-            className="enterprise-button inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-black"
-          >
+          <Link href={copy.proHref} className="enterprise-button inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-black">
             <Crown size={13} aria-hidden />
             Pro 보기
           </Link>
@@ -165,7 +161,7 @@ export function UsageMeterPanel({
           <Zap className="mt-0.5 shrink-0" size={14} aria-hidden />
           Basic은 첫 확인용이고, Pro는 장중 재확인과 알림까지 이어지는 실전 감시 모드입니다.
         </span>
-          {compact ? (
+        {compact ? (
           <Link href={copy.proHref} className="font-black text-accent-blue hover:text-white">
             Pro 플랜 보기
           </Link>
