@@ -1,21 +1,26 @@
 "use client";
+// 구글 로그인 진입 화면을 렌더링합니다.
 
 import Link from "next/link";
 import { ArrowLeft, KeyRound } from "lucide-react";
 import { getOAuthUrl, isSupabaseConfigured } from "@/lib/supabase";
 
+const authReturnToStorageKey = "chartRadar.auth.returnTo";
+
+function safeReturnTo(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
+  return value;
+}
+
 export default function LoginPage() {
   const configured = isSupabaseConfigured();
-
-  function safeReturnTo(value: string | null) {
-    if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
-    return value;
-  }
 
   function startLogin(provider: "google") {
     const params = new URLSearchParams(window.location.search);
     const returnTo = safeReturnTo(params.get("returnTo"));
-    const url = getOAuthUrl(provider, `/auth/callback?returnTo=${encodeURIComponent(returnTo)}`);
+    window.sessionStorage.setItem(authReturnToStorageKey, returnTo);
+
+    const url = getOAuthUrl(provider, "/auth/callback");
     if (!url) return;
     window.location.href = url;
   }
@@ -34,12 +39,12 @@ export default function LoginPage() {
           </div>
           <h1 className="mt-5 text-2xl font-black text-white">Chart Radar 로그인</h1>
           <p className="mt-2 text-sm leading-6 text-slate-400">
-            복기, Pro 이용, 레이더 알림을 한 계정에서 이어 쓰기 위한 로그인입니다.
+            관심 종목, 알림, Pro 권한을 같은 계정에서 이어서 사용하기 위해 로그인합니다.
           </p>
 
           {!configured ? (
             <div className="mt-5 rounded-xl border border-signal-warning/25 bg-signal-warning/10 p-3 text-sm leading-6 text-signal-warning">
-              로그인을 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.
+              로그인 설정이 아직 연결되지 않았습니다. 잠시 후 다시 시도해 주세요.
             </div>
           ) : null}
 
@@ -58,7 +63,7 @@ export default function LoginPage() {
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06L5.84 9.9C6.71 7.31 9.14 5.38 12 5.38z" />
                 </svg>
               </span>
-              구글로 계속하기
+              Google로 계속하기
             </button>
           </div>
         </section>

@@ -1,26 +1,36 @@
 "use client";
+// Supabase OAuth 콜백에서 세션을 저장하고 원래 화면으로 돌려보냅니다.
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { parseSessionFromHash, saveSupabaseSession } from "@/lib/supabase";
 
+const authReturnToStorageKey = "chartRadar.auth.returnTo";
+
+function safeReturnTo(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
+  return value;
+}
+
 export default function AuthCallbackPage() {
-  const [message, setMessage] = useState("로그인 정보를 확인하는 중입니다.");
+  const [message, setMessage] = useState("로그인 정보를 확인하고 있습니다.");
   const [isDone, setIsDone] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const rawReturnTo = params.get("returnTo");
-    const returnTo = rawReturnTo && rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//") ? rawReturnTo : "/majors";
+    const storedReturnTo = window.sessionStorage.getItem(authReturnToStorageKey);
+    const returnTo = safeReturnTo(params.get("returnTo")) ?? safeReturnTo(storedReturnTo) ?? "/majors";
     const session = parseSessionFromHash(window.location.hash);
+
     if (!session) {
       setMessage("로그인 정보를 확인하지 못했습니다. 다시 로그인해 주세요.");
       return;
     }
 
     saveSupabaseSession(session);
-    setMessage("로그인이 완료됐습니다. 보던 화면으로 돌아갑니다.");
+    window.sessionStorage.removeItem(authReturnToStorageKey);
+    setMessage("로그인이 완료되었습니다. 보던 화면으로 돌아갑니다.");
     setIsDone(true);
 
     const id = window.setTimeout(() => {

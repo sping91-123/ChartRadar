@@ -1,5 +1,6 @@
 "use client";
-// 로그인 상태와 현재 권한을 상단에 표시한다.
+// 로그인 상태와 현재 권한을 상단에 표시합니다.
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Crown, Loader2, LogIn, LogOut } from "lucide-react";
