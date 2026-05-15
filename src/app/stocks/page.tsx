@@ -2,6 +2,7 @@
 import { BarChart3, Clock3, LineChart, ShieldCheck } from "lucide-react";
 import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
+import { GlobalMarketPulse } from "@/components/GlobalMarketPulse";
 import { MacroTicker } from "@/components/MacroTicker";
 import { RadarTopNav } from "@/components/RadarTopNav";
 import { StockRadarApp } from "@/components/StockRadarApp";
@@ -69,6 +70,7 @@ export default function StocksPage() {
         <Header market="stocks" />
         <RadarTopNav />
         <MacroTicker compact market="stocks" />
+        <GlobalMarketPulse />
         <StockRadarApp />
         <GlobalProRoutine />
         <AppFooter />

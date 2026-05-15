@@ -1466,3 +1466,9 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 글로벌 알림 화면에서는 코인 사용자에게 자연스러운 롱·숏 표현보다 주식 사용자에게 더 직관적인 상승 우세, 하락 우세 표현을 사용한다.
 - 대표 글로벌 심볼 `NQ=F`, `ES=F`, `QQQ`, `SPY`, `^VIX`, `TLT`, `NVDA`, `SMH`, `GLD`, `CL=F`는 Yahoo chart 응답이 정상인지 직접 확인했다.
 - 검증은 `npm run lint`, `npm run build`, `npm run smoke:copy`, `npm run smoke:billing`, `npm run smoke:launch`, `npm run smoke:all`을 기준으로 통과했다.
+
+## 2026-05-15 글로벌 관제 카드 보강.
+
+- 글로벌 사용자는 개별 차트에 들어가기 전에 오늘 위험자산, 변동성, 채권, 원자재가 어느 쪽으로 기울었는지를 먼저 보고 싶어 한다.
+- `GlobalMarketPulse`는 `NQ=F`, `ES=F`, `YM=F`, `RTY=F`, `^VIX`, `TLT`, `UUP`, `GLD`, `CL=F`, `SMH`, `QQQ`, `SPY`를 1일봉 기준으로 훑어 시장 온도를 만든다.
+- 이 카드는 예측보다 관제에 가깝다. 어느 자산군이 움직였는지를 먼저 보여주고, 사용자가 아래에서 개별 종목을 고르도록 연결한다.
