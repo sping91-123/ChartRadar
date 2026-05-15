@@ -166,7 +166,7 @@ Upstash Redis 값이 비어 있으면 로컬 개발처럼 메모리 기반 rate 
 
 ```text
 /
-/survival
+/majors
 /alts
 /global
 /stocks

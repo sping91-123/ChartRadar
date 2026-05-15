@@ -496,10 +496,10 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
               <p className="text-sm font-black text-white">오늘 확인 루틴</p>
               <div className="mt-3 grid gap-2">
                 <Link
-                  href="/survival"
+                  href="/majors"
                   className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm font-bold text-slate-200 hover:border-accent-blue/40 hover:text-white"
                 >
-                  BTC / ETH 큰 흐름 확인
+                  Majors 큰 흐름 확인
                   <Radar size={15} aria-hidden />
                 </Link>
                 <Link

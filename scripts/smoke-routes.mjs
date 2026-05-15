@@ -5,7 +5,7 @@ const smokeClientIp = `127.0.1.${Math.floor(Math.random() * 200) + 20}`;
 
 const checks = [
   { label: "홈", path: "/" },
-  { label: "BTC/ETH", path: "/survival" },
+  { label: "Majors", path: "/majors" },
   { label: "알트코인", path: "/alts" },
   { label: "글로벌", path: "/global" },
   { label: "해외주식", path: "/stocks" },

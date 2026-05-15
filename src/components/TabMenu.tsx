@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 const pageLinks = [
-  { href: "/survival", label: "레이더", icon: BarChart3 },
+  { href: "/majors", label: "레이더", icon: BarChart3 },
   { href: "/news?market=crypto", label: "뉴스", icon: BarChart3 },
   { href: "/calculator", label: "수량 계산", icon: Calculator },
   { href: "/journal", label: "복기", icon: History },
@@ -25,7 +25,7 @@ export function TabMenu() {
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         {pageLinks.map(({ href, label, icon: Icon }) => {
           const hrefPath = href.split("?")[0];
-          const isActive = pathname === hrefPath || (pathname === "/" && hrefPath === "/survival");
+          const isActive = pathname === hrefPath || (pathname === "/" && hrefPath === "/majors");
 
           return (
             <Link

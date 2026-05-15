@@ -918,7 +918,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
   const isOtherSymbolActive = otherSymbols.includes(symbol);
   const chartTitle = altOnly ? "알트코인 레이더" : "코인 레이더";
   const chartDescription = altOnly
-    ? "선택한 알트코인의 구조, 과열, 변동성, 브리핑을 BTC/ETH와 같은 방식으로 확인합니다."
+    ? "선택한 알트코인의 구조, 과열, 변동성, 브리핑을 Majors와 같은 방식으로 확인합니다."
     : "ICT 구조를 먼저 보고, 보조지표는 과열과 추격 위험만 참고합니다.";
 
   const cacheKey = `${storagePrefix}.marketCache.${symbol}.${activeTimeframe}.${analysisMode}.${msbMode}.${structureSensitivity}`;

@@ -1,6 +1,6 @@
 // 개발 서버가 실제 화면 스타일 파일을 정상 제공하는지 확인합니다.
 const baseUrl = (process.env.SMOKE_BASE_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
-const pageUrl = `${baseUrl}/survival`;
+const pageUrl = `${baseUrl}/majors`;
 
 function fail(message) {
   console.error(`FAIL ${message}`);

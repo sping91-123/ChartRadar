@@ -1,6 +1,6 @@
 // 차트 레이더 PWA의 기본 오프라인 캐시를 관리하는 서비스워커.
 const CACHE_NAME = "chart-radar-shell-v4";
-const SHELL_URLS = ["/", "/survival", "/alts", "/global", "/news", "/offline.html", "/brand/chart-radar-icon.png", "/manifest.webmanifest"];
+const SHELL_URLS = ["/", "/majors", "/alts", "/global", "/news", "/offline.html", "/brand/chart-radar-icon.png", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

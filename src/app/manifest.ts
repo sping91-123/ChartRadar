@@ -22,7 +22,7 @@ export default function manifest(): MetadataRoute.Manifest {
         name: "Coin Radar",
         short_name: "Coin",
         description: "BTC와 ETH 시장 레이더를 바로 엽니다.",
-        url: "/survival?source=pwa-shortcut",
+        url: "/majors?source=pwa-shortcut",
         icons: [{ src: icon, sizes: "1024x1024", type: "image/png" }]
       },
       {

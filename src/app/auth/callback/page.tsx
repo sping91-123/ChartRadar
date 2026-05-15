@@ -12,7 +12,7 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const rawReturnTo = params.get("returnTo");
-    const returnTo = rawReturnTo && rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//") ? rawReturnTo : "/survival";
+    const returnTo = rawReturnTo && rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//") ? rawReturnTo : "/majors";
     const session = parseSessionFromHash(window.location.hash);
     if (!session) {
       setMessage("로그인 정보를 확인하지 못했습니다. 다시 로그인해 주세요.");

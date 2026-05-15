@@ -66,7 +66,7 @@ export default function CheckoutSuccessPage({ searchParams }: CheckoutSuccessPag
 
           <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
             <Link
-              href="/survival"
+              href="/majors"
               className="inline-flex min-h-11 items-center justify-center rounded-xl bg-accent-blue px-5 text-sm font-black text-slate-950"
             >
               코인 레이더로 이동

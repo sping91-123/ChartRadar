@@ -11,7 +11,7 @@ export default function NotFound() {
         </p>
         <div className="grid gap-2 sm:grid-cols-2">
           <Link
-            href="/survival"
+            href="/majors"
             className="flex min-h-11 items-center justify-center rounded-md bg-accent-blue px-4 text-sm font-bold text-slate-950"
           >
             차트 판독으로

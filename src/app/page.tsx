@@ -6,7 +6,7 @@ import { ArrowRight, Coins, LineChart, ShieldCheck, TrendingUp } from "lucide-re
 const marketEntries = [
   {
     title: "코인 레이더",
-    href: "/survival",
+    href: "/majors",
     label: "BTC, ETH, 알트코인",
     description: "실시간 구조, 청산 압력, 코인 뉴스와 알림을 코인 시장에 맞춰 확인합니다.",
     action: "코인 시장 열기",

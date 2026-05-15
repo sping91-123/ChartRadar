@@ -62,7 +62,7 @@ export default function CheckoutFailPage({ searchParams }: CheckoutFailPageProps
               Pro 상품으로 이동
             </Link>
             <Link
-              href="/survival"
+              href="/majors"
               className="inline-flex min-h-11 items-center justify-center rounded-xl border border-surface-line bg-white/60 px-5 text-sm font-black text-slate-700 hover:border-accent-blue/40 dark:bg-black/20 dark:text-slate-200"
             >
               레이더 계속 보기

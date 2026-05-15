@@ -1,6 +1,5 @@
 // 앱에서 RevenueCat 구독 결제와 서버 권한 동기화를 처리합니다.
 import { Capacitor } from "@capacitor/core";
-import { Purchases, type CustomerInfo } from "@revenuecat/purchases-capacitor";
 import type { BillingPlan } from "@/lib/billing";
 import { supabaseAuthRefreshEvent } from "@/lib/supabase";
 
@@ -24,7 +23,18 @@ interface AppStoreSyncResponse {
   planId?: string;
 }
 
+type RevenueCatCustomerInfo = {
+  entitlements: {
+    active: Record<string, unknown>;
+  };
+};
+
 let configuredUserId: string | null = null;
+
+async function getRevenueCatPurchases() {
+  const { Purchases } = await import("@revenuecat/purchases-capacitor");
+  return Purchases;
+}
 
 export function getNativePurchasePlatform(): NativePurchasePlatform | null {
   if (!Capacitor.isNativePlatform()) return null;
@@ -49,11 +59,12 @@ async function configurePurchases(platform: NativePurchasePlatform, userId: stri
     throw new Error("앱 결제를 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.");
   }
 
+  const Purchases = await getRevenueCatPurchases();
   await Purchases.configure({ apiKey, appUserID: userId });
   configuredUserId = userId;
 }
 
-function hasActivePlan(customerInfo: CustomerInfo, plan: BillingPlan) {
+function hasActivePlan(customerInfo: RevenueCatCustomerInfo, plan: BillingPlan) {
   const active = customerInfo.entitlements.active;
   if (plan.marketScope === "bundle") return Boolean(active.all_market_pro || active.bundle_pro);
   if (plan.marketScope === "crypto") return Boolean(active.coin_pro || active.crypto_pro || active.all_market_pro || active.bundle_pro);
@@ -133,6 +144,7 @@ export async function purchaseNativePlan(params: NativePurchaseParams) {
 
   try {
     await configurePurchases(platform, params.userId);
+    const Purchases = await getRevenueCatPurchases();
     const { products } = await Purchases.getProducts({
       productIdentifiers: [params.plan.appStoreProductId]
     });
@@ -160,6 +172,7 @@ export async function restoreNativePurchases(params: NativePurchaseParams) {
   if (!platform) throw new Error("구매 복원은 Android 또는 iOS 앱에서만 사용할 수 있습니다.");
 
   await configurePurchases(platform, params.userId);
+  const Purchases = await getRevenueCatPurchases();
   const { customerInfo } = await Purchases.restorePurchases();
   if (!hasActivePlan(customerInfo, params.plan)) {
     throw new Error("복원 가능한 활성 구독을 찾지 못했습니다.");
@@ -174,6 +187,7 @@ export async function restoreNativeEntitlement(params: NativeRestoreParams) {
   if (!platform) throw new Error("구매 복원은 Android 또는 iOS 앱에서만 사용할 수 있습니다.");
 
   await configurePurchases(platform, params.userId);
+  const Purchases = await getRevenueCatPurchases();
   await Purchases.restorePurchases();
   await syncAnyAppStoreEntitlement({ ...params, platform });
   return { message: "활성 구독을 확인하고 Pro 권한을 다시 연결했습니다." };

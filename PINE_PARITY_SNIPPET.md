@@ -1,12 +1,12 @@
 # Pine-Web Parity Check Guide
 
-Use this when the TradingView Pine indicator and the `/survival` web chart show different MSB, CHoCH, OB, FVG, OTE, Sweep, or CISD values.
+Use this when the TradingView Pine indicator and the `/majors` web chart show different MSB, CHoCH, OB, FVG, OTE, Sweep, or CISD values.
 
 ## Where To Paste Values
 
 Open the web app:
 
-1. Go to `/survival`.
+1. Go to `/majors`.
 2. Open `상세 판독`.
 3. Open `고급 판독 기준`.
 4. Open `Pine 대조 디버그`.

@@ -113,7 +113,7 @@ const scopeCopy: Record<
     representativePrice: "월 24,900원",
     representativeBody: "코인과 글로벌 시장을 모두 보는 사용자에게 두 시장의 레이더, 뉴스, 브리핑, 알림을 하나로 묶었습니다.",
     highlightedPlanId: "bundle_monthly",
-    freeHref: "/survival",
+    freeHref: "/majors",
     filterNotice: "전체 요금제를 보고 있습니다. 코인과 글로벌 시장을 모두 보면 All Market Pro가 가장 효율적입니다.",
     priceAnchor: "코인과 글로벌을 따로 결제하는 것보다 월 4,900원을 줄이면서 두 시장을 함께 감시합니다."
   },
@@ -124,7 +124,7 @@ const scopeCopy: Record<
     representativePrice: "월 14,900원",
     representativeBody: "코인 레이더, ICT 구조, 기술지표, 코인 뉴스, 코인 알림을 코인 시장에 맞춰 씁니다.",
     highlightedPlanId: "crypto_monthly",
-    freeHref: "/survival",
+    freeHref: "/majors",
     filterNotice: "코인 중심 사용자에게 필요한 요금제만 정리했습니다.",
     priceAnchor: "하루 500원 정도의 비용으로 코인 레이더, 뉴스 브리핑, 관심코인, 알림을 매일 확인하는 구조입니다."
   },
@@ -163,7 +163,7 @@ function getScopedDisplayPlan(plan: BillingPlan, scope: BillingPageScope): Billi
     return {
       ...plan,
       description: "코인 레이더의 첫 흐름을 먼저 확인합니다. 반복 감시와 알림은 Coin Pro에서 넓어집니다.",
-      highlights: ["BTC / ETH 흐름 확인", "주요 알트코인 흐름 확인", "AI 브리핑 하루 1회"],
+      highlights: ["Majors 흐름 확인", "주요 알트코인 흐름 확인", "AI 브리핑 하루 1회"],
       limits: {
         ...plan.limits,
         radarScans: "하루 2회",

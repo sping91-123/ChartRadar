@@ -46,7 +46,7 @@ const checks = [
   {
     area: "Market Split",
     weight: 10,
-    pass: exists("src/app/survival/page.tsx") && exists("src/app/global/page.tsx") && exists("src/app/alts/page.tsx"),
+    pass: exists("src/app/majors/page.tsx") && exists("src/app/global/page.tsx") && exists("src/app/alts/page.tsx"),
     detail: "코인, 알트코인, 글로벌 진입 경로가 분리되어 있습니다."
   },
   {
