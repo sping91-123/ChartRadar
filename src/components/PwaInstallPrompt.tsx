@@ -28,6 +28,21 @@ function isMobileSafari() {
   return /iPhone|iPad|iPod/i.test(ua) && /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS/i.test(ua);
 }
 
+function isLocalPreviewHost() {
+  if (typeof window === "undefined") return false;
+  return ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+}
+
+async function clearLocalPwaCache() {
+  if (!("serviceWorker" in navigator)) return;
+  const registrations = await navigator.serviceWorker.getRegistrations();
+  await Promise.all(registrations.map((registration) => registration.unregister()));
+  if ("caches" in window) {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((key) => key.startsWith("chart-radar-")).map((key) => caches.delete(key)));
+  }
+}
+
 export function PwaInstallPrompt() {
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [showIosGuide, setShowIosGuide] = useState(false);
@@ -36,20 +51,8 @@ export function PwaInstallPrompt() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
 
-    if (process.env.NODE_ENV !== "production") {
-      void navigator.serviceWorker
-        .getRegistrations()
-        .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())))
-        .then(() =>
-          "caches" in window
-            ? caches
-                .keys()
-                .then((keys) =>
-                  Promise.all(keys.filter((key) => key.startsWith("chart-radar-")).map((key) => caches.delete(key)))
-                )
-            : undefined
-        )
-        .catch(() => undefined);
+    if (process.env.NODE_ENV !== "production" || isLocalPreviewHost()) {
+      void clearLocalPwaCache().catch(() => undefined);
       return;
     }
 
