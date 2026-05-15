@@ -7,8 +7,15 @@ import { getOAuthUrl, isSupabaseConfigured } from "@/lib/supabase";
 export default function LoginPage() {
   const configured = isSupabaseConfigured();
 
+  function safeReturnTo(value: string | null) {
+    if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
+    return value;
+  }
+
   function startLogin(provider: "google") {
-    const url = getOAuthUrl(provider);
+    const params = new URLSearchParams(window.location.search);
+    const returnTo = safeReturnTo(params.get("returnTo"));
+    const url = getOAuthUrl(provider, `/auth/callback?returnTo=${encodeURIComponent(returnTo)}`);
     if (!url) return;
     window.location.href = url;
   }

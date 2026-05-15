@@ -1,12 +1,19 @@
 "use client";
 // 로그인 상태와 현재 권한을 상단에 표시한다.
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Crown, Loader2, LogIn, LogOut } from "lucide-react";
 import { getEntitlementLabel, hasAnyPaidEntitlement } from "@/lib/billing";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 export function AuthStatus() {
   const { user, profile, isLoading, signOut } = useSupabaseAuth();
+  const [loginHref, setLoginHref] = useState("/login");
+
+  useEffect(() => {
+    const currentPath = `${window.location.pathname}${window.location.search}`;
+    setLoginHref(`/login?returnTo=${encodeURIComponent(currentPath)}`);
+  }, []);
 
   if (isLoading) {
     return (
@@ -20,7 +27,7 @@ export function AuthStatus() {
   if (!user) {
     return (
       <Link
-        href="/login"
+        href={loginHref}
         className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold text-slate-200 hover:border-accent-blue/50 hover:text-white"
       >
         <LogIn size={13} aria-hidden />

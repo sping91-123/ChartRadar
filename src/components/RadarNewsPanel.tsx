@@ -371,11 +371,17 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
 
       <div>
         <h3 className="mb-3 text-sm font-black text-white">참고 뉴스</h3>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {(payload?.items ?? []).slice(0, 12).map((item) => (
+        {(payload?.items ?? []).length ? (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {(payload?.items ?? []).slice(0, 12).map((item) => (
             <NewsSourceCard key={item.id} item={item} market={market} />
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-white/10 bg-black/20 p-4 text-sm font-bold leading-6 text-slate-400">
+            지금은 시장 전체 방향에 영향을 줄 만한 뉴스만 추려 보는 중입니다. 개별 종목성 뉴스는 제외하고, 금리·물가·고용·달러·원자재·주요 지수에 영향을 주는 이슈가 잡히면 이곳에 표시됩니다.
+          </div>
+        )}
       </div>
     </section>
   );

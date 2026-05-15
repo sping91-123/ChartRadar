@@ -1,7 +1,7 @@
 "use client";
 // 시장별 포지션 크기와 손익비를 빠르게 계산하는 페이지.
 import { useEffect, useMemo, useState } from "react";
-import { Calculator, ShieldAlert } from "lucide-react";
+import { Calculator, HelpCircle, ShieldAlert } from "lucide-react";
 import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
 import { RadarTopNav } from "@/components/RadarTopNav";
@@ -70,6 +70,7 @@ export default function CalculatorPage({ searchParams }: { searchParams?: { mark
   const [stopPrice, setStopPrice] = useState("");
   const [leverage, setLeverage] = useState(market === "stocks" ? "1" : "3");
   const [targetPrice, setTargetPrice] = useState("");
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     const marketParam = new URLSearchParams(window.location.search).get("market");
@@ -124,15 +125,43 @@ export default function CalculatorPage({ searchParams }: { searchParams?: { mark
         </div>
 
         <section className="enterprise-panel p-4 sm:p-5">
-          <div className="flex items-start gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
-              <Calculator size={21} aria-hidden />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
+                <Calculator size={21} aria-hidden />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-white">{marketCopy.title}</h2>
+                <p className="mt-1 text-sm leading-6 text-slate-400">{marketCopy.intro}</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-white">{marketCopy.title}</h2>
-              <p className="mt-1 text-sm leading-6 text-slate-400">{marketCopy.intro}</p>
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowHelp((current) => !current)}
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-white/10 bg-white/[0.04] px-3 text-xs font-black text-slate-200 transition hover:border-accent-blue/50 hover:text-white"
+              aria-expanded={showHelp}
+            >
+              <HelpCircle size={15} aria-hidden />
+              사용 예시
+            </button>
           </div>
+
+          {showHelp ? (
+            <div className="mt-5 grid gap-3 rounded-lg border border-accent-blue/20 bg-accent-blue/[0.06] p-4 text-sm leading-6 text-slate-300 md:grid-cols-3">
+              <div>
+                <p className="font-black text-white">1. 먼저 잃어도 되는 금액을 정합니다.</p>
+                <p className="mt-1 text-xs leading-5 text-slate-400">시드 1,000,000원에 허용 손실률 1%라면 한 번의 판단에서 최대 손실은 10,000원입니다.</p>
+              </div>
+              <div>
+                <p className="font-black text-white">2. 손절가는 방향에 맞게 넣습니다.</p>
+                <p className="mt-1 text-xs leading-5 text-slate-400">롱은 손절가가 진입가보다 아래, 숏은 손절가가 진입가보다 위에 있어야 합니다.</p>
+              </div>
+              <div>
+                <p className="font-black text-white">3. 예시입니다.</p>
+                <p className="mt-1 text-xs leading-5 text-slate-400">롱 진입 68,000 · 손절 66,500 · 목표 71,000 · 레버리지 3을 넣으면 적정 포지션과 손익비가 계산됩니다.</p>
+              </div>
+            </div>
+          ) : null}
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">

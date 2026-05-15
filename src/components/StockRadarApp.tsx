@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CandlestickSeries, createChart, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { Activity, AlertTriangle, BarChart3, Bookmark, BookmarkCheck, Clock3, Compass, Gauge, Loader2, RefreshCw, Search, Shield, Sparkles, Target } from "lucide-react";
 import { TechnicalRadarPanel } from "@/components/TechnicalRadarPanel";
-import { chartTimeframes, type Candle, type ChartTimeframe } from "@/lib/marketAnalysis";
+import { analyzeTimeframe, chartTimeframes, type Candle, type ChartTimeframe, type DirectionState, type TimeframeAnalysis } from "@/lib/marketAnalysis";
 import { analyzeTechnicalRadar, type TechnicalRadarReport } from "@/lib/technicalRadar";
 import type { StockSymbolInfo } from "@/lib/stockMarket";
 import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
@@ -42,6 +42,21 @@ const groupOrder: StockSymbolInfo["group"][] = ["futures", "index_etf", "mega_ca
 const featuredSymbols = ["NQ=F", "ES=F", "SPY", "QQQ", "NVDA", "GLD"];
 const globalWatchlistStorageKey = "chart-radar.globalWatchlist.v1";
 const globalWatchlistMaxItems = 150;
+type GlobalRadarMode = "combined" | "ict" | "technical";
+
+const radarModes: Array<{ value: GlobalRadarMode; label: string; caption: string }> = [
+  { value: "combined", label: "종합", caption: "ICT와 기술지표를 함께 봅니다." },
+  { value: "ict", label: "ICT", caption: "구조와 구간만 봅니다." },
+  { value: "technical", label: "기술지표", caption: "보조지표만 봅니다." }
+];
+
+const timeframeMinutes: Record<ChartTimeframe, number> = {
+  "5m": 5,
+  "15m": 15,
+  "1h": 60,
+  "4h": 240,
+  "1d": 1440
+};
 
 type LoadState =
   | { status: "idle" }
@@ -81,6 +96,60 @@ function writeGlobalWatchlist(symbols: string[]) {
 function formatPercent(value: number | null) {
   if (value === null || !Number.isFinite(value)) return "미확인";
   return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+}
+
+function directionLabel(value: DirectionState) {
+  if (value === "bullish") return "상승";
+  if (value === "bearish") return "하락";
+  if (value === "neutral") return "횡보";
+  return "미확인";
+}
+
+function directionClass(value: DirectionState) {
+  if (value === "bullish") return "border-emerald-300/25 bg-emerald-400/10 text-emerald-100";
+  if (value === "bearish") return "border-rose-300/25 bg-rose-400/10 text-rose-100";
+  return "border-slate-300/15 bg-white/[0.04] text-slate-200";
+}
+
+function formatAgeByTimeframe(age: number | undefined, timeframe: ChartTimeframe) {
+  if (age === undefined || age < 0) return "시간 미확인";
+  if (age === 0) return "현재 캔들";
+  const minutes = age * timeframeMinutes[timeframe];
+  if (minutes < 60) return `${minutes}분 전`;
+  if (minutes < 1440) {
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    return rest ? `${hours}시간 ${rest}분 전` : `${hours}시간 전`;
+  }
+  const days = Math.floor(minutes / 1440);
+  const restHours = Math.floor((minutes % 1440) / 60);
+  return restHours ? `${days}일 ${restHours}시간 전` : `${days}일 전`;
+}
+
+function formatIndexAge(index: number | undefined, candlesLength: number, timeframe: ChartTimeframe) {
+  if (index === undefined) return "시간 미확인";
+  return formatAgeByTimeframe(Math.max(0, candlesLength - 1 - index), timeframe);
+}
+
+function formatKstChartTime(time: Time, timeframe: ChartTimeframe) {
+  const seconds =
+    typeof time === "number"
+      ? time
+      : typeof time === "string"
+        ? Date.parse(`${time}T00:00:00Z`) / 1000
+        : Date.UTC(time.year, time.month - 1, time.day) / 1000;
+  const date = new Date(seconds * 1000 + 9 * 60 * 60 * 1000);
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const hour = String(date.getUTCHours()).padStart(2, "0");
+  const minute = String(date.getUTCMinutes()).padStart(2, "0");
+  if (timeframe === "1d") return `${month}/${day}`;
+  return `${month}/${day} ${hour}:${minute}`;
+}
+
+function formatZonePrice(low: number | null | undefined, high: number | null | undefined) {
+  if (typeof low !== "number" || typeof high !== "number") return "미확인";
+  return `${formatPrice(low)} - ${formatPrice(high)}`;
 }
 
 function directionTone(report: TechnicalRadarReport | null) {
@@ -287,6 +356,209 @@ function StockSnapshot({
   );
 }
 
+function ictDirectionLabel(direction: "bullish" | "bearish") {
+  return direction === "bullish" ? "상승" : "하락";
+}
+
+function premiumDiscountLabel(value: TimeframeAnalysis["premiumDiscount"]) {
+  if (value === "premium") return "프리미엄";
+  if (value === "discount") return "디스카운트";
+  if (value === "equilibrium") return "균형가";
+  return "미확인";
+}
+
+function oteZoneLabel(value: TimeframeAnalysis["oteZone"]) {
+  if (value === "long") return "롱 OTE";
+  if (value === "short") return "숏 OTE";
+  return "OTE 밖";
+}
+
+function pocPositionLabel(value: TimeframeAnalysis["volumeProfile"]) {
+  if (!value) return "POC 미확인";
+  if (value.position === "above") return "POC 위";
+  if (value.position === "below") return "POC 아래";
+  return "POC 근처";
+}
+
+function IctStatusCard({
+  title,
+  value,
+  detail,
+  tone = "neutral"
+}: {
+  title: string;
+  value: string;
+  detail: string;
+  tone?: DirectionState;
+}) {
+  return (
+    <article className={`rounded-lg border p-3 ${directionClass(tone)}`}>
+      <p className="text-[11px] font-black uppercase tracking-[0.16em] opacity-75">{title}</p>
+      <h4 className="mt-2 text-base font-black text-white">{value}</h4>
+      <p className="mt-2 text-xs leading-5 text-slate-300">{detail}</p>
+    </article>
+  );
+}
+
+function GlobalIctPanel({ analysis, timeframe, candlesLength }: { analysis: TimeframeAnalysis; timeframe: ChartTimeframe; candlesLength: number }) {
+  const scoreTone: DirectionState = analysis.score >= 1.2 ? "bullish" : analysis.score <= -1.2 ? "bearish" : "neutral";
+  const scoreLabel = analysis.score >= 1.2 ? "상승 구조 우세" : analysis.score <= -1.2 ? "하락 구조 우세" : "구조 관찰";
+  const latestOb = analysis.latestOb;
+  const latestFvg = analysis.latestFvg;
+  const latestSweep = analysis.latestSweep;
+  const latestCisd = analysis.latestCisd;
+  const latestDisplacement = analysis.latestDisplacement;
+
+  return (
+    <section className="rounded-lg border border-surface-line bg-black/20 p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-accent-blue">ICT Radar</p>
+          <h3 className="mt-1 text-xl font-black text-white">{timeframe} 구조 판독</h3>
+        </div>
+        <span className={`inline-flex min-h-8 items-center rounded-md border px-3 text-xs font-black ${directionClass(scoreTone)}`}>
+          {scoreLabel} · {analysis.score > 0 ? "+" : ""}
+          {analysis.score.toFixed(2)}
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <IctStatusCard
+          title="MSB"
+          value={directionLabel(analysis.msb)}
+          detail={
+            analysis.latestMsbEvent
+              ? `${formatPrice(analysis.latestMsbEvent.level)} 기준 · ${formatIndexAge(analysis.latestMsbEvent.index, candlesLength, timeframe)}`
+              : "현재 구조 방향을 기준으로 표시합니다."
+          }
+          tone={analysis.msb}
+        />
+        <IctStatusCard
+          title="CHoCH"
+          value={directionLabel(analysis.choch)}
+          detail={
+            analysis.latestChochEvent
+              ? `${formatPrice(analysis.latestChochEvent.level)} 기준 · ${formatIndexAge(analysis.latestChochEvent.index, candlesLength, timeframe)}`
+              : "최근 단기 구조 전환을 기준으로 표시합니다."
+          }
+          tone={analysis.choch}
+        />
+        <IctStatusCard
+          title="OB"
+          value={latestOb ? `${ictDirectionLabel(latestOb.direction)} OB ${analysis.inOb ? "내부" : "외부"}` : "최근 OB 미확인"}
+          detail={latestOb ? `${formatZonePrice(latestOb.bottom, latestOb.top)} · ${formatAgeByTimeframe(latestOb.age, timeframe)}` : "유효한 오더블록이 아직 선명하지 않습니다."}
+          tone={latestOb?.direction ?? "neutral"}
+        />
+        <IctStatusCard
+          title="FVG"
+          value={latestFvg ? `${ictDirectionLabel(latestFvg.direction)} ${latestFvg.state === "ifvg" ? "iFVG" : "FVG"} ${analysis.inFvg ? "내부" : "외부"}` : "최근 FVG 미확인"}
+          detail={latestFvg ? `${formatZonePrice(latestFvg.bottom, latestFvg.top)} · ${formatAgeByTimeframe(latestFvg.age, timeframe)}` : "강한 가격 불균형 구간이 아직 선명하지 않습니다."}
+          tone={latestFvg?.direction ?? "neutral"}
+        />
+        <IctStatusCard
+          title="Sweep"
+          value={latestSweep ? `${latestSweep.direction === "bullish" ? "저점 스윕" : "고점 스윕"}` : "스윕 미확인"}
+          detail={latestSweep ? `${formatPrice(latestSweep.level)} · ${formatAgeByTimeframe(latestSweep.age, timeframe)}` : "최근 유동성 스윕이 뚜렷하지 않습니다."}
+          tone={latestSweep?.direction ?? "neutral"}
+        />
+        <IctStatusCard
+          title="CISD"
+          value={latestCisd ? `${ictDirectionLabel(latestCisd.direction)} CISD` : "CISD 미확인"}
+          detail={latestCisd ? `${formatPrice(latestCisd.level)} · ${formatAgeByTimeframe(latestCisd.age, timeframe)}` : "OB 반응 이후 상태 변화가 아직 확인되지 않았습니다."}
+          tone={latestCisd?.direction ?? "neutral"}
+        />
+        <IctStatusCard
+          title="PD / OTE"
+          value={`${premiumDiscountLabel(analysis.premiumDiscount)} · ${oteZoneLabel(analysis.oteZone)}`}
+          detail={
+            analysis.oteLevels
+              ? `롱 ${formatZonePrice(analysis.oteLevels.longLow, analysis.oteLevels.longHigh)} · 숏 ${formatZonePrice(analysis.oteLevels.shortLow, analysis.oteLevels.shortHigh)}`
+              : "최근 딜링레인지 기준을 확인 중입니다."
+          }
+          tone={analysis.oteZone === "long" ? "bullish" : analysis.oteZone === "short" ? "bearish" : "neutral"}
+        />
+        <IctStatusCard
+          title="POC / EMA"
+          value={`${pocPositionLabel(analysis.volumeProfile)} · EMA200 ${analysis.ema200Side === "above" ? "위" : analysis.ema200Side === "below" ? "아래" : "미확인"}`}
+          detail={`POC ${analysis.volumeProfile ? formatPrice(analysis.volumeProfile.poc) : "미확인"} · EMA200 ${formatPrice(analysis.ema200Value)}`}
+          tone={analysis.ema200Side === "above" ? "bullish" : analysis.ema200Side === "below" ? "bearish" : "neutral"}
+        />
+      </div>
+
+      <div className="mt-3 grid gap-3 md:grid-cols-3">
+        <IctStatusCard
+          title="Displacement"
+          value={latestDisplacement ? `${ictDirectionLabel(latestDisplacement.direction)} 변위` : "변위 미확인"}
+          detail={latestDisplacement ? `강도 ${latestDisplacement.strength}점 · ${formatAgeByTimeframe(latestDisplacement.age, timeframe)}` : "강한 몸통 변위 캔들이 최근 구간에 뚜렷하지 않습니다."}
+          tone={latestDisplacement?.direction ?? "neutral"}
+        />
+        <IctStatusCard
+          title="Buy-side"
+          value={analysis.buySideLiquidity ? formatPrice(analysis.buySideLiquidity.level) : "미확인"}
+          detail={analysis.buySideLiquidity ? `${formatAgeByTimeframe(analysis.buySideLiquidity.age, timeframe)} · 거리 ${analysis.buySideLiquidity.distancePercent.toFixed(2)}%` : "가까운 매수 유동성 풀을 찾지 못했습니다."}
+          tone="neutral"
+        />
+        <IctStatusCard
+          title="Sell-side"
+          value={analysis.sellSideLiquidity ? formatPrice(analysis.sellSideLiquidity.level) : "미확인"}
+          detail={analysis.sellSideLiquidity ? `${formatAgeByTimeframe(analysis.sellSideLiquidity.age, timeframe)} · 거리 ${analysis.sellSideLiquidity.distancePercent.toFixed(2)}%` : "가까운 매도 유동성 풀을 찾지 못했습니다."}
+          tone="neutral"
+        />
+      </div>
+    </section>
+  );
+}
+
+function GlobalRadarControlDock({
+  timeframe,
+  onTimeframeChange,
+  radarMode,
+  onRadarModeChange
+}: {
+  timeframe: ChartTimeframe;
+  onTimeframeChange: (value: ChartTimeframe) => void;
+  radarMode: GlobalRadarMode;
+  onRadarModeChange: (value: GlobalRadarMode) => void;
+}) {
+  return (
+    <div className="fixed inset-x-3 bottom-3 z-40 mx-auto max-w-5xl rounded-lg border border-surface-line bg-slate-950/92 p-2 shadow-2xl shadow-black/40 backdrop-blur">
+      <div className="grid grid-cols-5 gap-1.5">
+        {chartTimeframes.map((item) => (
+          <button
+            key={item}
+            type="button"
+            onClick={() => onTimeframeChange(item)}
+            className={`min-h-10 rounded-md border px-2 text-xs font-black transition ${
+              timeframe === item
+                ? "border-accent-blue bg-accent-blue text-slate-950"
+                : "border-white/10 bg-white/[0.04] text-slate-300 hover:border-accent-blue/60"
+            }`}
+          >
+            {item}
+          </button>
+        ))}
+      </div>
+      <div className="mt-2 grid grid-cols-3 gap-1.5">
+        {radarModes.map((item) => (
+          <button
+            key={item.value}
+            type="button"
+            onClick={() => onRadarModeChange(item.value)}
+            className={`min-h-9 rounded-md border px-2 text-xs font-black transition ${
+              radarMode === item.value
+                ? "border-white/20 bg-white text-slate-950"
+                : "border-white/10 bg-white/[0.04] text-slate-300 hover:border-white/25"
+            }`}
+            title={item.caption}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function StockRadarApp() {
   const { profile } = useSupabaseAuth();
   const isPaid = hasMarketEntitlement(profile?.plan, "stocks");
@@ -295,6 +567,7 @@ export function StockRadarApp() {
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const [symbol, setSymbol] = useState("QQQ");
   const [timeframe, setTimeframe] = useState<ChartTimeframe>("1d");
+  const [radarMode, setRadarMode] = useState<GlobalRadarMode>("combined");
   const [universe, setUniverse] = useState<StockSymbolInfo[]>(fallbackUniverse);
   const [selectedGroup, setSelectedGroup] = useState<StockSymbolInfo["group"] | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -402,8 +675,15 @@ export function StockRadarApp() {
         vertLines: { color: "rgba(148,163,184,0.08)" },
         horzLines: { color: "rgba(148,163,184,0.08)" }
       },
+      localization: {
+        timeFormatter: (time: Time) => formatKstChartTime(time, timeframe)
+      },
       rightPriceScale: { borderColor: "rgba(148,163,184,0.18)" },
-      timeScale: { borderColor: "rgba(148,163,184,0.18)", timeVisible: timeframe !== "1d" }
+      timeScale: {
+        borderColor: "rgba(148,163,184,0.18)",
+        timeVisible: timeframe !== "1d",
+        tickMarkFormatter: (time: Time) => formatKstChartTime(time, timeframe)
+      }
     });
 
     const series = chart.addSeries(CandlestickSeries, {
@@ -449,9 +729,13 @@ export function StockRadarApp() {
   const previous = state.status === "ready" ? state.candles[state.candles.length - 2] : null;
   const changePercent = latest && previous ? ((latest.close - previous.close) / previous.close) * 100 : null;
   const technicalReport = useMemo(() => (state.status === "ready" ? analyzeTechnicalRadar(state.candles) : null), [state]);
+  const ictAnalysis = useMemo(
+    () => (state.status === "ready" ? analyzeTimeframe(timeframe, state.candles, { zigLen: 5, useCloseForMsb: true }) : null),
+    [state, timeframe]
+  );
 
   return (
-    <section className="rounded-lg border border-surface-line bg-surface-card p-4 shadow-glow sm:p-5">
+    <section className="rounded-lg border border-surface-line bg-surface-card p-4 pb-36 shadow-glow sm:p-5 sm:pb-36">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-accent-blue/30 bg-accent-blue/15 text-accent-blue">
@@ -461,8 +745,8 @@ export function StockRadarApp() {
             <p className="text-xs font-bold tracking-[0.18em] text-accent-blue">GLOBAL RADAR</p>
             <h2 className="mt-1 text-xl font-black text-white">글로벌 레이더</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-              미국 주요 주식, 지수 ETF, 반도체, 성장주, 원자재 ETF를 기술지표 중심으로 빠르게 훑습니다.
-              종목별 추세, 모멘텀, 변동성, 거래량을 한 화면에서 보고 장전 점검과 관심종목 선별을 빠르게 시작합니다.
+              미국 주요 주식, 지수 ETF, 해외선물, 원자재 ETF를 시장별 레이더로 빠르게 훑습니다.
+              종합, ICT, 기술지표 기준을 분리해서 장전 점검과 관심종목 선별을 빠르게 시작합니다.
             </p>
           </div>
         </div>
@@ -488,7 +772,7 @@ export function StockRadarApp() {
               <span className="ml-2 text-base font-bold text-slate-400">{selectedInfo?.name ?? symbol}</span>
             </h3>
             <p className="mt-1 text-xs font-bold text-slate-500">
-              {selectedInfo ? groupLabels[selectedInfo.group] : "관심 시장"} · {timeframe} 기준 판독
+              {selectedInfo ? groupLabels[selectedInfo.group] : "관심 시장"} · {timeframe} · {radarModes.find((item) => item.value === radarMode)?.label ?? "종합"} 분석
             </p>
           </div>
           <label className="relative block lg:w-80">
@@ -496,7 +780,7 @@ export function StockRadarApp() {
             <input
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="티커나 이름 검색"
+              placeholder="종목 검색"
               className="h-11 w-full rounded-md border border-surface-line bg-surface-cardSoft pl-9 pr-3 text-sm font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-accent-blue/70"
             />
           </label>
@@ -610,29 +894,12 @@ export function StockRadarApp() {
         </div>
         {visibleUniverse.length === 0 ? (
           <p className="mt-3 rounded-md border border-white/10 bg-black/20 p-3 text-xs font-bold text-slate-500">
-            검색 결과가 없습니다. 티커를 조금 짧게 입력해 보세요.
+            검색 결과가 없습니다. 종목명이나 심볼을 조금 짧게 입력해 보세요.
           </p>
         ) : null}
       </div>
 
-      <div className="mt-5 grid grid-cols-5 gap-2">
-        {chartTimeframes.map((item) => (
-          <button
-            key={item}
-            type="button"
-            onClick={() => setTimeframe(item)}
-            className={`min-h-10 rounded-md border px-2 text-xs font-black transition ${
-              timeframe === item
-                ? "border-accent-blue bg-accent-blue text-slate-950"
-                : "border-surface-line bg-surface-cardSoft text-slate-300 hover:border-accent-blue/60"
-            }`}
-          >
-            {item}
-          </button>
-        ))}
-      </div>
-
-      {state.status === "ready" ? (
+      {state.status === "ready" && radarMode !== "ict" ? (
         <div className="mt-5">
           <StockSnapshot report={technicalReport} latest={latest} changePercent={changePercent} />
           <GlobalPlaybook
@@ -682,18 +949,31 @@ export function StockRadarApp() {
       {state.status === "ready" ? (
         <>
           <p className="mt-3 text-xs leading-5 text-slate-500">
-            현재 화면은 {state.dataSource} 가격 흐름을 기준으로 차트 판독과 관심종목 선별에 필요한 흐름을 정리합니다.
+            현재 화면은 {state.dataSource} 가격 흐름을 한국 시간 기준으로 정리합니다.
           </p>
-          <div className="mt-5">
-            <TechnicalRadarPanel
-              candles={state.candles}
-              timeframe={timeframe}
-              assetLabel={selectedInfo?.name ? `${selectedInfo.name}(${symbol})` : symbol}
-              intro="이동평균, MACD, RSI, 일목균형표, Supertrend, 거래량, 변동성 지표로 글로벌 자산의 방향과 과열도를 확인합니다."
-            />
-          </div>
+          {radarMode !== "technical" && ictAnalysis ? (
+            <div className="mt-5">
+              <GlobalIctPanel analysis={ictAnalysis} timeframe={timeframe} candlesLength={state.candles.length} />
+            </div>
+          ) : null}
+          {radarMode !== "ict" ? (
+            <div className="mt-5">
+              <TechnicalRadarPanel
+                candles={state.candles}
+                timeframe={timeframe}
+                assetLabel={selectedInfo?.name ? `${selectedInfo.name}(${symbol})` : symbol}
+                intro="이동평균, MACD, RSI, 일목균형표, Supertrend, 거래량, 변동성 지표로 글로벌 자산의 방향과 과열도를 확인합니다."
+              />
+            </div>
+          ) : null}
         </>
       ) : null}
+      <GlobalRadarControlDock
+        timeframe={timeframe}
+        onTimeframeChange={setTimeframe}
+        radarMode={radarMode}
+        onRadarModeChange={setRadarMode}
+      />
     </section>
   );
 }

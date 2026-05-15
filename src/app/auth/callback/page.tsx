@@ -10,6 +10,9 @@ export default function AuthCallbackPage() {
   const [isDone, setIsDone] = useState(false);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const rawReturnTo = params.get("returnTo");
+    const returnTo = rawReturnTo && rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//") ? rawReturnTo : "/survival";
     const session = parseSessionFromHash(window.location.hash);
     if (!session) {
       setMessage("로그인 정보를 확인하지 못했습니다. 다시 로그인해 주세요.");
@@ -17,11 +20,11 @@ export default function AuthCallbackPage() {
     }
 
     saveSupabaseSession(session);
-    setMessage("로그인이 완료됐습니다. 잠시 후 복기 페이지로 이동합니다.");
+    setMessage("로그인이 완료됐습니다. 보던 화면으로 돌아갑니다.");
     setIsDone(true);
 
     const id = window.setTimeout(() => {
-      window.location.href = "/journal?sync=1";
+      window.location.href = returnTo;
     }, 900);
 
     return () => window.clearTimeout(id);

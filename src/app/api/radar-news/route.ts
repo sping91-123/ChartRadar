@@ -104,6 +104,78 @@ function toIsoDate(value: string) {
   return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
 }
 
+const GLOBAL_MARKET_KEYWORDS = [
+  "fed",
+  "fomc",
+  "powell",
+  "rate",
+  "rates",
+  "yield",
+  "treasury",
+  "inflation",
+  "cpi",
+  "ppi",
+  "jobs",
+  "payroll",
+  "jobless claims",
+  "unemployment",
+  "gdp",
+  "pce",
+  "core pce",
+  "retail sales",
+  "consumer",
+  "pmi",
+  "ism",
+  "housing",
+  "existing home",
+  "existing home sales",
+  "new home sales",
+  "durable goods",
+  "dollar",
+  "oil",
+  "crude",
+  "gold",
+  "nasdaq",
+  "s&p",
+  "dow",
+  "futures",
+  "wall street",
+  "recession",
+  "tariff",
+  "trade war",
+  "sanctions",
+  "earnings season",
+  "semiconductor",
+  "ai stocks",
+  "magnificent seven"
+];
+
+const GLOBAL_MAJOR_ASSETS = ["nvidia", "apple", "microsoft", "tesla", "amazon", "meta", "google", "alphabet", "broadcom", "amd"];
+const GLOBAL_MARKET_CONTEXT = ["earnings", "guidance", "forecast", "chip", "ai", "data center", "antitrust", "tariff", "index", "market", "nasdaq", "s&p"];
+const GLOBAL_GEOPOLITICAL_CONTEXT = ["china", "taiwan", "trump", "trade", "export", "sanction"];
+const GLOBAL_GEOPOLITICAL_MARKET_CONTEXT = ["tariff", "oil", "crude", "semiconductor", "chip", "taiwan", "trade", "export", "sanction", "treasury", "dollar"];
+const GLOBAL_NOISE_KEYWORDS = ["boeing", "jury", "lawsuit", "v. altman", "nasdaq debut", "ipo", "shares pop", "buying 200"];
+
+function isMarketMovingGlobalNews(title: string) {
+  const lower = title.toLowerCase();
+  const strongHit = GLOBAL_MARKET_KEYWORDS.some((keyword) => lower.includes(keyword));
+  if (strongHit && !GLOBAL_NOISE_KEYWORDS.some((keyword) => lower.includes(keyword))) return true;
+
+  const hasGeopolitical = GLOBAL_GEOPOLITICAL_CONTEXT.some((keyword) => lower.includes(keyword));
+  const hasGeoMarketContext = GLOBAL_GEOPOLITICAL_MARKET_CONTEXT.some((keyword) => lower.includes(keyword));
+  if (hasGeopolitical && hasGeoMarketContext && !lower.includes("boeing")) return true;
+
+  const hasMajorAsset = GLOBAL_MAJOR_ASSETS.some((keyword) => lower.includes(keyword));
+  const hasContext = GLOBAL_MARKET_CONTEXT.some((keyword) => lower.includes(keyword));
+  return hasMajorAsset && hasContext;
+}
+
+function selectFeedRecords(records: Array<{ title: string; link: string; publishedAt: string }>, market: RadarNewsMarket) {
+  if (market !== "stocks") return records.slice(0, 10);
+  const marketMoving = records.filter((record) => isMarketMovingGlobalNews(record.title));
+  return marketMoving.slice(0, 8);
+}
+
 function hasKorean(value: string) {
   return /[가-힣]/.test(value);
 }
@@ -210,7 +282,7 @@ async function loadFeed(feed: NewsFeed, market: RadarNewsMarket) {
   const atomItems = asArray<unknown>(parsed?.feed?.entry);
   const entries = rssItems.length ? rssItems : atomItems;
   const records = entries
-    .slice(0, 10)
+    .slice(0, market === "stocks" ? 30 : 10)
     .map((entry) => {
       const record = entry as Record<string, unknown>;
       const title = pickText(record.title);
@@ -221,12 +293,13 @@ async function loadFeed(feed: NewsFeed, market: RadarNewsMarket) {
     })
     .filter((record): record is { title: string; link: string; publishedAt: string } => Boolean(record));
 
+  const selectedRecords = selectFeedRecords(records, market);
   const translations = await translateTitlesWithGroq(
-    records.map((record) => record.title),
+    selectedRecords.map((record) => record.title),
     market
   );
 
-  return records.map((record) =>
+  return selectedRecords.map((record) =>
     createRadarNewsItem(
       {
         source: feed.source,
