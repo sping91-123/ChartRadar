@@ -12,7 +12,6 @@ const routes = [
   "/news",
   "/alerts",
   "/pro",
-  "/calculator",
   "/journal",
   "/terms",
   "/privacy",

@@ -20,7 +20,6 @@ import {
   BarChart3,
   Bot,
   Bug,
-  Calculator,
   Copy,
   Crown,
   History,
@@ -918,8 +917,8 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
   const isOtherSymbolActive = otherSymbols.includes(symbol);
   const chartTitle = altOnly ? "알트코인 레이더" : "코인 레이더";
   const chartDescription = altOnly
-    ? "선택한 알트코인의 구조, 과열, 변동성, 브리핑을 Majors와 같은 방식으로 확인합니다."
-    : "ICT 구조를 먼저 보고, 보조지표는 과열과 추격 위험만 참고합니다.";
+    ? "선택한 알트코인의 구조, 과열, 변동성, 브리핑을 BTC/ETH와 같은 방식으로 확인합니다."
+    : "BTC와 ETH의 구조, 추세, 변동성, 시장 브리핑을 한 화면에서 확인합니다.";
 
   const cacheKey = `${storagePrefix}.marketCache.${symbol}.${activeTimeframe}.${analysisMode}.${msbMode}.${structureSensitivity}`;
 
@@ -2187,7 +2186,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 {analysis.summaryLine}
               </p>
             </div>
-            <div className={`shrink-0 rounded-xl border px-4 py-3 text-right ${biasClasses(analysis.bias)}`}>
+            <div className={`min-w-[160px] shrink-0 rounded-xl border px-4 py-3 text-left ${biasClasses(analysis.bias)}`}>
               <p className="text-xs font-bold opacity-75">판독 방향</p>
               <p className="mt-1 text-lg font-black">{biasLabel(analysis.bias)}</p>
               <p className="mt-1 text-xs font-bold opacity-75">종합 점수 {analysis.biasScore}</p>
@@ -2206,33 +2205,16 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             ))}
           </div>
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-3">
-            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-              <div className="flex items-center justify-between text-xs font-bold text-signal-success">
-                <span>상승 근거</span>
-                <span>{radarSignalRatio.bullish}개 · {bullishPercent}%</span>
-              </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full rounded-full bg-signal-success" style={{ width: `${bullishPercent}%` }} />
-              </div>
+          <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold">
+              <span className="text-signal-success">상승 근거 {radarSignalRatio.bullish}개 · {bullishPercent}%</span>
+              <span className="text-signal-danger">하락 근거 {radarSignalRatio.bearish}개 · {bearishPercent}%</span>
+              <span className="text-signal-warning">횡보·주의 {radarSignalRatio.neutral}개 · {neutralPercent}%</span>
             </div>
-            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-              <div className="flex items-center justify-between text-xs font-bold text-signal-danger">
-                <span>하락 근거</span>
-                <span>{radarSignalRatio.bearish}개 · {bearishPercent}%</span>
-              </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full rounded-full bg-signal-danger" style={{ width: `${bearishPercent}%` }} />
-              </div>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-              <div className="flex items-center justify-between text-xs font-bold text-signal-warning">
-                <span>횡보·주의</span>
-                <span>{radarSignalRatio.neutral}개 · {neutralPercent}%</span>
-              </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full rounded-full bg-signal-warning" style={{ width: `${neutralPercent}%` }} />
-              </div>
+            <div className="mt-2 flex h-3 overflow-hidden rounded-full bg-white/10">
+              <div className="h-full bg-signal-success" style={{ width: `${bullishPercent}%` }} />
+              <div className="h-full bg-signal-danger" style={{ width: `${bearishPercent}%` }} />
+              <div className="h-full bg-signal-warning" style={{ width: `${neutralPercent}%` }} />
             </div>
           </div>
 
@@ -2476,25 +2458,11 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               </div>
             ) : null}
             {analysis ? (
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                <Link
-                  href="/news?market=crypto"
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-accent-blue px-3 text-sm font-extrabold text-slate-950 hover:bg-sky-300"
-                >
-                  <Activity size={16} aria-hidden />
-                  시장 브리핑
-                </Link>
-                <Link
-                  href="/calculator"
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-white/10 bg-black/20 px-3 text-sm font-bold text-slate-200 hover:border-accent-blue/60"
-                >
-                  <Calculator size={16} aria-hidden />
-                  손절 수량 계산
-                </Link>
+              <div className="mt-3">
                 <button
                   type="button"
                   onClick={saveAnalysisToJournal}
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-white/10 bg-black/20 px-3 text-sm font-bold text-slate-200 hover:border-accent-blue/60 hover:text-white"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-white/10 bg-black/20 px-3 text-sm font-bold text-slate-200 hover:border-accent-blue/60 hover:text-white"
                 >
                   <History size={16} aria-hidden />
                   레이더 저장
@@ -2517,7 +2485,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest text-accent-blue">AI 레이더 브리핑</p>
-                  <h3 className="mt-1 text-lg font-black text-white">감지된 구조 전체를 긴 문장으로 종합합니다</h3>
+                  <h3 className="mt-1 text-lg font-black text-white">감지된 구조 전체를 AI가 종합해서 정리합니다.</h3>
                   <p className="mt-2 text-sm leading-6 text-slate-400">
                     {radarProfile === "technical"
                       ? "선택 코인의 추세, 모멘텀, 변동성, 거래량 지표를 중심으로 시장 해석을 정리합니다."
@@ -2683,7 +2651,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest text-accent-blue">판독 체계</p>
-                  <h3 className="mt-1 text-lg font-black text-white">ICT 구조가 중심, 보조지표는 보조 도구로 참고</h3>
+                  <h3 className="mt-1 text-lg font-black text-white">구조와 지표를 함께 확인합니다.</h3>
                 </div>
                 <span className="inline-flex w-fit rounded-md border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-bold text-slate-300">
                   {activeTimeframe} 기준
@@ -2749,8 +2717,8 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 </div>
 
                 <div className="rounded-lg border border-white/10 bg-black/20 p-4">
-                  <p className="text-xs font-bold text-slate-400">추세 환경 보조 도구</p>
-                  <h4 className="mt-1 text-base font-black text-white">보조지표 참고값</h4>
+                  <p className="text-xs font-bold text-slate-400">추세 환경 지표</p>
+                  <h4 className="mt-1 text-base font-black text-white">기술지표 참고값</h4>
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <div className={`rounded-md border p-3 sm:col-span-2 ${conditionTone(activeAnalysis.condition.regime)}`}>
                       <p className="text-xs font-semibold opacity-80">시장 국면</p>
@@ -2814,9 +2782,6 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 </div>
               </div>
 
-              <p className="mt-3 rounded-md border border-signal-warning/20 bg-signal-warning/10 px-3 py-2 text-xs leading-5 text-signal-warning">
-                RSI·MACD·볼린저·거래량은 ICT 구조가 먼저 맞은 뒤 과열, 변동성 확대, 추격 위험을 확인하는 보조 도구로 참고하세요.
-              </p>
             </div>
           ) : null}
 

@@ -1,4 +1,4 @@
-// 글로벌 주요 자산의 하루 변동률과 시장 온도를 제공하는 API 라우트입니다.
+// 글로벌 주요 자산의 하루 변동률과 시장 흐름을 제공하는 API 라우트입니다.
 import { NextResponse } from "next/server";
 import { fetchStockCandles, findStockSymbol } from "@/lib/stockMarket";
 import { rateLimit } from "@/lib/server/rateLimit";
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
 
   if (!limit.allowed) {
     return NextResponse.json(
-      { error: "글로벌 시장 온도 요청이 잠시 많습니다. 잠시 후 다시 확인해 주세요." },
+      { error: "글로벌 시장 흐름 요청이 잠시 많습니다. 잠시 후 다시 확인해 주세요." },
       { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
     );
   }
@@ -61,7 +61,7 @@ export async function GET(request: Request) {
   const items = settled.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
   if (items.length === 0) {
     return NextResponse.json(
-      { error: "글로벌 시장 온도 데이터를 잠시 확인하지 못했습니다. 잠시 뒤 다시 확인해 주세요." },
+      { error: "글로벌 시장 흐름 데이터를 잠시 확인하지 못했습니다. 잠시 뒤 다시 확인해 주세요." },
       { status: 503 }
     );
   }

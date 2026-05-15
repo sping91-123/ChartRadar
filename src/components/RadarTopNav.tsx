@@ -1,9 +1,9 @@
 "use client";
-// 시장별 주요 페이지로 이동하는 상단 앱 내비게이션입니다.
+// 시장별 주요 페이지로 이동하는 상단 내비게이션입니다.
 import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { BellRing, Calculator, Coins, Crown, History, Newspaper, Radar, TrendingUp } from "lucide-react";
+import { BellRing, Coins, Crown, History, Newspaper, Radar, TrendingUp } from "lucide-react";
 
 type MarketScope = "crypto" | "stocks" | "all";
 
@@ -16,24 +16,22 @@ type NavItem = {
 };
 
 const cryptoNavItems: NavItem[] = [
-  { label: "Majors", icon: Radar, href: "/majors", match: ["/majors"] },
+  { label: "BTC/ETH", icon: Radar, href: "/majors", match: ["/majors"] },
   { label: "알트코인", icon: Coins, href: "/alts", match: ["/alts"] },
   { label: "뉴스", icon: Newspaper, href: "/news?market=crypto", match: ["/news"], market: "crypto" },
   { label: "알림", icon: BellRing, href: "/alerts?market=crypto", match: ["/alerts"], market: "crypto" },
-  { label: "복기", icon: History, href: "/journal?market=crypto", match: ["/journal"], market: "crypto" },
-  { label: "계산기", icon: Calculator, href: "/calculator?market=crypto", match: ["/calculator"], market: "crypto" }
+  { label: "복기", icon: History, href: "/journal?market=crypto", match: ["/journal"], market: "crypto" }
 ];
 
 const stockNavItems: NavItem[] = [
   { label: "글로벌", icon: TrendingUp, href: "/global", match: ["/stocks", "/global"] },
   { label: "뉴스", icon: Newspaper, href: "/news?market=global", match: ["/news"], market: "global" },
   { label: "알림", icon: BellRing, href: "/alerts?market=global", match: ["/alerts"], market: "global" },
-  { label: "복기", icon: History, href: "/journal?market=global", match: ["/journal"], market: "global" },
-  { label: "계산기", icon: Calculator, href: "/calculator?market=global", match: ["/calculator"], market: "global" }
+  { label: "복기", icon: History, href: "/journal?market=global", match: ["/journal"], market: "global" }
 ];
 
 const allNavItems: NavItem[] = [
-  { label: "Majors", icon: Radar, href: "/majors", match: ["/majors", "/alts"] },
+  { label: "BTC/ETH", icon: Radar, href: "/majors", match: ["/majors", "/alts"] },
   { label: "글로벌 레이더", icon: TrendingUp, href: "/global", match: ["/stocks", "/global"] },
   { label: "요금제", icon: Crown, href: "/pro", match: ["/pro", "/checkout/success", "/checkout/fail", "/refund"] }
 ];
@@ -54,7 +52,7 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
     <nav className="sticky top-2 z-30 rounded-xl border border-surface-line bg-slate-950/78 p-1 shadow-[0_14px_42px_rgba(0,0,0,0.28)] backdrop-blur-xl">
       <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}>
         {navItems.map(({ label, icon: Icon, href, match, market: itemMarket }) => {
-          const isMarketRoute = pathname === "/news" || pathname === "/alerts" || pathname === "/journal" || pathname === "/calculator";
+          const isMarketRoute = pathname === "/news" || pathname === "/alerts" || pathname === "/journal";
           const active = match.some((path) => path === pathname) && (!itemMarket || marketParam === itemMarket || !isMarketRoute);
 
           return (

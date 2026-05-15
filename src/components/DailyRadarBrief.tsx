@@ -415,7 +415,7 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
             <div className={`rounded-xl border p-3 ${toneClasses(summary.tone.tone)}`}>
               <p className="flex items-center gap-1.5 text-[11px] font-bold opacity-80">
                 <Gauge size={13} aria-hidden />
-                시장 온도
+                시장 흐름
               </p>
               <p className="mt-1 text-lg font-black">{summary.tone.label}</p>
               <p className="mt-1 text-xs font-semibold opacity-80">{summary.tone.description}</p>
@@ -499,7 +499,7 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
                   href="/majors"
                   className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm font-bold text-slate-200 hover:border-accent-blue/40 hover:text-white"
                 >
-                  Majors 큰 흐름 확인
+                  BTC/ETH 큰 흐름 확인
                   <Radar size={15} aria-hidden />
                 </Link>
                 <Link

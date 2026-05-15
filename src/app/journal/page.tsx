@@ -1,23 +1,17 @@
 "use client";
 // 매매 복기 기록을 로컬과 Supabase 계정에 저장하는 페이지.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import {
-  BadgeCheck,
-  Cloud,
-  CloudOff,
   History,
   Loader2,
   Plus,
   Trash2,
   TrendingDown,
-  TrendingUp,
-  UploadCloud
+  TrendingUp
 } from "lucide-react";
 import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
 import { RadarTopNav } from "@/components/RadarTopNav";
-import { getEntitlementLabel, hasAnyPaidEntitlement } from "@/lib/billing";
 import {
   appendJournalEntry,
   loadJournalEntries,
@@ -29,7 +23,6 @@ import {
   createRemoteJournalEntry,
   deleteRemoteJournalEntry,
   loadRemoteJournalEntries,
-  migrateLocalJournalEntries,
   updateRemoteJournalOutcome
 } from "@/lib/remoteJournal";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
@@ -147,20 +140,16 @@ function OutcomeButtons({
 
 export default function JournalPage({ searchParams }: { searchParams?: { market?: string } }) {
   const initialMarket = searchParams?.market === "stocks" || searchParams?.market === "global" ? "stocks" : "crypto";
-  const { session, user, profile, isLoading } = useSupabaseAuth();
+  const { session } = useSupabaseAuth();
   const [market, setMarket] = useState<MarketScope>(initialMarket);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [localEntries, setLocalEntries] = useState<JournalEntry[]>([]);
   const [title, setTitle] = useState("");
-  const [bias, setBias] = useState("관망");
+  const [bias, setBias] = useState("롱");
   const [note, setNote] = useState("");
   const [activeFilter, setActiveFilter] = useState<EntryFilter>("전체");
   const [isLoadingRemote, setIsLoadingRemote] = useState(false);
-  const [syncMessage, setSyncMessage] = useState("");
 
   const marketLabel = market === "stocks" ? "글로벌" : "코인";
-  const profilePlan = profile?.plan ?? "free";
-  const profilePlanLabel = hasAnyPaidEntitlement(profilePlan) ? getEntitlementLabel(profilePlan) : "Basic";
 
   const refreshRemote = useCallback(async () => {
     if (!session?.accessToken) return;
@@ -168,9 +157,8 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
     try {
       const remoteEntries = await loadRemoteJournalEntries(session.accessToken);
       setEntries(remoteEntries);
-      setSyncMessage("저장된 복기 기록을 불러왔습니다.");
     } catch {
-      setSyncMessage("저장된 복기 기록을 잠시 확인하지 못했습니다. 이 기기의 기록은 유지됩니다.");
+      setEntries(loadJournalEntries());
     } finally {
       setIsLoadingRemote(false);
     }
@@ -180,7 +168,6 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
     const nextMarket = new URLSearchParams(window.location.search).get("market");
     setMarket(nextMarket === "stocks" || nextMarket === "global" ? "stocks" : "crypto");
     const local = loadJournalEntries();
-    setLocalEntries(local);
     if (!session?.accessToken) {
       setEntries(local);
       return;
@@ -204,22 +191,6 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
     return marketEntries;
   }, [activeFilter, marketEntries]);
 
-  async function migrateLocalEntries() {
-    if (!session?.accessToken || !localEntries.length) return;
-    setIsLoadingRemote(true);
-    try {
-      const remote = await migrateLocalJournalEntries(session.accessToken, localEntries);
-      saveJournalEntries([]);
-      setLocalEntries([]);
-      setEntries(remote);
-      setSyncMessage("이 기기에 있던 복기 기록을 계정에 옮겼습니다.");
-    } catch {
-      setSyncMessage("기기 복기를 계정에 옮기지 못했습니다. 잠시 후 다시 시도해 주세요.");
-    } finally {
-      setIsLoadingRemote(false);
-    }
-  }
-
   async function addEntry() {
     const nextTitle = title.trim() || `${marketLabel} 복기 ${new Date().toLocaleDateString("ko-KR")}`;
     const entry = {
@@ -234,16 +205,13 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
     if (session?.accessToken) {
       const created = await createRemoteJournalEntry(session.accessToken, entry);
       setEntries((current) => [created, ...current]);
-      setSyncMessage("복기 기록이 계정에 저장됐습니다.");
     } else {
       const next = appendJournalEntry(entry);
       setEntries(next);
-      setLocalEntries(next);
-      setSyncMessage("복기 기록이 이 기기에 저장됐습니다.");
     }
 
     setTitle("");
-    setBias("관망");
+    setBias("롱");
     setNote("");
   }
 
@@ -254,7 +222,6 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
       await deleteRemoteJournalEntry(session.accessToken, id);
     } else {
       saveJournalEntries(next);
-      setLocalEntries(next);
     }
   }
 
@@ -271,7 +238,6 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
       await updateRemoteJournalOutcome(session.accessToken, id, nextOutcome ?? null, nextOutcomeAt ?? null);
     } else {
       saveJournalEntries(next);
-      setLocalEntries(next);
     }
   }
 
@@ -335,58 +301,6 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
             </div>
           ) : null}
 
-          <div className="mt-5 rounded-lg border border-white/10 bg-black/20 p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-3">
-                <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-md border ${session ? "border-signal-success/25 bg-signal-success/10 text-signal-success" : "border-signal-warning/25 bg-signal-warning/10 text-signal-warning"}`}>
-                  {session ? <Cloud size={18} aria-hidden /> : <CloudOff size={18} aria-hidden />}
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-white">
-                    {isLoading ? "계정 확인 중" : session ? "복기장이 계정에 연결됐습니다" : "계정 연결 전 기록입니다"}
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-slate-400">
-                    {session
-                      ? "복기 기록을 계정 기준으로 보관해 다른 기기에서도 이어볼 수 있습니다."
-                      : "구글 계정을 연결하면 기기가 바뀌어도 기록을 이어갈 수 있습니다."}
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {!session ? (
-                  <Link href="/login" className="inline-flex min-h-10 items-center justify-center rounded-md bg-accent-blue px-3 text-sm font-black text-slate-950 hover:bg-sky-300">
-                    계정 연결
-                  </Link>
-                ) : localEntries.length ? (
-                  <button
-                    type="button"
-                    onClick={migrateLocalEntries}
-                    disabled={isLoadingRemote}
-                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-accent-blue px-3 text-sm font-black text-slate-950 hover:bg-sky-300 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isLoadingRemote ? <Loader2 className="animate-spin" size={16} aria-hidden /> : <UploadCloud size={16} aria-hidden />}
-                    이 기기 기록 가져오기
-                  </button>
-                ) : null}
-              </div>
-            </div>
-            {session && user ? (
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1">
-                  {profile?.display_name ?? user.user_metadata?.name ?? user.email ?? "회원"}
-                </span>
-                <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1">
-                  {user.email ?? "이메일 없음"}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-md border border-accent-blue/25 bg-accent-blue/10 px-2 py-1 text-accent-blue">
-                  <BadgeCheck size={12} aria-hidden />
-                  {profilePlanLabel}
-                </span>
-              </div>
-            ) : null}
-            {syncMessage ? <p className="mt-3 text-xs leading-5 text-slate-400">{syncMessage}</p> : null}
-          </div>
-
           <div className="mt-5 grid gap-3">
             <input
               value={title}
@@ -394,8 +308,8 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
               placeholder={market === "stocks" ? "예. NVDA 1h 조정 관찰" : "예. BTC 15m 롱 관찰"}
               className="min-h-12 rounded-md border border-surface-line bg-surface-cardSoft px-4 text-base text-white outline-none placeholder:text-slate-600 focus:border-accent-blue"
             />
-            <div className="grid grid-cols-3 gap-2">
-              {["롱", "숏", "관망"].map((item) => (
+            <div className="grid grid-cols-2 gap-2">
+              {["롱", "숏"].map((item) => (
                 <button
                   key={item}
                   type="button"

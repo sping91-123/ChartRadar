@@ -1,7 +1,6 @@
 // 전역 메타데이터와 테마 초기화를 담당하는 루트 레이아웃.
 import type { Metadata, Viewport } from "next";
 import { AuthHashRescue } from "@/components/AuthHashRescue";
-import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 import { RadarAlertMonitor } from "@/components/RadarAlertMonitor";
 import { getSiteUrlWithLocalFallback } from "@/lib/siteUrl";
 import "./globals.css";
@@ -92,7 +91,6 @@ export default function RootLayout({
         <AuthHashRescue />
         {children}
         <RadarAlertMonitor />
-        <PwaInstallPrompt />
       </body>
     </html>
   );

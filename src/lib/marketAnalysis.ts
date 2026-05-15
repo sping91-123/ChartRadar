@@ -313,9 +313,21 @@ export async function fetchBinanceCandles(
     limit: String(limit)
   });
 
-  const response = await fetch(`https://fapi.binance.com/fapi/v1/klines?${params.toString()}`);
+  const clientParams = new URLSearchParams({
+    symbol: normalizedSymbol,
+    timeframe,
+    limit: String(limit)
+  });
+  const isBrowser = typeof window !== "undefined";
+  const response = await fetch(isBrowser ? `/data/candles?${clientParams.toString()}` : `https://fapi.binance.com/fapi/v1/klines?${params.toString()}`);
   if (!response.ok) {
     throw new Error("캔들 흐름을 잠시 확인하지 못했습니다.");
+  }
+
+  if (isBrowser) {
+    const payload = (await response.json()) as { candles?: Candle[] };
+    if (!Array.isArray(payload.candles)) throw new Error("캔들 흐름을 잠시 확인하지 못했습니다.");
+    return payload.candles;
   }
 
   const rows = (await response.json()) as Array<

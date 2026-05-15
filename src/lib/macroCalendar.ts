@@ -126,6 +126,7 @@ function isImportantUsdEvent(event: ForexFactoryEvent) {
   if (event.country !== "USD") return false;
   const title = normalizeTitle(event.title ?? "");
   if (!title) return false;
+  if (/speaks|speech|testifies/i.test(title) && event.impact !== "High") return false;
   if (event.impact === "High") return true;
   return IMPORTANT_USD_EVENTS.some((pattern) => pattern.test(title));
 }
@@ -376,7 +377,7 @@ export async function getMacroCalendarPayload(): Promise<MacroCalendarPayload> {
         .filter((item): item is MacroEventItem => Boolean(item))
         .filter((item) => {
           const time = Date.parse(item.releaseAt);
-          return time >= now || now - time <= RECENT_RELEASE_MS || item.importance >= 3;
+          return time >= now || now - time <= RECENT_RELEASE_MS;
         }),
       actuals
     );

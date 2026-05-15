@@ -50,7 +50,7 @@ type GlobalRadarMode = "combined" | "ict" | "technical";
 const radarModes: Array<{ value: GlobalRadarMode; label: string; caption: string }> = [
   { value: "combined", label: "종합", caption: "ICT와 기술지표를 함께 봅니다." },
   { value: "ict", label: "ICT", caption: "구조와 구간만 봅니다." },
-  { value: "technical", label: "기술지표", caption: "보조지표만 봅니다." }
+  { value: "technical", label: "기술지표", caption: "기술지표만 봅니다." }
 ];
 
 const timeframeMinutes: Record<ChartTimeframe, number> = {

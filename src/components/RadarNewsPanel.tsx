@@ -132,7 +132,7 @@ function NewsSourceCard({ item, market }: { item: RadarNewsItem; market: RadarNe
         <Icon className={`mt-1 shrink-0 ${style.text}`} size={17} aria-hidden />
       </div>
 
-      <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-400 [word-break:keep-all]">{item.summary}</p>
+      <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-400 [word-break:keep-all]">{localizeNewsSourceText(item.summary)}</p>
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {item.assets.slice(0, 3).map((asset) => (
@@ -343,6 +343,9 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
       {briefing ? (
         <div className="enterprise-panel p-4">
           <h3 className="text-lg font-black text-white">AI 시장 브리핑</h3>
+          <p className="mt-1 text-xs font-bold text-slate-500">
+            공개 뉴스 흐름을 한국어로 묶고, 시장에 미칠 영향을 먼저 정리합니다.
+          </p>
           <p className="mt-2 text-sm leading-6 text-slate-300 [word-break:keep-all]">{localizeNewsSourceText(briefing.overview)}</p>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {briefing.keyIssues.slice(0, 4).map((issue) => (
@@ -369,10 +372,12 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
         </div>
       ) : null}
 
-      <div>
-        <h3 className="mb-3 text-sm font-black text-white">참고 뉴스</h3>
+      <details className="rounded-xl border border-surface-line bg-surface-card/70 p-4">
+        <summary className="cursor-pointer text-sm font-black text-white">
+          원문 참고 자료 펼치기
+        </summary>
         {(payload?.items ?? []).length ? (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {(payload?.items ?? []).slice(0, 12).map((item) => (
             <NewsSourceCard key={item.id} item={item} market={market} />
             ))}
@@ -382,7 +387,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
             지금은 시장 전체 방향에 영향을 줄 만한 뉴스만 추려 보는 중입니다. 개별 종목성 뉴스는 제외하고, 금리·물가·고용·달러·원자재·주요 지수에 영향을 주는 이슈가 잡히면 이곳에 표시됩니다.
           </div>
         )}
-      </div>
+      </details>
     </section>
   );
 }

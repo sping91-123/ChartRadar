@@ -25,20 +25,6 @@ export const macroCalendarSourceNote =
 
 export const macroItems: MacroEventItem[] = [
   {
-    label: "FOMC Meeting Minutes",
-    releaseAt: "2026-05-20T18:00:00.000Z",
-    dateKst: "05.21 03:00",
-    state: "upcoming",
-    importance: 3,
-    forecast: "의사록 공개",
-    previous: "의사록 공개",
-    summary: "연준 위원들이 물가, 고용, 금리 경로를 어떻게 보고 있는지 확인하는 일정입니다.",
-    marketImpact:
-      "매파적인 표현이 강하면 달러와 금리 부담이 커질 수 있고, 완화적인 표현이 나오면 위험자산 반등 명분이 생길 수 있습니다.",
-    source: "Fed",
-    sourceUrl: "https://www.federalreserve.gov/monetarypolicy.htm"
-  },
-  {
     label: "Initial Jobless Claims",
     releaseAt: "2026-05-21T12:30:00.000Z",
     dateKst: "05.21 21:30",

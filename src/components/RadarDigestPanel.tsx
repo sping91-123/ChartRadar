@@ -232,7 +232,7 @@ export function RadarDigestPanel() {
         <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1.1fr]">
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
             <div className={`rounded-lg border p-3 ${toneClasses(digest.tone.tone)}`}>
-              <p className="text-[11px] font-bold opacity-80">시장 온도</p>
+              <p className="text-[11px] font-bold opacity-80">시장 흐름</p>
               <p className="mt-1 text-xl font-black">{digest.tone.label}</p>
               <p className="mt-1 text-xs font-semibold opacity-80">상승 {digest.tone.up} · 하락 {digest.tone.down}</p>
             </div>

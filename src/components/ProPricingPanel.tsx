@@ -44,7 +44,7 @@ const valueRows = [
   {
     icon: TimerReset,
     title: "장 시작 전 시장 정리",
-    body: "매크로 일정, 시장 온도, 주요 자산 흐름을 먼저 보고 오늘 조심해야 할 구간을 좁습니다."
+    body: "매크로 일정과 주요 자산 흐름을 먼저 보고 오늘 조심해야 할 구간을 좁습니다."
   },
   {
     icon: ShieldCheck,
@@ -163,7 +163,7 @@ function getScopedDisplayPlan(plan: BillingPlan, scope: BillingPageScope): Billi
     return {
       ...plan,
       description: "코인 레이더의 첫 흐름을 먼저 확인합니다. 반복 감시와 알림은 Coin Pro에서 넓어집니다.",
-      highlights: ["Majors 흐름 확인", "주요 알트코인 흐름 확인", "AI 브리핑 하루 1회"],
+      highlights: ["BTC/ETH 흐름 확인", "주요 알트코인 흐름 확인", "AI 브리핑 하루 1회"],
       limits: {
         ...plan.limits,
         radarScans: "하루 2회",

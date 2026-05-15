@@ -1713,3 +1713,15 @@
 - [x] Update app links, PWA cache, sitemap, and smoke checks to `/majors`.
 - [x] Rename the Majors screen label to Majors.
 - [x] Run lint, build, smoke checks, then push to the new GitHub repo.
+
+## 2026-05-15 레이더 화면 중복과 데이터 표시 정리.
+
+- [x] 오른쪽 아래 PWA 설치 프롬프트를 제거했다.
+- [x] 메인 화면을 코인 레이더와 글로벌 레이더 두 선택지만 남기는 구조로 줄였다.
+- [x] 상단 메뉴에서 Majors와 계산기를 제거하고 BTC/ETH, 알트코인, 뉴스, 알림, 복기로 정리했다.
+- [x] 계산기와 진단 구주소는 코인 레이더로 리다이렉트한다.
+- [x] 알트코인 화면 상단에 시장 레이더 TOP과 관심 코인 레이더가 먼저 보이도록 순서를 조정했다.
+- [x] 복기 화면의 계정 연결 안내 블록과 관망 선택지를 제거했다.
+- [x] FOMC 멤버 발언이 경제지표처럼 반복 노출되지 않도록 매크로 필터를 조정했다.
+- [x] 브라우저 차단을 피하는 `/data/candles` 경로를 추가해 차트 캔들 로딩을 복구했다.
+- [x] 홈, BTC/ETH, 알트코인, 글로벌, 뉴스, 복기, 계산기 리다이렉트를 브라우저에서 확인했다.

@@ -1,5 +1,5 @@
 "use client";
-// 글로벌 주요 자산의 당일 시장 온도를 요약해 보여주는 관제 카드입니다.
+// 글로벌 주요 자산의 당일 시장 흐름을 요약해 보여주는 관제 카드입니다.
 import { useEffect, useMemo, useState } from "react";
 import { Activity, AlertTriangle, Loader2, RefreshCw, TrendingDown, TrendingUp } from "lucide-react";
 import { withSupabaseAuth } from "@/lib/authFetch";
@@ -59,8 +59,8 @@ export function GlobalMarketPulse() {
     try {
       const response = await fetch("/api/stocks/market-board", await withSupabaseAuth({ cache: "no-store" }));
       const data = (await response.json().catch(() => ({}))) as Partial<Extract<PulseState, { status: "ready" }>> & { error?: string };
-      if (!response.ok) throw new Error(data.error ?? "글로벌 시장 온도를 잠시 확인하지 못했습니다.");
-      if (!Array.isArray(data.items)) throw new Error("글로벌 시장 온도 데이터가 아직 준비되지 않았습니다.");
+      if (!response.ok) throw new Error(data.error ?? "글로벌 시장 흐름을 잠시 확인하지 못했습니다.");
+      if (!Array.isArray(data.items)) throw new Error("글로벌 시장 흐름 데이터가 아직 준비되지 않았습니다.");
       setState({
         status: "ready",
         headline: data.headline ?? "글로벌 시장 흐름을 정리하고 있습니다.",
@@ -69,7 +69,7 @@ export function GlobalMarketPulse() {
         items: data.items
       });
     } catch (error) {
-      setState({ status: "error", message: error instanceof Error ? error.message : "글로벌 시장 온도를 잠시 확인하지 못했습니다." });
+      setState({ status: "error", message: error instanceof Error ? error.message : "글로벌 시장 흐름을 잠시 확인하지 못했습니다." });
     }
   }
 
@@ -91,7 +91,7 @@ export function GlobalMarketPulse() {
           </div>
           <div>
             <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Global Pulse</p>
-            <h2 className="mt-1 text-xl font-black text-white">글로벌 시장 온도</h2>
+            <h2 className="mt-1 text-xl font-black text-white">글로벌 시장 흐름</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400 [word-break:keep-all]">
               지수선물, 변동성, 채권, 달러, 원자재, 반도체 ETF를 먼저 훑어 오늘 시장의 압력이 어디에 있는지 정리합니다.
             </p>
@@ -110,7 +110,7 @@ export function GlobalMarketPulse() {
       {state.status === "loading" ? (
         <div className="mt-4 flex min-h-32 items-center justify-center rounded-lg border border-white/10 bg-black/20 text-sm text-slate-400">
           <Loader2 className="mr-2 animate-spin" size={16} aria-hidden />
-          시장 온도를 불러오는 중입니다.
+          시장 흐름을 불러오는 중입니다.
         </div>
       ) : state.status === "error" ? (
         <div className="mt-4 rounded-lg border border-amber-300/25 bg-amber-300/10 p-4 text-sm leading-6 text-amber-100">

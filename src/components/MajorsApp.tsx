@@ -1,9 +1,7 @@
 import { AppFooter } from "@/components/AppFooter";
-import { DailyRadarBrief } from "@/components/DailyRadarBrief";
 import { Header } from "@/components/Header";
 import { LiveMarketChart } from "@/components/LiveMarketChart";
 import { MacroTicker } from "@/components/MacroTicker";
-import { RadarAlertCenter } from "@/components/RadarAlertCenter";
 import { RadarTopNav } from "@/components/RadarTopNav";
 
 export function MajorsApp() {
@@ -14,8 +12,6 @@ export function MajorsApp() {
         <RadarTopNav />
         <MacroTicker compact />
         <LiveMarketChart majorOnly />
-        <DailyRadarBrief scope="major" />
-        <RadarAlertCenter compact />
         <AppFooter />
       </div>
     </main>

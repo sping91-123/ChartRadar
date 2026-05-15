@@ -1483,3 +1483,11 @@ The health endpoint now reports a launch readiness score and structured blocking
 
 - The user asked to rename the old major-coin screen to Majors. This fits the product model because the screen is the BTC and ETH command center, not a generic Majors page.
 - Internal entry points, auth callback fallback, sitemap, PWA shortcut, service worker cache, and smoke checks are aligned to `/majors`.
+
+## 2026-05-15 레이더 화면 중복과 데이터 표시 정리.
+
+- 메인 화면은 설명형 랜딩보다 선택형 런처가 더 맞다. 사용자가 첫 화면에서 내려가며 읽지 않도록 코인 레이더와 글로벌 레이더 두 개만 남겼다.
+- 계산기는 현재 제품의 반복 방문 이유를 만들지 못하고 상단 메뉴 공간을 잡아먹는다. 메뉴와 사이트맵에서 제외하고 직접 접근 시 BTC/ETH 레이더로 보낸다.
+- 뉴스와 알림은 전용 페이지가 있으므로 BTC/ETH 화면 중간에 중복 노출하지 않는다. BTC/ETH는 차트와 판독에 집중한다.
+- 경제지표는 FOMC 멤버 발언을 FOMC 일정처럼 보이면 신뢰가 크게 떨어진다. 낮은 중요도의 발언성 이벤트는 필터링하고, 최근 발표와 다음 발표 중심으로 정리한다.
+- 브라우저 확장 환경에서 `/api/crypto-candles`와 `/api/candles` 직접 접근이 차단될 수 있었다. 화면 데이터 요청은 `/data/candles` 별칭을 사용하게 바꿔 실시간 판독 로딩을 복구했다.
