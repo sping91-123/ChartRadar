@@ -183,7 +183,7 @@ export async function getLiquidCryptoSymbols(options: {
   const limit = options.limit ?? 32;
   const major = new Set(["BTCUSDT.P", "ETHUSDT.P"]);
 
-  const symbols = await getCryptoSymbols();
+  const symbols = excludeMajor ? fallbackCryptoSymbols() : await getCryptoSymbols();
   const filtered = symbols.filter((item) => {
     const isMajor = major.has(item.symbol);
     if (excludeMajor && isMajor) return false;
