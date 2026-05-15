@@ -141,25 +141,35 @@ export function displayNewsSource(source: string) {
   return sourceDisplayNames[source] ?? source;
 }
 
-export function localizeNewsSourceText(text: string) {
+function sanitizeNewsText(text: string) {
   return text
-    .replace(/\bBitcoin\b/gi, "비트코인")
-    .replace(/\bEthereum\b/gi, "이더리움")
-    .replace(/\bSolana\b/gi, "솔라나")
-    .replace(/\bNasdaq\b/gi, "나스닥")
-    .replace(/\bS&P\s?500\b/gi, "S&P500")
-    .replace(/\bFederal Reserve\b/gi, "연준")
-    .replace(/\bFed\b/gi, "연준")
-    .replace(/\bTreasury yields?\b/gi, "미국채 금리")
-    .replace(/\byields?\b/gi, "금리")
-    .replace(/\bInflation\b/gi, "물가")
-    .replace(/\bCrypto\b/gi, "코인")
-    .replace(/\bStocks?\b/gi, "주식")
-    .replace(/\bMarkets?\b/gi, "시장")
-    .replace(/\bEarnings?\b/gi, "실적")
-    .replace(/\bRevenue\b/gi, "매출")
-    .replace(/\bRate cuts?\b/gi, "금리 인하")
-    .replace(/\bRate hikes?\b/gi, "금리 인상");
+    .replace(/무尽한/g, "막대한")
+    .replace(/[\u3400-\u4DBF\u4E00-\u9FFF]/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+export function localizeNewsSourceText(text: string) {
+  return sanitizeNewsText(
+    text
+      .replace(/\bBitcoin\b/gi, "비트코인")
+      .replace(/\bEthereum\b/gi, "이더리움")
+      .replace(/\bSolana\b/gi, "솔라나")
+      .replace(/\bNasdaq\b/gi, "나스닥")
+      .replace(/\bS&P\s?500\b/gi, "S&P500")
+      .replace(/\bFederal Reserve\b/gi, "연준")
+      .replace(/\bFed\b/gi, "연준")
+      .replace(/\bTreasury yields?\b/gi, "미국채 금리")
+      .replace(/\byields?\b/gi, "금리")
+      .replace(/\bInflation\b/gi, "물가")
+      .replace(/\bCrypto\b/gi, "코인")
+      .replace(/\bStocks?\b/gi, "주식")
+      .replace(/\bMarkets?\b/gi, "시장")
+      .replace(/\bEarnings?\b/gi, "실적")
+      .replace(/\bRevenue\b/gi, "매출")
+      .replace(/\bRate cuts?\b/gi, "금리 인하")
+      .replace(/\bRate hikes?\b/gi, "금리 인상")
+  );
 }
 
 function hasKorean(value: string) {
@@ -232,10 +242,16 @@ export function analyzeNewsText(input: string, market: RadarNewsMarket = "crypto
 
   const actionHint =
     direction === "bullish"
-      ? "가격이 이미 과열이면 바로 추격하지 말고 눌림과 재돌파를 확인하세요."
+      ? market === "stocks"
+        ? "프리마켓 과열이면 바로 추격하지 말고 지수선물, 금리, 거래량 반응이 이어지는지 확인하세요."
+        : "가격이 이미 과열이면 바로 추격하지 말고 눌림과 재돌파를 확인하세요."
       : direction === "bearish"
-        ? "주요 지지선 이탈, 고배율 청산 위험, 거래량 급증 여부를 먼저 점검하세요."
-        : "뉴스만으로 판단하지 말고 BTC, ETH, 주요 지수 반응을 같이 확인하세요.";
+        ? market === "stocks"
+          ? "주요 지수선물 약세, VIX 상승, 금리 급등이 같이 나오는지 먼저 점검하세요."
+          : "주요 지지선 이탈, 고배율 청산 위험, 거래량 급증 여부를 먼저 점검하세요."
+        : market === "stocks"
+          ? "뉴스만으로 판단하지 말고 지수선물, 달러, 금리, 섹터 ETF 반응을 같이 확인하세요."
+          : "뉴스만으로 판단하지 말고 BTC, ETH, 주요 지수 반응을 같이 확인하세요.";
 
   return {
     direction,
@@ -260,7 +276,7 @@ export function createRadarNewsItem(
     id: `${input.source}-${publishedAt}-${input.link}`.replace(/\s+/g, "-"),
     source: input.source,
     title: input.title,
-    translatedTitle: input.translatedTitle,
+    translatedTitle: input.translatedTitle ? localizeNewsSourceText(input.translatedTitle) : undefined,
     link: input.link,
     publishedAt
   };

@@ -1472,3 +1472,9 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 글로벌 사용자는 개별 차트에 들어가기 전에 오늘 위험자산, 변동성, 채권, 원자재가 어느 쪽으로 기울었는지를 먼저 보고 싶어 한다.
 - `GlobalMarketPulse`는 `NQ=F`, `ES=F`, `YM=F`, `RTY=F`, `^VIX`, `TLT`, `UUP`, `GLD`, `CL=F`, `SMH`, `QQQ`, `SPY`를 1일봉 기준으로 훑어 시장 온도를 만든다.
 - 이 카드는 예측보다 관제에 가깝다. 어느 자산군이 움직였는지를 먼저 보여주고, 사용자가 아래에서 개별 종목을 고르도록 연결한다.
+
+## 2026-05-15 글로벌 뉴스 문구 보정.
+
+- 글로벌 뉴스에서 중립 안내가 BTC, ETH를 같이 보라고 말하면 글로벌 사용자에게 앱이 코인 앱처럼 느껴진다.
+- 글로벌 뉴스 액션 문구는 지수선물, 달러, 금리, 섹터 ETF 중심으로 분리했다.
+- Groq 번역이나 규칙 번역에서 어색한 한자 혼합 표현이 섞이면 `localizeNewsSourceText`에서 한 번 더 정리한다.
