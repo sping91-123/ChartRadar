@@ -63,6 +63,14 @@ async function getScannerSymbols(scope: ScoutScope) {
   return getLiquidCryptoSymbols({ includeMajor: true, limit: 40 });
 }
 
+function getScoutTopLimit(scope: ScoutScope, riskProfile: ScoutRiskProfile, isPaid: boolean) {
+  if (scope === "alts") {
+    if (!isPaid) return 3;
+    return riskProfile === "radar" ? 5 : 3;
+  }
+  return isPaid ? (riskProfile === "radar" ? 12 : 6) : riskProfile === "radar" ? 6 : 3;
+}
+
 export async function GET(request: Request) {
   const entitlement = await getRequestEntitlement(request, "crypto");
   const limit = await rateLimit(request, {
@@ -108,7 +116,7 @@ export async function GET(request: Request) {
       .then((symbols) => scanAllSetups({ mode, riskProfile, symbols }))
       .then((all) => {
         const scoped = all.filter((setup) => setupInScope(setup, scope));
-        const topLimit = entitlement.isPaid ? (riskProfile === "radar" ? 12 : 6) : riskProfile === "radar" ? 6 : 3;
+        const topLimit = getScoutTopLimit(scope, riskProfile, entitlement.isPaid);
         const top = topSetups(scoped, topLimit);
         cacheByKey.set(cacheKey, { setups: top, cachedAt: Date.now() });
         return top;

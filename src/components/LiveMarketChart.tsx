@@ -134,7 +134,18 @@ function writeAltAnalysisUsage(snapshot: AltAnalysisUsageSnapshot) {
   window.localStorage.setItem(altAnalysisUsageStorageKey, JSON.stringify(snapshot));
 }
 
-function getAltAnalysisGate(isPaid: boolean): AltAnalysisGate {
+function initialAltAnalysisGate(isPaid: boolean): AltAnalysisGate {
+  const limit = isPaid ? 300 : altAnalysisFreeLimit;
+  return {
+    allowed: true,
+    used: 0,
+    limit,
+    remaining: limit,
+    symbols: []
+  };
+}
+
+function getAltAnalysisGate(isPaid: boolean, currentSymbol?: string): AltAnalysisGate {
   const snapshot = readAltAnalysisUsage();
   if (isPaid) {
     return {
@@ -146,8 +157,9 @@ function getAltAnalysisGate(isPaid: boolean): AltAnalysisGate {
     };
   }
 
+  const alreadyUsed = currentSymbol ? snapshot.symbols.includes(currentSymbol) : false;
   return {
-    allowed: snapshot.symbols.length < altAnalysisFreeLimit,
+    allowed: alreadyUsed || snapshot.symbols.length < altAnalysisFreeLimit,
     used: snapshot.symbols.length,
     limit: altAnalysisFreeLimit,
     remaining: Math.max(0, altAnalysisFreeLimit - snapshot.symbols.length),
@@ -158,7 +170,7 @@ function getAltAnalysisGate(isPaid: boolean): AltAnalysisGate {
 function registerAltAnalysisSymbol(symbol: string, isPaid: boolean): AltAnalysisGate {
   const snapshot = readAltAnalysisUsage();
   if (isPaid || snapshot.symbols.includes(symbol)) {
-    return getAltAnalysisGate(isPaid);
+    return getAltAnalysisGate(isPaid, symbol);
   }
 
   if (snapshot.symbols.length >= altAnalysisFreeLimit) {
@@ -946,7 +958,8 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
   const [savedMessage, setSavedMessage] = useState("");
   const [marketBriefing, setMarketBriefing] = useState<MarketBriefingState>({ status: "idle" });
   const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>(defaultOverlaySettings);
-  const [altAnalysisGate, setAltAnalysisGate] = useState<AltAnalysisGate>(() => getAltAnalysisGate(false));
+  const [altAnalysisGate, setAltAnalysisGate] = useState<AltAnalysisGate>(() => initialAltAnalysisGate(false));
+  const [hasMounted, setHasMounted] = useState(false);
   const effectiveTradingMode: TradingMode = activeTimeframe === "5m" || activeTimeframe === "15m" ? "scalp" : "swing";
   const modeTimeframes = chartTimeframes;
   const primarySymbols = altOnly ? altSymbols.slice(0, 5) : majorSymbols;
@@ -960,16 +973,18 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
     ? "선택한 알트코인의 구조, 과열, 변동성, 브리핑을 BTC/ETH와 같은 방식으로 확인합니다."
     : "BTC와 ETH의 구조, 추세, 변동성, 시장 브리핑을 한 화면에서 확인합니다.";
 
+  const visibleAltAnalysisGate = hasMounted ? altAnalysisGate : initialAltAnalysisGate(false);
   const cacheKey = `${storagePrefix}.marketCache.${symbol}.${activeTimeframe}.${analysisMode}.${msbMode}.${structureSensitivity}`;
 
   useEffect(() => {
+    setHasMounted(true);
     setOverlaySettings(readOverlaySettings());
   }, []);
 
   useEffect(() => {
     if (!altOnly) return;
-    setAltAnalysisGate(getAltAnalysisGate(hasCoinPro));
-  }, [altOnly, hasCoinPro]);
+    setAltAnalysisGate(getAltAnalysisGate(hasCoinPro, symbol));
+  }, [altOnly, hasCoinPro, symbol]);
 
   useEffect(() => {
     if (majorOnly) return;
@@ -1075,10 +1090,10 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
 
     try {
       if (altOnly) {
-        const nextGate = registerAltAnalysisSymbol(symbol, hasCoinPro);
-        setAltAnalysisGate(nextGate);
+        const currentGate = getAltAnalysisGate(hasCoinPro, symbol);
+        setAltAnalysisGate(currentGate);
 
-        if (!nextGate.allowed) {
+        if (!currentGate.allowed) {
           setCandles([]);
           setAnalysis(null);
           setMarketBriefing({ status: "idle" });
@@ -1121,6 +1136,9 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         };
         window.localStorage.setItem(cacheKey, JSON.stringify(payload));
       }
+      if (altOnly) {
+        setAltAnalysisGate(registerAltAnalysisSymbol(symbol, hasCoinPro));
+      }
     } catch (loadError) {
       const fallback = readMarketCache(cacheKey);
 
@@ -1128,6 +1146,9 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         setCandles(fallback.candles);
         setAnalysis(fallback.analysis);
         setIsUsingCachedData(true);
+        if (altOnly) {
+          setAltAnalysisGate(registerAltAnalysisSymbol(symbol, hasCoinPro));
+        }
         setError("실시간 데이터를 잠시 불러오지 못해 최근 레이더 판독값을 보여주고 있습니다.");
       } else {
         setError(loadError instanceof Error ? loadError.message : "시장 흐름을 잠시 확인하지 못했습니다.");
@@ -2083,21 +2104,21 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
       {altOnly ? (
         <div
           className={`mt-3 rounded-lg border p-3 ${
-            altAnalysisGate.allowed
+            visibleAltAnalysisGate.allowed
               ? "border-cyan-300/20 bg-cyan-300/10"
               : "border-amber-300/35 bg-amber-300/10"
           }`}
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className={`text-xs font-black ${altAnalysisGate.allowed ? "text-cyan-200" : "text-amber-200"}`}>
-                {hasCoinPro ? "Coin Pro 알트 분석 무제한" : `무료 분석 ${altAnalysisGate.limit}개 중 ${Math.min(altAnalysisGate.used, altAnalysisGate.limit)}개 사용`}
+              <p className={`text-xs font-black ${visibleAltAnalysisGate.allowed ? "text-cyan-200" : "text-amber-200"}`}>
+                {hasCoinPro ? "Coin Pro 알트 분석 무제한" : `무료 분석 ${visibleAltAnalysisGate.limit}개 중 ${Math.min(visibleAltAnalysisGate.used, visibleAltAnalysisGate.limit)}개 사용`}
               </p>
               <p className="mt-1 text-xs leading-5 text-slate-400 [word-break:keep-all]">
                 {hasCoinPro
                   ? "관심 있는 알트코인을 제한 없이 바꿔가며 구조와 브리핑을 확인할 수 있습니다."
-                  : altAnalysisGate.allowed
-                    ? `무료에서는 하루 ${altAnalysisGate.limit}개의 알트를 개별 분석할 수 있습니다. 같은 알트는 다시 열어도 차감되지 않습니다.`
+                  : visibleAltAnalysisGate.allowed
+                    ? `무료에서는 하루 ${visibleAltAnalysisGate.limit}개의 알트를 개별 분석할 수 있습니다. 같은 알트는 다시 열어도 차감되지 않습니다.`
                     : "오늘 무료 알트 분석을 모두 사용했습니다. Coin Pro에서는 알트코인을 제한 없이 확인할 수 있습니다."}
               </p>
             </div>
@@ -2171,14 +2192,14 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         ))}
       </div>
 
-      {altOnly && !altAnalysisGate.allowed ? (
+      {altOnly && !visibleAltAnalysisGate.allowed ? (
         <div className="mt-4 rounded-lg border border-amber-300/30 bg-amber-300/10 p-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-black text-amber-200">오늘 무료 알트 분석 완료</p>
               <h3 className="mt-2 text-2xl font-black text-white">새 알트 분석은 Coin Pro에서 계속 열립니다.</h3>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 [word-break:keep-all]">
-                무료에서는 하루 {altAnalysisGate.limit}개의 알트를 개별 분석할 수 있어요. 이미 확인한 알트는 다시 열 수 있고,
+                무료에서는 하루 {visibleAltAnalysisGate.limit}개의 알트를 개별 분석할 수 있어요. 이미 확인한 알트는 다시 열 수 있고,
                 새로운 알트까지 계속 비교하려면 Coin Pro가 필요합니다.
               </p>
             </div>
@@ -2190,9 +2211,9 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               Coin Pro 보기
             </Link>
           </div>
-          {altAnalysisGate.symbols.length > 0 ? (
+          {visibleAltAnalysisGate.symbols.length > 0 ? (
             <div className="mt-4 flex flex-wrap gap-2">
-              {altAnalysisGate.symbols.map((item) => (
+              {visibleAltAnalysisGate.symbols.map((item) => (
                 <button
                   key={item}
                   type="button"

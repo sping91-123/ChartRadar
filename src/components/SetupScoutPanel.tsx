@@ -652,6 +652,14 @@ function filterSetupsByScope(setups: ScoutSetup[], excludeMajor: boolean) {
   return excludeMajor ? setups.filter((setup) => !majorSetupSymbols.has(setup.symbol)) : setups;
 }
 
+function getVisibleSetupLimit(excludeMajor: boolean, riskProfile: ScoutRiskProfile, isPaid: boolean) {
+  if (excludeMajor) {
+    if (!isPaid) return 3;
+    return riskProfile === "radar" ? 5 : 3;
+  }
+  return isPaid ? (riskProfile === "radar" ? 12 : 6) : riskProfile === "radar" ? 6 : 3;
+}
+
 export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boolean } = {}) {
   const [state, setState] = useState<ScanState>({ status: "idle" });
   const [riskProfile, setRiskProfile] = useState<ScoutRiskProfile>("radar");
@@ -728,8 +736,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
     return formatCachedAt(state.cachedAt);
   }, [state]);
 
-  const visibleLimit = isPaid ? (riskProfile === "radar" ? 12 : 6) : riskProfile === "radar" ? 6 : 3;
-  const rankedSetups = state.status === "ready" ? rankScoutSetups(state.setups) : [];
+  const visibleLimit = getVisibleSetupLimit(excludeMajor, riskProfile, isPaid);
   const visibleSetups = state.status === "ready" ? uniqueTopSetupsBySymbol(state.setups, visibleLimit) : [];
 
   return (
@@ -822,7 +829,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
             />
           ) : (
             <>
-              <ScanSummary setups={rankedSetups} riskProfile={riskProfile} />
+              <ScanSummary setups={visibleSetups} riskProfile={riskProfile} />
               <div className="grid gap-3 sm:grid-cols-3">
                 {visibleSetups.map((setup, idx) => (
                   <SetupCard
