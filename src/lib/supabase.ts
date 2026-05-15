@@ -1,5 +1,6 @@
 // Supabase 로그인 세션과 REST 호출을 관리합니다.
 import type { BillingEntitlementPlan } from "@/lib/billing";
+import { getConfiguredSiteUrl } from "@/lib/siteUrl";
 
 export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 export const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
@@ -68,7 +69,8 @@ export function isSupabaseConfigured() {
 export function getOAuthUrl(provider: "google", redirectPath = "/auth/callback") {
   if (!isSupabaseConfigured() || typeof window === "undefined") return "";
 
-  const redirectTo = new URL(redirectPath, window.location.origin).toString();
+  const authBaseUrl = getConfiguredSiteUrl() || window.location.origin;
+  const redirectTo = new URL(redirectPath, authBaseUrl).toString();
   const params = new URLSearchParams({
     provider,
     redirect_to: redirectTo
