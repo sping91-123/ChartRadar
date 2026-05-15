@@ -936,6 +936,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const priceLinesRef = useRef<IPriceLine[]>([]);
   const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
+  const pendingUserSelectedAltSymbolRef = useRef<string | null>(null);
 
   const [symbol, setSymbol] = useState(initialSymbol);
   const [activeTimeframe, setActiveTimeframe] = useState<ChartTimeframe>("15m");
@@ -953,6 +954,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
   const [showAdvancedControls, setShowAdvancedControls] = useState(false);
   const [showDetailedReadout, setShowDetailedReadout] = useState(true);
   const [showOtherSymbols, setShowOtherSymbols] = useState(false);
+  const [otherSymbolQuery, setOtherSymbolQuery] = useState("");
   const [dynamicSymbols, setDynamicSymbols] = useState<string[]>([]);
   const [pineSnapshotInput, setPineSnapshotInput] = useState("");
   const [savedMessage, setSavedMessage] = useState("");
@@ -967,6 +969,11 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
   const otherSymbols = majorOnly
     ? []
     : allSelectableSymbols.filter((item) => !majorSymbols.includes(item) && !primarySymbols.includes(item)).slice(0, 220);
+  const filteredOtherSymbols = useMemo(() => {
+    const query = otherSymbolQuery.trim().toUpperCase();
+    if (!query) return otherSymbols;
+    return otherSymbols.filter((item) => item.includes(query) || symbolLabel(item).includes(query));
+  }, [otherSymbolQuery, otherSymbols]);
   const isOtherSymbolActive = otherSymbols.includes(symbol);
   const chartTitle = altOnly ? "알트코인 레이더" : "코인 레이더";
   const chartDescription = altOnly
@@ -975,6 +982,15 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
 
   const visibleAltAnalysisGate = hasMounted ? altAnalysisGate : initialAltAnalysisGate(false);
   const cacheKey = `${storagePrefix}.marketCache.${symbol}.${activeTimeframe}.${analysisMode}.${msbMode}.${structureSensitivity}`;
+
+  const selectSymbol = useCallback((nextSymbol: string, options: { userSelected?: boolean } = {}) => {
+    if (altOnly && options.userSelected) {
+      pendingUserSelectedAltSymbolRef.current = nextSymbol;
+    }
+    setSymbol(nextSymbol);
+    setShowOtherSymbols(false);
+    setOtherSymbolQuery("");
+  }, [altOnly]);
 
   useEffect(() => {
     setHasMounted(true);
@@ -1008,14 +1024,12 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
 
   useEffect(() => {
     if (majorOnly && !majorSymbols.includes(symbol)) {
-      setSymbol(majorSymbols[0]);
-      setShowOtherSymbols(false);
+      selectSymbol(majorSymbols[0]);
     }
     if (altOnly && majorSymbols.includes(symbol)) {
-      setSymbol(altSymbols[0]);
-      setShowOtherSymbols(false);
+      selectSymbol(altSymbols[0]);
     }
-  }, [altOnly, majorOnly, symbol]);
+  }, [altOnly, majorOnly, selectSymbol, symbol]);
 
   useEffect(() => {
     const storedSymbol = readLocalStorageWithLegacy(storageKey("symbol"), legacyStorageKeys("symbol"));
@@ -1136,8 +1150,9 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         };
         window.localStorage.setItem(cacheKey, JSON.stringify(payload));
       }
-      if (altOnly) {
+      if (altOnly && pendingUserSelectedAltSymbolRef.current === symbol) {
         setAltAnalysisGate(registerAltAnalysisSymbol(symbol, hasCoinPro));
+        pendingUserSelectedAltSymbolRef.current = null;
       }
     } catch (loadError) {
       const fallback = readMarketCache(cacheKey);
@@ -1146,8 +1161,9 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         setCandles(fallback.candles);
         setAnalysis(fallback.analysis);
         setIsUsingCachedData(true);
-        if (altOnly) {
+        if (altOnly && pendingUserSelectedAltSymbolRef.current === symbol) {
           setAltAnalysisGate(registerAltAnalysisSymbol(symbol, hasCoinPro));
+          pendingUserSelectedAltSymbolRef.current = null;
         }
         setError("실시간 데이터를 잠시 불러오지 못해 최근 레이더 판독값을 보여주고 있습니다.");
       } else {
@@ -2052,10 +2068,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           <button
             key={item}
             type="button"
-            onClick={() => {
-              setSymbol(item);
-              setShowOtherSymbols(false);
-            }}
+            onClick={() => selectSymbol(item, { userSelected: true })}
             className={`min-h-10 whitespace-nowrap rounded-md border px-3 text-sm font-black transition ${
               symbol === item
                 ? "border-accent-blue bg-accent-blue text-slate-950"
@@ -2068,7 +2081,12 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         {!majorOnly ? (
           <button
             type="button"
-            onClick={() => setShowOtherSymbols((value) => !value)}
+            onClick={() => {
+              setShowOtherSymbols((value) => {
+                if (value) setOtherSymbolQuery("");
+                return !value;
+              });
+            }}
             className={`min-h-10 whitespace-nowrap rounded-md border px-3 text-sm font-black transition ${
               isOtherSymbolActive || showOtherSymbols
                 ? "border-accent-blue bg-accent-blue text-slate-950"
@@ -2079,24 +2097,35 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           </button>
         ) : null}
         {!majorOnly && showOtherSymbols ? (
-          <div className="absolute left-0 top-full z-50 mt-2 grid max-h-[52vh] w-[min(92vw,520px)] grid-cols-4 gap-2 overflow-y-auto rounded-lg border border-surface-line bg-slate-950 p-2 shadow-[0_18px_50px_rgba(0,0,0,0.55)] sm:grid-cols-6">
-            {otherSymbols.map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => {
-                  setSymbol(item);
-                  setShowOtherSymbols(false);
-                }}
-                className={`min-h-9 rounded-md border px-2 text-xs font-black transition ${
-                  symbol === item
-                    ? "border-accent-blue bg-accent-blue text-slate-950"
-                    : "border-surface-line bg-surface-cardSoft text-slate-300 hover:border-accent-blue/60"
-                }`}
-              >
-                {symbolLabel(item)}
-              </button>
-            ))}
+          <div className="absolute left-0 top-full z-50 mt-2 max-h-[58vh] w-[min(92vw,560px)] overflow-hidden rounded-lg border border-surface-line bg-slate-950 p-2 shadow-[0_18px_50px_rgba(0,0,0,0.55)]">
+            <input
+              value={otherSymbolQuery}
+              onChange={(event) => setOtherSymbolQuery(event.target.value)}
+              placeholder="코인 검색"
+              className="mb-2 h-10 w-full rounded-md border border-surface-line bg-black/30 px-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-accent-blue"
+            />
+            <div className="grid max-h-[44vh] grid-cols-4 gap-2 overflow-y-auto sm:grid-cols-6">
+              {filteredOtherSymbols.length > 0 ? (
+                filteredOtherSymbols.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => selectSymbol(item, { userSelected: true })}
+                    className={`min-h-9 rounded-md border px-2 text-xs font-black transition ${
+                      symbol === item
+                        ? "border-accent-blue bg-accent-blue text-slate-950"
+                        : "border-surface-line bg-surface-cardSoft text-slate-300 hover:border-accent-blue/60"
+                    }`}
+                  >
+                    {symbolLabel(item)}
+                  </button>
+                ))
+              ) : (
+                <p className="col-span-4 rounded-md border border-surface-line bg-black/20 px-3 py-4 text-center text-xs font-bold text-slate-400 sm:col-span-6">
+                  검색 결과가 없습니다.
+                </p>
+              )}
+            </div>
           </div>
         ) : null}
       </div>
@@ -2217,7 +2246,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 <button
                   key={item}
                   type="button"
-                  onClick={() => setSymbol(item)}
+                  onClick={() => selectSymbol(item)}
                   className="rounded border border-white/10 bg-black/20 px-2 py-1 text-xs font-black text-slate-200 hover:border-cyan-300/60"
                 >
                   다시 보기: {symbolLabel(item)}
