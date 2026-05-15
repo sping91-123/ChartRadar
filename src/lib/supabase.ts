@@ -69,7 +69,7 @@ export function isSupabaseConfigured() {
 export function getOAuthUrl(provider: "google", redirectPath = "/auth/callback") {
   if (!isSupabaseConfigured() || typeof window === "undefined") return "";
 
-  const authBaseUrl = getConfiguredSiteUrl() || window.location.origin;
+  const authBaseUrl = window.location.origin || getConfiguredSiteUrl();
   const redirectTo = new URL(redirectPath, authBaseUrl).toString();
   const params = new URLSearchParams({
     provider,
