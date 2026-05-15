@@ -34,6 +34,49 @@ let cachedAt = 0;
 let cachedSymbols: CryptoSymbolInfo[] = [];
 let inflight: Promise<CryptoSymbolInfo[]> | null = null;
 
+const fallbackPerpTickers = [
+  "SOLUSDT",
+  "XRPUSDT",
+  "DOGEUSDT",
+  "BNBUSDT",
+  "ADAUSDT",
+  "AVAXUSDT",
+  "LINKUSDT",
+  "SUIUSDT",
+  "TRXUSDT",
+  "DOTUSDT",
+  "NEARUSDT",
+  "APTUSDT",
+  "ARBUSDT",
+  "OPUSDT",
+  "TONUSDT",
+  "INJUSDT",
+  "SEIUSDT",
+  "TIAUSDT",
+  "FILUSDT",
+  "ATOMUSDT",
+  "LTCUSDT",
+  "BCHUSDT",
+  "ETCUSDT",
+  "UNIUSDT",
+  "AAVEUSDT",
+  "WLDUSDT",
+  "JUPUSDT",
+  "PYTHUSDT",
+  "ORDIUSDT",
+  "PEPEUSDT",
+  "WIFUSDT",
+  "FETUSDT",
+  "RENDERUSDT",
+  "RUNEUSDT",
+  "GALAUSDT",
+  "MANAUSDT",
+  "SANDUSDT",
+  "DYDXUSDT",
+  "LDOUSDT",
+  "1000SHIBUSDT"
+];
+
 function toRadarSymbol(symbol: string) {
   return `${symbol}.P`;
 }
@@ -53,6 +96,18 @@ function isSupportedPerpetual(symbol: BinanceExchangeInfo["symbols"][number]) {
     /^[A-Z0-9]{2,30}USDT$/.test(symbol.symbol) &&
     (typeof symbol.baseAsset !== "string" || /^[A-Z0-9]{2,30}$/.test(symbol.baseAsset))
   );
+}
+
+function fallbackCryptoSymbols(): CryptoSymbolInfo[] {
+  return fallbackPerpTickers.map((ticker, index) => ({
+    symbol: toRadarSymbol(ticker),
+    ticker,
+    baseAsset: ticker.replace(/USDT$/, ""),
+    quoteAsset: "USDT",
+    price: null,
+    changePercent: null,
+    quoteVolume: fallbackPerpTickers.length - index
+  }));
 }
 
 async function fetchCryptoSymbolsFromBinance(): Promise<CryptoSymbolInfo[]> {
@@ -98,6 +153,14 @@ export async function getCryptoSymbols(force = false): Promise<CryptoSymbolInfo[
   if (!inflight) {
     inflight = fetchCryptoSymbolsFromBinance()
       .then((symbols) => {
+        cachedSymbols = symbols;
+        cachedAt = Date.now();
+        return symbols;
+      })
+      .catch((error) => {
+        console.warn("[cryptoUniverse] Binance symbol universe unavailable, using fallback symbols:", error);
+        if (cachedSymbols.length > 0) return cachedSymbols;
+        const symbols = fallbackCryptoSymbols();
         cachedSymbols = symbols;
         cachedAt = Date.now();
         return symbols;
