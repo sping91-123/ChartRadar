@@ -1,4 +1,4 @@
-// PWA 설치와 앱 아이콘 정보를 제공하는 매니페스트.
+// PWA 설치와 앱 아이콘 정보를 제공하는 매니페스트입니다.
 import type { MetadataRoute } from "next";
 
 const icon = "/brand/chart-radar-icon.png";
@@ -8,7 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/",
     name: "Chart Radar",
     short_name: "Chart Radar",
-    description: "코인과 글로벌 시장의 차트 흐름을 빠르게 감지하는 분석 레이더",
+    description: "코인과 글로벌 시장의 차트 흐름을 빠르게 감지하는 분석 레이더입니다.",
     start_url: "/?source=pwa",
     scope: "/",
     display: "standalone",
@@ -22,7 +22,7 @@ export default function manifest(): MetadataRoute.Manifest {
         name: "Coin Radar",
         short_name: "Coin",
         description: "BTC와 ETH 시장 레이더를 바로 엽니다.",
-        url: "/majors?source=pwa-shortcut",
+        url: "/crypto?source=pwa-shortcut",
         icons: [{ src: icon, sizes: "1024x1024", type: "image/png" }]
       },
       {
@@ -48,18 +48,8 @@ export default function manifest(): MetadataRoute.Manifest {
       }
     ],
     icons: [
-      {
-        src: icon,
-        sizes: "1024x1024",
-        type: "image/png",
-        purpose: "any"
-      },
-      {
-        src: icon,
-        sizes: "1024x1024",
-        type: "image/png",
-        purpose: "maskable"
-      }
+      { src: icon, sizes: "1024x1024", type: "image/png", purpose: "any" },
+      { src: icon, sizes: "1024x1024", type: "image/png", purpose: "maskable" }
     ]
   };
 }

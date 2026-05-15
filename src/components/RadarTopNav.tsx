@@ -1,5 +1,5 @@
 "use client";
-// 시장별 주요 페이지로 이동하는 상단 내비게이션입니다.
+// 시장별 주요 페이지로 이동하는 상단 레이더 내비게이션입니다.
 import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -16,7 +16,7 @@ type NavItem = {
 };
 
 const cryptoNavItems: NavItem[] = [
-  { label: "BTC/ETH", icon: Radar, href: "/majors", match: ["/majors"] },
+  { label: "BTC/ETH", icon: Radar, href: "/crypto", match: ["/crypto"] },
   { label: "알트코인", icon: Coins, href: "/alts", match: ["/alts"] },
   { label: "뉴스", icon: Newspaper, href: "/news?market=crypto", match: ["/news"], market: "crypto" },
   { label: "알림", icon: BellRing, href: "/alerts?market=crypto", match: ["/alerts"], market: "crypto" },
@@ -31,8 +31,8 @@ const stockNavItems: NavItem[] = [
 ];
 
 const allNavItems: NavItem[] = [
-  { label: "BTC/ETH", icon: Radar, href: "/majors", match: ["/majors", "/alts"] },
-  { label: "글로벌 레이더", icon: TrendingUp, href: "/global", match: ["/stocks", "/global"] },
+  { label: "BTC/ETH", icon: Radar, href: "/crypto", match: ["/crypto", "/alts"] },
+  { label: "글로벌", icon: TrendingUp, href: "/global", match: ["/stocks", "/global"] },
   { label: "요금제", icon: Crown, href: "/pro", match: ["/pro", "/checkout/success", "/checkout/fail", "/refund"] }
 ];
 

@@ -29,7 +29,7 @@ export default function CheckoutSuccessPage({ searchParams }: CheckoutSuccessPag
             <CheckCircle2 className="mx-auto text-signal-success" size={42} aria-hidden />
             <h2 className="mt-4 text-2xl font-black text-slate-950 dark:text-white">결제 확인을 진행하고 있습니다.</h2>
             <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-              결제 승인 정보와 계정 권한을 확인하는 중입니다. 확인이 끝나면 선택한 Pro 기능이 계정에 반영됩니다.
+              결제 승인 정보를 확인한 뒤 계정에 Pro 권한을 반영합니다.
             </p>
           </div>
 
@@ -65,10 +65,7 @@ export default function CheckoutSuccessPage({ searchParams }: CheckoutSuccessPag
           </div>
 
           <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
-            <Link
-              href="/majors"
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-accent-blue px-5 text-sm font-black text-slate-950"
-            >
+            <Link href="/crypto" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-accent-blue px-5 text-sm font-black text-slate-950">
               코인 레이더로 이동
             </Link>
             <Link

@@ -1,34 +1,9 @@
 "use client";
-// 첫 화면에서 시장 온도와 다음 확인 루틴을 압축해 보여주는 관제실 카드.
-
+// 첫 화면에서 오늘 확인할 코인 시장 흐름과 TOP 감지 후보를 요약한다.
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Activity,
-  ArrowDownRight,
-  ArrowUpRight,
-  BellRing,
-  CheckCircle2,
-  Gauge,
-  Loader2,
-  Newspaper,
-  Radar,
-  RefreshCw,
-  ShieldAlert,
-  Star
-} from "lucide-react";
-import type { TradingMode } from "@/lib/marketAnalysis";
+import { ArrowDownRight, ArrowUpRight, Loader2, Radar, RefreshCw } from "lucide-react";
 import type { ScoutSetup } from "@/lib/setupScout";
-import {
-  buildSetupAlertPreset,
-  getSetupAlertPresetId,
-  readSetupAlertPresets,
-  writeSetupAlertPresets
-} from "@/lib/setupAlertPresets";
-import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
-import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
-import { hasMarketEntitlement } from "@/lib/billing";
-import { withSupabaseAuth } from "@/lib/authFetch";
 
 interface MarketBoardItem {
   symbol: string;
@@ -38,15 +13,14 @@ interface MarketBoardItem {
   quoteVolume: number;
 }
 
-type DailyBriefState =
+type BriefScope = "all" | "major" | "alts";
+
+type BriefState =
   | { status: "loading" }
   | { status: "ready"; board: MarketBoardItem[]; setups: ScoutSetup[]; cachedAt: number }
   | { status: "error"; message: string };
 
-const scanModes: TradingMode[] = ["scalp", "swing"];
 const majorSymbols = new Set(["BTCUSDT.P", "ETHUSDT.P"]);
-
-type BriefScope = "all" | "major" | "alts";
 
 function compactSymbol(symbol: string) {
   return symbol.replace("USDT.P", "").replace("USDT", "");
@@ -55,14 +29,7 @@ function compactSymbol(symbol: string) {
 function formatPrice(price: number) {
   if (!Number.isFinite(price) || price <= 0) return "-";
   const digits = price >= 100 ? 2 : price >= 10 ? 3 : price >= 1 ? 4 : 5;
-  return price.toLocaleString("ko-KR", { maximumFractionDigits: digits, minimumFractionDigits: digits });
-}
-
-function formatVolume(value: number) {
-  if (!Number.isFinite(value)) return "-";
-  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}B`;
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-  return value.toLocaleString("ko-KR", { maximumFractionDigits: 0 });
+  return price.toLocaleString("ko-KR", { maximumFractionDigits: digits });
 }
 
 function formatCachedAt(ms: number) {
@@ -73,45 +40,7 @@ function formatCachedAt(ms: number) {
   return `${Math.floor(min / 60)}시간 전 갱신`;
 }
 
-function statusRank(setup: ScoutSetup) {
-  if (setup.status === "entry") return 4;
-  if (setup.status === "active") return 3;
-  if (setup.proximity === "ready") return 2;
-  if (setup.proximity === "near") return 1;
-  return 0;
-}
-
-function qualityRank(setup: ScoutSetup) {
-  if (setup.plan.quality === "A") return 3;
-  if (setup.plan.quality === "B") return 2;
-  return 1;
-}
-
-function rankSetups(setups: ScoutSetup[]) {
-  return [...setups].sort((a, b) => {
-    const statusDiff = statusRank(b) - statusRank(a);
-    if (statusDiff !== 0) return statusDiff;
-    const qualityDiff = qualityRank(b) - qualityRank(a);
-    if (qualityDiff !== 0) return qualityDiff;
-    return b.score - a.score;
-  });
-}
-
-function uniqueTopSetups(setups: ScoutSetup[], limit: number) {
-  const picked: ScoutSetup[] = [];
-  const usedSymbols = new Set<string>();
-
-  for (const setup of rankSetups(setups)) {
-    if (usedSymbols.has(setup.symbol)) continue;
-    picked.push(setup);
-    usedSymbols.add(setup.symbol);
-    if (picked.length >= limit) break;
-  }
-
-  return picked;
-}
-
-function isInScope(symbol: string, scope: BriefScope) {
+function inScope(symbol: string, scope: BriefScope) {
   if (scope === "all") return true;
   const normalized = symbol.endsWith(".P") ? symbol : `${symbol}.P`;
   const isMajor = majorSymbols.has(normalized);
@@ -119,417 +48,178 @@ function isInScope(symbol: string, scope: BriefScope) {
 }
 
 function scopeLabel(scope: BriefScope) {
-  if (scope === "major") return "BTC와 ETH";
+  if (scope === "major") return "BTC/ETH";
   if (scope === "alts") return "알트코인";
-  return "주요 코인";
+  return "코인";
 }
 
-function getMarketTone(board: MarketBoardItem[], scope: BriefScope) {
+function toneFromBoard(board: MarketBoardItem[]) {
   const up = board.filter((item) => item.changePercent > 0).length;
   const down = board.filter((item) => item.changePercent < 0).length;
-  const threshold = board.length <= 3 ? 1 : 3;
-  const label = scopeLabel(scope);
-
-  if (up >= down + threshold) {
-    return {
-      label: "상승 우세",
-      description: `${label} 중 ${up}개가 상승, ${down}개가 하락 중입니다.`,
-      tone: "long" as const,
-      up,
-      down
-    };
-  }
-
-  if (down >= up + threshold) {
-    return {
-      label: "하락 우세",
-      description: `${label} 중 ${down}개가 하락, ${up}개가 상승 중입니다.`,
-      tone: "short" as const,
-      up,
-      down
-    };
-  }
-
-  return {
-    label: "혼조",
-    description: `상승 ${up}개, 하락 ${down}개로 방향이 갈리고 있습니다.`,
-    tone: "neutral" as const,
-    up,
-    down
-  };
+  if (up >= down + 2) return { label: "상승 우세", tone: "long" as const, up, down };
+  if (down >= up + 2) return { label: "하락 우세", tone: "short" as const, up, down };
+  return { label: "혼조", tone: "neutral" as const, up, down };
 }
 
-function toneClasses(tone: "long" | "short" | "neutral") {
+function toneClass(tone: "long" | "short" | "neutral") {
   if (tone === "long") return "border-signal-success/35 bg-signal-success/10 text-signal-success";
   if (tone === "short") return "border-signal-danger/35 bg-signal-danger/10 text-signal-danger";
   return "border-signal-warning/35 bg-signal-warning/10 text-signal-warning";
 }
 
-function sideClasses(side: ScoutSetup["plan"]["side"]) {
-  return side === "long"
-    ? "border-signal-success/35 bg-signal-success/10 text-signal-success"
-    : "border-signal-danger/35 bg-signal-danger/10 text-signal-danger";
+function sideClass(side: ScoutSetup["plan"]["side"]) {
+  return side === "long" ? "text-signal-success" : "text-signal-danger";
 }
 
 function sideLabel(side: ScoutSetup["plan"]["side"]) {
   return side === "long" ? "롱 우세" : "숏 우세";
 }
 
-function setupStateLabel(setup: ScoutSetup) {
-  if (setup.status === "entry") return "구간 내부";
-  if (setup.status === "active") return "활성 감지";
-  if (setup.proximity === "near") return "근접 관찰";
-  return "관찰";
+function sortSetups(setups: ScoutSetup[]) {
+  return [...setups].sort((a, b) => b.score - a.score);
 }
 
-function getMainSentence(board: MarketBoardItem[], setups: ScoutSetup[], scope: BriefScope) {
-  const tone = getMarketTone(board, scope);
-  const top = uniqueTopSetups(setups, 1)[0] ?? null;
-  const readyCount = setups.filter((setup) => setup.proximity === "ready" || setup.proximity === "near").length;
-
-  if (!top) {
-    if (scope === "major") {
-      return `${tone.label} 흐름이지만 BTC와 ETH의 구조 감지는 아직 강하지 않습니다. 지금은 1h와 4h 방향을 먼저 확인하고, 알트코인은 별도 레이더에서만 좁혀보는 편이 좋습니다.`;
-    }
-    return `${tone.label} 흐름이지만 구조 감지는 아직 강하지 않습니다. 지금은 거래대금 상위와 뉴스 이슈가 겹치는 코인 위주로만 좁혀보는 편이 좋습니다.`;
+function uniqueTop(setups: ScoutSetup[], limit: number) {
+  const used = new Set<string>();
+  const picked: ScoutSetup[] = [];
+  for (const setup of sortSetups(setups)) {
+    if (used.has(setup.symbol)) continue;
+    used.add(setup.symbol);
+    picked.push(setup);
+    if (picked.length >= limit) break;
   }
-
-  if (scope === "major") {
-    return `${tone.label} 흐름 속에서 ${compactSymbol(top.symbol)} ${top.timeframe}가 먼저 볼 레이더 감지로 올라왔습니다. BTC와 ETH는 시장 기준선 역할이 크기 때문에, 이 화면에서는 알트코인보다 큰 방향과 위험 구간을 먼저 정리합니다.`;
-  }
-
-  return `${tone.label} 흐름 속에서 ${compactSymbol(top.symbol)} ${top.timeframe}가 가장 먼저 볼 레이더 감지로 올라왔습니다. 감지 코인이 ${readyCount}개라서 무작정 넓게 보기보다 TOP 감지와 뉴스 이슈를 함께 확인하는 흐름이 좋습니다.`;
-}
-
-function getNextAction(setups: ScoutSetup[], scope: BriefScope) {
-  const top = uniqueTopSetups(setups, 1)[0] ?? null;
-  if (!top) {
-    if (scope === "major") {
-      return "BTC와 ETH의 1h, 4h 방향부터 확인하고 알트코인은 아직 넓게 보지 마세요.";
-    }
-    return "오늘은 억지로 후보를 찾기보다 BTC, ETH, 레이더뉴스 순서로 시장 방향만 정리해보세요.";
-  }
-
-  return `${compactSymbol(top.symbol)} ${top.timeframe}를 먼저 열고, 가격이 구조 구간에 가까워지는지와 반대 방향 스윕이 새로 나오는지만 확인하세요.`;
-}
-
-function MiniSetupCard({
-  setup,
-  isSaved,
-  onToggleAlert
-}: {
-  setup: ScoutSetup;
-  isSaved: boolean;
-  onToggleAlert: (setup: ScoutSetup) => void;
-}) {
-  const isLong = setup.plan.side === "long";
-  const Icon = isLong ? ArrowUpRight : ArrowDownRight;
-
-  return (
-    <article className="rounded-md border border-white/10 bg-black/25 p-3 [word-break:keep-all]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-base font-black text-white">{compactSymbol(setup.symbol)}</span>
-            <span className="rounded border border-white/10 bg-black/30 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">
-              {setup.timeframe}
-            </span>
-            <span className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-black ${sideClasses(setup.plan.side)}`}>
-              <Icon size={11} aria-hidden />
-              {sideLabel(setup.plan.side)}
-            </span>
-          </div>
-          <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-300">{setup.headline}</p>
-        </div>
-        <span className="shrink-0 rounded border border-accent-blue/35 bg-accent-blue/10 px-2 py-1 text-[11px] font-black text-accent-blue">
-          {setup.score}점
-        </span>
-      </div>
-      <div className="mt-3 flex flex-wrap gap-1.5 text-[10px] font-bold">
-        <span className="rounded border border-white/10 bg-black/30 px-2 py-1 text-slate-300">{setupStateLabel(setup)}</span>
-        <span className="rounded border border-white/10 bg-black/30 px-2 py-1 text-slate-300">{setup.plan.quality}급</span>
-        <span className="rounded border border-white/10 bg-black/30 px-2 py-1 text-slate-300">신뢰 {setup.plan.confidence}%</span>
-      </div>
-      <button
-        type="button"
-        onClick={() => onToggleAlert(setup)}
-        className={`mt-3 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-md border px-3 text-xs font-black transition ${
-          isSaved
-            ? "border-emerald-300/35 bg-emerald-300/15 text-emerald-200 hover:bg-emerald-300/25"
-            : "border-accent-blue/35 bg-accent-blue/10 text-accent-blue hover:bg-accent-blue hover:text-slate-950"
-        }`}
-      >
-        {isSaved ? <CheckCircle2 size={14} aria-hidden /> : <BellRing size={14} aria-hidden />}
-        {isSaved ? "감시 중" : "감시 저장"}
-      </button>
-    </article>
-  );
+  return picked;
 }
 
 export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
-  const { profile } = useSupabaseAuth();
-  const isPaid = hasMarketEntitlement(profile?.plan, "crypto");
-  const [state, setState] = useState<DailyBriefState>({ status: "loading" });
-  const [savedPresetIds, setSavedPresetIds] = useState<Set<string>>(() => new Set());
-  const [alertToast, setAlertToast] = useState<string | null>(null);
+  const [state, setState] = useState<BriefState>({ status: "loading" });
 
-  const loadBrief = useCallback(async () => {
-    const usageGate = getUsageGate("radarScan", isPaid);
-    if (!usageGate.allowed) {
-      setState({ status: "error", message: usageGate.message });
-      return;
-    }
-
+  async function load() {
     setState({ status: "loading" });
     try {
-      const boardResponse = await fetch("/api/market-board", { cache: "no-store" });
-      const scanResults = await Promise.allSettled(
-        scanModes.map(async (mode) => {
-          const response = await fetch(
-            `/api/scout?mode=${mode}&risk=radar&scope=${scope}`,
-            await withSupabaseAuth({ cache: "no-store" })
-          );
-          const payload = (await response.json().catch(() => ({}))) as {
-            setups?: ScoutSetup[];
-            cachedAt?: number;
-            error?: string;
-          };
-          if (!response.ok || !Array.isArray(payload.setups)) {
-            throw new Error(payload.error ?? "레이더 감지값을 잠시 확인하지 못했습니다.");
-          }
-          return payload;
-        })
-      );
+      const [boardResponse, scoutResponse] = await Promise.allSettled([
+        fetch("/api/market-board", { cache: "no-store" }),
+        fetch(`/api/scout?mode=scalp&risk=radar&scope=${scope}`, { cache: "no-store" })
+      ]);
 
-      const boardPayload = (await boardResponse.json().catch(() => ({}))) as {
-        items?: MarketBoardItem[];
-        cachedAt?: number;
-        error?: string;
-      };
-
-      if (!boardResponse.ok || !Array.isArray(boardPayload.items)) {
-        throw new Error(boardPayload.error ?? "시장 흐름을 잠시 확인하지 못했습니다.");
+      let board: MarketBoardItem[] = [];
+      let cachedAt = Date.now();
+      if (boardResponse.status === "fulfilled" && boardResponse.value.ok) {
+        const payload = (await boardResponse.value.json()) as { items?: MarketBoardItem[]; cachedAt?: number };
+        board = (payload.items ?? []).filter((item) => inScope(item.symbol, scope));
+        cachedAt = payload.cachedAt ?? cachedAt;
       }
 
-      const scanPayloads = scanResults
-        .filter((result): result is PromiseFulfilledResult<{ setups?: ScoutSetup[]; cachedAt?: number }> => result.status === "fulfilled")
-        .map((result) => result.value);
+      let setups: ScoutSetup[] = [];
+      if (scoutResponse.status === "fulfilled" && scoutResponse.value.ok) {
+        const payload = (await scoutResponse.value.json()) as { setups?: ScoutSetup[]; cachedAt?: number };
+        setups = (payload.setups ?? []).filter((setup) => inScope(setup.symbol, scope));
+        cachedAt = payload.cachedAt ?? cachedAt;
+      }
 
-      setState({
-        status: "ready",
-        board: boardPayload.items.filter((item) => isInScope(item.symbol, scope)),
-        setups: scanPayloads.flatMap((payload) => payload.setups ?? []).filter((setup) => isInScope(setup.symbol, scope)),
-        cachedAt: Math.max(boardPayload.cachedAt ?? Date.now(), ...scanPayloads.map((payload) => payload.cachedAt ?? Date.now()))
-      });
-      recordUsageEvent("radarScan");
+      if (board.length === 0 && setups.length === 0) {
+        throw new Error("시장 흐름을 불러오지 못했습니다.");
+      }
+
+      setState({ status: "ready", board, setups, cachedAt });
     } catch (error) {
-      setState({
-        status: "error",
-        message: error instanceof Error ? error.message : "오늘의 레이더 브리핑을 잠시 확인하지 못했습니다."
-      });
-    }
-  }, [isPaid, scope]);
-
-  useEffect(() => {
-    void loadBrief();
-  }, [loadBrief]);
-
-  useEffect(() => {
-    setSavedPresetIds(new Set(readSetupAlertPresets("crypto").map((preset) => preset.id)));
-  }, []);
-
-  function toggleSetupAlert(setup: ScoutSetup) {
-    const preset = buildSetupAlertPreset(setup, "crypto");
-    const current = readSetupAlertPresets("crypto");
-    const exists = current.some((item) => item.id === preset.id);
-    const next = exists ? current.filter((item) => item.id !== preset.id) : [preset, ...current.filter((item) => item.id !== preset.id)];
-
-    if (!exists) {
-      const usageGate = getUsageGate("cryptoAlertRule", isPaid);
-      if (!usageGate.allowed) {
-        setAlertToast(usageGate.message);
-        return;
-      }
-    }
-
-    writeSetupAlertPresets(next, "crypto");
-    setSavedPresetIds(new Set(next.map((item) => item.id)));
-    if (!exists) {
-      recordUsageEvent("cryptoAlertRule");
-      setAlertToast(`${compactSymbol(setup.symbol)} ${setup.timeframe} ${sideLabel(setup.plan.side)} 조건을 감시 목록에 저장했습니다.`);
-    } else {
-      setAlertToast(`${compactSymbol(setup.symbol)} ${setup.timeframe} 감시 조건을 해제했습니다.`);
+      setState({ status: "error", message: error instanceof Error ? error.message : "레이더 브리핑을 불러오지 못했습니다." });
     }
   }
 
+  useEffect(() => {
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope]);
+
   const summary = useMemo(() => {
     if (state.status !== "ready") return null;
-
-    const topSetups = uniqueTopSetups(state.setups, 3);
-    const tone = getMarketTone(state.board, scope);
-    const volumeLeader = [...state.board].sort((a, b) => b.quoteVolume - a.quoteVolume)[0] ?? null;
-    const strongestMove = [...state.board].sort((a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent))[0] ?? null;
-    const strongCount = state.setups.filter((setup) => setup.status === "entry" || setup.status === "active").length;
-    const watchCount = state.setups.filter((setup) => setup.status === "watch").length;
-
-    return {
-      tone,
-      topSetups,
-      volumeLeader,
-      strongestMove,
-      strongCount,
-      watchCount,
-      sentence: getMainSentence(state.board, state.setups, scope),
-      nextAction: getNextAction(state.setups, scope)
-    };
-  }, [scope, state]);
+    const tone = toneFromBoard(state.board);
+    const top = uniqueTop(state.setups, 3);
+    const topSetup = top[0] ?? null;
+    return { tone, top, topSetup };
+  }, [state]);
 
   return (
-    <section className="overflow-hidden rounded-xl border border-surface-line bg-surface-card shadow-[0_18px_58px_rgba(0,0,0,0.2)]">
-      <div className="relative border-b border-surface-line bg-[linear-gradient(135deg,rgba(15,23,42,0.9),rgba(8,13,23,0.72))] p-4 sm:p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex items-start gap-3">
-            <div className="radar-mark-lg h-14 w-14 shrink-0 border border-accent-blue/25" />
-            <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-accent-blue">Daily Radar</p>
-              <h2 className="mt-1 text-2xl font-black tracking-tight text-white">오늘의 레이더 브리핑</h2>
-              <p className="mt-1 text-xs font-bold text-slate-500">Binance 기준 거래 흐름을 참고합니다.</p>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300 [word-break:keep-all]">
-                {summary?.sentence ?? (scope === "major" ? "BTC와 ETH 흐름을 먼저 훑어서 오늘 시장의 기준선을 정리하고 있습니다." : "주요 코인과 뉴스 흐름을 한 번에 훑어서 오늘 먼저 확인할 순서를 정리하고 있습니다.")}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={loadBrief}
-            disabled={state.status === "loading"}
-            className="enterprise-button inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-accent-blue/30 bg-accent-blue/10 px-3 text-sm font-black text-accent-blue hover:bg-accent-blue hover:text-slate-950 disabled:cursor-wait disabled:opacity-70"
-          >
-            <RefreshCw size={15} className={state.status === "loading" ? "animate-spin" : ""} aria-hidden />
-            레이더 새로고침
-          </button>
+    <section className="enterprise-panel p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-black tracking-[0.2em] text-accent-blue">{scopeLabel(scope).toUpperCase()} RADAR</p>
+          <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 dark:text-white">오늘의 레이더 브리핑</h2>
         </div>
-
-        {state.status === "ready" && summary ? (
-          <div className="mt-4 grid gap-2 md:grid-cols-4">
-            <div className={`rounded-xl border p-3 ${toneClasses(summary.tone.tone)}`}>
-              <p className="flex items-center gap-1.5 text-[11px] font-bold opacity-80">
-                <Gauge size={13} aria-hidden />
-                시장 흐름
-              </p>
-              <p className="mt-1 text-lg font-black">{summary.tone.label}</p>
-              <p className="mt-1 text-xs font-semibold opacity-80">{summary.tone.description}</p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-              <p className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
-                <Activity size={13} aria-hidden />
-                거래대금 중심
-              </p>
-              <p className="mt-1 text-lg font-black text-white">{summary.volumeLeader?.name ?? "-"}</p>
-              <p className="mt-1 text-xs font-semibold text-slate-400">
-                {summary.volumeLeader
-                  ? `${formatVolume(summary.volumeLeader.quoteVolume)} · ${formatPrice(summary.volumeLeader.price)}`
-                  : "데이터 대기"}
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-              <p className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
-                <Star size={13} aria-hidden />
-                가장 큰 변동
-              </p>
-              <p className="mt-1 text-lg font-black text-white">{summary.strongestMove?.name ?? "-"}</p>
-              <p className={summary.strongestMove && summary.strongestMove.changePercent >= 0 ? "mt-1 text-xs font-black text-signal-success" : "mt-1 text-xs font-black text-signal-danger"}>
-                {summary.strongestMove ? `${summary.strongestMove.changePercent.toFixed(2)}%` : "-"}
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-black/20 p-3 text-signal-warning">
-              <p className="flex items-center gap-1.5 text-[11px] font-bold opacity-80">
-                <ShieldAlert size={13} aria-hidden />
-                지금 확인할 것
-              </p>
-              <p className="mt-1 text-xs font-bold leading-5 [word-break:keep-all]">{summary.nextAction}</p>
-            </div>
-          </div>
-        ) : null}
+        <button
+          type="button"
+          onClick={() => void load()}
+          className="inline-flex min-h-10 items-center justify-center rounded-xl border border-surface-line bg-white/70 px-3 text-xs font-black text-slate-700 dark:bg-black/20 dark:text-slate-200"
+        >
+          <RefreshCw size={14} aria-hidden className="mr-1" />
+          갱신
+        </button>
       </div>
 
-      <div className="p-4 sm:p-5">
-        {state.status === "loading" ? (
-          <div className="flex min-h-32 items-center justify-center gap-2 rounded-xl border border-surface-line bg-surface-cardSoft text-sm text-slate-400">
-            <Loader2 size={18} className="animate-spin text-accent-blue" aria-hidden />
-            오늘의 시장 레이더를 정리하는 중입니다.
-          </div>
-        ) : null}
+      {state.status === "loading" ? (
+        <div className="mt-5 flex min-h-32 items-center justify-center rounded-xl border border-surface-line bg-white/50 text-sm font-bold text-slate-500 dark:bg-black/20">
+          <Loader2 className="mr-2 animate-spin" size={18} aria-hidden />
+          시장 흐름을 확인하고 있습니다.
+        </div>
+      ) : null}
 
-        {state.status === "error" ? (
-          <div className="rounded-xl border border-signal-danger/30 bg-signal-danger/10 p-4 text-sm text-signal-danger">
-            {state.message}
-          </div>
-        ) : null}
+      {state.status === "error" ? (
+        <div className="mt-5 rounded-xl border border-signal-warning/30 bg-signal-warning/10 p-4 text-sm font-bold text-signal-warning">
+          {state.message}
+        </div>
+      ) : null}
 
-        {state.status === "ready" && summary ? (
-          <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-            <div>
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-sm font-black text-white">레이더 TOP 감지</h3>
-                <span className="text-xs font-semibold text-slate-500">{formatCachedAt(state.cachedAt)}</span>
-              </div>
-              {summary.topSetups.length > 0 ? (
-                <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                  {summary.topSetups.map((setup) => (
-                    <MiniSetupCard
-                      key={`${setup.symbol}-${setup.timeframe}-${setup.mode}`}
-                      setup={setup}
-                      isSaved={savedPresetIds.has(getSetupAlertPresetId(setup, "crypto"))}
-                      onToggleAlert={toggleSetupAlert}
-                    />
-                  ))}
-                </div>
+      {state.status === "ready" && summary ? (
+        <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1.2fr]">
+          <div className="rounded-xl border border-surface-line bg-white/60 p-4 dark:bg-black/20">
+            <div className={`inline-flex rounded-full border px-3 py-1 text-sm font-black ${toneClass(summary.tone.tone)}`}>
+              {summary.tone.label}
+            </div>
+            <p className="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              상승 {summary.tone.up}개, 하락 {summary.tone.down}개 기준으로 {scopeLabel(scope)} 시장의 짧은 흐름을 정리했습니다.
+              {summary.topSetup ? ` 현재 가장 먼저 볼 후보는 ${compactSymbol(summary.topSetup.symbol)} ${summary.topSetup.timeframe}입니다.` : " 강한 감지 후보는 아직 많지 않습니다."}
+            </p>
+            <p className="mt-3 text-xs font-bold text-slate-500">{formatCachedAt(state.cachedAt)}</p>
+          </div>
+
+          <div className="rounded-xl border border-surface-line bg-white/60 p-4 dark:bg-black/20">
+            <div className="flex items-center gap-2">
+              <Radar size={17} className="text-accent-blue" aria-hidden />
+              <h3 className="text-base font-black text-slate-950 dark:text-white">TOP 감지 후보</h3>
+            </div>
+            <div className="mt-3 grid gap-2">
+              {summary.top.length > 0 ? (
+                summary.top.map((setup) => {
+                  const Icon = setup.plan.side === "long" ? ArrowUpRight : ArrowDownRight;
+                  return (
+                    <Link
+                      key={`${setup.symbol}-${setup.timeframe}`}
+                      href={scope === "alts" ? "/alts" : "/crypto"}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/5 p-3 transition hover:border-accent-blue/40 dark:bg-black/20"
+                    >
+                      <div>
+                        <p className="font-black text-slate-950 dark:text-white">
+                          {compactSymbol(setup.symbol)} <span className="text-xs text-slate-500">{setup.timeframe}</span>
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">현재가 {formatPrice(setup.currentPrice)}</p>
+                      </div>
+                      <div className={`flex items-center gap-1 text-sm font-black ${sideClass(setup.plan.side)}`}>
+                        <Icon size={15} aria-hidden />
+                        {sideLabel(setup.plan.side)} · {Math.round(setup.score)}점
+                      </div>
+                    </Link>
+                  );
+                })
               ) : (
-                <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-4 text-sm leading-6 text-slate-300 [word-break:keep-all]">
-                  지금은 강한 레이더 감지가 많지 않습니다. 억지로 후보를 찾기보다 BTC와 ETH의 큰 흐름, 그리고 뉴스 이슈를 먼저 확인하는 장이 좋아 보입니다.
-                </div>
+                <p className="rounded-lg border border-white/10 bg-black/5 p-3 text-sm text-slate-500 dark:bg-black/20">
+                  지금은 무리해서 후보를 찾기보다 BTC/ETH 방향과 뉴스 흐름을 먼저 확인하는 편이 좋습니다.
+                </p>
               )}
             </div>
-
-            <div className="rounded-xl border border-white/10 bg-black/20 p-4">
-              <p className="text-sm font-black text-white">오늘 확인 루틴</p>
-              <div className="mt-3 grid gap-2">
-                <Link
-                  href="/majors"
-                  className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm font-bold text-slate-200 hover:border-accent-blue/40 hover:text-white"
-                >
-                  BTC/ETH 큰 흐름 확인
-                  <Radar size={15} aria-hidden />
-                </Link>
-                <Link
-                  href="/alts"
-                  className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm font-bold text-slate-200 hover:border-accent-blue/40 hover:text-white"
-                >
-                  알트코인 레이더에서 확산 확인
-                  <ArrowUpRight size={15} aria-hidden />
-                </Link>
-                <Link
-                  href="/news"
-                  className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm font-bold text-slate-200 hover:border-accent-blue/40 hover:text-white"
-                >
-                  레이더뉴스로 변동성 이슈 확인
-                  <Newspaper size={15} aria-hidden />
-                </Link>
-              </div>
-              <p className="mt-3 text-xs leading-5 text-slate-500 [word-break:keep-all]">
-                이 화면은 오늘 시장에서 먼저 확인할 순서를 줄여주는 관제실입니다. 중요해 보이는 감지는 저장해두면 알림 센터에서 다시 확인할 수 있습니다.
-              </p>
-            </div>
           </div>
-        ) : null}
-
-        {alertToast ? (
-          <p className="mt-4 rounded-md border border-accent-blue/25 bg-accent-blue/10 px-3 py-2 text-xs font-bold leading-5 text-accent-blue">
-            {alertToast}
-          </p>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </section>
   );
 }

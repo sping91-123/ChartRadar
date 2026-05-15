@@ -5,26 +5,24 @@ const smokeClientIp = `127.0.1.${Math.floor(Math.random() * 200) + 20}`;
 
 const checks = [
   { label: "홈", path: "/" },
-  { label: "Majors", path: "/majors" },
+  { label: "코인 레이더", path: "/crypto" },
+  { label: "기존 메이저 주소 리다이렉트", path: "/majors", expectedStatus: [200, 307, 308] },
   { label: "알트코인", path: "/alts" },
   { label: "글로벌", path: "/global" },
   { label: "해외주식", path: "/stocks" },
-  { label: "레이더 뉴스", path: "/news" },
+  { label: "뉴스", path: "/news" },
   { label: "코인 뉴스", path: "/news?market=crypto" },
   { label: "글로벌 뉴스", path: "/news?market=global" },
   { label: "알림 센터", path: "/alerts" },
   { label: "코인 알림 센터", path: "/alerts?market=crypto" },
   { label: "글로벌 알림 센터", path: "/alerts?market=global" },
-  { label: "Pro", path: "/pro" },
-  { label: "코인 Pro", path: "/pro?market=crypto" },
-  { label: "글로벌 Pro", path: "/pro?market=stocks" },
+  { label: "요금제", path: "/pro" },
+  { label: "코인 요금제", path: "/pro?market=crypto" },
+  { label: "글로벌 요금제", path: "/pro?market=stocks" },
   { label: "로그인", path: "/login" },
-  { label: "매매복기", path: "/journal" },
-  { label: "코인 매매복기", path: "/journal?market=crypto" },
-  { label: "글로벌 매매복기", path: "/journal?market=global" },
-  { label: "계산기", path: "/calculator" },
-  { label: "코인 계산기", path: "/calculator?market=crypto" },
-  { label: "글로벌 계산기", path: "/calculator?market=global" },
+  { label: "매매 복기", path: "/journal" },
+  { label: "코인 매매 복기", path: "/journal?market=crypto" },
+  { label: "글로벌 매매 복기", path: "/journal?market=global" },
   { label: "이용약관", path: "/terms" },
   { label: "개인정보 처리방침", path: "/privacy" },
   { label: "계정 삭제 안내", path: "/account/delete" },
@@ -32,7 +30,7 @@ const checks = [
   { label: "로봇 정책", path: "/robots.txt" },
   { label: "사이트맵", path: "/sitemap.xml" },
   { label: "앱 매니페스트", path: "/manifest.webmanifest" },
-  { label: "운영 헬스체크", path: "/api/health" },
+  { label: "운영 상태체크", path: "/api/health" },
   {
     label: "월간 결제 로그인 보호",
     path: "/api/billing/checkout",
@@ -97,7 +95,8 @@ async function fetchWithTimeout(check) {
         "x-forwarded-for": smokeClientIp
       },
       body: check.body ? JSON.stringify(check.body) : undefined,
-      signal: controller.signal
+      signal: controller.signal,
+      redirect: "manual"
     });
 
     const text = await response.text();

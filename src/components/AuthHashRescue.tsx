@@ -1,6 +1,5 @@
 "use client";
-// OAuth 토큰이 콜백이 아닌 화면에 붙어 돌아온 경우 세션을 복구합니다.
-
+// OAuth 토큰이 콜백이 아닌 화면에 붙어 돌아온 경우 세션을 복구한다.
 import { useEffect } from "react";
 import { parseSessionFromHash, saveSupabaseSession } from "@/lib/supabase";
 
@@ -19,7 +18,7 @@ export function AuthHashRescue() {
     if (!session) return;
 
     saveSupabaseSession(session);
-    const returnTo = safeReturnTo(window.sessionStorage.getItem(authReturnToStorageKey)) ?? "/majors";
+    const returnTo = safeReturnTo(window.sessionStorage.getItem(authReturnToStorageKey)) ?? "/crypto";
     window.sessionStorage.removeItem(authReturnToStorageKey);
     window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
     window.location.replace(returnTo);

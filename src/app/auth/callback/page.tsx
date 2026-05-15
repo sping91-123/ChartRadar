@@ -1,6 +1,5 @@
 "use client";
-// Supabase OAuth 콜백에서 세션을 저장하고 원래 화면으로 돌려보냅니다.
-
+// Supabase OAuth 콜백에서 세션을 저장하고 원래 화면으로 돌려보낸다.
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Loader2 } from "lucide-react";
@@ -20,7 +19,7 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const storedReturnTo = window.sessionStorage.getItem(authReturnToStorageKey);
-    const returnTo = safeReturnTo(params.get("returnTo")) ?? safeReturnTo(storedReturnTo) ?? "/majors";
+    const returnTo = safeReturnTo(params.get("returnTo")) ?? safeReturnTo(storedReturnTo) ?? "/crypto";
     const session = parseSessionFromHash(window.location.hash);
 
     if (!session) {

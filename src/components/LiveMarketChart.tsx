@@ -46,6 +46,7 @@ import { appendJournalEntry } from "@/lib/journal";
 import type { MarketBriefingInput } from "@/lib/ai/types";
 import { normalizePineDirection, parsePineSnapshot, pineDirectionForTimeframe, type PineSnapshot } from "@/lib/pineParity";
 import { createRemoteJournalEntry } from "@/lib/remoteJournal";
+import { evaluateRadarDecision, type RadarDecisionTone } from "@/lib/radarDecisionEngine";
 import { getActiveSupabaseSession } from "@/lib/supabase";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import { TechnicalRadarPanel } from "@/components/TechnicalRadarPanel";
@@ -573,6 +574,13 @@ function overlayPresetMatches(settings: OverlaySettings, preset: keyof typeof ov
 
 function structureSensitivityLabel(value: StructureSensitivity) {
   return structureSensitivityOptions.find((item) => item.value === value)?.label ?? "빠른 변화 감지";
+}
+
+function radarDecisionClasses(tone?: RadarDecisionTone) {
+  if (tone === "bullish") return "border-signal-success/30 bg-signal-success/10 text-signal-success";
+  if (tone === "bearish" || tone === "danger") return "border-signal-danger/30 bg-signal-danger/10 text-signal-danger";
+  if (tone === "warning") return "border-signal-warning/30 bg-signal-warning/10 text-signal-warning";
+  return "border-white/10 bg-black/20 text-slate-300";
 }
 
 type RadarPulseTone = "long" | "short" | "warn" | "neutral";
@@ -1198,6 +1206,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
     () => (analysis ? buildRadarPulse(analysis, activeAnalysis) : []),
     [activeAnalysis, analysis]
   );
+  const radarDecision = useMemo(() => (analysis ? evaluateRadarDecision(analysis) : null), [analysis]);
   const hasAnyOverlay = useMemo(() => Object.values(overlaySettings).some(Boolean), [overlaySettings]);
   const combinedScoreLimit = useMemo(() => {
     if (!analysis) return null;
@@ -2223,9 +2232,12 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               <p className="text-xs font-semibold opacity-75">진입 위험도</p>
               <p className="mt-1 text-base font-black">{userFacingRiskPercent(analysis)}% · {userFacingRiskLabel(analysis)}</p>
             </div>
-            <div className={`rounded-xl border p-3 ${decisionTone(userFacingNextStep(analysis))}`}>
-              <p className="text-xs font-semibold opacity-75">진입 전 확인</p>
-              <p className="mt-1 text-base font-black">{userFacingNextStep(analysis)}</p>
+            <div className={`rounded-xl border p-3 ${radarDecisionClasses(radarDecision?.tone)}`}>
+              <p className="text-xs font-semibold opacity-75">판단 엔진</p>
+              <p className="mt-1 text-base font-black">{radarDecision?.title ?? userFacingNextStep(analysis)}</p>
+              <p className="mt-1 line-clamp-2 text-xs leading-5 opacity-80 [word-break:keep-all]">
+                {radarDecision ? `${radarDecision.score}점 · ${radarDecision.nextStep}` : userFacingNextStep(analysis)}
+              </p>
             </div>
             <div className={`rounded-xl border p-3 ${readinessClasses(analysis.readiness)}`}>
               <p className="flex items-center gap-1 text-xs font-semibold opacity-75">

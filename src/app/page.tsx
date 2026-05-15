@@ -1,4 +1,4 @@
-// 첫 진입에서 코인 레이더와 글로벌 레이더만 선택하게 하는 화면입니다.
+// 첫 진입에서 코인 레이더와 글로벌 레이더를 선택하게 하는 홈 화면입니다.
 import Image from "next/image";
 import Link from "next/link";
 import { Coins, TrendingUp } from "lucide-react";
@@ -6,7 +6,7 @@ import { Coins, TrendingUp } from "lucide-react";
 const marketEntries = [
   {
     title: "코인 레이더",
-    href: "/majors",
+    href: "/crypto",
     icon: Coins,
     accent: "text-cyan-200",
     glow: "from-cyan-300/16"
