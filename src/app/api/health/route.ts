@@ -49,10 +49,8 @@ function scoreLaunchReadiness(checks: Record<string, boolean>) {
     aiProvider: 12,
     siteUrl: 10,
     macroReady: 14,
-    webPaymentProvider: 12,
-    webPaymentLinks: 8,
-    androidBilling: 10,
-    iosBilling: 4
+    primaryPaymentChannel: 24,
+    multiPlatformPayment: 10
   };
 
   return Object.entries(weights).reduce((score, [key, weight]) => score + (checks[key] ? weight : 0), 0);
@@ -97,20 +95,23 @@ export async function GET() {
   const hasAutomaticMacroRefresh = macroCalendarPayload.isAutomatic;
   const macroReady = hasAutomaticMacroRefresh && !isMacroStale;
   const coreReady = hasSupabaseUrl && hasSupabaseKey && hasAIProvider && macroReady;
-  const readyForWebPaidLaunch = coreReady && hasSiteUrl && hasPaymentProvider && paymentLinksReady;
-  const readyForAndroidLaunch = coreReady && hasSiteUrl && hasAndroidBillingProvider;
-  const readyForIosLaunch = coreReady && hasSiteUrl && hasIosBillingProvider;
+  const readyForWebCheckout = hasPaymentProvider && paymentLinksReady;
+  const readyForAndroidBilling = hasAndroidBillingProvider;
+  const readyForIosBilling = hasIosBillingProvider;
+  const readyForWebPaidLaunch = coreReady && hasSiteUrl && readyForWebCheckout;
+  const readyForAndroidLaunch = coreReady && hasSiteUrl && readyForAndroidBilling;
+  const readyForIosLaunch = coreReady && hasSiteUrl && readyForIosBilling;
   const readyForPaidLaunch = readyForWebPaidLaunch || readyForAndroidLaunch || readyForIosLaunch;
+  const hasPrimaryPaymentChannel = readyForWebCheckout || readyForAndroidBilling || readyForIosBilling;
+  const hasMultiPlatformPayment = readyForWebCheckout || (readyForAndroidBilling && readyForIosBilling);
   const launchScore = scoreLaunchReadiness({
     supabasePublic: hasSupabaseUrl && hasSupabaseKey,
     supabaseAdmin: hasSupabaseAdmin,
     aiProvider: hasAIProvider,
     siteUrl: hasSiteUrl,
     macroReady,
-    webPaymentProvider: hasPaymentProvider,
-    webPaymentLinks: paymentLinksReady,
-    androidBilling: hasAndroidBillingProvider,
-    iosBilling: hasIosBillingProvider
+    primaryPaymentChannel: hasPrimaryPaymentChannel,
+    multiPlatformPayment: hasMultiPlatformPayment
   });
   const blockingActions = [
     hasSiteUrl
@@ -129,13 +130,13 @@ export async function GET() {
           env: "TOSS_PAYMENTS_SECRET_KEY 또는 REVENUECAT_REST_API_KEY",
           reason: "유료 결제 확인과 Pro 권한 반영은 서버에서 검증해야 합니다."
         },
-    readyForWebPaidLaunch || paymentLinksReady || readyForAndroidLaunch || readyForIosLaunch
+    readyForWebCheckout || readyForAndroidBilling || readyForIosBilling
       ? null
       : {
           area: "web_payment_links",
           label: "플랜별 결제 링크 설정",
           env: "NEXT_PUBLIC_CRYPTO_MONTHLY_PAYMENT_URL 등",
-          reason: "앱에서 요금제를 누르면 실제 결제창으로 이동해야 합니다."
+          reason: "웹 결제로 판매하려면 요금제 버튼이 실제 결제창으로 이동해야 합니다. 앱 결제만 먼저 출시한다면 RevenueCat 구독 연결을 우선 확인하세요."
         },
     macroReady
       ? null
@@ -151,7 +152,10 @@ export async function GET() {
     hasAIProvider ? null : "AI 제공자가 아직 연결되지 않았습니다.",
     hasSiteUrl ? null : "서비스 공개 URL이 아직 설정되지 않았습니다.",
     hasPaymentProvider || hasAppPaymentProvider ? null : "웹 결제 또는 앱 구독 결제 도구가 아직 연결되지 않았습니다.",
-    paymentLinksReady || readyForAndroidLaunch || readyForIosLaunch ? null : `플랜별 결제 링크가 아직 비어 있습니다. ${missingPlanPaymentLinks.join(", ")}`,
+    paymentLinksReady || readyForAndroidBilling || readyForIosBilling ? null : `플랜별 결제 링크가 아직 비어 있습니다. ${missingPlanPaymentLinks.join(", ")}`,
+    !paymentLinksReady && (readyForAndroidBilling || readyForIosBilling)
+      ? "앱 구독 결제는 준비돼 있지만, 웹 결제 링크는 아직 비어 있습니다. 웹에서도 판매하려면 플랜별 링크를 추가해 주세요."
+      : null,
     fallbackPlanPaymentLinks.length === 0 ? null : `공용 결제 링크로 대체 연결되는 플랜이 있습니다. ${fallbackPlanPaymentLinks.join(", ")}`,
     !macroReady ? "매크로 자동 캘린더 연결 상태를 확인해 주세요." : null
   ].filter((item): item is string => Boolean(item));
@@ -172,6 +176,11 @@ export async function GET() {
       aiProvider: hasGroq ? "groq" : hasGemini ? "gemini" : "not-configured",
       paymentProvider: hasPaymentProvider ? "toss-payments" : "not-configured",
       appBillingProvider: hasAppPaymentProvider ? "revenuecat" : "not-configured",
+      readyForWebCheckout,
+      readyForAndroidBilling,
+      readyForIosBilling,
+      hasPrimaryPaymentChannel,
+      hasMultiPlatformPayment,
       readyForWebPaidLaunch,
       readyForAndroidLaunch,
       readyForIosLaunch,

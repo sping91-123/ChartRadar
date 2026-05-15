@@ -1440,3 +1440,10 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 뉴스는 Groq를 우선 사용하고, 실패해도 한국어 규칙 기반 제목과 브리핑으로 떨어지도록 정리했다.
 - 결제 플랜 문구는 코인, 글로벌, 올마켓 가치가 명확히 보이도록 다시 정리했다.
 - 이번 검증에서는 `lint`, `build`, `smoke:ops`, `smoke:copy`, `smoke:billing`, `smoke:api`, `smoke:routes`, `smoke:css`, `smoke:mobile`, `smoke:launch`, `smoke:all`을 통과 기준으로 삼았다.
+
+## 2026-05-15 출시 직전 운영 판단 보강.
+
+- 헬스체크는 앱 구독 결제와 웹 결제를 같은 차단 항목처럼 보여주면 운영자가 무엇을 먼저 해야 하는지 헷갈린다.
+- RevenueCat 앱 구독이 준비된 상태라면 웹 결제 링크 누락은 앱 출시 차단이 아니라 웹 판매 보강 항목으로 보여주는 편이 더 정확하다.
+- Pro 전환 문구는 “저장”보다 “장중 반복 감시, 관심종목 추적, 알림”을 앞세울수록 사용자가 월 구독 이유를 더 빠르게 이해한다.
+- 출시 점수도 같은 기준을 따라야 한다. 안드로이드 앱 결제가 준비된 상황에서 웹 결제와 iOS 결제 미설정을 동시에 감점하면 실제 출시 가능 상태를 과소평가하므로, 주 결제 채널과 멀티 플랫폼 완성도를 분리했다.
