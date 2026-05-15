@@ -113,7 +113,8 @@ function compactSymbol(symbol: string) {
   return symbol.replace("USDT.P", "").replace("USDT", "");
 }
 
-function presetSideLabel(side: SetupAlertPreset["side"]) {
+function presetSideLabel(side: SetupAlertPreset["side"], market: AlertMarket = "crypto") {
+  if (market === "stocks") return side === "long" ? "상승 우세" : "하락 우세";
   return side === "long" ? "롱 우세" : "숏 우세";
 }
 
@@ -486,7 +487,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
                       {match.setup.timeframe}
                     </span>
                     <span className={match.setup.side === "long" ? "rounded border border-emerald-300/25 bg-emerald-300/10 px-1.5 py-0.5 text-[10px] font-black text-emerald-200" : "rounded border border-red-300/25 bg-red-300/10 px-1.5 py-0.5 text-[10px] font-black text-red-200"}>
-                      {presetSideLabel(match.setup.side)}
+                      {presetSideLabel(match.setup.side, market)}
                     </span>
                     <span className="rounded border border-cyan-300/25 bg-cyan-300/10 px-1.5 py-0.5 text-[10px] font-black text-cyan-200">
                       {match.setup.score}점
@@ -514,7 +515,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
                         {preset.timeframe}
                       </span>
                       <span className={preset.side === "long" ? "rounded border border-emerald-300/25 bg-emerald-300/10 px-1.5 py-0.5 text-[10px] font-black text-emerald-200" : "rounded border border-red-300/25 bg-red-300/10 px-1.5 py-0.5 text-[10px] font-black text-red-200"}>
-                        {presetSideLabel(preset.side)}
+                        {presetSideLabel(preset.side, market)}
                       </span>
                     </div>
                     <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-400">{preset.headline}</p>

@@ -1463,5 +1463,6 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 이번 보강은 예측 문구를 과하게 늘리는 방향이 아니라, 선택한 자산군별로 같이 확인해야 할 항목과 위험 포인트를 짧게 보여주는 방향으로 진행한다.
 - Global Pro는 코인 Pro의 부속 기능처럼 보이면 안 된다. 미국주식, 해외선물, ETF, 매크로 이벤트를 별도 루틴으로 반복 감시하는 상품이라는 메시지를 강화한다.
 - 커버리지는 해외선물, 채권, 변동성, 섹터 ETF, 반도체, 빅테크, 성장주, 금융, 원자재로 넓혔다. 글로벌 화면은 선택 종목별로 동반 체크, 위험 체크, 판단 순서를 보여주게 했다.
+- 글로벌 알림 화면에서는 코인 사용자에게 자연스러운 롱·숏 표현보다 주식 사용자에게 더 직관적인 상승 우세, 하락 우세 표현을 사용한다.
 - 대표 글로벌 심볼 `NQ=F`, `ES=F`, `QQQ`, `SPY`, `^VIX`, `TLT`, `NVDA`, `SMH`, `GLD`, `CL=F`는 Yahoo chart 응답이 정상인지 직접 확인했다.
 - 검증은 `npm run lint`, `npm run build`, `npm run smoke:copy`, `npm run smoke:billing`, `npm run smoke:launch`, `npm run smoke:all`을 기준으로 통과했다.
