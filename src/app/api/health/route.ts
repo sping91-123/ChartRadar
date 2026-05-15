@@ -1,4 +1,4 @@
-// 서비스 운영 상태와 주요 출시 준비 항목을 확인하는 헬스체크 API입니다.
+// 서비스 운영 상태와 출시 준비 항목을 확인하는 헬스체크 API입니다.
 import { NextResponse } from "next/server";
 import { paidBillingPlans } from "@/lib/billing";
 import { getMacroCalendarPayload } from "@/lib/macroCalendar";
@@ -119,7 +119,7 @@ export async function GET() {
           area: "public_url",
           label: "공개 URL 설정",
           env: "NEXT_PUBLIC_SITE_URL",
-          reason: "결제 성공, 약관, 개인정보처리방침, 앱스토어 심사 링크가 같은 도메인을 바라봐야 합니다."
+          reason: "결제 성공, 약관, 개인정보 처리방침, 앱스토어 심사 링크가 같은 도메인을 바라봐야 합니다."
         },
     hasPaymentProvider || hasAndroidBillingProvider || hasIosBillingProvider
       ? null
@@ -135,7 +135,7 @@ export async function GET() {
           area: "web_payment_links",
           label: "플랜별 결제 링크 설정",
           env: "NEXT_PUBLIC_CRYPTO_MONTHLY_PAYMENT_URL 등",
-          reason: "웹에서 요금제를 누르면 실제 결제창으로 이동해야 합니다."
+          reason: "앱에서 요금제를 누르면 실제 결제창으로 이동해야 합니다."
         },
     macroReady
       ? null
@@ -143,7 +143,7 @@ export async function GET() {
           area: "macro_calendar",
           label: "매크로 일정 자동 갱신",
           env: "공개 경제 캘린더 또는 공식 통계 데이터",
-          reason: "매크로 일정이 오래되면 첫 화면 신뢰도가 떨어집니다."
+          reason: "매크로 일정이 오래되면 첫 화면 신뢰감이 떨어집니다."
         }
   ].filter((item): item is { area: string; label: string; env: string; reason: string } => Boolean(item));
   const warnings = [

@@ -1429,6 +1429,7 @@ The health endpoint now reports a launch readiness score and structured blocking
 - Basic은 첫 확인용, Pro는 장중 반복 확인과 관심종목, 알림까지 이어지는 실전 감시 모드라는 가치 구분을 유지했다.
 - 코인, 글로벌, 올마켓 요금제는 같은 가격 구조를 유지하되 각 시장에서 어떤 기능이 열리는지 더 직접적으로 설명했다.
 - `smoke-copy`는 깨진 문자 패턴까지 검사하도록 강화했다.
+- 운영 헬스체크 API도 결제와 매크로 연결 상태를 사람이 바로 이해할 수 있도록 정상 한국어로 복구했다.
 
 ## 2026-05-15 운영 신뢰도 보강 완료.
 
