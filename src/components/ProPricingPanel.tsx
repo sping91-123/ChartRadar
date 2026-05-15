@@ -11,12 +11,13 @@ import {
   isYearlyBillingPlan,
   subscriptionTrustNotes
 } from "@/lib/billing";
+import { isNativePurchaseAvailable, purchaseNativePlan, restoreNativeEntitlement } from "@/lib/mobilePurchases";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
-import { withSupabaseAuth } from "@/lib/authFetch";
 
 type CheckoutState =
   | { status: "idle" }
   | { status: "loading"; planId: string }
+  | { status: "restoring" }
   | { status: "message"; tone: "info" | "error"; text: string };
 
 function scopeCopy(scope: BillingPageScope) {
@@ -120,10 +121,11 @@ function PlanCard({
 }
 
 export function ProPricingPanel({ marketScope = "all" }: { marketScope?: BillingPageScope } = {}) {
-  const { user, isLoading } = useSupabaseAuth();
+  const { session, user, isLoading } = useSupabaseAuth();
   const [checkoutState, setCheckoutState] = useState<CheckoutState>({ status: "idle" });
   const visiblePlans = useMemo(() => getBillingPlansForPage(marketScope), [marketScope]);
   const copy = scopeCopy(marketScope);
+  const nativePurchaseAvailable = isNativePurchaseAvailable();
 
   async function startCheckout(plan: BillingPlan) {
     if (isLoading) {
@@ -131,31 +133,58 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
       return;
     }
 
-    if (!user?.id) {
-      setCheckoutState({ status: "message", tone: "info", text: "결제를 시작하려면 먼저 로그인해 주세요." });
+    if (!session?.accessToken) {
+      setCheckoutState({ status: "message", tone: "info", text: "결제 후 Pro 기능을 바로 이용하려면 먼저 구글 로그인이 필요합니다. 로그인 후 다시 결제를 시작해 주세요." });
       return;
     }
 
     setCheckoutState({ status: "loading", planId: plan.id });
 
     try {
-      const response = await fetch(
-        "/api/billing/checkout",
-        await withSupabaseAuth({
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ planId: plan.id, platform: "web" })
-        })
-      );
-      const data = await response.json().catch(() => ({}));
+      if (nativePurchaseAvailable) {
+        if (!user?.id) throw new Error("앱 구독을 연결하려면 로그인 정보를 먼저 확인해야 합니다.");
+        const result = await purchaseNativePlan({ plan, userId: user.id, accessToken: session.accessToken });
+        setCheckoutState({ status: "message", tone: "info", text: result.message });
+        return;
+      }
+
+      const response = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ planId: plan.id, platform: "web" })
+      });
+      const data = (await response.json().catch(() => ({}))) as { paymentUrl?: string; message?: string; error?: string };
       if (!response.ok) throw new Error(data.error ?? "결제창을 열지 못했습니다. 잠시 후 다시 시도해 주세요.");
-      if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl;
         return;
       }
       setCheckoutState({ status: "message", tone: "info", text: data.message ?? "결제창 연결 정보를 확인하지 못했습니다." });
     } catch (error) {
       setCheckoutState({ status: "message", tone: "error", text: error instanceof Error ? error.message : "결제 연결 상태를 확인하지 못했습니다." });
+    }
+  }
+
+  async function restoreCheckout() {
+    if (!nativePurchaseAvailable) return;
+
+    if (isLoading) {
+      setCheckoutState({ status: "message", tone: "info", text: "계정 상태를 확인하고 있습니다. 잠시 후 다시 눌러 주세요." });
+      return;
+    }
+
+    if (!session?.accessToken || !user?.id) {
+      setCheckoutState({ status: "message", tone: "info", text: "구매 복원을 하려면 먼저 구글 로그인이 필요합니다." });
+      return;
+    }
+
+    setCheckoutState({ status: "restoring" });
+
+    try {
+      const result = await restoreNativeEntitlement({ userId: user.id, accessToken: session.accessToken });
+      setCheckoutState({ status: "message", tone: "info", text: result.message });
+    } catch (error) {
+      setCheckoutState({ status: "message", tone: "error", text: error instanceof Error ? error.message : "구매 복원 상태를 확인하지 못했습니다." });
     }
   }
 
@@ -189,6 +218,18 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
           />
         ))}
       </div>
+
+      {nativePurchaseAvailable ? (
+        <button
+          type="button"
+          onClick={restoreCheckout}
+          disabled={checkoutState.status === "restoring"}
+          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-surface-line bg-white/80 px-4 text-sm font-black text-slate-700 dark:bg-black/20 dark:text-slate-200 disabled:cursor-wait disabled:opacity-60"
+        >
+          {checkoutState.status === "restoring" ? <Loader2 className="mr-2 animate-spin" size={16} aria-hidden /> : null}
+          앱 구독 복원
+        </button>
+      ) : null}
 
       <div className="enterprise-panel p-5">
         <div className="flex items-center gap-2">

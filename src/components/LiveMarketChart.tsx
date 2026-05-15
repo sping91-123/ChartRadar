@@ -2067,7 +2067,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className={`text-xs font-black ${altAnalysisGate.allowed ? "text-cyan-200" : "text-amber-200"}`}>
-                {hasCoinPro ? "Coin Pro 알트 분석 무제한" : `오늘 무료 알트 분석 ${Math.min(altAnalysisGate.used, altAnalysisGate.limit)}/${altAnalysisGate.limit}개`}
+                {hasCoinPro ? "Coin Pro 알트 분석 무제한" : `무료 분석 ${altAnalysisGate.limit}개 중 ${Math.min(altAnalysisGate.used, altAnalysisGate.limit)}개 사용`}
               </p>
               <p className="mt-1 text-xs leading-5 text-slate-400 [word-break:keep-all]">
                 {hasCoinPro

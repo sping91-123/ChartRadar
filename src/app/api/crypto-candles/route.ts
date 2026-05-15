@@ -7,6 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const BINANCE_FAPI = "https://fapi.binance.com";
+const BINANCE_SPOT_DATA_API = "https://data-api.binance.vision";
 const intervalMap: Record<ChartTimeframe, string> = {
   "5m": "5m",
   "15m": "15m",
@@ -55,6 +56,13 @@ function parseRows(rows: unknown): Candle[] {
   );
 }
 
+function candleEndpoints(params: URLSearchParams) {
+  return [
+    { source: "binance-usdt-m", url: `${BINANCE_FAPI}/fapi/v1/klines?${params.toString()}` },
+    { source: "binance-spot", url: `${BINANCE_SPOT_DATA_API}/api/v3/klines?${params.toString()}` }
+  ];
+}
+
 export async function GET(request: Request) {
   const limited = await rateLimit(request, {
     key: "crypto-candles",
@@ -82,12 +90,27 @@ export async function GET(request: Request) {
   });
 
   try {
-    const response = await fetch(`${BINANCE_FAPI}/fapi/v1/klines?${params.toString()}`, {
-      headers: { Accept: "application/json" },
-      cache: "no-store"
-    });
-    if (!response.ok) throw new Error(`Binance ${response.status}`);
-    return NextResponse.json({ candles: parseRows(await response.json()), source: "binance-usdt-m" });
+    let lastError: unknown = null;
+
+    for (const endpoint of candleEndpoints(params)) {
+      try {
+        const response = await fetch(endpoint.url, {
+          headers: { Accept: "application/json" },
+          cache: "no-store"
+        });
+        if (!response.ok) throw new Error(`Binance ${response.status}`);
+
+        const candles = parseRows(await response.json());
+        if (candles.length > 0) {
+          return NextResponse.json({ candles, source: endpoint.source });
+        }
+        throw new Error("Binance empty candles");
+      } catch (endpointError) {
+        lastError = endpointError;
+      }
+    }
+
+    throw lastError ?? new Error("Binance candles unavailable");
   } catch (error) {
     console.error("[api/crypto-candles] error:", error);
     return NextResponse.json({ error: "캔들 흐름을 잠시 확인하지 못했습니다." }, { status: 500 });

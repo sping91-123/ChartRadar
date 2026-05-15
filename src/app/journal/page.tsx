@@ -296,12 +296,17 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
           ) : null}
 
           <div className="mt-5 grid gap-3">
+            <label htmlFor="journal-title" className="text-xs font-black text-slate-300">
+              복기 제목
+            </label>
             <input
+              id="journal-title"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               placeholder={market === "stocks" ? "예. NVDA 1h 조정 관찰" : "예. BTC 15m 롱 관찰"}
               className="min-h-12 rounded-md border border-surface-line bg-surface-cardSoft px-4 text-base text-white outline-none placeholder:text-slate-600 focus:border-accent-blue"
             />
+            <p className="text-xs font-black text-slate-300">방향</p>
             <div className="grid grid-cols-2 gap-2">
               {["롱", "숏"].map((item) => (
                 <button
@@ -318,13 +323,18 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                 </button>
               ))}
             </div>
+            <label htmlFor="journal-note" className="text-xs font-black text-slate-300">
+              복기 메모
+            </label>
             <textarea
+              id="journal-note"
               value={note}
               onChange={(event) => setNote(event.target.value)}
               placeholder="진입 전 봤던 구조, 위험 신호, 지킨 원칙, 다음에 고칠 점을 적어보세요."
               rows={5}
               className="w-full resize-none rounded-md border border-surface-line bg-surface-cardSoft px-4 py-3 text-base leading-7 text-white outline-none placeholder:text-slate-600 focus:border-accent-blue"
             />
+            <p className="text-xs font-black text-slate-300">복기 질문</p>
             <div className="flex flex-wrap gap-2">
               {promptChips.map((item) => (
                 <button

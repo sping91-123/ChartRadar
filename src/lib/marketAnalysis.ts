@@ -301,6 +301,32 @@ const intervalMap: Record<ChartTimeframe, string> = {
   "1d": "1d"
 };
 
+type BinanceKlineRow = [
+  number,
+  string,
+  string,
+  string,
+  string,
+  string,
+  number,
+  string,
+  number,
+  string,
+  string,
+  string
+];
+
+function parseBinanceKlineRows(rows: BinanceKlineRow[]): Candle[] {
+  return rows.map((row) => ({
+    time: Math.floor(row[0] / 1000),
+    open: Number(row[1]),
+    high: Number(row[2]),
+    low: Number(row[3]),
+    close: Number(row[4]),
+    volume: Number(row[5])
+  }));
+}
+
 export async function fetchBinanceCandles(
   symbol: string,
   timeframe: ChartTimeframe,
@@ -319,7 +345,28 @@ export async function fetchBinanceCandles(
     limit: String(limit)
   });
   const isBrowser = typeof window !== "undefined";
-  const response = await fetch(isBrowser ? `/data/candles?${clientParams.toString()}` : `https://fapi.binance.com/fapi/v1/klines?${params.toString()}`);
+  if (!isBrowser) {
+    const endpoints = [
+      `https://fapi.binance.com/fapi/v1/klines?${params.toString()}`,
+      `https://data-api.binance.vision/api/v3/klines?${params.toString()}`
+    ];
+    let lastError: unknown = null;
+
+    for (const endpoint of endpoints) {
+      try {
+        const response = await fetch(endpoint);
+        if (!response.ok) throw new Error(`Binance ${response.status}`);
+        const candles = parseBinanceKlineRows((await response.json()) as BinanceKlineRow[]);
+        if (candles.length > 0) return candles;
+        throw new Error("Binance empty candles");
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError ?? new Error("Binance candles unavailable");
+  }
+  const response = await fetch(`/data/candles?${clientParams.toString()}`);
   if (!response.ok) {
     throw new Error("캔들 흐름을 잠시 확인하지 못했습니다.");
   }

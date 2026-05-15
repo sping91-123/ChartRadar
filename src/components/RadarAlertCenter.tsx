@@ -407,7 +407,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             {permissionLabel(permission)}
           </p>
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            저장한 조건을 현재 시장과 다시 대조합니다. 모바일 앱에서는 같은 조건을 푸시 알림으로 받을 수 있습니다.
+            저장한 조건을 현재 시장과 다시 대조합니다. 알림 권한을 켠 현재 기기에서는 조건 일치 알림을 받을 수 있습니다.
           </p>
         </div>
         <button

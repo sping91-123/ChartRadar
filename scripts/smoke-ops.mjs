@@ -58,7 +58,6 @@ const usageMeterPanel = read("src/components/UsageMeterPanel.tsx");
 const stockRadarApp = read("src/components/StockRadarApp.tsx");
 const setupScoutPanel = read("src/components/SetupScoutPanel.tsx");
 const watchlistPanel = read("src/components/WatchlistPanel.tsx");
-const dailyRadarBrief = read("src/components/DailyRadarBrief.tsx");
 const apiRoutes = walk("src/app/api", [".ts"]);
 
 expectIncludes(rateLimit, "UPSTASH_REDIS_REST_URL", "Upstash rate limit URL", "src/lib/server/rateLimit.ts");
@@ -98,7 +97,7 @@ expectIncludes(radarAlertCenter, "getMarketRuleStorageKey", "알림 조건 시�
 expectIncludes(usageMeterPanel, "hasScopedEntitlement(profile?.plan, marketScope)", "사용량 패널 시장별 권한", "src/components/UsageMeterPanel.tsx");
 expectIncludes(setupScoutPanel, 'hasMarketEntitlement(profile?.plan, "crypto")', "코인 스캐너 권한", "src/components/SetupScoutPanel.tsx");
 expectIncludes(watchlistPanel, 'hasMarketEntitlement(profile?.plan, "crypto")', "관심코인 권한", "src/components/WatchlistPanel.tsx");
-expectIncludes(dailyRadarBrief, 'hasMarketEntitlement(profile?.plan, "crypto")', "코인 일일 레이더 권한", "src/components/DailyRadarBrief.tsx");
+expectIncludes(scoutRoute, "entitlement.isPaid ? 120 : 20", "코인 일일 레이더 권한", "src/app/api/scout/route.ts");
 expectIncludes(stockRadarApp, 'hasMarketEntitlement(profile?.plan, "stocks")', "글로벌 레이더 권한", "src/components/StockRadarApp.tsx");
 
 const releaseMatches = [...macroEvents.matchAll(/releaseAt:\s*"([^"]+)"/g)].map((match) => Date.parse(match[1]));

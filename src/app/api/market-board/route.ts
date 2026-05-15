@@ -6,6 +6,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const CACHE_TTL_MS = 60 * 1000;
+const tickerEndpoints = [
+  "https://fapi.binance.com/fapi/v1/ticker/24hr",
+  "https://data-api.binance.vision/api/v3/ticker/24hr"
+];
 const boardSymbols = new Set([
   "BTCUSDT",
   "ETHUSDT",
@@ -53,6 +57,28 @@ function toItem(ticker: BinanceTicker): MarketBoardItem {
   };
 }
 
+async function fetchTickers() {
+  let lastError: unknown = null;
+
+  for (const endpoint of tickerEndpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        headers: { Accept: "application/json" },
+        cache: "no-store"
+      });
+      if (!response.ok) throw new Error(`Binance ${response.status}`);
+
+      const payload = (await response.json()) as BinanceTicker[];
+      if (Array.isArray(payload)) return payload;
+      throw new Error("Binance ticker payload is not an array");
+    } catch (endpointError) {
+      lastError = endpointError;
+    }
+  }
+
+  throw lastError ?? new Error("Binance ticker unavailable");
+}
+
 export async function GET(request: Request) {
   const limit = await rateLimit(request, { key: "market-board", limit: 45, windowMs: 5 * 60 * 1000 });
   if (!limit.allowed) {
@@ -68,12 +94,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const response = await fetch("https://fapi.binance.com/fapi/v1/ticker/24hr", {
-      headers: { Accept: "application/json" },
-      cache: "no-store"
-    });
-    if (!response.ok) throw new Error(`Binance ${response.status}`);
-    const payload = (await response.json()) as BinanceTicker[];
+    const payload = await fetchTickers();
     const items = payload
       .filter((ticker) => boardSymbols.has(ticker.symbol))
       .map(toItem)

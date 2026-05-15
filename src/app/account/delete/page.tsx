@@ -53,7 +53,7 @@ export default function AccountDeletePage() {
                 <div>
                   <h2 className="text-base font-black text-white">삭제 요청 방법</h2>
                   <p className="mt-2 text-sm leading-7 text-slate-400 [word-break:keep-all]">
-                    Chart Radar에 로그인한 Google 계정 이메일에서 <span className="font-bold text-white">support@chartradar.ai</span>로
+                    Chart Radar에 로그인한 Google 계정 이메일에서 <span className="font-bold text-white">staronlabs@gmail.com</span>로
                     “Chart Radar 계정 삭제 요청”이라고 보내 주세요. 본인 확인 후 영업일 기준 7일 이내에 삭제 처리 또는 추가 확인 절차를 안내합니다.
                   </p>
                 </div>
