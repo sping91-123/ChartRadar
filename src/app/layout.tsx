@@ -1,5 +1,6 @@
 // 전역 메타데이터와 테마 초기화를 담당하는 루트 레이아웃.
 import type { Metadata, Viewport } from "next";
+import { AuthHashRescue } from "@/components/AuthHashRescue";
 import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 import { RadarAlertMonitor } from "@/components/RadarAlertMonitor";
 import { getSiteUrlWithLocalFallback } from "@/lib/siteUrl";
@@ -88,6 +89,7 @@ export default function RootLayout({
               "try{var t=localStorage.getItem('chart-radar.theme')||'dark';document.documentElement.classList.add(t==='light'?'theme-light':'theme-dark');document.documentElement.style.colorScheme=t;}catch(e){document.documentElement.classList.add('theme-dark');}"
           }}
         />
+        <AuthHashRescue />
         {children}
         <RadarAlertMonitor />
         <PwaInstallPrompt />
