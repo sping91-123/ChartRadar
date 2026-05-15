@@ -11,6 +11,14 @@ export const dynamic = "force-dynamic";
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const cache = new Map<string, { text: string; expiresAt: number }>();
 
+function cleanMarketBriefingText(text: string) {
+  return text
+    .replace(/[\u3040-\u30ff]+/g, "")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -105,7 +113,7 @@ export async function POST(request: Request) {
     const providers = getAIProviderCandidates();
     for (const provider of providers) {
       try {
-        const text = await provider.generateMarketBriefing(input);
+        const text = cleanMarketBriefingText(await provider.generateMarketBriefing(input));
         cache.set(key, { text, expiresAt: now + CACHE_TTL_MS });
         return NextResponse.json({ briefing: text, model: provider.model, cached: false });
       } catch (error) {
@@ -120,7 +128,7 @@ export async function POST(request: Request) {
     console.warn("[ai/market-briefing] Provider 없음, 폴백 사용.", error instanceof Error ? error.message : error);
   }
 
-  const fallback = generateFallbackMarketBriefing(input);
+  const fallback = cleanMarketBriefingText(generateFallbackMarketBriefing(input));
   cache.set(key, { text: fallback, expiresAt: now + CACHE_TTL_MS });
   return NextResponse.json({ briefing: fallback, model: "fallback", cached: false });
 }
