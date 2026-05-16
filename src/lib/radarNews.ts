@@ -19,6 +19,7 @@ export type RadarNewsItem = RadarNewsSignal & {
   source: string;
   title: string;
   translatedTitle?: string;
+  excerpt?: string;
   link: string;
   publishedAt: string;
 };
@@ -266,10 +267,10 @@ export function analyzeNewsText(input: string, market: RadarNewsMarket = "crypto
 }
 
 export function createRadarNewsItem(
-  input: { source: string; title: string; translatedTitle?: string; link: string; publishedAt: string },
+  input: { source: string; title: string; translatedTitle?: string; excerpt?: string; link: string; publishedAt: string },
   market: RadarNewsMarket = "crypto"
 ): RadarNewsItem {
-  const signal = analyzeNewsText(`${input.title} ${input.translatedTitle ?? ""}`, market);
+  const signal = analyzeNewsText(`${input.title} ${input.translatedTitle ?? ""} ${input.excerpt ?? ""}`, market);
   const publishedAt = input.publishedAt || new Date().toISOString();
   return {
     ...signal,
@@ -277,6 +278,7 @@ export function createRadarNewsItem(
     source: input.source,
     title: input.title,
     translatedTitle: input.translatedTitle ? localizeNewsSourceText(input.translatedTitle) : undefined,
+    excerpt: input.excerpt ? localizeNewsSourceText(input.excerpt) : undefined,
     link: input.link,
     publishedAt
   };

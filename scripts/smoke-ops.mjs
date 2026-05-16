@@ -50,6 +50,7 @@ const macroEvents = read("src/data/macroEvents.ts");
 const macroCalendar = read("src/lib/macroCalendar.ts");
 const macroCalendarRoute = read("src/app/api/macro-calendar/route.ts");
 const macroTicker = read("src/components/MacroTicker.tsx");
+const newsPage = read("src/app/news/page.tsx");
 const radarNewsApi = read("src/app/api/radar-news/route.ts");
 const radarNewsLib = read("src/lib/radarNews.ts");
 const radarNewsPanel = read("src/components/RadarNewsPanel.tsx");
@@ -84,9 +85,21 @@ expectIncludes(radarNewsApi, "USE_GEMINI_NEWS_FALLBACK", "뉴스 Gemini fallback
 expectIncludes(radarNewsApi, "ensureKoreanText", "뉴스 브리핑 한국어 보정", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsApi, "오늘 확인할 주요 시장 이슈", "뉴스 기본 브리핑 문구", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsApi, "미국 물가 이슈", "뉴스 물가 표현 보강", "src/app/api/radar-news/route.ts");
-expectIncludes(radarNewsPanel, "오늘의 코인 뉴스 브리핑", "코인 뉴스 요약 화면", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "뉴스 레이더", "코인 뉴스 요약 화면", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "오늘의 시장 레이더", "시장 레이더 요약 카드", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "자세히 보기", "뉴스 상세 브리핑 버튼", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "참고 뉴스", "참고 뉴스 목록 화면", "src/components/RadarNewsPanel.tsx");
-expectIncludes(radarNewsPanel, "chart-radar.news.${market}.v9", "뉴스 캐시 버전 갱신", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "chart-radar.news.${market}.v13", "뉴스 캐시 버전 갱신", "src/components/RadarNewsPanel.tsx");
+expectIncludes(newsPage, "다가오는 주요 이벤트", "매크로 일정 보조 섹션", "src/app/news/page.tsx");
+{
+  const reportIndex = newsPage.indexOf("<RadarNewsPanel market={market} />");
+  const macroIndex = newsPage.indexOf("<MacroTicker compact market={market} />");
+  if (reportIndex >= 0 && macroIndex > reportIndex) {
+    pass("뉴스 리포트 우선 배치", "src/app/news/page.tsx에서 리포트를 먼저 표시합니다.");
+  } else {
+    fail("뉴스 리포트 우선 배치", "src/app/news/page.tsx에서 RadarNewsPanel 다음에 compact MacroTicker가 와야 합니다.");
+  }
+}
 expectIncludes(radarNewsLib, "미국 증시 뉴스", "뉴스 출처명 한국어 표시", "src/lib/radarNews.ts");
 expectIncludes(radarNewsLib, "net loss", "뉴스 실적 손실 분류", "src/lib/radarNews.ts");
 expectIncludes(radarNewsLib, "digitized finance", "뉴스 토큰화 금융 분류", "src/lib/radarNews.ts");
