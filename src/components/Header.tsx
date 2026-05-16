@@ -1,13 +1,11 @@
 // 전체 화면 상단에서 Chart Radar 브랜드와 계정 상태를 보여주는 헤더입니다.
 import Image from "next/image";
 import Link from "next/link";
-import { AuthStatus } from "@/components/AuthStatus";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { HeaderActions } from "@/components/HeaderActions";
 
 type HeaderMarket = "crypto" | "stocks";
 
 export function Header({ market }: { market?: HeaderMarket } = {}) {
-  const proHref = market === "crypto" ? "/pro?market=crypto" : market === "stocks" ? "/pro?market=stocks" : "/pro";
   const subtitle =
     market === "crypto"
       ? "코인 시장의 구조, 변동성, 주요 이벤트를 한 화면에서 확인하세요."
@@ -16,7 +14,7 @@ export function Header({ market }: { market?: HeaderMarket } = {}) {
         : "차트 흐름과 시장 변화를 빠르게 확인하세요.";
 
   return (
-    <header className="pt-5">
+    <header className="relative z-50 pt-5">
       <div className="flex items-center justify-between gap-4 rounded-xl border border-surface-line bg-surface-card/80 px-3 py-3 backdrop-blur sm:px-4">
         <Link href="/" className="flex min-w-0 items-center gap-3">
           <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-cyan-300/20 bg-slate-950 shadow-[0_0_24px_rgba(6,182,212,0.18)] sm:h-11 sm:w-11">
@@ -35,16 +33,7 @@ export function Header({ market }: { market?: HeaderMarket } = {}) {
             <p className="mt-0.5 hidden text-xs leading-5 text-slate-400 sm:block">{subtitle}</p>
           </div>
         </Link>
-        <div className="flex shrink-0 items-center gap-2">
-          <Link
-            href={proHref}
-            className="enterprise-button rounded-lg border border-cyan-300/25 bg-cyan-300 px-3 py-1.5 text-xs font-black text-slate-950 transition hover:bg-cyan-200"
-          >
-            Pro
-          </Link>
-          <ThemeToggle />
-          <AuthStatus />
-        </div>
+        <HeaderActions market={market} />
       </div>
     </header>
   );

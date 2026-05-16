@@ -34,14 +34,14 @@ type AlertMarket = "crypto" | "stocks";
 
 const alertMarketCopy = {
   crypto: {
-    eyebrow: "코인 레이더 알림",
-    title: "코인 변화를 놓치지 않게 정리합니다",
-    description: "BTC/ETH와 알트코인 급변, A급 후보, 청산 압력, 코인 뉴스 흐름을 한곳에서 확인합니다."
+    eyebrow: "알림 설정",
+    title: "코인 레이더 알림",
+    description: "시장 변화를 놓치지 않도록 감시 조건과 알림 상태를 정리합니다."
   },
   stocks: {
-    eyebrow: "글로벌 레이더 알림",
-    title: "글로벌 변화를 놓치지 않게 정리합니다",
-    description: "미국주식, 해외선물, ETF, 실적, 매크로 발표, 지수·원자재 급변을 한곳에서 확인합니다."
+    eyebrow: "알림 설정",
+    title: "글로벌 레이더 알림",
+    description: "지수, 섹터, 매크로 변화에 대한 알림 상태를 정리합니다."
   }
 } satisfies Record<AlertMarket, { eyebrow: string; title: string; description: string }>;
 
