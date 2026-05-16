@@ -53,6 +53,7 @@ import { LiquidationPressurePanel } from "@/components/LiquidationPressurePanel"
 import { hasMarketEntitlement } from "@/lib/billing";
 import { recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
+import { getChartThemeOptions, observeChartThemeChange } from "@/lib/chartTheme";
 
 const symbols = [
   "BTCUSDT.P",
@@ -1182,22 +1183,13 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
 
   useEffect(() => {
     if (!chartRef.current || chartApiRef.current) return;
+    const chartThemeOptions = getChartThemeOptions();
 
     const chart = createChart(chartRef.current, {
       autoSize: true,
-      layout: {
-        background: { color: "#11151c" },
-        textColor: "#cbd5e1"
-      },
-      grid: {
-        vertLines: { color: "rgba(148, 163, 184, 0.08)" },
-        horzLines: { color: "rgba(148, 163, 184, 0.08)" }
-      },
-      rightPriceScale: {
-        borderColor: "rgba(148, 163, 184, 0.18)"
-      },
+      ...chartThemeOptions,
       timeScale: {
-        borderColor: "rgba(148, 163, 184, 0.18)",
+        ...chartThemeOptions.timeScale,
         timeVisible: true
       },
       crosshair: {
@@ -1217,8 +1209,19 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
     chartApiRef.current = chart;
     candleSeriesRef.current = candleSeries;
     markersRef.current = createSeriesMarkers(candleSeries, []);
+    const stopObservingTheme = observeChartThemeChange(() => {
+      const nextThemeOptions = getChartThemeOptions();
+      chart.applyOptions({
+        ...nextThemeOptions,
+        timeScale: {
+          ...nextThemeOptions.timeScale,
+          timeVisible: true
+        }
+      });
+    });
 
     return () => {
+      stopObservingTheme();
       if (candleSeriesRef.current) {
         priceLinesRef.current.forEach((line) => candleSeriesRef.current?.removePriceLine(line));
         priceLinesRef.current = [];

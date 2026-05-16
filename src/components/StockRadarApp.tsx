@@ -12,6 +12,7 @@ import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { hasMarketEntitlement } from "@/lib/billing";
 import { getWatchlistLimit } from "@/lib/watchlist";
 import { withSupabaseAuth } from "@/lib/authFetch";
+import { getChartThemeOptions, observeChartThemeChange } from "@/lib/chartTheme";
 
 const fallbackUniverse: StockSymbolInfo[] = [
   { symbol: "NQ=F", name: "Nasdaq 100 Futures", group: "futures" },
@@ -754,23 +755,16 @@ export function StockRadarApp() {
 
   useEffect(() => {
     if (!chartRef.current) return;
+    const chartThemeOptions = getChartThemeOptions();
 
     const chart = createChart(chartRef.current, {
       height: 360,
-      layout: {
-        background: { color: "transparent" },
-        textColor: "#cbd5e1"
-      },
-      grid: {
-        vertLines: { color: "rgba(148,163,184,0.08)" },
-        horzLines: { color: "rgba(148,163,184,0.08)" }
-      },
+      ...chartThemeOptions,
       localization: {
         timeFormatter: (time: Time) => formatKstChartTime(time, timeframe)
       },
-      rightPriceScale: { borderColor: "rgba(148,163,184,0.18)" },
       timeScale: {
-        borderColor: "rgba(148,163,184,0.18)",
+        ...chartThemeOptions.timeScale,
         timeVisible: timeframe !== "1d",
         tickMarkFormatter: (time: Time) => formatKstChartTime(time, timeframe)
       }
@@ -786,6 +780,17 @@ export function StockRadarApp() {
 
     chartApiRef.current = chart;
     candleSeriesRef.current = series;
+    const stopObservingTheme = observeChartThemeChange(() => {
+      const nextThemeOptions = getChartThemeOptions();
+      chart.applyOptions({
+        ...nextThemeOptions,
+        timeScale: {
+          ...nextThemeOptions.timeScale,
+          timeVisible: timeframe !== "1d",
+          tickMarkFormatter: (time: Time) => formatKstChartTime(time, timeframe)
+        }
+      });
+    });
 
     const resizeObserver = new ResizeObserver(() => {
       if (!chartRef.current) return;
@@ -794,6 +799,7 @@ export function StockRadarApp() {
     resizeObserver.observe(chartRef.current);
 
     return () => {
+      stopObservingTheme();
       resizeObserver.disconnect();
       chart.remove();
       chartApiRef.current = null;
