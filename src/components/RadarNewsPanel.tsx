@@ -725,7 +725,7 @@ export function RadarNewsPanel({ market = "crypto", afterBriefing }: { market?: 
 
   return (
     <section className="space-y-5">
-      <div className="overflow-hidden rounded-2xl border border-accent-blue/20 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.16),transparent_32%),linear-gradient(135deg,rgba(15,23,42,0.96),rgba(2,6,23,0.96))] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.32)] sm:p-6">
+      <div className="news-radar-hero overflow-hidden rounded-2xl border border-accent-blue/20 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.16),transparent_32%),linear-gradient(135deg,rgba(15,23,42,0.96),rgba(2,6,23,0.96))] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.32)] sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
             <div className="inline-flex items-center gap-2 rounded-full border border-accent-blue/20 bg-accent-blue/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-accent-blue">
