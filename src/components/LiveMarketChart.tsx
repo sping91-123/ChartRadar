@@ -323,6 +323,16 @@ type MarketBriefingState =
 type RadarProfile = "combined" | "ict" | "technical";
 type StructureSensitivity = 5 | 7 | 9;
 
+const radarProfileOptions: Array<{
+  key: RadarProfile;
+  label: string;
+  description: string;
+}> = [
+  { key: "combined", label: "종합", description: "구조와 지표를 함께 요약" },
+  { key: "ict", label: "ICT 구조", description: "MSB, CHoCH, OB, FVG 중심" },
+  { key: "technical", label: "기술지표", description: "RSI, MACD, 거래량 중심" }
+];
+
 const structureSensitivityOptions: Array<{
   value: StructureSensitivity;
   label: string;
@@ -2202,28 +2212,6 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-2 rounded-lg border border-surface-line bg-black/20 p-1">
-        {[
-          { key: "combined", label: "종합", description: "구조와 지표를 함께 요약" },
-          { key: "ict", label: "ICT 구조", description: "MSB, CHoCH, OB, FVG 중심" },
-          { key: "technical", label: "기술지표", description: "RSI, MACD, 거래량 중심" }
-        ].map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            onClick={() => setRadarProfile(item.key as RadarProfile)}
-            className={`min-h-12 rounded-md border px-2 text-center transition ${
-              radarProfile === item.key
-                ? "border-accent-blue bg-accent-blue text-slate-950"
-                : "border-transparent bg-transparent text-slate-300 hover:border-accent-blue/40 hover:bg-white/5"
-            }`}
-          >
-            <span className="block text-sm font-black">{item.label}</span>
-            <span className="mt-0.5 hidden text-[10px] font-semibold opacity-80 sm:block">{item.description}</span>
-          </button>
-        ))}
-      </div>
-
       {altOnly && !visibleAltAnalysisGate.allowed ? (
         <div className="mt-4 rounded-lg border border-amber-300/30 bg-amber-300/10 p-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -3524,9 +3512,8 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           ) : null}
         </div>
       </div>
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-surface-line bg-slate-950/90 px-3 py-2 shadow-[0_-12px_36px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-        <div className="mx-auto max-w-md">
-          <p className="mb-1 text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">Timeframe</p>
+      <div className="fixed inset-x-3 bottom-3 z-40 mx-auto max-w-5xl rounded-lg border border-surface-line bg-slate-950/92 p-2 shadow-2xl shadow-black/40 backdrop-blur">
+        <div className="mx-auto max-w-5xl">
           <div className="grid grid-cols-5 gap-2">
             {modeTimeframes.map((timeframe) => (
               <button
@@ -3540,6 +3527,23 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 }`}
               >
                 {timeframe}
+              </button>
+            ))}
+          </div>
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
+            {radarProfileOptions.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setRadarProfile(item.key)}
+                className={`min-h-9 rounded-md border px-2 text-xs font-black transition ${
+                  radarProfile === item.key
+                    ? "border-white/20 bg-white text-slate-950"
+                    : "border-white/10 bg-white/[0.04] text-slate-300 hover:border-white/25"
+                }`}
+                title={item.description}
+              >
+                {item.label}
               </button>
             ))}
           </div>
