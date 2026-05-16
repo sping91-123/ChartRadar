@@ -1,24 +1,26 @@
 // 첫 진입에서 코인 레이더와 글로벌 레이더를 선택하게 하는 홈 화면입니다.
 import Image from "next/image";
 import Link from "next/link";
-import { Coins, TrendingUp } from "lucide-react";
+import { Bitcoin, TrendingUp } from "lucide-react";
 
 const marketEntries = [
   {
     title: "코인 레이더",
-    description: "오늘의 구조·위험·관망/추적 포인트를 빠르게 정리합니다.",
-    scope: "BTC/ETH/알트코인",
+    scope: "비트코인 및 이더리움 · 알트코인",
     href: "/crypto",
-    icon: Coins,
+    icon: Bitcoin,
+    iconFrame: "rounded-2xl border-white/10 bg-slate-950/60",
+    iconRing: "rounded-full border-cyan-200/25 bg-cyan-300/10",
     accent: "text-cyan-200",
     glow: "from-cyan-300/16"
   },
   {
     title: "글로벌 레이더",
-    description: "오늘의 구조·위험·관망/추적 포인트를 빠르게 정리합니다.",
-    scope: "미국주식/ETF/해외선물",
+    scope: "미국주식·ETF·해외선물",
     href: "/global",
     icon: TrendingUp,
+    iconFrame: "rounded-2xl border-white/10 bg-slate-950/60",
+    iconRing: null,
     accent: "text-emerald-200",
     glow: "from-emerald-300/16"
   }
@@ -46,12 +48,12 @@ export default function Home() {
             </div>
 
             <p className="max-w-2xl text-sm font-semibold leading-relaxed text-slate-200 sm:text-base">
-              차트를 오래 보지 않아도 오늘의 구조·위험·관망/추적 포인트를 빠르게 정리합니다.
+              오늘 시장의 방향성과 핵심 대응 포인트를 한눈에 제공합니다.
             </p>
           </header>
 
           <div className="grid w-full gap-4 md:grid-cols-2">
-            {marketEntries.map(({ title, description, scope, href, icon: Icon, accent, glow }) => (
+            {marketEntries.map(({ title, scope, href, icon: Icon, iconFrame, iconRing, accent, glow }) => (
               <Link
                 key={title}
                 href={href}
@@ -59,20 +61,21 @@ export default function Home() {
               >
                 <div className={`absolute inset-x-0 top-0 h-28 bg-gradient-to-b ${glow} to-transparent`} aria-hidden />
                 <div className="relative flex flex-col items-center gap-4">
-                  <div className={`grid h-16 w-16 place-items-center rounded-2xl border border-white/10 bg-slate-950/60 ${accent}`}>
-                    <Icon size={30} aria-hidden />
+                  <div className={`grid h-16 w-16 place-items-center border ${iconFrame} ${accent}`}>
+                    {iconRing ? (
+                      <div className={`grid h-11 w-11 place-items-center border ${iconRing}`} aria-hidden>
+                        <Icon size={26} aria-hidden />
+                      </div>
+                    ) : (
+                      <Icon size={30} aria-hidden />
+                    )}
                   </div>
                   <h2 className="text-3xl font-black tracking-tight text-white sm:text-4xl">{title}</h2>
-                  <p className="max-w-xs text-sm font-semibold leading-relaxed text-slate-200">{description}</p>
-                  <p className="text-xs font-bold text-slate-400">대상. {scope}</p>
+                  <p className="text-xs font-bold text-slate-400">{scope}</p>
                 </div>
               </Link>
             ))}
           </div>
-
-          <p className="text-center text-xs font-bold text-slate-400">
-            코인. BTC/ETH/알트코인 · 글로벌. 미국주식/ETF/해외선물
-          </p>
         </div>
       </section>
     </main>
