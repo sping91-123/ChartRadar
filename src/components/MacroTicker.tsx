@@ -23,6 +23,16 @@ function isRecentlyReleased(item: MacroEventItem) {
   return diff >= 0 && diff <= RECENT_RELEASE_WINDOW_MS;
 }
 
+function isWithinNextDay(item: MacroEventItem) {
+  const diff = new Date(item.releaseAt).getTime() - Date.now();
+  return diff > 0 && diff <= RECENT_RELEASE_WINDOW_MS;
+}
+
+function compactLeadLabel(item: MacroEventItem) {
+  if (isRecentlyReleased(item) || isWithinNextDay(item)) return "오늘 체크";
+  return "다음 발표";
+}
+
 function macroValueText(value?: string) {
   if (!value) return "미정";
   return value
@@ -213,20 +223,34 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
 
   if (compact) {
     const item = getCompactItem(calendar.items);
-    if (!item) return null;
+    if (!item) {
+      return (
+        <div className="rounded-md border border-white/10 bg-black/20 px-3 py-3 text-xs font-bold leading-5 text-slate-500 [word-break:keep-all]">
+          자동 캘린더에서 이번 주 주요 일정을 확인하는 중입니다.
+        </div>
+      );
+    }
+
+    const isTodayCheck = isRecentlyReleased(item) || isWithinNextDay(item);
 
     return (
       <Link
         href={market === "stocks" ? "/news?market=global" : "/news?market=crypto"}
         className="group flex min-h-10 items-center gap-2 rounded-md border border-accent-blue/15 bg-surface-card/78 px-2.5 py-2 shadow-[0_10px_34px_rgba(0,0,0,0.18)] transition hover:border-accent-blue/35 hover:bg-surface-card"
       >
-        <div className="inline-flex shrink-0 items-center gap-1.5 rounded border border-accent-blue/20 bg-accent-blue/10 px-2 py-1 text-[11px] font-black text-accent-blue">
+        <div
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded border px-2 py-1 text-[11px] font-black ${
+            isTodayCheck
+              ? "border-signal-warning/25 bg-signal-warning/10 text-signal-warning"
+              : "border-accent-blue/20 bg-accent-blue/10 text-accent-blue"
+          }`}
+        >
           <Radio size={12} aria-hidden />
-          매크로
+          {isTodayCheck ? "오늘 체크" : "매크로"}
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-[11px] font-black text-white">
-            {isRecentlyReleased(item) ? "최근 발표" : "다음 발표"} · <span className={compactStateClass(item)}>{stateLabel(item)}</span> · {macroLabel(item.label)}
+            {compactLeadLabel(item)} · <span className={compactStateClass(item)}>{stateLabel(item)}</span> · {macroLabel(item.label)}
           </p>
           <p className="mt-0.5 truncate text-[11px] font-bold text-slate-500">
             한국시간 {item.dateKst} · {refreshLabel} · 실제 {displayActual(item)} · 예상 {macroValueText(item.forecast)} · 이전 {macroValueText(item.previous)}
