@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 const CACHE_TTL_MS = 60 * 1000;
 const FETCH_TIMEOUT_MS = 4500;
 const BINANCE_FAPI = "https://fapi.binance.com";
+const BINANCE_SPOT_DATA_API = "https://data-api.binance.vision";
 const allowedPeriods = new Set(["5m", "15m", "30m", "1h", "2h", "4h", "6h", "12h", "1d"]);
 
 interface PremiumIndexPayload {
@@ -40,6 +41,21 @@ interface TakerLongShortRow {
   sellVol: string;
   timestamp: number;
 }
+
+type KlineRow = [
+  number,
+  string,
+  string,
+  string,
+  string,
+  string,
+  number,
+  string,
+  number,
+  string,
+  string,
+  string
+];
 
 interface CacheValue {
   cachedAt: number;
@@ -181,6 +197,35 @@ function settledValue<T>(result: PromiseSettledResult<T>, label: string) {
   return null;
 }
 
+function latestClose(rows: unknown) {
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  const last = rows[rows.length - 1] as Partial<KlineRow>;
+  return toNumber(last[4]);
+}
+
+async function fetchFallbackMarkPrice(symbol: string, period: string) {
+  const params = new URLSearchParams({
+    symbol,
+    interval: period,
+    limit: "2"
+  });
+  const endpoints = [
+    `${BINANCE_FAPI}/fapi/v1/klines?${params.toString()}`,
+    `${BINANCE_SPOT_DATA_API}/api/v3/klines?${params.toString()}`
+  ];
+
+  for (const endpoint of endpoints) {
+    try {
+      const close = latestClose(await fetchJson<KlineRow[]>(endpoint));
+      if (close !== null && close > 0) return close;
+    } catch (error) {
+      console.warn("[api/liquidation-pressure] fallback mark source failed:", error);
+    }
+  }
+
+  return null;
+}
+
 export async function GET(request: Request) {
   const limit = await rateLimit(request, { key: "liquidation-pressure", limit: 40, windowMs: 5 * 60 * 1000 });
   if (!limit.allowed) {
@@ -220,24 +265,27 @@ export async function GET(request: Request) {
       fetchJson<TakerLongShortRow[]>(`${BINANCE_FAPI}/futures/data/takerlongshortRatio?symbol=${symbol}&period=${period}&limit=1`)
     ]);
 
-    if (premiumIndexResult.status === "rejected") {
-      throw premiumIndexResult.reason;
-    }
-
-    const premiumIndexPayload = premiumIndexResult.value;
+    const premiumIndexPayload = settledValue(premiumIndexResult, "premiumIndex");
     const openInterestPayload = settledValue(openInterestResult, "openInterestHist");
     const globalLongShortPayload = settledValue(globalLongShortResult, "globalLongShortAccountRatio");
     const topAccountPayload = settledValue(topAccountResult, "topLongShortAccountRatio");
     const topPositionPayload = settledValue(topPositionResult, "topLongShortPositionRatio");
     const takerPayload = settledValue(takerResult, "takerlongshortRatio");
     const oi = openInterestChange(unwrapRows<OpenInterestHistRow>(openInterestPayload));
+    const premiumMarkPrice = toNumber(premiumIndexPayload?.markPrice);
+    const fallbackMarkPrice = premiumMarkPrice === null ? await fetchFallbackMarkPrice(symbol, period) : null;
+    const markPrice = premiumMarkPrice ?? fallbackMarkPrice;
+    if (markPrice === null || markPrice <= 0) {
+      throw new Error("Liquidation pressure mark price unavailable");
+    }
+
     const report = buildLiquidationPressureReport({
       symbol,
       period,
-      markPrice: Number(premiumIndexPayload.markPrice),
-      indexPrice: Number(premiumIndexPayload.indexPrice),
-      fundingRate: Number(premiumIndexPayload.lastFundingRate),
-      nextFundingTime: premiumIndexPayload.nextFundingTime,
+      markPrice,
+      indexPrice: toNumber(premiumIndexPayload?.indexPrice),
+      fundingRate: toNumber(premiumIndexPayload?.lastFundingRate),
+      nextFundingTime: premiumIndexPayload?.nextFundingTime ?? null,
       openInterestValue: oi.value,
       openInterestChangePercent: oi.changePercent,
       globalLongShort: parseLongShort(unwrapRows<LongShortRow>(globalLongShortPayload)[0] ?? null),
