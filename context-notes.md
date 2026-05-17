@@ -1514,6 +1514,12 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 알림은 매일 탐색하는 콘텐츠 탭보다 설정과 권한 확인에 가까우므로, 코인과 글로벌 메인 탭에서는 제거하고 헤더 우측 벨 아이콘으로 이동한다.
 - 기존 `/alerts` 라우트는 유지한다. 코인은 `/alerts?market=crypto`, 글로벌은 `/alerts?market=global`로 연결한다.
 - 설정은 메인 탭을 대체하지 않는다. 헤더 보조 메뉴 안에서 알림, 테마, 계정, 구독, 데이터, 약관 진입 구조만 제공한다.
+## 2026-05-16 복기 레이더 UX 개선.
+
+- `/journal`은 기존 저장 구조를 유지하면서 UX를 새로 구성한다. 새 칩 기반 입력값은 기존 `note`, `symbol`, `bias`, `outcome` 필드에 안전하게 담아 로컬 저장과 Supabase 저장을 모두 깨지 않도록 한다.
+- 실제 AI 호출이 없으므로 저장 후 카드는 `이번 복기 요약`이라는 규칙 기반 피드백으로 표현한다. 가짜 AI처럼 보이는 문구와 매수, 매도 추천성 표현은 피한다.
+- `market=global`은 내부 저장 모델의 `stocks` 범위를 유지하되 화면 문구는 글로벌 시장 기준으로 보여준다.
+- 검증은 타입 체크, 린트, 빌드, smoke:copy, smoke:ops를 통과했다. 브라우저에서는 `127.0.0.1:3010`에서 crypto 390px, global 데스크톱, 직접 저장 후 요약 카드와 히스토리 반영을 확인했다.
 
 ## 2026-05-17 계정 상태 중심 진입 흐름.
 
@@ -1521,3 +1527,11 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 첫 실행은 강제 로그인보다 스플래시 이후 로그인 또는 Basic 둘러보기 선택을 주는 흐름이 제품 진입 저항이 낮다. Basic 둘러보기 선택은 로컬 저장소에 남겨 같은 브라우저에서는 시장 선택 화면으로 바로 이어지게 한다.
 - 로그인 사용자는 스플래시 뒤 바로 기존 시장 선택 화면으로 진입한다. 비로그인 사용자는 계정 기반 기능을 설명받고, 필요하면 로그인 없이 Basic 상태로 탐색할 수 있다.
 - 검증은 `npm.cmd run build`와 `npm.cmd run smoke:all`을 통과했다. 로컬 개발 서버는 `127.0.0.1:3011`에서 홈 응답을 확인했다.
+## 2026-05-17 직접 Google 로그인 전환.
+
+- Supabase `/auth/v1/authorize`로 이동하면 Google 계정 선택 화면에 Supabase 프로젝트 도메인이 드러난다.
+- 선택한 방향은 Google Identity Services 버튼에서 Google ID 토큰을 직접 받고, Supabase Auth에는 `grant_type=id_token`으로 교환하는 방식이다.
+- 이 방식은 Google Cloud OAuth 동의 화면과 Web Client ID 설정이 실제 표시 이름을 결정한다.
+- 기존 `/auth/callback`은 레거시 Supabase OAuth 링크와 해시 복구용으로 남기는 편이 안전하다.
+- 앱 재실행 후 Pro 권한 유지가 더 중요하므로 refresh token 저장 기본값은 허용으로 둔다.
+- 검증은 `.next` 캐시 삭제 후 `npm.cmd run build`와 `npm.cmd run smoke:billing`을 통과했다.

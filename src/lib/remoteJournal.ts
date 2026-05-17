@@ -1,3 +1,4 @@
+// Supabase 저널 행과 클라이언트 복기 모델을 변환하는 유틸리티.
 import type { JournalEntry } from "@/lib/journal";
 import { fetchSupabaseUser, supabaseRest } from "@/lib/supabase";
 
@@ -17,6 +18,23 @@ interface JournalRow {
   created_at: string;
 }
 
+function inferMarket(verdictValue: string | null): JournalEntry["market"] {
+  const verdict = verdictValue?.toLowerCase() ?? "";
+  if (
+    verdict.includes("global") ||
+    verdict.includes("글로벌") ||
+    verdict.includes("해외주식") ||
+    verdict.includes("湲濡쒕쾶") ||
+    verdict.includes("?댁쇅二쇱떇")
+  ) {
+    return "stocks";
+  }
+  if (verdict.includes("crypto") || verdict.includes("코인") || verdict.includes("肄붿씤")) {
+    return "crypto";
+  }
+  return undefined;
+}
+
 function rowToEntry(row: JournalRow): JournalEntry {
   return {
     id: row.id,
@@ -24,7 +42,7 @@ function rowToEntry(row: JournalRow): JournalEntry {
     bias: row.bias,
     note: row.note,
     createdAt: row.created_at,
-    market: row.verdict?.includes("글로벌") || row.verdict?.includes("해외주식") ? "stocks" : row.verdict?.includes("코인") ? "crypto" : undefined,
+    market: inferMarket(row.verdict),
     source: row.source,
     symbol: row.symbol ?? undefined,
     timeframe: row.timeframe ?? undefined,
