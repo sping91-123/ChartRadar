@@ -3,11 +3,11 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Crown, Loader2, LogIn, LogOut } from "lucide-react";
+import { Crown, Loader2, LogIn, LogOut, UserCircle } from "lucide-react";
 import { getEntitlementLabel, hasAnyPaidEntitlement } from "@/lib/billing";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
-export function AuthStatus() {
+export function AuthStatus({ variant = "default" }: { variant?: "default" | "compact" } = {}) {
   const { user, profile, isLoading, signOut } = useSupabaseAuth();
   const [loginHref, setLoginHref] = useState("/login");
 
@@ -18,9 +18,41 @@ export function AuthStatus() {
 
   if (isLoading) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold text-slate-300">
+      <span className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold text-slate-300">
         <Loader2 className="animate-spin" size={13} aria-hidden />
         확인 중
+      </span>
+    );
+  }
+
+  const plan = profile?.plan ?? "free";
+  const isPaid = hasAnyPaidEntitlement(plan);
+  const planLabel = getEntitlementLabel(plan);
+
+  if (variant === "compact") {
+    if (!user) {
+      return (
+        <span
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-2.5 py-1 text-xs font-black text-cyan-100 sm:px-3"
+          title="Basic 상태입니다. 로그인은 설정 메뉴에서 진행할 수 있습니다."
+        >
+          <UserCircle size={14} aria-hidden />
+          Basic
+        </span>
+      );
+    }
+
+    return (
+      <span
+        className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-black sm:px-3 ${
+          isPaid
+            ? "border-amber-300/35 bg-amber-300/10 text-amber-100"
+            : "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"
+        }`}
+        title={isPaid ? `${planLabel} 이용 중` : "Basic 이용 중"}
+      >
+        <Crown size={14} aria-hidden />
+        <span className="max-w-[6.5rem] truncate">{isPaid ? planLabel : "Basic"}</span>
       </span>
     );
   }
@@ -29,7 +61,7 @@ export function AuthStatus() {
     return (
       <Link
         href={loginHref}
-        className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold text-slate-200 hover:border-accent-blue/50 hover:text-white"
+        className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold text-slate-200 hover:border-accent-blue/50 hover:text-white"
       >
         <LogIn size={13} aria-hidden />
         로그인
@@ -38,9 +70,6 @@ export function AuthStatus() {
   }
 
   const name = user.user_metadata?.name ?? user.user_metadata?.full_name ?? user.email ?? "회원";
-  const plan = profile?.plan ?? "free";
-  const isPaid = hasAnyPaidEntitlement(plan);
-  const planLabel = getEntitlementLabel(plan);
 
   return (
     <div className="flex flex-col items-end gap-1 sm:flex-row sm:items-center">

@@ -47,12 +47,7 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
 
   return (
     <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-      <Link
-        href={proHref}
-        className="enterprise-button rounded-lg border border-cyan-300/25 bg-cyan-300 px-2.5 py-1.5 text-xs font-black text-slate-950 transition hover:bg-cyan-200 sm:px-3"
-      >
-        Pro
-      </Link>
+      <AuthStatus variant="compact" />
       <Link
         href={alertHref}
         className="relative grid min-h-9 min-w-9 place-items-center rounded-lg border border-surface-line bg-surface-cardSoft text-slate-300 transition hover:border-cyan-300/45 hover:text-white"
@@ -69,9 +64,6 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
       <div className="hidden sm:block">
         <ThemeToggle />
       </div>
-      <div className="hidden md:block">
-        <AuthStatus />
-      </div>
       <details className="group relative">
         <summary
           className="grid min-h-9 min-w-9 cursor-pointer list-none place-items-center rounded-lg border border-surface-line bg-surface-cardSoft text-slate-300 transition hover:border-cyan-300/45 hover:text-white [&::-webkit-details-marker]:hidden"
@@ -86,7 +78,7 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
             <p className="mb-2 text-sm font-black text-white">테마 설정</p>
             <ThemeToggle />
           </div>
-          <div className="rounded-lg px-3 py-2.5 md:hidden">
+          <div className="rounded-lg px-3 py-2.5">
             <p className="mb-2 text-sm font-black text-white">계정</p>
             <AuthStatus />
           </div>
