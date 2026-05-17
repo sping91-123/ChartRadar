@@ -85,11 +85,13 @@ expectIncludes(radarNewsApi, "USE_GEMINI_NEWS_FALLBACK", "뉴스 Gemini fallback
 expectIncludes(radarNewsApi, "ensureKoreanText", "뉴스 브리핑 한국어 보정", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsApi, "오늘 확인할 주요 시장 이슈", "뉴스 기본 브리핑 문구", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsApi, "미국 물가 이슈", "뉴스 물가 표현 보강", "src/app/api/radar-news/route.ts");
+expectIncludes(radarNewsApi, "PERSONAL_FINANCE_NOISE_KEYWORDS", "뉴스 개인재무 노이즈 차단", "src/app/api/radar-news/route.ts");
+expectIncludes(radarNewsApi, "GLOBAL_MARKET_CONFIRMATION_KEYWORDS", "뉴스 매크로 문맥 확인", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsPanel, "뉴스 레이더", "코인 뉴스 요약 화면", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "오늘의 시장 레이더", "시장 레이더 요약 카드", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "자세히 보기", "뉴스 상세 브리핑 버튼", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "참고 뉴스", "참고 뉴스 목록 화면", "src/components/RadarNewsPanel.tsx");
-expectIncludes(radarNewsPanel, "chart-radar.news.${market}.v13", "뉴스 캐시 버전 갱신", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "chart-radar.news.${market}.v14", "뉴스 캐시 버전 갱신", "src/components/RadarNewsPanel.tsx");
 expectIncludes(newsPage, "이번 주 주요 매크로 일정", "매크로 일정 보조 섹션", "src/app/news/page.tsx");
 {
   const reportIndex = newsPage.indexOf("<RadarNewsPanel");

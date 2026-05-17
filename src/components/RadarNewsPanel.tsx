@@ -93,7 +93,7 @@ const marketCopy = {
 >;
 
 function newsCacheKey(market: RadarNewsMarket) {
-  return `chart-radar.news.${market}.v13`;
+  return `chart-radar.news.${market}.v14`;
 }
 
 function canUseStorage() {

@@ -163,9 +163,92 @@ const GLOBAL_MARKET_KEYWORDS = [
 
 const GLOBAL_MAJOR_ASSETS = ["nvidia", "apple", "microsoft", "tesla", "amazon", "meta", "google", "alphabet", "broadcom", "amd"];
 const GLOBAL_MARKET_CONTEXT = ["earnings", "guidance", "forecast", "chip", "ai", "data center", "antitrust", "tariff", "index", "market", "nasdaq", "s&p"];
+const GLOBAL_MARKET_CONFIRMATION_KEYWORDS = [
+  "fed",
+  "fomc",
+  "powell",
+  "treasury",
+  "yield",
+  "yields",
+  "bond market",
+  "cpi",
+  "ppi",
+  "pce",
+  "jobs report",
+  "payroll",
+  "jobless claims",
+  "unemployment rate",
+  "dollar",
+  "vix",
+  "nasdaq",
+  "s&p",
+  "dow",
+  "futures",
+  "wall street",
+  "stock market",
+  "stocks",
+  "equities",
+  "earnings",
+  "guidance",
+  "sector",
+  "semiconductor",
+  "chip",
+  "ai stocks",
+  "oil",
+  "crude",
+  "brent",
+  "wti",
+  "gold",
+  "recession",
+  "tariff"
+];
 const GLOBAL_GEOPOLITICAL_CONTEXT = ["china", "taiwan", "trump", "trade", "export", "sanction"];
 const GLOBAL_GEOPOLITICAL_MARKET_CONTEXT = ["tariff", "oil", "crude", "semiconductor", "chip", "taiwan", "trade", "export", "sanction", "treasury", "dollar"];
 const GLOBAL_NOISE_KEYWORDS = ["boeing", "jury", "lawsuit", "v. altman", "nasdaq debut", "ipo", "shares pop", "buying 200"];
+const PERSONAL_FINANCE_NOISE_KEYWORDS = [
+  "retirement",
+  "retire",
+  "retired",
+  "retirement plan",
+  "retirement planning",
+  "401(k)",
+  "ira",
+  "roth ira",
+  "social security",
+  "medicare",
+  "estate",
+  "inheritance",
+  "heirs",
+  "divorce",
+  "my daughter",
+  "my son",
+  "my wife",
+  "my husband",
+  "my mother",
+  "my father",
+  "daughter",
+  "son",
+  "family",
+  "drug problem",
+  "addiction",
+  "sell her house",
+  "selling her house",
+  "house sale",
+  "home sale",
+  "mortgage",
+  "personal finance",
+  "should i",
+  "can i",
+  "do i have to",
+  "what should i",
+  "your retirement",
+  "we traded our",
+  "smartphone",
+  "smartphones",
+  "flip phone",
+  "flip phones",
+  "ditch modern technology"
+];
 const CRYPTO_MAJOR_MARKET_KEYWORDS = [
   "bitcoin",
   "btc",
@@ -324,10 +407,21 @@ function keywordInText(text: string, keyword: string) {
   return text.includes(keyword);
 }
 
+function hasKeyword(text: string, keywords: readonly string[]) {
+  return keywords.some((keyword) => keywordInText(text, keyword));
+}
+
+function hasPersonalFinanceNoise(text: string) {
+  return hasKeyword(text, PERSONAL_FINANCE_NOISE_KEYWORDS);
+}
+
 function isMarketMovingGlobalNews(title: string) {
   const lower = title.toLowerCase();
-  const strongHit = GLOBAL_MARKET_KEYWORDS.some((keyword) => lower.includes(keyword));
-  if (strongHit && !GLOBAL_NOISE_KEYWORDS.some((keyword) => lower.includes(keyword))) return true;
+  if (hasPersonalFinanceNoise(lower) || hasKeyword(lower, GLOBAL_NOISE_KEYWORDS)) return false;
+
+  const strongHit = hasKeyword(lower, GLOBAL_MARKET_KEYWORDS);
+  const marketContextHit = hasKeyword(lower, GLOBAL_MARKET_CONFIRMATION_KEYWORDS);
+  if (strongHit && marketContextHit) return true;
 
   const hasGeopolitical = GLOBAL_GEOPOLITICAL_CONTEXT.some((keyword) => lower.includes(keyword));
   const hasGeoMarketContext = GLOBAL_GEOPOLITICAL_MARKET_CONTEXT.some((keyword) => lower.includes(keyword));
@@ -340,6 +434,8 @@ function isMarketMovingGlobalNews(title: string) {
 
 function cryptoMarketNewsScore(title: string) {
   const lower = title.toLowerCase();
+  if (hasPersonalFinanceNoise(lower)) return -10;
+
   const majorHits = CRYPTO_MAJOR_MARKET_KEYWORDS.filter((keyword) => keywordInText(lower, keyword)).length;
   const macroHits = CRYPTO_MACRO_KEYWORDS.filter((keyword) => keywordInText(lower, keyword)).length;
   const policyHits = CRYPTO_POLICY_KEYWORDS.filter((keyword) => keywordInText(lower, keyword)).length;
