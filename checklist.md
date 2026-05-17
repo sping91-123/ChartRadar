@@ -1791,3 +1791,10 @@
 - [x] 홈 진입 화면과 `/login`에 Kakao 로그인 버튼을 추가한다.
 - [x] Kakao와 Supabase 운영 설정 항목을 `.env.example`에 정리한다.
 - [x] 빌드로 Next.js 라우트와 타입 오류를 검증한다.
+
+## 2026-05-18 AI provider 비용 차단.
+
+- [x] 기본 AI 호출 후보를 Groq 단독으로 제한한다.
+- [x] Gemini fallback은 `ENABLE_GEMINI_AI_FALLBACK=true`일 때만 켜지게 한다.
+- [x] 헬스체크에서 Gemini 키가 있어도 기본 fallback으로 쓰지 않는다는 상태를 표시한다.
+- [x] 빌드와 smoke 검증을 실행한다.

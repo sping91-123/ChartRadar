@@ -1551,3 +1551,10 @@ The health endpoint now reports a launch readiness score and structured blocking
 - Kakao OpenID Connect 활성화와 Supabase Kakao provider 설정이 운영 배포의 필수 외부 설정이다.
 - KOE205는 동의항목 미설정 또는 OIDC scope 불일치에서 발생할 수 있어 기본 요청에서는 `scope` 파라미터를 보내지 않는다. 닉네임/이미지/이메일은 Kakao 동의항목을 켠 뒤 명시적으로 추가한다.
 - Kakao `id_token` Supabase 교환에서 nonce mismatch가 발생해 nonce는 제거하고, CSRF 방어는 서버 쿠키 `state` 검증으로 유지한다.
+
+## 2026-05-18 AI provider 비용 차단.
+
+- 운영 비용 예측 가능성을 우선해 일반 AI 코멘트와 시장 브리핑 provider는 Groq를 기본 단독 후보로 둔다.
+- `GEMINI_API_KEY`가 환경변수에 남아 있어도 `ENABLE_GEMINI_AI_FALLBACK=true`가 없으면 Gemini를 호출하지 않는다.
+- Groq가 실패하면 Gemini가 아니라 기존 규칙 기반 fallback으로 내려가는 것이 기본 동작이다.
+- Vercel 운영 환경에서는 Gemini를 쓰지 않을 계획이면 `GEMINI_API_KEY` 자체를 제거하고, Groq 콘솔에는 spend limit을 걸어야 실제 과금 리스크가 줄어든다.

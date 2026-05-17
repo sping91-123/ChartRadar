@@ -67,6 +67,8 @@ expectIncludes(requestEntitlement, "getRequestEntitlement", "서버 권한 판�
 expectIncludes(requestEntitlement, "hasMarketEntitlement", "시장별 Pro 권한 판별", "src/lib/server/requestEntitlement.ts");
 expectIncludes(envExample, "UPSTASH_REDIS_REST_URL=", "운영 환경변수 예시", ".env.example");
 expectIncludes(envExample, "GROQ_API_KEY=", "Groq 환경변수 예시", ".env.example");
+expectIncludes(envExample, "ENABLE_GEMINI_AI_FALLBACK=", "Gemini AI fallback 명시 옵션", ".env.example");
+expectIncludes(read("src/lib/ai/index.ts"), "ENABLE_GEMINI_AI_FALLBACK", "Gemini AI fallback 기본 비활성화", "src/lib/ai/index.ts");
 expectIncludes(supabaseClient, "NEXT_PUBLIC_ALLOW_LOCAL_REFRESH_TOKEN", "refresh token 저장 보호 옵션", "src/lib/supabase.ts");
 expectIncludes(billingLib, "crypto_monthly", "코인 단독 요금제", "src/lib/billing.ts");
 expectIncludes(billingLib, "global_monthly", "글로벌 단독 요금제", "src/lib/billing.ts");

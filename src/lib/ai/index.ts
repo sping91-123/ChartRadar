@@ -10,12 +10,13 @@ function buildAIProviderCandidates() {
   const providers: AIProvider[] = [];
   const groqKey = process.env.GROQ_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY;
+  const geminiFallbackEnabled = process.env.ENABLE_GEMINI_AI_FALLBACK === "true";
 
   if (groqKey) {
     providers.push(new GroqProvider(groqKey, process.env.GROQ_MODEL));
   }
 
-  if (geminiKey) {
+  if (geminiFallbackEnabled && geminiKey) {
     providers.push(new GeminiProvider(geminiKey));
   }
 

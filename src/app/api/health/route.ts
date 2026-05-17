@@ -61,6 +61,8 @@ export async function GET() {
   const macroAgeHours = hoursSince(macroCalendarPayload.updatedAt);
   const hasGroq = hasValue(process.env.GROQ_API_KEY);
   const hasGemini = hasValue(process.env.GEMINI_API_KEY);
+  const geminiAiFallbackEnabled = process.env.ENABLE_GEMINI_AI_FALLBACK === "true";
+  const hasEnabledGeminiFallback = geminiAiFallbackEnabled && hasGemini;
   const hasTossSecret = hasValue(process.env.TOSS_PAYMENTS_SECRET_KEY);
   const hasTossClient = hasValue(process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY);
   const hasRevenueCatAndroid = hasValue(process.env.NEXT_PUBLIC_REVENUECAT_ANDROID_API_KEY);
@@ -70,7 +72,7 @@ export async function GET() {
   const hasSupabaseUrl = hasValue(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const hasSupabaseKey = hasValue(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
   const hasSiteUrl = hasValue(getConfiguredSiteUrl());
-  const hasAIProvider = hasGroq || hasGemini;
+  const hasAIProvider = hasGroq || hasEnabledGeminiFallback;
   const hasPaymentProvider = hasTossSecret && hasTossClient;
   const hasAppPaymentProvider = hasRevenueCatRest && hasSupabaseAdmin && (hasRevenueCatAndroid || hasRevenueCatIos);
   const hasAndroidBillingProvider = hasRevenueCatAndroid && hasRevenueCatRest && hasSupabaseAdmin;
@@ -149,7 +151,8 @@ export async function GET() {
   ].filter((item): item is { area: string; label: string; env: string; reason: string } => Boolean(item));
   const warnings = [
     hasSupabaseUrl && hasSupabaseKey ? null : "로그인 연결 정보가 아직 준비되지 않았습니다.",
-    hasAIProvider ? null : "AI 제공자가 아직 연결되지 않았습니다.",
+    hasAIProvider ? null : "AI 제공자가 아직 연결되지 않았습니다. 기본 운영 provider는 Groq입니다.",
+    hasGemini && !geminiAiFallbackEnabled ? "Gemini 키가 있어도 ENABLE_GEMINI_AI_FALLBACK=true가 아니면 AI fallback으로 사용하지 않습니다." : null,
     hasSiteUrl ? null : "서비스 공개 URL이 아직 설정되지 않았습니다.",
     hasPaymentProvider || hasAppPaymentProvider ? null : "웹 결제 또는 앱 구독 결제 도구가 아직 연결되지 않았습니다.",
     paymentLinksReady || readyForAndroidBilling || readyForIosBilling ? null : `플랜별 결제 링크가 아직 비어 있습니다. ${missingPlanPaymentLinks.join(", ")}`,
@@ -173,7 +176,8 @@ export async function GET() {
     checks: {
       supabasePublic: hasSupabaseUrl && hasSupabaseKey,
       siteUrl: hasSiteUrl,
-      aiProvider: hasGroq ? "groq" : hasGemini ? "gemini" : "not-configured",
+      aiProvider: hasGroq ? "groq" : hasEnabledGeminiFallback ? "gemini-fallback" : "not-configured",
+      geminiAiFallbackEnabled,
       paymentProvider: hasPaymentProvider ? "toss-payments" : "not-configured",
       appBillingProvider: hasAppPaymentProvider ? "revenuecat" : "not-configured",
       readyForWebCheckout,
