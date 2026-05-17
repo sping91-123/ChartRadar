@@ -1558,3 +1558,10 @@ The health endpoint now reports a launch readiness score and structured blocking
 - `GEMINI_API_KEY`가 환경변수에 남아 있어도 `ENABLE_GEMINI_AI_FALLBACK=true`가 없으면 Gemini를 호출하지 않는다.
 - Groq가 실패하면 Gemini가 아니라 기존 규칙 기반 fallback으로 내려가는 것이 기본 동작이다.
 - Vercel 운영 환경에서는 Gemini를 쓰지 않을 계획이면 `GEMINI_API_KEY` 자체를 제거하고, Groq 콘솔에는 spend limit을 걸어야 실제 과금 리스크가 줄어든다.
+
+## 2026-05-18 설정 메뉴 정리.
+
+- 설정 메뉴는 보조 링크 모음보다 계정과 지원 진입점에 집중하는 편이 낫다. 알림은 상단 벨 아이콘이 있으므로 설정에서 제거한다.
+- 상단의 Basic/Pro 배지가 계정 상태를 이미 보여주므로 설정 안에서는 기존 `AuthStatus`를 쓰지 않고, 플랜 정보와 회원정보 관리를 분리한다.
+- 로그아웃은 설정을 열자마자 보이지 않도록 회원정보관리 접힘 영역 안에 둔다.
+- 지표 안내는 실제 학습 페이지로 연결하고, 고객센터, FAQ, 정기결제 현황은 준비 중 항목으로 둔다.
