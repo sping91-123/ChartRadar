@@ -4,6 +4,7 @@ import type { BillingEntitlementPlan } from "@/lib/billing";
 export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 export const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
 export const googleOAuthClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+export const kakaoRestApiKey = process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY ?? "";
 
 export const supabaseSessionStorageKey = "chartRadar.supabase.session";
 export const supabaseAuthRefreshEvent = "chartRadar.supabase.authRefresh";
@@ -31,6 +32,8 @@ export interface SupabaseUser {
   user_metadata?: {
     name?: string;
     full_name?: string;
+    nickname?: string;
+    preferred_username?: string;
     avatar_url?: string;
     picture?: string;
   };
@@ -68,6 +71,10 @@ export function isSupabaseConfigured() {
 
 export function isGoogleOAuthConfigured() {
   return Boolean(isSupabaseConfigured() && googleOAuthClientId);
+}
+
+export function isKakaoOAuthConfigured() {
+  return Boolean(isSupabaseConfigured() && kakaoRestApiKey);
 }
 
 export function parseSessionFromHash(hash: string): SupabaseSession | null {

@@ -5,11 +5,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Bitcoin, TrendingUp } from "lucide-react";
-import { getSupabaseSession, isGoogleOAuthConfigured } from "@/lib/supabase";
+import { GoogleLoginButton } from "@/components/GoogleLoginButton";
+import { KakaoLoginButton } from "@/components/KakaoLoginButton";
+import { getSupabaseSession } from "@/lib/supabase";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
-const basicBrowseKey = "chartRadar.basicBrowse.v1";
-const authReturnToStorageKey = "chartRadar.auth.returnTo";
 const skipSplashAfterAuthKey = "chartRadar.skipSplashAfterAuth.v1";
 const brandLetters = Array.from("Chart Radar");
 
@@ -128,7 +128,7 @@ function SplashScreen() {
   );
 }
 
-function LoginPrompt({ onBrowseBasic, onGoogleLogin, configured }: { onBrowseBasic: () => void; onGoogleLogin: () => void; configured: boolean }) {
+function LoginPrompt({ onBrowseBasic }: { onBrowseBasic: () => void }) {
   return (
     <main className="grid min-h-screen place-items-center px-4 py-6 sm:px-6 sm:py-8">
       <section className="enterprise-panel w-full max-w-md rounded-2xl p-5 text-center sm:p-8">
@@ -139,28 +139,16 @@ function LoginPrompt({ onBrowseBasic, onGoogleLogin, configured }: { onBrowseBas
             같은 계정에서 이어서 사용할 수 있습니다.
           </p>
           <div className="grid w-full gap-2">
-            <button
-              type="button"
-              disabled={!configured}
-              onClick={onGoogleLogin}
-              className="inline-flex min-h-11 items-center justify-center gap-3 rounded-lg border border-white/10 bg-white px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <span className="grid h-5 w-5 place-items-center" aria-hidden>
-                <svg viewBox="0 0 24 24" className="h-5 w-5">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                  <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.84z" />
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06L5.84 9.9C6.71 7.31 9.14 5.38 12 5.38z" />
-                </svg>
-              </span>
-              Google로 계속하기
-            </button>
+            <GoogleLoginButton returnTo="/" />
+            <KakaoLoginButton returnTo="/" />
             <button
               type="button"
               onClick={onBrowseBasic}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-black text-slate-100 transition hover:border-cyan-300/35 hover:bg-white/[0.07]"
+              className="mx-auto grid h-10 w-full max-w-[360px] grid-cols-[40px_1fr_40px] items-center rounded border border-[#dadce0] bg-white px-0 text-[14px] font-medium text-[#3c4043] shadow-none transition hover:bg-[#f8fafd]"
             >
-              로그인 없이 둘러보기
+              <span aria-hidden />
+              <span className="text-center">로그인 없이 둘러보기</span>
+              <span aria-hidden />
             </button>
           </div>
         </div>
@@ -217,17 +205,13 @@ function MarketSelector() {
 
 export function HomeEntryGate() {
   const { user, isLoading } = useSupabaseAuth();
-  const [skipSplashAfterAuth, setSkipSplashAfterAuth] = useState(() =>
-    typeof window !== "undefined" ? window.sessionStorage.getItem(skipSplashAfterAuthKey) === "true" : false
-  );
-  const [showSplash, setShowSplash] = useState(() => !skipSplashAfterAuth);
-  const [hasStoredSession, setHasStoredSession] = useState(() => (typeof window !== "undefined" ? Boolean(getSupabaseSession()) : false));
+  const [skipSplashAfterAuth, setSkipSplashAfterAuth] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
+  const [hasStoredSession, setHasStoredSession] = useState(false);
   const [basicBrowse, setBasicBrowse] = useState(false);
 
   useEffect(() => {
-    window.localStorage.removeItem(basicBrowseKey);
     setHasStoredSession(Boolean(getSupabaseSession()));
-    setBasicBrowse(window.sessionStorage.getItem(basicBrowseKey) === "true");
 
     if (window.sessionStorage.getItem(skipSplashAfterAuthKey) === "true") {
       window.sessionStorage.removeItem(skipSplashAfterAuthKey);
@@ -241,13 +225,7 @@ export function HomeEntryGate() {
   }, []);
 
   const startBasicBrowse = () => {
-    window.sessionStorage.setItem(basicBrowseKey, "true");
     setBasicBrowse(true);
-  };
-
-  const startGoogleLogin = () => {
-    window.sessionStorage.setItem(authReturnToStorageKey, "/");
-    window.location.href = "/login?returnTo=%2F";
   };
 
   if (showSplash) {
@@ -259,7 +237,7 @@ export function HomeEntryGate() {
   }
 
   if (!user && !basicBrowse) {
-    return <LoginPrompt onBrowseBasic={startBasicBrowse} onGoogleLogin={startGoogleLogin} configured={isGoogleOAuthConfigured()} />;
+    return <LoginPrompt onBrowseBasic={startBasicBrowse} />;
   }
 
   return <MarketSelector />;

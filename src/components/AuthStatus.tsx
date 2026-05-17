@@ -7,6 +7,20 @@ import { Crown, Loader2, LogIn, LogOut, UserCircle } from "lucide-react";
 import { getEntitlementLabel, hasAnyPaidEntitlement } from "@/lib/billing";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
+type AuthUser = NonNullable<ReturnType<typeof useSupabaseAuth>["user"]>;
+
+function getAccountLabel(user: AuthUser, displayName?: string | null) {
+  return (
+    displayName ??
+    user.user_metadata?.name ??
+    user.user_metadata?.full_name ??
+    user.user_metadata?.nickname ??
+    user.user_metadata?.preferred_username ??
+    user.email ??
+    `회원 ${user.id.slice(0, 6)}`
+  );
+}
+
 export function AuthStatus({ variant = "default" }: { variant?: "default" | "compact" } = {}) {
   const { user, profile, isLoading, signOut } = useSupabaseAuth();
   const [loginHref, setLoginHref] = useState("/login");
@@ -69,7 +83,7 @@ export function AuthStatus({ variant = "default" }: { variant?: "default" | "com
     );
   }
 
-  const name = user.user_metadata?.name ?? user.user_metadata?.full_name ?? user.email ?? "회원";
+  const name = getAccountLabel(user, profile?.display_name);
 
   return (
     <div className="flex flex-col items-end gap-1 sm:flex-row sm:items-center">

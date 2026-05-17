@@ -1535,3 +1535,19 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 기존 `/auth/callback`은 레거시 Supabase OAuth 링크와 해시 복구용으로 남기는 편이 안전하다.
 - 앱 재실행 후 Pro 권한 유지가 더 중요하므로 refresh token 저장 기본값은 허용으로 둔다.
 - 검증은 `.next` 캐시 삭제 후 `npm.cmd run build`와 `npm.cmd run smoke:billing`을 통과했다.
+
+## 2026-05-18 로그인 첫 화면 복구.
+
+- `로그인 없이 둘러보기`는 영구 선택이 아니라 이번 방문에서만 시장 선택으로 넘어가는 행동이어야 한다.
+- Google 계정 선택 화면의 앱 이름은 코드가 아니라 Google 인증 플랫폼 브랜딩의 앱 이름에서 나온다.
+- Google 인증 플랫폼 브랜딩의 앱 이름을 `Coters Survive`에서 `Chart Radar`로 저장했다.
+- 첫 화면의 Google 버튼도 `/login` 경유가 아니라 Google Identity Services 버튼으로 직접 계정 선택을 연다.
+
+## 2026-05-18 Kakao 로그인 추가.
+
+- Kakao는 공식 REST API 기준으로 인가코드 발급 후 서버에서 `https://kauth.kakao.com/oauth/token`을 호출해야 `id_token`을 안정적으로 받을 수 있다.
+- Supabase 세션, RLS, Pro 권한 구조는 Google 작업과 동일하게 유지하고, Kakao `id_token`만 Supabase `grant_type=id_token`으로 교환한다.
+- Supabase OAuth redirect를 쓰지 않으므로 사용자는 로그인 시작 시 Supabase 프로젝트 도메인을 보지 않는다.
+- Kakao OpenID Connect 활성화와 Supabase Kakao provider 설정이 운영 배포의 필수 외부 설정이다.
+- KOE205는 동의항목 미설정 또는 OIDC scope 불일치에서 발생할 수 있어 기본 요청에서는 `scope` 파라미터를 보내지 않는다. 닉네임/이미지/이메일은 Kakao 동의항목을 켠 뒤 명시적으로 추가한다.
+- Kakao `id_token` Supabase 교환에서 nonce mismatch가 발생해 nonce는 제거하고, CSRF 방어는 서버 쿠키 `state` 검증으로 유지한다.
