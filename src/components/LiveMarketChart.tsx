@@ -975,11 +975,15 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
   const [hasMounted, setHasMounted] = useState(false);
   const effectiveTradingMode: TradingMode = activeTimeframe === "5m" || activeTimeframe === "15m" ? "scalp" : "swing";
   const modeTimeframes = chartTimeframes;
-  const primarySymbols = altOnly ? altSymbols.slice(0, 5) : majorSymbols;
-  const allSelectableSymbols = dynamicSymbols.length > 0 ? dynamicSymbols : symbols;
-  const otherSymbols = majorOnly
-    ? []
-    : allSelectableSymbols.filter((item) => !majorSymbols.includes(item) && !primarySymbols.includes(item)).slice(0, 220);
+  const primarySymbols = useMemo(() => (altOnly ? altSymbols.slice(0, 5) : majorSymbols), [altOnly]);
+  const allSelectableSymbols = useMemo(() => (dynamicSymbols.length > 0 ? dynamicSymbols : symbols), [dynamicSymbols]);
+  const otherSymbols = useMemo(
+    () =>
+      majorOnly
+        ? []
+        : allSelectableSymbols.filter((item) => !majorSymbols.includes(item) && !primarySymbols.includes(item)).slice(0, 220),
+    [allSelectableSymbols, majorOnly, primarySymbols]
+  );
   const filteredOtherSymbols = useMemo(() => {
     const query = otherSymbolQuery.trim().toUpperCase();
     if (!query) return otherSymbols;
