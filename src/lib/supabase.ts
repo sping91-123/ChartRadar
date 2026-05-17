@@ -1,16 +1,16 @@
 // Supabase 로그인 세션과 REST 호출을 관리합니다.
 import type { BillingEntitlementPlan } from "@/lib/billing";
-import { getConfiguredSiteUrl } from "@/lib/siteUrl";
 
 export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 export const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
+export const googleOAuthClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
 export const supabaseSessionStorageKey = "chartRadar.supabase.session";
 export const supabaseAuthRefreshEvent = "chartRadar.supabase.authRefresh";
 const legacyUntitledRiskSupabaseSessionStorageKey = "untitledRisk.supabase.session";
 const legacyPreviousBrandSupabaseSessionStorageKey = `${"position"}${"guard"}.supabase.session`;
 const legacySupabaseSessionStorageKey = "co" + "ters.supabase.session";
-const allowLocalRefreshToken = process.env.NEXT_PUBLIC_ALLOW_LOCAL_REFRESH_TOKEN === "true";
+const allowLocalRefreshToken = process.env.NEXT_PUBLIC_ALLOW_LOCAL_REFRESH_TOKEN !== "false";
 
 export interface SupabaseSession {
   accessToken: string;
@@ -66,17 +66,8 @@ export function isSupabaseConfigured() {
   return Boolean(supabaseUrl && supabasePublishableKey);
 }
 
-export function getOAuthUrl(provider: "google", redirectPath = "/auth/callback") {
-  if (!isSupabaseConfigured() || typeof window === "undefined") return "";
-
-  const authBaseUrl = window.location.origin || getConfiguredSiteUrl();
-  const redirectTo = new URL(redirectPath, authBaseUrl).toString();
-  const params = new URLSearchParams({
-    provider,
-    redirect_to: redirectTo
-  });
-
-  return `${supabaseUrl}/auth/v1/authorize?${params.toString()}`;
+export function isGoogleOAuthConfigured() {
+  return Boolean(isSupabaseConfigured() && googleOAuthClientId);
 }
 
 export function parseSessionFromHash(hash: string): SupabaseSession | null {
@@ -194,6 +185,48 @@ export async function refreshSupabaseSession(session: SupabaseSession): Promise<
   const nextSession: SupabaseSession = {
     accessToken: payload.access_token,
     refreshToken: payload.refresh_token ?? session.refreshToken,
+    expiresAt: payload.expires_in ? Math.floor(Date.now() / 1000) + payload.expires_in : undefined,
+    tokenType: payload.token_type
+  };
+
+  saveSupabaseSession(nextSession);
+  return nextSession;
+}
+
+export async function exchangeGoogleIdToken(idToken: string, nonce: string): Promise<SupabaseSession> {
+  if (!isSupabaseConfigured()) throw new Error("로그인을 잠시 사용할 수 없습니다.");
+  if (!idToken) throw new Error("Google 로그인 정보를 받지 못했습니다.");
+
+  const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=id_token`, {
+    method: "POST",
+    headers: {
+      apikey: supabasePublishableKey,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      provider: "google",
+      id_token: idToken,
+      nonce
+    })
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || "Google 로그인 처리에 실패했습니다.");
+  }
+
+  const payload = (await response.json()) as {
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+    token_type?: string;
+  };
+
+  if (!payload.access_token) throw new Error("Supabase 세션을 만들지 못했습니다.");
+
+  const nextSession: SupabaseSession = {
+    accessToken: payload.access_token,
+    refreshToken: payload.refresh_token,
     expiresAt: payload.expires_in ? Math.floor(Date.now() / 1000) + payload.expires_in : undefined,
     tokenType: payload.token_type
   };
