@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { parseSessionFromHash, saveSupabaseSession } from "@/lib/supabase";
 
 const authReturnToStorageKey = "chartRadar.auth.returnTo";
+const skipSplashAfterAuthKey = "chartRadar.skipSplashAfterAuth.v1";
 
 function safeReturnTo(value: string | null) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
@@ -20,6 +21,7 @@ export function AuthHashRescue() {
     saveSupabaseSession(session);
     const returnTo = safeReturnTo(window.sessionStorage.getItem(authReturnToStorageKey)) ?? "/crypto";
     window.sessionStorage.removeItem(authReturnToStorageKey);
+    window.sessionStorage.setItem(skipSplashAfterAuthKey, "true");
     window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
     window.location.replace(returnTo);
   }, []);

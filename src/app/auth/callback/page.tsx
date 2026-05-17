@@ -6,6 +6,7 @@ import { CheckCircle2, Loader2 } from "lucide-react";
 import { parseSessionFromHash, saveSupabaseSession } from "@/lib/supabase";
 
 const authReturnToStorageKey = "chartRadar.auth.returnTo";
+const skipSplashAfterAuthKey = "chartRadar.skipSplashAfterAuth.v1";
 
 function safeReturnTo(value: string | null) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
@@ -29,14 +30,8 @@ export default function AuthCallbackPage() {
 
     saveSupabaseSession(session);
     window.sessionStorage.removeItem(authReturnToStorageKey);
-    setMessage("로그인이 완료되었습니다. 보던 화면으로 돌아갑니다.");
-    setIsDone(true);
-
-    const id = window.setTimeout(() => {
-      window.location.href = returnTo;
-    }, 900);
-
-    return () => window.clearTimeout(id);
+    window.sessionStorage.setItem(skipSplashAfterAuthKey, "true");
+    window.location.replace(returnTo);
   }, []);
 
   return (
