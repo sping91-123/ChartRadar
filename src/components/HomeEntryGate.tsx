@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Bitcoin, TrendingUp } from "lucide-react";
-import { isGoogleOAuthConfigured } from "@/lib/supabase";
+import { getSupabaseSession, isGoogleOAuthConfigured } from "@/lib/supabase";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 const basicBrowseKey = "chartRadar.basicBrowse.v1";
@@ -221,10 +221,13 @@ export function HomeEntryGate() {
     typeof window !== "undefined" ? window.sessionStorage.getItem(skipSplashAfterAuthKey) === "true" : false
   );
   const [showSplash, setShowSplash] = useState(() => !skipSplashAfterAuth);
+  const [hasStoredSession, setHasStoredSession] = useState(() => (typeof window !== "undefined" ? Boolean(getSupabaseSession()) : false));
   const [basicBrowse, setBasicBrowse] = useState(false);
 
   useEffect(() => {
-    setBasicBrowse(window.localStorage.getItem(basicBrowseKey) === "true");
+    window.localStorage.removeItem(basicBrowseKey);
+    setHasStoredSession(Boolean(getSupabaseSession()));
+    setBasicBrowse(window.sessionStorage.getItem(basicBrowseKey) === "true");
 
     if (window.sessionStorage.getItem(skipSplashAfterAuthKey) === "true") {
       window.sessionStorage.removeItem(skipSplashAfterAuthKey);
@@ -238,7 +241,7 @@ export function HomeEntryGate() {
   }, []);
 
   const startBasicBrowse = () => {
-    window.localStorage.setItem(basicBrowseKey, "true");
+    window.sessionStorage.setItem(basicBrowseKey, "true");
     setBasicBrowse(true);
   };
 
@@ -247,11 +250,11 @@ export function HomeEntryGate() {
     window.location.href = "/login?returnTo=%2F";
   };
 
-  if (showSplash || (isLoading && !skipSplashAfterAuth)) {
+  if (showSplash) {
     return <SplashScreen />;
   }
 
-  if (isLoading && skipSplashAfterAuth) {
+  if (isLoading && (skipSplashAfterAuth || hasStoredSession)) {
     return <MarketSelector />;
   }
 
