@@ -7,6 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const CACHE_TTL_MS = 60 * 1000;
+const FETCH_TIMEOUT_MS = 4500;
 const BINANCE_FAPI = "https://fapi.binance.com";
 const allowedPeriods = new Set(["5m", "15m", "30m", "1h", "2h", "4h", "6h", "12h", "1d"]);
 
@@ -106,16 +107,24 @@ function unwrapRows<T>(payload: unknown): T[] {
 }
 
 async function fetchJson<T>(url: string) {
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" },
-    cache: "no-store"
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-  if (!response.ok) {
-    throw new Error(`Binance ${response.status}`);
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      throw new Error(`Binance ${response.status}`);
+    }
+
+    return (await response.json()) as T;
+  } finally {
+    clearTimeout(timer);
   }
-
-  return (await response.json()) as T;
 }
 
 function parseLongShort(row: LongShortRow | null): LongShortSnapshot {
@@ -145,15 +154,31 @@ function parseTakerFlow(row: TakerLongShortRow | null): TakerFlowSnapshot {
 }
 
 function openInterestChange(rows: OpenInterestHistRow[]) {
-  if (rows.length < 2) return { value: null as number | null, changePercent: null as number | null };
-  const first = toNumber(rows[0]?.sumOpenInterestValue);
-  const last = toNumber(rows[rows.length - 1]?.sumOpenInterestValue);
-  if (!first || first <= 0 || last === null) return { value: last, changePercent: null };
+  const sortedRows = rows
+    .filter((row) => Number.isFinite(Number(row.timestamp)))
+    .sort((a, b) => a.timestamp - b.timestamp);
+  if (sortedRows.length < 2) return { value: null as number | null, changePercent: null as number | null };
+
+  const firstRow = sortedRows[0];
+  const lastRow = sortedRows[sortedRows.length - 1];
+  const firstContracts = toNumber(firstRow?.sumOpenInterest);
+  const lastContracts = toNumber(lastRow?.sumOpenInterest);
+  const firstValue = toNumber(firstRow?.sumOpenInterestValue);
+  const lastValue = toNumber(lastRow?.sumOpenInterestValue);
+  const first = firstContracts ?? firstValue;
+  const last = lastContracts ?? lastValue;
+  if (!first || first <= 0 || last === null) return { value: lastValue, changePercent: null };
 
   return {
-    value: last,
+    value: lastValue,
     changePercent: ((last - first) / first) * 100
   };
+}
+
+function settledValue<T>(result: PromiseSettledResult<T>, label: string) {
+  if (result.status === "fulfilled") return result.value;
+  console.warn(`[api/liquidation-pressure] optional Binance source failed: ${label}`, result.reason);
+  return null;
 }
 
 export async function GET(request: Request) {
@@ -180,13 +205,13 @@ export async function GET(request: Request) {
 
   try {
     const [
-      premiumIndexPayload,
-      openInterestPayload,
-      globalLongShortPayload,
-      topAccountPayload,
-      topPositionPayload,
-      takerPayload
-    ] = await Promise.all([
+      premiumIndexResult,
+      openInterestResult,
+      globalLongShortResult,
+      topAccountResult,
+      topPositionResult,
+      takerResult
+    ] = await Promise.allSettled([
       fetchJson<PremiumIndexPayload>(`${BINANCE_FAPI}/fapi/v1/premiumIndex?symbol=${symbol}`),
       fetchJson<OpenInterestHistRow[]>(`${BINANCE_FAPI}/futures/data/openInterestHist?symbol=${symbol}&period=${period}&limit=12`),
       fetchJson<LongShortRow[]>(`${BINANCE_FAPI}/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=${period}&limit=1`),
@@ -195,6 +220,16 @@ export async function GET(request: Request) {
       fetchJson<TakerLongShortRow[]>(`${BINANCE_FAPI}/futures/data/takerlongshortRatio?symbol=${symbol}&period=${period}&limit=1`)
     ]);
 
+    if (premiumIndexResult.status === "rejected") {
+      throw premiumIndexResult.reason;
+    }
+
+    const premiumIndexPayload = premiumIndexResult.value;
+    const openInterestPayload = settledValue(openInterestResult, "openInterestHist");
+    const globalLongShortPayload = settledValue(globalLongShortResult, "globalLongShortAccountRatio");
+    const topAccountPayload = settledValue(topAccountResult, "topLongShortAccountRatio");
+    const topPositionPayload = settledValue(topPositionResult, "topLongShortPositionRatio");
+    const takerPayload = settledValue(takerResult, "takerlongshortRatio");
     const oi = openInterestChange(unwrapRows<OpenInterestHistRow>(openInterestPayload));
     const report = buildLiquidationPressureReport({
       symbol,

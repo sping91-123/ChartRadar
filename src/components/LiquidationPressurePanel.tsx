@@ -12,7 +12,7 @@ interface LiquidationPressurePanelProps {
 
 type LoadState =
   | { status: "loading" }
-  | { status: "ready"; report: LiquidationPressureReport; cached: boolean }
+  | { status: "ready"; report: LiquidationPressureReport; cached: boolean; isRefreshing?: boolean; stale?: boolean }
   | { status: "error"; message: string };
 
 function compactSymbol(symbol: string) {
@@ -116,7 +116,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
     const controller = new AbortController();
 
     async function load() {
-      setState({ status: "loading" });
+      setState((current) => (current.status === "ready" ? { ...current, isRefreshing: true } : { status: "loading" }));
       try {
         const response = await fetch(`/api/liquidation-pressure?symbol=${encodeURIComponent(symbol)}&period=${timeframe}`, {
           cache: "no-store",
@@ -125,6 +125,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
         const payload = (await response.json().catch(() => ({}))) as {
           report?: LiquidationPressureReport;
           cached?: boolean;
+          stale?: boolean;
           error?: string;
         };
 
@@ -132,10 +133,14 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
           throw new Error(payload.error ?? "청산 압력 흐름을 잠시 확인하지 못했습니다.");
         }
 
-        if (alive) setState({ status: "ready", report: payload.report, cached: Boolean(payload.cached) });
+        if (alive) setState({ status: "ready", report: payload.report, cached: Boolean(payload.cached), stale: Boolean(payload.stale) });
       } catch (error) {
         if (!alive || controller.signal.aborted) return;
-        setState({ status: "error", message: error instanceof Error ? error.message : "청산 압력 흐름을 잠시 확인하지 못했습니다." });
+        setState((current) =>
+          current.status === "ready"
+            ? { ...current, isRefreshing: false, stale: true }
+            : { status: "error", message: error instanceof Error ? error.message : "청산 압력 흐름을 잠시 확인하지 못했습니다." }
+        );
       }
     }
 
@@ -186,6 +191,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
 
   const upsideWidth = `${Math.round((report.upsideShortPressure / pressureTotal) * 100)}%`;
   const downsideWidth = `${Math.round((report.downsideLongPressure / pressureTotal) * 100)}%`;
+  const dataStatusLabel = state.isRefreshing ? "갱신 중" : state.stale ? "최근 저장값" : state.cached ? "캐시" : "실시간";
 
   return (
     <section className="rounded-lg border border-accent-blue/20 bg-surface-cardSoft p-4 shadow-glow">
@@ -199,6 +205,9 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <span className="inline-flex items-center rounded-md border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-black text-slate-400">
+            {dataStatusLabel}
+          </span>
           <span className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-black ${dominantClasses(report.dominantSide)}`}>
             {report.dominantSide === "upsideShorts" ? <ArrowUp size={13} aria-hidden /> : report.dominantSide === "downsideLongs" ? <ArrowDown size={13} aria-hidden /> : <Gauge size={13} aria-hidden />}
             {sideLabel(report.dominantSide)}

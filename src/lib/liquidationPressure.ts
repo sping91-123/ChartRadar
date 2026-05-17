@@ -87,9 +87,10 @@ function crowdingScore(percent: number | null, weight: number) {
   return Math.max(0, percent - 50) * weight;
 }
 
-function oiHeat(openInterestChangePercent: number | null) {
+function oiHeat(openInterestChangePercent: number | null, period: string) {
   if (openInterestChangePercent === null) return 0;
-  return Math.max(0, openInterestChangePercent) * 4;
+  const periodWeight = period === "5m" || period === "15m" ? 2.2 : period === "30m" || period === "1h" ? 2.8 : 3.4;
+  return Math.min(Math.max(0, openInterestChangePercent), 8) * periodWeight;
 }
 
 function fundingHeat(fundingRatePercent: number | null, side: "long" | "short") {
@@ -162,7 +163,7 @@ export function buildLiquidationPressureReport(input: BuildLiquidationPressureIn
       crowdingScore(topPositionLongShort.longPercent, 0.9) +
       fundingHeat(fundingRatePercent, "long") +
       takerHeat(takerFlow, "long") +
-      oiHeat(openInterestChangePercent)
+      oiHeat(openInterestChangePercent, input.period)
   );
 
   const upsideShortPressure = clamp(
@@ -172,7 +173,7 @@ export function buildLiquidationPressureReport(input: BuildLiquidationPressureIn
       crowdingScore(topPositionLongShort.shortPercent, 0.9) +
       fundingHeat(fundingRatePercent, "short") +
       takerHeat(takerFlow, "short") +
-      oiHeat(openInterestChangePercent)
+      oiHeat(openInterestChangePercent, input.period)
   );
 
   const side = dominantSide(upsideShortPressure, downsideLongPressure);
