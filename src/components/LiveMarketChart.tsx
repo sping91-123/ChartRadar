@@ -603,6 +603,49 @@ function userFacingNextStep(analysis: MarketAnalysis | null) {
   return "반응 확인 후 판단";
 }
 
+function uniqueText(items: string[]) {
+  return Array.from(new Set(items.filter(Boolean)));
+}
+
+function buildAltAnalysisRiskSignals(analysis: MarketAnalysis, active?: TimeframeAnalysis) {
+  const signals: string[] = [];
+
+  if (
+    active?.condition.rsiState === "overbought" ||
+    active?.condition.keltnerPosition === "outsideUpper" ||
+    active?.condition.bollingerPosition === "outsideUpper"
+  ) {
+    signals.push("급등 추격 주의");
+  }
+  if (active?.condition.volatilityState === "expanded") {
+    signals.push("변동성 확대");
+    signals.push("BTC 방향성 의존");
+  }
+  if (active?.condition.volumeState === "low") {
+    signals.push("거래량 부족");
+    signals.push("저유동성 리스크");
+  }
+  if (analysis.bias === "neutral" || active?.condition.regime === "mixed") {
+    signals.push("상방/하방 근거 혼재");
+  }
+  if (analysis.readiness !== "high") signals.push("리스크 점검");
+
+  return uniqueText([...signals, ...analysis.riskFlags]).slice(0, 5);
+}
+
+function altAnalysisFilterLabel(analysis: MarketAnalysis, active?: TimeframeAnalysis) {
+  const risks = buildAltAnalysisRiskSignals(analysis, active);
+  if (risks.includes("급등 추격 주의") || risks.includes("변동성 확대") || risks.length >= 3) return "고위험 구간";
+  if (analysis.bias === "neutral" || analysis.readiness === "low") return "관망 우위";
+  return "추적 후보";
+}
+
+function altAnalysisFilterClass(label: string) {
+  if (label === "고위험 구간") return "border-signal-danger/30 bg-signal-danger/10 text-signal-danger";
+  if (label === "관망 우위") return "border-signal-warning/30 bg-signal-warning/10 text-signal-warning";
+  return "border-accent-blue/30 bg-accent-blue/10 text-accent-blue";
+}
+
 function overlayPresetMatches(settings: OverlaySettings, preset: keyof typeof overlayPresets) {
   const target = overlayPresets[preset];
   return (Object.keys(target) as Array<keyof OverlaySettings>).every((key) => settings[key] === target[key]);
@@ -1003,7 +1046,10 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
   const { profile } = useSupabaseAuth();
   const hasCoinPro = hasMarketEntitlement(profile?.plan, "crypto");
   const isMajorScreen = majorOnly && !altOnly;
+  const isBasicAltView = altOnly && !hasCoinPro;
+  const canShowAltProDetails = !altOnly || hasCoinPro;
   const canShowMajorProDetails = !isMajorScreen || hasCoinPro;
+  const canShowDetailedAnalysis = canShowMajorProDetails && canShowAltProDetails;
   const chartRef = useRef<HTMLDivElement | null>(null);
   const chartApiRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -1344,6 +1390,14 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
     () => analysis?.timeframeAnalyses.find((item) => item.timeframe === activeTimeframe),
     [analysis, activeTimeframe]
   );
+  const altRiskSignals = useMemo(
+    () => (analysis ? buildAltAnalysisRiskSignals(analysis, activeAnalysis) : []),
+    [activeAnalysis, analysis]
+  );
+  const altFilterLabel = useMemo(
+    () => (analysis ? altAnalysisFilterLabel(analysis, activeAnalysis) : "추적 대기"),
+    [activeAnalysis, analysis]
+  );
   const activeDealingRange = activeAnalysis?.dealingRange ?? {
     high: null,
     low: null,
@@ -1357,8 +1411,8 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
     [hasCoinPro, radarInsight]
   );
   const hasAnyOverlay = useMemo(
-    () => canShowMajorProDetails && Object.values(overlaySettings).some(Boolean),
-    [canShowMajorProDetails, overlaySettings]
+    () => canShowDetailedAnalysis && Object.values(overlaySettings).some(Boolean),
+    [canShowDetailedAnalysis, overlaySettings]
   );
   const combinedScoreLimit = useMemo(() => {
     if (!analysis) return null;
@@ -1374,6 +1428,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
   }, [activeTimeframe, analysis, effectiveTradingMode]);
 
   const marketBriefingInput = useMemo<MarketBriefingInput | null>(() => {
+    if (isBasicAltView) return null;
     if (!analysis || !activeAnalysis) return null;
 
     const scenario = analysis.proPlan
@@ -1456,7 +1511,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
       })),
       scenario
     };
-  }, [activeAnalysis, activeDealingRange.position, activeTimeframe, analysis, combinedScoreLimit]);
+  }, [activeAnalysis, activeDealingRange.position, activeTimeframe, analysis, combinedScoreLimit, isBasicAltView]);
   const marketBriefingScopeKey = `${symbol}.${activeTimeframe}`;
 
   useEffect(() => {
@@ -1510,7 +1565,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
     markersRef.current?.setMarkers([]);
 
     if (!activeAnalysis) return;
-    if (!canShowMajorProDetails) return;
+    if (!canShowDetailedAnalysis) return;
 
     const lines: Array<{ price: number | null | undefined; color: string; title: string; style?: LineStyle }> = [];
     const markers: SeriesMarker<Time>[] = [];
@@ -1681,7 +1736,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         })
       );
     markersRef.current?.setMarkers(markers);
-  }, [activeAnalysis, canShowMajorProDetails, candles, overlaySettings]);
+  }, [activeAnalysis, canShowDetailedAnalysis, candles, overlaySettings]);
 
   const mtfFvgMap = useMemo(
     () =>
@@ -2380,7 +2435,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         </div>
       )}
 
-      {canShowMajorProDetails ? (
+      {canShowDetailedAnalysis ? (
         <div className="mt-3">
           <button
             type="button"
@@ -2393,7 +2448,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         </div>
       ) : null}
 
-      {showAdvancedControls && canShowMajorProDetails ? (
+      {showAdvancedControls && canShowDetailedAnalysis ? (
         <div className="mt-3 rounded-lg border border-surface-line bg-surface-cardSoft p-3">
           <div className="rounded-md border border-white/10 bg-black/20 p-3">
             <p className="text-xs font-semibold text-slate-400">차트 표시 설정</p>
@@ -2534,7 +2589,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               </div>
             ) : null}
           </div>
-          {activeAnalysis && radarProfile !== "technical" ? (
+          {activeAnalysis && !isBasicAltView && radarProfile !== "technical" ? (
             <div className="border-t border-surface-line bg-black/20 px-4 py-3">
               <div className="flex flex-wrap gap-2 text-[11px] font-semibold text-slate-300">
                 <span className="rounded-md border border-emerald-400/20 bg-emerald-400/10 px-2 py-1 text-emerald-300">OB</span>
@@ -2560,19 +2615,21 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             </div>
           ) : null}
 
-          <div className={`rounded-lg border p-4 ${isMajorScreen ? "border-surface-line bg-surface-cardSoft text-slate-200" : biasClasses(analysis?.bias)}`}>
+          <div className={`rounded-lg border p-4 ${isBasicAltView ? altAnalysisFilterClass(altFilterLabel) : isMajorScreen ? "border-surface-line bg-surface-cardSoft text-slate-200" : biasClasses(analysis?.bias)}`}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold opacity-80">{isMajorScreen ? "상단 판단의 근거 요약" : "레이더 판독"}</p>
+                <p className="text-xs font-semibold opacity-80">{isBasicAltView ? "알트 리스크 요약" : isMajorScreen ? "상단 판단의 근거 요약" : "레이더 판독"}</p>
                 <h3 className="mt-1 text-2xl font-black">
-                  {analysis ? (isMajorScreen ? "아래 데이터는 판단 보조 근거입니다" : analysis.verdict) : "레이더 대기 중"}
+                  {analysis ? (isBasicAltView ? altFilterLabel : isMajorScreen ? "아래 데이터는 판단 보조 근거입니다" : analysis.verdict) : "레이더 대기 중"}
                 </h3>
               </div>
               <Activity size={26} aria-hidden />
             </div>
             <p className="mt-3 text-sm leading-6 text-slate-300">
               {analysis
-                ? isMajorScreen
+                ? isBasicAltView
+                  ? `요약 리스크: ${altRiskSignals[0] ?? "리스크 점검"}. 세부 추적 조건과 가격 기준은 Pro에서 확인합니다.`
+                  : isMajorScreen
                   ? "최종 판단, 판단 강도, 추적 조건, 무효화 조건은 상단 Radar Insight에서 확인하고, 이 영역은 그 판단을 만든 구조·기술 근거만 확인합니다."
                   : `종합 점수 ${analysis.biasScore}${combinedScoreLimit ? ` / -${combinedScoreLimit}~+${combinedScoreLimit}` : ""}. ${analysis.summaryLine}`
                 : "캔들 데이터를 불러오고 있습니다."}
@@ -2592,6 +2649,11 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                         : "Basic에서는 구체 조건, 가격 레벨, 무효화 기준을 렌더링하지 않습니다."}
                     </span>
                   </div>
+                ) : isBasicAltView ? (
+                  <div className="rounded-md border border-white/10 bg-black/15 p-3 text-sm leading-6 text-slate-100">
+                    <span className="block text-xs font-semibold text-slate-400">공개 리스크</span>
+                    <span className="mt-1 block">{altRiskSignals[0] ?? "리스크 점검"}</span>
+                  </div>
                 ) : (
                   <div className="rounded-md border border-white/10 bg-black/15 p-3 text-sm leading-6 text-slate-100">
                     <span className="block text-xs font-semibold text-slate-400">행동 가이드</span>
@@ -2600,7 +2662,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 )}
               </div>
             ) : null}
-            {analysis && (!isMajorScreen || hasCoinPro) ? (
+            {analysis && canShowDetailedAnalysis ? (
               <div className="mt-3">
                 <button
                   type="button"
@@ -2617,18 +2679,30 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 {savedMessage}
               </p>
             ) : null}
+            {analysis && isBasicAltView ? (
+              <div className="mt-3 rounded-md border border-cyan-300/25 bg-cyan-300/10 px-3 py-3">
+                <p className="text-xs font-black text-cyan-100">Coin Pro 상세 판단 보조</p>
+                <p className="mt-1 text-sm leading-6 text-slate-300 [word-break:keep-all]">
+                  무효화 조건, 구체 가격 레벨, AI 브리핑, 상세 체크포인트는 Basic에서 렌더링하지 않습니다.
+                </p>
+              </div>
+            ) : null}
           </div>
 
-          {analysis && activeAnalysis ? (
+          {analysis && activeAnalysis && !isBasicAltView ? (
             <LiquidationPressurePanel symbol={symbol} timeframe={activeTimeframe} />
           ) : null}
 
-          {analysis && activeAnalysis && isMajorScreen && !hasCoinPro ? (
+          {analysis && activeAnalysis && ((isMajorScreen && !hasCoinPro) || isBasicAltView) ? (
             <div className="rounded-lg border border-cyan-300/20 bg-cyan-300/10 p-4">
               <p className="text-xs font-black text-cyan-100">Pro 판단 보조</p>
-              <h3 className="mt-1 text-lg font-black text-white">AI 레이더 브리핑은 Pro에서 상세 근거로 열립니다.</h3>
+              <h3 className="mt-1 text-lg font-black text-white">
+                {isBasicAltView ? "AI 알트 브리핑은 Coin Pro에서 상세 근거로 열립니다." : "AI 레이더 브리핑은 Pro에서 상세 근거로 열립니다."}
+              </h3>
               <p className="mt-2 text-sm leading-6 text-slate-300 [word-break:keep-all]">
-                Basic 화면에서는 상단 판단 요약과 일반 리스크까지만 제공합니다. 구체 조건, 가격 레벨, 무효화 기준이 포함될 수 있는 AI 상세 브리핑은 렌더링하지 않습니다.
+                {isBasicAltView
+                  ? "Basic 알트 화면에서는 큰 분류와 요약 리스크까지만 제공합니다. 구체 조건, 가격 레벨, 무효화 기준이 포함될 수 있는 AI 상세 브리핑은 렌더링하지 않습니다."
+                  : "Basic 화면에서는 상단 판단 요약과 일반 리스크까지만 제공합니다. 구체 조건, 가격 레벨, 무효화 기준이 포함될 수 있는 AI 상세 브리핑은 렌더링하지 않습니다."}
               </p>
             </div>
           ) : analysis && activeAnalysis ? (
@@ -2718,7 +2792,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             </div>
           ) : null}
 
-          {analysis && activeAnalysis && activeAnalysis.condition && radarProfile === "ict" ? (
+          {analysis && activeAnalysis && activeAnalysis.condition && !isBasicAltView && radarProfile === "ict" ? (
             <div id="ict-radar" className="scroll-mt-24 rounded-lg border border-surface-line bg-surface-cardSoft p-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
@@ -2801,9 +2875,9 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             </div>
           ) : null}
 
-          {analysis && radarProfile === "technical" ? <TechnicalRadarPanel candles={candles} timeframe={activeTimeframe} /> : null}
+          {analysis && !isBasicAltView && radarProfile === "technical" ? <TechnicalRadarPanel candles={candles} timeframe={activeTimeframe} /> : null}
 
-          {analysis && activeAnalysis && activeAnalysis.condition && radarProfile === "combined" ? (
+          {analysis && activeAnalysis && activeAnalysis.condition && !isBasicAltView && radarProfile === "combined" ? (
             <div id="radar-dashboard" className="scroll-mt-24 rounded-lg border border-surface-line bg-surface-cardSoft p-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
@@ -2942,7 +3016,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             </div>
           ) : null}
 
-          {analysis && canShowMajorProDetails && radarProfile !== "technical" ? (
+          {analysis && canShowDetailedAnalysis && radarProfile !== "technical" ? (
             <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
               <h3 className="text-sm font-bold text-white">지금 볼 구간</h3>
               <div className="mt-3 space-y-2">
@@ -2955,7 +3029,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             </div>
           ) : null}
 
-          {analysis && canShowMajorProDetails && radarProfile !== "technical" ? (
+          {analysis && canShowDetailedAnalysis && radarProfile !== "technical" ? (
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
                 <h3 className="text-sm font-bold text-white">현재 위치 판단</h3>
@@ -2972,7 +3046,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             </div>
           ) : null}
 
-          {analysis?.proPlan && canShowMajorProDetails && radarProfile !== "technical" ? (
+          {analysis?.proPlan && canShowDetailedAnalysis && radarProfile !== "technical" ? (
             <div className="rounded-lg border border-accent-blue/30 bg-accent-blue/10 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
@@ -3001,7 +3075,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 ))}
               </div>
             </div>
-          ) : analysis && canShowMajorProDetails && radarProfile !== "technical" ? (
+          ) : analysis && canShowDetailedAnalysis && radarProfile !== "technical" ? (
             <div className="rounded-lg border border-signal-warning/25 bg-signal-warning/10 p-4">
               <p className="text-sm font-bold text-signal-warning">분석 시나리오 대기</p>
               <p className="mt-2 text-sm leading-6 text-slate-300">
@@ -3020,7 +3094,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             </div>
           ) : null}
 
-          {analysis && canShowMajorProDetails && radarProfile !== "technical" ? (
+          {analysis && canShowDetailedAnalysis && radarProfile !== "technical" ? (
             <button
               type="button"
               onClick={() => setShowDetailedReadout((value) => !value)}
@@ -3030,7 +3104,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             </button>
           ) : null}
 
-          {showDetailedReadout && canShowMajorProDetails && radarProfile !== "technical" ? (
+          {showDetailedReadout && canShowDetailedAnalysis && radarProfile !== "technical" ? (
             <>
           {analysis ? (
             <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
@@ -3536,9 +3610,9 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             </>
           ) : null}
 
-          {analysis && canShowMajorProDetails ? (
+          {analysis && canShowDetailedAnalysis ? (
             <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
-              <h3 className="text-sm font-bold text-white">{isMajorScreen ? "판단 근거 상세" : "판독 근거"}</h3>
+              <h3 className="text-sm font-bold text-white">{isMajorScreen || altOnly ? "판단 근거 상세" : "판독 근거"}</h3>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-md border border-signal-success/20 bg-signal-success/5 p-3">
                   <p className="text-xs font-bold text-signal-success">상승 근거</p>

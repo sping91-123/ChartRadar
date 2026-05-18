@@ -6,12 +6,14 @@ import {
   ArrowUpRight,
   Bot,
   CheckCircle2,
+  Crown,
   Loader2,
   RefreshCw,
   Radar,
   Save,
   Target
 } from "lucide-react";
+import Link from "next/link";
 import {
   readScoutCache,
   writeScoutCache,
@@ -39,6 +41,15 @@ type CommentaryState =
   | { status: "loading" }
   | { status: "ready"; text: string; cached: boolean }
   | { status: "error" };
+
+type AltFilterBucket = "candidate" | "watch" | "danger";
+
+interface AltFilterMeta {
+  bucket: AltFilterBucket;
+  label: string;
+  description: string;
+  className: string;
+}
 
 const numberFormatter = new Intl.NumberFormat("ko-KR", {
   maximumFractionDigits: 4,
@@ -84,6 +95,115 @@ function formatPriceWithSymbol(price: number) {
 
 function formatDistance(value: number) {
   return numberFormatter.format(Math.abs(value));
+}
+
+function uniqueItems(items: string[]) {
+  return Array.from(new Set(items.filter(Boolean)));
+}
+
+function activeSetupAnalysis(setup: ScoutSetup) {
+  return setup.analysis.timeframeAnalyses.find((item) => item.timeframe === setup.timeframe);
+}
+
+function buildAltRiskSignals(setup: ScoutSetup) {
+  const active = activeSetupAnalysis(setup);
+  const signals: string[] = [];
+
+  if (setup.status === "active" || setup.proximity === "ready") signals.push("급등 추격 주의");
+  if (setup.watchKind === "counter" || active?.condition.regime === "mixed") {
+    signals.push("상방/하방 근거 혼재");
+    signals.push("BTC 방향성 의존");
+  }
+  if (active?.condition.volatilityState === "expanded") {
+    signals.push("변동성 확대");
+    signals.push("BTC 방향성 의존");
+  }
+  if (active?.condition.volumeState === "low") {
+    signals.push("거래량 부족");
+    signals.push("저유동성 리스크");
+  }
+  if (setup.distancePercent > 3 || setup.proximity === "wait") signals.push("추적 대기");
+  if (setup.analysis.readiness !== "high") signals.push("리스크 점검");
+
+  return uniqueItems([...signals, ...setup.analysis.riskFlags]).slice(0, 6);
+}
+
+function summarizeAltRisk(setup: ScoutSetup) {
+  return buildAltRiskSignals(setup)[0] ?? "리스크 점검";
+}
+
+function classifyAltSetup(setup: ScoutSetup): AltFilterMeta {
+  const riskSignals = buildAltRiskSignals(setup);
+  const highRisk =
+    setup.status === "active" ||
+    setup.watchKind === "counter" ||
+    riskSignals.includes("급등 추격 주의") ||
+    riskSignals.includes("변동성 확대") ||
+    riskSignals.length >= 3;
+
+  if (highRisk) {
+    return {
+      bucket: "danger",
+      label: "고위험",
+      description: "추격, 변동성, 유동성 리스크를 먼저 걸러야 하는 구간입니다.",
+      className: "border-signal-danger/35 bg-signal-danger/15 text-signal-danger"
+    };
+  }
+
+  if (setup.status === "watch" || setup.proximity === "wait") {
+    return {
+      bucket: "watch",
+      label: "관망",
+      description: "구조 확인 전까지 추적 대기 성격이 강한 구간입니다.",
+      className: "border-signal-warning/35 bg-signal-warning/15 text-signal-warning"
+    };
+  }
+
+  return {
+    bucket: "candidate",
+    label: "추적 후보",
+    description: "위험 신호를 확인하면서 우선순위에 올려볼 수 있는 후보입니다.",
+    className: "border-accent-blue/35 bg-accent-blue/15 text-accent-blue"
+  };
+}
+
+function altJudgmentLabel(setup: ScoutSetup, meta: AltFilterMeta) {
+  if (meta.bucket === "danger") return "고위험";
+  if (meta.bucket === "watch") return "관망 우위";
+  return setup.plan.side === "long" ? "롱 우위" : "숏 우위";
+}
+
+function buildAltBtcInfluence(setup: ScoutSetup) {
+  const active = activeSetupAnalysis(setup);
+  if (setup.watchKind === "counter" || active?.condition.regime === "mixed") {
+    return "BTC 방향성 확인 전까지 알트 단독 신호를 보수적으로 봅니다.";
+  }
+  if (active?.condition.volatilityState === "expanded") {
+    return "BTC 변동이 커지면 알트 변동성이 먼저 확대될 수 있습니다.";
+  }
+  return "BTC/ETH 방향이 같은 쪽으로 유지되는지 함께 확인합니다.";
+}
+
+function AltProCta({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={`rounded-lg border border-cyan-300/25 bg-cyan-300/10 ${compact ? "p-3" : "p-4"}`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-black text-cyan-100">Coin Pro 알트 필터</p>
+          <p className="mt-1 text-sm leading-6 text-slate-300 [word-break:keep-all]">
+            추적 조건, 무효화 조건, 가격 레벨, 상세 근거는 Pro에서 확인합니다.
+          </p>
+        </div>
+        <Link
+          href="/pro?market=crypto"
+          className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-md bg-cyan-300 px-3 text-xs font-black text-slate-950 transition hover:bg-cyan-200"
+        >
+          <Crown size={14} aria-hidden />
+          Coin Pro 보기
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 function ScoreBadge({ score }: { score: number }) {
@@ -350,18 +470,30 @@ function buildJournalNote(setup: ScoutSetup) {
 function SetupCard({
   setup,
   rank,
-  riskProfile
+  riskProfile,
+  isAltFilterMode,
+  canShowAltProDetails
 }: {
   setup: ScoutSetup;
   rank: number;
   riskProfile: ScoutRiskProfile;
+  isAltFilterMode: boolean;
+  canShowAltProDetails: boolean;
 }) {
   const isLong = setup.plan.side === "long";
   const sideColor = isLong ? "text-signal-success" : "text-signal-danger";
   const SideIcon = isLong ? ArrowUpRight : ArrowDownRight;
   const symbol = setup.symbol.replace("USDT.P", "");
+  const altMeta = isAltFilterMode ? classifyAltSetup(setup) : null;
+  const altRiskSignals = isAltFilterMode ? buildAltRiskSignals(setup) : [];
+  const altSummaryRisk = isAltFilterMode ? summarizeAltRisk(setup) : null;
+  const shouldShowProDetails = !isAltFilterMode || canShowAltProDetails;
   const modeCardClass =
-    setup.timeframe === "5m" || setup.timeframe === "15m"
+    isAltFilterMode && altMeta?.bucket === "danger"
+      ? "border-signal-danger/30 bg-signal-danger/5 hover:border-signal-danger/50"
+      : isAltFilterMode && altMeta?.bucket === "watch"
+        ? "border-signal-warning/30 bg-signal-warning/5 hover:border-signal-warning/50"
+        : setup.timeframe === "5m" || setup.timeframe === "15m"
       ? "border-accent-blue/25 bg-accent-blue/5 hover:border-accent-blue/50"
       : setup.timeframe === "1h"
         ? "border-cyan-300/25 bg-cyan-300/5 hover:border-cyan-300/50"
@@ -428,94 +560,174 @@ function SetupCard({
     <article className={`rounded-lg border p-4 [word-break:keep-all] transition ${modeCardClass}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-bold text-slate-500">TOP {rank}</p>
+          <p className="text-xs font-bold text-slate-500">{isAltFilterMode ? "ALT FILTER" : "TOP"} {rank}</p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <h3 className="text-base font-black text-white">{symbol}</h3>
             <span className="whitespace-nowrap rounded border border-white/10 bg-black/20 px-1.5 py-0.5 text-xs font-bold text-slate-300">
               {setup.timeframe}
             </span>
             <SideIcon className={sideColor} size={16} aria-hidden />
-            <span className={`whitespace-nowrap text-xs font-bold ${sideColor}`}>{isLong ? "롱 우세" : "숏 우세"}</span>
-            <span className={`whitespace-nowrap rounded border px-1.5 py-0.5 text-xs font-bold ${modeBadgeClass}`}>
-              {setup.plan.quality}급
+            <span className={`whitespace-nowrap text-xs font-bold ${isAltFilterMode && altMeta?.bucket !== "candidate" ? "text-slate-300" : sideColor}`}>
+              {isAltFilterMode && altMeta ? altJudgmentLabel(setup, altMeta) : isLong ? "롱 우세" : "숏 우세"}
             </span>
+            {shouldShowProDetails ? (
+              <span className={`whitespace-nowrap rounded border px-1.5 py-0.5 text-xs font-bold ${modeBadgeClass}`}>
+                {setup.plan.quality}급
+              </span>
+            ) : null}
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <StatusBadge setup={setup} riskProfile={riskProfile} />
-          <ScoreBadge score={setup.score} />
+          {isAltFilterMode && altMeta ? (
+            <span className={`inline-flex items-center whitespace-nowrap rounded-md border px-2 py-1 text-[11px] font-black ${altMeta.className}`}>
+              {altMeta.label}
+            </span>
+          ) : (
+            <StatusBadge setup={setup} riskProfile={riskProfile} />
+          )}
+          {shouldShowProDetails ? <ScoreBadge score={setup.score} /> : null}
         </div>
       </div>
 
-      <div className="mt-3">
-        <ProximityBadge setup={setup} />
-      </div>
+      {isAltFilterMode ? (
+        <div className="mt-3 grid grid-cols-2 gap-2 text-center">
+          <div className="rounded border border-white/10 bg-black/30 px-2 py-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">현재가</p>
+            <p className="mt-1 text-xs font-bold text-white">{formatPriceWithSymbol(setup.currentPrice)}</p>
+          </div>
+          <div className={`rounded border px-2 py-2 ${altMeta?.className ?? "border-white/10 bg-black/20 text-slate-300"}`}>
+            <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">분류</p>
+            <p className="mt-1 text-xs font-black">{altMeta?.label ?? "리스크 점검"}</p>
+          </div>
+        </div>
+      ) : null}
 
-      <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-300">{setup.plan.entryLabel}</p>
-      {setup.status === "watch" && setup.watchReason ? (
+      {isAltFilterMode && !shouldShowProDetails ? (
+        <div className="mt-3 rounded-md border border-white/10 bg-black/20 px-3 py-2">
+          <p className="text-[11px] font-bold text-slate-400">요약 리스크</p>
+          <p className="mt-1 text-sm font-black text-white">{altSummaryRisk}</p>
+          <p className="mt-1 text-[11px] leading-5 text-slate-500">
+            추적 조건과 무효화 조건은 Pro에서 렌더링합니다.
+          </p>
+        </div>
+      ) : null}
+
+      {shouldShowProDetails ? (
+        <div className="mt-3">
+          <ProximityBadge setup={setup} />
+        </div>
+      ) : null}
+
+      {shouldShowProDetails ? (
+        <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-300">{setup.plan.entryLabel}</p>
+      ) : null}
+      {shouldShowProDetails && setup.status === "watch" && setup.watchReason ? (
         <p className="mt-3 line-clamp-2 rounded-md border border-signal-warning/25 bg-signal-warning/10 px-3 py-2 text-[11px] leading-5 text-signal-warning">
           <span className="font-black">관찰 사유.</span> {setup.watchReason}
           {setup.watchKind === "counter" ? " 반대 방향 구간 감시." : ""}
         </p>
       ) : null}
-      <EvidenceChips setup={setup} />
+      {shouldShowProDetails ? <EvidenceChips setup={setup} /> : null}
 
-      <div className="mt-3 grid grid-cols-2 gap-2 text-center">
-        <div className="rounded border border-white/10 bg-black/30 px-2 py-2">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">현재가</p>
-          <p className="mt-1 text-xs font-bold text-white">{formatPriceWithSymbol(setup.currentPrice)}</p>
+      {shouldShowProDetails && isAltFilterMode ? (
+        <div className="mt-3 rounded-md border border-orange-400/20 bg-orange-400/10 px-3 py-2 text-[11px] leading-5 text-orange-100">
+          <span className="font-black">BTC 영향.</span> {buildAltBtcInfluence(setup)}
         </div>
-        <div className="rounded border border-accent-blue/20 bg-accent-blue/5 px-2 py-2">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-accent-blue">관찰 구간</p>
-          <p className="mt-1 text-xs font-bold text-white">
-            {formatPriceWithSymbol(setup.plan.entryLow)} ~ {formatPriceWithSymbol(setup.plan.entryHigh)}
-          </p>
+      ) : null}
+
+      {shouldShowProDetails && altRiskSignals.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {altRiskSignals.slice(0, 4).map((item) => (
+            <span
+              key={item}
+              className="rounded-md border border-signal-warning/25 bg-signal-warning/10 px-2 py-1 text-[11px] font-bold text-signal-warning"
+            >
+              {item}
+            </span>
+          ))}
         </div>
-      </div>
+      ) : null}
 
-      <div className="mt-2 grid grid-cols-2 gap-2 text-center">
-        <div className="rounded border border-signal-danger/20 bg-signal-danger/10 px-2 py-2">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-signal-danger">무효 기준</p>
-          <p className="mt-1 text-xs font-bold text-white">{formatPriceWithSymbol(setup.plan.invalidation)}</p>
+      {!isAltFilterMode ? (
+        <div className="mt-3 grid grid-cols-2 gap-2 text-center">
+          <div className="rounded border border-white/10 bg-black/30 px-2 py-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">현재가</p>
+            <p className="mt-1 text-xs font-bold text-white">{formatPriceWithSymbol(setup.currentPrice)}</p>
+          </div>
+          <div className="rounded border border-accent-blue/20 bg-accent-blue/5 px-2 py-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-accent-blue">관찰 구간</p>
+            <p className="mt-1 text-xs font-bold text-white">
+              {formatPriceWithSymbol(setup.plan.entryLow)} ~ {formatPriceWithSymbol(setup.plan.entryHigh)}
+            </p>
+          </div>
         </div>
-        <div className="rounded border border-signal-success/20 bg-signal-success/10 px-2 py-2">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-signal-success">다음 레벨</p>
-          <p className="mt-1 text-xs font-bold text-white">{formatPriceWithSymbol(setup.plan.target1)}</p>
-        </div>
-      </div>
+      ) : null}
 
-      <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-        <span className="inline-flex items-center gap-1 whitespace-nowrap">
-          <Target size={12} aria-hidden /> 구조 신뢰도 {setup.plan.confidence}%
-        </span>
-        <span className="font-bold text-slate-400">다음 레벨 2 {formatPriceWithSymbol(setup.plan.target2)}</span>
-      </div>
+      {shouldShowProDetails ? (
+        <>
+          <div className="mt-2 grid grid-cols-2 gap-2 text-center">
+            {isAltFilterMode ? (
+              <div className="rounded border border-accent-blue/20 bg-accent-blue/5 px-2 py-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-accent-blue">관찰 구간</p>
+                <p className="mt-1 text-xs font-bold text-white">
+                  {formatPriceWithSymbol(setup.plan.entryLow)} ~ {formatPriceWithSymbol(setup.plan.entryHigh)}
+                </p>
+              </div>
+            ) : null}
+            <div className="rounded border border-signal-danger/20 bg-signal-danger/10 px-2 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-signal-danger">무효 기준</p>
+              <p className="mt-1 text-xs font-bold text-white">{formatPriceWithSymbol(setup.plan.invalidation)}</p>
+            </div>
+            <div className="rounded border border-signal-success/20 bg-signal-success/10 px-2 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-signal-success">다음 레벨</p>
+              <p className="mt-1 text-xs font-bold text-white">{formatPriceWithSymbol(setup.plan.target1)}</p>
+            </div>
+            {isAltFilterMode ? (
+              <div className="rounded border border-signal-success/15 bg-signal-success/5 px-2 py-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-signal-success">다음 레벨 2</p>
+                <p className="mt-1 text-xs font-bold text-white">{formatPriceWithSymbol(setup.plan.target2)}</p>
+              </div>
+            ) : null}
+          </div>
 
-      <CommentaryLine setup={setup} />
+          <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+            <span className="inline-flex items-center gap-1 whitespace-nowrap">
+              <Target size={12} aria-hidden /> 구조 신뢰도 {setup.plan.confidence}%
+            </span>
+            {!isAltFilterMode ? (
+              <span className="font-bold text-slate-400">다음 레벨 2 {formatPriceWithSymbol(setup.plan.target2)}</span>
+            ) : null}
+          </div>
+        </>
+      ) : null}
 
-      <button
-        type="button"
-        onClick={saveSetup}
-        disabled={saveState === "saving"}
-        className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-accent-blue/30 bg-accent-blue/10 px-3 text-xs font-black text-accent-blue transition hover:bg-accent-blue hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {saveState === "saving" ? (
-          <Loader2 size={14} className="animate-spin" aria-hidden />
-        ) : saveState === "saved" ? (
-          <CheckCircle2 size={14} aria-hidden />
-        ) : (
-          <Save size={14} aria-hidden />
-        )}
-        {saveState === "saving"
-          ? "저장 중"
-          : saveState === "saved"
-            ? "복기에 저장됨"
-            : saveState === "error"
-              ? "기기 저장"
-              : "레이더 저장"}
-      </button>
+      {shouldShowProDetails ? <CommentaryLine setup={setup} /> : null}
 
-      {setup.plan.cautions.length > 0 ? (
+      {shouldShowProDetails ? (
+        <button
+          type="button"
+          onClick={saveSetup}
+          disabled={saveState === "saving"}
+          className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-accent-blue/30 bg-accent-blue/10 px-3 text-xs font-black text-accent-blue transition hover:bg-accent-blue hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {saveState === "saving" ? (
+            <Loader2 size={14} className="animate-spin" aria-hidden />
+          ) : saveState === "saved" ? (
+            <CheckCircle2 size={14} aria-hidden />
+          ) : (
+            <Save size={14} aria-hidden />
+          )}
+          {saveState === "saving"
+            ? "저장 중"
+            : saveState === "saved"
+              ? "복기에 저장됨"
+              : saveState === "error"
+                ? "기기 저장"
+                : "레이더 저장"}
+        </button>
+      ) : null}
+
+      {shouldShowProDetails && setup.plan.cautions.length > 0 ? (
         <p className="mt-2 line-clamp-2 text-[11px] leading-5 text-slate-500">
           주의: {setup.plan.cautions[0]}
         </p>
@@ -562,15 +774,39 @@ function EmptyState({
 
 function ScanSummary({
   setups,
-  riskProfile
+  riskProfile,
+  excludeMajor
 }: {
   setups: ScoutSetup[];
   riskProfile: ScoutRiskProfile;
+  excludeMajor: boolean;
 }) {
   const entryCount = setups.filter((setup) => setup.status === "entry").length;
   const activeCount = setups.filter((setup) => setup.status === "active").length;
   const watchCount = setups.filter((setup) => setup.status === "watch").length;
   const isRadar = riskProfile === "radar";
+
+  if (excludeMajor) {
+    const summary = setups.reduce(
+      (acc, setup) => {
+        const bucket = classifyAltSetup(setup).bucket;
+        acc[bucket] += 1;
+        return acc;
+      },
+      { candidate: 0, watch: 0, danger: 0 } as Record<AltFilterBucket, number>
+    );
+
+    return (
+      <div className="mb-3 rounded-lg border border-accent-blue/25 bg-accent-blue/10 px-4 py-3">
+        <p className="text-sm font-black text-accent-blue">
+          오늘의 알트 필터 · 추적 후보 {summary.candidate}개 · 관망 {summary.watch}개 · 고위험 {summary.danger}개
+        </p>
+        <p className="mt-1 text-xs leading-5 text-slate-300 [word-break:keep-all]">
+          알트는 좋은 후보를 찾는 것보다 위험한 후보를 먼저 걸러야 합니다. 급등 추격, 저유동성, 변동성 확대, BTC 방향성 의존을 먼저 확인합니다.
+        </p>
+      </div>
+    );
+  }
 
   if (entryCount > 0 || activeCount > 0) {
     return (
@@ -738,6 +974,8 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
 
   const visibleLimit = getVisibleSetupLimit(excludeMajor, riskProfile, isPaid);
   const visibleSetups = state.status === "ready" ? uniqueTopSetupsBySymbol(state.setups, visibleLimit) : [];
+  const isAltFilterMode = excludeMajor;
+  const canShowAltProDetails = !isAltFilterMode || isPaid;
 
   return (
     <section className="rounded-lg border border-accent-blue/25 bg-surface-card p-4 shadow-glow sm:p-5">
@@ -748,23 +986,25 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-black text-white">시장 레이더 TOP</h2>
+              <h2 className="text-lg font-black text-white">{excludeMajor ? "알트 기회/위험 필터" : "시장 레이더 TOP"}</h2>
               <span className="rounded border border-accent-blue/30 bg-accent-blue/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent-blue">
                 Live
               </span>
             </div>
             <p className="mt-1 text-sm leading-6 text-slate-400 [word-break:keep-all]">
-              전체 타임프레임에서 구조 변화가 선명한 코인을 먼저 추립니다. 오늘 무엇부터 볼지 줄여주는 레이더입니다.
+              {excludeMajor
+                ? "알트를 추적 후보, 관망, 고위험으로 먼저 나눕니다. 급등 추격과 유동성 리스크를 먼저 걸러내는 레이더입니다."
+                : "전체 타임프레임에서 구조 변화가 선명한 코인을 먼저 추립니다. 오늘 무엇부터 볼지 줄여주는 레이더입니다."}
             </p>
             <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold text-slate-300">
               <span className="whitespace-nowrap rounded-md border border-signal-warning/25 bg-signal-warning/10 px-2 py-1 text-signal-warning">
-                확인 순서 정리
+                {excludeMajor ? "리스크 우선 필터" : "확인 순서 정리"}
               </span>
               <span className="whitespace-nowrap rounded-md border border-surface-line bg-black/20 px-2 py-1">
-                관찰 구간 표시
+                {excludeMajor ? "추적 후보 / 관망 / 고위험" : "관찰 구간 표시"}
               </span>
               <span className="whitespace-nowrap rounded-md border border-orange-400/20 bg-orange-400/10 px-2 py-1 text-orange-200">
-                공격적 분석은 더 넓게 감지
+                {excludeMajor ? "BTC 방향성 의존 확인" : "공격적 분석은 더 넓게 감지"}
               </span>
             </div>
           </div>
@@ -829,7 +1069,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
             />
           ) : (
             <>
-              <ScanSummary setups={visibleSetups} riskProfile={riskProfile} />
+              <ScanSummary setups={visibleSetups} riskProfile={riskProfile} excludeMajor={excludeMajor} />
               <div className="grid gap-3 sm:grid-cols-3">
                 {visibleSetups.map((setup, idx) => (
                   <SetupCard
@@ -837,17 +1077,25 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
                     setup={setup}
                     rank={idx + 1}
                     riskProfile={riskProfile}
+                    isAltFilterMode={isAltFilterMode}
+                    canShowAltProDetails={canShowAltProDetails}
                   />
                 ))}
               </div>
+              {isAltFilterMode && !isPaid ? (
+                <div className="mt-3">
+                  <AltProCta />
+                </div>
+              ) : null}
             </>
           )
         ) : null}
       </div>
 
       <p className="mt-3 text-[11px] leading-5 text-slate-500">
-        레이더 결과는 5분 단위로 갱신됩니다. 감지 카드는 오늘 먼저 확인할 순서를 줄여주는 기준이며,
-        관찰 구간과 무효 기준은 본인의 손절 원칙과 포지션 크기에 맞춰 다시 확인하세요.
+        {excludeMajor
+          ? "레이더 결과는 5분 단위로 갱신됩니다. Basic은 현재가와 큰 분류만 보여주며, 추적 조건과 무효화 조건은 Pro 상세 영역에서 확인합니다."
+          : "레이더 결과는 5분 단위로 갱신됩니다. 감지 카드는 오늘 먼저 확인할 순서를 줄여주는 기준이며, 관찰 구간과 무효 기준은 본인의 손절 원칙과 포지션 크기에 맞춰 다시 확인하세요."}
       </p>
     </section>
   );

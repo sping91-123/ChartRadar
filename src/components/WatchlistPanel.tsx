@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import {
   ArrowDownRight,
   ArrowUpRight,
   Bookmark,
   BookmarkCheck,
+  Crown,
   Loader2,
   Plus,
   Radar,
@@ -27,6 +29,14 @@ import {
   type WatchlistPlan
 } from "@/lib/watchlist";
 
+type WatchlistBucket = "candidate" | "watch" | "danger";
+
+interface WatchlistFilterMeta {
+  bucket: WatchlistBucket;
+  label: string;
+  className: string;
+}
+
 // ─── 가격 포매터 ─────────────────────────────────────────────────────────────
 function formatPrice(price: number): string {
   if (!Number.isFinite(price) || price <= 0) return "-";
@@ -41,12 +51,106 @@ function formatPrice(price: number): string {
   }).format(price);
 }
 
+function uniqueItems(items: string[]) {
+  return Array.from(new Set(items.filter(Boolean)));
+}
+
+function activeSetupAnalysis(setup: ScoutSetup) {
+  return setup.analysis.timeframeAnalyses.find((item) => item.timeframe === setup.timeframe);
+}
+
+function buildWatchlistRiskSignals(setup: ScoutSetup) {
+  const active = activeSetupAnalysis(setup);
+  const signals: string[] = [];
+
+  if (setup.status === "active" || setup.proximity === "ready") signals.push("급등 추격 주의");
+  if (setup.watchKind === "counter" || active?.condition.regime === "mixed") {
+    signals.push("상방/하방 근거 혼재");
+    signals.push("BTC 방향성 의존");
+  }
+  if (active?.condition.volatilityState === "expanded") signals.push("변동성 확대");
+  if (active?.condition.volumeState === "low") {
+    signals.push("거래량 부족");
+    signals.push("저유동성 리스크");
+  }
+  if (setup.proximity === "wait") signals.push("추적 대기");
+
+  return uniqueItems([...signals, ...setup.analysis.riskFlags]).slice(0, 5);
+}
+
+function summarizeWatchlistRisk(setup: ScoutSetup) {
+  return buildWatchlistRiskSignals(setup)[0] ?? "리스크 점검";
+}
+
+function classifyWatchlistSetup(setup: ScoutSetup): WatchlistFilterMeta {
+  const risks = buildWatchlistRiskSignals(setup);
+  const isDanger =
+    setup.status === "active" ||
+    setup.watchKind === "counter" ||
+    risks.includes("급등 추격 주의") ||
+    risks.includes("변동성 확대") ||
+    risks.length >= 3;
+
+  if (isDanger) {
+    return {
+      bucket: "danger",
+      label: "고위험",
+      className: "border-signal-danger/35 bg-signal-danger/15 text-signal-danger"
+    };
+  }
+
+  if (setup.status === "watch" || setup.proximity === "wait") {
+    return {
+      bucket: "watch",
+      label: "관망",
+      className: "border-signal-warning/35 bg-signal-warning/15 text-signal-warning"
+    };
+  }
+
+  return {
+    bucket: "candidate",
+    label: "추적 후보",
+    className: "border-accent-blue/35 bg-accent-blue/15 text-accent-blue"
+  };
+}
+
+function watchlistJudgmentLabel(setup: ScoutSetup, meta: WatchlistFilterMeta) {
+  if (meta.bucket === "danger") return "고위험";
+  if (meta.bucket === "watch") return "관망 우위";
+  return setup.plan.side === "long" ? "롱 우위" : "숏 우위";
+}
+
+function WatchlistProCta() {
+  return (
+    <div className="mt-3 rounded-lg border border-cyan-300/25 bg-cyan-300/10 p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-black text-cyan-100">Coin Pro 관심 코인 레이더</p>
+          <p className="mt-1 text-sm leading-6 text-slate-300 [word-break:keep-all]">
+            관찰 구간, 무효화, 다음 레벨, 상세 체크포인트는 Pro에서 확인합니다.
+          </p>
+        </div>
+        <Link
+          href="/pro?market=crypto"
+          className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-md bg-cyan-300 px-3 text-xs font-black text-slate-950 transition hover:bg-cyan-200"
+        >
+          <Crown size={14} aria-hidden />
+          Coin Pro 보기
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 // ─── 미니 레이더 카드 ──────────────────────────────────────────────────────────
-function WatchlistSetupCard({ setup }: { setup: ScoutSetup }) {
+function WatchlistSetupCard({ setup, canShowProDetails }: { setup: ScoutSetup; canShowProDetails: boolean }) {
   const isLong = setup.plan.side === "long";
   const sideColor = isLong ? "text-signal-success" : "text-signal-danger";
   const SideIcon = isLong ? ArrowUpRight : ArrowDownRight;
   const sym = symbolToName(setup.symbol);
+  const meta = classifyWatchlistSetup(setup);
+  const riskSignals = buildWatchlistRiskSignals(setup);
+  const summaryRisk = summarizeWatchlistRisk(setup);
 
   const proximityText =
     setup.proximity === "ready"
@@ -65,42 +169,70 @@ function WatchlistSetupCard({ setup }: { setup: ScoutSetup }) {
   return (
     <article className="rounded-lg border border-surface-line bg-surface-cardSoft p-3.5 transition hover:border-accent-blue/40">
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <h4 className="text-sm font-black text-white">{sym}</h4>
           <span className="rounded border border-white/10 bg-black/20 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">
             {setup.timeframe}
           </span>
           <SideIcon className={sideColor} size={14} aria-hidden />
-          <span className={`text-[11px] font-bold ${sideColor}`}>{isLong ? "롱" : "숏"}</span>
+          <span className={`text-[11px] font-bold ${meta.bucket === "candidate" ? sideColor : "text-slate-300"}`}>
+            {watchlistJudgmentLabel(setup, meta)}
+          </span>
         </div>
-        <span
-          className={`inline-flex items-center rounded border px-2 py-0.5 text-[10px] font-black ${proximityColor}`}
-        >
-          {proximityText}
+        <span className={`inline-flex items-center rounded border px-2 py-0.5 text-[10px] font-black ${meta.className}`}>
+          {meta.label}
         </span>
       </div>
 
-      <div className="mt-2.5 grid grid-cols-3 gap-1.5 text-center">
+      <div className={`mt-2.5 grid gap-1.5 text-center ${canShowProDetails ? "grid-cols-3" : "grid-cols-2"}`}>
         <div className="rounded border border-white/10 bg-black/30 px-1 py-1.5">
           <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">현재가</p>
           <p className="mt-0.5 text-[11px] font-bold text-white">{formatPrice(setup.currentPrice)}</p>
         </div>
-        <div className="rounded border border-accent-blue/20 bg-accent-blue/5 px-1 py-1.5">
-          <p className="text-[9px] font-bold uppercase tracking-wider text-accent-blue">관찰 구간</p>
-          <p className="mt-0.5 text-[10px] font-bold text-white">
-            {formatPrice(setup.plan.entryLow)}~{formatPrice(setup.plan.entryHigh)}
-          </p>
-        </div>
-        <div className="rounded border border-signal-danger/20 bg-signal-danger/10 px-1 py-1.5">
-          <p className="text-[9px] font-bold uppercase tracking-wider text-signal-danger">무효화</p>
-          <p className="mt-0.5 text-[11px] font-bold text-white">{formatPrice(setup.plan.invalidation)}</p>
-        </div>
+        {canShowProDetails ? (
+          <>
+            <div className="rounded border border-accent-blue/20 bg-accent-blue/5 px-1 py-1.5">
+              <p className="text-[9px] font-bold uppercase tracking-wider text-accent-blue">관찰 구간</p>
+              <p className="mt-0.5 text-[10px] font-bold text-white">
+                {formatPrice(setup.plan.entryLow)}~{formatPrice(setup.plan.entryHigh)}
+              </p>
+            </div>
+            <div className="rounded border border-signal-danger/20 bg-signal-danger/10 px-1 py-1.5">
+              <p className="text-[9px] font-bold uppercase tracking-wider text-signal-danger">무효화</p>
+              <p className="mt-0.5 text-[11px] font-bold text-white">{formatPrice(setup.plan.invalidation)}</p>
+            </div>
+          </>
+        ) : (
+          <div className="rounded border border-white/10 bg-black/20 px-1 py-1.5">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">요약 리스크</p>
+            <p className="mt-0.5 text-[11px] font-bold text-white">{summaryRisk}</p>
+          </div>
+        )}
       </div>
 
-      <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500">
-        <span>{setup.plan.quality}급 감지 · 구조 신뢰도 {setup.plan.confidence}%</span>
-        <span className="font-bold text-slate-400">다음 레벨 {formatPrice(setup.plan.target1)}</span>
-      </div>
+      {canShowProDetails ? (
+        <>
+          <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500">
+            <span>{setup.plan.quality}급 감지 · 구조 신뢰도 {setup.plan.confidence}%</span>
+            <span className="font-bold text-slate-400">다음 레벨 {formatPrice(setup.plan.target1)}</span>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <span className={`rounded border px-2 py-0.5 text-[10px] font-black ${proximityColor}`}>{proximityText}</span>
+            {riskSignals.slice(0, 3).map((item) => (
+              <span
+                key={item}
+                className="rounded border border-signal-warning/25 bg-signal-warning/10 px-2 py-0.5 text-[10px] font-bold text-signal-warning"
+              >
+                {item}
+              </span>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="mt-2 text-[10px] leading-5 text-slate-500">
+          가격 조건, 무효화, 다음 레벨은 Pro에서 렌더링합니다.
+        </p>
+      )}
     </article>
   );
 }
@@ -341,9 +473,9 @@ export function WatchlistPanel() {
               <Radar size={20} aria-hidden />
             </div>
             <div>
-              <h2 className="text-base font-black text-white">관심 코인 레이더</h2>
+              <h2 className="text-base font-black text-white">관심 코인 리스크 레이더</h2>
               <p className="mt-0.5 text-xs leading-5 text-slate-500">
-                {watchlist.length}/{limit}개 · 3분 단위 레이더
+                {watchlist.length}/{limit}개 · 추적 후보 / 관망 / 고위험 확인
               </p>
             </div>
           </div>
@@ -428,14 +560,18 @@ export function WatchlistPanel() {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {scanState.setups.map((setup) => (
-                  <WatchlistSetupCard
-                    key={`${setup.symbol}-${setup.timeframe}`}
-                    setup={setup}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {scanState.setups.map((setup) => (
+                    <WatchlistSetupCard
+                      key={`${setup.symbol}-${setup.timeframe}`}
+                      setup={setup}
+                      canShowProDetails={isPaid}
+                    />
+                  ))}
+                </div>
+                {!isPaid ? <WatchlistProCta /> : null}
+              </>
             )
           ) : null}
         </div>
