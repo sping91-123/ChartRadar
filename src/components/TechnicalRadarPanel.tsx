@@ -1,6 +1,7 @@
 "use client";
 // 기술지표 레이더 결과를 모바일 카드 형태로 보여주는 패널입니다.
 import { useMemo } from "react";
+import { HelpCircle } from "lucide-react";
 import type { Candle, ChartTimeframe } from "@/lib/marketAnalysis";
 import { analyzeTechnicalRadar, type IndicatorReading, type TechnicalTone } from "@/lib/technicalRadar";
 
@@ -26,6 +27,17 @@ function formatPrice(value: number | null) {
 function formatPercent(value: number | null) {
   if (value === null || !Number.isFinite(value)) return "미확인";
   return `${value.toFixed(2)}%`;
+}
+
+function HelpTip({ text }: { text: string }) {
+  return (
+    <span className="group relative inline-flex align-middle" tabIndex={0} aria-label="설명 보기">
+      <HelpCircle size={14} className="text-cyan-200" aria-hidden />
+      <span className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 hidden w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 rounded-md border border-white/10 bg-slate-950 px-3 py-2 text-[11px] font-bold leading-5 text-slate-300 shadow-xl group-hover:block group-focus:block">
+        {text}
+      </span>
+    </span>
+  );
 }
 
 function IndicatorRow({ item }: { item: IndicatorReading }) {
@@ -77,7 +89,10 @@ export function TechnicalRadarPanel({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-accent-blue">Technical Radar</p>
-          <h3 className="mt-1 text-lg font-black text-white">기술지표 레이더</h3>
+          <h3 className="mt-1 flex items-center gap-2 text-lg font-black text-white">
+            기술지표 레이더
+            <HelpTip text="여러 기술지표를 한 방향 표로 압축한 영역입니다. 상승, 하락, 관망 개수와 설명을 먼저 보고 세부 지표를 확인하세요." />
+          </h3>
           <p className="mt-2 text-sm leading-6 text-slate-400">{intro}</p>
         </div>
         <span className="inline-flex w-fit rounded-md border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-bold text-slate-300">
@@ -112,7 +127,10 @@ export function TechnicalRadarPanel({
         </div>
 
         <div className="rounded-lg border border-white/10 bg-black/20 p-4">
-          <p className="text-xs font-bold text-slate-400">심리 참고값</p>
+          <p className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
+            심리 참고값
+            <HelpTip text="캔들 흐름을 기준으로 과열과 침체 정도를 숫자로 읽는 값입니다. 높으면 추세가 강할 수 있지만 추격 위험도 같이 봐야 합니다." />
+          </p>
           <div className="mt-5">
             <div className="relative h-5 rounded-full bg-[linear-gradient(90deg,#ef4444,#f59e0b,#facc15,#38bdf8,#22c55e)]">
               <span
@@ -132,7 +150,10 @@ export function TechnicalRadarPanel({
       </div>
 
       <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-4">
-        <h4 className="text-base font-black text-white">차트 기준선</h4>
+        <h4 className="flex items-center gap-2 text-base font-black text-white">
+          차트 기준선
+          <HelpTip text="현재가와 가까운 지지선, 저항선을 보여줍니다. 초보자는 방향보다 먼저 가격이 어느 기준선에 가까운지 확인하는 편이 안전합니다." />
+        </h4>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <div className="rounded-md border border-emerald-500/20 bg-emerald-500/10 p-3">
             <p className="text-xs font-bold text-emerald-200">가까운 지지선</p>

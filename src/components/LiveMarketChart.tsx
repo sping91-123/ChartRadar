@@ -45,9 +45,10 @@ import { appendJournalEntry } from "@/lib/journal";
 import type { MarketBriefingInput } from "@/lib/ai/types";
 import { normalizePineDirection, parsePineSnapshot, pineDirectionForTimeframe, type PineSnapshot } from "@/lib/pineParity";
 import { createRemoteJournalEntry } from "@/lib/remoteJournal";
-import { evaluateRadarDecision, type RadarDecisionTone } from "@/lib/radarDecisionEngine";
+import { evaluateRadarDecision, type RadarDecision, type RadarDecisionTone } from "@/lib/radarDecisionEngine";
 import { getActiveSupabaseSession } from "@/lib/supabase";
 import { withSupabaseAuth } from "@/lib/authFetch";
+import { BeginnerActionGuide, type BeginnerGuideStep, type BeginnerGuideTone } from "@/components/BeginnerActionGuide";
 import { TechnicalRadarPanel } from "@/components/TechnicalRadarPanel";
 import { LiquidationPressurePanel } from "@/components/LiquidationPressurePanel";
 import { hasMarketEntitlement } from "@/lib/billing";
@@ -638,6 +639,13 @@ function radarDecisionClasses(tone?: RadarDecisionTone) {
   return "border-white/10 bg-black/20 text-slate-300";
 }
 
+function beginnerToneFromDecision(decision: RadarDecision | null): BeginnerGuideTone {
+  if (!decision) return "neutral";
+  if (decision.action === "enter") return "success";
+  if (decision.action === "avoid") return "danger";
+  return "warning";
+}
+
 type RadarPulseTone = "long" | "short" | "warn" | "neutral";
 
 interface RadarPulseItem {
@@ -683,6 +691,42 @@ function buildRadarPulse(analysis: MarketAnalysis, active?: TimeframeAnalysis): 
       title: userFacingNextStep(analysis),
       text: nextText,
       tone: "neutral"
+    }
+  ];
+}
+
+function buildCoinBeginnerSteps(analysis: MarketAnalysis, decision: RadarDecision | null): BeginnerGuideStep[] {
+  const firstBlocker = decision?.blockers[0] ?? analysis.riskFlags[0] ?? analysis.warnings[0];
+  const firstConfirmation = decision?.confirmations[0] ?? analysis.opportunityFlags[0] ?? analysis.currentLocationLabel;
+  const actionTitle =
+    decision?.action === "enter"
+      ? "손절과 수량 고정"
+      : decision?.action === "avoid"
+        ? "새 구조 대기"
+        : "반응 확인";
+  const blockerBody =
+    firstBlocker ??
+    firstConfirmation ??
+    "방향, 현재 위치, 거래량이 같은 쪽으로 맞는지 한 번 더 확인하세요.";
+
+  return [
+    {
+      label: "1. 지금 판단",
+      title: decision?.title ?? analysis.verdict,
+      body: decision?.summary ?? analysis.summaryLine,
+      tone: beginnerToneFromDecision(decision)
+    },
+    {
+      label: "2. 먼저 할 일",
+      title: actionTitle,
+      body: decision?.nextStep ?? analysis.actionGuide,
+      tone: decision?.action === "avoid" ? "danger" : "info"
+    },
+    {
+      label: "3. 막히는 조건",
+      title: firstBlocker ? "이 조건이면 보수적으로" : "근거가 유지되는지 확인",
+      body: blockerBody,
+      tone: firstBlocker ? "warning" : "neutral"
     }
   ];
 }
@@ -2317,6 +2361,20 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               </p>
               <p className="mt-1 text-base font-black">{readinessLabel(analysis.readiness)}</p>
             </div>
+          </div>
+
+          <div className="mt-4">
+            <BeginnerActionGuide
+              title="지금은 이 순서로 보면 됩니다"
+              summary="방향, 현재 위치, 위험 조건을 한 줄 행동 순서로 압축했습니다. 초보자는 아래 3가지를 먼저 확인한 뒤 세부 지표로 내려가면 됩니다."
+              steps={buildCoinBeginnerSteps(analysis, radarDecision)}
+              checklist={[
+                "손절 기준을 말로 설명할 수 있는지 확인",
+                "수량이 계좌 기준 위험 한도 안인지 확인",
+                "다음 캔들에서도 같은 방향 근거가 유지되는지 확인"
+              ]}
+              help="판단 엔진은 차트 구조, 현재 위치, 위험 플래그, 데이터 신뢰도를 합쳐 행동 순서를 정리합니다. 점수가 좋아도 손절과 수량을 정하지 않았다면 아직 준비가 끝난 상태가 아닙니다."
+            />
           </div>
         </div>
       ) : (

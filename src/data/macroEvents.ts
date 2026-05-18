@@ -19,7 +19,7 @@ export type MacroEventItem = {
 };
 
 export const macroCalendarUpdatedAt = "2026년 5월 15일 예비 일정 갱신";
-export const macroCalendarUpdatedAtIso = "2026-05-15T00:00:00.000Z";
+export const macroCalendarUpdatedAtIso = "2026-05-18T06:56:00.000Z";
 export const macroCalendarSourceNote =
   "공개 경제 캘린더와 공식 통계 데이터를 우선 확인합니다. 자동 확인이 막히면 예비 일정으로 보여주고, 다음 주기에 다시 갱신을 시도합니다.";
 
