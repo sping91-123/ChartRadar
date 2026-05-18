@@ -548,7 +548,7 @@ function detectPatterns(candles: Candle[]) {
       name: "Doji",
       tone: "neutral",
       confidence: 58,
-      description: "몸통이 작아 매수와 매도 힘이 충돌하고 있습니다.",
+      description: "몸통이 작아 상방과 하방 힘이 충돌하고 있습니다.",
       detectedAt: latest.time
     });
   }
@@ -558,7 +558,7 @@ function detectPatterns(candles: Candle[]) {
       name: "Bullish Engulfing",
       tone: "bullish",
       confidence: 72,
-      description: "직전 음봉을 양봉이 감싸며 단기 매수 반응이 커졌습니다.",
+      description: "직전 음봉을 양봉이 감싸며 단기 상방 반응이 커졌습니다.",
       detectedAt: latest.time
     });
   }
@@ -568,7 +568,7 @@ function detectPatterns(candles: Candle[]) {
       name: "Bearish Engulfing",
       tone: "bearish",
       confidence: 72,
-      description: "직전 양봉을 음봉이 감싸며 단기 매도 압력이 커졌습니다.",
+      description: "직전 양봉을 음봉이 감싸며 단기 하방 압력이 커졌습니다.",
       detectedAt: latest.time
     });
   }
@@ -578,7 +578,7 @@ function detectPatterns(candles: Candle[]) {
       name: "Hammer",
       tone: "bullish",
       confidence: 64,
-      description: "아래꼬리가 길어 저가 매수 반응이 확인됩니다.",
+      description: "아래꼬리가 길어 저가 상방 반응이 확인됩니다.",
       detectedAt: latest.time
     });
   }
@@ -588,7 +588,7 @@ function detectPatterns(candles: Candle[]) {
       name: "Shooting Star",
       tone: "bearish",
       confidence: 64,
-      description: "윗꼬리가 길어 고가 매도 반응이 확인됩니다.",
+      description: "윗꼬리가 길어 고가 하방 반응이 확인됩니다.",
       detectedAt: latest.time
     });
   }
@@ -608,7 +608,7 @@ function detectPatterns(candles: Candle[]) {
       name: "Evening Star",
       tone: "bearish",
       confidence: 68,
-      description: "상승 후 매도 캔들이 나오며 단기 조정 가능성이 생겼습니다.",
+      description: "상승 후 하방 캔들이 나오며 단기 조정 가능성이 생겼습니다.",
       detectedAt: latest.time
     });
   }
@@ -802,7 +802,7 @@ export function analyzeTechnicalRadar(candles: Candle[]): TechnicalRadarReport {
       "Parabolic SAR",
       `SAR ${formatNumber(sarValue.sar)}`,
       sarValue.score,
-      sarValue.direction === "bullish" ? "가격이 SAR 위에 있어 단기 추세 추종 매수가 우위입니다." : sarValue.direction === "bearish" ? "가격이 SAR 아래에 있어 단기 추세 추종 매도가 우위입니다." : "SAR 기준 방향 확인이 어렵습니다."
+      sarValue.direction === "bullish" ? "가격이 SAR 위에 있어 단기 상방 추세 추적이 우위입니다." : sarValue.direction === "bearish" ? "가격이 SAR 아래에 있어 단기 하방 추세 추적이 우위입니다." : "SAR 기준 방향 확인이 어렵습니다."
     ),
     reading(
       "Aroon",
@@ -817,14 +817,14 @@ export function analyzeTechnicalRadar(candles: Candle[]): TechnicalRadarReport {
       "RSI 14",
       formatNumber(rsi14, 1),
       scoreOverbought(rsi14, 30, 70),
-      rsi14 !== null && rsi14 >= 70 ? "과열권에 가까워 추세는 강하지만 조정 가능성도 같이 봐야 합니다." : rsi14 !== null && rsi14 <= 30 ? "과매도권에 가까워 반등 시도와 추가 하락을 함께 확인해야 합니다." : "RSI는 중립 구간에서 방향성을 확인 중입니다.",
+      rsi14 !== null && rsi14 >= 70 ? "과열권에 가까워 추세는 강하지만 조정 가능성도 같이 봐야 합니다." : rsi14 !== null && rsi14 <= 30 ? "하방 과열권에 가까워 반등 시도와 추가 하락을 함께 확인해야 합니다." : "RSI는 중립 구간에서 방향성을 확인 중입니다.",
       rsi14 !== null && (rsi14 >= 70 || rsi14 <= 30) ? "warning" : undefined
     ),
     reading(
       "Stochastic",
       `%K ${formatNumber(stochasticValue.k, 1)} / %D ${formatNumber(stochasticValue.d, 1)}`,
       stochasticValue.k === null || stochasticValue.d === null ? 50 : stochasticValue.k > stochasticValue.d ? 64 : 36,
-      stochasticValue.k !== null && stochasticValue.k >= 80 ? "단기 과열권입니다. 추격보다 눌림 확인이 중요합니다." : stochasticValue.k !== null && stochasticValue.k <= 20 ? "단기 과매도권입니다. 반등 시도 여부가 중요합니다." : "Stochastic은 중립권에서 단기 방향을 확인 중입니다.",
+      stochasticValue.k !== null && stochasticValue.k >= 80 ? "단기 과열권입니다. 추격보다 눌림 확인이 중요합니다." : stochasticValue.k !== null && stochasticValue.k <= 20 ? "단기 하방 과열권입니다. 반등 시도 여부가 중요합니다." : "Stochastic은 중립권에서 단기 방향을 확인 중입니다.",
       stochasticValue.k !== null && (stochasticValue.k >= 80 || stochasticValue.k <= 20) ? "warning" : undefined
     ),
     reading(
@@ -837,14 +837,14 @@ export function analyzeTechnicalRadar(candles: Candle[]): TechnicalRadarReport {
       "MFI 14",
       formatNumber(mfi14, 1),
       scoreOverbought(mfi14, 20, 80),
-      mfi14 !== null && mfi14 >= 80 ? "자금 흐름이 과열권입니다." : mfi14 !== null && mfi14 <= 20 ? "자금 흐름이 과매도권입니다." : "자금 흐름은 중립권에서 움직이고 있습니다.",
+      mfi14 !== null && mfi14 >= 80 ? "자금 흐름이 과열권입니다." : mfi14 !== null && mfi14 <= 20 ? "자금 흐름이 하방 과열권입니다." : "자금 흐름은 중립권에서 움직이고 있습니다.",
       mfi14 !== null && (mfi14 >= 80 || mfi14 <= 20) ? "warning" : undefined
     ),
     reading(
       "Williams %R",
       formatNumber(williams, 1),
       williams === null ? 50 : williams > -20 ? 60 : williams < -80 ? 40 : 50,
-      williams !== null && williams > -20 ? "단기 과열권에 가까워 조정 가능성을 함께 봐야 합니다." : williams !== null && williams < -80 ? "단기 과매도권에 가까워 반등 가능성을 함께 봐야 합니다." : "Williams %R은 중립권에서 움직이고 있습니다.",
+      williams !== null && williams > -20 ? "단기 과열권에 가까워 조정 가능성을 함께 봐야 합니다." : williams !== null && williams < -80 ? "단기 하방 과열권에 가까워 반등 가능성을 함께 봐야 합니다." : "Williams %R은 중립권에서 움직이고 있습니다.",
       williams !== null && (williams > -20 || williams < -80) ? "warning" : undefined
     ),
     reading(
@@ -863,7 +863,7 @@ export function analyzeTechnicalRadar(candles: Candle[]): TechnicalRadarReport {
       "Ultimate Oscillator",
       formatNumber(ultimate, 1),
       ultimate === null ? 50 : ultimate,
-      ultimate !== null && ultimate >= 70 ? "복합 모멘텀이 과열권에 가까워 조정 가능성도 열어둬야 합니다." : ultimate !== null && ultimate <= 30 ? "복합 모멘텀이 과매도권에 가까워 반등 가능성도 열어둬야 합니다." : "복합 모멘텀은 중립권에서 움직이고 있습니다.",
+      ultimate !== null && ultimate >= 70 ? "복합 모멘텀이 과열권에 가까워 조정 가능성도 열어둬야 합니다." : ultimate !== null && ultimate <= 30 ? "복합 모멘텀이 하방 과열권에 가까워 반등 가능성도 열어둬야 합니다." : "복합 모멘텀은 중립권에서 움직이고 있습니다.",
       ultimate !== null && (ultimate >= 70 || ultimate <= 30) ? "warning" : undefined
     )
   ];
@@ -880,14 +880,14 @@ export function analyzeTechnicalRadar(candles: Candle[]): TechnicalRadarReport {
       "Bollinger Bands",
       `상단 ${formatNumber(bands.upper)} / 중단 ${formatNumber(bands.middle)} / 하단 ${formatNumber(bands.lower)} / 폭 ${formatPercent(bands.widthPercent)}`,
       bands.positionPercent === null ? 50 : bands.positionPercent >= 80 ? 62 : bands.positionPercent <= 20 ? 38 : 50,
-      bands.positionPercent !== null && bands.positionPercent >= 80 ? "상단 밴드에 가까워 과열 여부를 확인해야 합니다." : bands.positionPercent !== null && bands.positionPercent <= 20 ? "하단 밴드에 가까워 매도 과열 여부를 확인해야 합니다." : "현재가는 볼린저밴드 중간권에 있습니다.",
+      bands.positionPercent !== null && bands.positionPercent >= 80 ? "상단 밴드에 가까워 과열 여부를 확인해야 합니다." : bands.positionPercent !== null && bands.positionPercent <= 20 ? "하단 밴드에 가까워 하방 과열 여부를 확인해야 합니다." : "현재가는 볼린저밴드 중간권에 있습니다.",
       bands.positionPercent !== null && (bands.positionPercent >= 80 || bands.positionPercent <= 20) ? "warning" : undefined
     ),
     reading(
       "Keltner Channel",
       `상단 ${formatNumber(keltnerValue.upper)} / 중심 ${formatNumber(keltnerValue.middle)} / 하단 ${formatNumber(keltnerValue.lower)}`,
       keltnerValue.positionPercent === null ? 50 : keltnerValue.positionPercent >= 80 ? 62 : keltnerValue.positionPercent <= 20 ? 38 : 50,
-      keltnerValue.positionPercent !== null && keltnerValue.positionPercent >= 80 ? "켈트너 상단권으로 추세는 강하지만 눌림 위험도 있습니다." : keltnerValue.positionPercent !== null && keltnerValue.positionPercent <= 20 ? "켈트너 하단권으로 매도 압력이 커졌습니다." : "켈트너 채널 기준으로는 중간권입니다.",
+      keltnerValue.positionPercent !== null && keltnerValue.positionPercent >= 80 ? "켈트너 상단권으로 추세는 강하지만 눌림 위험도 있습니다." : keltnerValue.positionPercent !== null && keltnerValue.positionPercent <= 20 ? "켈트너 하단권으로 하방 압력이 커졌습니다." : "켈트너 채널 기준으로는 중간권입니다.",
       keltnerValue.positionPercent !== null && (keltnerValue.positionPercent >= 80 || keltnerValue.positionPercent <= 20) ? "warning" : undefined
     ),
     reading(
@@ -903,7 +903,7 @@ export function analyzeTechnicalRadar(candles: Candle[]): TechnicalRadarReport {
       "OBV",
       formatNumber(obvValue, 0),
       obvValue === null ? 50 : obvValue > 0 ? 66 : 34,
-      obvValue !== null && obvValue > 0 ? "OBV가 누적 매수 우위를 가리킵니다." : "OBV가 누적 매도 우위 또는 둔화를 가리킵니다."
+      obvValue !== null && obvValue > 0 ? "OBV가 누적 상방 우위를 가리킵니다." : "OBV가 누적 하방 우위 또는 둔화를 가리킵니다."
     ),
     reading(
       "Volume MA",
@@ -916,13 +916,13 @@ export function analyzeTechnicalRadar(candles: Candle[]): TechnicalRadarReport {
       "VWAP",
       formatNumber(vwapValue),
       vwapValue === null ? 50 : price >= vwapValue ? 66 : 34,
-      vwapValue !== null && price >= vwapValue ? "현재가가 VWAP 위에 있어 매수 평균 가격보다 강합니다." : "현재가가 VWAP 아래에 있어 매도 압력이 남아 있습니다."
+      vwapValue !== null && price >= vwapValue ? "현재가가 VWAP 위에 있어 평균 체결 기준보다 강합니다." : "현재가가 VWAP 아래에 있어 하방 압력이 남아 있습니다."
     ),
     reading(
       "CMF 20",
       formatNumber(cmf20, 3),
       cmf20 === null ? 50 : cmf20 > 0.05 ? 66 : cmf20 < -0.05 ? 34 : 50,
-      cmf20 !== null && cmf20 > 0.05 ? "Chaikin 자금 흐름이 양수라 매수 유입이 우세합니다." : cmf20 !== null && cmf20 < -0.05 ? "Chaikin 자금 흐름이 음수라 매도 유출이 우세합니다." : "자금 흐름은 균형권입니다."
+      cmf20 !== null && cmf20 > 0.05 ? "Chaikin 자금 흐름이 양수라 상방 유입이 우세합니다." : cmf20 !== null && cmf20 < -0.05 ? "Chaikin 자금 흐름이 음수라 하방 유출이 우세합니다." : "자금 흐름은 균형권입니다."
     ),
     reading(
       "A/D Line",
@@ -953,7 +953,7 @@ export function analyzeTechnicalRadar(candles: Candle[]): TechnicalRadarReport {
     label: fearGreedLabel(greedScore),
     description:
       greedScore >= 65
-        ? "매수 심리가 강한 편입니다. 다만 과열권에서는 추격보다 조정 후 반응 확인이 중요합니다."
+        ? "상방 심리가 강한 편입니다. 다만 과열권에서는 추격보다 조정 후 반응 확인이 중요합니다."
         : greedScore <= 35
           ? "위험 회피 심리가 강한 편입니다. 반등보다 지지 이탈 여부를 먼저 확인해야 합니다."
           : "심리는 중립권입니다. 방향성보다 지지와 저항 반응 확인이 우선입니다."

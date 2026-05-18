@@ -1850,10 +1850,10 @@ function buildActionGuide(bias: BiasSide, active: TimeframeAnalysis | undefined,
 
   if (readiness === "high") {
     if (bias === "long") {
-      return "롱 우세와 타이밍 조건이 비교적 같이 맞고 있습니다. 다만 추격보다 OB, FVG/iFVG, 눌림 반응 확인 후 들어가는 편이 안전합니다.";
+      return "롱 우세와 타이밍 조건이 비교적 같이 맞고 있습니다. 다만 추격보다 OB, FVG/iFVG, 눌림 반응과 무효화 조건 확인이 먼저입니다.";
     }
     if (bias === "short") {
-      return "숏 우세와 타이밍 조건이 비교적 같이 맞고 있습니다. 다만 아래에서 누르기보다 되돌림과 iFVG 저항 반응을 확인하는 편이 안전합니다.";
+      return "숏 우세와 타이밍 조건이 비교적 같이 맞고 있습니다. 다만 아래에서 누르기보다 되돌림과 iFVG 저항 반응, 무효화 조건 확인이 먼저입니다.";
     }
   }
 
@@ -1867,10 +1867,10 @@ function buildActionGuide(bias: BiasSide, active: TimeframeAnalysis | undefined,
   }
 
   if (bias === "neutral") {
-    return "지금은 방향보다 관찰이 우선입니다. 억지로 롱이나 숏을 정하기보다 구조가 더 또렷해질 때까지 기다리는 편이 낫습니다.";
+    return "관망 우위입니다. 억지로 롱이나 숏을 정하기보다 구조가 더 또렷해질 때까지 추적 조건을 확인하는 편이 낫습니다.";
   }
 
-  return "구조는 보이지만 바로 진입하기엔 아직 성급할 수 있습니다. 자리, 반응, 리스크 기준을 먼저 확인하세요.";
+  return "구조는 보이지만 바로 판단하기엔 아직 성급할 수 있습니다. 자리, 반응, 리스크 기준을 먼저 확인하세요.";
 }
 
 function buildCheckpoints(active: TimeframeAnalysis | undefined) {
@@ -2593,7 +2593,7 @@ export function summarizeMarket(
   }
 
   if (bias === "neutral") {
-    warnings.push("방향이 아직 충분히 정리되지 않았습니다. 지금은 진입보다 관찰이 우선입니다.");
+    warnings.push("방향이 아직 충분히 정리되지 않았습니다. 지금은 신규 판단보다 관망 우위입니다.");
   }
 
   if (active?.volumeProfile?.position === "near") {

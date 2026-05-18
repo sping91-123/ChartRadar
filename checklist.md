@@ -1826,3 +1826,11 @@
 - [x] `/global`을 사용량이 비어 있는 로컬 origin에서 열어 공통 패널 표시를 확인한다.
 - [x] Basic용 `RadarInsight`는 패널 전달 전에 조건, 무효화, 다음 행동, 업데이트 시각을 제거한다.
 - [x] `npx.cmd tsc --noEmit`, `npm.cmd run lint`, `npm.cmd run build`, `npm.cmd run smoke:all`을 실행한다.
+
+## 2026-05-18 공통 판단 로직 품질 개선.
+
+- [x] `radarInsight.ts`에서 최종 판단, 관망, 조건, 리스크 문구를 강화한다.
+- [x] `radarDecisionEngine.ts`의 행동 문구를 투자 권유가 아닌 판단 보조 톤으로 보정한다.
+- [x] `marketAnalysis.ts`와 `technicalRadar.ts`의 잔여 문구를 최소 범위로 정리한다.
+- [x] 샘플 케이스 기준으로 롱, 숏, 관망, 고위험 문구를 자체 점검한다.
+- [x] `git diff --check`, `npx.cmd tsc --noEmit`, `npm.cmd run lint`, `npm.cmd run build`, `npm.cmd run smoke:all`을 실행한다.

@@ -1585,3 +1585,12 @@ The health endpoint now reports a launch readiness score and structured blocking
 - `visibleRadarInsightForPlan`으로 Basic 사용자에게는 공통 패널 전달 전 조건, 무효화, 다음 행동, 업데이트 시각 데이터를 제거한다.
 - 글로벌 로컬 화면은 Basic 사용량 제한이 걸리면 기존 정책대로 분석 패널 대신 한도 안내가 먼저 보인다.
 - `/global` 패널은 `127.0.0.2:3000`처럼 사용량이 비어 있는 로컬 origin에서 확인했고, 기존 GlobalPlaybook, GlobalBeginnerGuide는 공통 패널과 중복 렌더링되지 않는다.
+
+## 2026-05-18 공통 판단 로직 품질 개선.
+
+- 이번 범위는 UI 변경 없이 `RadarInsight` 어댑터와 판단 문구만 개선한다.
+- 관망은 중립의 다른 표현이 아니라 저신뢰, 혼재, POC 균형, 킬존 밖, 추격 리스크, 변동성 확대가 겹칠 때의 명시적 판단으로 다룬다.
+- Basic/Pro 정책은 `visibleRadarInsightForPlan` 구조를 유지한다. 무료 사용자는 방향과 요약, 핵심 근거 일부만 보고 세부 추적 조건과 다음 행동은 Pro 가치로 남긴다.
+- 글로벌 레이더는 코인 표현 대신 지수 방향성, 섹터 분위기, 금리, 달러, VIX, 리스크온/리스크오프 중심 문구로 제한한다.
+- Basic summary와 Basic key reason은 Pro급 단서가 새지 않도록 `visibleRadarInsightForPlan`에서 최종 판단별 일반 문구로 대체한다.
+- Pro summary도 1~2문장으로 줄이고 구체 조건은 조건, 무효화, 리스크, nextAction 배열에 나눠 담는다.
