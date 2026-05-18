@@ -88,7 +88,7 @@ function InsightList({
       )}
       {locked ? (
         <p className="mt-2 text-[11px] font-bold leading-5 text-slate-500 [word-break:keep-all]">
-          {previewText ?? "상세 조건은 Pro에서 판단 보조 자료로 열립니다."}
+          {previewText ?? "상세 조건, 무효화 기준, 세부 리스크는 Pro에서 확인할 수 있습니다."}
         </p>
       ) : null}
     </div>
@@ -102,7 +102,7 @@ function LockedValue({ label }: { label: string }) {
         <p className="text-xs font-black text-slate-200">{label}</p>
         <Lock size={14} className="text-cyan-200" aria-hidden />
       </div>
-      <p className="mt-2 text-xs font-bold leading-5 text-slate-500">Pro에서 상세 판단 보조 항목으로 확인합니다.</p>
+      <p className="mt-2 text-xs font-bold leading-5 text-slate-500">상세 조건, 무효화 기준, 세부 리스크는 Pro에서 확인할 수 있습니다.</p>
     </div>
   );
 }
@@ -129,7 +129,7 @@ export function RadarInsightPanel({ insight, isPro, className = "" }: RadarInsig
             </span>
             {!isPro ? (
               <span className="rounded-md border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-black text-cyan-100">
-                Basic 미리보기
+                Basic 방향 요약
               </span>
             ) : (
               <span className="rounded-md border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-xs font-black text-cyan-100">
@@ -161,14 +161,14 @@ export function RadarInsightPanel({ insight, isPro, className = "" }: RadarInsig
           title="핵심 근거"
           items={keyReasons}
           locked={!isPro && insight.keyReasons.length > 1}
-          previewText="나머지 근거는 Pro에서 전체 맥락으로 확인합니다."
+          previewText="Basic에서는 방향 요약만 제공합니다. 나머지 근거는 Pro에서 전체 맥락으로 확인합니다."
           showLockedPreviewItems
         />
         <InsightList
           title="리스크"
           items={risks}
           locked={!isPro && insight.risks.length > 1}
-          previewText="상세 리스크와 무효화 조건은 Pro에서 확인합니다."
+          previewText="상세 조건, 무효화 기준, 세부 리스크는 Pro에서 확인할 수 있습니다."
           showLockedPreviewItems
         />
       </div>
@@ -176,17 +176,17 @@ export function RadarInsightPanel({ insight, isPro, className = "" }: RadarInsig
       <div className="mt-3 grid gap-3 lg:grid-cols-3">
         <InsightList title="롱 추적 조건" items={insight.longConditions} locked={!isPro} />
         <InsightList title="숏 추적 조건" items={insight.shortConditions} locked={!isPro} />
-        <InsightList title="무효화 조건" items={insight.invalidationConditions} locked={!isPro} />
+        <InsightList title="무효화 기준" items={insight.invalidationConditions} locked={!isPro} />
       </div>
 
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         {isPro ? (
           <div className="rounded-lg border border-white/10 bg-black/20 p-3">
-            <p className="text-xs font-black text-slate-200">다음 행동</p>
+            <p className="text-xs font-black text-slate-200">다음 확인 기준</p>
             <p className="mt-2 text-xs font-bold leading-5 text-slate-300 [word-break:keep-all]">{insight.nextAction}</p>
           </div>
         ) : (
-          <LockedValue label="다음 행동" />
+          <LockedValue label="다음 확인 기준" />
         )}
         {isPro ? (
           <div className="rounded-lg border border-white/10 bg-black/20 p-3">

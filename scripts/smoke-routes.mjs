@@ -55,7 +55,7 @@ const checks = [
     body: {
       planId: "crypto_monthly",
       orderId: "cr_crypto_monthly_smoke",
-      amount: 14900,
+      amount: 39000,
       paymentKey: "smoke_payment_key"
     },
     expectedStatus: [401]
@@ -79,7 +79,7 @@ const checks = [
     body: {
       planId: "stocks_monthly",
       orderId: "cr_crypto_monthly_smoke",
-      amount: 14900,
+      amount: 39000,
       paymentKey: "smoke_payment_key"
     },
     expectedStatus: [400]

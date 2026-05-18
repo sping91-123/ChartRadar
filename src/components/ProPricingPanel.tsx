@@ -24,24 +24,31 @@ function scopeCopy(scope: BillingPageScope) {
   if (scope === "crypto") {
     return {
       eyebrow: "COIN PRO",
-      title: "코인 시장을 매일 보는 사람에게 필요한 레이더입니다.",
-      body: "BTC, ETH, 알트코인, 코인 뉴스와 알림을 코인 흐름에 맞춰 깊게 확인합니다."
+      title: "Coin Pro로 코인 상세 판단을 엽니다.",
+      body: "BTC/ETH·알트 추적 조건, 무효화 기준, 세부 리스크를 코인 시장 기준으로 정리합니다."
     };
   }
 
   if (scope === "stocks") {
     return {
       eyebrow: "GLOBAL PRO",
-      title: "글로벌 시장과 매크로 흐름을 함께 보는 레이더입니다.",
-      body: "미국주식, ETF, 해외선물, 주요 매크로 이슈를 한 화면에서 정리합니다."
+      title: "Global Pro로 미국장 상세 판단을 엽니다.",
+      body: "미국장 30초 체크, 지수선물, 매크로 압력, 섹터 로테이션, 대장주 레이더를 한 화면에서 정리합니다."
     };
   }
 
   return {
     eyebrow: "ALL MARKET PRO",
-    title: "코인과 글로벌 시장을 모두 감시하는 통합 레이더입니다.",
-    body: "두 시장을 따로 결제하는 것보다 효율적으로, 뉴스와 알림까지 함께 사용할 수 있습니다."
+    title: "All Market Pro로 전체 시장 판단을 엽니다.",
+    body: "Coin Pro와 Global Pro를 통합해 코인과 미국장을 함께 보는 사용자를 위한 판단 보조 흐름을 제공합니다."
   };
+}
+
+function checkoutCtaLabel(plan: BillingPlan) {
+  if (plan.marketScope === "crypto") return "Coin Pro로 코인 상세 판단 열기";
+  if (plan.marketScope === "stocks") return "Global Pro로 미국장 상세 판단 열기";
+  if (plan.marketScope === "bundle") return "All Market Pro로 전체 시장 판단 열기";
+  return "Pro 시작하기";
 }
 
 function PlanCard({
@@ -55,6 +62,7 @@ function PlanCard({
 }) {
   const isFree = plan.id === "free";
   const isRecommended = plan.marketScope === "bundle" && !isYearlyBillingPlan(plan.id);
+  const isYearly = isYearlyBillingPlan(plan.id);
 
   return (
     <article
@@ -70,12 +78,12 @@ function PlanCard({
           <h3 className="mt-2 text-xl font-black text-slate-950 dark:text-white">{plan.name}</h3>
         </div>
         {isRecommended ? (
-          <span className="rounded-full bg-cyan-300 px-2.5 py-1 text-[11px] font-black text-slate-950">추천</span>
+          <span className="rounded-full bg-cyan-300 px-2.5 py-1 text-[11px] font-black text-slate-950">통합</span>
         ) : null}
       </div>
 
       <p className="mt-4 text-3xl font-black text-slate-950 dark:text-white">{plan.priceLabel}</p>
-      {plan.monthlyValue > 0 ? (
+      {plan.monthlyValue > 0 && isYearly ? (
         <p className="mt-1 text-xs font-bold text-slate-500">월 환산 {formatKrw(plan.monthlyValue)}</p>
       ) : null}
       <p className="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-300">{plan.description}</p>
@@ -109,10 +117,10 @@ function PlanCard({
             type="button"
             onClick={() => onCheckout(plan)}
             disabled={isBusy}
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-accent-blue px-4 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-accent-blue px-4 text-center text-sm font-black leading-5 text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isBusy ? <Loader2 className="mr-2 animate-spin" size={16} aria-hidden /> : null}
-            {isYearlyBillingPlan(plan.id) ? "연간으로 시작하기" : "월간으로 시작하기"}
+            {checkoutCtaLabel(plan)}
           </button>
         )}
       </div>

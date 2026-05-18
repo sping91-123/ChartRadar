@@ -189,9 +189,9 @@ function AltProCta({ compact = false }: { compact?: boolean }) {
     <div className={`rounded-lg border border-cyan-300/25 bg-cyan-300/10 ${compact ? "p-3" : "p-4"}`}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-black text-cyan-100">Coin Pro 알트 필터</p>
+          <p className="text-xs font-black text-cyan-100">Coin Pro 알트 상세 판단</p>
           <p className="mt-1 text-sm leading-6 text-slate-300 [word-break:keep-all]">
-            추적 조건, 무효화 조건, 가격 레벨, 상세 근거는 Pro에서 확인합니다.
+            BTC/ETH·알트 리스크, 추적 조건, 무효화 기준, 세부 리스크는 Coin Pro에서 확인할 수 있습니다.
           </p>
         </div>
         <Link
@@ -199,7 +199,7 @@ function AltProCta({ compact = false }: { compact?: boolean }) {
           className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-md bg-cyan-300 px-3 text-xs font-black text-slate-950 transition hover:bg-cyan-200"
         >
           <Crown size={14} aria-hidden />
-          Coin Pro 보기
+          Coin Pro로 코인 상세 판단 열기
         </Link>
       </div>
     </div>
@@ -242,7 +242,7 @@ function StatusBadge({ setup, riskProfile }: { setup: ScoutSetup; riskProfile: S
     if (riskProfile === "radar") {
       return (
         <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-accent-blue/40 bg-accent-blue/15 px-2 py-1 text-[11px] font-black text-accent-blue">
-          공격적 관찰
+          확장 관찰
         </span>
       );
     }
@@ -460,8 +460,8 @@ function buildJournalNote(setup: ScoutSetup) {
     "위험 신호:",
     ...(risks.length ? risks.map((item) => `- ${item}`) : ["- 별도 위험 신호 없음"]),
     "",
-    "기회 신호:",
-    ...(opportunities.length ? opportunities.map((item) => `- ${item}`) : ["- 별도 기회 신호 없음"]),
+    "추적 후보:",
+    ...(opportunities.length ? opportunities.map((item) => `- ${item}`) : ["- 별도 추적 후보 없음"]),
     "",
     "주의: 이 기록은 매수·매도 추천이 아니라, 시장 구조 관찰 기록입니다."
   ].join("\n");
@@ -607,7 +607,7 @@ function SetupCard({
           <p className="text-[11px] font-bold text-slate-400">요약 리스크</p>
           <p className="mt-1 text-sm font-black text-white">{altSummaryRisk}</p>
           <p className="mt-1 text-[11px] leading-5 text-slate-500">
-            추적 조건과 무효화 조건은 Pro에서 렌더링합니다.
+            Basic에서는 방향 요약만 제공합니다. 상세 조건, 무효화 기준, 세부 리스크는 Pro에서 확인할 수 있습니다.
           </p>
         </div>
       ) : null}
@@ -760,11 +760,11 @@ function EmptyState({
           onClick={onUseRadar}
           className="mt-4 inline-flex min-h-10 items-center justify-center rounded-md border border-signal-danger/30 bg-signal-danger/15 px-3 text-xs font-black text-signal-danger transition hover:bg-signal-danger hover:text-white"
         >
-          공격적 분석으로 더 넓게 보기
+          확장 감지로 더 넓게 보기
         </button>
       ) : null}
       <div className="mt-3 grid gap-2 text-left text-[11px] leading-5 text-slate-400 sm:grid-cols-3">
-        <span className="rounded-md border border-surface-line bg-black/20 px-3 py-2">1. 킬존/세션 재진입 대기</span>
+        <span className="rounded-md border border-surface-line bg-black/20 px-3 py-2">1. 킬존/세션 재접근 대기</span>
         <span className="rounded-md border border-surface-line bg-black/20 px-3 py-2">2. MSB·CHoCH 재정렬 대기</span>
         <span className="rounded-md border border-surface-line bg-black/20 px-3 py-2">3. OB/FVG/OTE 근처 재접근 대기</span>
       </div>
@@ -816,11 +816,11 @@ function ScanSummary({
         }`}
       >
         <p className={`text-sm font-black ${isRadar ? "text-signal-danger" : "text-accent-blue"}`}>
-          전체 TF 점수순 · {isRadar ? "공격적 분석" : "보수적 분석"} · 강한 감지 {entryCount + activeCount}개 · 관찰 {watchCount}개
+          전체 TF 점수순 · {isRadar ? "확장 감지" : "보수적 분석"} · 강한 감지 {entryCount + activeCount}개 · 관찰 {watchCount}개
         </p>
         <p className="mt-1 text-xs leading-5 text-slate-300 [word-break:keep-all]">
           {isRadar
-            ? "공격적 분석은 완화된 조건으로 움직임을 더 넓게 잡아냅니다. 빠른 변화를 먼저 보고 싶을 때 적합합니다."
+            ? "확장 감지는 완화된 조건으로 움직임을 더 넓게 정리합니다. 빠른 변화를 먼저 점검할 때 적합합니다."
             : "보수적 분석은 구조가 더 분명한 감지만 남깁니다. 관찰 구간, 무효 기준, 포지션 크기까지 함께 확인하세요."}
         </p>
       </div>
@@ -834,12 +834,12 @@ function ScanSummary({
       }`}
     >
       <p className={`text-sm font-black ${isRadar ? "text-signal-danger" : "text-accent-blue"}`}>
-        {isRadar ? "공격적 분석" : "보수적 분석"} · 강한 감지 없음 · 관찰 {watchCount}개
+        {isRadar ? "확장 감지" : "보수적 분석"} · 강한 감지 없음 · 관찰 {watchCount}개
       </p>
       <p className="mt-1 text-xs leading-5 text-slate-300 [word-break:keep-all]">
         전체 타임프레임을 통틀어 바로 검토할 조건은 부족합니다.
         {isRadar
-          ? " 공격적 분석은 작은 움직임까지 넓게 보여주므로, 다시 돌려서 새로 올라오는 감지를 확인해 보세요."
+          ? " 확장 감지는 작은 움직임까지 넓게 보여주므로, 다시 돌려서 새로 올라오는 감지를 확인해 보세요."
           : " 가격이 다시 관찰 구간에 접근할 때 확인할 체크포인트만 남겨두는 흐름입니다."}
       </p>
     </div>
@@ -1004,7 +1004,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
                 {excludeMajor ? "추적 후보 / 관망 / 고위험" : "관찰 구간 표시"}
               </span>
               <span className="whitespace-nowrap rounded-md border border-orange-400/20 bg-orange-400/10 px-2 py-1 text-orange-200">
-                {excludeMajor ? "BTC 방향성 의존 확인" : "공격적 분석은 더 넓게 감지"}
+                {excludeMajor ? "BTC 방향성 의존 확인" : "확장 감지는 더 넓게 확인"}
               </span>
             </div>
           </div>
@@ -1027,7 +1027,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
                   : "border-transparent text-slate-300 hover:bg-surface-cardSoft hover:text-white"
               }`}
             >
-              {profile === "guard" ? "보수적 분석" : "공격적 분석"}
+              {profile === "guard" ? "보수적 분석" : "확장 감지"}
             </button>
           ))}
           </div>
@@ -1094,7 +1094,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
 
       <p className="mt-3 text-[11px] leading-5 text-slate-500">
         {excludeMajor
-          ? "레이더 결과는 5분 단위로 갱신됩니다. Basic은 현재가와 큰 분류만 보여주며, 추적 조건과 무효화 조건은 Pro 상세 영역에서 확인합니다."
+          ? "레이더 결과는 5분 단위로 갱신됩니다. Basic에서는 방향 요약만 제공합니다. 추적 조건, 무효화 기준, 세부 리스크는 Coin Pro에서 확인할 수 있습니다."
           : "레이더 결과는 5분 단위로 갱신됩니다. 감지 카드는 오늘 먼저 확인할 순서를 줄여주는 기준이며, 관찰 구간과 무효 기준은 본인의 손절 원칙과 포지션 크기에 맞춰 다시 확인하세요."}
       </p>
     </section>

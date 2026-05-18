@@ -60,21 +60,24 @@ function UsageRow({ state, isPaid }: { state: ReturnType<typeof getUsageBucketSt
 
 const initialUsageSnapshot: UsageSnapshot = { dateKey: "", counts: {} };
 
-const scopedUsageCopy: Record<BillingPageScope, { free: string; paid: string; proHref: string }> = {
+const scopedUsageCopy: Record<BillingPageScope, { free: string; paid: string; proHref: string; ctaLabel: string }> = {
   all: {
-    free: "Basic에서는 오늘 시장의 첫 흐름을 먼저 확인합니다. 장중 변화를 다시 돌려보고, 관심종목을 넓히고, 알림까지 받고 싶다면 Pro가 필요합니다.",
-    paid: "Pro 실전 감시 모드가 열려 있습니다. 코인, 글로벌, AI 브리핑, 관심종목, 알림을 장중에도 끊기지 않게 이어갈 수 있습니다.",
-    proHref: "/pro"
+    free: "Basic에서는 방향 요약만 제공합니다. 상세 조건, 무효화 기준, 세부 리스크는 Pro에서 확인할 수 있습니다.",
+    paid: "All Market Pro 판단 보조 모드입니다. 코인과 글로벌 전체 시장 판단, 리스크 점검, 알림을 함께 확인할 수 있습니다.",
+    proHref: "/pro",
+    ctaLabel: "All Market Pro 보기"
   },
   crypto: {
-    free: "Basic에서는 코인 시장의 첫 흐름을 먼저 확인합니다. 장중 후보 재확인, 관심코인 추적, 코인 알림까지 챙기려면 Coin Pro가 필요합니다.",
-    paid: "Coin Pro 실전 감시 모드가 열려 있습니다. 코인 스캔, 관심코인, AI 브리핑, 알림을 장중에도 끊기지 않게 이어갈 수 있습니다.",
-    proHref: "/pro?market=crypto"
+    free: "Basic에서는 방향 요약만 제공합니다. BTC/ETH·알트 추적 조건, 무효화 기준, 세부 리스크는 Coin Pro에서 확인할 수 있습니다.",
+    paid: "Coin Pro 판단 보조 모드입니다. 코인 상세 판단, BTC/ETH·알트 리스크, 추적 조건을 반복 확인할 수 있습니다.",
+    proHref: "/pro?market=crypto",
+    ctaLabel: "Coin Pro 보기"
   },
   stocks: {
-    free: "Basic에서는 글로벌 시장의 첫 흐름을 먼저 확인합니다. 장중 미국주식, 해외선물, ETF, 매크로 브리핑과 알림을 반복 확인하려면 Global Pro가 필요합니다.",
-    paid: "Global Pro 실전 감시 모드가 열려 있습니다. 미국주식, 해외선물, ETF, 매크로 브리핑과 알림을 장중에도 끊기지 않게 이어갈 수 있습니다.",
-    proHref: "/pro?market=stocks"
+    free: "Basic에서는 방향 요약만 제공합니다. 미국장 30초 체크 상세, 지수선물, 매크로 압력, 섹터 리스크는 Global Pro에서 확인할 수 있습니다.",
+    paid: "Global Pro 판단 보조 모드입니다. 미국장 30초 체크, 지수선물, 매크로 압력, 섹터 로테이션을 반복 확인할 수 있습니다.",
+    proHref: "/pro?market=stocks",
+    ctaLabel: "Global Pro 보기"
   }
 };
 
@@ -120,7 +123,7 @@ export function UsageMeterPanel({
   const scopedUsedTotal = scopedStates.reduce((sum, state) => sum + state.used, 0);
   const scopedOverCount = scopedStates.filter((state) => state.isOverFree).length;
   const title = isPaid
-    ? `${entitlementLabel} 실전 감시 모드입니다.`
+    ? `${entitlementLabel} 판단 보조 모드입니다.`
     : scopedOverCount > 0
       ? "오늘 Basic 한도를 모두 사용했습니다."
       : scopedUsedTotal > 0
@@ -145,7 +148,7 @@ export function UsageMeterPanel({
         <div className="flex shrink-0 gap-2">
           <Link href={copy.proHref} className="enterprise-button inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-black">
             <Crown size={13} aria-hidden />
-            {isPaid ? "Pro 활성" : "Pro 보기"}
+            {isPaid ? "Pro 활성" : copy.ctaLabel}
           </Link>
         </div>
       </div>
@@ -159,7 +162,7 @@ export function UsageMeterPanel({
       <div className="mt-4 flex flex-col gap-2 rounded-xl border border-accent-blue/20 bg-accent-blue/10 p-3 text-xs leading-5 text-accent-blue sm:flex-row sm:items-center sm:justify-between">
         <span className="flex items-start gap-2">
           <Zap className="mt-0.5 shrink-0" size={14} aria-hidden />
-          Basic은 첫 방향 확인용이고, Pro는 장중 재확인과 알림까지 이어지는 실전 감시 모드입니다.
+          이 정보는 투자 권유가 아니라 판단 보조용입니다. Basic은 방향 요약만 제공하고, Pro는 상세 조건과 세부 리스크를 함께 확인합니다.
         </span>
         {compact ? (
           <Link href={copy.proHref} className="font-black text-accent-blue hover:text-white">

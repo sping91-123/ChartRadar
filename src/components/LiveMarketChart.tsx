@@ -350,7 +350,7 @@ const structureSensitivityOptions: Array<{
     description: "짧은 흐름을 더 빨리 잡습니다.",
     analysisMode: "aggressive",
     msbMode: "wick",
-    detail: "빠른 반응, 신호 많음, 변동성 민감"
+    detail: "빠른 반응, 감지 범위 넓음, 변동성 민감"
   },
   {
     value: 7,
@@ -358,7 +358,7 @@ const structureSensitivityOptions: Array<{
     description: "기본값으로 쓰기 좋습니다.",
     analysisMode: "confirmed",
     msbMode: "wick",
-    detail: "균형 반응, 기본 추천, 노이즈 완화"
+    detail: "균형 반응, 기본 기준, 노이즈 완화"
   },
   {
     value: 9,
@@ -598,7 +598,7 @@ function userFacingRiskLabel(analysis: MarketAnalysis | null) {
 
 function userFacingNextStep(analysis: MarketAnalysis | null) {
   if (!analysis) return "레이더가 차트 데이터를 감지하는 중";
-  if (analysis.bias === "neutral") return "진입보다 구조 확인";
+  if (analysis.bias === "neutral") return "신규 판단보다 구조 확인";
   if (analysis.readiness === "high") return "손절/수량 먼저 확인";
   return "반응 확인 후 판단";
 }
@@ -679,7 +679,7 @@ function buildRadarPulse(analysis: MarketAnalysis, active?: TimeframeAnalysis): 
   const riskText =
     analysis.riskFlags[0] ??
     (active?.condition.rsiState === "overbought"
-      ? "과열권에 가까워 추격 진입은 피하는 편이 좋습니다."
+      ? "과열권에 가까워 추격 판단은 피하는 편이 좋습니다."
       : active?.condition.volatilityState === "expanded"
         ? "변동성이 커져 손절폭과 포지션 크기를 먼저 줄여야 합니다."
         : "뚜렷한 위험 플래그는 적지만, 손절 기준 없이 들어가면 판독 의미가 없습니다.");
@@ -752,19 +752,19 @@ function buildCoinBasicBeginnerSteps(analysis: MarketAnalysis): BeginnerGuideSte
     {
       label: "1. 최종 판단",
       title: analysis.verdict,
-      body: "Basic에서는 최종 방향과 판단 강도를 먼저 확인하고, 세부 조건은 과하게 해석하지 않습니다.",
+      body: "Basic에서는 방향 요약만 제공합니다. 상세 조건, 무효화 기준, 세부 리스크는 Pro에서 확인할 수 있습니다.",
       tone: "info"
     },
     {
       label: "2. 리스크 확인",
       title: analysis.riskFlags[0] ?? "리스크 먼저 확인",
-      body: "상세 리스크와 무효화 조건은 Pro에서 전체 맥락으로 확인합니다.",
+      body: "이 정보는 투자 권유가 아니라 판단 보조용입니다. 세부 리스크는 Pro에서 전체 맥락으로 확인합니다.",
       tone: analysis.riskFlags.length > 0 ? "warning" : "neutral"
     },
     {
       label: "3. 다음 기준",
       title: "추적 조건은 잠금",
-      body: "실제 판단에 필요한 조건, 무효화, 다음 행동은 Pro 판단 보조 영역에서 확인합니다.",
+      body: "실제 판단에 필요한 추적 조건, 무효화 기준, 다음 확인 기준은 Pro 판단 보조 영역에서 확인합니다.",
       tone: "neutral"
     }
   ];
@@ -776,8 +776,8 @@ function buildMajorScreenGuideSteps(isPro: boolean): BeginnerGuideStep[] {
       label: "1. 상단 판단",
       title: "Radar Insight를 먼저 봅니다",
       body: isPro
-        ? "최종 판단, 판단 강도, 추적 조건, 무효화 조건은 상단 판단 카드에서 먼저 확인합니다."
-        : "Basic에서는 최종 판단과 방향감, 공개된 핵심 근거만 먼저 확인합니다.",
+        ? "최종 판단, 판단 강도, 추적 조건, 무효화 기준은 상단 판단 카드에서 먼저 확인합니다."
+        : "Basic에서는 방향 요약만 제공합니다. 공개된 핵심 근거와 일반 리스크만 먼저 확인합니다.",
       tone: "info"
     },
     {
@@ -790,8 +790,8 @@ function buildMajorScreenGuideSteps(isPro: boolean): BeginnerGuideStep[] {
       label: "3. 실행 전 점검",
       title: isPro ? "리스크 기준을 다시 점검" : "세부 조건은 Pro 영역",
       body: isPro
-        ? "구체 판단은 추적 조건, 무효화 조건, 리스크 점검을 모두 맞춘 뒤 검토합니다."
-        : "추적 조건, 무효화 조건, 구체 레벨, 다음 행동은 Pro에서 판단 보조 항목으로 확인합니다.",
+        ? "구체 판단은 추적 조건, 무효화 기준, 리스크 점검을 모두 맞춘 뒤 검토합니다."
+        : "추적 조건, 무효화 기준, 구체 레벨, 다음 확인 기준은 Pro에서 판단 보조 항목으로 확인합니다.",
       tone: isPro ? "warning" : "neutral"
     }
   ];
@@ -2138,7 +2138,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
       ...analysis.checkpoints.map((item) => `- ${item}`),
       `위험 신호:`,
       ...(analysis.riskFlags.length ? analysis.riskFlags.map((item) => `- ${item}`) : ["- 없음"]),
-      `기회 신호:`,
+      `추적 후보:`,
       ...(analysis.opportunityFlags.length ? analysis.opportunityFlags.map((item) => `- ${item}`) : ["- 없음"])
     ];
 
@@ -2282,7 +2282,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   ? "관심 있는 알트코인을 제한 없이 바꿔가며 구조와 브리핑을 확인할 수 있습니다."
                   : visibleAltAnalysisGate.allowed
                     ? `무료에서는 하루 ${visibleAltAnalysisGate.limit}개의 알트를 개별 분석할 수 있습니다. 같은 알트는 다시 열어도 차감되지 않습니다.`
-                    : "오늘 무료 알트 분석을 모두 사용했습니다. Coin Pro에서는 알트코인을 제한 없이 확인할 수 있습니다."}
+                    : "오늘 무료 알트 분석을 모두 사용했습니다. Coin Pro에서는 BTC/ETH·알트 리스크와 추적 조건을 반복 확인할 수 있습니다."}
               </p>
             </div>
             {!hasCoinPro ? (
@@ -2291,7 +2291,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 className="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-md bg-cyan-300 px-3 text-xs font-black text-slate-950 transition hover:bg-cyan-200"
               >
                 <Crown size={13} aria-hidden />
-                Coin Pro 보기
+                Coin Pro 상세 보기
               </Link>
             ) : null}
           </div>
@@ -2338,10 +2338,10 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-black text-amber-200">오늘 무료 알트 분석 완료</p>
-              <h3 className="mt-2 text-2xl font-black text-white">새 알트 분석은 Coin Pro에서 계속 열립니다.</h3>
+              <h3 className="mt-2 text-2xl font-black text-white">새 알트 상세 판단은 Coin Pro에서 열립니다.</h3>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 [word-break:keep-all]">
                 무료에서는 하루 {visibleAltAnalysisGate.limit}개의 알트를 개별 분석할 수 있어요. 이미 확인한 알트는 다시 열 수 있고,
-                새로운 알트까지 계속 비교하려면 Coin Pro가 필요합니다.
+                새로운 알트의 추적 조건과 리스크까지 확인하려면 Coin Pro가 필요합니다.
               </p>
             </div>
             <Link
@@ -2349,7 +2349,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-cyan-300 px-4 text-sm font-black text-slate-950 transition hover:bg-cyan-200"
             >
               <Crown size={16} aria-hidden />
-              Coin Pro 보기
+              Coin Pro 상세 보기
             </Link>
           </div>
           {visibleAltAnalysisGate.symbols.length > 0 ? (
@@ -2378,7 +2378,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   ? "이 안내는 판단을 다시 내리는 영역이 아닙니다. 상단 판단을 먼저 보고, 아래 차트와 지표는 그 판단의 근거를 확인하는 순서로 봅니다."
                   : hasCoinPro
                   ? "방향, 현재 위치, 위험 조건을 한 줄 행동 순서로 압축했습니다. 초보자는 아래 3가지를 먼저 확인한 뒤 세부 지표로 내려가면 됩니다."
-                  : "Basic에서는 최종 판단, 강도, 공개된 근거와 리스크까지만 확인합니다. 세부 추적 조건과 다음 행동은 Pro 판단 보조 영역에서 분리합니다."
+                  : "Basic에서는 방향 요약만 제공합니다. 공개된 근거와 일반 리스크까지만 확인하고, 세부 추적 조건과 다음 확인 기준은 Pro 판단 보조 영역에서 분리합니다."
               }
               steps={
                 isMajorScreen
@@ -2391,7 +2391,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 isMajorScreen
                   ? hasCoinPro
                     ? [
-                        "상단 판단 카드의 추적 조건과 무효화 조건을 먼저 확인",
+                        "상단 판단 카드의 추적 조건과 무효화 기준을 먼저 확인",
                         "아래 구조·기술 근거가 같은 방향을 보조하는지 확인",
                         "리스크 점검 항목이 판단을 약화시키는지 확인"
                       ]
@@ -2409,7 +2409,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   : [
                       "최종 판단과 판단 강도를 먼저 확인",
                       "공개된 핵심 근거와 리스크 1개만 확인",
-                      "추적 조건, 무효화, 다음 행동은 잠금 영역으로 분리"
+                      "추적 조건, 무효화 기준, 다음 확인 기준은 잠금 영역으로 분리"
                     ]
               }
               help={
@@ -2417,7 +2417,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   ? "상단 Radar Insight가 최종 판단 영역입니다. 아래 안내와 지표는 판단을 보조하는 근거 확인용입니다."
                   : hasCoinPro
                   ? "판단 엔진은 차트 구조, 현재 위치, 위험 플래그, 데이터 신뢰도를 합쳐 행동 순서를 정리합니다. 점수가 좋아도 손절과 수량을 정하지 않았다면 아직 준비가 끝난 상태가 아닙니다."
-                  : "Basic 안내는 판단 보조 요약입니다. 실제 판단에 필요한 조건, 무효화, 상세 리스크는 Pro에서 전체 맥락으로 확인합니다."
+                  : "Basic 안내는 판단 보조 요약입니다. 실제 판단에 필요한 조건, 무효화 기준, 상세 리스크는 Pro에서 전체 맥락으로 확인합니다."
               }
             />
           </div>
@@ -2630,7 +2630,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 ? isBasicAltView
                   ? `요약 리스크: ${altRiskSignals[0] ?? "리스크 점검"}. 세부 추적 조건과 가격 기준은 Pro에서 확인합니다.`
                   : isMajorScreen
-                  ? "최종 판단, 판단 강도, 추적 조건, 무효화 조건은 상단 Radar Insight에서 확인하고, 이 영역은 그 판단을 만든 구조·기술 근거만 확인합니다."
+                  ? "최종 판단, 판단 강도, 추적 조건, 무효화 기준은 상단 Radar Insight에서 확인하고, 이 영역은 그 판단을 만든 구조·기술 근거만 확인합니다."
                   : `종합 점수 ${analysis.biasScore}${combinedScoreLimit ? ` / -${combinedScoreLimit}~+${combinedScoreLimit}` : ""}. ${analysis.summaryLine}`
                 : "캔들 데이터를 불러오고 있습니다."}
             </p>
@@ -2646,7 +2646,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                     <span className="mt-1 block">
                       {hasCoinPro
                         ? "Pro에서는 아래에서 구조 근거, 기술 근거, 리스크 점검을 이어서 확인합니다."
-                        : "Basic에서는 구체 조건, 가격 레벨, 무효화 기준을 렌더링하지 않습니다."}
+                        : "Basic에서는 방향 요약만 제공합니다. 상세 조건, 무효화 기준, 세부 리스크는 Pro에서 확인할 수 있습니다."}
                     </span>
                   </div>
                 ) : isBasicAltView ? (
@@ -2683,7 +2683,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               <div className="mt-3 rounded-md border border-cyan-300/25 bg-cyan-300/10 px-3 py-3">
                 <p className="text-xs font-black text-cyan-100">Coin Pro 상세 판단 보조</p>
                 <p className="mt-1 text-sm leading-6 text-slate-300 [word-break:keep-all]">
-                  무효화 조건, 구체 가격 레벨, AI 브리핑, 상세 체크포인트는 Basic에서 렌더링하지 않습니다.
+                  Basic에서는 방향 요약만 제공합니다. 무효화 기준, 구체 가격 레벨, AI 브리핑, 세부 리스크는 Coin Pro에서 확인할 수 있습니다.
                 </p>
               </div>
             ) : null}
@@ -2701,8 +2701,8 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               </h3>
               <p className="mt-2 text-sm leading-6 text-slate-300 [word-break:keep-all]">
                 {isBasicAltView
-                  ? "Basic 알트 화면에서는 큰 분류와 요약 리스크까지만 제공합니다. 구체 조건, 가격 레벨, 무효화 기준이 포함될 수 있는 AI 상세 브리핑은 렌더링하지 않습니다."
-                  : "Basic 화면에서는 상단 판단 요약과 일반 리스크까지만 제공합니다. 구체 조건, 가격 레벨, 무효화 기준이 포함될 수 있는 AI 상세 브리핑은 렌더링하지 않습니다."}
+                  ? "Basic에서는 방향 요약만 제공합니다. 구체 조건, 가격 레벨, 무효화 기준이 포함될 수 있는 AI 상세 브리핑은 Coin Pro에서 확인할 수 있습니다."
+                  : "Basic에서는 방향 요약만 제공합니다. 구체 조건, 가격 레벨, 무효화 기준이 포함될 수 있는 AI 상세 브리핑은 Pro에서 확인할 수 있습니다."}
               </p>
             </div>
           ) : analysis && activeAnalysis ? (
@@ -3054,7 +3054,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   <h3 className="mt-1 text-lg font-black text-white">{analysis.proPlan.title}</h3>
                   <p className="mt-2 text-sm leading-6 text-slate-300">{analysis.proPlan.reason}</p>
                   <p className="mt-2 rounded-md border border-signal-warning/25 bg-signal-warning/10 px-3 py-2 text-xs leading-5 text-signal-warning">
-                    아래 가격대는 구조 확인용 기준입니다. 실제 진입 전에는 손절폭과 포지션 크기를 함께 계산하세요.
+                    아래 가격대는 구조 확인용 기준입니다. 실제 판단 전에는 손절폭과 포지션 크기를 함께 계산하세요.
                   </p>
                 </div>
                 <span className={`inline-flex shrink-0 rounded-md border px-3 py-1.5 text-sm font-black ${planQualityClasses(analysis.proPlan.quality)}`}>
@@ -3088,8 +3088,8 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             <div className="rounded-lg border border-cyan-300/20 bg-cyan-300/10 p-4">
               <p className="text-sm font-bold text-cyan-100">Pro 상세 판단 보조</p>
               <p className="mt-2 text-sm leading-6 text-slate-300 [word-break:keep-all]">
-                구체적인 롱/숏 추적 조건, 무효화 조건, 관찰 구간, 다음 레벨, 세부 리스크는 Basic에서 렌더링하지 않습니다.
-                상단 요약을 기준으로 방향감과 일반 리스크만 확인하세요.
+                Basic에서는 방향 요약만 제공합니다. 구체적인 롱/숏 추적 조건, 무효화 기준, 관찰 구간, 다음 레벨, 세부 리스크는 Pro에서 확인할 수 있습니다.
+                이 정보는 투자 권유가 아니라 판단 보조용입니다.
               </p>
             </div>
           ) : null}
@@ -3288,7 +3288,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           {analysis ? (
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-lg border border-emerald-500/20 bg-surface-cardSoft p-4">
-                <h3 className="text-sm font-bold text-emerald-300">기회 신호</h3>
+                <h3 className="text-sm font-bold text-emerald-300">추적 후보</h3>
                 <div className="mt-3 space-y-2">
                   {analysis.opportunityFlags.length > 0 ? (
                     analysis.opportunityFlags.map((item) => (

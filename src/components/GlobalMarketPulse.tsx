@@ -173,12 +173,12 @@ function ProCta({ compact = false }: { compact?: boolean }) {
   return (
     <Link
       href="/pro?market=stocks"
-      className={`inline-flex items-center justify-center gap-2 rounded-md border border-cyan-300/25 bg-cyan-300/10 font-black text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/15 ${
+      className={`inline-flex items-center justify-center gap-2 rounded-md border border-cyan-300/25 bg-cyan-300/10 text-center font-black leading-4 text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/15 ${
         compact ? "min-h-8 px-2.5 text-[11px]" : "min-h-10 px-3 text-xs"
       }`}
     >
       <Lock size={13} aria-hidden />
-      Pro 상세 확인
+      {compact ? "Global Pro 상세 판단 열기" : "Global Pro로 미국장 상세 판단 열기"}
     </Link>
   );
 }
@@ -264,7 +264,7 @@ function EventRiskBlock({ payload, isPaid }: { payload: DashboardPayload; isPaid
       ) : (
         <p className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-xs font-bold text-slate-500">이벤트 데이터 일부 확인 제한입니다.</p>
       )}
-      {!isPaid ? <LockedDetail title="이벤트 타임라인">Pro에서는 이벤트 타임라인과 관련 자산 영향을 함께 확인합니다.</LockedDetail> : null}
+      {!isPaid ? <LockedDetail title="이벤트 리스크 상세">Global Pro에서는 이벤트 타임라인과 관련 자산 영향을 함께 확인합니다.</LockedDetail> : null}
     </SectionShell>
   );
 }
@@ -290,7 +290,7 @@ function FuturesBlock({ payload, isPaid }: { payload: DashboardPayload; isPaid: 
       ) : (
         <p className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-xs font-bold text-slate-500">지수선물 데이터 일부 확인 제한입니다.</p>
       )}
-      {!isPaid ? <LockedDetail title="NQ / ES / YM / RTY 상세">Pro에서는 지수선물 전체, 지수선물 엇갈림, 조건과 무효화 기준을 확인합니다.</LockedDetail> : null}
+      {!isPaid ? <LockedDetail title="NQ / ES / YM / RTY 상세">Global Pro에서는 지수선물 전체, 지수선물 엇갈림, 조건과 무효화 기준을 확인합니다.</LockedDetail> : null}
     </SectionShell>
   );
 }
@@ -306,7 +306,7 @@ function MacroBlock({ payload, isPaid }: { payload: DashboardPayload; isPaid: bo
       <p className="mt-3 rounded-md border border-white/10 bg-white/[0.03] p-3 text-[11px] font-bold leading-5 text-slate-500 [word-break:keep-all]">
         {payload.proxyDisclosure}
       </p>
-      {!isPaid ? <LockedDetail title="매크로 프록시 전체">Pro에서는 VIX, UUP 달러 프록시, TLT/ZN=F/IEF/SHY 금리 프록시, 유가와 금 압력을 함께 봅니다.</LockedDetail> : null}
+      {!isPaid ? <LockedDetail title="매크로 압력 전체">Global Pro에서는 VIX, UUP 달러 프록시, TLT/ZN=F/IEF/SHY 금리 프록시, 유가와 금 압력을 함께 봅니다.</LockedDetail> : null}
     </SectionShell>
   );
 }
@@ -327,7 +327,7 @@ function SectorBlock({ payload, isPaid }: { payload: DashboardPayload; isPaid: b
           {weak ? <MiniItem item={weak} /> : <p className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-xs font-bold text-slate-500">약한 섹터 확인 제한</p>}
         </div>
       )}
-      {!isPaid ? <LockedDetail title="섹터 전체 로테이션">Pro에서는 성장, 방어, 금융, 에너지, 반도체 전체 로테이션과 시장 폭 해석을 봅니다.</LockedDetail> : null}
+      {!isPaid ? <LockedDetail title="섹터 전체 로테이션">Global Pro에서는 성장, 방어, 금융, 에너지, 반도체 전체 로테이션과 시장 폭 해석을 봅니다.</LockedDetail> : null}
     </SectionShell>
   );
 }
@@ -340,7 +340,7 @@ function LeaderBlock({ payload, isPaid }: { payload: DashboardPayload; isPaid: b
       <div className="grid gap-2 sm:grid-cols-2">
         {visibleItems.length ? visibleItems.map((item) => <MiniItem key={item.symbol} item={item} />) : <p className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-xs font-bold text-slate-500">대장주 데이터 일부 확인 제한입니다.</p>}
       </div>
-      {!isPaid ? <LockedDetail title="대장주 전체 상세">Pro에서는 NVDA, TSLA, AAPL, MSFT, AMZN, META, GOOGL, AVGO가 지수를 지지하는지 방해하는지 확인합니다.</LockedDetail> : null}
+      {!isPaid ? <LockedDetail title="대장주 레이더 상세">Global Pro에서는 NVDA, TSLA, AAPL, MSFT, AMZN, META, GOOGL, AVGO가 지수를 지지하는지 방해하는지 확인합니다.</LockedDetail> : null}
     </SectionShell>
   );
 }
@@ -366,7 +366,7 @@ function NewsBlock({ payload, isPaid }: { payload: DashboardPayload; isPaid: boo
       ) : (
         <p className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-xs font-bold text-slate-500">강한 뉴스 압력은 아직 제한적입니다.</p>
       )}
-      {!isPaid ? <LockedDetail title="뉴스 압력 상세">Pro에서는 핵심 뉴스 1~3개를 Risk-On, Risk-Off, 변동성 확대 요인으로 나눠 봅니다.</LockedDetail> : null}
+      {!isPaid ? <LockedDetail title="뉴스 압력 상세">Global Pro에서는 핵심 뉴스 1~3개를 Risk-On, Risk-Off, 변동성 확대 요인으로 나눠 봅니다.</LockedDetail> : null}
     </SectionShell>
   );
 }
@@ -488,7 +488,7 @@ export function GlobalMarketPulse() {
           {!isPaid ? (
             <div className="mt-3 rounded-lg border border-cyan-300/15 bg-cyan-300/[0.06] p-3 sm:flex sm:items-center sm:justify-between sm:gap-4">
               <p className="text-xs font-bold leading-5 text-cyan-100 [word-break:keep-all]">
-                Basic은 최종 라벨과 핵심 압력만 보여줍니다. Pro에서는 조건, 무효화 조건, 세부 리스크와 전체 로테이션을 확인합니다.
+                Basic에서는 방향 요약만 제공합니다. 상세 조건, 무효화 기준, 세부 리스크는 Global Pro에서 확인할 수 있습니다. 이 정보는 투자 권유가 아니라 판단 보조용입니다.
               </p>
               <div className="mt-3 shrink-0 sm:mt-0">
                 <ProCta compact />

@@ -125,9 +125,9 @@ function WatchlistProCta() {
     <div className="mt-3 rounded-lg border border-cyan-300/25 bg-cyan-300/10 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-black text-cyan-100">Coin Pro 관심 코인 레이더</p>
+          <p className="text-xs font-black text-cyan-100">Coin Pro 관심 코인 상세 판단</p>
           <p className="mt-1 text-sm leading-6 text-slate-300 [word-break:keep-all]">
-            관찰 구간, 무효화, 다음 레벨, 상세 체크포인트는 Pro에서 확인합니다.
+            BTC/ETH·알트 리스크, 추적 조건, 무효화 기준, 세부 리스크는 Coin Pro에서 확인할 수 있습니다.
           </p>
         </div>
         <Link
@@ -135,7 +135,7 @@ function WatchlistProCta() {
           className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-md bg-cyan-300 px-3 text-xs font-black text-slate-950 transition hover:bg-cyan-200"
         >
           <Crown size={14} aria-hidden />
-          Coin Pro 보기
+          Coin Pro로 코인 상세 판단 열기
         </Link>
       </div>
     </div>
@@ -154,7 +154,7 @@ function WatchlistSetupCard({ setup, canShowProDetails }: { setup: ScoutSetup; c
 
   const proximityText =
     setup.proximity === "ready"
-      ? "관찰 구간 진입"
+      ? "관찰 구간 도달"
       : setup.proximity === "near"
         ? `${Math.abs(setup.distancePercent).toFixed(2)}% 근접`
         : `${Math.abs(setup.distancePercent).toFixed(2)}% 대기`;
@@ -230,7 +230,7 @@ function WatchlistSetupCard({ setup, canShowProDetails }: { setup: ScoutSetup; c
         </>
       ) : (
         <p className="mt-2 text-[10px] leading-5 text-slate-500">
-          가격 조건, 무효화, 다음 레벨은 Pro에서 렌더링합니다.
+          Basic에서는 방향 요약만 제공합니다. 상세 조건, 무효화 기준, 세부 리스크는 Pro에서 확인할 수 있습니다.
         </p>
       )}
     </article>

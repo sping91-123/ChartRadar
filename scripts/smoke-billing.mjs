@@ -189,21 +189,43 @@ expectIncludes(files.supabaseAuthHook, "window.addEventListener(supabaseAuthRefr
 expectIncludes(files.checkoutConfirmationPanel, "window.dispatchEvent(new Event(supabaseAuthRefreshEvent))", "결제 성공 후 권한 재조회", "src/components/CheckoutConfirmationPanel.tsx");
 
 const cryptoAmount = /id:\s*"crypto_monthly"[\s\S]*?billingAmount:\s*(\d+)/.exec(files.billing)?.[1];
+const cryptoYearlyAmount = /id:\s*"crypto_yearly"[\s\S]*?billingAmount:\s*(\d+)/.exec(files.billing)?.[1];
+const cryptoYearlyMonthlyValue = /id:\s*"crypto_yearly"[\s\S]*?monthlyValue:\s*(\d+)/.exec(files.billing)?.[1];
 const stocksAmount = /id:\s*"stocks_monthly"[\s\S]*?billingAmount:\s*(\d+)/.exec(files.billing)?.[1];
+const stocksYearlyAmount = /id:\s*"stocks_yearly"[\s\S]*?billingAmount:\s*(\d+)/.exec(files.billing)?.[1];
+const stocksYearlyMonthlyValue = /id:\s*"stocks_yearly"[\s\S]*?monthlyValue:\s*(\d+)/.exec(files.billing)?.[1];
 const bundleAmount = /id:\s*"bundle_monthly"[\s\S]*?billingAmount:\s*(\d+)/.exec(files.billing)?.[1];
 const bundleYearlyAmount = /id:\s*"bundle_yearly"[\s\S]*?billingAmount:\s*(\d+)/.exec(files.billing)?.[1];
 const bundleYearlyMonthlyValue = /id:\s*"bundle_yearly"[\s\S]*?monthlyValue:\s*(\d+)/.exec(files.billing)?.[1];
 
-if (Number(cryptoAmount) === 14900) pass("코인 월간 청구 금액", "14,900원");
-else fail("코인 월간 청구 금액", `예상 14900, 현재 ${cryptoAmount ?? "미확인"}.`);
+if (Number(cryptoAmount) === 39000) pass("코인 월간 청구 금액", "39,000원");
+else fail("코인 월간 청구 금액", `예상 39000, 현재 ${cryptoAmount ?? "미확인"}.`);
 
-if (Number(stocksAmount) === 14900) pass("글로벌 월간 청구 금액", "14,900원");
-else fail("글로벌 월간 청구 금액", `예상 14900, 현재 ${stocksAmount ?? "미확인"}.`);
+if (Number(stocksAmount) === 39000) pass("글로벌 월간 청구 금액", "39,000원");
+else fail("글로벌 월간 청구 금액", `예상 39000, 현재 ${stocksAmount ?? "미확인"}.`);
 
-if (Number(bundleAmount) === 24900 && Number(bundleAmount) < Number(cryptoAmount) + Number(stocksAmount)) {
-  pass("번들 월간 할인 구조", "개별 결제보다 낮은 24,900원");
+if (Number(bundleAmount) === 69000 && Number(bundleAmount) < Number(cryptoAmount) + Number(stocksAmount)) {
+  pass("번들 월간 통합 가격", "개별 결제보다 낮은 69,000원");
 } else {
   fail("번들 월간 할인 구조", "코인+글로벌 개별 결제보다 번들 가격이 낮아야 합니다.");
+}
+
+if (Number(cryptoYearlyAmount) === 390000 && Number(cryptoYearlyMonthlyValue) === 32500) {
+  pass("코인 연간 청구 금액", "연 390,000원, 월 환산 32,500원");
+} else {
+  fail("코인 연간 청구 금액", `예상 390000/32500, 현재 ${cryptoYearlyAmount ?? "미확인"}/${cryptoYearlyMonthlyValue ?? "미확인"}.`);
+}
+
+if (Number(stocksYearlyAmount) === 390000 && Number(stocksYearlyMonthlyValue) === 32500) {
+  pass("글로벌 연간 청구 금액", "연 390,000원, 월 환산 32,500원");
+} else {
+  fail("글로벌 연간 청구 금액", `예상 390000/32500, 현재 ${stocksYearlyAmount ?? "미확인"}/${stocksYearlyMonthlyValue ?? "미확인"}.`);
+}
+
+if (Number(bundleYearlyAmount) === 690000 && Number(bundleYearlyMonthlyValue) === 57500) {
+  pass("번들 연간 청구 금액", "연 690,000원, 월 환산 57,500원");
+} else {
+  fail("번들 연간 청구 금액", `예상 690000/57500, 현재 ${bundleYearlyAmount ?? "미확인"}/${bundleYearlyMonthlyValue ?? "미확인"}.`);
 }
 
 if (Number(bundleYearlyMonthlyValue) > 0 && Number(bundleYearlyMonthlyValue) < Number(bundleYearlyAmount)) {
