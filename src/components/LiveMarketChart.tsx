@@ -727,6 +727,33 @@ function buildCoinBasicBeginnerSteps(analysis: MarketAnalysis): BeginnerGuideSte
   ];
 }
 
+function buildMajorScreenGuideSteps(isPro: boolean): BeginnerGuideStep[] {
+  return [
+    {
+      label: "1. 상단 판단",
+      title: "Radar Insight를 먼저 봅니다",
+      body: isPro
+        ? "최종 판단, 판단 강도, 추적 조건, 무효화 조건은 상단 판단 카드에서 먼저 확인합니다."
+        : "Basic에서는 최종 판단과 방향감, 공개된 핵심 근거만 먼저 확인합니다.",
+      tone: "info"
+    },
+    {
+      label: "2. 근거 상세",
+      title: "아래 영역은 보조 근거입니다",
+      body: "ICT 구조, 기술지표, 차트 표시는 상단 판단을 뒷받침하는 확인 자료로만 봅니다.",
+      tone: "neutral"
+    },
+    {
+      label: "3. 실행 전 점검",
+      title: isPro ? "리스크 기준을 다시 점검" : "세부 조건은 Pro 영역",
+      body: isPro
+        ? "구체 판단은 추적 조건, 무효화 조건, 리스크 점검을 모두 맞춘 뒤 검토합니다."
+        : "추적 조건, 무효화 조건, 구체 레벨, 다음 행동은 Pro에서 판단 보조 항목으로 확인합니다.",
+      tone: isPro ? "warning" : "neutral"
+    }
+  ];
+}
+
 function radarPulseClasses(tone: RadarPulseTone) {
   if (tone === "long") return "border-signal-success/20 bg-black/20 text-signal-success";
   if (tone === "short") return "border-signal-danger/20 bg-black/20 text-signal-danger";
@@ -975,6 +1002,8 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
   const initialSymbol = altOnly ? altSymbols[0] : majorSymbols[0];
   const { profile } = useSupabaseAuth();
   const hasCoinPro = hasMarketEntitlement(profile?.plan, "crypto");
+  const isMajorScreen = majorOnly && !altOnly;
+  const canShowMajorProDetails = !isMajorScreen || hasCoinPro;
   const chartRef = useRef<HTMLDivElement | null>(null);
   const chartApiRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -1327,7 +1356,10 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
     () => (radarInsight ? visibleRadarInsightForPlan(radarInsight, hasCoinPro) : null),
     [hasCoinPro, radarInsight]
   );
-  const hasAnyOverlay = useMemo(() => Object.values(overlaySettings).some(Boolean), [overlaySettings]);
+  const hasAnyOverlay = useMemo(
+    () => canShowMajorProDetails && Object.values(overlaySettings).some(Boolean),
+    [canShowMajorProDetails, overlaySettings]
+  );
   const combinedScoreLimit = useMemo(() => {
     if (!analysis) return null;
     const config = tradingModeConfigs[effectiveTradingMode];
@@ -1478,6 +1510,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
     markersRef.current?.setMarkers([]);
 
     if (!activeAnalysis) return;
+    if (!canShowMajorProDetails) return;
 
     const lines: Array<{ price: number | null | undefined; color: string; title: string; style?: LineStyle }> = [];
     const markers: SeriesMarker<Time>[] = [];
@@ -1648,7 +1681,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         })
       );
     markersRef.current?.setMarkers(markers);
-  }, [activeAnalysis, candles, overlaySettings]);
+  }, [activeAnalysis, canShowMajorProDetails, candles, overlaySettings]);
 
   const mtfFvgMap = useMemo(
     () =>
@@ -2284,15 +2317,35 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           <RadarInsightPanel insight={visibleRadarInsight} isPro={hasCoinPro} />
           <div className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
             <BeginnerActionGuide
-              title="지금은 이 순서로 보면 됩니다"
+              title={isMajorScreen ? "화면은 이 순서로 읽습니다" : "지금은 이 순서로 보면 됩니다"}
               summary={
-                hasCoinPro
+                isMajorScreen
+                  ? "이 안내는 판단을 다시 내리는 영역이 아닙니다. 상단 판단을 먼저 보고, 아래 차트와 지표는 그 판단의 근거를 확인하는 순서로 봅니다."
+                  : hasCoinPro
                   ? "방향, 현재 위치, 위험 조건을 한 줄 행동 순서로 압축했습니다. 초보자는 아래 3가지를 먼저 확인한 뒤 세부 지표로 내려가면 됩니다."
                   : "Basic에서는 최종 판단, 강도, 공개된 근거와 리스크까지만 확인합니다. 세부 추적 조건과 다음 행동은 Pro 판단 보조 영역에서 분리합니다."
               }
-              steps={hasCoinPro ? buildCoinBeginnerSteps(analysis, radarDecision) : buildCoinBasicBeginnerSteps(analysis)}
+              steps={
+                isMajorScreen
+                  ? buildMajorScreenGuideSteps(hasCoinPro)
+                  : hasCoinPro
+                    ? buildCoinBeginnerSteps(analysis, radarDecision)
+                    : buildCoinBasicBeginnerSteps(analysis)
+              }
               checklist={
-                hasCoinPro
+                isMajorScreen
+                  ? hasCoinPro
+                    ? [
+                        "상단 판단 카드의 추적 조건과 무효화 조건을 먼저 확인",
+                        "아래 구조·기술 근거가 같은 방향을 보조하는지 확인",
+                        "리스크 점검 항목이 판단을 약화시키는지 확인"
+                      ]
+                    : [
+                        "상단 판단과 판단 강도를 먼저 확인",
+                        "Basic 공개 근거와 일반 리스크만 확인",
+                        "구체 조건과 가격 레벨은 Pro 잠금 영역으로 구분"
+                      ]
+                  : hasCoinPro
                   ? [
                       "손절 기준을 말로 설명할 수 있는지 확인",
                       "수량이 계좌 기준 위험 한도 안인지 확인",
@@ -2305,7 +2358,9 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                     ]
               }
               help={
-                hasCoinPro
+                isMajorScreen
+                  ? "상단 Radar Insight가 최종 판단 영역입니다. 아래 안내와 지표는 판단을 보조하는 근거 확인용입니다."
+                  : hasCoinPro
                   ? "판단 엔진은 차트 구조, 현재 위치, 위험 플래그, 데이터 신뢰도를 합쳐 행동 순서를 정리합니다. 점수가 좋아도 손절과 수량을 정하지 않았다면 아직 준비가 끝난 상태가 아닙니다."
                   : "Basic 안내는 판단 보조 요약입니다. 실제 판단에 필요한 조건, 무효화, 상세 리스크는 Pro에서 전체 맥락으로 확인합니다."
               }
@@ -2325,18 +2380,20 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         </div>
       )}
 
-      <div className="mt-3">
-        <button
-          type="button"
-          onClick={() => setShowAdvancedControls((value) => !value)}
-          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-surface-line bg-surface-cardSoft px-3 text-sm font-bold text-slate-300 hover:border-accent-blue/60 hover:text-white"
-        >
-          <Settings2 size={16} aria-hidden />
-          차트 표시 설정 {showAdvancedControls ? "접기" : "열기"}
-        </button>
-      </div>
+      {canShowMajorProDetails ? (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => setShowAdvancedControls((value) => !value)}
+            className="inline-flex min-h-10 items-center gap-2 rounded-md border border-surface-line bg-surface-cardSoft px-3 text-sm font-bold text-slate-300 hover:border-accent-blue/60 hover:text-white"
+          >
+            <Settings2 size={16} aria-hidden />
+            차트 표시 설정 {showAdvancedControls ? "접기" : "열기"}
+          </button>
+        </div>
+      ) : null}
 
-      {showAdvancedControls ? (
+      {showAdvancedControls && canShowMajorProDetails ? (
         <div className="mt-3 rounded-lg border border-surface-line bg-surface-cardSoft p-3">
           <div className="rounded-md border border-white/10 bg-black/20 p-3">
             <p className="text-xs font-semibold text-slate-400">차트 표시 설정</p>
@@ -2431,8 +2488,8 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               <p className="text-lg font-black text-white">{analysis ? formatPrice(analysis.price) : "-"}</p>
             </div>
             {analysis ? (
-              <span className={`rounded-md border px-3 py-1.5 text-sm font-black ${biasClasses(analysis.bias)}`}>
-                {analysis.verdict}
+              <span className={`rounded-md border px-3 py-1.5 text-sm font-black ${isMajorScreen ? "border-white/10 bg-black/20 text-slate-300" : biasClasses(analysis.bias)}`}>
+                {isMajorScreen ? "판단 근거 차트" : analysis.verdict}
               </span>
             ) : null}
           </div>
@@ -2503,17 +2560,21 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             </div>
           ) : null}
 
-          <div className={`rounded-lg border p-4 ${biasClasses(analysis?.bias)}`}>
+          <div className={`rounded-lg border p-4 ${isMajorScreen ? "border-surface-line bg-surface-cardSoft text-slate-200" : biasClasses(analysis?.bias)}`}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold opacity-80">레이더 판독</p>
-                <h3 className="mt-1 text-2xl font-black">{analysis?.verdict ?? "레이더 대기 중"}</h3>
+                <p className="text-xs font-semibold opacity-80">{isMajorScreen ? "상단 판단의 근거 요약" : "레이더 판독"}</p>
+                <h3 className="mt-1 text-2xl font-black">
+                  {analysis ? (isMajorScreen ? "아래 데이터는 판단 보조 근거입니다" : analysis.verdict) : "레이더 대기 중"}
+                </h3>
               </div>
               <Activity size={26} aria-hidden />
             </div>
             <p className="mt-3 text-sm leading-6 text-slate-300">
               {analysis
-                ? `종합 점수 ${analysis.biasScore}${combinedScoreLimit ? ` / -${combinedScoreLimit}~+${combinedScoreLimit}` : ""}. ${analysis.summaryLine}`
+                ? isMajorScreen
+                  ? "최종 판단, 판단 강도, 추적 조건, 무효화 조건은 상단 Radar Insight에서 확인하고, 이 영역은 그 판단을 만든 구조·기술 근거만 확인합니다."
+                  : `종합 점수 ${analysis.biasScore}${combinedScoreLimit ? ` / -${combinedScoreLimit}~+${combinedScoreLimit}` : ""}. ${analysis.summaryLine}`
                 : "캔들 데이터를 불러오고 있습니다."}
             </p>
             {analysis ? (
@@ -2522,13 +2583,24 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   <span className="block text-xs font-semibold opacity-80">데이터 신뢰도</span>
                   <span className="mt-1 block text-lg font-black">{readinessLabel(analysis.readiness)}</span>
                 </div>
-                <div className="rounded-md border border-white/10 bg-black/15 p-3 text-sm leading-6 text-slate-100">
-                  <span className="block text-xs font-semibold text-slate-400">행동 가이드</span>
-                  <span className="mt-1 block">{analysis.actionGuide}</span>
-                </div>
+                {isMajorScreen ? (
+                  <div className="rounded-md border border-white/10 bg-black/15 p-3 text-sm leading-6 text-slate-100">
+                    <span className="block text-xs font-semibold text-slate-400">{hasCoinPro ? "근거 상세 범위" : "Basic 공개 범위"}</span>
+                    <span className="mt-1 block">
+                      {hasCoinPro
+                        ? "Pro에서는 아래에서 구조 근거, 기술 근거, 리스크 점검을 이어서 확인합니다."
+                        : "Basic에서는 구체 조건, 가격 레벨, 무효화 기준을 렌더링하지 않습니다."}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="rounded-md border border-white/10 bg-black/15 p-3 text-sm leading-6 text-slate-100">
+                    <span className="block text-xs font-semibold text-slate-400">행동 가이드</span>
+                    <span className="mt-1 block">{analysis.actionGuide}</span>
+                  </div>
+                )}
               </div>
             ) : null}
-            {analysis ? (
+            {analysis && (!isMajorScreen || hasCoinPro) ? (
               <div className="mt-3">
                 <button
                   type="button"
@@ -2551,14 +2623,26 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             <LiquidationPressurePanel symbol={symbol} timeframe={activeTimeframe} />
           ) : null}
 
-          {analysis && activeAnalysis ? (
+          {analysis && activeAnalysis && isMajorScreen && !hasCoinPro ? (
+            <div className="rounded-lg border border-cyan-300/20 bg-cyan-300/10 p-4">
+              <p className="text-xs font-black text-cyan-100">Pro 판단 보조</p>
+              <h3 className="mt-1 text-lg font-black text-white">AI 레이더 브리핑은 Pro에서 상세 근거로 열립니다.</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-300 [word-break:keep-all]">
+                Basic 화면에서는 상단 판단 요약과 일반 리스크까지만 제공합니다. 구체 조건, 가격 레벨, 무효화 기준이 포함될 수 있는 AI 상세 브리핑은 렌더링하지 않습니다.
+              </p>
+            </div>
+          ) : analysis && activeAnalysis ? (
             <div id="ai-briefing" className="scroll-mt-24 rounded-lg border border-accent-blue/25 bg-surface-cardSoft p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest text-accent-blue">AI 레이더 브리핑</p>
-                  <h3 className="mt-1 text-lg font-black text-white">감지된 구조 전체를 AI가 종합해서 정리합니다.</h3>
+                  <h3 className="mt-1 text-lg font-black text-white">
+                    {isMajorScreen ? "상단 판단의 근거를 문장으로 풀어봅니다." : "감지된 구조 전체를 AI가 종합해서 정리합니다."}
+                  </h3>
                   <p className="mt-2 text-sm leading-6 text-slate-400">
-                    {radarProfile === "technical"
+                    {isMajorScreen
+                      ? "이 브리핑은 최종 판단을 다시 내리는 영역이 아니라, 구조와 기술 근거를 읽기 쉽게 정리하는 보조 설명입니다."
+                      : radarProfile === "technical"
                       ? "선택 코인의 추세, 모멘텀, 변동성, 거래량 지표를 중심으로 시장 해석을 정리합니다."
                       : radarProfile === "ict"
                         ? "선택 코인의 MSB, CHoCH, OB, FVG, Sweep, CISD, PD, POC만 중심으로 시장 해석을 정리합니다."
@@ -2600,25 +2684,27 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 ) : null}
                 {marketBriefing.status === "ready" ? (
                   <>
-                    <div className="mb-4 grid gap-2 sm:grid-cols-3">
-                      <div className={`rounded-md border px-3 py-2 ${biasClasses(analysis.bias)}`}>
-                        <p className="text-[11px] font-bold opacity-80">방향 결론</p>
-                        <p className="mt-1 text-base font-black">
-                          {analysis.bias === "long" ? "롱 우세" : analysis.bias === "short" ? "숏 우세" : "횡보 관찰"}
-                        </p>
+                    {!isMajorScreen ? (
+                      <div className="mb-4 grid gap-2 sm:grid-cols-3">
+                        <div className={`rounded-md border px-3 py-2 ${biasClasses(analysis.bias)}`}>
+                          <p className="text-[11px] font-bold opacity-80">방향 결론</p>
+                          <p className="mt-1 text-base font-black">
+                            {analysis.bias === "long" ? "롱 우세" : analysis.bias === "short" ? "숏 우세" : "횡보 관찰"}
+                          </p>
+                        </div>
+                        <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2">
+                          <p className="text-[11px] font-bold text-slate-400">종합 점수</p>
+                          <p className="mt-1 text-base font-black text-white">
+                            {analysis.biasScore}
+                            {combinedScoreLimit ? ` / -${combinedScoreLimit}~+${combinedScoreLimit}` : ""}
+                          </p>
+                        </div>
+                        <div className={`rounded-md border px-3 py-2 ${readinessClasses(analysis.readiness)}`}>
+                          <p className="text-[11px] font-bold opacity-80">데이터 신뢰도</p>
+                          <p className="mt-1 text-base font-black">{readinessLabel(analysis.readiness)}</p>
+                        </div>
                       </div>
-                      <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2">
-                        <p className="text-[11px] font-bold text-slate-400">종합 점수</p>
-                        <p className="mt-1 text-base font-black text-white">
-                          {analysis.biasScore}
-                          {combinedScoreLimit ? ` / -${combinedScoreLimit}~+${combinedScoreLimit}` : ""}
-                        </p>
-                      </div>
-                      <div className={`rounded-md border px-3 py-2 ${readinessClasses(analysis.readiness)}`}>
-                        <p className="text-[11px] font-bold opacity-80">데이터 신뢰도</p>
-                        <p className="mt-1 text-base font-black">{readinessLabel(analysis.readiness)}</p>
-                      </div>
-                    </div>
+                    ) : null}
                     <HighlightedBriefing text={marketBriefing.text} />
                     {marketBriefing.cached ? (
                       <p className="mt-3 text-xs text-slate-500">방금 전 생성한 브리핑을 다시 불러왔습니다.</p>
@@ -2731,8 +2817,8 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
 
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <div className="rounded-lg border border-accent-blue/20 bg-black/20 p-4">
-                  <p className="text-xs font-bold text-accent-blue">진입 판단의 중심</p>
-                  <h4 className="mt-1 text-base font-black text-white">ICT 구조 코어</h4>
+                  <p className="text-xs font-bold text-accent-blue">상단 판단의 구조 근거</p>
+                  <h4 className="mt-1 text-base font-black text-white">ICT 구조 근거</h4>
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <SignalMetric label="MSB" value={stateLabel(activeAnalysis.msb)} direction={activeAnalysis.msb} />
                     <SignalMetric
@@ -2856,7 +2942,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             </div>
           ) : null}
 
-          {analysis && radarProfile !== "technical" ? (
+          {analysis && canShowMajorProDetails && radarProfile !== "technical" ? (
             <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
               <h3 className="text-sm font-bold text-white">지금 볼 구간</h3>
               <div className="mt-3 space-y-2">
@@ -2869,7 +2955,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             </div>
           ) : null}
 
-          {analysis && radarProfile !== "technical" ? (
+          {analysis && canShowMajorProDetails && radarProfile !== "technical" ? (
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
                 <h3 className="text-sm font-bold text-white">현재 위치 판단</h3>
@@ -2886,7 +2972,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             </div>
           ) : null}
 
-          {analysis?.proPlan && radarProfile !== "technical" ? (
+          {analysis?.proPlan && canShowMajorProDetails && radarProfile !== "technical" ? (
             <div className="rounded-lg border border-accent-blue/30 bg-accent-blue/10 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
@@ -2915,7 +3001,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 ))}
               </div>
             </div>
-          ) : analysis && radarProfile !== "technical" ? (
+          ) : analysis && canShowMajorProDetails && radarProfile !== "technical" ? (
             <div className="rounded-lg border border-signal-warning/25 bg-signal-warning/10 p-4">
               <p className="text-sm font-bold text-signal-warning">분석 시나리오 대기</p>
               <p className="mt-2 text-sm leading-6 text-slate-300">
@@ -2924,7 +3010,17 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             </div>
           ) : null}
 
-          {analysis && radarProfile !== "technical" ? (
+          {analysis && isMajorScreen && !hasCoinPro ? (
+            <div className="rounded-lg border border-cyan-300/20 bg-cyan-300/10 p-4">
+              <p className="text-sm font-bold text-cyan-100">Pro 상세 판단 보조</p>
+              <p className="mt-2 text-sm leading-6 text-slate-300 [word-break:keep-all]">
+                구체적인 롱/숏 추적 조건, 무효화 조건, 관찰 구간, 다음 레벨, 세부 리스크는 Basic에서 렌더링하지 않습니다.
+                상단 요약을 기준으로 방향감과 일반 리스크만 확인하세요.
+              </p>
+            </div>
+          ) : null}
+
+          {analysis && canShowMajorProDetails && radarProfile !== "technical" ? (
             <button
               type="button"
               onClick={() => setShowDetailedReadout((value) => !value)}
@@ -2934,7 +3030,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             </button>
           ) : null}
 
-          {showDetailedReadout && radarProfile !== "technical" ? (
+          {showDetailedReadout && canShowMajorProDetails && radarProfile !== "technical" ? (
             <>
           {analysis ? (
             <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
@@ -3440,9 +3536,9 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             </>
           ) : null}
 
-          {analysis ? (
+          {analysis && canShowMajorProDetails ? (
             <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
-              <h3 className="text-sm font-bold text-white">판독 근거</h3>
+              <h3 className="text-sm font-bold text-white">{isMajorScreen ? "판단 근거 상세" : "판독 근거"}</h3>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-md border border-signal-success/20 bg-signal-success/5 p-3">
                   <p className="text-xs font-bold text-signal-success">상승 근거</p>
