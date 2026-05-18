@@ -25,7 +25,9 @@ const fallbackUniverse: StockSymbolInfo[] = [
   { symbol: "ZN=F", name: "10Y Treasury Note Futures", group: "futures" },
   { symbol: "SPY", name: "S&P 500 ETF", group: "index_etf" },
   { symbol: "QQQ", name: "Nasdaq 100 ETF", group: "index_etf" },
-  { symbol: "^VIX", name: "CBOE Volatility Index", group: "index_etf" },
+  { symbol: "^VIX", name: "CBOE Volatility Index", group: "macro_proxy" },
+  { symbol: "UUP", name: "US Dollar ETF", group: "macro_proxy" },
+  { symbol: "TLT", name: "20Y Treasury ETF", group: "macro_proxy" },
   { symbol: "NVDA", name: "Nvidia", group: "mega_cap" },
   { symbol: "AAPL", name: "Apple", group: "mega_cap" },
   { symbol: "SMH", name: "Semiconductor ETF", group: "ai_chip" },
@@ -38,6 +40,8 @@ const fallbackUniverse: StockSymbolInfo[] = [
 const groupLabels: Record<StockSymbolInfo["group"], string> = {
   futures: "해외선물",
   index_etf: "지수 ETF",
+  macro_proxy: "매크로 프록시",
+  sector_etf: "섹터 ETF",
   mega_cap: "빅테크",
   ai_chip: "AI·반도체",
   growth: "성장주",
@@ -45,7 +49,7 @@ const groupLabels: Record<StockSymbolInfo["group"], string> = {
   commodity: "원자재 ETF"
 };
 
-const groupOrder: StockSymbolInfo["group"][] = ["futures", "index_etf", "mega_cap", "ai_chip", "growth", "finance", "commodity"];
+const groupOrder: StockSymbolInfo["group"][] = ["futures", "index_etf", "macro_proxy", "sector_etf", "mega_cap", "ai_chip", "growth", "finance", "commodity"];
 const featuredSymbols = ["NQ=F", "ES=F", "QQQ", "SPY", "^VIX", "TLT", "NVDA", "SMH", "GLD", "CL=F"];
 const globalWatchlistStorageKey = "chart-radar.globalWatchlist.v1";
 const globalWatchlistMaxItems = 150;
@@ -218,6 +222,8 @@ function getGlobalSessionState(now = new Date()) {
 function groupPlaybook(group: StockSymbolInfo["group"] | undefined) {
   if (group === "futures") return "해외선물은 본장 전후에도 민감하게 움직입니다. 지수와 달러, 금리, 원자재 뉴스를 함께 보며 과한 레버리지 추격을 조심하세요.";
   if (group === "index_etf") return "지수 ETF는 전체 시장 방향의 기준선입니다. SPY와 QQQ가 같은 방향이면 개별 종목 신뢰도가 올라갑니다.";
+  if (group === "macro_proxy") return "매크로 프록시는 실제 DXY나 10Y yield 대신 달러, 채권, 변동성 압력을 간접 확인하는 기준입니다. 방향보다 본장 반응과 함께 해석하세요.";
+  if (group === "sector_etf") return "섹터 ETF는 시장 폭과 로테이션을 확인하는 기준입니다. 기술주만 강한지, 방어주가 앞서는지부터 확인하세요.";
   if (group === "mega_cap") return "빅테크는 실적, 금리, 나스닥 흐름에 민감합니다. 지수보다 강한지 약한지를 먼저 비교하세요.";
   if (group === "ai_chip") return "AI·반도체는 변동성이 큽니다. 강한 추세에서는 좋지만 과열 구간 추격은 위험도가 빠르게 올라갑니다.";
   if (group === "growth") return "성장주는 금리와 리스크온 심리에 민감합니다. 반등이 빨라도 지수와 거래량 확인이 중요합니다.";
@@ -240,6 +246,22 @@ function groupChecklist(group: StockSymbolInfo["group"] | undefined) {
       compare: "같이 볼 시장. QQQ, SPY, VIX, TLT, 섹터 ETF",
       risk: "위험 포인트. 지수는 강한데 폭이 좁은 상승이면 추격 신뢰도가 낮아집니다.",
       action: "확인 순서. 지수 ETF와 선물이 같은 방향인지 먼저 맞춥니다."
+    };
+  }
+
+  if (group === "macro_proxy") {
+    return {
+      compare: "같이 볼 시장. NQ, ES, QQQ, SPY, VIX, UUP",
+      risk: "위험 포인트. 프록시는 실제 DXY와 10Y yield가 아니므로 방향 확인용으로만 봅니다.",
+      action: "확인 순서. 프록시 방향과 지수선물 반응이 같은지 먼저 맞춥니다."
+    };
+  }
+
+  if (group === "sector_etf") {
+    return {
+      compare: "같이 볼 시장. QQQ, SPY, SMH, 방어 섹터",
+      risk: "위험 포인트. 지수는 강한데 섹터 확산이 좁으면 추격 신뢰도가 낮아집니다.",
+      action: "확인 순서. 성장, 방어, 금융, 에너지 중 어느 축이 강한지 봅니다."
     };
   }
 
@@ -688,7 +710,7 @@ function GlobalRadarControlDock({
   onRadarModeChange: (value: GlobalRadarMode) => void;
 }) {
   return (
-    <div className="fixed inset-x-3 bottom-3 z-40 mx-auto max-w-5xl rounded-lg border border-surface-line bg-slate-950/92 p-2 shadow-2xl shadow-black/40 backdrop-blur">
+    <div className="sticky top-3 z-20 mx-auto max-w-5xl rounded-lg border border-surface-line bg-slate-950/92 p-2 shadow-2xl shadow-black/40 backdrop-blur">
       <div className="grid grid-cols-5 gap-1.5">
         {chartTimeframes.map((item) => (
           <button
@@ -931,11 +953,11 @@ export function StockRadarApp() {
             <BarChart3 size={21} aria-hidden />
           </div>
           <div>
-            <p className="text-xs font-bold tracking-[0.18em] text-accent-blue">GLOBAL RADAR</p>
-            <h2 className="mt-1 text-xl font-black text-white">글로벌 레이더</h2>
+            <p className="text-xs font-bold tracking-[0.18em] text-accent-blue">GLOBAL DETAIL RADAR</p>
+            <h2 className="mt-1 text-xl font-black text-white">선택 종목 상세 판단</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-              미국 주요 주식, 지수 ETF, 해외선물, 원자재 ETF를 시장별 레이더로 빠르게 훑습니다.
-              종합, ICT, 기술지표 기준을 분리해서 장전 점검과 관심종목 선별을 빠르게 시작합니다.
+              글로벌 전체 판단 이후 개별 종목을 확인하는 심화 영역입니다.
+              상단 대시보드의 시장 모드, 매크로 압력, 섹터 로테이션과 함께 해석하세요.
             </p>
           </div>
         </div>
@@ -954,7 +976,7 @@ export function StockRadarApp() {
           <div className="min-w-0">
             <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.18em] text-accent-blue">
               <Sparkles size={13} aria-hidden />
-              오늘 볼 글로벌 시장
+              상세 확인할 글로벌 자산
             </p>
             <h3 className="mt-2 text-2xl font-black text-white">
               {symbol}{" "}
@@ -1005,7 +1027,7 @@ export function StockRadarApp() {
             <div>
               <p className="text-xs font-black text-white">관심 글로벌 종목</p>
               <p className="mt-1 text-[11px] font-bold text-slate-500">
-                매일 보는 ETF와 종목을 저장하면 이곳에 고정됩니다. 장전 점검 때 저장한 종목부터 빠르게 확인하세요.
+                매일 보는 ETF와 종목을 저장하면 이곳에 고정됩니다. 미국장 30초 체크 이후 개별 판단을 이어가세요.
               </p>
             </div>
             <button

@@ -1601,3 +1601,14 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 글로벌 레이더는 코인 표현 대신 지수 방향성, 섹터 분위기, 금리, 달러, VIX, 리스크온/리스크오프 중심 문구로 제한한다.
 - Basic summary와 Basic key reason은 Pro급 단서가 새지 않도록 `visibleRadarInsightForPlan`에서 최종 판단별 일반 문구로 대체한다.
 - Pro summary도 1~2문장으로 줄이고 구체 조건은 조건, 무효화, 리스크, nextAction 배열에 나눠 담는다.
+
+## 2026-05-18 글로벌 30초 체크 1차 개편.
+
+- 이번 `/global` 개편은 Global Pro 단독 월 39,000원 가치를 목표로 한다. 결제와 가격 코드는 이번 범위에서 수정하지 않고, 현재 코드의 14,900원 표기는 별도 유료화 작업 리스크로 남긴다.
+- 새 API를 추가하지 않고 기존 `/api/stocks/market-board`를 확장해 미국장 30초 체크, 지수선물, 매크로 프록시, 섹터, 대장주, 이벤트, 뉴스 압력을 한 번에 내려준다.
+- DXY는 `UUP`, 금리와 10Y 압력은 `TLT`, `ZN=F`, `IEF`, `SHY` 프록시로만 표현한다. 사용자에게 실제 DXY와 실제 10Y yield가 아니라는 점을 화면 라벨에 명시한다.
+- Basic은 최종 시장 모드, 핵심 압력, 다음 이벤트, QQQ 또는 NQ 요약, 강한/약한 섹터 일부만 보여준다. Pro 상세는 현재 로그인/구독 상태를 기준으로 전체 묶음을 열고, Basic에서는 CTA와 잠금 표시로 남긴다.
+- 모바일 확인 중 선택 종목 상세 컨트롤이 상단 대시보드 위에 고정 노출되는 문제를 발견해, `StockRadarApp` 컨트롤을 상세 영역 내부 sticky 컨트롤로 바꿨다.
+- 검증은 `git diff --check`, `npx.cmd tsc --noEmit`, `npm.cmd run lint`, `npm.cmd run build`, `npm.cmd run smoke:all`을 통과했고 `/global`, `/stocks`, `/crypto`, `/alts` 로컬 화면에서 application/hydration 오류가 없음을 확인했다.
+- 커밋 전 확인에서 Basic 화면은 Pro 상세를 조건부 렌더링으로 제외하고, `/api/stocks/market-board`도 Basic 응답에서 지수선물 전체, 섹터 전체, 대장주 전체, 이벤트/뉴스 상세 배열과 원본 `items`를 내려주지 않도록 축소했다.
+- `market-board`는 34개 Yahoo 심볼을 한 번에 모두 치지 않고 8개 단위 배치로 호출한다. 일부 심볼 실패 시 성공 데이터로 대시보드를 유지하고 `일부 데이터 확인 제한` 경고를 내려준다.

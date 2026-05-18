@@ -1842,3 +1842,11 @@
 - [x] `marketAnalysis.ts`와 `technicalRadar.ts`의 잔여 문구를 최소 범위로 정리한다.
 - [x] 샘플 케이스 기준으로 롱, 숏, 관망, 고위험 문구를 자체 점검한다.
 - [x] `git diff --check`, `npx.cmd tsc --noEmit`, `npm.cmd run lint`, `npm.cmd run build`, `npm.cmd run smoke:all`을 실행한다.
+
+## 2026-05-18 글로벌 30초 체크 1차 개편.
+
+- [x] `market-board` API를 미국장 판단 대시보드 데이터로 확장한다.
+- [x] `GlobalMarketPulse`를 미국장 30초 체크 화면으로 재구성한다.
+- [x] DXY와 10Y는 프록시 표기를 명확히 한다.
+- [x] 선택 종목 상세 판단을 하단 심화 영역으로 정리한다.
+- [x] `/global`, `/stocks`, `/crypto`, `/alts` 영향과 검증 명령을 확인한다.
