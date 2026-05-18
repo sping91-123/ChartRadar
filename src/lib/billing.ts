@@ -172,13 +172,37 @@ export const billingPlans: BillingPlan[] = [
 export const paidBillingPlans = billingPlans.filter((plan) => plan.id !== "free");
 export const paidBillingPlanIds = paidBillingPlans.map((plan) => plan.id);
 
+export interface NormalizedStoreProductId {
+  originalProductId: string;
+  subscriptionId: string;
+  basePlanId: string | null;
+}
+
+export interface StoreEntitlementMarkets {
+  crypto: boolean;
+  stocks: boolean;
+  bundle: boolean;
+}
+
+type StoreBillingPeriod = "monthly" | "yearly";
+
+const appStoreProductIdToPlanId = new Map(
+  paidBillingPlans.flatMap((plan) => (plan.appStoreProductId ? [[plan.appStoreProductId, plan.id] as const] : []))
+);
+
+const billingPlanPriorityByScope: Record<BillingPageScope, BillingPlanId[]> = {
+  all: ["bundle_yearly", "bundle_monthly", "crypto_yearly", "stocks_yearly", "crypto_monthly", "stocks_monthly"],
+  crypto: ["bundle_yearly", "bundle_monthly", "crypto_yearly", "crypto_monthly"],
+  stocks: ["bundle_yearly", "bundle_monthly", "stocks_yearly", "stocks_monthly"]
+};
+
 export function findBillingPlan(planId: string | null | undefined) {
   return billingPlans.find((plan) => plan.id === planId) ?? null;
 }
 
 export function findBillingPlanByAppStoreProductId(productId: string | null | undefined) {
-  if (!productId) return null;
-  return paidBillingPlans.find((plan) => plan.appStoreProductId === productId) ?? null;
+  const planId = resolvePlanIdFromStoreProductId(productId);
+  return planId ? findBillingPlan(planId) : null;
 }
 
 export function getBillingPlansByScope(scope: BillingMarketScope) {
@@ -187,6 +211,128 @@ export function getBillingPlansByScope(scope: BillingMarketScope) {
 
 export function getMarketScopeForPlan(planId: BillingPlanId): BillingMarketScope {
   return findBillingPlan(planId)?.marketScope ?? "trial";
+}
+
+export function normalizeStoreProductId(productId: string | null | undefined): NormalizedStoreProductId | null {
+  const originalProductId = productId?.trim();
+  if (!originalProductId) return null;
+
+  const separatorIndex = originalProductId.indexOf(":");
+  if (separatorIndex === -1) {
+    return {
+      originalProductId,
+      subscriptionId: originalProductId,
+      basePlanId: null
+    };
+  }
+
+  const subscriptionId = originalProductId.slice(0, separatorIndex).trim();
+  const basePlanId = originalProductId.slice(separatorIndex + 1).trim();
+  if (!subscriptionId) return null;
+
+  return {
+    originalProductId,
+    subscriptionId,
+    basePlanId: basePlanId || null
+  };
+}
+
+function inferBillingPeriodFromStoreProductId(productId: NormalizedStoreProductId): StoreBillingPeriod | null {
+  const candidates = [productId.basePlanId, productId.subscriptionId, productId.originalProductId]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => value.toLowerCase());
+
+  if (candidates.some((value) => /(^|[_\-\s:])(yearly|annual|year|p1y|1y)($|[_\-\s:])/.test(value))) return "yearly";
+  if (candidates.some((value) => /(^|[_\-\s:])(monthly|month|p1m|1m)($|[_\-\s:])/.test(value))) return "monthly";
+  return null;
+}
+
+function inferMarketScopeFromStoreProductId(productId: NormalizedStoreProductId): Exclude<BillingMarketScope, "trial"> | null {
+  const value = `${productId.subscriptionId} ${productId.originalProductId}`.toLowerCase();
+  if (/(^|[_\-\s:])(bundle|allmarket|all_market|all-market)($|[_\-\s:])/.test(value)) return "bundle";
+  if (/(^|[_\-\s:])(global|stocks|stock)($|[_\-\s:])/.test(value)) return "stocks";
+  if (/(^|[_\-\s:])(crypto|coin)($|[_\-\s:])/.test(value)) return "crypto";
+  return null;
+}
+
+export function resolvePlanIdFromStoreProductId(productId: string | null | undefined): BillingPlanId | null {
+  const normalizedProductId = normalizeStoreProductId(productId);
+  if (!normalizedProductId) return null;
+
+  const exactPlanId = appStoreProductIdToPlanId.get(normalizedProductId.originalProductId);
+  if (exactPlanId) return exactPlanId;
+
+  const subscriptionPlanId = appStoreProductIdToPlanId.get(normalizedProductId.subscriptionId);
+  if (subscriptionPlanId) return subscriptionPlanId;
+
+  const marketScope = inferMarketScopeFromStoreProductId(normalizedProductId);
+  const billingPeriod = inferBillingPeriodFromStoreProductId(normalizedProductId);
+  if (!marketScope || !billingPeriod) return null;
+
+  return (
+    paidBillingPlans.find((plan) => plan.marketScope === marketScope && plan.id.endsWith(`_${billingPeriod}`))?.id ??
+    null
+  );
+}
+
+export function resolveStoreEntitlementMarkets(activeEntitlements: Record<string, unknown> | null | undefined): StoreEntitlementMarkets {
+  const entitlementIds = new Set(Object.keys(activeEntitlements ?? {}));
+  const bundle = entitlementIds.has("all_market_pro") || entitlementIds.has("bundle_pro");
+
+  return {
+    crypto: bundle || entitlementIds.has("coin_pro") || entitlementIds.has("crypto_pro"),
+    stocks: bundle || entitlementIds.has("global_pro"),
+    bundle
+  };
+}
+
+export function resolveEntitlementsFromStoreCustomer(customerInfo: {
+  entitlements?: { active?: Record<string, unknown> };
+} | null | undefined) {
+  return resolveStoreEntitlementMarkets(customerInfo?.entitlements?.active);
+}
+
+export function hasStoreEntitlementForPlan(activeEntitlements: Record<string, unknown> | null | undefined, plan: BillingPlan) {
+  const markets = resolveStoreEntitlementMarkets(activeEntitlements);
+  if (plan.marketScope === "bundle") return markets.bundle;
+  if (plan.marketScope === "crypto") return markets.crypto;
+  if (plan.marketScope === "stocks") return markets.stocks;
+  return false;
+}
+
+export function hasMarketEntitlementFromPlans(
+  planIds: BillingEntitlementPlan[],
+  scope: Exclude<BillingPageScope, "all">
+) {
+  return planIds.some((planId) => hasMarketEntitlement(planId, scope));
+}
+
+export function resolveCombinedBillingEntitlementPlan(
+  planIds: BillingEntitlementPlan[],
+  scope: BillingPageScope = "all"
+): BillingEntitlementPlan {
+  const normalizedPlanIds = planIds.filter((planId): planId is NonNullable<BillingEntitlementPlan> => Boolean(planId));
+  if (normalizedPlanIds.includes("admin")) return "admin";
+
+  const paidPlanIds = normalizedPlanIds.filter((planId): planId is BillingPlanId => {
+    const plan = findBillingPlan(planId);
+    return Boolean(plan && plan.id !== "free");
+  });
+  const priorityPlan = billingPlanPriorityByScope[scope].find((planId) => paidPlanIds.includes(planId));
+
+  if (scope !== "all") {
+    return priorityPlan ?? normalizedPlanIds.find((planId) => planId === "member" || planId === "premium") ?? null;
+  }
+
+  if (priorityPlan && getMarketScopeForPlan(priorityPlan) === "bundle") return priorityPlan;
+
+  const hasCrypto = hasMarketEntitlementFromPlans(paidPlanIds, "crypto");
+  const hasStocks = hasMarketEntitlementFromPlans(paidPlanIds, "stocks");
+  if (hasCrypto && hasStocks) {
+    return paidPlanIds.every((planId) => isYearlyBillingPlan(planId)) ? "bundle_yearly" : "bundle_monthly";
+  }
+
+  return priorityPlan ?? normalizedPlanIds.find((planId) => planId === "member" || planId === "premium") ?? null;
 }
 
 export function getBillingPlansForPage(scope: BillingPageScope) {

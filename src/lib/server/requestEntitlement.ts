@@ -1,7 +1,8 @@
 // API 요청의 로그인 사용자와 Pro 권한을 서버에서 판별합니다.
 import {
   hasAnyPaidEntitlement,
-  hasMarketEntitlement,
+  hasMarketEntitlementFromPlans,
+  resolveCombinedBillingEntitlementPlan,
   type BillingEntitlementPlan,
   type BillingPageScope
 } from "@/lib/billing";
@@ -64,17 +65,6 @@ function isLegacyAlwaysPaidPlan(plan: BillingEntitlementPlan) {
   return plan === "member" || plan === "premium";
 }
 
-function activeSubscriptionPlan(subscriptions: SupabaseSubscription[], scope: BillingPageScope): BillingEntitlementPlan {
-  const plans = subscriptions.map((subscription) => normalizePlan(subscription.plan)).filter(Boolean);
-  const priorityByScope: Record<BillingPageScope, NonNullable<BillingEntitlementPlan>[]> = {
-    all: ["bundle_yearly", "bundle_monthly", "crypto_yearly", "stocks_yearly", "crypto_monthly", "stocks_monthly"],
-    crypto: ["bundle_yearly", "bundle_monthly", "crypto_yearly", "crypto_monthly"],
-    stocks: ["bundle_yearly", "bundle_monthly", "stocks_yearly", "stocks_monthly"]
-  };
-
-  return priorityByScope[scope].find((plan) => plans.includes(plan)) ?? null;
-}
-
 async function loadEntitlementFromToken(token: string) {
   const now = Date.now();
   const cached = entitlementCache.get(token);
@@ -99,11 +89,13 @@ export async function getRequestEntitlement(request: Request, scope: BillingPage
   try {
     const { user, profile, subscriptions } = await loadEntitlementFromToken(token);
     const accountPlan = planFromUser(user) ?? normalizePlan(profile?.plan);
+    const subscriptionPlans = subscriptions.map((subscription) => normalizePlan(subscription.plan)).filter(Boolean);
+    const entitlementPlans = [...subscriptionPlans, accountPlan];
     const plan =
       accountPlan === "admin"
         ? "admin"
-        : activeSubscriptionPlan(subscriptions, scope) ?? (isLegacyAlwaysPaidPlan(accountPlan) ? accountPlan : "free");
-    const isPaid = scope === "all" ? hasAnyPaidEntitlement(plan) : hasMarketEntitlement(plan, scope);
+        : resolveCombinedBillingEntitlementPlan(entitlementPlans, scope) ?? (isLegacyAlwaysPaidPlan(accountPlan) ? accountPlan : "free");
+    const isPaid = scope === "all" ? hasAnyPaidEntitlement(plan) : hasMarketEntitlementFromPlans(entitlementPlans, scope);
 
     return {
       userId: user.id,

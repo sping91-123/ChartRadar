@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import {
   findBillingPlan,
   findBillingPlanByAppStoreProductId,
-  type BillingPlanId
+  resolveCombinedBillingEntitlementPlan,
+  resolveStoreEntitlementMarkets
 } from "@/lib/billing";
 import { grantBillingEntitlement } from "@/lib/server/billingEntitlements";
 import { isBodyTooLarge, rateLimit } from "@/lib/server/rateLimit";
@@ -29,14 +30,6 @@ interface ResolvedAppStorePlan {
   plan: NonNullable<ReturnType<typeof findBillingPlan>>;
   expiresDate: string | null;
 }
-
-const entitlementFallbackPlans: Record<string, BillingPlanId> = {
-  coin_pro: "crypto_monthly",
-  crypto_pro: "crypto_monthly",
-  global_pro: "stocks_monthly",
-  all_market_pro: "bundle_monthly",
-  bundle_pro: "bundle_monthly"
-};
 
 function getBearerToken(request: Request) {
   const authorization = request.headers.get("authorization") ?? "";
@@ -72,7 +65,50 @@ async function fetchRevenueCatSubscriber(appUserId: string) {
   return { configured: true, payload };
 }
 
-function resolveActivePlan(payload: RevenueCatSubscriberResponse, requestedPlanId?: string): ResolvedAppStorePlan | null {
+function uniqueActivePlans(activePlans: ResolvedAppStorePlan[]) {
+  const byPlanId = new Map<string, ResolvedAppStorePlan>();
+  for (const activePlan of activePlans) {
+    const previousPlan = byPlanId.get(activePlan.plan.id);
+    if (!previousPlan) {
+      byPlanId.set(activePlan.plan.id, activePlan);
+      continue;
+    }
+
+    const previousTime = previousPlan.expiresDate ? new Date(previousPlan.expiresDate).getTime() : Number.POSITIVE_INFINITY;
+    const nextTime = activePlan.expiresDate ? new Date(activePlan.expiresDate).getTime() : Number.POSITIVE_INFINITY;
+    if (nextTime > previousTime) byPlanId.set(activePlan.plan.id, activePlan);
+  }
+
+  return Array.from(byPlanId.values());
+}
+
+function sortActivePlans(activePlans: ResolvedAppStorePlan[], requestedPlanId?: string) {
+  const priorityPlanId = resolveCombinedBillingEntitlementPlan(
+    activePlans.map((activePlan) => activePlan.plan.id),
+    "all"
+  );
+  const priorityByPlanId = new Map(
+    ["bundle_yearly", "bundle_monthly", "crypto_yearly", "stocks_yearly", "crypto_monthly", "stocks_monthly"].map((planId, index) => [
+      planId,
+      index
+    ])
+  );
+
+  return [...activePlans].sort((left, right) => {
+    if (requestedPlanId && left.plan.id === requestedPlanId) return -1;
+    if (requestedPlanId && right.plan.id === requestedPlanId) return 1;
+    if (priorityPlanId && left.plan.id === priorityPlanId) return -1;
+    if (priorityPlanId && right.plan.id === priorityPlanId) return 1;
+    return (priorityByPlanId.get(left.plan.id) ?? 99) - (priorityByPlanId.get(right.plan.id) ?? 99);
+  });
+}
+
+function getActiveRevenueCatEntitlements(payload: RevenueCatSubscriberResponse) {
+  const entitlements = payload.subscriber?.entitlements ?? {};
+  return Object.fromEntries(Object.entries(entitlements).filter(([, value]) => isStillActive(value.expires_date)));
+}
+
+function resolveActivePlans(payload: RevenueCatSubscriberResponse, requestedPlanId?: string) {
   const requestedPlan = findBillingPlan(requestedPlanId);
   const subscriptions = payload.subscriber?.subscriptions ?? {};
   const activeProductIds = Object.entries(subscriptions)
@@ -86,21 +122,14 @@ function resolveActivePlan(payload: RevenueCatSubscriberResponse, requestedPlanI
     })
     .filter(Boolean) as ResolvedAppStorePlan[];
 
-  if (requestedPlan && requestedPlan.id !== "free") {
-    const requestedActivePlan = activePlans.find((activePlan) => activePlan.plan.id === requestedPlan.id);
-    if (requestedActivePlan) return requestedActivePlan;
-  }
+  const knownActivePlans = uniqueActivePlans(activePlans);
+  const activeEntitlements = getActiveRevenueCatEntitlements(payload);
+  const entitlementMarkets = resolveStoreEntitlementMarkets(activeEntitlements);
 
-  const bundlePlan = activePlans.find((activePlan) => activePlan.plan.marketScope === "bundle");
-  if (bundlePlan) return bundlePlan;
-  if (activePlans[0]) return activePlans[0];
-
-  const entitlements = payload.subscriber?.entitlements ?? {};
-  const activeEntitlement = Object.entries(entitlements).find(([, value]) => isStillActive(value.expires_date));
-  const fallbackPlan = activeEntitlement ? findBillingPlan(entitlementFallbackPlans[activeEntitlement[0]]) : null;
-  return fallbackPlan?.id === "free" || !fallbackPlan
-    ? null
-    : { plan: fallbackPlan, expiresDate: activeEntitlement?.[1]?.expires_date ?? null };
+  return {
+    plans: sortActivePlans(knownActivePlans, requestedPlan?.id === "free" ? undefined : requestedPlan?.id),
+    entitlementMarkets
+  };
 }
 
 export async function POST(request: Request) {
@@ -155,32 +184,53 @@ export async function POST(request: Request) {
     });
   }
 
-  const activePlan = resolveActivePlan(revenueCatResult.payload ?? {}, body.planId);
-  if (!activePlan || activePlan.plan.id === "free") {
+  const activePlanResult = resolveActivePlans(revenueCatResult.payload ?? {}, body.planId);
+  const activePlans = activePlanResult.plans;
+  if (activePlans.length === 0) {
+    if (activePlanResult.entitlementMarkets.crypto || activePlanResult.entitlementMarkets.stocks || activePlanResult.entitlementMarkets.bundle) {
+      return NextResponse.json({
+        active: false,
+        status: "setup_required",
+        message: "활성 앱 구독은 확인했지만 요금제 상품 ID를 연결하지 못했습니다. 고객센터로 문의해 주세요."
+      }, { status: 409 });
+    }
+
     return NextResponse.json({ active: false, status: "not_active", message: "현재 활성화된 앱 구독을 찾지 못했습니다." }, { status: 404 });
   }
 
+  const primaryPlan = activePlans[0];
   if (!isSupabaseAdminConfigured()) {
     return NextResponse.json({
       active: false,
       status: "setup_required",
-      planId: activePlan.plan.id,
+      planId: primaryPlan.plan.id,
+      planIds: activePlans.map((activePlan) => activePlan.plan.id),
       message: "앱 구독은 확인했지만 Pro 기능을 여는 과정이 지연되고 있습니다. 고객센터로 문의해 주세요."
     });
   }
 
   try {
-    await grantBillingEntitlement({
-      userId: user.id,
-      planId: activePlan.plan.id,
-      provider: "revenuecat",
-      providerOrderId: `rc_${user.id}_${activePlan.plan.id}`,
-      providerPaymentId: body.appUserId,
-      currentPeriodEndIso: activePlan.expiresDate ?? undefined
-    });
+    await Promise.all(
+      activePlans.map((activePlan) =>
+        grantBillingEntitlement({
+          userId: user.id,
+          planId: activePlan.plan.id,
+          provider: "revenuecat",
+          providerOrderId: `rc_${user.id}_${activePlan.plan.id}`,
+          providerPaymentId: body.appUserId,
+          currentPeriodEndIso: activePlan.expiresDate ?? undefined
+        })
+      )
+    );
   } catch {
     return NextResponse.json(
-      { active: false, status: "setup_required", planId: activePlan.plan.id, message: "앱 구독은 확인했지만 Pro 기능을 여는 과정에서 문제가 발생했습니다." },
+      {
+        active: false,
+        status: "setup_required",
+        planId: primaryPlan.plan.id,
+        planIds: activePlans.map((activePlan) => activePlan.plan.id),
+        message: "앱 구독은 확인했지만 Pro 기능을 여는 과정에서 문제가 발생했습니다."
+      },
       { status: 500 }
     );
   }
@@ -188,7 +238,8 @@ export async function POST(request: Request) {
   return NextResponse.json({
     active: true,
     status: "active",
-    planId: activePlan.plan.id,
+    planId: primaryPlan.plan.id,
+    planIds: activePlans.map((activePlan) => activePlan.plan.id),
     message: "앱 구독이 확인되어 Pro 기능이 열렸습니다."
   });
 }

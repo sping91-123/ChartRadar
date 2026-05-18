@@ -1,6 +1,6 @@
 // 앱에서 RevenueCat 구독 결제와 서버 권한 동기화를 처리합니다.
 import { Capacitor } from "@capacitor/core";
-import type { BillingPlan } from "@/lib/billing";
+import { hasStoreEntitlementForPlan, type BillingPlan } from "@/lib/billing";
 import { supabaseAuthRefreshEvent } from "@/lib/supabase";
 
 type NativePurchasePlatform = "android" | "ios";
@@ -65,11 +65,7 @@ async function configurePurchases(platform: NativePurchasePlatform, userId: stri
 }
 
 function hasActivePlan(customerInfo: RevenueCatCustomerInfo, plan: BillingPlan) {
-  const active = customerInfo.entitlements.active;
-  if (plan.marketScope === "bundle") return Boolean(active.all_market_pro || active.bundle_pro);
-  if (plan.marketScope === "crypto") return Boolean(active.coin_pro || active.crypto_pro || active.all_market_pro || active.bundle_pro);
-  if (plan.marketScope === "stocks") return Boolean(active.global_pro || active.all_market_pro || active.bundle_pro);
-  return false;
+  return hasStoreEntitlementForPlan(customerInfo.entitlements.active, plan);
 }
 
 async function syncAppStoreEntitlement(params: NativePurchaseParams & { platform: NativePurchasePlatform }) {

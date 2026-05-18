@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { resolveCombinedBillingEntitlementPlan } from "@/lib/billing";
 import {
   clearSupabaseSession,
   fetchSupabaseActiveSubscriptions,
@@ -37,17 +38,11 @@ function resolveSupabaseMetadataPlan(user: SupabaseUser): SupabaseProfile["plan"
 }
 
 function resolveActiveSubscriptionPlan(subscriptions: SupabaseSubscription[]): SupabaseProfile["plan"] | null {
-  const plans = subscriptions.map((subscription) => subscription.plan);
-  return (
-    [
-      "bundle_yearly",
-      "bundle_monthly",
-      "crypto_yearly",
-      "stocks_yearly",
-      "crypto_monthly",
-      "stocks_monthly"
-    ] as SupabaseProfile["plan"][]
-  ).find((plan) => plans.includes(plan)) ?? null;
+  const plan = resolveCombinedBillingEntitlementPlan(
+    subscriptions.map((subscription) => subscription.plan),
+    "all"
+  );
+  return plan === "free" ? null : plan;
 }
 
 function resolveLegacyPaidPlan(plan: SupabaseProfile["plan"] | null | undefined) {

@@ -72,6 +72,68 @@ const productIds = [
   "chart_radar_bundle_yearly"
 ];
 
+const expectedProductPlanPairs = [
+  ["chart_radar_crypto_monthly", "crypto_monthly"],
+  ["chart_radar_crypto_yearly", "crypto_yearly"],
+  ["chart_radar_global_monthly", "stocks_monthly"],
+  ["chart_radar_global_yearly", "stocks_yearly"],
+  ["chart_radar_bundle_monthly", "bundle_monthly"],
+  ["chart_radar_bundle_yearly", "bundle_yearly"]
+];
+
+function planBlock(planId) {
+  const match = new RegExp(`id:\\s*"${planId}"[\\s\\S]*?(?=\\n\\s*\\},\\n\\s*\\{\\n\\s*id:|\\n\\s*\\}\\n\\];)`).exec(files.billing);
+  return match?.[0] ?? "";
+}
+
+function appStoreProductIdForPlan(planId) {
+  return /appStoreProductId:\s*"([^"]+)"/.exec(planBlock(planId))?.[1] ?? null;
+}
+
+const smokeProductIdToPlanId = new Map(expectedProductPlanPairs.map(([productId, planId]) => [productId, planId]));
+
+function smokeResolvePlanIdFromStoreProductId(productId) {
+  const trimmed = productId.trim();
+  const [subscriptionId, basePlanId = ""] = trimmed.split(":");
+  const exactPlanId = smokeProductIdToPlanId.get(trimmed);
+  if (exactPlanId) return exactPlanId;
+  const subscriptionPlanId = smokeProductIdToPlanId.get(subscriptionId);
+  if (subscriptionPlanId) return subscriptionPlanId;
+
+  const value = `${subscriptionId} ${trimmed}`.toLowerCase();
+  const basePlanValue = basePlanId.toLowerCase();
+  const marketScope = /(^|[_\-\s:])(bundle|allmarket|all_market|all-market)($|[_\-\s:])/.test(value)
+    ? "bundle"
+    : /(^|[_\-\s:])(global|stocks|stock)($|[_\-\s:])/.test(value)
+      ? "stocks"
+      : /(^|[_\-\s:])(crypto|coin)($|[_\-\s:])/.test(value)
+        ? "crypto"
+        : null;
+  const period = /(^|[_\-\s:])(yearly|annual|year|p1y|1y)($|[_\-\s:])/.test(basePlanValue || value)
+    ? "yearly"
+    : /(^|[_\-\s:])(monthly|month|p1m|1m)($|[_\-\s:])/.test(basePlanValue || value)
+      ? "monthly"
+      : null;
+
+  if (!marketScope || !period) return null;
+  return {
+    crypto_monthly: "crypto_monthly",
+    crypto_yearly: "crypto_yearly",
+    stocks_monthly: "stocks_monthly",
+    stocks_yearly: "stocks_yearly",
+    bundle_monthly: "bundle_monthly",
+    bundle_yearly: "bundle_yearly"
+  }[`${marketScope}_${period}`] ?? null;
+}
+
+function smokeResolveMarkets(activeEntitlements) {
+  const bundle = Boolean(activeEntitlements.all_market_pro || activeEntitlements.bundle_pro);
+  return {
+    crypto: bundle || Boolean(activeEntitlements.coin_pro || activeEntitlements.crypto_pro),
+    stocks: bundle || Boolean(activeEntitlements.global_pro)
+  };
+}
+
 const paymentEnvNames = [
   "NEXT_PUBLIC_PRO_PAYMENT_URL",
   "NEXT_PUBLIC_PRO_MONTHLY_PAYMENT_URL",
@@ -98,6 +160,56 @@ for (const planId of planIds) {
 for (const productId of productIds) {
   expectIncludes(files.billing, productId, `앱스토어 상품 ID ${productId}`, "src/lib/billing.ts");
   expectIncludes(files.appStoreGuide, productId, `앱스토어 가이드 상품 ID ${productId}`, "docs/app-store-release.md");
+}
+
+for (const [productId, planId] of expectedProductPlanPairs) {
+  const actualProductId = appStoreProductIdForPlan(planId);
+  if (actualProductId === productId) {
+    pass(`상품 ID와 planId 연결 ${productId}`, `${productId} → ${planId}`);
+  } else {
+    fail(`상품 ID와 planId 연결 ${productId}`, `예상 ${planId}, 현재 ${actualProductId ?? "미확인"}.`);
+  }
+}
+
+for (const [productId, expectedPlanId] of [
+  ["chart_radar_crypto_monthly", "crypto_monthly"],
+  ["chart_radar_crypto_monthly:monthly", "crypto_monthly"],
+  ["chart_radar_crypto_yearly:yearly", "crypto_yearly"],
+  ["chart_radar_global_monthly:monthly", "stocks_monthly"],
+  ["chart_radar_global_yearly:yearly", "stocks_yearly"],
+  ["chart_radar_bundle_monthly:monthly", "bundle_monthly"],
+  ["chart_radar_bundle_yearly:yearly", "bundle_yearly"],
+  ["chart_radar_crypto:monthly", "crypto_monthly"],
+  ["chart_radar_global:yearly", "stocks_yearly"],
+  ["chart_radar_bundle:yearly", "bundle_yearly"]
+]) {
+  const actualPlanId = smokeResolvePlanIdFromStoreProductId(productId);
+  if (actualPlanId === expectedPlanId) {
+    pass(`RevenueCat 상품 ID 매핑 ${productId}`, `${productId} → ${expectedPlanId}`);
+  } else {
+    fail(`RevenueCat 상품 ID 매핑 ${productId}`, `예상 ${expectedPlanId}, 현재 ${actualPlanId ?? "unknown"}.`);
+  }
+}
+
+if (smokeResolvePlanIdFromStoreProductId("unknown_product:monthly") === null) {
+  pass("알 수 없는 상품 ID 권한 차단", "unknown 상품은 planId로 매핑하지 않습니다.");
+} else {
+  fail("알 수 없는 상품 ID 권한 차단", "unknown 상품이 planId로 매핑되고 있습니다.");
+}
+
+for (const [label, activeEntitlements, expectedMarkets] of [
+  ["coin_pro 단독", { coin_pro: {} }, { crypto: true, stocks: false }],
+  ["global_pro 단독", { global_pro: {} }, { crypto: false, stocks: true }],
+  ["coin_pro + global_pro", { coin_pro: {}, global_pro: {} }, { crypto: true, stocks: true }],
+  ["all_market_pro", { all_market_pro: {} }, { crypto: true, stocks: true }],
+  ["알 수 없는 entitlement", { unknown_pro: {} }, { crypto: false, stocks: false }]
+]) {
+  const actualMarkets = smokeResolveMarkets(activeEntitlements);
+  if (actualMarkets.crypto === expectedMarkets.crypto && actualMarkets.stocks === expectedMarkets.stocks) {
+    pass(`RevenueCat entitlement 권한 ${label}`, `crypto=${actualMarkets.crypto}, stocks=${actualMarkets.stocks}`);
+  } else {
+    fail(`RevenueCat entitlement 권한 ${label}`, `예상 ${JSON.stringify(expectedMarkets)}, 현재 ${JSON.stringify(actualMarkets)}.`);
+  }
 }
 
 for (const envName of paymentEnvNames) {
@@ -154,12 +266,20 @@ expectIncludes(files.checkoutRoute, "play_billing", "Android Google Play Billing
 
 expectIncludes(files.appStoreSyncRoute, "REVENUECAT_REST_API_KEY", "RevenueCat 서버 검증 키 사용", "src/app/api/billing/app-store/sync/route.ts");
 expectIncludes(files.appStoreSyncRoute, "grantBillingEntitlement", "앱 구독 확인 후 Pro 권한 반영", "src/app/api/billing/app-store/sync/route.ts");
+expectIncludes(files.appStoreSyncRoute, "resolveActivePlans", "앱 구독 다중 활성 플랜 해석", "src/app/api/billing/app-store/sync/route.ts");
+expectIncludes(files.appStoreSyncRoute, "activePlans.map", "Coin Pro와 Global Pro 별도 구매 합산 반영", "src/app/api/billing/app-store/sync/route.ts");
+expectIncludes(files.appStoreSyncRoute, "resolveStoreEntitlementMarkets", "RevenueCat entitlement 범위 확인", "src/app/api/billing/app-store/sync/route.ts");
 expectIncludes(files.appStoreSyncRoute, "active: true", "앱 구독 성공 응답 active 플래그", "src/app/api/billing/app-store/sync/route.ts");
 expectIncludes(files.appStoreSyncRoute, "currentPeriodEndIso: activePlan.expiresDate", "앱 구독 실제 만료일 반영", "src/app/api/billing/app-store/sync/route.ts");
 expectIncludes(files.billingEntitlements, "currentPeriodEndIso", "구독 권한 만료일 override 지원", "src/lib/server/billingEntitlements.ts");
 expectIncludes(files.requestEntitlement, "fetchSupabaseActiveSubscriptions", "서버 권한 활성 구독 조회", "src/lib/server/requestEntitlement.ts");
-expectIncludes(files.requestEntitlement, "activeSubscriptionPlan", "서버 권한 활성 플랜 우선 판정", "src/lib/server/requestEntitlement.ts");
+expectIncludes(files.requestEntitlement, "resolveCombinedBillingEntitlementPlan", "서버 권한 활성 플랜 합산 판정", "src/lib/server/requestEntitlement.ts");
+expectIncludes(files.requestEntitlement, "hasMarketEntitlementFromPlans", "서버 권한 시장별 합산 판정", "src/lib/server/requestEntitlement.ts");
 expectIncludes(files.requestEntitlement, "isLegacyAlwaysPaidPlan", "서버 권한 레거시 관리자 플랜 분리", "src/lib/server/requestEntitlement.ts");
+expectIncludes(files.billing, "normalizeStoreProductId", "스토어 상품 ID 정규화 helper", "src/lib/billing.ts");
+expectIncludes(files.billing, "resolvePlanIdFromStoreProductId", "스토어 상품 ID planId 매핑 helper", "src/lib/billing.ts");
+expectIncludes(files.billing, "resolveStoreEntitlementMarkets", "RevenueCat entitlement 권한 helper", "src/lib/billing.ts");
+expectIncludes(files.billing, "resolveCombinedBillingEntitlementPlan", "복수 플랜 합산 helper", "src/lib/billing.ts");
 
 expectIncludes(files.proPricingPanel, "Authorization: `Bearer ${session.accessToken}`", "결제 시작 요청 세션 전달", "src/components/ProPricingPanel.tsx");
 expectIncludes(files.proPricingPanel, "결제 후 Pro 기능을 바로 이용하려면 먼저 구글 로그인이 필요합니다.", "결제 전 로그인 안내", "src/components/ProPricingPanel.tsx");
@@ -184,7 +304,7 @@ expectIncludes(files.usageMeterPanel, "bucketMatchesScope", "사용량 패널 �
 expectIncludes(files.usageMeterPanel, "id === \"stockRadar\"", "글로벌 사용량 필터", "src/components/UsageMeterPanel.tsx");
 expectIncludes(files.supabaseClient, "supabaseAuthRefreshEvent", "권한 갱신 이벤트 상수", "src/lib/supabase.ts");
 expectIncludes(files.supabaseAuthHook, "fetchSupabaseActiveSubscriptions", "브라우저 권한 활성 구독 조회", "src/lib/useSupabaseAuth.ts");
-expectIncludes(files.supabaseAuthHook, "resolveActiveSubscriptionPlan", "브라우저 권한 활성 플랜 우선 판정", "src/lib/useSupabaseAuth.ts");
+expectIncludes(files.supabaseAuthHook, "resolveCombinedBillingEntitlementPlan", "브라우저 권한 활성 플랜 합산 판정", "src/lib/useSupabaseAuth.ts");
 expectIncludes(files.supabaseAuthHook, "window.addEventListener(supabaseAuthRefreshEvent, refreshAuth)", "권한 갱신 이벤트 수신", "src/lib/useSupabaseAuth.ts");
 expectIncludes(files.checkoutConfirmationPanel, "window.dispatchEvent(new Event(supabaseAuthRefreshEvent))", "결제 성공 후 권한 재조회", "src/components/CheckoutConfirmationPanel.tsx");
 
