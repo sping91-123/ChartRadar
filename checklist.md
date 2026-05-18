@@ -1858,3 +1858,12 @@
 - [x] 투자 권유처럼 보이는 사용자 노출 문구를 보수적으로 바꾼다.
 - [x] 결제 문서와 스모크 검증 기대값을 새 BM 기준으로 맞춘다.
 - [x] 타입 체크, 린트, 빌드, 스모크와 구 가격 잔여 검색으로 검증한다.
+
+## 2026-05-19 Android 패키지명 Play Console 정합화.
+
+- [x] Google Play Console 패키지명 `com.staronlabs.chartradar`와 로컬 Android 설정 차이를 확인한다.
+- [x] Capacitor, Gradle, Android 리소스, MainActivity 패키지명을 동일하게 맞춘다.
+- [x] 모바일 스모크 검증 기대값과 출시 문서의 패키지명을 갱신한다.
+- [x] Capacitor 동기화와 관련 검증 명령을 실행한다.
+- [x] RevenueCat과 Google Play Console의 남은 수동 연결 단계를 정리한다.
+- [x] Play Console 중복 업로드 방지를 위해 Android versionCode를 2로 올린다.

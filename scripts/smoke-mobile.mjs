@@ -95,7 +95,7 @@ if (offlineHtml.includes("Chart Radar") && offlineHtml.includes('href="/"')) {
 
 const capacitorConfig = readText("capacitor.config.ts");
 if (
-  capacitorConfig.includes('appId: "kr.chartradar.app"') &&
+  capacitorConfig.includes('appId: "com.staronlabs.chartradar"') &&
   capacitorConfig.includes('appName: "Chart Radar"') &&
   capacitorConfig.includes('webDir: "mobile-shell"')
 ) {

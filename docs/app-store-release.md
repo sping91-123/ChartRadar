@@ -7,7 +7,7 @@
 | 항목 | 권장 값 |
 | --- | --- |
 | 앱 이름 | Chart Radar |
-| 패키지명 | `kr.chartradar.app` |
+| 패키지명 | `com.staronlabs.chartradar` |
 | 카테고리 | Finance |
 | 지원 언어 | 한국어 우선 |
 | 고객센터 URL | `https://your-domain.kr` |
@@ -78,7 +78,7 @@ Google Play Console에는 아래 상품 ID를 그대로 만듭니다. 코드의 
 ## 7. RevenueCat 연결 순서
 
 1. RevenueCat 프로젝트 이름은 `Chart Radar`로 둡니다.
-2. Android 앱은 패키지명 `kr.chartradar.app`로 추가합니다.
+2. Android 앱은 패키지명 `com.staronlabs.chartradar`로 추가합니다.
 3. Google Play Console 신원 확인이 끝나면 Google Play 앱과 RevenueCat을 연결합니다.
 4. 위 6개 상품 ID를 RevenueCat Product catalog에 등록합니다.
 5. Entitlement는 아래처럼 분리합니다.
@@ -98,7 +98,7 @@ RevenueCat에는 키가 두 종류라서 헷갈리기 쉽습니다.
 | Android Public SDK key | 왼쪽 메뉴 `Apps & providers` → `API keys` → `SDK API keys` 영역의 Android 앱 행에서 `Show key` | `NEXT_PUBLIC_REVENUECAT_ANDROID_API_KEY` |
 | Secret API key | 왼쪽 메뉴 `Apps & providers` → `API keys` → `Secret API keys` 영역의 `+ New secret API key` | `REVENUECAT_REST_API_KEY` |
 
-`Test Store`만 있는 상태에서는 Android 앱 키가 아니라 테스트용 SDK 키만 보일 수 있습니다. Google Play Console 앱을 만든 뒤 RevenueCat에 Android 앱을 추가해야 `kr.chartradar.app`용 Public SDK key를 받을 수 있습니다.
+`Test Store`만 있는 상태에서는 Android 앱 키가 아니라 테스트용 SDK 키만 보일 수 있습니다. Google Play Console 앱을 만든 뒤 RevenueCat에 Android 앱을 추가해야 `com.staronlabs.chartradar`용 Public SDK key를 받을 수 있습니다.
 
 Secret API key는 서버에서 구독 상태를 확인할 때만 씁니다. 이 값은 `.env.local`과 배포 서버 환경변수에만 넣고, 앱 코드나 브라우저 코드에는 넣지 않습니다.
 

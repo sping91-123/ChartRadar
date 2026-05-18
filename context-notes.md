@@ -922,7 +922,7 @@
 - Google Play Console 신원 확인이 끝나기 전에는 실제 Google Play 구독 상품 생성과 결제 테스트가 제한됩니다.
 - 이 대기 시간에는 코드 결제 흐름보다 운영 자료와 반복 검증 명령을 정리하는 편이 출시 속도를 높입니다.
 - `docs/app-store-release.md`와 `docs/payment-launch.md`가 일부 깨진 문자열로 보이던 상태를 읽을 수 있는 한국어 문서로 복구했습니다.
-- 실제 Android 앱 ID는 `kr.chartradar.app`이므로 RevenueCat과 Google Play 등록 안내도 이 값으로 통일했습니다.
+- 실제 Android 앱 ID는 이후 Play Console 앱 기준으로 다시 정합화해야 하므로 RevenueCat과 Google Play 등록 안내도 현재 콘솔 값을 우선합니다.
 - `scripts/smoke-billing.mjs`와 `scripts/smoke-mobile.mjs`의 출력 문구를 읽을 수 있게 정리했습니다.
 - Java 경로가 PowerShell 세션에 잡히지 않아도 Android Studio 내장 JDK를 찾아 디버그 APK를 만드는 `npm.cmd run app:android:debug` 명령을 추가했습니다.
 - Google Play 신원 확인이 끝나도 바로 출시되는 것은 아니고, 구독 상품 연결, 스토어 심사 자료, 계정 삭제 안내, 실제 결제 테스트가 남습니다.
@@ -1621,3 +1621,14 @@ The health endpoint now reports a launch readiness score and structured blocking
 - All Market Pro는 단순 할인 묶음이 아니라 Coin Pro와 Global Pro를 함께 쓰는 통합 판단 도구로 표현한다.
 - 구 BM 가격 검색은 `NO_MATCH`까지 확인했다.
 - 검증은 `git diff --check`, `npx.cmd tsc --noEmit`, `npm.cmd run lint`, `npm.cmd run build`, `npm.cmd run smoke:all`, `npm.cmd run smoke:billing`을 통과했다.
+
+## 2026-05-19 Android 패키지명 Play Console 정합화.
+
+- Google Play Console의 실제 앱 패키지명은 `com.staronlabs.chartradar`이고, 로컬 Android 설정이 다른 패키지명을 쓰고 있어 Google Play Billing과 RevenueCat 실매장 연결이 막힌 상태였다.
+- 새 앱을 만들지 않고 기존 Play Console 앱에 맞추는 것이 안전하므로 로컬 `appId`, Android `namespace`, `applicationId`, Activity 패키지, Android 리소스, 모바일 스모크 기대값을 `com.staronlabs.chartradar`로 맞춘다.
+- 가격, 상품 ID, RevenueCat entitlement, 결제 API, 권한 계산 로직은 이번 변경 범위가 아니다.
+- Google Play Console에서 구독 상품을 만들려면 먼저 billing 권한이 포함된 동일 패키지 AAB 또는 APK를 업로드해야 한다.
+- RevenueCat Play Store 앱 연결에는 Google Play package name과 Service Account Credentials JSON이 필요하며, JSON 업로드는 외부 계정 권한 위임이므로 별도 확인 후 진행한다.
+- 검증은 `npx.cmd cap sync android`, `git diff --check`, `npx.cmd tsc --noEmit`, `npm.cmd run lint`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:billing`, `npm.cmd run build`, `npm.cmd run smoke:all`, `npm.cmd run app:android:debug`를 통과했다.
+- 이전 패키지명 잔여 검색은 `NO_OLD_PACKAGE_MATCH`로 확인했다.
+- Play Console 내부 테스트 초안에서 `versionCode 1` 중복 오류가 발생했으므로 다음 업로드용 Android 빌드는 `versionCode 2`, `versionName 1.0.1`로 만든다.
