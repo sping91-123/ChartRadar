@@ -45,16 +45,18 @@ import { appendJournalEntry } from "@/lib/journal";
 import type { MarketBriefingInput } from "@/lib/ai/types";
 import { normalizePineDirection, parsePineSnapshot, pineDirectionForTimeframe, type PineSnapshot } from "@/lib/pineParity";
 import { createRemoteJournalEntry } from "@/lib/remoteJournal";
-import { evaluateRadarDecision, type RadarDecision, type RadarDecisionTone } from "@/lib/radarDecisionEngine";
+import { evaluateRadarDecision, type RadarDecision } from "@/lib/radarDecisionEngine";
 import { getActiveSupabaseSession } from "@/lib/supabase";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import { BeginnerActionGuide, type BeginnerGuideStep, type BeginnerGuideTone } from "@/components/BeginnerActionGuide";
+import { RadarInsightPanel } from "@/components/RadarInsightPanel";
 import { TechnicalRadarPanel } from "@/components/TechnicalRadarPanel";
 import { LiquidationPressurePanel } from "@/components/LiquidationPressurePanel";
 import { hasMarketEntitlement } from "@/lib/billing";
 import { recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { getChartThemeOptions, observeChartThemeChange } from "@/lib/chartTheme";
+import { marketAnalysisToRadarInsight, visibleRadarInsightForPlan } from "@/lib/radarInsight";
 
 const symbols = [
   "BTCUSDT.P",
@@ -456,28 +458,6 @@ function biasLabel(bias?: MarketAnalysis["bias"]) {
   return "횡보 관찰";
 }
 
-function signalRatio(analysis: MarketAnalysis | null) {
-  if (!analysis) {
-    return { bullish: 0, bearish: 0, neutral: 0, total: 0 };
-  }
-
-  const bullish = analysis.reasons.filter((reason) => reason.tone === "bullish").length;
-  const bearish = analysis.reasons.filter((reason) => reason.tone === "bearish").length;
-  const neutral = Math.max(
-    0,
-    analysis.reasons.filter((reason) => reason.tone === "neutral").length +
-      analysis.timeframeAnalyses.filter((item) => item.msb === "neutral").length
-  );
-  const total = Math.max(1, bullish + bearish + neutral);
-
-  return { bullish, bearish, neutral, total };
-}
-
-function ratioPercent(count: number, total: number) {
-  if (total <= 0) return 0;
-  return Math.round((count / total) * 100);
-}
-
 /** lightweight-charts v5는 timeZone 옵션 미지원 → UTC 타임스탬프에 KST 오프셋 직접 가산 */
 const KST_OFFSET_SEC = 9 * 3600; // +9h
 
@@ -617,7 +597,7 @@ function userFacingRiskLabel(analysis: MarketAnalysis | null) {
 }
 
 function userFacingNextStep(analysis: MarketAnalysis | null) {
-    if (!analysis) return "레이더가 차트 데이터를 감지하는 중";
+  if (!analysis) return "레이더가 차트 데이터를 감지하는 중";
   if (analysis.bias === "neutral") return "진입보다 구조 확인";
   if (analysis.readiness === "high") return "손절/수량 먼저 확인";
   return "반응 확인 후 판단";
@@ -630,13 +610,6 @@ function overlayPresetMatches(settings: OverlaySettings, preset: keyof typeof ov
 
 function structureSensitivityLabel(value: StructureSensitivity) {
   return structureSensitivityOptions.find((item) => item.value === value)?.label ?? "빠른 변화 감지";
-}
-
-function radarDecisionClasses(tone?: RadarDecisionTone) {
-  if (tone === "bullish") return "border-signal-success/30 bg-signal-success/10 text-signal-success";
-  if (tone === "bearish" || tone === "danger") return "border-signal-danger/30 bg-signal-danger/10 text-signal-danger";
-  if (tone === "warning") return "border-signal-warning/30 bg-signal-warning/10 text-signal-warning";
-  return "border-white/10 bg-black/20 text-slate-300";
 }
 
 function beginnerToneFromDecision(decision: RadarDecision | null): BeginnerGuideTone {
@@ -731,17 +704,33 @@ function buildCoinBeginnerSteps(analysis: MarketAnalysis, decision: RadarDecisio
   ];
 }
 
+function buildCoinBasicBeginnerSteps(analysis: MarketAnalysis): BeginnerGuideStep[] {
+  return [
+    {
+      label: "1. 최종 판단",
+      title: analysis.verdict,
+      body: "Basic에서는 최종 방향과 판단 강도를 먼저 확인하고, 세부 조건은 과하게 해석하지 않습니다.",
+      tone: "info"
+    },
+    {
+      label: "2. 리스크 확인",
+      title: analysis.riskFlags[0] ?? "리스크 먼저 확인",
+      body: "상세 리스크와 무효화 조건은 Pro에서 전체 맥락으로 확인합니다.",
+      tone: analysis.riskFlags.length > 0 ? "warning" : "neutral"
+    },
+    {
+      label: "3. 다음 기준",
+      title: "추적 조건은 잠금",
+      body: "실제 판단에 필요한 조건, 무효화, 다음 행동은 Pro 판단 보조 영역에서 확인합니다.",
+      tone: "neutral"
+    }
+  ];
+}
+
 function radarPulseClasses(tone: RadarPulseTone) {
   if (tone === "long") return "border-signal-success/20 bg-black/20 text-signal-success";
   if (tone === "short") return "border-signal-danger/20 bg-black/20 text-signal-danger";
   if (tone === "warn") return "border-signal-warning/20 bg-black/20 text-signal-warning";
-  return "border-white/10 bg-black/20 text-slate-200";
-}
-
-function decisionTone(value: string) {
-  if (value.includes("검토 가능") || value.includes("손절")) return "border-signal-success/25 bg-signal-success/10 text-signal-success";
-  if (value.includes("위험")) return "border-signal-danger/25 bg-signal-danger/10 text-signal-danger";
-  if (value.includes("주의") || value.includes("관찰")) return "border-signal-warning/25 bg-signal-warning/10 text-signal-warning";
   return "border-white/10 bg-black/20 text-slate-200";
 }
 
@@ -1332,11 +1321,12 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
     equilibrium: null,
     position: "unknown" as const
   };
-  const radarPulseItems = useMemo(
-    () => (analysis ? buildRadarPulse(analysis, activeAnalysis) : []),
-    [activeAnalysis, analysis]
-  );
   const radarDecision = useMemo(() => (analysis ? evaluateRadarDecision(analysis) : null), [analysis]);
+  const radarInsight = useMemo(() => (analysis ? marketAnalysisToRadarInsight(analysis) : null), [analysis]);
+  const visibleRadarInsight = useMemo(
+    () => (radarInsight ? visibleRadarInsightForPlan(radarInsight, hasCoinPro) : null),
+    [hasCoinPro, radarInsight]
+  );
   const hasAnyOverlay = useMemo(() => Object.values(overlaySettings).some(Boolean), [overlaySettings]);
   const combinedScoreLimit = useMemo(() => {
     if (!analysis) return null;
@@ -1698,11 +1688,6 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             : "단기 구조 혼합"
     };
   }, [analysis]);
-
-  const radarSignalRatio = useMemo(() => signalRatio(analysis), [analysis]);
-  const bullishPercent = ratioPercent(radarSignalRatio.bullish, radarSignalRatio.total);
-  const bearishPercent = ratioPercent(radarSignalRatio.bearish, radarSignalRatio.total);
-  const neutralPercent = Math.max(0, 100 - bullishPercent - bearishPercent);
 
   const pineSnapshot = useMemo(() => parsePineSnapshot(pineSnapshotInput), [pineSnapshotInput]);
 
@@ -2294,86 +2279,36 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             </div>
           ) : null}
         </div>
-      ) : analysis ? (
-        <div className="relative mt-4 overflow-hidden rounded-xl border border-surface-line bg-surface-cardSoft p-4 shadow-[0_16px_48px_rgba(0,0,0,0.18)]">
-          <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${biasAccentLine(analysis.bias)}`} aria-hidden />
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">{symbolLabel(symbol)} · {activeTimeframe} Radar Briefing</p>
-              <h3 className="mt-2 text-2xl font-black tracking-tight text-white sm:text-3xl">{analysis.verdict}</h3>
-              <p className="mt-2 line-clamp-2 max-w-3xl text-sm leading-6 text-slate-400 [word-break:keep-all]">
-                {analysis.summaryLine}
-              </p>
-            </div>
-            <div className={`min-w-[160px] shrink-0 rounded-xl border px-4 py-3 text-left ${biasClasses(analysis.bias)}`}>
-              <p className="text-xs font-bold opacity-75">판독 방향</p>
-              <p className="mt-1 text-lg font-black">{biasLabel(analysis.bias)}</p>
-              <p className="mt-1 text-xs font-bold opacity-75">종합 점수 {analysis.biasScore}</p>
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-2 sm:grid-cols-3">
-            {radarPulseItems.map((item) => (
-              <div key={item.label} className={`rounded-xl border p-3 ${radarPulseClasses(item.tone)}`}>
-                <p className="text-[11px] font-black opacity-80">{item.label}</p>
-                <p className="mt-1 text-base font-black">{item.title}</p>
-                <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-200 [word-break:keep-all]">
-                  {item.text}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold">
-              <span className="text-signal-success">상승 근거 {radarSignalRatio.bullish}개 · {bullishPercent}%</span>
-              <span className="text-signal-danger">하락 근거 {radarSignalRatio.bearish}개 · {bearishPercent}%</span>
-              <span className="text-signal-warning">횡보·주의 {radarSignalRatio.neutral}개 · {neutralPercent}%</span>
-            </div>
-            <div className="mt-2 flex h-3 overflow-hidden rounded-full bg-white/10">
-              <div className="h-full bg-signal-success" style={{ width: `${bullishPercent}%` }} />
-              <div className="h-full bg-signal-danger" style={{ width: `${bearishPercent}%` }} />
-              <div className="h-full bg-signal-warning" style={{ width: `${neutralPercent}%` }} />
-            </div>
-          </div>
-
-          <div className="mt-4 grid gap-2 sm:grid-cols-3">
-            <div className={`rounded-xl border p-3 ${decisionTone(userFacingRiskLabel(analysis))}`}>
-              <p className="text-xs font-semibold opacity-75">진입 위험도</p>
-              <p className="mt-1 text-base font-black">{userFacingRiskPercent(analysis)}% · {userFacingRiskLabel(analysis)}</p>
-            </div>
-            <div className={`rounded-xl border p-3 ${radarDecisionClasses(radarDecision?.tone)}`}>
-              <p className="text-xs font-semibold opacity-75">판단 엔진</p>
-              <p className="mt-1 text-base font-black">{radarDecision?.title ?? userFacingNextStep(analysis)}</p>
-              <p className="mt-1 line-clamp-2 text-xs leading-5 opacity-80 [word-break:keep-all]">
-                {radarDecision ? `${radarDecision.score}점 · ${radarDecision.nextStep}` : userFacingNextStep(analysis)}
-              </p>
-            </div>
-            <div className={`rounded-xl border p-3 ${readinessClasses(analysis.readiness)}`}>
-              <p className="flex items-center gap-1 text-xs font-semibold opacity-75">
-                데이터 신뢰도
-                <span className="group relative inline-flex">
-                  <HelpCircle size={13} aria-hidden />
-                  <span className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 hidden w-[min(18rem,calc(100vw-2rem))] rounded-md border border-white/10 bg-slate-950 px-3 py-2 text-[11px] leading-5 text-slate-300 shadow-xl group-hover:block sm:left-1/2 sm:right-auto sm:w-64 sm:-translate-x-1/2">
-                    여러 타임프레임 구조와 현재 위치가 얼마나 서로 맞는지 보는 값입니다. 높다고 무조건 진입이라는 뜻은 아닙니다.
-                  </span>
-                </span>
-              </p>
-              <p className="mt-1 text-base font-black">{readinessLabel(analysis.readiness)}</p>
-            </div>
-          </div>
-
-          <div className="mt-4">
+      ) : analysis && visibleRadarInsight ? (
+        <div className="mt-4 space-y-4">
+          <RadarInsightPanel insight={visibleRadarInsight} isPro={hasCoinPro} />
+          <div className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
             <BeginnerActionGuide
               title="지금은 이 순서로 보면 됩니다"
-              summary="방향, 현재 위치, 위험 조건을 한 줄 행동 순서로 압축했습니다. 초보자는 아래 3가지를 먼저 확인한 뒤 세부 지표로 내려가면 됩니다."
-              steps={buildCoinBeginnerSteps(analysis, radarDecision)}
-              checklist={[
-                "손절 기준을 말로 설명할 수 있는지 확인",
-                "수량이 계좌 기준 위험 한도 안인지 확인",
-                "다음 캔들에서도 같은 방향 근거가 유지되는지 확인"
-              ]}
-              help="판단 엔진은 차트 구조, 현재 위치, 위험 플래그, 데이터 신뢰도를 합쳐 행동 순서를 정리합니다. 점수가 좋아도 손절과 수량을 정하지 않았다면 아직 준비가 끝난 상태가 아닙니다."
+              summary={
+                hasCoinPro
+                  ? "방향, 현재 위치, 위험 조건을 한 줄 행동 순서로 압축했습니다. 초보자는 아래 3가지를 먼저 확인한 뒤 세부 지표로 내려가면 됩니다."
+                  : "Basic에서는 최종 판단, 강도, 공개된 근거와 리스크까지만 확인합니다. 세부 추적 조건과 다음 행동은 Pro 판단 보조 영역에서 분리합니다."
+              }
+              steps={hasCoinPro ? buildCoinBeginnerSteps(analysis, radarDecision) : buildCoinBasicBeginnerSteps(analysis)}
+              checklist={
+                hasCoinPro
+                  ? [
+                      "손절 기준을 말로 설명할 수 있는지 확인",
+                      "수량이 계좌 기준 위험 한도 안인지 확인",
+                      "다음 캔들에서도 같은 방향 근거가 유지되는지 확인"
+                    ]
+                  : [
+                      "최종 판단과 판단 강도를 먼저 확인",
+                      "공개된 핵심 근거와 리스크 1개만 확인",
+                      "추적 조건, 무효화, 다음 행동은 잠금 영역으로 분리"
+                    ]
+              }
+              help={
+                hasCoinPro
+                  ? "판단 엔진은 차트 구조, 현재 위치, 위험 플래그, 데이터 신뢰도를 합쳐 행동 순서를 정리합니다. 점수가 좋아도 손절과 수량을 정하지 않았다면 아직 준비가 끝난 상태가 아닙니다."
+                  : "Basic 안내는 판단 보조 요약입니다. 실제 판단에 필요한 조건, 무효화, 상세 리스크는 Pro에서 전체 맥락으로 확인합니다."
+              }
             />
           </div>
         </div>

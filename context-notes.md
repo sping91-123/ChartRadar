@@ -1575,3 +1575,13 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 기술지표 레이더에는 초보자가 해석 기준을 바로 볼 수 있도록 물음표 도움말을 추가했다.
 - 검증은 `npm.cmd run lint`, `npm.cmd run build`, `npm.cmd run smoke:all`, `127.0.0.1:3000`의 `/crypto`, `/global`, `/api/health` 200 응답으로 확인했다.
 - `smoke:all`에서 매크로 갱신 신선도 기준이 걸려 `macroCalendarUpdatedAtIso`만 현재 갱신 시각으로 맞췄다.
+## 2026-05-18 공통 판단 구조 1차 기반.
+
+- 이번 범위는 판단 로직 변경이 아니라 기존 분석 결과를 `RadarInsight`로 감싸는 어댑터와 공통 패널 기반을 만드는 작업이다.
+- Free 사용자는 최종 판단, 판단 강도, 한 줄 요약, 핵심 근거 1개, 리스크 1개만 보고, 조건과 무효화, 상세 리스크, 다음 행동, 업데이트 시각은 Pro 영역으로 둔다.
+- 코인과 글로벌 상단은 `RadarInsightPanel`을 먼저 보여주고 기존 초보자 안내와 세부 근거 패널은 보조 영역으로 낮춘다.
+- `SetupScoutPanel`, `WatchlistPanel`, `RadarAlertCenter`는 이번 작업에서 수정하지 않고 다음 단계 공통화 대상으로 남긴다.
+- `RadarInsightPanel`은 Basic에서 판단, 강도, 요약, 근거 1개, 리스크 1개만 보여주고 조건, 무효화, 다음 행동, 업데이트 시각은 Pro 잠금 미리보기로 처리한다.
+- `visibleRadarInsightForPlan`으로 Basic 사용자에게는 공통 패널 전달 전 조건, 무효화, 다음 행동, 업데이트 시각 데이터를 제거한다.
+- 글로벌 로컬 화면은 Basic 사용량 제한이 걸리면 기존 정책대로 분석 패널 대신 한도 안내가 먼저 보인다.
+- `/global` 패널은 `127.0.0.2:3000`처럼 사용량이 비어 있는 로컬 origin에서 확인했고, 기존 GlobalPlaybook, GlobalBeginnerGuide는 공통 패널과 중복 렌더링되지 않는다.

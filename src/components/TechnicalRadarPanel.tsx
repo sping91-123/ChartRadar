@@ -75,7 +75,7 @@ export function TechnicalRadarPanel({
   candles,
   timeframe,
   assetLabel = "선택 코인",
-  intro = "ICT 구조와 분리해서 이동평균, MACD, RSI, 일목균형표, Supertrend, 거래량, 변동성 지표를 한 번에 확인합니다."
+  intro = "상단 판단을 보조하는 세부 근거입니다. 이동평균, MACD, RSI, 일목균형표, Supertrend, 거래량, 변동성 지표를 한 번에 확인합니다."
 }: {
   candles: Candle[];
   timeframe: ChartTimeframe;
@@ -88,10 +88,10 @@ export function TechnicalRadarPanel({
     <div id="technical-radar" className="scroll-mt-24 rounded-lg border border-surface-line bg-surface-cardSoft p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-accent-blue">Technical Radar</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-accent-blue">Technical Evidence</p>
           <h3 className="mt-1 flex items-center gap-2 text-lg font-black text-white">
-            기술지표 레이더
-            <HelpTip text="여러 기술지표를 한 방향 표로 압축한 영역입니다. 상승, 하락, 관망 개수와 설명을 먼저 보고 세부 지표를 확인하세요." />
+            기술지표 세부 근거
+            <HelpTip text="상단 공통 판단을 보조하는 세부 지표 영역입니다. 상승, 하락, 관망 개수와 설명을 보고 판단 근거가 충분한지 확인하세요." />
           </h3>
           <p className="mt-2 text-sm leading-6 text-slate-400">{intro}</p>
         </div>

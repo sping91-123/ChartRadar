@@ -1815,3 +1815,14 @@
 - [x] `npm.cmd run build`와 `npm.cmd run smoke:all`로 검증한다.
 - [x] `npm.cmd run lint`와 로컬 3000 응답을 추가 확인한다.
 - [x] 매크로 예비 일정 갱신 시각을 smoke 기준 안으로 갱신한다.
+## 2026-05-18 공통 판단 구조 1차 기반.
+
+- [x] `RadarInsight` 공통 타입과 코인, 글로벌 어댑터를 추가한다.
+- [x] Free/Pro 노출 정책을 처리하는 `RadarInsightPanel`을 추가한다.
+- [x] 코인 상단 판단 영역을 공통 패널 기준으로 정리한다.
+- [x] 글로벌 상단 판단 영역을 공통 패널 기준으로 정리한다.
+- [x] 기술지표 패널은 세부 근거 패널 톤으로 최소 정리한다.
+- [x] 스캐너, 관심코인, 알림 공통화는 다음 단계 TODO로만 남긴다.
+- [x] `/global`을 사용량이 비어 있는 로컬 origin에서 열어 공통 패널 표시를 확인한다.
+- [x] Basic용 `RadarInsight`는 패널 전달 전에 조건, 무효화, 다음 행동, 업데이트 시각을 제거한다.
+- [x] `npx.cmd tsc --noEmit`, `npm.cmd run lint`, `npm.cmd run build`, `npm.cmd run smoke:all`을 실행한다.

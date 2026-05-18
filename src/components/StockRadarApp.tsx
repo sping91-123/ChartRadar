@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CandlestickSeries, createChart, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { Activity, AlertTriangle, BarChart3, Bookmark, BookmarkCheck, Clock3, Compass, Gauge, Loader2, RefreshCw, Search, Shield, Sparkles, Target } from "lucide-react";
 import { BeginnerActionGuide, type BeginnerGuideStep, type BeginnerGuideTone } from "@/components/BeginnerActionGuide";
+import { RadarInsightPanel } from "@/components/RadarInsightPanel";
 import { TechnicalRadarPanel } from "@/components/TechnicalRadarPanel";
 import { analyzeTimeframe, chartTimeframes, type Candle, type ChartTimeframe, type DirectionState, type TimeframeAnalysis } from "@/lib/marketAnalysis";
 import { analyzeTechnicalRadar, type TechnicalRadarReport } from "@/lib/technicalRadar";
@@ -14,6 +15,7 @@ import { hasMarketEntitlement } from "@/lib/billing";
 import { getWatchlistLimit } from "@/lib/watchlist";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import { getChartThemeOptions, observeChartThemeChange } from "@/lib/chartTheme";
+import { technicalRadarReportToRadarInsight, visibleRadarInsightForPlan } from "@/lib/radarInsight";
 
 const fallbackUniverse: StockSymbolInfo[] = [
   { symbol: "NQ=F", name: "Nasdaq 100 Futures", group: "futures" },
@@ -467,13 +469,13 @@ function StockSnapshot({
       <div className={`rounded-lg border p-4 lg:col-span-2 ${toneBadgeClass(tone)}`}>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] opacity-80">오늘의 글로벌 레이더</p>
-            <h3 className="mt-2 text-2xl font-black text-white">{report?.trendLabel ?? "데이터 확인 중"}</h3>
+            <p className="text-xs font-black uppercase tracking-[0.2em] opacity-80">세부 근거 요약</p>
+            <h3 className="mt-2 text-2xl font-black text-white">기술지표 근거 분포</h3>
           </div>
           <Gauge size={24} aria-hidden />
         </div>
         <p className="mt-3 text-sm leading-6 text-slate-200">
-          {report?.summary ?? "글로벌 시장 캔들을 불러오면 추세, 모멘텀, 변동성, 거래량을 요약합니다."}
+          상단 판단에 사용된 상승, 하락, 횡보 근거 수와 가까운 가격 기준선을 분리해 확인합니다.
         </p>
         <div className="mt-4 grid grid-cols-3 gap-2 text-center">
           <div className="rounded-md bg-black/20 p-2">
@@ -899,6 +901,23 @@ export function StockRadarApp() {
   const previous = state.status === "ready" ? state.candles[state.candles.length - 2] : null;
   const changePercent = latest && previous ? ((latest.close - previous.close) / previous.close) * 100 : null;
   const technicalReport = useMemo(() => (state.status === "ready" ? analyzeTechnicalRadar(state.candles) : null), [state]);
+  const radarInsight = useMemo(
+    () =>
+      technicalReport
+        ? technicalRadarReportToRadarInsight(technicalReport, {
+            market: "global",
+            symbol,
+            timeframe,
+            sessionNote: sessionState?.detail ?? undefined,
+            groupNote: groupPlaybook(selectedInfo?.group)
+          })
+        : null,
+    [selectedInfo?.group, sessionState?.detail, symbol, technicalReport, timeframe]
+  );
+  const visibleRadarInsight = useMemo(
+    () => (radarInsight ? visibleRadarInsightForPlan(radarInsight, isPaid) : null),
+    [isPaid, radarInsight]
+  );
   const ictAnalysis = useMemo(
     () => (state.status === "ready" ? analyzeTimeframe(timeframe, state.candles, { zigLen: 5, useCloseForMsb: true }) : null),
     [state, timeframe]
@@ -1071,17 +1090,12 @@ export function StockRadarApp() {
         ) : null}
       </div>
 
-      {state.status === "ready" && radarMode !== "ict" ? (
+      {state.status === "ready" && radarMode !== "ict" && visibleRadarInsight ? (
         <div className="mt-5">
-          <StockSnapshot report={technicalReport} latest={latest} changePercent={changePercent} />
-          <GlobalPlaybook
-            report={technicalReport}
-            latest={latest}
-            changePercent={changePercent}
-            selectedInfo={selectedInfo}
-            sessionState={sessionState}
-          />
-          <GlobalBeginnerGuide report={technicalReport} selectedInfo={selectedInfo} sessionState={sessionState} />
+          <RadarInsightPanel insight={visibleRadarInsight} isPro={isPaid} />
+          <div className="mt-5">
+            <StockSnapshot report={technicalReport} latest={latest} changePercent={changePercent} />
+          </div>
         </div>
       ) : null}
 
