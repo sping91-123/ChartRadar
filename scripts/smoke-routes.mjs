@@ -42,7 +42,7 @@ const checks = [
     expectedStatus: [401]
   },
   {
-    label: "연간 결제 로그인 보호",
+    label: "All Market 6개월 결제 로그인 보호",
     path: "/api/billing/checkout",
     method: "POST",
     body: { planId: "bundle_yearly", platform: "web" },

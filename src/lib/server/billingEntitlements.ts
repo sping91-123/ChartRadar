@@ -1,5 +1,6 @@
 // 결제 확인 후 사용자 Pro 권한을 Supabase에 반영하는 서버 유틸입니다.
 import {
+  getBillingPeriodMonths,
   getMarketScopeForPlan,
   type BillingPlanId
 } from "@/lib/billing";
@@ -16,7 +17,7 @@ export async function grantBillingEntitlement(params: {
   const marketScope = getMarketScopeForPlan(params.planId);
   const now = new Date();
   const fallbackPeriodEnd = new Date(now);
-  fallbackPeriodEnd.setMonth(fallbackPeriodEnd.getMonth() + (params.planId.endsWith("_yearly") ? 12 : 1));
+  fallbackPeriodEnd.setMonth(fallbackPeriodEnd.getMonth() + getBillingPeriodMonths(params.planId));
   const providerPeriodEnd = params.currentPeriodEndIso ? new Date(params.currentPeriodEndIso) : null;
   const periodEnd =
     providerPeriodEnd && Number.isFinite(providerPeriodEnd.getTime()) && providerPeriodEnd.getTime() > now.getTime()

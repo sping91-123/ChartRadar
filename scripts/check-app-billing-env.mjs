@@ -22,7 +22,7 @@ const expectedProductIds = [
   "chart_radar_global_monthly",
   "chart_radar_global_yearly",
   "chart_radar_bundle_monthly",
-  "chart_radar_bundle_yearly"
+  "chart_radar_bundle_6month"
 ];
 
 function parseEnv(text) {

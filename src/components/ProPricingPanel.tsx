@@ -1,17 +1,17 @@
 "use client";
 // Pro 구독 플랜과 결제 시작 버튼을 보여주는 판매 패널입니다.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Crown, Loader2, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
 import {
+  type BillingPlanId,
   type BillingPageScope,
   type BillingPlan,
   getBillingPlansForPage,
   formatKrw,
-  isYearlyBillingPlan,
   subscriptionTrustNotes
 } from "@/lib/billing";
-import { isNativePurchaseAvailable, purchaseNativePlan, restoreNativeEntitlement } from "@/lib/mobilePurchases";
+import { fetchNativePlanPriceLabels, isNativePurchaseAvailable, purchaseNativePlan, restoreNativeEntitlement } from "@/lib/mobilePurchases";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 type CheckoutState =
@@ -54,15 +54,17 @@ function checkoutCtaLabel(plan: BillingPlan) {
 function PlanCard({
   plan,
   isBusy,
+  priceLabel,
   onCheckout
 }: {
   plan: BillingPlan;
   isBusy: boolean;
+  priceLabel: string;
   onCheckout: (plan: BillingPlan) => void;
 }) {
   const isFree = plan.id === "free";
-  const isRecommended = plan.marketScope === "bundle" && !isYearlyBillingPlan(plan.id);
-  const isYearly = isYearlyBillingPlan(plan.id);
+  const isRecommended = plan.marketScope === "bundle" && plan.billingPeriodMonths === 1;
+  const hasMonthlyValue = plan.monthlyValue > 0 && plan.billingPeriodMonths > 1;
 
   return (
     <article
@@ -75,18 +77,20 @@ function PlanCard({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-black tracking-[0.22em] text-accent-blue">{plan.badge}</p>
-          <h3 className="mt-2 text-xl font-black text-slate-950 dark:text-white">{plan.name}</h3>
+          <h3 className="mt-2 text-xl font-black text-slate-950 dark:text-white">{plan.displayName}</h3>
+          <p className="mt-1 text-xs font-bold text-slate-500 dark:text-slate-400">{plan.periodLabel}</p>
         </div>
         {isRecommended ? (
           <span className="rounded-full bg-cyan-300 px-2.5 py-1 text-[11px] font-black text-slate-950">통합</span>
         ) : null}
       </div>
 
-      <p className="mt-4 text-3xl font-black text-slate-950 dark:text-white">{plan.priceLabel}</p>
-      {plan.monthlyValue > 0 && isYearly ? (
+      <p className="mt-4 text-3xl font-black text-slate-950 dark:text-white">{priceLabel}</p>
+      {hasMonthlyValue ? (
         <p className="mt-1 text-xs font-bold text-slate-500">월 환산 {formatKrw(plan.monthlyValue)}</p>
       ) : null}
       <p className="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-300">{plan.description}</p>
+      {!isFree ? <p className="mt-3 text-xs font-bold leading-5 text-slate-500 dark:text-slate-400">{plan.renewalText}</p> : null}
 
       <ul className="mt-5 space-y-2 text-sm text-slate-600 dark:text-slate-300">
         {plan.highlights.map((item) => (
@@ -131,9 +135,31 @@ function PlanCard({
 export function ProPricingPanel({ marketScope = "all" }: { marketScope?: BillingPageScope } = {}) {
   const { session, user, isLoading } = useSupabaseAuth();
   const [checkoutState, setCheckoutState] = useState<CheckoutState>({ status: "idle" });
+  const [nativePriceLabels, setNativePriceLabels] = useState<Partial<Record<BillingPlanId, string>>>({});
   const visiblePlans = useMemo(() => getBillingPlansForPage(marketScope), [marketScope]);
+  const visiblePlanIds = useMemo(() => visiblePlans.map((plan) => plan.id).join("|"), [visiblePlans]);
   const copy = scopeCopy(marketScope);
   const nativePurchaseAvailable = isNativePurchaseAvailable();
+
+  useEffect(() => {
+    if (!nativePurchaseAvailable || !user?.id) {
+      setNativePriceLabels({});
+      return;
+    }
+
+    let cancelled = false;
+    fetchNativePlanPriceLabels(visiblePlans, user.id)
+      .then((labels) => {
+        if (!cancelled) setNativePriceLabels(labels);
+      })
+      .catch(() => {
+        if (!cancelled) setNativePriceLabels({});
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [nativePurchaseAvailable, user?.id, visiblePlanIds, visiblePlans]);
 
   async function startCheckout(plan: BillingPlan) {
     if (isLoading) {
@@ -222,6 +248,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
             key={plan.id}
             plan={plan}
             isBusy={checkoutState.status === "loading" && checkoutState.planId === plan.id}
+            priceLabel={nativePriceLabels[plan.id] ?? plan.priceLabel}
             onCheckout={startCheckout}
           />
         ))}

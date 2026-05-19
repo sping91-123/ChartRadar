@@ -69,7 +69,7 @@ const productIds = [
   "chart_radar_global_monthly",
   "chart_radar_global_yearly",
   "chart_radar_bundle_monthly",
-  "chart_radar_bundle_yearly"
+  "chart_radar_bundle_6month"
 ];
 
 const expectedProductPlanPairs = [
@@ -78,7 +78,7 @@ const expectedProductPlanPairs = [
   ["chart_radar_global_monthly", "stocks_monthly"],
   ["chart_radar_global_yearly", "stocks_yearly"],
   ["chart_radar_bundle_monthly", "bundle_monthly"],
-  ["chart_radar_bundle_yearly", "bundle_yearly"]
+  ["chart_radar_bundle_6month", "bundle_yearly"]
 ];
 
 function planBlock(planId) {
@@ -90,6 +90,10 @@ function appStoreProductIdForPlan(planId) {
   return /appStoreProductId:\s*"([^"]+)"/.exec(planBlock(planId))?.[1] ?? null;
 }
 
+function appStoreBasePlanIdForPlan(planId) {
+  return /appStoreBasePlanId:\s*"([^"]+)"/.exec(planBlock(planId))?.[1] ?? null;
+}
+
 const smokeProductIdToPlanId = new Map(expectedProductPlanPairs.map(([productId, planId]) => [productId, planId]));
 
 function smokeResolvePlanIdFromStoreProductId(productId) {
@@ -98,32 +102,17 @@ function smokeResolvePlanIdFromStoreProductId(productId) {
   const exactPlanId = smokeProductIdToPlanId.get(trimmed);
   if (exactPlanId) return exactPlanId;
   const subscriptionPlanId = smokeProductIdToPlanId.get(subscriptionId);
-  if (subscriptionPlanId) return subscriptionPlanId;
+  if (!subscriptionPlanId) return null;
 
-  const value = `${subscriptionId} ${trimmed}`.toLowerCase();
-  const basePlanValue = basePlanId.toLowerCase();
-  const marketScope = /(^|[_\-\s:])(bundle|allmarket|all_market|all-market)($|[_\-\s:])/.test(value)
-    ? "bundle"
-    : /(^|[_\-\s:])(global|stocks|stock)($|[_\-\s:])/.test(value)
-      ? "stocks"
-      : /(^|[_\-\s:])(crypto|coin)($|[_\-\s:])/.test(value)
-        ? "crypto"
-        : null;
-  const period = /(^|[_\-\s:])(yearly|annual|year|p1y|1y)($|[_\-\s:])/.test(basePlanValue || value)
-    ? "yearly"
-    : /(^|[_\-\s:])(monthly|month|p1m|1m)($|[_\-\s:])/.test(basePlanValue || value)
-      ? "monthly"
-      : null;
-
-  if (!marketScope || !period) return null;
-  return {
-    crypto_monthly: "crypto_monthly",
-    crypto_yearly: "crypto_yearly",
-    stocks_monthly: "stocks_monthly",
-    stocks_yearly: "stocks_yearly",
-    bundle_monthly: "bundle_monthly",
-    bundle_yearly: "bundle_yearly"
-  }[`${marketScope}_${period}`] ?? null;
+  const expectedBasePlanIds = {
+    crypto_monthly: "monthly",
+    crypto_yearly: "year-1",
+    stocks_monthly: "monthly",
+    stocks_yearly: "yearly-1",
+    bundle_monthly: "monthly",
+    bundle_yearly: "month-6"
+  };
+  return !basePlanId || expectedBasePlanIds[subscriptionPlanId] === basePlanId ? subscriptionPlanId : null;
 }
 
 function smokeResolveMarkets(activeEntitlements) {
@@ -145,7 +134,7 @@ const paymentEnvNames = [
   "NEXT_PUBLIC_STOCKS_MONTHLY_PAYMENT_URL",
   "NEXT_PUBLIC_STOCKS_YEARLY_PAYMENT_URL",
   "NEXT_PUBLIC_BUNDLE_MONTHLY_PAYMENT_URL",
-  "NEXT_PUBLIC_BUNDLE_YEARLY_PAYMENT_URL",
+  "NEXT_PUBLIC_BUNDLE_6MONTH_PAYMENT_URL",
   "TOSS_PAYMENTS_SECRET_KEY",
   "SUPABASE_SERVICE_ROLE_KEY",
   "NEXT_PUBLIC_REVENUECAT_ANDROID_API_KEY",
@@ -171,17 +160,30 @@ for (const [productId, planId] of expectedProductPlanPairs) {
   }
 }
 
+for (const [planId, expectedBasePlanId] of [
+  ["crypto_monthly", "monthly"],
+  ["crypto_yearly", "year-1"],
+  ["stocks_monthly", "monthly"],
+  ["stocks_yearly", "yearly-1"],
+  ["bundle_monthly", "monthly"],
+  ["bundle_yearly", "month-6"]
+]) {
+  const actualBasePlanId = appStoreBasePlanIdForPlan(planId);
+  if (actualBasePlanId === expectedBasePlanId) {
+    pass(`basePlanId 연결 ${planId}`, `${planId} → ${expectedBasePlanId}`);
+  } else {
+    fail(`basePlanId 연결 ${planId}`, `예상 ${expectedBasePlanId}, 현재 ${actualBasePlanId ?? "미확인"}.`);
+  }
+}
+
 for (const [productId, expectedPlanId] of [
   ["chart_radar_crypto_monthly", "crypto_monthly"],
   ["chart_radar_crypto_monthly:monthly", "crypto_monthly"],
-  ["chart_radar_crypto_yearly:yearly", "crypto_yearly"],
+  ["chart_radar_crypto_yearly:year-1", "crypto_yearly"],
   ["chart_radar_global_monthly:monthly", "stocks_monthly"],
-  ["chart_radar_global_yearly:yearly", "stocks_yearly"],
+  ["chart_radar_global_yearly:yearly-1", "stocks_yearly"],
   ["chart_radar_bundle_monthly:monthly", "bundle_monthly"],
-  ["chart_radar_bundle_yearly:yearly", "bundle_yearly"],
-  ["chart_radar_crypto:monthly", "crypto_monthly"],
-  ["chart_radar_global:yearly", "stocks_yearly"],
-  ["chart_radar_bundle:yearly", "bundle_yearly"]
+  ["chart_radar_bundle_6month:month-6", "bundle_yearly"]
 ]) {
   const actualPlanId = smokeResolvePlanIdFromStoreProductId(productId);
   if (actualPlanId === expectedPlanId) {
@@ -195,6 +197,12 @@ if (smokeResolvePlanIdFromStoreProductId("unknown_product:monthly") === null) {
   pass("알 수 없는 상품 ID 권한 차단", "unknown 상품은 planId로 매핑하지 않습니다.");
 } else {
   fail("알 수 없는 상품 ID 권한 차단", "unknown 상품이 planId로 매핑되고 있습니다.");
+}
+
+if (smokeResolvePlanIdFromStoreProductId("chart_radar_global_yearly:year-1") === null) {
+  pass("잘못된 Global Pro 연간 basePlanId 차단", "yearly-1만 Global Pro 연간으로 매핑합니다.");
+} else {
+  fail("잘못된 Global Pro 연간 basePlanId 차단", "year-1이 Global Pro 연간으로 매핑되고 있습니다.");
 }
 
 for (const [label, activeEntitlements, expectedMarkets] of [
@@ -220,6 +228,7 @@ for (const envName of [
   "NEXT_PUBLIC_CRYPTO_MONTHLY_PAYMENT_URL",
   "NEXT_PUBLIC_GLOBAL_MONTHLY_PAYMENT_URL",
   "NEXT_PUBLIC_BUNDLE_MONTHLY_PAYMENT_URL",
+  "NEXT_PUBLIC_BUNDLE_6MONTH_PAYMENT_URL",
   "TOSS_PAYMENTS_SECRET_KEY",
   "SUPABASE_SERVICE_ROLE_KEY"
 ]) {
@@ -238,7 +247,8 @@ for (const phrase of [
   expectIncludes(files.paymentGuide, phrase, `결제 가이드 문구 ${phrase}`, "docs/payment-launch.md");
 }
 
-for (const stale of ["chart_radar_pro_monthly", "chart_radar_pro_yearly"]) {
+const staleBundleAnnualProductId = `${"chart_radar_bundle"}_${"yearly"}`;
+for (const stale of ["chart_radar_pro_monthly", "chart_radar_pro_yearly", staleBundleAnnualProductId]) {
   for (const [fileName, source] of [
     ["LAUNCH_CHECKLIST.md", files.launchChecklist],
     ["docs/payment-launch.md", files.paymentGuide],
@@ -263,12 +273,14 @@ expectIncludes(files.checkoutRoute, "결제창 연결 주소를 확인하지 못
 expectIncludes(files.checkoutRoute, "rateLimit(request", "결제 시작 호출 제한", "src/app/api/billing/checkout/route.ts");
 expectIncludes(files.checkoutRoute, "isBodyTooLarge(request, 8_000)", "결제 시작 본문 크기 제한", "src/app/api/billing/checkout/route.ts");
 expectIncludes(files.checkoutRoute, "play_billing", "Android Google Play Billing 분기", "src/app/api/billing/checkout/route.ts");
+expectIncludes(files.checkoutRoute, "basePlanId: plan.appStoreBasePlanId", "Android Google Play basePlanId 응답", "src/app/api/billing/checkout/route.ts");
 
 expectIncludes(files.appStoreSyncRoute, "REVENUECAT_REST_API_KEY", "RevenueCat 서버 검증 키 사용", "src/app/api/billing/app-store/sync/route.ts");
 expectIncludes(files.appStoreSyncRoute, "grantBillingEntitlement", "앱 구독 확인 후 Pro 권한 반영", "src/app/api/billing/app-store/sync/route.ts");
 expectIncludes(files.appStoreSyncRoute, "resolveActivePlans", "앱 구독 다중 활성 플랜 해석", "src/app/api/billing/app-store/sync/route.ts");
 expectIncludes(files.appStoreSyncRoute, "activePlans.map", "Coin Pro와 Global Pro 별도 구매 합산 반영", "src/app/api/billing/app-store/sync/route.ts");
 expectIncludes(files.appStoreSyncRoute, "resolveStoreEntitlementMarkets", "RevenueCat entitlement 범위 확인", "src/app/api/billing/app-store/sync/route.ts");
+expectIncludes(files.appStoreSyncRoute, "resolvePlanIdFromStoreProductId", "앱 구독 productId/basePlanId 검증", "src/app/api/billing/app-store/sync/route.ts");
 expectIncludes(files.appStoreSyncRoute, "active: true", "앱 구독 성공 응답 active 플래그", "src/app/api/billing/app-store/sync/route.ts");
 expectIncludes(files.appStoreSyncRoute, "currentPeriodEndIso: activePlan.expiresDate", "앱 구독 실제 만료일 반영", "src/app/api/billing/app-store/sync/route.ts");
 expectIncludes(files.billingEntitlements, "currentPeriodEndIso", "구독 권한 만료일 override 지원", "src/lib/server/billingEntitlements.ts");
@@ -288,8 +300,10 @@ expectIncludes(files.proPricingPanel, "purchaseNativePlan", "네이티브 앱 �
 expectIncludes(files.proPricingPanel, "restoreNativeEntitlement", "앱 구독 복원 버튼", "src/components/ProPricingPanel.tsx");
 
 expectIncludes(files.mobilePurchases, "Purchases.purchaseStoreProduct", "RevenueCat 구독 구매 호출", "src/lib/mobilePurchases.ts");
+expectIncludes(files.mobilePurchases, "Purchases.purchaseSubscriptionOption", "RevenueCat Google Play basePlanId 구매 호출", "src/lib/mobilePurchases.ts");
 expectIncludes(files.mobilePurchases, "Purchases.restorePurchases", "RevenueCat 구독 복원 호출", "src/lib/mobilePurchases.ts");
 expectIncludes(files.mobilePurchases, "/api/billing/app-store/sync", "앱 구독 확인 호출", "src/lib/mobilePurchases.ts");
+expectIncludes(files.mobilePurchases, "basePlanId", "앱 구독 기본 요금제 ID 전달", "src/lib/mobilePurchases.ts");
 expectIncludes(files.mobilePurchases, "앱 구독 상태를 계정에 연결하지 못했습니다.", "앱 구독 실패 사용자 문구", "src/lib/mobilePurchases.ts");
 if (files.mobilePurchases.includes("서버에 반영하지 못했습니다.") || files.checkoutRoute.includes("환경변수가 https://")) {
   fail("결제 내부 문구 노출 방지", "사용자에게 서버 반영 또는 환경변수 문구가 노출될 수 있습니다.");
@@ -342,16 +356,16 @@ if (Number(stocksYearlyAmount) === 390000 && Number(stocksYearlyMonthlyValue) ==
   fail("글로벌 연간 청구 금액", `예상 390000/32500, 현재 ${stocksYearlyAmount ?? "미확인"}/${stocksYearlyMonthlyValue ?? "미확인"}.`);
 }
 
-if (Number(bundleYearlyAmount) === 690000 && Number(bundleYearlyMonthlyValue) === 57500) {
-  pass("번들 연간 청구 금액", "연 690,000원, 월 환산 57,500원");
+if (Number(bundleYearlyAmount) === 390000 && Number(bundleYearlyMonthlyValue) === 65000) {
+  pass("번들 6개월 청구 금액", "6개월 390,000원, 월 환산 65,000원");
 } else {
-  fail("번들 연간 청구 금액", `예상 690000/57500, 현재 ${bundleYearlyAmount ?? "미확인"}/${bundleYearlyMonthlyValue ?? "미확인"}.`);
+  fail("번들 6개월 청구 금액", `예상 390000/65000, 현재 ${bundleYearlyAmount ?? "미확인"}/${bundleYearlyMonthlyValue ?? "미확인"}.`);
 }
 
 if (Number(bundleYearlyMonthlyValue) > 0 && Number(bundleYearlyMonthlyValue) < Number(bundleYearlyAmount)) {
-  pass("연간 월 환산가 분리", `월 환산가 ${bundleYearlyMonthlyValue}원과 실제 청구 금액 ${bundleYearlyAmount}원이 분리되어 있습니다.`);
+  pass("장기 구독 월 환산가 분리", `월 환산가 ${bundleYearlyMonthlyValue}원과 실제 청구 금액 ${bundleYearlyAmount}원이 분리되어 있습니다.`);
 } else {
-  fail("연간 월 환산가 분리", "monthlyValue와 billingAmount 관계를 확인해 주세요.");
+  fail("장기 구독 월 환산가 분리", "monthlyValue와 billingAmount 관계를 확인해 주세요.");
 }
 
 for (const [planId, expectedLimit] of [

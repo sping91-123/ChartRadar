@@ -8,7 +8,7 @@
  *  - Global Pro 월간: 50개
  *  - Global Pro 연간: 100개
  *  - All Market 월간: 100개
- *  - All Market 연간: 150개
+ *  - All Market 6개월: 150개
  */
 
 import type { BillingEntitlementPlan } from "./billing";

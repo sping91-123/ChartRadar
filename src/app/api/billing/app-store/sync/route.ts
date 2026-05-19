@@ -4,6 +4,7 @@ import {
   findBillingPlan,
   findBillingPlanByAppStoreProductId,
   resolveCombinedBillingEntitlementPlan,
+  resolvePlanIdFromStoreProductId,
   resolveStoreEntitlementMarkets
 } from "@/lib/billing";
 import { grantBillingEntitlement } from "@/lib/server/billingEntitlements";
@@ -15,7 +16,9 @@ import {
 
 interface AppStoreSyncRequest {
   appUserId?: string;
+  basePlanId?: string;
   planId?: string;
+  productId?: string;
   platform?: "android" | "ios";
 }
 
@@ -132,6 +135,12 @@ function resolveActivePlans(payload: RevenueCatSubscriberResponse, requestedPlan
   };
 }
 
+function resolveRequestedStorePlanId(body: AppStoreSyncRequest) {
+  if (!body.productId) return null;
+  const storeProductId = body.basePlanId ? `${body.productId}:${body.basePlanId}` : body.productId;
+  return resolvePlanIdFromStoreProductId(storeProductId);
+}
+
 export async function POST(request: Request) {
   const limit = await rateLimit(request, { key: "app-store-sync", limit: 30, windowMs: 10 * 60 * 1000 });
   if (!limit.allowed) {
@@ -166,6 +175,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ status: "rejected", message: "앱 구독 사용자와 로그인 계정이 일치하지 않습니다." }, { status: 400 });
   }
 
+  const requestedStorePlanId = resolveRequestedStorePlanId(body);
+  if (body.productId && !requestedStorePlanId) {
+    return NextResponse.json({ status: "rejected", message: "앱 구독 상품과 기본 요금제 연결을 확인하지 못했습니다." }, { status: 400 });
+  }
+
+  if (body.planId && requestedStorePlanId && body.planId !== requestedStorePlanId) {
+    return NextResponse.json({ status: "rejected", message: "요청한 Pro 상품과 Google Play 기본 요금제가 일치하지 않습니다." }, { status: 400 });
+  }
+
   let revenueCatResult: Awaited<ReturnType<typeof fetchRevenueCatSubscriber>>;
   try {
     revenueCatResult = await fetchRevenueCatSubscriber(body.appUserId);
@@ -184,7 +202,7 @@ export async function POST(request: Request) {
     });
   }
 
-  const activePlanResult = resolveActivePlans(revenueCatResult.payload ?? {}, body.planId);
+  const activePlanResult = resolveActivePlans(revenueCatResult.payload ?? {}, requestedStorePlanId ?? body.planId);
   const activePlans = activePlanResult.plans;
   if (activePlans.length === 0) {
     if (activePlanResult.entitlementMarkets.crypto || activePlanResult.entitlementMarkets.stocks || activePlanResult.entitlementMarkets.bundle) {

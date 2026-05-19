@@ -21,7 +21,7 @@ function getPaymentUrl(planId: string) {
     stocks_monthly: process.env.NEXT_PUBLIC_GLOBAL_MONTHLY_PAYMENT_URL ?? process.env.NEXT_PUBLIC_STOCKS_MONTHLY_PAYMENT_URL,
     stocks_yearly: process.env.NEXT_PUBLIC_GLOBAL_YEARLY_PAYMENT_URL ?? process.env.NEXT_PUBLIC_STOCKS_YEARLY_PAYMENT_URL,
     bundle_monthly: process.env.NEXT_PUBLIC_BUNDLE_MONTHLY_PAYMENT_URL,
-    bundle_yearly: process.env.NEXT_PUBLIC_BUNDLE_YEARLY_PAYMENT_URL
+    bundle_yearly: process.env.NEXT_PUBLIC_BUNDLE_6MONTH_PAYMENT_URL
   };
 
   return (
@@ -75,6 +75,10 @@ export async function POST(request: Request) {
       configured: Boolean(plan.appStoreProductId),
       mode: body.platform === "android" ? "play_billing" : "app_store",
       productId: plan.appStoreProductId,
+      basePlanId: plan.appStoreBasePlanId,
+      displayName: plan.displayName,
+      periodLabel: plan.periodLabel,
+      fallbackPriceLabel: plan.priceLabel,
       confirmationRequired: true,
       message:
         body.platform === "android"
