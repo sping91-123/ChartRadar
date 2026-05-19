@@ -6,7 +6,10 @@ import { exchangeGoogleIdToken, googleOAuthClientId, isGoogleOAuthConfigured, su
 let initializePromise: Promise<void> | null = null;
 
 export function isAndroidNativeApp() {
-  return Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
+  if (Capacitor.getPlatform() !== "android") return false;
+  if (Capacitor.isNativePlatform()) return true;
+  if (typeof window === "undefined") return false;
+  return Boolean((window as Window & { androidBridge?: unknown }).androidBridge);
 }
 
 function createNonce() {

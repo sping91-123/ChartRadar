@@ -14,11 +14,33 @@ function safeReturnTo(value: string | null) {
 
 export function KakaoLoginButton({ returnTo = "/crypto" }: { returnTo?: string }) {
   const configured = isKakaoOAuthConfigured();
-  const [isAndroidApp, setIsAndroidApp] = useState(false);
+  const [platform, setPlatform] = useState<"unknown" | "android" | "web">("unknown");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    setIsAndroidApp(isAndroidNativeApp());
+    let attempts = 0;
+    let timer: number | undefined;
+
+    function detectPlatform() {
+      if (isAndroidNativeApp()) {
+        setPlatform("android");
+        return;
+      }
+
+      attempts += 1;
+      if (attempts < 12) {
+        timer = window.setTimeout(detectPlatform, 100);
+        return;
+      }
+
+      setPlatform("web");
+    }
+
+    detectPlatform();
+
+    return () => {
+      if (timer) window.clearTimeout(timer);
+    };
   }, []);
 
   const startKakaoLogin = () => {
@@ -32,7 +54,7 @@ export function KakaoLoginButton({ returnTo = "/crypto" }: { returnTo?: string }
     window.location.href = `/api/auth/kakao/start?returnTo=${encodeURIComponent(destination)}`;
   };
 
-  if (isAndroidApp) return null;
+  if (platform !== "web") return null;
 
   return (
     <div className="grid gap-2">

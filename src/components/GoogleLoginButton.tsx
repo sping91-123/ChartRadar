@@ -91,9 +91,32 @@ export function GoogleLoginButton({ returnTo = "/crypto" }: { returnTo?: string 
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setPlatform(isAndroidNativeApp() ? "android" : "web");
     window.sessionStorage.setItem(authReturnToStorageKey, safeReturnTo(returnTo));
     if (window.google?.accounts.id) setScriptReady(true);
+
+    let attempts = 0;
+    let timer: number | undefined;
+
+    function detectPlatform() {
+      if (isAndroidNativeApp()) {
+        setPlatform("android");
+        return;
+      }
+
+      attempts += 1;
+      if (attempts < 12) {
+        timer = window.setTimeout(detectPlatform, 100);
+        return;
+      }
+
+      setPlatform("web");
+    }
+
+    detectPlatform();
+
+    return () => {
+      if (timer) window.clearTimeout(timer);
+    };
   }, [returnTo]);
 
   useEffect(() => {

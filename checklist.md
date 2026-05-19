@@ -1907,3 +1907,4 @@
 - [x] 빌드, 모바일 smoke, 전체 smoke, debug APK 빌드를 검증한다.
 - [x] 실제 기기에서 네이티브 Google 계정 선택창 노출을 확인했고, 반복 취소 오류는 Android OAuth Client 패키지명/SHA-1 설정 필요 항목으로 분리한다.
 - [x] 네이티브 Google 로그인 후 세션이 저장됐는데 프로필/구독 조회 실패로 즉시 삭제되는 문제를 분리 처리한다.
+- [x] 운영 URL WebView에서 Capacitor bridge 초기화가 늦어 웹 로그인 분기로 고정되는 문제를 재시도 감지로 보강한다.
