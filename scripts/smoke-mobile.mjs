@@ -115,6 +115,12 @@ if (packageJson.includes('"@capacitor/push-notifications"')) {
   fail("Capacitor 푸시 의존성", "@capacitor/push-notifications가 package.json에 없습니다.");
 }
 
+if (packageJson.includes('"@capawesome/capacitor-google-sign-in"')) {
+  pass("Capacitor Google Sign-In 의존성", "@capawesome/capacitor-google-sign-in이 설치되어 있습니다.");
+} else {
+  fail("Capacitor Google Sign-In 의존성", "@capawesome/capacitor-google-sign-in이 package.json에 없습니다.");
+}
+
 const appPush = readText("src/lib/appPush.ts");
 if (
   appPush.includes("Capacitor.isNativePlatform()") &&
@@ -124,6 +130,17 @@ if (
   pass("Android 앱 푸시 환경 가드", "일반 웹브라우저에서는 PushNotifications 플러그인을 로드하지 않습니다.");
 } else {
   fail("Android 앱 푸시 환경 가드", "Android 앱 환경 감지 또는 PushNotifications 로드 가드가 빠져 있습니다.");
+}
+
+const nativeGoogleSignIn = readText("src/lib/nativeGoogleSignIn.ts");
+if (
+  nativeGoogleSignIn.includes("@capawesome/capacitor-google-sign-in") &&
+  nativeGoogleSignIn.includes("GoogleSignIn.signIn") &&
+  nativeGoogleSignIn.includes("exchangeGoogleIdToken")
+) {
+  pass("Android 네이티브 Google 로그인", "네이티브 ID token을 Supabase 세션으로 교환합니다.");
+} else {
+  fail("Android 네이티브 Google 로그인", "GoogleSignIn.signIn 또는 Supabase id_token 교환이 빠져 있습니다.");
 }
 
 const pushPlatformGuard = readText("supabase/migrations/20260519_android_push_platform_guard.sql");

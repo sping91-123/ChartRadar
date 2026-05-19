@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { resolveCombinedBillingEntitlementPlan } from "@/lib/billing";
+import { nativeGoogleSignOut } from "@/lib/nativeGoogleSignIn";
 import {
   clearSupabaseSession,
   fetchSupabaseActiveSubscriptions,
@@ -124,11 +125,13 @@ export function useSupabaseAuth() {
 
       if (isMounted) setSession(activeSession);
 
-      return Promise.all([
-        fetchSupabaseUser(activeSession.accessToken),
-        fetchSupabaseProfile(activeSession.accessToken),
-        fetchSupabaseActiveSubscriptions(activeSession.accessToken).catch(() => [])
+      const nextUser = await fetchSupabaseUser(activeSession.accessToken);
+      const [nextProfile, nextSubscriptions] = await Promise.all([
+        fetchSupabaseProfile(activeSession.accessToken).catch(() => null),
+        fetchSupabaseActiveSubscriptions(activeSession.accessToken, nextUser.id).catch(() => [])
       ]);
+
+      return [nextUser, nextProfile, nextSubscriptions] as const;
     }
 
     function applyAuthResult(result: Awaited<ReturnType<typeof loadAuth>>) {
@@ -166,6 +169,7 @@ export function useSupabaseAuth() {
   }, []);
 
   function signOut() {
+    void nativeGoogleSignOut();
     clearSupabaseSession();
     setSession(null);
     setUser(null);

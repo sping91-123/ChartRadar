@@ -1897,3 +1897,13 @@
 - [x] Vercel Cron과 테스트 발송이 Android FCM 토큰만 조회하도록 명확히 한다.
 - [x] 알림 화면에서 앱 푸시와 브라우저 알림 문구를 분리한다.
 - [x] 빌드와 모바일/전체 스모크로 검증한다.
+
+## 2026-05-19 Android 네이티브 Google 로그인.
+
+- [x] Capacitor 8 호환 Google Sign-In 플러그인을 설치한다.
+- [x] Android 앱에서는 Google GIS와 외부 OAuth 대신 네이티브 ID token 로그인을 사용한다.
+- [x] Google ID token을 Supabase `id_token` grant로 교환해 앱 내부 세션을 저장한다.
+- [x] Android 앱에서는 Kakao 버튼을 숨기고 웹 Kakao 흐름은 유지한다.
+- [x] 빌드, 모바일 smoke, 전체 smoke, debug APK 빌드를 검증한다.
+- [x] 실제 기기에서 네이티브 Google 계정 선택창 노출을 확인했고, 반복 취소 오류는 Android OAuth Client 패키지명/SHA-1 설정 필요 항목으로 분리한다.
+- [x] 네이티브 Google 로그인 후 세션이 저장됐는데 프로필/구독 조회 실패로 즉시 삭제되는 문제를 분리 처리한다.

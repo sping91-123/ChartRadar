@@ -1662,3 +1662,13 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 1차 출시는 Android 앱 푸시만 정식 지원한다. Capacitor WebView 화면은 웹앱을 공유하지만 푸시 발송 채널은 Android 네이티브 FCM 토큰만 대상으로 삼는다.
 - 일반 브라우저의 Notification API는 현재 열린 브라우저에서 쓰는 테스트/포그라운드 알림으로만 설명한다. 백그라운드 웹 푸시는 추후 Service Worker + Web Push/VAPID 구조로 별도 확장한다.
 - `push_tokens.platform`은 발송 채널 분리를 위해 유지하되, 현재 등록 API와 Cron 대상은 `platform=android`, `provider=fcm`으로 좁힌다.
+
+## 2026-05-19 Android 네이티브 Google 로그인.
+
+- `@capawesome/capacitor-google-sign-in` 0.1.x는 Capacitor 8 이상을 지원하고 Android에서 Google ID token을 반환한다.
+- 플러그인은 Android에서도 Google Cloud Web Client ID를 `clientId`로 사용한다. Android OAuth Client는 패키지명과 서명 지문 등록용으로 별도 생성해야 한다.
+- Android 앱에서는 Google GIS script와 Supabase OAuth redirect를 쓰지 않고, 네이티브 Google Sign-In 결과의 `idToken`을 기존 Supabase `id_token` grant로 교환한다.
+- Kakao는 이번 범위에서 네이티브 SDK를 붙이지 않으므로 Android 앱에서는 버튼을 숨긴다. 일반 웹에서는 기존 Kakao 로그인 흐름을 유지한다.
+- 직전 외부 브라우저 OAuth deep link 접근은 Google 네이티브 방향과 충돌하므로 제거한다.
+- 실제 기기에서 Google 계정 선택창은 네이티브로 열렸지만 계정 선택 후 `SIGN_IN_CANCELED`가 반복됐다. `android/app/google-services.json`의 `oauth_client`가 비어 있어 Android OAuth Client 패키지명 `com.staronlabs.chartradar`와 debug SHA-1 등록이 아직 반영되지 않은 상태로 본다.
+- nonce 해시 처리 후 Supabase 세션은 저장됐지만 프로필/구독 조회 실패가 전체 세션 삭제로 전파됐다. 인증 토큰 검증 실패와 부가 사용자 데이터 조회 실패를 분리해야 앱 로그인 유지가 가능하다.

@@ -1,7 +1,8 @@
-// Kakao 인가코드 로그인으로 Supabase 세션 생성을 시작합니다.
+// 웹 Kakao 로그인 버튼을 렌더링하고 Android 앱에서는 숨깁니다.
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { isAndroidNativeApp } from "@/lib/nativeGoogleSignIn";
 import { isKakaoOAuthConfigured } from "@/lib/supabase";
 
 const authReturnToStorageKey = "chartRadar.auth.returnTo";
@@ -13,7 +14,12 @@ function safeReturnTo(value: string | null) {
 
 export function KakaoLoginButton({ returnTo = "/crypto" }: { returnTo?: string }) {
   const configured = isKakaoOAuthConfigured();
+  const [isAndroidApp, setIsAndroidApp] = useState(false);
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    setIsAndroidApp(isAndroidNativeApp());
+  }, []);
 
   const startKakaoLogin = () => {
     if (!configured) {
@@ -25,6 +31,8 @@ export function KakaoLoginButton({ returnTo = "/crypto" }: { returnTo?: string }
     window.sessionStorage.setItem(authReturnToStorageKey, destination);
     window.location.href = `/api/auth/kakao/start?returnTo=${encodeURIComponent(destination)}`;
   };
+
+  if (isAndroidApp) return null;
 
   return (
     <div className="grid gap-2">
