@@ -1673,3 +1673,4 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 실제 기기에서 Google 계정 선택창은 네이티브로 열렸지만 계정 선택 후 `SIGN_IN_CANCELED`가 반복됐다. `android/app/google-services.json`의 `oauth_client`가 비어 있어 Android OAuth Client 패키지명 `com.staronlabs.chartradar`와 debug SHA-1 등록이 아직 반영되지 않은 상태로 본다.
 - nonce 해시 처리 후 Supabase 세션은 저장됐지만 프로필/구독 조회 실패가 전체 세션 삭제로 전파됐다. 인증 토큰 검증 실패와 부가 사용자 데이터 조회 실패를 분리해야 앱 로그인 유지가 가능하다.
 - 운영 URL을 보는 WebView에서는 `window.Capacitor`와 `androidBridge`가 뒤늦게 준비될 수 있다. 로그인 버튼 렌더 시 즉시 웹으로 확정하면 GIS/Kakao 웹 분기로 떨어지므로 Android 감지를 짧게 재시도한 뒤 웹 분기로 확정한다.
+- 네이티브 Google 로그인에서 `id_token` 교환은 200으로 성공했지만, helper가 `authRefresh`를 먼저 발행하고 버튼 handler가 곧바로 `window.location.href`를 바꾸면서 기존 페이지의 auth fetch가 abort됐다. 이 abort가 `handleAuthError`로 들어가 저장된 세션을 지우므로, 로그인 직후에는 refresh 이벤트를 발행하지 않고 다음 페이지 로드가 저장 세션을 읽게 한다.

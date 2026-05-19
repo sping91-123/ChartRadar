@@ -1,7 +1,7 @@
 // Android 네이티브 Google Sign-In 결과를 Supabase 세션으로 교환합니다.
 import { Capacitor } from "@capacitor/core";
 import { ErrorCode, GoogleSignIn } from "@capawesome/capacitor-google-sign-in";
-import { exchangeGoogleIdToken, googleOAuthClientId, isGoogleOAuthConfigured, supabaseAuthRefreshEvent, type SupabaseSession } from "@/lib/supabase";
+import { exchangeGoogleIdToken, googleOAuthClientId, isGoogleOAuthConfigured, type SupabaseSession } from "@/lib/supabase";
 
 let initializePromise: Promise<void> | null = null;
 
@@ -39,9 +39,7 @@ export async function nativeGoogleSignIn(): Promise<SupabaseSession> {
   const result = await GoogleSignIn.signIn({ nonce: hashedNonce });
   if (!result.idToken) throw new Error("Google 로그인 정보를 받지 못했습니다. 다시 시도해 주세요.");
 
-  const session = await exchangeGoogleIdToken(result.idToken, nonce);
-  window.dispatchEvent(new Event(supabaseAuthRefreshEvent));
-  return session;
+  return exchangeGoogleIdToken(result.idToken, nonce);
 }
 
 export function getNativeGoogleSignInErrorMessage(error: unknown) {
