@@ -520,8 +520,8 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
   }
 
   return (
-    <main className="min-h-screen px-4 pb-10">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
+    <main className="min-h-full px-4 pb-[calc(7rem+env(safe-area-inset-bottom))]">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 pt-3 sm:pt-0">
         <Header market={market} />
         <RadarTopNav market={market} />
 
@@ -602,7 +602,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
               </div>
             </section>
 
-            <section id="pending-radar" className="rounded-xl border border-white/10 bg-surface-cardSoft p-4">
+            <section id="pending-radar" className="scroll-mt-4 scroll-mb-32 rounded-xl border border-white/10 bg-surface-cardSoft p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
@@ -666,7 +666,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
               )}
             </section>
 
-            <section id="quick-journal-form" className="rounded-xl border border-white/10 bg-surface-cardSoft p-4">
+            <section id="quick-journal-form" className="scroll-mt-4 scroll-mb-32 rounded-xl border border-white/10 bg-surface-cardSoft p-4">
               <div className="flex items-start gap-3">
                 <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
                   <ListChecks size={20} aria-hidden />
@@ -832,7 +832,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
               </section>
             ) : null}
 
-            <section className="rounded-xl border border-white/10 bg-surface-cardSoft p-4">
+            <section className="scroll-mb-32 rounded-xl border border-white/10 bg-surface-cardSoft p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <div className="flex items-center gap-2">
