@@ -89,7 +89,9 @@ export default function RootLayout({
           }}
         />
         <AuthHashRescue />
-        {children}
+        <div className="app-shell">
+          <div className="app-scroll-root">{children}</div>
+        </div>
         <RadarAlertMonitor />
       </body>
     </html>
