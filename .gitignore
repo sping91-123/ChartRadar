@@ -7,6 +7,8 @@ reports
 .verify-dist
 .env
 .env.local
+.env*.local
+android/app/google-services.json
 .tools
 .next-dev*.log
 dev-server*.log

@@ -4,4 +4,5 @@
     <string name="title_activity_main">Chart Radar</string>
     <string name="package_name">com.staronlabs.chartradar</string>
     <string name="custom_url_scheme">com.staronlabs.chartradar</string>
+    <string name="default_notification_channel_id">radar-alerts</string>
 </resources>

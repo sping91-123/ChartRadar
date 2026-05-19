@@ -1632,3 +1632,22 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 검증은 `npx.cmd cap sync android`, `git diff --check`, `npx.cmd tsc --noEmit`, `npm.cmd run lint`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:billing`, `npm.cmd run build`, `npm.cmd run smoke:all`, `npm.cmd run app:android:debug`를 통과했다.
 - 이전 패키지명 잔여 검색은 `NO_OLD_PACKAGE_MATCH`로 확인했다.
 - Play Console 내부 테스트 초안에서 `versionCode 1` 중복 오류가 발생했으므로 다음 업로드용 Android 빌드는 `versionCode 2`, `versionName 1.0.1`로 만든다.
+
+## 2026-05-19 Android 앱 푸시 기반 구축.
+
+- Android 앱 푸시는 Capacitor 공식 `@capacitor/push-notifications` 플러그인과 Firebase Cloud Messaging을 기준으로 연결한다.
+- `google-services.json`은 `android/app/google-services.json`에 직접 둬야 하며 민감 설정 파일이므로 저장소에 커밋하지 않는다.
+- Android 13 이상은 `POST_NOTIFICATIONS` 런타임 권한이 필요하고, 알림 화면의 `앱 푸시 켜기`가 네이티브 권한 요청과 FCM 토큰 등록을 처리한다.
+- 로그인된 사용자는 `/api/push-tokens`를 통해 Supabase `push_tokens` 테이블에 토큰, 시장, 알림 규칙이 저장된다.
+- 테스트 발송은 `/api/push-test`에서 Firebase HTTP v1로 처리하며, 운영 서버에는 `FIREBASE_SERVICE_ACCOUNT_JSON` 또는 `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`가 필요하다.
+- 이번 변경은 앱 푸시 수신 기반과 테스트 발송까지이며, 장중 조건 감시를 서버에서 주기 실행해 자동 푸시를 보내는 배치/크론은 다음 단계다.
+- 검증은 `git diff --check`, `npx.cmd tsc --noEmit`, `npm.cmd run lint`, `npm.cmd run smoke:mobile`, `npm.cmd run build`, `npm.cmd run smoke:all`, `npm.cmd run app:android:debug`를 통과했다.
+
+## 2026-05-19 Android 앱 푸시 자동 감시/발송.
+
+- 위 한계는 이번 단계에서 해소했다. 앱은 FCM 토큰뿐 아니라 켜진 알림 규칙과 사용자가 저장한 프리셋 조건을 `/api/push-tokens`로 서버에 동기화한다.
+- Supabase에는 `push_alert_presets`와 `push_alert_events`가 추가된다. 전자는 서버가 사용자별 조건을 읽기 위한 저장소이고, 후자는 같은 이벤트가 반복 발송되지 않도록 사용자별 중복 발송을 막는 기록이다.
+- `/api/push-cron`은 `CRON_SECRET`으로 보호되는 서버 실행 엔드포인트다. Vercel Cron은 `vercel.json` 기준 5분마다 이 경로를 호출한다.
+- `runPushAlertScan`은 코인 스카우트, 글로벌 기술 레이더, 청산 압력, 뉴스/매크로 모멘텀, 저장된 프리셋 조건을 확인하고 조건이 맞는 사용자에게 Firebase HTTP v1로 푸시를 보낸다.
+- 권한은 서버에서 사용자 플랜 기준으로 다시 확인한다. Basic 사용자는 Basic 허용 규칙만, Pro 사용자는 해당 시장 Pro 권한 범위의 규칙까지 받을 수 있다.
+- 운영 반영 전에는 Supabase 마이그레이션 적용, Vercel 환경변수 `CRON_SECRET`과 Firebase 서버 인증값 설정, Android `google-services.json` 배치, Vercel Cron 실행 로그 확인이 필요하다.

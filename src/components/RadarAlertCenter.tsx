@@ -26,6 +26,15 @@ import {
 import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { hasMarketEntitlement } from "@/lib/billing";
+import {
+  readAppPushState,
+  registerAndroidAppPush,
+  registerAppPushListeners,
+  sendAndroidAppPushTest,
+  subscribeAppPushState,
+  syncAndroidAppPushPreferences,
+  type AppPushDeviceState
+} from "@/lib/appPush";
 
 const baseStorageKey = "chartRadar.alertRules.v1";
 
@@ -107,6 +116,14 @@ function permissionLabel(permission: PermissionState) {
   if (permission === "denied") return "알림이 꺼져 있습니다";
   if (permission === "unsupported") return "현재 환경에서는 알림을 켤 수 없습니다";
   return "알림을 켜야 받을 수 있습니다";
+}
+
+function appPushPermissionLabel(state: AppPushDeviceState) {
+  if (!state.supported) return "현재 환경에서는 앱 푸시를 켤 수 없습니다";
+  if (state.permission === "granted" && state.synced) return "Android 앱 푸시가 연결되어 있습니다";
+  if (state.permission === "granted" && state.token) return "앱 푸시 권한은 켜졌고 서버 연결 확인이 필요합니다";
+  if (state.permission === "denied") return "Android 앱 푸시가 꺼져 있습니다";
+  return "Android 앱 푸시를 켜야 받을 수 있습니다";
 }
 
 function compactSymbol(symbol: string) {
@@ -206,7 +223,9 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
   const [setupMatches, setSetupMatches] = useState<SetupAlertMatch[]>([]);
   const [monitorStatus, setMonitorStatus] = useState<SetupAlertMonitorStatus | null>(null);
   const [permission, setPermission] = useState<PermissionState>("default");
+  const [appPushState, setAppPushState] = useState<AppPushDeviceState>(() => readAppPushState());
   const [isRequesting, setIsRequesting] = useState(false);
+  const [isSendingTestPush, setIsSendingTestPush] = useState(false);
   const [isManualChecking, setIsManualChecking] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -219,6 +238,12 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
     setMonitorStatus(readSetupAlertMonitorStatus(market));
     setPermission(getPermissionState());
   }, [market]);
+
+  useEffect(() => {
+    setAppPushState(readAppPushState());
+    void registerAppPushListeners();
+    return subscribeAppPushState(setAppPushState);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -263,6 +288,11 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
     window.localStorage.setItem(getMarketRuleStorageKey(market), JSON.stringify(enabledRuleIds));
   }, [enabledRuleIds, hasLoadedStoredRules, market, rulesMarket]);
 
+  useEffect(() => {
+    if (!appPushState.supported || !appPushState.token || !hasLoadedStoredRules || rulesMarket !== market) return;
+    void syncAndroidAppPushPreferences({ market, ruleIds: enabledRuleIds, presets: setupPresets }).then(setAppPushState);
+  }, [appPushState.supported, appPushState.token, enabledRuleIds, hasLoadedStoredRules, market, rulesMarket, setupPresets]);
+
   const scopedRules = useMemo(
     () =>
       radarAlertRules.filter((rule) => {
@@ -284,6 +314,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
     });
   }, [setupMatches]);
   const alertUsageBucketId = market === "stocks" ? "stocksAlertRule" : "cryptoAlertRule";
+  const isAndroidAppPush = appPushState.supported && appPushState.platform === "android";
 
   function toggleRule(ruleId: RadarAlertRuleId) {
     if (!enabledRuleIds.includes(ruleId)) {
@@ -295,8 +326,11 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
       recordUsageEvent(alertUsageBucketId);
     }
     setEnabledRuleIds((current) => {
-      if (current.includes(ruleId)) return current.filter((id) => id !== ruleId);
-      return [...current, ruleId];
+      const next = current.includes(ruleId) ? current.filter((id) => id !== ruleId) : [...current, ruleId];
+      if (appPushState.supported && appPushState.token) {
+        void syncAndroidAppPushPreferences({ market, ruleIds: next, presets: readSetupAlertPresets(market) }).then(setAppPushState);
+      }
+      return next;
     });
   }
 
@@ -307,14 +341,30 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
       return;
     }
 
-    if (typeof window === "undefined" || !("Notification" in window)) {
-      setPermission("unsupported");
-      setToast("현재 환경에서는 알림을 켤 수 없습니다.");
-      return;
-    }
-
     setIsRequesting(true);
     try {
+      if (isAndroidAppPush) {
+        const next = await registerAndroidAppPush({ market, ruleIds: scopedEnabledRuleIds, presets: readSetupAlertPresets(market) });
+        setAppPushState(next);
+        recordUsageEvent(alertUsageBucketId);
+        if (next.permission === "granted" && next.token) {
+          setToast(
+            next.synced
+              ? "Android 앱 푸시가 켜졌습니다. 저장한 조건과 알림 규칙이 서버에 연결되었습니다."
+              : next.lastError ?? "Android 앱 푸시 권한은 켜졌고, 로그인 후 서버 연결을 완료할 수 있습니다."
+          );
+        } else {
+          setToast(next.lastError ?? "Android 앱 푸시 권한이 꺼져 있습니다.");
+        }
+        return;
+      }
+
+      if (typeof window === "undefined" || !("Notification" in window)) {
+        setPermission("unsupported");
+        setToast("현재 환경에서는 알림을 켤 수 없습니다.");
+        return;
+      }
+
       const result = await Notification.requestPermission();
       recordUsageEvent(alertUsageBucketId);
       setPermission(result as PermissionState);
@@ -331,6 +381,18 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
       }
     } finally {
       setIsRequesting(false);
+    }
+  }
+
+  async function requestTestPush() {
+    setIsSendingTestPush(true);
+    try {
+      await sendAndroidAppPushTest();
+      setToast("테스트 앱 푸시를 보냈습니다. Android 알림 영역에서 수신 여부를 확인해 주세요.");
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "테스트 앱 푸시 발송에 실패했습니다.");
+    } finally {
+      setIsSendingTestPush(false);
     }
   }
 
@@ -404,21 +466,41 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
         <div>
           <p className="flex items-center gap-2 text-sm font-black text-white">
             <ShieldCheck size={16} className="text-cyan-300" aria-hidden />
-            {permissionLabel(permission)}
+            {isAndroidAppPush ? appPushPermissionLabel(appPushState) : permissionLabel(permission)}
           </p>
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            저장한 조건을 현재 시장과 다시 대조합니다. 알림 권한을 켠 현재 기기에서는 조건 일치 알림을 받을 수 있습니다.
+            {isAndroidAppPush
+              ? "Android 앱에서는 Firebase 푸시 토큰을 발급받아 저장한 조건과 알림 규칙을 서버에 연결합니다."
+              : "저장한 조건을 현재 시장과 다시 대조합니다. 알림 권한을 켠 현재 기기에서는 조건 일치 알림을 받을 수 있습니다."}
           </p>
+          {isAndroidAppPush && appPushState.token ? (
+            <p className="mt-1 text-[11px] font-bold text-slate-600">
+              토큰 {appPushState.token.slice(0, 8)}... · {appPushState.synced ? "서버 연결됨" : "서버 연결 필요"}
+            </p>
+          ) : null}
         </div>
-        <button
-          type="button"
-          onClick={requestNotificationPermission}
-          disabled={isRequesting || permission === "unsupported"}
-          className="enterprise-button inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg px-4 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isRequesting ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <CheckCircle2 size={16} aria-hidden />}
-          알림 켜기
-        </button>
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={requestNotificationPermission}
+            disabled={isRequesting || (!isAndroidAppPush && permission === "unsupported")}
+            className="enterprise-button inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isRequesting ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <CheckCircle2 size={16} aria-hidden />}
+            {isAndroidAppPush ? "앱 푸시 켜기" : "알림 켜기"}
+          </button>
+          {isAndroidAppPush && appPushState.token ? (
+            <button
+              type="button"
+              onClick={requestTestPush}
+              disabled={isSendingTestPush}
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-cyan-300/30 bg-cyan-300/10 px-4 text-sm font-black text-cyan-100 disabled:cursor-wait disabled:opacity-60"
+            >
+              {isSendingTestPush ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Smartphone size={16} aria-hidden />}
+              테스트 발송
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {toast ? (

@@ -102,6 +102,19 @@ RevenueCat에는 키가 두 종류라서 헷갈리기 쉽습니다.
 
 Secret API key는 서버에서 구독 상태를 확인할 때만 씁니다. 이 값은 `.env.local`과 배포 서버 환경변수에만 넣고, 앱 코드나 브라우저 코드에는 넣지 않습니다.
 
+## 7-1. Android 앱 푸시 연결 순서
+
+1. Firebase Console에서 Android 앱 `com.staronlabs.chartradar`를 추가합니다.
+2. Firebase에서 받은 `google-services.json`을 `android/app/google-services.json`에 둡니다. 이 파일은 저장소에 커밋하지 않습니다.
+3. Supabase SQL Editor에서 `supabase/migrations/20260519_push_tokens.sql`을 적용합니다.
+4. 배포 서버 환경변수에 아래 중 하나를 설정합니다.
+   - `FIREBASE_SERVICE_ACCOUNT_JSON`
+   - 또는 `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`
+5. Vercel 환경변수에 `CRON_SECRET`을 설정합니다. Vercel Cron은 이 값을 `Authorization` 헤더로 보내며 `/api/push-cron`이 검증합니다.
+6. Android 앱에서 알림 화면을 열고 `앱 푸시 켜기`를 눌러 FCM 토큰이 발급되는지 확인합니다.
+7. 로그인 상태에서 `테스트 발송`을 눌러 실제 Android 알림 수신을 확인합니다.
+8. Vercel Cron Jobs에서 `/api/push-cron`이 5분마다 실행되는지 확인합니다. 이 작업은 저장한 레이더 조건, A급 코인 감지, 청산 압력, 뉴스/매크로, 글로벌 모멘텀을 서버에서 다시 확인해 조건이 맞으면 앱 푸시를 보냅니다.
+
 로컬에 키를 넣을 때는 아래 명령을 쓰면 `.env.local`에 필요한 줄만 안전하게 반영됩니다.
 
 ```powershell

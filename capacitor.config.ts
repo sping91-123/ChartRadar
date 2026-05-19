@@ -17,6 +17,11 @@ const config: CapacitorConfig = {
   android: {
     allowMixedContent: false,
     captureInput: true
+  },
+  plugins: {
+    PushNotifications: {
+      presentationOptions: ["alert", "sound", "badge"]
+    }
   }
 };
 

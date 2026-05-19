@@ -1867,3 +1867,21 @@
 - [x] Capacitor 동기화와 관련 검증 명령을 실행한다.
 - [x] RevenueCat과 Google Play Console의 남은 수동 연결 단계를 정리한다.
 - [x] Play Console 중복 업로드 방지를 위해 Android versionCode를 2로 올린다.
+
+## 2026-05-19 Android 앱 푸시 기반 구축.
+
+- [x] `@capacitor/push-notifications`를 설치하고 Android 프로젝트에 동기화한다.
+- [x] Android 13+ 알림 권한, 기본 알림 채널, 푸시 알림 아이콘을 Manifest에 연결한다.
+- [x] 알림 화면에서 Android 앱 푸시 권한 요청과 FCM 토큰 등록을 실행하게 한다.
+- [x] 로그인 사용자 기준으로 앱 푸시 토큰과 알림 규칙을 Supabase에 저장하는 API를 추가한다.
+- [x] Firebase HTTP v1 테스트 푸시 발송 API와 운영 환경변수 문서를 추가한다.
+- [x] `git diff --check`, `npx.cmd tsc --noEmit`, `npm.cmd run lint`, `npm.cmd run smoke:mobile`, `npm.cmd run build`, `npm.cmd run smoke:all`, `npm.cmd run app:android:debug`로 검증한다.
+
+## 2026-05-19 Android 앱 푸시 자동 감시/발송.
+
+- [x] 저장된 FCM 토큰, 알림 규칙, 사용자의 프리셋 조건을 서버가 읽을 수 있도록 `push_alert_presets`와 `push_alert_events` 스키마를 추가한다.
+- [x] 알림 화면에서 프리셋 조건 변경 시 `/api/push-tokens`로 서버 저장 조건까지 동기화한다.
+- [x] `/api/push-cron`을 추가하고 Vercel Cron이 5분마다 호출하도록 설정한다.
+- [x] 서버 스캐너가 장중 조건, A급 코인 감지, 청산 압력, 뉴스/매크로 모멘텀, 저장된 프리셋 조건을 확인해 조건 충족 시 FCM 푸시를 발송하게 한다.
+- [x] 같은 조건이 반복 발송되지 않도록 `push_alert_events` 기준으로 사용자별 이벤트 중복을 막는다.
+- [x] `CRON_SECRET`, Firebase 서버 환경변수, Supabase 마이그레이션, Vercel Cron 확인 항목을 출시 문서에 정리한다.

@@ -56,6 +56,8 @@ expectFile("public/sw.js", "PWA 서비스 워커", 500);
 expectFile("mobile-shell/index.html", "Capacitor 모바일 shell", 500);
 expectFile("src/app/manifest.ts", "PWA manifest 소스", 500);
 expectFile("capacitor.config.ts", "Capacitor 설정", 200);
+expectFile("android/app/src/main/res/drawable/ic_stat_chart_radar.xml", "Android 푸시 알림 아이콘", 200);
+expectFile("supabase/migrations/20260519_push_tokens.sql", "앱 푸시 토큰 마이그레이션", 500);
 
 const iconSize = readPngSize("public/brand/chart-radar-icon.png");
 if (!iconSize) {
@@ -97,11 +99,37 @@ const capacitorConfig = readText("capacitor.config.ts");
 if (
   capacitorConfig.includes('appId: "com.staronlabs.chartradar"') &&
   capacitorConfig.includes('appName: "Chart Radar"') &&
-  capacitorConfig.includes('webDir: "mobile-shell"')
+  capacitorConfig.includes('webDir: "mobile-shell"') &&
+  capacitorConfig.includes("PushNotifications")
 ) {
-  pass("Capacitor 앱 식별자", "앱 ID, 앱 이름, webDir이 연결되어 있습니다.");
+  pass("Capacitor 앱 식별자", "앱 ID, 앱 이름, webDir, 푸시 플러그인이 연결되어 있습니다.");
 } else {
-  fail("Capacitor 앱 식별자", "appId, appName, webDir 중 하나가 예상값과 다릅니다.");
+  fail("Capacitor 앱 식별자", "appId, appName, webDir, PushNotifications 중 하나가 예상값과 다릅니다.");
+}
+
+const packageJson = readText("package.json");
+if (packageJson.includes('"@capacitor/push-notifications"')) {
+  pass("Capacitor 푸시 의존성", "@capacitor/push-notifications가 설치되어 있습니다.");
+} else {
+  fail("Capacitor 푸시 의존성", "@capacitor/push-notifications가 package.json에 없습니다.");
+}
+
+const androidManifest = readText("android/app/src/main/AndroidManifest.xml");
+if (
+  androidManifest.includes("android.permission.POST_NOTIFICATIONS") &&
+  androidManifest.includes("com.google.firebase.messaging.default_notification_channel_id") &&
+  androidManifest.includes("@drawable/ic_stat_chart_radar")
+) {
+  pass("Android 푸시 Manifest", "Android 13 권한, 기본 채널, 알림 아이콘이 연결되어 있습니다.");
+} else {
+  fail("Android 푸시 Manifest", "POST_NOTIFICATIONS, 기본 채널, 알림 아이콘 중 하나가 빠져 있습니다.");
+}
+
+const androidBuildGradle = readText("android/app/build.gradle");
+if (androidBuildGradle.includes("google-services.json") && androidBuildGradle.includes("com.google.gms.google-services")) {
+  pass("Firebase 설정 연결", "google-services.json이 있으면 Google Services 플러그인이 적용됩니다.");
+} else {
+  fail("Firebase 설정 연결", "Android 빌드가 google-services.json과 Google Services 플러그인을 확인하지 않습니다.");
 }
 
 const mobileShell = readText("mobile-shell/index.html");
