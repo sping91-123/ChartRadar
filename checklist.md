@@ -1890,3 +1890,10 @@
 
 - [x] Play Console 재업로드용 Android 버전을 `versionCode 3`, `versionName 1.0.2`로 올린다.
 - [x] Firebase 푸시 설정이 포함된 새 release AAB를 빌드하고 기존 ChartRadar upload key로 서명한다.
+
+## 2026-05-19 Android 앱 푸시와 웹 알림 분리.
+- [x] Android 네이티브 앱에서만 Capacitor PushNotifications를 호출하게 보강한다.
+- [x] `/api/push-tokens`가 1차 출시에서 Android FCM 토큰만 등록하게 제한한다.
+- [x] Vercel Cron과 테스트 발송이 Android FCM 토큰만 조회하도록 명확히 한다.
+- [x] 알림 화면에서 앱 푸시와 브라우저 알림 문구를 분리한다.
+- [x] 빌드와 모바일/전체 스모크로 검증한다.

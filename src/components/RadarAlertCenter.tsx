@@ -27,6 +27,7 @@ import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { hasMarketEntitlement } from "@/lib/billing";
 import {
+  disableAndroidAppPush,
   readAppPushState,
   registerAndroidAppPush,
   registerAppPushListeners,
@@ -112,10 +113,10 @@ function categoryClass(category: RadarAlertRule["category"]) {
 }
 
 function permissionLabel(permission: PermissionState) {
-  if (permission === "granted") return "알림을 받을 수 있습니다";
-  if (permission === "denied") return "알림이 꺼져 있습니다";
-  if (permission === "unsupported") return "현재 환경에서는 알림을 켤 수 없습니다";
-  return "알림을 켜야 받을 수 있습니다";
+  if (permission === "granted") return "브라우저 알림 권한이 켜져 있습니다";
+  if (permission === "denied") return "브라우저 알림이 꺼져 있습니다";
+  if (permission === "unsupported") return "현재 브라우저에서는 알림을 켤 수 없습니다";
+  return "브라우저 알림 권한을 켤 수 있습니다";
 }
 
 function appPushPermissionLabel(state: AppPushDeviceState) {
@@ -226,6 +227,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
   const [appPushState, setAppPushState] = useState<AppPushDeviceState>(() => readAppPushState());
   const [isRequesting, setIsRequesting] = useState(false);
   const [isSendingTestPush, setIsSendingTestPush] = useState(false);
+  const [isDisablingPush, setIsDisablingPush] = useState(false);
   const [isManualChecking, setIsManualChecking] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -361,7 +363,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
 
       if (typeof window === "undefined" || !("Notification" in window)) {
         setPermission("unsupported");
-        setToast("현재 환경에서는 알림을 켤 수 없습니다.");
+        setToast("현재 브라우저에서는 브라우저 알림을 켤 수 없습니다.");
         return;
       }
 
@@ -369,15 +371,15 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
       recordUsageEvent(alertUsageBucketId);
       setPermission(result as PermissionState);
       if (result === "granted") {
-        new Notification("Chart Radar 알림이 켜졌습니다", {
+        new Notification("Chart Radar 브라우저 알림 테스트", {
           body: isGlobal
-            ? "글로벌 자산 급변, 매크로 압력, 뉴스 브리핑 알림을 받을 수 있습니다."
-            : "A급 감지, 청산 압력, 뉴스 브리핑 알림을 받을 수 있습니다.",
+            ? "현재 열린 브라우저에서 글로벌 감시 조건을 포그라운드 알림으로 확인합니다."
+            : "현재 열린 브라우저에서 레이더 감시 조건을 포그라운드 알림으로 확인합니다.",
           icon: "/brand/chart-radar-mark.png"
         });
-        setToast("알림이 켜졌습니다. 저장한 조건은 이 기기에서 바로 확인할 수 있습니다.");
+        setToast("브라우저 알림이 켜졌습니다. 현재 열린 브라우저의 테스트/포그라운드 알림으로만 동작합니다.");
       } else {
-        setToast("알림이 꺼져 있습니다. 브라우저 설정에서 언제든 다시 켤 수 있습니다.");
+        setToast("브라우저 알림이 꺼져 있습니다. 브라우저 설정에서 언제든 다시 켤 수 있습니다.");
       }
     } finally {
       setIsRequesting(false);
@@ -393,6 +395,19 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
       setToast(error instanceof Error ? error.message : "테스트 앱 푸시 발송에 실패했습니다.");
     } finally {
       setIsSendingTestPush(false);
+    }
+  }
+
+  async function requestDisablePush() {
+    setIsDisablingPush(true);
+    try {
+      const next = await disableAndroidAppPush();
+      setAppPushState(next);
+      setToast("Android 앱 푸시 토큰을 서버에서 해제했습니다.");
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "Android 앱 푸시 해제에 실패했습니다.");
+    } finally {
+      setIsDisablingPush(false);
     }
   }
 
@@ -419,7 +434,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">{copy.eyebrow}</p>
             <h2 className="mt-1 text-xl font-black text-white">{copy.title}</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400 [word-break:keep-all]">
-              {copy.description} 저장한 조건과 레이더 변화를 한곳에서 확인합니다.
+              {copy.description} Android 앱 푸시와 브라우저 알림 상태를 분리해 확인합니다.
             </p>
           </div>
         </div>
@@ -457,8 +472,8 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
         </div>
         <div className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
           <Smartphone className="text-emerald-200" size={20} aria-hidden />
-          <p className="mt-3 text-sm font-black text-white">놓친 조건 재확인</p>
-          <p className="mt-2 text-xs leading-5 text-slate-400">저장한 조건이 다시 맞아떨어지면 최근 감지에 남겨 바로 확인할 수 있습니다.</p>
+          <p className="mt-3 text-sm font-black text-white">Android 앱 푸시 지원</p>
+          <p className="mt-2 text-xs leading-5 text-slate-400">1차 출시는 Android 앱 푸시를 정식 지원하고, 웹 알림은 열린 브라우저 안에서만 확인합니다.</p>
         </div>
       </div>
 
@@ -471,7 +486,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
           <p className="mt-1 text-xs leading-5 text-slate-500">
             {isAndroidAppPush
               ? "Android 앱에서는 Firebase 푸시 토큰을 발급받아 저장한 조건과 알림 규칙을 서버에 연결합니다."
-              : "저장한 조건을 현재 시장과 다시 대조합니다. 알림 권한을 켠 현재 기기에서는 조건 일치 알림을 받을 수 있습니다."}
+              : "브라우저 알림은 현재 열린 화면에서 조건 일치를 알려주는 테스트/포그라운드 알림입니다. 백그라운드 웹 푸시는 추후 Web Push/VAPID로 확장합니다."}
           </p>
           {isAndroidAppPush && appPushState.token ? (
             <p className="mt-1 text-[11px] font-bold text-slate-600">
@@ -487,18 +502,29 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             className="enterprise-button inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isRequesting ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <CheckCircle2 size={16} aria-hidden />}
-            {isAndroidAppPush ? "앱 푸시 켜기" : "알림 켜기"}
+            {isAndroidAppPush ? "앱 푸시 켜기" : "브라우저 알림 켜기"}
           </button>
           {isAndroidAppPush && appPushState.token ? (
-            <button
-              type="button"
-              onClick={requestTestPush}
-              disabled={isSendingTestPush}
-              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-cyan-300/30 bg-cyan-300/10 px-4 text-sm font-black text-cyan-100 disabled:cursor-wait disabled:opacity-60"
-            >
-              {isSendingTestPush ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Smartphone size={16} aria-hidden />}
-              테스트 발송
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={requestTestPush}
+                disabled={isSendingTestPush}
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-cyan-300/30 bg-cyan-300/10 px-4 text-sm font-black text-cyan-100 disabled:cursor-wait disabled:opacity-60"
+              >
+                {isSendingTestPush ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Smartphone size={16} aria-hidden />}
+                테스트 발송
+              </button>
+              <button
+                type="button"
+                onClick={requestDisablePush}
+                disabled={isDisablingPush}
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-300/25 bg-red-300/10 px-4 text-sm font-black text-red-100 disabled:cursor-wait disabled:opacity-60"
+              >
+                {isDisablingPush ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <ShieldCheck size={16} aria-hidden />}
+                앱 푸시 해제
+              </button>
+            </>
           ) : null}
         </div>
       </div>

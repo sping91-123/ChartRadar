@@ -53,15 +53,30 @@ export function readAppPushState(): AppPushDeviceState {
   if (!canUseStorage()) return emptyAppPushState();
 
   try {
+    const isAndroidApp = isAndroidNativeApp();
     const raw = window.localStorage.getItem(appPushStorageKey);
     if (!raw) return emptyAppPushState();
     const parsed = JSON.parse(raw) as Partial<AppPushDeviceState>;
+    if (!isAndroidApp) {
+      return {
+        ...emptyAppPushState(),
+        supported: false,
+        platform: "web",
+        permission: "unsupported",
+        token: null,
+        synced: false,
+        updatedAt: parsed.updatedAt ?? null,
+        lastError: null,
+        lastNotificationTitle: null
+      };
+    }
+
     return {
       ...emptyAppPushState(),
       ...parsed,
-      supported: isAndroidNativeApp(),
-      platform: isAndroidNativeApp() ? "android" : "web",
-      permission: parsed.permission ?? (isAndroidNativeApp() ? "prompt" : "unsupported"),
+      supported: true,
+      platform: "android",
+      permission: parsed.permission ?? "prompt",
       token: parsed.token ?? null,
       synced: Boolean(parsed.synced && parsed.token),
       updatedAt: parsed.updatedAt ?? null,
@@ -74,15 +89,28 @@ export function readAppPushState(): AppPushDeviceState {
 }
 
 function writeAppPushState(next: AppPushDeviceState) {
-  if (!canUseStorage()) return next;
-  window.localStorage.setItem(appPushStorageKey, JSON.stringify(next));
-  window.dispatchEvent(new CustomEvent(appPushChangedEvent, { detail: next }));
-  return next;
+  const sanitized = isAndroidNativeApp()
+    ? next
+    : {
+        ...emptyAppPushState(),
+        supported: false,
+        platform: "web" as const,
+        permission: "unsupported" as const,
+        token: null,
+        synced: false,
+        updatedAt: next.updatedAt,
+        lastError: next.lastError,
+        lastNotificationTitle: null
+      };
+  if (!canUseStorage()) return sanitized;
+  window.localStorage.setItem(appPushStorageKey, JSON.stringify(sanitized));
+  window.dispatchEvent(new CustomEvent(appPushChangedEvent, { detail: sanitized }));
+  return sanitized;
 }
 
 export function subscribeAppPushState(listener: (state: AppPushDeviceState) => void) {
   if (typeof window === "undefined") return () => {};
-  const handler = (event: Event) => listener((event as CustomEvent<AppPushDeviceState>).detail ?? readAppPushState());
+  const handler = () => listener(readAppPushState());
   window.addEventListener(appPushChangedEvent, handler);
   return () => window.removeEventListener(appPushChangedEvent, handler);
 }
@@ -211,6 +239,7 @@ export async function registerAndroidAppPush(preferences: AppPushPreferences) {
 }
 
 export async function syncAndroidAppPushPreferences(preferences: AppPushPreferences) {
+  if (!isAndroidNativeApp()) return readAppPushState();
   const state = readAppPushState();
   if (!state.supported || !state.token || state.permission !== "granted") return state;
 
@@ -223,7 +252,51 @@ export async function syncAndroidAppPushPreferences(preferences: AppPushPreferen
   });
 }
 
+export async function disableAndroidAppPush() {
+  if (!isAndroidNativeApp()) {
+    return writeAppPushState({
+      ...emptyAppPushState(),
+      permission: "unsupported",
+      lastError: "Android 앱 환경에서만 앱 푸시를 해제할 수 있습니다."
+    });
+  }
+
+  const state = readAppPushState();
+  if (!state.token) return state;
+
+  const session = await getActiveSupabaseSession();
+  if (!session?.accessToken) throw new Error("로그인 후 앱 푸시 토큰을 해제할 수 있습니다.");
+
+  const response = await fetch("/api/push-tokens", {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${session.accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      token: state.token,
+      platform: "android"
+    })
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as { error?: string };
+  if (!response.ok) throw new Error(payload.error ?? "앱 푸시 토큰 해제에 실패했습니다.");
+
+  const PushNotifications = await loadPushNotifications();
+  await PushNotifications?.unregister();
+
+  return writeAppPushState({
+    ...emptyAppPushState(),
+    supported: true,
+    platform: "android",
+    permission: "prompt",
+    updatedAt: new Date().toISOString()
+  });
+}
+
 export async function sendAndroidAppPushTest() {
+  if (!isAndroidNativeApp()) throw new Error("Android 앱에서만 테스트 앱 푸시를 보낼 수 있습니다.");
+
   const session = await getActiveSupabaseSession();
   if (!session?.accessToken) throw new Error("로그인 후 테스트 푸시를 보낼 수 있습니다.");
 
@@ -249,7 +322,7 @@ export async function registerAppPushListeners() {
   await PushNotifications.addListener("pushNotificationReceived", (notification) => {
     writeAppPushState({
       ...readAppPushState(),
-      lastNotificationTitle: notification.title ?? "Chart Radar 알림",
+      lastNotificationTitle: notification.title ?? "Chart Radar 앱 푸시",
       updatedAt: new Date().toISOString()
     });
   });

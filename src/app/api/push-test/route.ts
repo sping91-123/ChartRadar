@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
   const user = await fetchSupabaseUserOnServer(accessToken);
   const tokens = await supabaseAdminRest<PushTokenRow[]>(
-    `push_tokens?select=token,platform&user_id=eq.${encodeURIComponent(user.id)}&enabled=eq.true&platform=eq.android&order=last_registered_at.desc&limit=5`
+    `push_tokens?select=token,platform&user_id=eq.${encodeURIComponent(user.id)}&enabled=eq.true&platform=eq.android&provider=eq.fcm&order=last_registered_at.desc&limit=5`
   );
 
   if (tokens.length === 0) {

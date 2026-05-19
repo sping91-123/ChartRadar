@@ -328,7 +328,7 @@ async function sendEventToUser(userId: string, tokens: PushTokenRow[], event: Pu
 
 export async function runPushAlertScan(context: ScanContext) {
   const tokens = await supabaseAdminRest<PushTokenRow[]>(
-    "push_tokens?select=id,user_id,token,markets,rule_ids&enabled=eq.true&platform=eq.android&limit=500"
+    "push_tokens?select=id,user_id,token,markets,rule_ids&enabled=eq.true&platform=eq.android&provider=eq.fcm&limit=500"
   );
   if (tokens.length === 0) return { users: 0, events: 0, sent: 0, skipped: 0, failed: 0 };
 

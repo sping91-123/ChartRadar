@@ -1657,3 +1657,8 @@ The health endpoint now reports a launch readiness score and structured blocking
 - Play Console에 이미 `versionCode 2` 계열 AAB를 올린 상태라면 같은 versionCode를 다시 올릴 수 없으므로 Android 버전을 `versionCode 3`, `versionName 1.0.2`로 올린다.
 - 새 AAB는 Firebase `google-services.json`과 앱 푸시 Manifest 설정이 포함된 상태로 빌드해야 한다.
 - 기존 업로드 키는 `ChartRadar` 인증서 지문 `SHA256 77:28:22:AF:E8:13:92:C4:0E:B8:E6:5B:70:E3:EC:71:C3:76:59:C2:13:9E:CD:70:23:21:B1:47:73:10:C6:BF`이며, 새 AAB도 같은 키로 서명해야 한다.
+
+## 2026-05-19 Android 앱 푸시와 웹 알림 분리.
+- 1차 출시는 Android 앱 푸시만 정식 지원한다. Capacitor WebView 화면은 웹앱을 공유하지만 푸시 발송 채널은 Android 네이티브 FCM 토큰만 대상으로 삼는다.
+- 일반 브라우저의 Notification API는 현재 열린 브라우저에서 쓰는 테스트/포그라운드 알림으로만 설명한다. 백그라운드 웹 푸시는 추후 Service Worker + Web Push/VAPID 구조로 별도 확장한다.
+- `push_tokens.platform`은 발송 채널 분리를 위해 유지하되, 현재 등록 API와 Cron 대상은 `platform=android`, `provider=fcm`으로 좁힌다.

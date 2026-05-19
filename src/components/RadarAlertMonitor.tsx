@@ -2,6 +2,7 @@
 // 앱이 켜져 있는 동안 시장별 레이더 감시 조건을 주기적으로 다시 확인한다.
 import { useCallback, useEffect, useRef } from "react";
 import { chartTimeframes, type Candle, type ChartTimeframe, type TradingMode } from "@/lib/marketAnalysis";
+import { isAndroidNativeApp } from "@/lib/appPush";
 import type { ScoutSetup } from "@/lib/setupScout";
 import { analyzeTechnicalRadar } from "@/lib/technicalRadar";
 import { withSupabaseAuth } from "@/lib/authFetch";
@@ -184,7 +185,7 @@ export function RadarAlertMonitor() {
     const merged = [...matches, ...previous.filter((item) => !matches.some((match) => match.id === item.id))];
     writeSetupAlertMatches(merged, market);
 
-    if (!("Notification" in window) || Notification.permission !== "granted") return matches.length;
+    if (isAndroidNativeApp() || !("Notification" in window) || Notification.permission !== "granted") return matches.length;
 
     const notifiedIds = readNotifiedIds(market);
     const freshMatch = matches.find((match) => !notifiedIds.has(match.id));
@@ -192,7 +193,7 @@ export function RadarAlertMonitor() {
 
     notifiedIds.add(freshMatch.id);
     writeNotifiedIds(market, notifiedIds);
-    new Notification("Chart Radar 감시 조건 일치", {
+    new Notification("Chart Radar 브라우저 감시 조건 일치", {
       body: `${compactSymbol(freshMatch.setup.symbol)} ${freshMatch.setup.timeframe} ${sideLabel(freshMatch.setup.side)} 감지가 다시 올라왔습니다.`,
       icon: "/brand/chart-radar-mark.png"
     });

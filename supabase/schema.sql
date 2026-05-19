@@ -86,7 +86,12 @@ create table if not exists public.push_tokens (
   last_registered_at timestamptz not null default now(),
   last_seen_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint push_tokens_provider_platform_check check (
+    (platform = 'android' and provider = 'fcm')
+    or (platform = 'ios' and provider = 'apns')
+    or (platform = 'web' and provider = 'webpush')
+  )
 );
 
 create unique index if not exists subscriptions_provider_order_id_idx
@@ -98,6 +103,10 @@ on public.push_tokens(token);
 
 create index if not exists push_tokens_user_enabled_idx
 on public.push_tokens(user_id, enabled);
+
+create index if not exists push_tokens_android_fcm_enabled_idx
+on public.push_tokens(user_id, enabled, last_registered_at desc)
+where platform = 'android' and provider = 'fcm';
 
 create table if not exists public.push_alert_presets (
   id uuid primary key default gen_random_uuid(),

@@ -58,6 +58,7 @@ expectFile("src/app/manifest.ts", "PWA manifest 소스", 500);
 expectFile("capacitor.config.ts", "Capacitor 설정", 200);
 expectFile("android/app/src/main/res/drawable/ic_stat_chart_radar.xml", "Android 푸시 알림 아이콘", 200);
 expectFile("supabase/migrations/20260519_push_tokens.sql", "앱 푸시 토큰 마이그레이션", 500);
+expectFile("supabase/migrations/20260519_android_push_platform_guard.sql", "앱 푸시 플랫폼 가드 마이그레이션", 500);
 
 const iconSize = readPngSize("public/brand/chart-radar-icon.png");
 if (!iconSize) {
@@ -112,6 +113,28 @@ if (packageJson.includes('"@capacitor/push-notifications"')) {
   pass("Capacitor 푸시 의존성", "@capacitor/push-notifications가 설치되어 있습니다.");
 } else {
   fail("Capacitor 푸시 의존성", "@capacitor/push-notifications가 package.json에 없습니다.");
+}
+
+const appPush = readText("src/lib/appPush.ts");
+if (
+  appPush.includes("Capacitor.isNativePlatform()") &&
+  appPush.includes('Capacitor.getPlatform() === "android"') &&
+  appPush.includes('if (!isAndroidNativeApp()) return null;')
+) {
+  pass("Android 앱 푸시 환경 가드", "일반 웹브라우저에서는 PushNotifications 플러그인을 로드하지 않습니다.");
+} else {
+  fail("Android 앱 푸시 환경 가드", "Android 앱 환경 감지 또는 PushNotifications 로드 가드가 빠져 있습니다.");
+}
+
+const pushPlatformGuard = readText("supabase/migrations/20260519_android_push_platform_guard.sql");
+if (
+  pushPlatformGuard.includes("push_tokens_provider_platform_check") &&
+  pushPlatformGuard.includes("platform = 'android' and provider = 'fcm'") &&
+  pushPlatformGuard.includes("push_tokens_android_fcm_enabled_idx")
+) {
+  pass("Android FCM 토큰 DB 구분", "platform/provider 제약과 Android FCM 조회 인덱스를 포함합니다.");
+} else {
+  fail("Android FCM 토큰 DB 구분", "platform/provider 제약 또는 Android FCM 인덱스가 빠져 있습니다.");
 }
 
 const androidManifest = readText("android/app/src/main/AndroidManifest.xml");

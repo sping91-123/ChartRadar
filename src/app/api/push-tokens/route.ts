@@ -84,7 +84,12 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => ({}))) as PushTokenRequestBody;
   const token = typeof body.token === "string" ? body.token.trim() : "";
-  const platform = body.platform === "android" || body.platform === "ios" || body.platform === "web" ? body.platform : "android";
+  const rawPlatform = typeof body.platform === "string" ? body.platform : "android";
+  if (rawPlatform !== "android") {
+    return NextResponse.json({ error: "1차 출시에서는 Android 앱 푸시 토큰만 등록합니다." }, { status: 400 });
+  }
+  const platform: PushPlatform = "android";
+
   const appId = typeof body.appId === "string" && body.appId.trim() ? body.appId.trim() : "com.staronlabs.chartradar";
   const markets = normalizeStringList(body.markets, new Set(["crypto", "stocks"]));
   const ruleIds = normalizeStringList(body.ruleIds);
@@ -108,7 +113,7 @@ export async function POST(request: Request) {
       user_id: user.id,
       token,
       platform,
-      provider: platform === "android" ? "fcm" : "apns",
+      provider: "fcm",
       app_id: appId,
       enabled: body.enabled !== false,
       markets,
@@ -155,9 +160,13 @@ export async function DELETE(request: Request) {
   const body = (await request.json().catch(() => ({}))) as PushTokenRequestBody;
   const token = typeof body.token === "string" ? body.token.trim() : "";
   if (!token) return NextResponse.json({ error: "해제할 앱 푸시 토큰이 없습니다." }, { status: 400 });
+  const rawPlatform = typeof body.platform === "string" ? body.platform : "android";
+  if (rawPlatform !== "android") {
+    return NextResponse.json({ error: "1차 출시에서는 Android 앱 푸시 토큰만 해제합니다." }, { status: 400 });
+  }
 
   const user = await fetchSupabaseUserOnServer(accessToken);
-  await supabaseAdminRest(`push_tokens?token=eq.${encodeURIComponent(token)}&user_id=eq.${encodeURIComponent(user.id)}`, {
+  await supabaseAdminRest(`push_tokens?token=eq.${encodeURIComponent(token)}&user_id=eq.${encodeURIComponent(user.id)}&platform=eq.android&provider=eq.fcm`, {
     method: "PATCH",
     body: {
       enabled: false,
