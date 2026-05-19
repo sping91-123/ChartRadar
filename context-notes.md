@@ -1651,3 +1651,9 @@ The health endpoint now reports a launch readiness score and structured blocking
 - `runPushAlertScan`은 코인 스카우트, 글로벌 기술 레이더, 청산 압력, 뉴스/매크로 모멘텀, 저장된 프리셋 조건을 확인하고 조건이 맞는 사용자에게 Firebase HTTP v1로 푸시를 보낸다.
 - 권한은 서버에서 사용자 플랜 기준으로 다시 확인한다. Basic 사용자는 Basic 허용 규칙만, Pro 사용자는 해당 시장 Pro 권한 범위의 규칙까지 받을 수 있다.
 - 운영 반영 전에는 Supabase 마이그레이션 적용, Vercel 환경변수 `CRON_SECRET`과 Firebase 서버 인증값 설정, Android `google-services.json` 배치, Vercel Cron 실행 로그 확인이 필요하다.
+
+## 2026-05-19 Android Play Console v3 업로드 준비.
+
+- Play Console에 이미 `versionCode 2` 계열 AAB를 올린 상태라면 같은 versionCode를 다시 올릴 수 없으므로 Android 버전을 `versionCode 3`, `versionName 1.0.2`로 올린다.
+- 새 AAB는 Firebase `google-services.json`과 앱 푸시 Manifest 설정이 포함된 상태로 빌드해야 한다.
+- 기존 업로드 키는 `ChartRadar` 인증서 지문 `SHA256 77:28:22:AF:E8:13:92:C4:0E:B8:E6:5B:70:E3:EC:71:C3:76:59:C2:13:9E:CD:70:23:21:B1:47:73:10:C6:BF`이며, 새 AAB도 같은 키로 서명해야 한다.

@@ -1885,3 +1885,8 @@
 - [x] 서버 스캐너가 장중 조건, A급 코인 감지, 청산 압력, 뉴스/매크로 모멘텀, 저장된 프리셋 조건을 확인해 조건 충족 시 FCM 푸시를 발송하게 한다.
 - [x] 같은 조건이 반복 발송되지 않도록 `push_alert_events` 기준으로 사용자별 이벤트 중복을 막는다.
 - [x] `CRON_SECRET`, Firebase 서버 환경변수, Supabase 마이그레이션, Vercel Cron 확인 항목을 출시 문서에 정리한다.
+
+## 2026-05-19 Android Play Console v3 업로드 준비.
+
+- [x] Play Console 재업로드용 Android 버전을 `versionCode 3`, `versionName 1.0.2`로 올린다.
+- [x] Firebase 푸시 설정이 포함된 새 release AAB를 빌드하고 기존 ChartRadar upload key로 서명한다.
