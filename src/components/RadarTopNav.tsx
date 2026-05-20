@@ -47,8 +47,8 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
   const navItems = market === "all" ? allNavItems : market === "stocks" ? stockNavItems : cryptoNavItems;
 
   return (
-    <nav className="sticky top-2 z-30 rounded-xl border border-surface-line bg-slate-950/78 p-1.5 shadow-[0_14px_42px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-      <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}>
+    <nav className="sticky top-2 z-30 overflow-hidden rounded-xl border border-surface-line bg-slate-950/78 p-1.5 shadow-[0_14px_42px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+      <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid" style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}>
         {navItems.map(({ label, icon: Icon, href, match, market: itemMarket }) => {
           const isMarketRoute = pathname === "/news" || pathname === "/alerts" || pathname === "/journal";
           const active = match.some((path) => path === pathname) && (!itemMarket || marketParam === itemMarket || !isMarketRoute);
@@ -57,14 +57,14 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
             <Link
               key={label}
               href={href}
-              className={`group flex min-h-12 items-center justify-center gap-1.5 rounded-lg px-3 text-[11px] font-black tracking-tight transition sm:text-xs ${
+              className={`group flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[11px] font-black tracking-tight transition sm:min-h-12 sm:px-3 sm:text-xs md:shrink ${
                 active
                   ? "bg-cyan-300/12 text-cyan-200 shadow-[inset_0_0_0_1px_rgba(103,232,249,0.16)]"
                   : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-100"
               }`}
             >
               <Icon size={15} aria-hidden className={active ? "text-cyan-300" : "text-slate-500 transition group-hover:text-slate-300"} />
-              <span className="truncate">{label}</span>
+              <span className="whitespace-nowrap">{label}</span>
             </Link>
           );
         })}

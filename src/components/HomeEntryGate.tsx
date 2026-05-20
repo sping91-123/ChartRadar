@@ -130,21 +130,21 @@ function SplashScreen() {
 
 function LoginPrompt({ onBrowseBasic }: { onBrowseBasic: () => void }) {
   return (
-    <main className="grid min-h-screen place-items-center px-4 py-6 sm:px-6 sm:py-8">
-      <section className="enterprise-panel w-full max-w-md rounded-2xl p-5 text-center sm:p-8">
+    <main className="grid min-h-screen place-items-center overflow-hidden px-3 py-6 sm:px-6 sm:py-8">
+      <section className="enterprise-panel w-[calc(100vw-1.5rem)] max-w-md rounded-2xl p-4 text-center sm:w-full sm:p-8">
         <div className="flex flex-col items-center gap-5">
-          <p className="text-center text-sm font-semibold leading-6 text-slate-300">
+          <p className="max-w-full text-center text-sm font-semibold leading-6 text-slate-300">
             로그인하면 관심 종목, 알림, 복기 페이지 등을
             <br />
             같은 계정에서 이어서 사용할 수 있습니다.
           </p>
-          <div className="grid w-full gap-2">
+          <div className="grid w-full min-w-0 gap-2 [&>*]:min-w-0">
             <GoogleLoginButton returnTo="/" />
             <KakaoLoginButton returnTo="/" />
             <button
               type="button"
               onClick={onBrowseBasic}
-              className="mx-auto grid h-10 w-full max-w-[360px] grid-cols-[40px_1fr_40px] items-center rounded border border-[#dadce0] bg-white px-0 text-[14px] font-medium text-[#3c4043] shadow-none transition hover:bg-[#f8fafd]"
+              className="mx-auto grid h-10 w-full max-w-full grid-cols-[40px_1fr_40px] items-center rounded border border-[#dadce0] bg-white px-0 text-[14px] font-medium text-[#3c4043] shadow-none transition hover:bg-[#f8fafd]"
             >
               <span aria-hidden />
               <span className="text-center">로그인 없이 둘러보기</span>
@@ -159,39 +159,43 @@ function LoginPrompt({ onBrowseBasic }: { onBrowseBasic: () => void }) {
 
 function MarketSelector() {
   return (
-    <main className="grid min-h-screen place-items-center px-4 py-6 sm:px-6 sm:py-8">
-      <section className="enterprise-panel w-full max-w-5xl rounded-2xl p-5 sm:p-8 lg:p-10">
-        <div className="flex flex-col items-center gap-9">
-          <header className="flex w-full flex-col items-center gap-4 text-center">
-            <div className="flex items-center justify-center gap-3">
+    <main className="grid h-[100dvh] place-items-center overflow-hidden px-3 py-3 sm:px-6 sm:py-6">
+      <section className="enterprise-panel w-[calc(100vw-1.5rem)] max-w-5xl rounded-2xl p-4 sm:w-full sm:p-6 lg:p-10">
+        <div className="flex flex-col items-center gap-4 sm:gap-6 lg:gap-9">
+          <header className="flex w-full flex-col items-center gap-2 text-center sm:gap-4">
+            <div className="flex items-center justify-center gap-2 sm:gap-3">
               <BrandMark />
-              <h1 className="text-3xl font-black tracking-tight text-white sm:text-4xl">Chart Radar</h1>
+              <h1 className="text-2xl font-black tracking-tight text-white sm:text-4xl">Chart Radar</h1>
             </div>
 
-            <p className="max-w-2xl text-sm font-semibold leading-relaxed text-slate-200 sm:text-base">
+            <p className="max-w-2xl text-xs font-semibold leading-relaxed text-slate-200 sm:text-base">
               오늘 시장의 방향성과 핵심 대응 포인트를 한눈에 제공합니다.
             </p>
           </header>
 
-          <div className="grid w-full gap-4 md:grid-cols-2">
+          <div className="grid w-full gap-3 sm:gap-4 md:grid-cols-2">
             {marketEntries.map(({ title, scope, href, icon: Icon, iconFrame, iconRing, accent, glow }) => (
               <Link
                 key={title}
                 href={href}
-                className="group relative grid min-h-[14rem] place-items-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-6 text-center transition hover:-translate-y-0.5 hover:border-cyan-300/35 hover:bg-white/[0.055] hover:shadow-[0_22px_60px_rgba(0,0,0,0.22)] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:min-h-[16rem]"
+                className="group relative grid min-h-[8.5rem] place-items-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-center transition hover:-translate-y-0.5 hover:border-cyan-300/35 hover:bg-white/[0.055] hover:shadow-[0_22px_60px_rgba(0,0,0,0.22)] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:min-h-[12rem] sm:p-6 md:min-h-[16rem]"
               >
                 <div className={`absolute inset-x-0 top-0 h-28 bg-gradient-to-b ${glow} to-transparent`} aria-hidden />
-                <div className="relative flex flex-col items-center gap-4">
-                  <div className={`grid h-16 w-16 place-items-center border ${iconFrame} ${accent}`}>
+                <div className="relative flex flex-col items-center gap-2.5 sm:gap-4">
+                  <div className={`grid h-12 w-12 place-items-center border sm:h-16 sm:w-16 ${iconFrame} ${accent}`}>
                     {iconRing ? (
-                      <div className={`grid h-11 w-11 place-items-center border ${iconRing}`} aria-hidden>
-                        <Icon size={26} aria-hidden />
+                      <div className={`grid h-8 w-8 place-items-center border sm:h-11 sm:w-11 ${iconRing}`} aria-hidden>
+                        <Icon size={22} aria-hidden className="sm:hidden" />
+                        <Icon size={26} aria-hidden className="hidden sm:block" />
                       </div>
                     ) : (
-                      <Icon size={30} aria-hidden />
+                      <>
+                        <Icon size={24} aria-hidden className="sm:hidden" />
+                        <Icon size={30} aria-hidden className="hidden sm:block" />
+                      </>
                     )}
                   </div>
-                  <h2 className="text-3xl font-black tracking-tight text-white sm:text-4xl">{title}</h2>
+                  <h2 className="text-2xl font-black tracking-tight text-white sm:text-4xl">{title}</h2>
                   <p className="text-xs font-bold text-slate-400">{scope}</p>
                 </div>
               </Link>
