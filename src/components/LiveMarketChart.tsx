@@ -797,6 +797,12 @@ function buildMajorScreenGuideSteps(isPro: boolean): BeginnerGuideStep[] {
   ];
 }
 
+const MAJOR_STRENGTH_HELP = [
+  "판단 강도는 현재 레이더가 한쪽 방향으로 얼마나 뚜렷하게 기울었는지를 나타냅니다.",
+  "높을수록 조건이 더 선명하지만, 진입을 보장하지는 않습니다.",
+  "낮을수록 신호가 약하거나 관망 성격이 강합니다."
+];
+
 function radarPulseClasses(tone: RadarPulseTone) {
   if (tone === "long") return "border-signal-success/20 bg-black/20 text-signal-success";
   if (tone === "short") return "border-signal-danger/20 bg-black/20 text-signal-danger";
@@ -2181,9 +2187,11 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-xl font-black text-white">{chartTitle}</h2>
-                <span className="rounded border border-accent-blue/30 bg-accent-blue/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-accent-blue">
-                  Live
-                </span>
+                {!isMajorScreen ? (
+                  <span className="rounded border border-accent-blue/30 bg-accent-blue/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-accent-blue">
+                    Live
+                  </span>
+                ) : null}
                 <span className="rounded border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] font-bold text-slate-400">
                   Binance 기준
                 </span>
@@ -2369,7 +2377,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         </div>
       ) : analysis && visibleRadarInsight ? (
         <div className="mt-4 space-y-4">
-          <RadarInsightPanel insight={visibleRadarInsight} isPro={hasCoinPro} />
+          <RadarInsightPanel insight={visibleRadarInsight} isPro={hasCoinPro} strengthHelp={isMajorScreen ? MAJOR_STRENGTH_HELP : undefined} />
           <div className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
             <BeginnerActionGuide
               title={isMajorScreen ? "화면은 이 순서로 읽습니다" : "지금은 이 순서로 보면 됩니다"}

@@ -6,6 +6,7 @@ interface RadarInsightPanelProps {
   insight: RadarInsight;
   isPro: boolean;
   className?: string;
+  strengthHelp?: string[];
 }
 
 function finalViewClass(finalView: RadarFinalView) {
@@ -107,9 +108,10 @@ function LockedValue({ label }: { label: string }) {
   );
 }
 
-export function RadarInsightPanel({ insight, isPro, className = "" }: RadarInsightPanelProps) {
+export function RadarInsightPanel({ insight, isPro, className = "", strengthHelp }: RadarInsightPanelProps) {
   const keyReasons = listItems(insight.keyReasons, isPro ? null : 1);
   const risks = listItems(insight.risks, isPro ? null : 1);
+  const strengthHelpText = strengthHelp?.join(" ");
 
   return (
     <section className={`relative overflow-hidden rounded-xl border border-surface-line bg-surface-cardSoft p-4 shadow-[0_18px_56px_rgba(0,0,0,0.22)] ${className}`}>
@@ -146,6 +148,15 @@ export function RadarInsightPanel({ insight, isPro, className = "" }: RadarInsig
             <div className="flex items-center gap-2">
               <Gauge size={16} className="text-cyan-200" aria-hidden />
               <p className="text-xs font-black text-slate-200">판단 강도</p>
+              {strengthHelpText ? (
+                <span
+                  className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-300/10 text-[11px] font-black text-cyan-100"
+                  title={strengthHelpText}
+                  aria-label={`판단 강도 도움말: ${strengthHelpText}`}
+                >
+                  ?
+                </span>
+              ) : null}
             </div>
             <p className="text-sm font-black text-white">{insight.strengthLabel}</p>
           </div>
@@ -153,6 +164,15 @@ export function RadarInsightPanel({ insight, isPro, className = "" }: RadarInsig
             <div className={`h-full rounded-full ${strengthClass(insight.finalView)}`} style={{ width: `${Math.max(4, insight.strength)}%` }} />
           </div>
           <p className="mt-2 text-xs font-bold text-slate-400">{insight.strength} / 100</p>
+          {strengthHelp?.length ? (
+            <ul className="mt-3 space-y-1.5 rounded-md border border-cyan-300/15 bg-cyan-300/5 p-3">
+              {strengthHelp.map((item) => (
+                <li key={item} className="text-[11px] font-bold leading-5 text-slate-300 [word-break:keep-all]">
+                  {item}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       </div>
 
