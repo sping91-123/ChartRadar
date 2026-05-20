@@ -151,6 +151,13 @@ function outcomeClass(outcome?: OutcomeType | null) {
   return "border-accent-blue/25 bg-accent-blue/10 text-accent-blue";
 }
 
+function profitResultLabel(value: string) {
+  if (value === "+1R") return "수익";
+  if (value === "-1R") return "손실";
+  if (value === "0R") return "본전";
+  return value;
+}
+
 function parseEntryMeta(entry: JournalEntry): ParsedEntryMeta {
   const entryReasons = splitChips(readNoteValue(entry.note, ["진입 근거"]));
   const keptPrinciples = splitChips(readNoteValue(entry.note, ["지킨 기준", "지킨 원칙"]));
@@ -177,6 +184,10 @@ function toggleChip(current: string[], item: string, exclusiveNone = false) {
   if (exclusiveNone && item === "없음") return current.includes("없음") ? [] : ["없음"];
   const withoutNone = exclusiveNone ? current.filter((value) => value !== "없음") : current;
   return withoutNone.includes(item) ? withoutNone.filter((value) => value !== item) : [...withoutNone, item];
+}
+
+function isStructuredJournalNote(note: string) {
+  return note.includes("시장/종목:") || note.includes("진입 근거:") || note.includes("R 결과:");
 }
 
 function buildFeedback(params: {
@@ -705,7 +716,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                   <ChipGroup label="방향" options={directions} selected={[direction]} onToggle={(item) => setDirection(item as DirectionType)} />
                   <ChipGroup label="결과" options={resultOptions} selected={[result]} onToggle={(item) => setResult(item as TradeResult)} tone="green" />
                   <div className="rounded-xl border border-white/10 bg-black/15 p-3">
-                    <p className="mb-2 text-xs font-black text-slate-200">R 결과</p>
+                    <p className="mb-2 text-xs font-black text-slate-200">손익 결과</p>
                     <div className="flex flex-wrap gap-2">
                       {rResultOptions.map((item) => (
                         <button
@@ -718,7 +729,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                               : "border-surface-line bg-surface-cardSoft text-slate-300 hover:border-accent-blue/50 hover:text-white"
                           }`}
                         >
-                          {item}
+                          {profitResultLabel(item)}
                         </button>
                       ))}
                     </div>
@@ -726,7 +737,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                       <input
                         value={customRResult}
                         onChange={(event) => setCustomRResult(event.target.value)}
-                        placeholder="예: +0.4R"
+                        placeholder="예: 소폭 수익 / 약손실"
                         className="mt-2 min-h-10 w-full rounded-md border border-surface-line bg-black/20 px-3 text-sm font-semibold text-white outline-none placeholder:text-slate-600 focus:border-accent-blue"
                       />
                     ) : null}
@@ -886,7 +897,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                                 결과 {parsed.result}
                               </span>
                               <span className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs font-bold text-slate-300">
-                                R {parsed.rResult}
+                                손익 {profitResultLabel(parsed.rResult)}
                               </span>
                               <span className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs font-bold text-slate-300">
                                 <Clock3 className="mr-1 inline" size={12} aria-hidden />
@@ -948,11 +959,14 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                                 <span className="font-black text-slate-100">깨진 기준.</span>{" "}
                                 {parsed.brokenPrinciples.length ? parsed.brokenPrinciples.join(", ") : "기록 대기"}
                               </p>
+                              <p>
+                                <span className="font-black text-slate-100">손익 결과.</span> {profitResultLabel(parsed.rResult)}
+                              </p>
                               {parsed.memo ? (
                                 <p>
                                   <span className="font-black text-slate-100">선택 메모.</span> {parsed.memo}
                                 </p>
-                              ) : entry.note ? (
+                              ) : entry.note && !isStructuredJournalNote(entry.note) ? (
                                 <p className="whitespace-pre-wrap">{entry.note}</p>
                               ) : null}
                             </div>
