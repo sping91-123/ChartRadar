@@ -50,6 +50,12 @@ interface ScanContext {
   origin: string;
 }
 
+interface OptionalEventSourceResult {
+  label: string;
+  event: PushAlertEvent | null;
+  warning: string | null;
+}
+
 const cryptoModes: TradingMode[] = ["scalp", "swing"];
 const stockMomentumSymbols = ["QQQ", "SPY", "SMH", "NVDA", "TSLA", "AAPL", "MSFT"];
 
@@ -280,6 +286,24 @@ async function scanNewsEvent(origin: string, market: SetupAlertMarket): Promise<
   };
 }
 
+async function scanOptionalEventSource(label: string, scan: () => Promise<PushAlertEvent | null>): Promise<OptionalEventSourceResult> {
+  try {
+    return {
+      label,
+      event: await scan(),
+      warning: null
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[push-cron] optional event source failed: ${label}`, error);
+    return {
+      label,
+      event: null,
+      warning: `${label}: ${message.slice(0, 180)}`
+    };
+  }
+}
+
 async function alreadySent(userId: string, eventKey: string) {
   const rows = await supabaseAdminRest<Array<{ id: string }>>(
     `push_alert_events?select=id&user_id=eq.${encodeURIComponent(userId)}&event_key=eq.${encodeURIComponent(eventKey)}&limit=1`
@@ -344,6 +368,14 @@ export async function runPushAlertScan(context: ScanContext) {
     presetRows.filter((preset) => preset.market === "stocks").map((preset) => ({ symbol: preset.symbol, timeframe: preset.timeframe }))
   );
   const stockMomentumSetups = await scanStockSetups(stockMomentumSymbols.map((symbol) => ({ symbol, timeframe: "1d" })));
+  const optionalEventSources = await Promise.all([
+    scanOptionalEventSource("liquidation-pressure", () => scanLiquidationEvent(context.origin)),
+    scanOptionalEventSource("radar-news-crypto", () => scanNewsEvent(context.origin, "crypto")),
+    scanOptionalEventSource("radar-news-stocks", () => scanNewsEvent(context.origin, "stocks"))
+  ]);
+  const warnings = optionalEventSources
+    .map((source) => source.warning)
+    .filter((warning): warning is string => Boolean(warning));
   const genericEvents = [
     ...topSetups(cryptoSetups, 3)
       .filter((setup) => setup.score >= 80 || setup.plan.quality === "A")
@@ -351,9 +383,7 @@ export async function runPushAlertScan(context: ScanContext) {
     ...topSetups(stockMomentumSetups, 2)
       .filter((setup) => setup.score >= 78)
       .map((setup) => setupToEvent(setup, "stock-momentum", "stocks", "stock-momentum")),
-    await scanLiquidationEvent(context.origin),
-    await scanNewsEvent(context.origin, "crypto"),
-    await scanNewsEvent(context.origin, "stocks")
+    ...optionalEventSources.map((source) => source.event)
   ].filter((event): event is PushAlertEvent => event !== null);
 
   let sent = 0;
@@ -392,6 +422,12 @@ export async function runPushAlertScan(context: ScanContext) {
     events,
     sent,
     skipped,
-    failed
+    failed,
+    sources: {
+      succeeded: optionalEventSources.filter((source) => !source.warning && source.event).map((source) => source.label),
+      skipped: optionalEventSources.filter((source) => !source.warning && !source.event).map((source) => source.label),
+      failed: optionalEventSources.filter((source) => source.warning).map((source) => source.label)
+    },
+    warnings
   };
 }

@@ -182,6 +182,7 @@ export const billingPlans: BillingPlan[] = [
       markets: "코인과 글로벌"
     }
   },
+  // Legacy internal id: bundle_yearly now represents the user-facing All Market Pro 6-month subscription.
   {
     id: "bundle_yearly",
     marketScope: "bundle",

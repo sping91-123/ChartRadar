@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { paidBillingPlans } from "@/lib/billing";
 import { getMacroCalendarPayload } from "@/lib/macroCalendar";
+import { supabaseAdminRest } from "@/lib/server/supabaseAdmin";
 import { getConfiguredSiteUrl } from "@/lib/siteUrl";
 
 export const runtime = "nodejs";
@@ -56,6 +57,41 @@ function scoreLaunchReadiness(checks: Record<string, boolean>) {
   return Object.entries(weights).reduce((score, [key, weight]) => score + (checks[key] ? weight : 0), 0);
 }
 
+async function verifySupabaseAdminRest(enabled: boolean) {
+  if (!enabled) {
+    return {
+      ok: false,
+      status: "missing_env" as const,
+      message: "SUPABASE_SERVICE_ROLE_KEY is not configured."
+    };
+  }
+
+  try {
+    await supabaseAdminRest("profiles?select=id&limit=1");
+    await supabaseAdminRest("subscriptions?id=eq.00000000-0000-0000-0000-000000000000", {
+      method: "PATCH",
+      body: { status: "inactive" }
+    });
+    await supabaseAdminRest("push_tokens?id=eq.00000000-0000-0000-0000-000000000000", {
+      method: "PATCH",
+      body: { last_seen_at: new Date().toISOString() }
+    });
+    await supabaseAdminRest("push_alert_events?select=id&limit=1");
+
+    return {
+      ok: true,
+      status: "verified" as const,
+      message: "Supabase admin REST read/write path is reachable."
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: "failed" as const,
+      message: error instanceof Error ? error.message.slice(0, 240) : "Supabase admin REST verification failed."
+    };
+  }
+}
+
 export async function GET() {
   const macroCalendarPayload = await getMacroCalendarPayload();
   const macroAgeHours = hoursSince(macroCalendarPayload.updatedAt);
@@ -69,14 +105,16 @@ export async function GET() {
   const hasRevenueCatIos = hasValue(process.env.NEXT_PUBLIC_REVENUECAT_IOS_API_KEY);
   const hasRevenueCatRest = hasValue(process.env.REVENUECAT_REST_API_KEY);
   const hasSupabaseAdmin = hasValue(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const supabaseAdminRestCheck = await verifySupabaseAdminRest(hasSupabaseAdmin);
+  const hasVerifiedSupabaseAdmin = supabaseAdminRestCheck.ok;
   const hasSupabaseUrl = hasValue(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const hasSupabaseKey = hasValue(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY);
   const hasSiteUrl = hasValue(getConfiguredSiteUrl());
   const hasAIProvider = hasGroq || hasEnabledGeminiFallback;
   const hasPaymentProvider = hasTossSecret && hasTossClient;
-  const hasAppPaymentProvider = hasRevenueCatRest && hasSupabaseAdmin && (hasRevenueCatAndroid || hasRevenueCatIos);
-  const hasAndroidBillingProvider = hasRevenueCatAndroid && hasRevenueCatRest && hasSupabaseAdmin;
-  const hasIosBillingProvider = hasRevenueCatIos && hasRevenueCatRest && hasSupabaseAdmin;
+  const hasAppPaymentProvider = hasRevenueCatRest && hasVerifiedSupabaseAdmin && (hasRevenueCatAndroid || hasRevenueCatIos);
+  const hasAndroidBillingProvider = hasRevenueCatAndroid && hasRevenueCatRest && hasVerifiedSupabaseAdmin;
+  const hasIosBillingProvider = hasRevenueCatIos && hasRevenueCatRest && hasVerifiedSupabaseAdmin;
   const planPaymentLinks = paidBillingPlans.map((plan) => {
     const directUrl = getDirectPaymentUrl(plan.id);
     const fallbackUrl = getFallbackPaymentUrl(plan.id);
@@ -108,7 +146,7 @@ export async function GET() {
   const hasMultiPlatformPayment = readyForWebCheckout || (readyForAndroidBilling && readyForIosBilling);
   const launchScore = scoreLaunchReadiness({
     supabasePublic: hasSupabaseUrl && hasSupabaseKey,
-    supabaseAdmin: hasSupabaseAdmin,
+    supabaseAdmin: hasVerifiedSupabaseAdmin,
     aiProvider: hasAIProvider,
     siteUrl: hasSiteUrl,
     macroReady,
@@ -151,6 +189,7 @@ export async function GET() {
   ].filter((item): item is { area: string; label: string; env: string; reason: string } => Boolean(item));
   const warnings = [
     hasSupabaseUrl && hasSupabaseKey ? null : "로그인 연결 정보가 아직 준비되지 않았습니다.",
+    hasVerifiedSupabaseAdmin ? null : `Supabase admin REST 검증 실패: ${supabaseAdminRestCheck.message}`,
     hasAIProvider ? null : "AI 제공자가 아직 연결되지 않았습니다. 기본 운영 provider는 Groq입니다.",
     hasGemini && !geminiAiFallbackEnabled ? "Gemini 키가 있어도 ENABLE_GEMINI_AI_FALLBACK=true가 아니면 AI fallback으로 사용하지 않습니다." : null,
     hasSiteUrl ? null : "서비스 공개 URL이 아직 설정되지 않았습니다.",
@@ -196,7 +235,8 @@ export async function GET() {
         androidPublicKey: hasRevenueCatAndroid,
         iosPublicKey: hasRevenueCatIos,
         revenueCatRest: hasRevenueCatRest,
-        supabaseAdmin: hasSupabaseAdmin
+        supabaseAdmin: hasSupabaseAdmin,
+        supabaseAdminRest: supabaseAdminRestCheck
       }
     },
     macroCalendar: {

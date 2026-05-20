@@ -14,6 +14,7 @@ import {
   ReceiptText,
   Settings,
   Sparkles,
+  Trash2,
   type LucideIcon
 } from "lucide-react";
 import { AuthStatus } from "@/components/AuthStatus";
@@ -192,6 +193,13 @@ function MemberManagementSection({
               <LogOut size={14} aria-hidden />
               로그아웃
             </button>
+            <Link
+              href="/account/delete"
+              className="inline-flex min-h-8 w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-transparent px-3 py-2 text-xs font-bold text-slate-500 transition hover:border-rose-300/25 hover:text-slate-300"
+            >
+              <Trash2 size={13} aria-hidden />
+              계정·데이터 삭제 안내
+            </Link>
           </div>
         ) : (
           <div className="grid gap-3">

@@ -27,6 +27,13 @@ interface NormalizedPushPreset {
   saved_at: string;
 }
 
+interface ExistingPushTokenRow {
+  id: string;
+  user_id: string;
+  markets: string[] | null;
+  rule_ids: string[] | null;
+}
+
 function bearerToken(request: Request) {
   const header = request.headers.get("authorization") ?? "";
   const match = header.match(/^Bearer\s+(.+)$/i);
@@ -38,6 +45,17 @@ function normalizeStringList(values: unknown, allowed?: Set<string>) {
   return Array.from(
     new Set(
       values
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.trim())
+        .filter((item) => item && (!allowed || allowed.has(item)))
+    )
+  ).slice(0, 40);
+}
+
+function mergeStringLists(current: string[] | null | undefined, next: string[], allowed?: Set<string>) {
+  return Array.from(
+    new Set(
+      [...(current ?? []), ...next]
         .filter((item): item is string => typeof item === "string")
         .map((item) => item.trim())
         .filter((item) => item && (!allowed || allowed.has(item)))
@@ -105,6 +123,12 @@ export async function POST(request: Request) {
 
   const user = await fetchSupabaseUserOnServer(accessToken);
   const now = new Date().toISOString();
+  const existingRows = await supabaseAdminRest<ExistingPushTokenRow[]>(
+    `push_tokens?select=id,user_id,markets,rule_ids&token=eq.${encodeURIComponent(token)}&user_id=eq.${encodeURIComponent(user.id)}&limit=1`
+  );
+  const existing = existingRows[0] ?? null;
+  const mergedMarkets = mergeStringLists(existing?.markets, markets, new Set(["crypto", "stocks"]));
+  const mergedRuleIds = mergeStringLists(existing?.rule_ids, ruleIds);
 
   const rows = await supabaseAdminRest<Array<{ id: string }>>("push_tokens?on_conflict=token", {
     method: "POST",
@@ -116,8 +140,8 @@ export async function POST(request: Request) {
       provider: "fcm",
       app_id: appId,
       enabled: body.enabled !== false,
-      markets,
-      rule_ids: ruleIds,
+      markets: mergedMarkets,
+      rule_ids: mergedRuleIds,
       last_registered_at: now,
       last_seen_at: now
     }
