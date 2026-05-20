@@ -467,26 +467,26 @@ export function WatchlistPanel() {
       )}
 
       <section className="rounded-lg border border-surface-line bg-surface-card p-4 sm:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
+        <div className="flex flex-col gap-3 min-[420px]:flex-row min-[420px]:items-start min-[420px]:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
               <Radar size={20} aria-hidden />
             </div>
-            <div>
+            <div className="min-w-0">
               <h2 className="text-base font-black text-white">관심 코인 리스크 레이더</h2>
               <p className="mt-0.5 text-xs leading-5 text-slate-500">
                 {watchlist.length}/{limit}개 · 추적 후보 / 관망 / 고위험 확인
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             {scanState.status === "ready" && watchlist.length > 0 && (
               <button
                 type="button"
                 onClick={() => runScan(watchlist)}
-                className="inline-flex min-h-8 items-center gap-1.5 rounded-md border border-surface-line bg-surface-cardSoft px-2.5 text-[11px] font-bold text-slate-200 hover:border-accent-blue/50 hover:text-white disabled:opacity-50"
+                className="inline-flex min-h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-surface-line bg-surface-cardSoft px-2.5 text-[11px] font-bold text-slate-200 hover:border-accent-blue/50 hover:text-white disabled:opacity-50"
               >
-                <RefreshCw size={12} aria-hidden />
+                <RefreshCw size={12} className="shrink-0" aria-hidden />
                 다시 돌리기
               </button>
             )}
@@ -494,10 +494,10 @@ export function WatchlistPanel() {
               type="button"
               onClick={() => setShowModal(true)}
               disabled={watchlist.length >= limit}
-              className="inline-flex min-h-8 items-center gap-1.5 rounded-md border border-accent-blue/30 bg-accent-blue/10 px-3 text-[11px] font-black text-accent-blue transition hover:bg-accent-blue hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex min-h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-accent-blue/30 bg-accent-blue/10 px-2.5 text-[11px] font-black text-accent-blue transition hover:bg-accent-blue hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-40 sm:px-3"
             >
-              <Plus size={13} aria-hidden />
-              코인 추가
+              <Plus size={13} className="shrink-0" aria-hidden />
+              추가
             </button>
           </div>
         </div>
@@ -536,9 +536,9 @@ export function WatchlistPanel() {
               <button
                 type="button"
                 onClick={() => setShowModal(true)}
-                className="mt-4 inline-flex min-h-9 items-center gap-1.5 rounded-md border border-accent-blue/40 bg-accent-blue/15 px-4 text-xs font-black text-accent-blue transition hover:bg-accent-blue hover:text-slate-950"
+                className="mt-4 inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-accent-blue/40 bg-accent-blue/15 px-4 text-xs font-black text-accent-blue transition hover:bg-accent-blue hover:text-slate-950"
               >
-                <Plus size={13} aria-hidden />
+                <Plus size={13} className="shrink-0" aria-hidden />
                 코인 선택하기
               </button>
             </div>
