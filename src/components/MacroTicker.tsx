@@ -2,8 +2,8 @@
 // 자동 매크로 캘린더를 상단 전광판과 뉴스 화면에 표시하는 패널입니다.
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { CalendarClock, ChevronDown, ChevronRight, Clock3, ExternalLink, Radio, TimerReset } from "lucide-react";
-import { type MacroEventImportance, type MacroEventItem, type MacroEventSource } from "@/data/macroEvents";
+import { CalendarClock, ChevronDown, ChevronRight, ExternalLink, Radio } from "lucide-react";
+import { type MacroEventItem, type MacroEventSource } from "@/data/macroEvents";
 import { getMacroCalendarFallbackPayload, type MacroCalendarPayload } from "@/lib/macroCalendar";
 
 const RECENT_RELEASE_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -79,10 +79,33 @@ function compactStateClass(item: MacroEventItem) {
   return "text-accent-blue";
 }
 
-function importanceLabel(importance: MacroEventImportance) {
-  if (importance === 3) return "중요도 높음";
-  if (importance === 2) return "중요도 중간";
-  return "참고";
+function isHighImpactMacro(item: MacroEventItem) {
+  const lower = item.label.toLowerCase();
+  return (
+    item.importance === 3 ||
+    lower.includes("cpi") ||
+    lower.includes("fomc") ||
+    lower.includes("fed") ||
+    lower.includes("rate") ||
+    lower.includes("rates") ||
+    lower.includes("payroll") ||
+    lower.includes("non-farm") ||
+    lower.includes("nonfarm") ||
+    lower.includes("jobless") ||
+    lower.includes("unemployment")
+  );
+}
+
+function importanceLabel(item: MacroEventItem) {
+  if (isHighImpactMacro(item)) return "중요 일정";
+  if (item.importance === 2) return "시장 영향 가능";
+  return "참고 일정";
+}
+
+function importanceClass(item: MacroEventItem) {
+  if (isHighImpactMacro(item)) return "border-signal-warning/35 bg-signal-warning/15 text-signal-warning";
+  if (item.importance === 2) return "border-accent-blue/25 bg-accent-blue/10 text-accent-blue";
+  return "border-white/10 bg-white/5 text-slate-400";
 }
 
 function sourceClass(source: MacroEventSource) {
@@ -125,13 +148,6 @@ function macroLabel(label: string) {
   return label;
 }
 
-function getRefreshLabel(nextRefreshMs?: number) {
-  const refreshMs = nextRefreshMs ?? 10 * 60 * 1000;
-  if (refreshMs <= 60_000) return "1분마다 확인";
-  if (refreshMs <= 3 * 60_000) return "3분마다 확인";
-  return "10분마다 확인";
-}
-
 function getUpcomingItems(items: MacroEventItem[]) {
   const now = Date.now();
   return items
@@ -158,11 +174,20 @@ function ValuePill({ label, value, tone = "default" }: { label: string; value?: 
 }
 
 function MacroItemCard({ item, compact = false }: { item: MacroEventItem; compact?: boolean }) {
+  const highImpact = isHighImpactMacro(item);
   return (
-    <article className={`rounded-md border px-3 py-2.5 ${compact ? "border-white/10 bg-black/25" : "border-signal-success/15 bg-signal-success/5"}`}>
+    <article
+      className={`rounded-md border px-3 py-2.5 ${
+        highImpact
+          ? "border-signal-warning/25 bg-signal-warning/10"
+          : compact
+            ? "border-white/10 bg-black/25"
+            : "border-white/10 bg-black/20"
+      }`}
+    >
       <div className="flex flex-wrap items-center gap-1.5">
         <span className={`rounded border px-1.5 py-0.5 text-[10px] font-black ${stateClass(item)}`}>{stateLabel(item)}</span>
-        <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-black text-slate-300">{importanceLabel(item.importance)}</span>
+        <span className={`rounded border px-1.5 py-0.5 text-[10px] font-black ${importanceClass(item)}`}>{importanceLabel(item)}</span>
         <span className={`rounded border px-1.5 py-0.5 text-[10px] font-black ${sourceClass(item.source)}`}>{sourceLabel(item.source)}</span>
       </div>
       <p className="mt-2 text-xs font-black text-white">{macroLabel(item.label)}</p>
@@ -190,7 +215,6 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
   const nearestUpcoming = upcomingItems[0];
   const laterUpcomingItems = upcomingItems.slice(1, 7);
   const latestRelease = releasedItems[0];
-  const refreshLabel = getRefreshLabel(calendar.nextRefreshMs);
 
   useEffect(() => {
     let cancelled = false;
@@ -253,7 +277,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
             {compactLeadLabel(item)} · <span className={compactStateClass(item)}>{stateLabel(item)}</span> · {macroLabel(item.label)}
           </p>
           <p className="mt-0.5 truncate text-[11px] font-bold text-slate-500">
-            한국시간 {item.dateKst} · {refreshLabel} · 실제 {displayActual(item)} · 예상 {macroValueText(item.forecast)} · 이전 {macroValueText(item.previous)}
+            한국시간 {item.dateKst} · 실제 {displayActual(item)} · 예상 {macroValueText(item.forecast)} · 이전 {macroValueText(item.previous)}
           </p>
         </div>
         <ChevronRight size={14} className="shrink-0 text-slate-600 transition group-hover:text-accent-blue" aria-hidden />
@@ -270,17 +294,15 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
         <div className="min-w-0">
           <p className="text-xs font-black text-white">매크로 레이더</p>
           <p className="truncate text-[11px] font-bold text-slate-500">
-            {calendar.updatedAtLabel} · {refreshLabel}
+            시장 영향 가능성이 큰 일정 우선 표시
           </p>
         </div>
         <div className="ml-auto hidden items-center gap-2 sm:flex">
-          <div className="inline-flex items-center gap-1 rounded border border-signal-success/25 bg-signal-success/10 px-2 py-1 text-[11px] font-black text-signal-success">
-            <TimerReset size={12} aria-hidden />
-            자동 업데이트
+          <div className="inline-flex items-center gap-1 rounded border border-signal-warning/25 bg-signal-warning/10 px-2 py-1 text-[11px] font-black text-signal-warning">
+            중요 일정
           </div>
-          <div className="inline-flex items-center gap-1 rounded border border-accent-blue/20 bg-accent-blue/10 px-2 py-1 text-[11px] font-black text-accent-blue">
-            <Clock3 size={12} aria-hidden />
-            {refreshLabel}
+          <div className="inline-flex items-center gap-1 rounded border border-white/10 bg-white/5 px-2 py-1 text-[11px] font-black text-slate-400">
+            참고 일정
           </div>
         </div>
       </div>
