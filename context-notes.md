@@ -1705,3 +1705,12 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 안내 범위는 코인 레이더의 ICT/기술/거래량 용어, 알트 레이더의 후보 점수와 유동성/추격 리스크, 글로벌 레이더의 지수선물·금리·달러·VIX·섹터·대장주, 매크로/뉴스 중요도, 앱 알림 시그널까지 포함한다.
 - `/learn` 문구에서 smoke copy가 금지하는 `확정 신호` 표현을 제거하고 단독 근거가 아니라는 설명으로 바꿨다.
 - 검증은 `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`을 통과했다. 최초 build는 stale `.next` 캐시로 `PageNotFoundError`가 발생해 `.next`만 삭제한 뒤 재실행했다.
+
+## 2026-05-21 관리자 페이지 보류 판단.
+
+- 1차 비공개 베타 출시 전에는 관리자 페이지 구현을 보류한다.
+- 출시 전 우선순위는 로그인 안정화, 푸시 수신/발송 안정화, 모바일 UX, 최종 AAB 안정화다.
+- 관리자 페이지는 1차 비공개 베타 출시 차단 필수 기능이 아니다.
+- 베타 초반 운영은 Supabase Dashboard, Play Console, Vercel 로그를 사용해 임시 대응한다.
+- 출시 후 관리자 콘솔 MVP가 필요해지면 가입자 목록, 유저 검색, 계정 상태 확인, 수동 권한 부여, 푸시 토큰 확인, 감사 로그 범위로 구현한다.
+- 이번 결정은 코드 구현 없이 문서/메모로만 남기며, 현재 변경사항은 아직 push하지 않는다.
