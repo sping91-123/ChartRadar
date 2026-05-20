@@ -94,7 +94,7 @@ function normalizePreset(item: unknown, fallbackMarket: "crypto" | "stocks"): No
 
 export async function POST(request: Request) {
   if (!isSupabaseAdminConfigured()) {
-    return NextResponse.json({ error: "Supabase 관리자 환경변수가 없어 앱 푸시 토큰을 저장할 수 없습니다." }, { status: 503 });
+    return NextResponse.json({ error: "앱 푸시 알림 설정을 저장할 수 없습니다." }, { status: 503 });
   }
 
   const accessToken = bearerToken(request);
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
   const token = typeof body.token === "string" ? body.token.trim() : "";
   const rawPlatform = typeof body.platform === "string" ? body.platform : "android";
   if (rawPlatform !== "android") {
-    return NextResponse.json({ error: "1차 출시에서는 Android 앱 푸시 토큰만 등록합니다." }, { status: 400 });
+    return NextResponse.json({ error: "현재 앱 푸시 알림만 지원합니다." }, { status: 400 });
   }
   const platform: PushPlatform = "android";
 
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
     : [];
 
   if (token.length < 20 || token.length > 4096) {
-    return NextResponse.json({ error: "앱 푸시 토큰 형식이 올바르지 않습니다." }, { status: 400 });
+    return NextResponse.json({ error: "앱 푸시 알림 연결 정보가 올바르지 않습니다." }, { status: 400 });
   }
 
   const user = await fetchSupabaseUserOnServer(accessToken);
@@ -175,7 +175,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   if (!isSupabaseAdminConfigured()) {
-    return NextResponse.json({ error: "Supabase 관리자 환경변수가 없어 앱 푸시 토큰을 해제할 수 없습니다." }, { status: 503 });
+    return NextResponse.json({ error: "앱 푸시 알림 설정을 해제할 수 없습니다." }, { status: 503 });
   }
 
   const accessToken = bearerToken(request);
@@ -183,10 +183,10 @@ export async function DELETE(request: Request) {
 
   const body = (await request.json().catch(() => ({}))) as PushTokenRequestBody;
   const token = typeof body.token === "string" ? body.token.trim() : "";
-  if (!token) return NextResponse.json({ error: "해제할 앱 푸시 토큰이 없습니다." }, { status: 400 });
+  if (!token) return NextResponse.json({ error: "해제할 앱 푸시 알림 연결 정보가 없습니다." }, { status: 400 });
   const rawPlatform = typeof body.platform === "string" ? body.platform : "android";
   if (rawPlatform !== "android") {
-    return NextResponse.json({ error: "1차 출시에서는 Android 앱 푸시 토큰만 해제합니다." }, { status: 400 });
+    return NextResponse.json({ error: "현재 앱 푸시 알림만 해제할 수 있습니다." }, { status: 400 });
   }
 
   const user = await fetchSupabaseUserOnServer(accessToken);

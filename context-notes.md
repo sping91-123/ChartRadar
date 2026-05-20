@@ -1687,3 +1687,13 @@ The health endpoint now reports a launch readiness score and structured blocking
 - Android ??? RevenueCat `subscriptionOption`?? ??? `basePlanId`? ?? ????, ?? ?? ? `/api/billing/app-store/sync`? `productId`? `basePlanId`? ??? ? ?? Supabase ?? ?? ???? ?????.
 - ?? DB? ?? ??? ??? ?? planId `bundle_yearly`? ?????, ??? ???? Google Play ?? ID? 6?? ?? ???? ???.
 - ??: `git diff --check`, `npx.cmd tsc --noEmit`, `npm.cmd run lint`, `npm.cmd run build`, `npm.cmd run smoke:billing`, `/pro` ?? ??? 390px ??? overflow ??? ????.
+
+## 2026-05-21 앱 푸시 무한 로딩 및 시그널 정리.
+
+- 범위는 앱 푸시와 알림 시그널로 제한한다. 웹 푸시, 결제, 로그인 구조는 건드리지 않는다.
+- 실기기 무한 로딩 의심 지점은 `PushNotifications.register()` 대기 구간이다. 현재 구현은 async Promise executor 안에서 listener 등록과 register를 호출해 예외 또는 이벤트 미수신 시 Promise가 끝나지 않을 수 있다.
+- 사용자 화면에서는 `Firebase`, `FCM`, `푸시 토큰`, `Android 앱 푸시 지원` 같은 구현 용어를 제거하고 `앱 푸시 알림`과 `브라우저 알림`으로 구분한다.
+- 글로벌 알림은 새 웹 푸시 기능을 만들지 않고 기존 Android FCM 서버 스캐너의 글로벌 모멘텀 대상과 발송 문구를 강화한다.
+- `PushNotifications.register()`는 listener 등록 또는 register 호출 실패, registration 이벤트 미수신 상황에서 무한 대기를 막기 위해 15초 타임아웃과 listener 정리를 추가한다.
+- 글로벌 푸시 시그널은 기존 `stock-momentum` 규칙 안에서 QQQ/SPY/NQ/ES, VIX/VIXY, SMH/SOXX/NVDA/AMD, UUP/GLD/TLT를 확인하고 리스크오프 조합과 반도체 주도력 비교 이벤트를 추가한다. `macro-news` 규칙에는 24시간 이내 중요 매크로 일정 리마인더를 추가한다.
+- 검증은 `.next` 캐시 삭제 후 `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`, `npm.cmd run app:android:debug`, `cmd /c npx tsc --noEmit`, `git diff --check`로 통과했다. ADB는 SDK 경로에서 실행됐지만 연결된 기기가 없어 실기기 버튼 클릭과 실제 수신 테스트는 남았다.

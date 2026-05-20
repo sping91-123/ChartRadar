@@ -25,6 +25,7 @@ export interface AppPushPreferences {
 
 const appPushStorageKey = "chartRadar.appPush.device.v1";
 const appPushChangedEvent = "chartRadar:appPushChanged";
+const appPushRegistrationTimeoutMs = 15000;
 export const radarPushChannelId = "radar-alerts";
 let pushListenersRegistered = false;
 
@@ -121,10 +122,62 @@ async function loadPushNotifications() {
   return pushNotificationsModule.PushNotifications;
 }
 
+type PushNotificationsPlugin = NonNullable<Awaited<ReturnType<typeof loadPushNotifications>>>;
+
+async function waitForPushRegistration(PushNotifications: PushNotificationsPlugin) {
+  return new Promise<string>((resolve, reject) => {
+    let settled = false;
+    let registrationHandle: { remove: () => Promise<void> } | null = null;
+    let errorHandle: { remove: () => Promise<void> } | null = null;
+    const timeoutHandle = setTimeout(() => {
+      finish(() => reject(new Error("앱 알림 연결 응답이 지연되고 있습니다. 앱을 다시 실행한 뒤 다시 시도해주세요.")));
+    }, appPushRegistrationTimeoutMs);
+
+    function cleanup() {
+      clearTimeout(timeoutHandle);
+      void registrationHandle?.remove();
+      void errorHandle?.remove();
+    }
+
+    function finish(callback: () => void) {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      callback();
+    }
+
+    void (async () => {
+      try {
+        registrationHandle = await PushNotifications.addListener("registration", (registration) => {
+          const value = typeof registration.value === "string" ? registration.value.trim() : "";
+          finish(() => {
+            if (value) resolve(value);
+            else reject(new Error("앱 알림 연결 정보를 받지 못했습니다. 다시 시도해주세요."));
+          });
+        });
+        if (settled) {
+          void registrationHandle.remove();
+          return;
+        }
+        errorHandle = await PushNotifications.addListener("registrationError", (error) => {
+          finish(() => reject(new Error(error.error || "앱 푸시 알림 연결에 실패했습니다.")));
+        });
+        if (settled) {
+          void errorHandle.remove();
+          return;
+        }
+        await PushNotifications.register();
+      } catch (error) {
+        finish(() => reject(error instanceof Error ? error : new Error("앱 푸시 알림 연결에 실패했습니다.")));
+      }
+    })();
+  });
+}
+
 async function syncTokenToServer(token: string, preferences: AppPushPreferences) {
   const session = await getActiveSupabaseSession();
   if (!session?.accessToken) {
-    return { synced: false, error: "로그인 후 앱 푸시 토큰을 서버에 연결할 수 있습니다." };
+    return { synced: false, error: "로그인 후 앱 푸시 알림을 계정에 연결할 수 있습니다." };
   }
 
   const response = await fetch("/api/push-tokens", {
@@ -146,7 +199,7 @@ async function syncTokenToServer(token: string, preferences: AppPushPreferences)
 
   if (!response.ok) {
     const payload = (await response.json().catch(() => ({}))) as { error?: string };
-    return { synced: false, error: payload.error ?? "앱 푸시 토큰 저장에 실패했습니다." };
+    return { synced: false, error: payload.error ?? "앱 푸시 알림 연결에 실패했습니다." };
   }
 
   return { synced: true, error: null };
@@ -174,7 +227,7 @@ export async function registerAndroidAppPush(preferences: AppPushPreferences) {
     return writeAppPushState({
       ...emptyAppPushState(),
       permission: "unsupported",
-      lastError: "Android 앱 환경에서만 앱 푸시를 등록할 수 있습니다."
+      lastError: "앱에서만 푸시 알림을 켤 수 있습니다."
     });
   }
 
@@ -191,29 +244,13 @@ export async function registerAndroidAppPush(preferences: AppPushPreferences) {
         platform: "android",
         permission: permission.receive,
         synced: false,
-        lastError: "앱 푸시 권한이 허용되지 않았습니다.",
+        lastError: "알림 권한이 거부되었습니다. 휴대폰 설정에서 알림을 허용해주세요.",
         updatedAt: new Date().toISOString()
       });
     }
 
     await ensureRadarPushChannel();
-
-    const token = await new Promise<string>(async (resolve, reject) => {
-      let registrationHandle: { remove: () => Promise<void> } | null = null;
-      let errorHandle: { remove: () => Promise<void> } | null = null;
-
-      registrationHandle = await PushNotifications.addListener("registration", (registration) => {
-        void registrationHandle?.remove();
-        void errorHandle?.remove();
-        resolve(registration.value);
-      });
-      errorHandle = await PushNotifications.addListener("registrationError", (error) => {
-        void registrationHandle?.remove();
-        void errorHandle?.remove();
-        reject(new Error(error.error));
-      });
-      await PushNotifications.register();
-    });
+    const token = await waitForPushRegistration(PushNotifications);
 
     const syncResult = await syncTokenToServer(token, preferences);
     return writeAppPushState({
@@ -257,7 +294,7 @@ export async function disableAndroidAppPush() {
     return writeAppPushState({
       ...emptyAppPushState(),
       permission: "unsupported",
-      lastError: "Android 앱 환경에서만 앱 푸시를 해제할 수 있습니다."
+      lastError: "앱에서만 푸시 알림을 끌 수 있습니다."
     });
   }
 
@@ -265,7 +302,7 @@ export async function disableAndroidAppPush() {
   if (!state.token) return state;
 
   const session = await getActiveSupabaseSession();
-  if (!session?.accessToken) throw new Error("로그인 후 앱 푸시 토큰을 해제할 수 있습니다.");
+  if (!session?.accessToken) throw new Error("로그인 후 앱 푸시 알림을 해제할 수 있습니다.");
 
   const response = await fetch("/api/push-tokens", {
     method: "DELETE",
@@ -280,7 +317,7 @@ export async function disableAndroidAppPush() {
   });
 
   const payload = (await response.json().catch(() => ({}))) as { error?: string };
-  if (!response.ok) throw new Error(payload.error ?? "앱 푸시 토큰 해제에 실패했습니다.");
+  if (!response.ok) throw new Error(payload.error ?? "앱 푸시 알림 해제에 실패했습니다.");
 
   const PushNotifications = await loadPushNotifications();
   await PushNotifications?.unregister();
@@ -295,10 +332,10 @@ export async function disableAndroidAppPush() {
 }
 
 export async function sendAndroidAppPushTest() {
-  if (!isAndroidNativeApp()) throw new Error("Android 앱에서만 테스트 앱 푸시를 보낼 수 있습니다.");
+  if (!isAndroidNativeApp()) throw new Error("앱에서만 테스트 알림을 보낼 수 있습니다.");
 
   const session = await getActiveSupabaseSession();
-  if (!session?.accessToken) throw new Error("로그인 후 테스트 푸시를 보낼 수 있습니다.");
+  if (!session?.accessToken) throw new Error("로그인 후 테스트 알림을 보낼 수 있습니다.");
 
   const response = await fetch("/api/push-test", {
     method: "POST",
@@ -309,7 +346,7 @@ export async function sendAndroidAppPushTest() {
   });
 
   const payload = (await response.json().catch(() => ({}))) as { error?: string };
-  if (!response.ok) throw new Error(payload.error ?? "테스트 푸시 발송에 실패했습니다.");
+  if (!response.ok) throw new Error(payload.error ?? "테스트 알림 발송에 실패했습니다.");
   return payload;
 }
 

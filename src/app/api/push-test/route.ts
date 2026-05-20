@@ -16,10 +16,10 @@ function bearerToken(request: Request) {
 
 export async function POST(request: Request) {
   if (!isSupabaseAdminConfigured()) {
-    return NextResponse.json({ error: "Supabase 관리자 환경변수가 없어 앱 푸시 토큰을 조회할 수 없습니다." }, { status: 503 });
+    return NextResponse.json({ error: "앱 푸시 알림 설정을 조회할 수 없습니다." }, { status: 503 });
   }
   if (!isFirebaseMessagingConfigured()) {
-    return NextResponse.json({ error: "Firebase 서비스 계정 환경변수가 없어 테스트 푸시를 보낼 수 없습니다." }, { status: 503 });
+    return NextResponse.json({ error: "앱 푸시 알림 발송 설정이 완료되지 않았습니다." }, { status: 503 });
   }
 
   const accessToken = bearerToken(request);
@@ -31,15 +31,15 @@ export async function POST(request: Request) {
   );
 
   if (tokens.length === 0) {
-    return NextResponse.json({ error: "등록된 Android 앱 푸시 토큰이 없습니다." }, { status: 404 });
+    return NextResponse.json({ error: "등록된 앱 푸시 알림 연결이 없습니다." }, { status: 404 });
   }
 
   const results = await Promise.allSettled(
     tokens.map((item) =>
       sendFcmMessage({
         token: item.token,
-        title: "Chart Radar 앱 푸시 테스트",
-        body: "Android 앱 푸시 연결이 정상적으로 등록되었습니다.",
+        title: "Chart Radar 테스트 알림",
+        body: "앱 푸시 알림이 정상적으로 연결되었습니다.",
         data: {
           type: "push_test",
           target: "/alerts"

@@ -62,10 +62,10 @@ export const radarAlertRules: RadarAlertRule[] = [
     id: "macro-news",
     category: "news",
     tier: "free",
-    title: "뉴스와 매크로 브리핑",
-    shortTitle: "뉴스 브리핑",
-    description: "시장에 영향을 줄 수 있는 뉴스와 미국 주요 발표 일정을 요약합니다.",
-    trigger: "주요 뉴스 묶음이 갱신되거나 매크로 이벤트 상태가 바뀝니다.",
+    title: "뉴스와 시장 이벤트 리마인더",
+    shortTitle: "이벤트 리마인더",
+    description: "시장에 영향을 줄 수 있는 뉴스와 CPI, FOMC, 고용 등 주요 이벤트를 요약합니다.",
+    trigger: "주요 뉴스 묶음이 갱신되거나 시장 이벤트 리스크가 커집니다.",
     cadence: "하루 여러 번 확인",
     value: "차트만 보다가 놓치기 쉬운 변동성 이벤트를 먼저 확인하게 해줍니다.",
     defaultEnabled: true
@@ -76,10 +76,10 @@ export const radarAlertRules: RadarAlertRule[] = [
     tier: "pro",
     title: "글로벌 모멘텀 전환",
     shortTitle: "글로벌 모멘텀",
-    description: "미국주식, ETF, 해외선물의 추세와 모멘텀 전환을 알려줍니다.",
-    trigger: "주요 종목의 기술 점수 급등, 섹터 강도 변화, 지수·원자재 흐름 변화가 감지됩니다.",
+    description: "지수, 변동성, 반도체 주도력, 방어 자산 흐름 변화를 알려줍니다.",
+    trigger: "QQQ/SPY/NQ/ES 흐름 전환, VIX 급등·완화, NVDA/SMH 주도력 변화, 리스크오프 조합이 감지됩니다.",
     cadence: "미장 정규장 중심 확인",
-    value: "여러 글로벌 자산군을 따로 새로고침하지 않아도 한 화면에서 감시할 수 있습니다.",
+    value: "지수만 보는 것보다 변동성, 반도체, 달러·금 흐름까지 묶어서 시장 분위기를 확인할 수 있습니다.",
     defaultEnabled: true
   }
 ];
