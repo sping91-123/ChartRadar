@@ -1697,3 +1697,11 @@ The health endpoint now reports a launch readiness score and structured blocking
 - `PushNotifications.register()`는 listener 등록 또는 register 호출 실패, registration 이벤트 미수신 상황에서 무한 대기를 막기 위해 15초 타임아웃과 listener 정리를 추가한다.
 - 글로벌 푸시 시그널은 기존 `stock-momentum` 규칙 안에서 QQQ/SPY/NQ/ES, VIX/VIXY, SMH/SOXX/NVDA/AMD, UUP/GLD/TLT를 확인하고 리스크오프 조합과 반도체 주도력 비교 이벤트를 추가한다. `macro-news` 규칙에는 24시간 이내 중요 매크로 일정 리마인더를 추가한다.
 - 검증은 `.next` 캐시 삭제 후 `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`, `npm.cmd run app:android:debug`, `cmd /c npx tsc --noEmit`, `git diff --check`로 통과했다. ADB는 SDK 경로에서 실행됐지만 연결된 기기가 없어 실기기 버튼 클릭과 실제 수신 테스트는 남았다.
+
+## 2026-05-21 설정 지표 안내 정리.
+
+- 범위는 설정 메뉴의 `/learn` 지표 안내와 해당 메뉴 설명 문구로 제한한다. 실제 레이더 계산, 점수 산식, 알림 스캐너 조건은 변경하지 않는다.
+- 실기기 피드백은 사용자가 지표와 판단 강도 의미를 이해하기 어렵다는 점이다. 따라서 용어 정의는 짧게 쓰고, 모든 설명은 투자 권유가 아니라 판단 보조 지표라는 톤으로 맞춘다.
+- 안내 범위는 코인 레이더의 ICT/기술/거래량 용어, 알트 레이더의 후보 점수와 유동성/추격 리스크, 글로벌 레이더의 지수선물·금리·달러·VIX·섹터·대장주, 매크로/뉴스 중요도, 앱 알림 시그널까지 포함한다.
+- `/learn` 문구에서 smoke copy가 금지하는 `확정 신호` 표현을 제거하고 단독 근거가 아니라는 설명으로 바꿨다.
+- 검증은 `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`을 통과했다. 최초 build는 stale `.next` 캐시로 `PageNotFoundError`가 발생해 `.next`만 삭제한 뒤 재실행했다.
