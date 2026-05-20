@@ -23,8 +23,13 @@ export interface SupabaseSession {
 export interface SupabaseUser {
   id: string;
   email?: string;
+  created_at?: string;
+  last_sign_in_at?: string;
+  email_confirmed_at?: string;
   app_metadata?: {
     plan?: BillingEntitlementPlan | string;
+    provider?: string;
+    providers?: string[];
     role?: string;
     market_scope?: string;
     [key: string]: unknown;
