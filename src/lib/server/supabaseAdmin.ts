@@ -52,3 +52,46 @@ export async function supabaseAdminRest<T>(
   if (response.status === 204) return null as T;
   return (await response.json()) as T;
 }
+
+export async function supabaseAdminAuth<T>(
+  path: string,
+  options: {
+    method?: "GET" | "POST" | "PUT" | "DELETE";
+    body?: unknown;
+  } = {}
+) {
+  if (!isSupabaseAdminConfigured()) throw new Error("Supabase service role key가 설정되지 않았습니다.");
+
+  const response = await fetch(`${supabaseUrl}/auth/v1/${path}`, {
+    method: options.method ?? "GET",
+    headers: {
+      apikey: supabaseServiceRoleKey,
+      Authorization: `Bearer ${supabaseServiceRoleKey}`,
+      "Content-Type": "application/json"
+    },
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || "Supabase Auth 관리자 요청에 실패했습니다.");
+  }
+
+  if (response.status === 204) return null as T;
+  return (await response.json()) as T;
+}
+
+export async function listSupabaseAuthUsers(limit = 500) {
+  const perPage = 100;
+  const users: SupabaseUser[] = [];
+
+  for (let page = 1; users.length < limit; page += 1) {
+    const payload = await supabaseAdminAuth<{ users?: SupabaseUser[] }>(`admin/users?page=${page}&per_page=${perPage}`);
+    const nextUsers = payload.users ?? [];
+    users.push(...nextUsers);
+    if (nextUsers.length < perPage) break;
+  }
+
+  return users.slice(0, limit);
+}

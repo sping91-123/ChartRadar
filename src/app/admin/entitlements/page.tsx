@@ -19,8 +19,8 @@ interface AdminMember {
   email: string | null;
   displayName: string | null;
   profilePlan: string | null;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string | null;
+  updatedAt: string | null;
   activePlan: string | null;
   activeMarketScope: string | null;
   activeStatus: string | null;

@@ -1,10 +1,11 @@
 // 관리자 전용으로 테스터 Pro 권한을 수동 부여하는 API입니다.
 import { NextResponse } from "next/server";
 import { findBillingPlan, getMarketScopeForPlan, type BillingPlanId } from "@/lib/billing";
-import { fetchSupabaseUserOnServer, supabaseAdminRest } from "@/lib/server/supabaseAdmin";
+import { fetchSupabaseUserOnServer, listSupabaseAuthUsers, supabaseAdminRest } from "@/lib/server/supabaseAdmin";
+import type { SupabaseUser } from "@/lib/supabase";
 
 const grantablePlanIds = new Set<BillingPlanId>(["crypto_monthly", "stocks_monthly", "bundle_monthly"]);
-const memberListLimit = 100;
+const memberListLimit = 500;
 
 interface AdminProfileRow {
   id: string;
@@ -38,6 +39,20 @@ function isAdminUser(user: Awaited<ReturnType<typeof fetchSupabaseUserOnServer>>
   return user.app_metadata?.role === "admin" || user.app_metadata?.plan === "admin";
 }
 
+function getUserDisplayName(user: SupabaseUser) {
+  return (
+    user.user_metadata?.name ??
+    user.user_metadata?.full_name ??
+    user.user_metadata?.nickname ??
+    user.user_metadata?.preferred_username ??
+    null
+  );
+}
+
+function getUserAvatarUrl(user: SupabaseUser) {
+  return user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null;
+}
+
 async function requireAdmin(request: Request) {
   const authorization = request.headers.get("authorization") ?? "";
   const token = authorization.replace(/^Bearer\s+/i, "").trim();
@@ -64,13 +79,17 @@ export async function GET(request: Request) {
 
     const url = new URL(request.url);
     const query = url.searchParams.get("q")?.trim().toLowerCase() ?? "";
-    const profiles = await supabaseAdminRest<AdminProfileRow[]>(
-      `profiles?select=id,email,display_name,plan,created_at,updated_at&order=updated_at.desc.nullslast&limit=${memberListLimit}`
-    );
+    const [authUsers, profiles] = await Promise.all([
+      listSupabaseAuthUsers(memberListLimit),
+      supabaseAdminRest<AdminProfileRow[]>(
+        `profiles?select=id,email,display_name,plan,created_at,updated_at&order=updated_at.desc&limit=${memberListLimit}`
+      )
+    ]);
     const now = encodeURIComponent(new Date().toISOString());
     const subscriptions = await supabaseAdminRest<AdminSubscriptionRow[]>(
       `subscriptions?select=user_id,plan,market_scope,status,current_period_end,updated_at&status=in.(active,trialing)&current_period_end=gt.${now}&order=current_period_end.desc&limit=1000`
     );
+    const profilesById = new Map(profiles.map((profile) => [profile.id, profile]));
     const activeByUser = new Map<string, AdminSubscriptionRow>();
     for (const subscription of subscriptions) {
       if (!activeByUser.has(subscription.user_id)) {
@@ -78,26 +97,30 @@ export async function GET(request: Request) {
       }
     }
 
-    const members = profiles
-      .filter((profile) => {
-        if (!query) return true;
-        return profile.email?.toLowerCase().includes(query) || profile.display_name?.toLowerCase().includes(query);
-      })
-      .map((profile) => {
-        const activeSubscription = activeByUser.get(profile.id);
+    const members = authUsers
+      .map((user) => {
+        const profile = profilesById.get(user.id) ?? null;
+        const email = user.email ?? profile?.email ?? null;
+        const displayName = profile?.display_name ?? getUserDisplayName(user);
+        const activeSubscription = activeByUser.get(user.id);
         return {
-          id: profile.id,
-          email: profile.email,
-          displayName: profile.display_name,
-          profilePlan: profile.plan,
-          createdAt: profile.created_at,
-          updatedAt: profile.updated_at,
+          id: user.id,
+          email,
+          displayName,
+          profilePlan: profile?.plan ?? (typeof user.app_metadata?.plan === "string" ? user.app_metadata.plan : null),
+          createdAt: user.created_at ?? profile?.created_at ?? null,
+          updatedAt: profile?.updated_at ?? user.last_sign_in_at ?? user.created_at ?? null,
           activePlan: activeSubscription?.plan ?? null,
           activeMarketScope: activeSubscription?.market_scope ?? null,
           activeStatus: activeSubscription?.status ?? null,
           activeUntil: activeSubscription?.current_period_end ?? null
         };
-      });
+      })
+      .filter((member) => {
+        if (!query) return true;
+        return member.email?.toLowerCase().includes(query) || member.displayName?.toLowerCase().includes(query);
+      })
+      .sort((left, right) => new Date(right.updatedAt ?? 0).getTime() - new Date(left.updatedAt ?? 0).getTime());
 
     return NextResponse.json({ members });
   } catch (error) {
@@ -132,11 +155,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "부여할 Pro 권한을 선택해 주세요." }, { status: 400 });
     }
 
-    const profiles = await supabaseAdminRest<Array<{ id: string; email: string | null }>>(
-      `profiles?select=id,email&email=ilike.${encodeURIComponent(email)}&limit=1`
-    );
-    const target = profiles[0];
-    if (!target?.id) {
+    const authUsers = await listSupabaseAuthUsers(memberListLimit);
+    const target = authUsers.find((user) => user.email?.toLowerCase() === email);
+    if (!target) {
       return NextResponse.json({ error: "해당 이메일의 가입 계정을 찾지 못했습니다. 테스터가 먼저 한 번 로그인해야 합니다." }, { status: 404 });
     }
 
@@ -172,9 +193,16 @@ export async function POST(request: Request) {
       });
     }
 
-    await supabaseAdminRest(`profiles?id=eq.${encodeURIComponent(target.id)}`, {
-      method: "PATCH",
-      body: { plan: plan.id }
+    await supabaseAdminRest("profiles", {
+      method: "POST",
+      prefer: "resolution=merge-duplicates",
+      body: {
+        id: target.id,
+        email: target.email ?? email,
+        display_name: getUserDisplayName(target),
+        avatar_url: getUserAvatarUrl(target),
+        plan: plan.id
+      }
     });
 
     return NextResponse.json({
