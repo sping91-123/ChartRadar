@@ -319,7 +319,16 @@ expectIncludes(files.usageMeterPanel, "id === \"stockRadar\"", "글로벌 사용
 expectIncludes(files.supabaseClient, "supabaseAuthRefreshEvent", "권한 갱신 이벤트 상수", "src/lib/supabase.ts");
 expectIncludes(files.supabaseAuthHook, "fetchSupabaseActiveSubscriptions", "브라우저 권한 활성 구독 조회", "src/lib/useSupabaseAuth.ts");
 expectIncludes(files.supabaseAuthHook, "resolveCombinedBillingEntitlementPlan", "브라우저 권한 활성 플랜 합산 판정", "src/lib/useSupabaseAuth.ts");
-expectIncludes(files.supabaseAuthHook, "window.addEventListener(supabaseAuthRefreshEvent, refreshAuth)", "권한 갱신 이벤트 수신", "src/lib/useSupabaseAuth.ts");
+if (
+  files.supabaseAuthHook.includes("window.addEventListener(supabaseAuthRefreshEvent, refreshAuth)") ||
+  (files.supabaseAuthHook.includes("const handleRefreshEvent = () => refreshAuth()") &&
+    files.supabaseAuthHook.includes("window.addEventListener(supabaseAuthRefreshEvent, handleRefreshEvent)") &&
+    files.supabaseAuthHook.includes("window.removeEventListener(supabaseAuthRefreshEvent, handleRefreshEvent)"))
+) {
+  pass("권한 갱신 이벤트 수신", "src/lib/useSupabaseAuth.ts가 결제 성공 권한 갱신 이벤트를 수신합니다.");
+} else {
+  fail("권한 갱신 이벤트 수신", "src/lib/useSupabaseAuth.ts에서 권한 갱신 이벤트 수신과 정리 흐름을 찾지 못했습니다.");
+}
 expectIncludes(files.checkoutConfirmationPanel, "window.dispatchEvent(new Event(supabaseAuthRefreshEvent))", "결제 성공 후 권한 재조회", "src/components/CheckoutConfirmationPanel.tsx");
 
 const cryptoAmount = /id:\s*"crypto_monthly"[\s\S]*?billingAmount:\s*(\d+)/.exec(files.billing)?.[1];
