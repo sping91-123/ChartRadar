@@ -1,7 +1,12 @@
 // 관리자 전용으로 테스터 Pro 권한을 수동 부여하는 API입니다.
 import { NextResponse } from "next/server";
 import { findBillingPlan, getMarketScopeForPlan, type BillingPlanId } from "@/lib/billing";
-import { fetchSupabaseUserOnServer, listSupabaseAuthUsers, supabaseAdminRest } from "@/lib/server/supabaseAdmin";
+import {
+  fetchSupabaseUserOnServer,
+  getSupabaseRestTableColumns,
+  listSupabaseAuthUsers,
+  supabaseAdminRest
+} from "@/lib/server/supabaseAdmin";
 import type { SupabaseUser } from "@/lib/supabase";
 
 const grantablePlanIds = new Set<BillingPlanId>(["crypto_monthly", "stocks_monthly", "bundle_monthly"]);
@@ -9,20 +14,27 @@ const memberListLimit = 500;
 
 interface AdminProfileRow {
   id: string;
-  email: string | null;
-  display_name: string | null;
-  plan: string | null;
-  created_at: string;
-  updated_at: string;
+  email?: string | null;
+  display_name?: string | null;
+  avatar_url?: string | null;
+  plan?: string | null;
+  membership_tier?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 interface AdminSubscriptionRow {
+  id?: string;
   user_id: string;
-  plan: string | null;
-  market_scope: string | null;
-  status: string | null;
-  current_period_end: string | null;
-  updated_at: string;
+  plan?: string | null;
+  tier?: string | null;
+  market_scope?: string | null;
+  status?: string | null;
+  provider?: string | null;
+  provider_subscription_id?: string | null;
+  provider_order_id?: string | null;
+  current_period_end?: string | null;
+  updated_at?: string | null;
 }
 
 function normalizeEmail(value: unknown) {
@@ -53,6 +65,25 @@ function getUserAvatarUrl(user: SupabaseUser) {
   return user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null;
 }
 
+function getProfilePlan(profile: AdminProfileRow | null) {
+  return profile?.plan ?? profile?.membership_tier ?? null;
+}
+
+function getSubscriptionPlan(subscription: AdminSubscriptionRow | undefined) {
+  return subscription?.plan ?? subscription?.tier ?? null;
+}
+
+function getSubscriptionMarketScope(subscription: AdminSubscriptionRow | undefined) {
+  const plan = getSubscriptionPlan(subscription);
+  if (subscription?.market_scope) return subscription.market_scope;
+  const billingPlan = findBillingPlan(plan);
+  return billingPlan ? getMarketScopeForPlan(billingPlan.id) : null;
+}
+
+function pickSchemaBody(columns: Set<string>, body: Record<string, unknown>) {
+  return Object.fromEntries(Object.entries(body).filter(([key, value]) => columns.has(key) && value !== undefined));
+}
+
 async function requireAdmin(request: Request) {
   const authorization = request.headers.get("authorization") ?? "";
   const token = authorization.replace(/^Bearer\s+/i, "").trim();
@@ -81,13 +112,11 @@ export async function GET(request: Request) {
     const query = url.searchParams.get("q")?.trim().toLowerCase() ?? "";
     const [authUsers, profiles] = await Promise.all([
       listSupabaseAuthUsers(memberListLimit),
-      supabaseAdminRest<AdminProfileRow[]>(
-        `profiles?select=id,email,display_name,plan,created_at,updated_at&order=updated_at.desc&limit=${memberListLimit}`
-      )
+      supabaseAdminRest<AdminProfileRow[]>(`profiles?select=*&limit=${memberListLimit}`)
     ]);
     const now = encodeURIComponent(new Date().toISOString());
     const subscriptions = await supabaseAdminRest<AdminSubscriptionRow[]>(
-      `subscriptions?select=user_id,plan,market_scope,status,current_period_end,updated_at&status=in.(active,trialing)&current_period_end=gt.${now}&order=current_period_end.desc&limit=1000`
+      `subscriptions?select=*&status=in.(active,trialing)&current_period_end=gt.${now}&order=current_period_end.desc&limit=1000`
     );
     const profilesById = new Map(profiles.map((profile) => [profile.id, profile]));
     const activeByUser = new Map<string, AdminSubscriptionRow>();
@@ -97,25 +126,56 @@ export async function GET(request: Request) {
       }
     }
 
-    const members = authUsers
-      .map((user) => {
+    const memberMap = new Map<string, {
+      id: string;
+      email: string | null;
+      displayName: string | null;
+      profilePlan: string | null;
+      createdAt: string | null;
+      updatedAt: string | null;
+      activePlan: string | null;
+      activeMarketScope: string | null;
+      activeStatus: string | null;
+      activeUntil: string | null;
+    }>();
+
+    for (const user of authUsers) {
         const profile = profilesById.get(user.id) ?? null;
         const email = user.email ?? profile?.email ?? null;
         const displayName = profile?.display_name ?? getUserDisplayName(user);
         const activeSubscription = activeByUser.get(user.id);
-        return {
+        memberMap.set(user.id, {
           id: user.id,
           email,
           displayName,
-          profilePlan: profile?.plan ?? (typeof user.app_metadata?.plan === "string" ? user.app_metadata.plan : null),
+          profilePlan: getProfilePlan(profile) ?? (typeof user.app_metadata?.plan === "string" ? user.app_metadata.plan : null),
           createdAt: user.created_at ?? profile?.created_at ?? null,
-          updatedAt: profile?.updated_at ?? user.last_sign_in_at ?? user.created_at ?? null,
-          activePlan: activeSubscription?.plan ?? null,
-          activeMarketScope: activeSubscription?.market_scope ?? null,
+          updatedAt: profile?.updated_at ?? profile?.created_at ?? user.last_sign_in_at ?? user.created_at ?? null,
+          activePlan: getSubscriptionPlan(activeSubscription),
+          activeMarketScope: getSubscriptionMarketScope(activeSubscription),
           activeStatus: activeSubscription?.status ?? null,
           activeUntil: activeSubscription?.current_period_end ?? null
-        };
-      })
+        });
+    }
+
+    for (const profile of profiles) {
+      if (memberMap.has(profile.id)) continue;
+      const activeSubscription = activeByUser.get(profile.id);
+      memberMap.set(profile.id, {
+        id: profile.id,
+        email: profile.email ?? null,
+        displayName: profile.display_name ?? null,
+        profilePlan: getProfilePlan(profile),
+        createdAt: profile.created_at ?? null,
+        updatedAt: profile.updated_at ?? profile.created_at ?? null,
+        activePlan: getSubscriptionPlan(activeSubscription),
+        activeMarketScope: getSubscriptionMarketScope(activeSubscription),
+        activeStatus: activeSubscription?.status ?? null,
+        activeUntil: activeSubscription?.current_period_end ?? null
+      });
+    }
+
+    const members = Array.from(memberMap.values())
       .filter((member) => {
         if (!query) return true;
         return member.email?.toLowerCase().includes(query) || member.displayName?.toLowerCase().includes(query);
@@ -165,21 +225,35 @@ export async function POST(request: Request) {
     const periodEnd = new Date(now);
     periodEnd.setDate(periodEnd.getDate() + durationDays);
     const providerOrderId = `manual_tester_${target.id}_${plan.id}`;
-    const subscriptionBody = {
+    const [profileColumns, subscriptionColumns] = await Promise.all([
+      getSupabaseRestTableColumns("profiles"),
+      getSupabaseRestTableColumns("subscriptions")
+    ]);
+    const subscriptionBody = pickSchemaBody(subscriptionColumns, {
       user_id: target.id,
       provider: "manual",
       status: "active",
       plan: plan.id,
+      tier: plan.id,
       market_scope: getMarketScopeForPlan(plan.id),
       current_period_start: now.toISOString(),
       current_period_end: periodEnd.toISOString(),
       provider_subscription_id: "manual_tester",
       provider_order_id: providerOrderId
-    };
+    });
 
-    const existing = await supabaseAdminRest<Array<{ id: string }>>(
-      `subscriptions?select=id&provider=eq.manual&provider_order_id=eq.${encodeURIComponent(providerOrderId)}&limit=1`
-    );
+    const existingSubscriptionPath = subscriptionColumns.has("provider_order_id")
+      ? `subscriptions?select=id&provider=eq.manual&provider_order_id=eq.${encodeURIComponent(providerOrderId)}&limit=1`
+      : [
+          `subscriptions?select=id`,
+          `user_id=eq.${encodeURIComponent(target.id)}`,
+          subscriptionColumns.has("provider") ? "provider=eq.manual" : "",
+          subscriptionColumns.has("provider_subscription_id") ? "provider_subscription_id=eq.manual_tester" : "",
+          "limit=1"
+        ]
+          .filter(Boolean)
+          .join("&");
+    const existing = await supabaseAdminRest<Array<{ id: string }>>(existingSubscriptionPath);
 
     if (existing[0]?.id) {
       await supabaseAdminRest(`subscriptions?id=eq.${encodeURIComponent(existing[0].id)}`, {
@@ -193,16 +267,19 @@ export async function POST(request: Request) {
       });
     }
 
+    const profileBody = pickSchemaBody(profileColumns, {
+      id: target.id,
+      email: target.email ?? email,
+      display_name: getUserDisplayName(target),
+      avatar_url: getUserAvatarUrl(target),
+      plan: plan.id,
+      membership_tier: "premium",
+      updated_at: now.toISOString()
+    });
     await supabaseAdminRest("profiles", {
       method: "POST",
       prefer: "resolution=merge-duplicates",
-      body: {
-        id: target.id,
-        email: target.email ?? email,
-        display_name: getUserDisplayName(target),
-        avatar_url: getUserAvatarUrl(target),
-        plan: plan.id
-      }
+      body: profileBody
     });
 
     return NextResponse.json({

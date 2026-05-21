@@ -2,6 +2,7 @@
 import { supabasePublishableKey, supabaseUrl, type SupabaseUser } from "@/lib/supabase";
 
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+const restTableColumnsCache = new Map<string, Set<string>>();
 
 export function isSupabaseAdminConfigured() {
   return Boolean(supabaseUrl && supabaseServiceRoleKey);
@@ -80,6 +81,34 @@ export async function supabaseAdminAuth<T>(
 
   if (response.status === 204) return null as T;
   return (await response.json()) as T;
+}
+
+export async function getSupabaseRestTableColumns(table: string) {
+  const cached = restTableColumnsCache.get(table);
+  if (cached) return cached;
+  if (!isSupabaseAdminConfigured()) throw new Error("Supabase service role key媛 ?ㅼ젙?섏? ?딆븯?듬땲??");
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/`, {
+    headers: {
+      apikey: supabaseServiceRoleKey,
+      Authorization: `Bearer ${supabaseServiceRoleKey}`
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || "Supabase REST ?ㅽ궎留덈? 遺덈윭?ㅼ? 紐삵뻽?듬땲??");
+  }
+
+  const payload = (await response.json()) as {
+    definitions?: Record<string, { properties?: Record<string, unknown> }>;
+    components?: { schemas?: Record<string, { properties?: Record<string, unknown> }> };
+  };
+  const properties = payload.definitions?.[table]?.properties ?? payload.components?.schemas?.[table]?.properties ?? {};
+  const columns = new Set(Object.keys(properties));
+  restTableColumnsCache.set(table, columns);
+  return columns;
 }
 
 export async function listSupabaseAuthUsers(limit = 500) {

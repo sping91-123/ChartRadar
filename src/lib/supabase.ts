@@ -70,6 +70,23 @@ export interface SupabaseSubscription {
   updated_at: string;
 }
 
+type SupabaseProfileRow = Omit<SupabaseProfile, "plan" | "updated_at"> & {
+  email?: string | null;
+  plan?: BillingEntitlementPlan;
+  membership_tier?: BillingEntitlementPlan;
+  updated_at?: string | null;
+};
+
+type SupabaseSubscriptionRow = Omit<SupabaseSubscription, "plan" | "market_scope" | "updated_at"> & {
+  plan?: BillingEntitlementPlan;
+  tier?: BillingEntitlementPlan;
+  market_scope?: SupabaseSubscription["market_scope"];
+  current_period_start?: string | null;
+  provider_customer_id?: string | null;
+  provider_order_id?: string | null;
+  updated_at?: string | null;
+};
+
 export function isSupabaseConfigured() {
   return Boolean(supabaseUrl && supabasePublishableKey);
 }
@@ -263,12 +280,24 @@ export async function fetchSupabaseUser(accessToken: string) {
 
 export async function fetchSupabaseProfile(accessToken: string) {
   const user = await fetchSupabaseUser(accessToken);
-  const rows = await supabaseRest<SupabaseProfile[]>(
+  const rows = await supabaseRest<SupabaseProfileRow[]>(
     `profiles?select=*&id=eq.${encodeURIComponent(user.id)}&limit=1`,
     { accessToken }
   );
 
-  return rows[0] ?? null;
+  const profile = rows[0];
+  if (!profile) return null;
+
+  const now = new Date().toISOString();
+  return {
+    id: profile.id,
+    email: profile.email ?? user.email ?? null,
+    display_name: profile.display_name ?? null,
+    avatar_url: profile.avatar_url ?? null,
+    plan: profile.plan ?? profile.membership_tier ?? "free",
+    created_at: profile.created_at ?? now,
+    updated_at: profile.updated_at ?? profile.created_at ?? now
+  } satisfies SupabaseProfile;
 }
 
 export async function fetchSupabaseActiveSubscriptions(accessToken: string, userId?: string) {
@@ -277,10 +306,26 @@ export async function fetchSupabaseActiveSubscriptions(accessToken: string, user
   if (!resolvedUserId) return [];
 
   const now = encodeURIComponent(new Date().toISOString());
-  return supabaseRest<SupabaseSubscription[]>(
+  const rows = await supabaseRest<SupabaseSubscriptionRow[]>(
     `subscriptions?select=*&user_id=eq.${encodeURIComponent(resolvedUserId)}&status=in.(active,trialing)&current_period_end=gt.${now}&order=current_period_end.desc`,
     { accessToken }
   );
+
+  return rows.map((subscription) => ({
+    id: subscription.id,
+    user_id: subscription.user_id,
+    provider: subscription.provider ?? null,
+    status: subscription.status ?? null,
+    plan: subscription.plan ?? subscription.tier ?? "free",
+    market_scope: subscription.market_scope ?? null,
+    current_period_start: subscription.current_period_start ?? null,
+    current_period_end: subscription.current_period_end ?? null,
+    provider_customer_id: subscription.provider_customer_id ?? null,
+    provider_subscription_id: subscription.provider_subscription_id ?? null,
+    provider_order_id: subscription.provider_order_id ?? null,
+    created_at: subscription.created_at,
+    updated_at: subscription.updated_at ?? subscription.created_at
+  }));
 }
 
 export async function supabaseRest<T>(
