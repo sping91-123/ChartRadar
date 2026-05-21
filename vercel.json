@@ -6,12 +6,19 @@
     },
     "src/app/api/push-cron/route.ts": {
       "regions": ["icn1"]
+    },
+    "src/app/api/macro-sync/route.ts": {
+      "regions": ["icn1"]
     }
   },
   "crons": [
     {
       "path": "/api/push-cron",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/macro-sync",
+      "schedule": "*/10 * * * *"
     }
   ]
 }

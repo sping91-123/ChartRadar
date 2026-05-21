@@ -1725,3 +1725,15 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 데이터가 부족하면 없는 데이터를 꾸미지 않고 `확인 필요` 또는 기본 체크리스트 fallback으로 표시한다.
 - 360px과 340px 폭에서 `/global` 탭, 결론 카드, 시장 온도계, TOP 3, 관계성 체크, 자산 앵커, 일정/복기 경로를 확인했고 가로 오버플로우는 없었다.
 - 검증은 `git diff --check`, `npx.cmd tsc --noEmit`, `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`을 통과했다.
+
+## 2026-05-21 공식 소스 기반 매크로 일정 상태 모델.
+
+- 현재 `main`은 `origin/main`과 동일한 `e9fcb58`에서 시작한다. 이전 글로벌 UX 변경은 이미 원격 main에 반영된 상태로 보인다.
+- 기존 매크로 일정은 `/api/macro-calendar`가 `getMacroCalendarPayload()`를 반환하고, `macroCalendar.ts`가 ForexFactory 공개 JSON과 BLS CPI/PPI 실제값 보강을 합쳐 `MacroEventItem` 배열을 만든다.
+- 문제의 핵심은 모든 이벤트를 숫자형 actual 중심으로 해석하는 구조다. FOMC 성명서, 의사록, 기자회견, 연준 발언은 실제값이 없으므로 문서 공개나 회의 종료 상태가 별도 모델이어야 한다.
+- 이번 구현은 새 외부 API 상품을 붙이지 않고, 공식 URL과 공개 API 구조를 어댑터로 분리한다. BLS는 실제값 보강을 유지하고, Fed/BEA/Census/DOL은 없는 값을 만들지 않고 공식 상태와 출처 신뢰도를 개선하는 방향으로 제한한다.
+- `/api/macro-sync`는 `CRON_SECRET` 보호와 정규화 결과 확인을 우선 구현한다. Supabase 저장은 마이그레이션 설계까지 반영하되, 운영 테이블 적용 전에는 `/api/macro-calendar`의 기존 fetch fallback이 계속 동작해야 한다.
+- 구현 결과 `/api/macro-calendar`는 저장 캐시를 먼저 읽고, 없거나 오래됐거나 테이블이 없으면 기존 공개 캘린더 + 공식 소스 fallback으로 내려간다.
+- `/api/macro-sync`는 로컬에 `CRON_SECRET`이 없으면 개발 편의를 위해 실행되고, 운영에서는 Bearer secret을 요구한다. 현재 로컬 Supabase에는 `macro_events` 테이블이 아직 적용되지 않아 `checked` 상태와 `macro_events 테이블 적용이 필요합니다.` 메시지를 반환한다.
+- 2026-05-21 확인 시 ForexFactory는 정상 응답했고 첫 항목 `FOMC Meeting Minutes`가 `document_release`와 `의사록 공개 완료`로 표시됐다. BLS 공개 API는 일일 한도 초과 응답을 반환해 CPI/PPI 실제값은 이번 실행에서 비어 있었지만, 화면은 공식 발표 확인/예비 일정 fallback으로 유지된다.
+- `npm.cmd run smoke:all`은 매크로/운영/모바일 단계는 통과했지만 기존 `smoke:billing`의 `권한 갱신 이벤트 수신` 정적 검사에서 실패했다. 이번 작업 범위가 로그인/결제 금지라 해당 코드는 수정하지 않는다.

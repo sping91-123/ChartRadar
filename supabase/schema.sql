@@ -149,6 +149,68 @@ create table if not exists public.push_alert_events (
 create unique index if not exists push_alert_events_user_event_idx
 on public.push_alert_events(user_id, event_key);
 
+create table if not exists public.macro_events (
+  id uuid primary key default gen_random_uuid(),
+  source text not null,
+  source_event_id text not null,
+  event_type text not null check (event_type in ('numeric_release', 'document_release', 'meeting_event', 'speech_event', 'calendar_event')),
+  title text not null,
+  country text not null default 'US',
+  category text not null default 'macro',
+  importance integer not null default 1 check (importance in (1, 2, 3)),
+  scheduled_at timestamptz not null,
+  released_at timestamptz,
+  status text not null check (
+    status in (
+      'scheduled',
+      'imminent',
+      'in_progress',
+      'checking',
+      'released',
+      'document_released',
+      'meeting_completed',
+      'official_check_needed',
+      'delayed',
+      'stale',
+      'past'
+    )
+  ),
+  status_label text not null,
+  actual_value text,
+  consensus_value text,
+  previous_value text,
+  unit text,
+  source_url text,
+  official_url text,
+  confidence numeric,
+  stale_reason text,
+  raw_payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (source, source_event_id)
+);
+
+create index if not exists macro_events_scheduled_at_idx
+on public.macro_events(scheduled_at);
+
+create index if not exists macro_events_status_idx
+on public.macro_events(status, scheduled_at);
+
+create table if not exists public.macro_sync_runs (
+  id uuid primary key default gen_random_uuid(),
+  source text not null,
+  started_at timestamptz not null,
+  finished_at timestamptz,
+  status text not null,
+  fetched_count integer not null default 0,
+  updated_count integer not null default 0,
+  error text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists macro_sync_runs_started_at_idx
+on public.macro_sync_runs(started_at desc);
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -182,6 +244,11 @@ for each row execute function public.set_updated_at();
 drop trigger if exists set_push_alert_presets_updated_at on public.push_alert_presets;
 create trigger set_push_alert_presets_updated_at
 before update on public.push_alert_presets
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_macro_events_updated_at on public.macro_events;
+create trigger set_macro_events_updated_at
+before update on public.macro_events
 for each row execute function public.set_updated_at();
 
 create or replace function public.handle_new_user()
@@ -219,6 +286,8 @@ alter table public.subscriptions enable row level security;
 alter table public.push_tokens enable row level security;
 alter table public.push_alert_presets enable row level security;
 alter table public.push_alert_events enable row level security;
+alter table public.macro_events enable row level security;
+alter table public.macro_sync_runs enable row level security;
 
 drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own"

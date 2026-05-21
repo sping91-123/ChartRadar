@@ -1,27 +1,50 @@
 // 자동 매크로 캘린더가 실패했을 때 보여줄 예비 경제 일정입니다.
+import { type MacroEventStatus, type MacroEventType, type MacroSourceType } from "@/lib/macro/types";
+
 export type MacroEventState = "upcoming" | "released" | "watch";
 export type MacroEventImportance = 1 | 2 | 3;
 export type MacroEventSource = "BLS" | "BEA" | "Fed" | "Census" | "DOL" | "NAR" | "ForexFactory" | "Official";
 
 export type MacroEventItem = {
+  id?: string;
   label: string;
+  title?: string;
+  country?: string;
+  category?: string;
   releaseAt: string;
   dateKst: string;
   state: MacroEventState;
   importance: MacroEventImportance;
+  eventType?: MacroEventType;
+  status?: MacroEventStatus;
+  statusLabel?: string;
+  scheduledAt?: string;
+  releasedAt?: string;
   actual?: string;
   forecast?: string;
   previous?: string;
+  actualValue?: string;
+  consensusValue?: string;
+  previousValue?: string;
+  unit?: string;
   summary: string;
   marketImpact: string;
   source: MacroEventSource;
+  sourceType?: MacroSourceType;
   sourceUrl: string;
+  officialUrl?: string;
+  confidence?: number;
+  staleReason?: string;
+  nextRefreshMs?: number;
+  isOfficial?: boolean;
+  isDocumentEvent?: boolean;
+  isNumericEvent?: boolean;
 };
 
-export const macroCalendarUpdatedAt = "2026년 5월 15일 예비 일정 갱신";
-export const macroCalendarUpdatedAtIso = "2026-05-18T06:56:00.000Z";
+export const macroCalendarUpdatedAt = "2026년 5월 21일 예비 일정 갱신";
+export const macroCalendarUpdatedAtIso = "2026-05-21T00:00:00.000Z";
 export const macroCalendarSourceNote =
-  "공개 경제 캘린더와 공식 통계 데이터를 우선 확인합니다. 자동 확인이 막히면 예비 일정으로 보여주고, 다음 주기에 다시 갱신을 시도합니다.";
+  "공개 경제 캘린더와 공식 통계 데이터를 우선 확인합니다. 문서형 이벤트는 실제값 대신 공식 문서 공개 상태로 표시하고, 자동 확인이 막히면 예비 일정으로 보여줍니다.";
 
 export const macroItems: MacroEventItem[] = [
   {

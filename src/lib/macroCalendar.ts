@@ -7,6 +7,13 @@ import {
   type MacroEventImportance,
   type MacroEventItem
 } from "@/data/macroEvents";
+import { normalizeMacroEvents } from "@/lib/macro/normalizeMacroEvent";
+import { getBeaOfficialEnrichments } from "@/lib/macro/sourceAdapters/bea";
+import { fetchBlsOfficialActuals } from "@/lib/macro/sourceAdapters/bls";
+import { getCensusOfficialEnrichments } from "@/lib/macro/sourceAdapters/census";
+import { getDolOfficialEnrichments } from "@/lib/macro/sourceAdapters/dol";
+import { fetchFedOfficialEnrichments } from "@/lib/macro/sourceAdapters/fed";
+import { type MacroSourceEnrichment } from "@/lib/macro/types";
 
 export type MacroCalendarSource = "forex-factory" | "official-bls" | "automatic-mixed";
 
@@ -32,40 +39,9 @@ type ForexFactoryEvent = {
   actual?: string;
 };
 
-type BlsPoint = {
-  year: string;
-  period: string;
-  value: string;
-};
-
-type BlsSeries = {
-  seriesID: string;
-  data?: BlsPoint[];
-};
-
-type BlsApiResponse = {
-  status?: string;
-  Results?: {
-    series?: BlsSeries[];
-  };
-};
-
-type OfficialActual = {
-  matcher: RegExp;
-  actual: string;
-  sourceUrl: string;
-};
-
 const FOREX_FACTORY_THIS_WEEK = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
-const BLS_PUBLIC_API_URL = "https://api.bls.gov/publicAPI/v2/timeseries/data/";
 const KST_TIME_ZONE = "Asia/Seoul";
 const RECENT_RELEASE_MS = 24 * 60 * 60 * 1000;
-const BLS_SERIES = {
-  cpi: "CUSR0000SA0",
-  coreCpi: "CUSR0000SA0L1E",
-  ppi: "WPSFD4",
-  corePpi: "WPSFD49116"
-} as const;
 
 const IMPORTANT_USD_EVENTS = [
   /cpi/i,
@@ -150,7 +126,8 @@ function importanceFromImpact(impact?: string): MacroEventImportance {
 
 function sourceFromTitle(title: string): MacroEventItem["source"] {
   if (/jobless|unemployment claims/i.test(title)) return "DOL";
-  if (/existing home sales|new home sales/i.test(title)) return "NAR";
+  if (/new home sales/i.test(title)) return "Census";
+  if (/existing home sales/i.test(title)) return "NAR";
   if (/retail|durable goods/i.test(title)) return "Census";
   if (/fomc|fed|powell/i.test(title)) return "Fed";
   if (/gdp|pce/i.test(title)) return "BEA";
@@ -161,7 +138,8 @@ function sourceFromTitle(title: string): MacroEventItem["source"] {
 function sourceUrlFromTitle(title: string) {
   if (/jobless|unemployment claims/i.test(title)) return "https://oui.doleta.gov/unemploy/claims.asp";
   if (/retail/i.test(title)) return "https://www.census.gov/retail";
-  if (/existing home sales|new home sales/i.test(title)) return "https://www.nar.realtor/research-and-statistics";
+  if (/new home sales/i.test(title)) return "https://www.census.gov/construction/nrs/";
+  if (/existing home sales/i.test(title)) return "https://www.nar.realtor/research-and-statistics";
   if (/fomc|fed|powell/i.test(title)) return "https://www.federalreserve.gov/monetarypolicy.htm";
   if (/gdp|pce/i.test(title)) return "https://www.bea.gov/news/schedule";
   if (/cpi/i.test(title)) return "https://www.bls.gov/cpi/";
@@ -217,6 +195,11 @@ function sortItems(items: MacroEventItem[]) {
 }
 
 function getRefreshMs(items: MacroEventItem[]) {
+  const itemRefreshMs = items
+    .map((item) => item.nextRefreshMs)
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value) && value > 0);
+  if (itemRefreshMs.length > 0) return Math.max(60 * 1000, Math.min(...itemRefreshMs));
+
   const now = Date.now();
   const nearest = items
     .map((item) => Date.parse(item.releaseAt))
@@ -260,107 +243,24 @@ function toMacroItem(event: ForexFactoryEvent): MacroEventItem | null {
   };
 }
 
-function sortBlsPoints(data: BlsPoint[] = []) {
-  return data
-    .filter((point) => /^M\d{2}$/.test(point.period) && Number.isFinite(Number(point.value)))
-    .sort((a, b) => {
-      const yearDiff = Number(b.year) - Number(a.year);
-      if (yearDiff !== 0) return yearDiff;
-      return Number(b.period.replace("M", "")) - Number(a.period.replace("M", ""));
-    });
-}
+async function getOfficialEnrichments(items: MacroEventItem[]) {
+  const [blsEnrichments, fedEnrichments] = await Promise.all([
+    fetchBlsOfficialActuals().catch(() => [] as MacroSourceEnrichment[]),
+    fetchFedOfficialEnrichments(items).catch(() => [] as MacroSourceEnrichment[])
+  ]);
 
-function findYearAgoPoint(points: BlsPoint[], latest: BlsPoint) {
-  return points.find((point) => point.year === String(Number(latest.year) - 1) && point.period === latest.period);
-}
-
-function pctChange(current: BlsPoint, base?: BlsPoint) {
-  const currentValue = Number(current.value);
-  const baseValue = Number(base?.value);
-  if (!Number.isFinite(currentValue) || !Number.isFinite(baseValue) || baseValue === 0) return null;
-  return ((currentValue - baseValue) / baseValue) * 100;
-}
-
-function formatPercent(value: number | null) {
-  if (value === null) return "확인 중";
-  return `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
-}
-
-function buildBlsLine(points?: BlsPoint[]) {
-  if (!points || points.length < 2) return null;
-  const latest = points[0];
-  return {
-    latest,
-    mom: pctChange(latest, points[1]),
-    yoy: pctChange(latest, findYearAgoPoint(points, latest))
-  };
-}
-
-export async function fetchOfficialBlsCalendar(): Promise<OfficialActual[]> {
-  const now = new Date();
-  const response = await fetch(BLS_PUBLIC_API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({
-      seriesid: Object.values(BLS_SERIES),
-      startyear: String(now.getUTCFullYear() - 1),
-      endyear: String(now.getUTCFullYear())
-    }),
-    cache: "no-store"
-  });
-
-  if (!response.ok) return [];
-  const payload = (await response.json()) as BlsApiResponse;
-  if (payload.status !== "REQUEST_SUCCEEDED") return [];
-
-  const map = new Map((payload.Results?.series ?? []).map((series) => [series.seriesID, sortBlsPoints(series.data)]));
-  const cpi = buildBlsLine(map.get(BLS_SERIES.cpi));
-  const coreCpi = buildBlsLine(map.get(BLS_SERIES.coreCpi));
-  const ppi = buildBlsLine(map.get(BLS_SERIES.ppi));
-  const corePpi = buildBlsLine(map.get(BLS_SERIES.corePpi));
-  const actuals: OfficialActual[] = [];
-
-  if (cpi && coreCpi) {
-    actuals.push({
-      matcher: /cpi/i,
-      actual: `CPI ${formatPercent(cpi.mom)} 전월비 / ${formatPercent(cpi.yoy)} 전년비, 근원 ${formatPercent(coreCpi.mom)} 전월비 / ${formatPercent(coreCpi.yoy)} 전년비`,
-      sourceUrl: "https://www.bls.gov/cpi/"
-    });
-  }
-
-  if (ppi && corePpi) {
-    actuals.push({
-      matcher: /ppi/i,
-      actual: `PPI ${formatPercent(ppi.mom)} 전월비 / ${formatPercent(ppi.yoy)} 전년비, 근원 ${formatPercent(corePpi.mom)} 전월비 / ${formatPercent(corePpi.yoy)} 전년비`,
-      sourceUrl: "https://www.bls.gov/ppi/"
-    });
-  }
-
-  return actuals;
-}
-
-export function mergeOfficialInflationActuals(items: MacroEventItem[], actuals: OfficialActual[]) {
-  return items.map((item) => {
-    const actual = actuals.find((candidate) => candidate.matcher.test(item.label));
-    if (!actual || Date.parse(item.releaseAt) > Date.now()) return item;
-    return {
-      ...item,
-      state: "released" as const,
-      actual: actual.actual,
-      sourceUrl: actual.sourceUrl,
-      summary: `${item.label}의 최신 공식 통계값을 확인했습니다. 예상치와 실제 발표값 차이를 시장 반응과 함께 확인하세요.`
-    };
-  });
+  return [
+    ...blsEnrichments,
+    ...fedEnrichments,
+    ...getBeaOfficialEnrichments(),
+    ...getCensusOfficialEnrichments(),
+    ...getDolOfficialEnrichments()
+  ];
 }
 
 export function getFallbackPayload(warning: string): MacroCalendarPayload {
   const updatedAt = macroCalendarUpdatedAtIso || new Date().toISOString();
-  const items = sortItems(
-    macroItems.map((item) => ({
-      ...item,
-      state: eventState(item.releaseAt)
-    }))
-  );
+  const items = sortItems(normalizeMacroEvents(macroItems.map((item) => ({ ...item, state: eventState(item.releaseAt) }))));
 
   return {
     updatedAt,
@@ -380,30 +280,29 @@ export async function getMacroCalendarPayload(): Promise<MacroCalendarPayload> {
   if (cachedPayload && cachedPayload.expiresAt > now) return cachedPayload.payload;
 
   try {
-    const [events, actuals] = await Promise.all([fetchForexFactoryEvents(), fetchOfficialBlsCalendar().catch(() => [])]);
-    const items = mergeOfficialInflationActuals(
-      events
-        .filter(isImportantUsdEvent)
-        .map(toMacroItem)
-        .filter((item): item is MacroEventItem => Boolean(item))
-        .filter((item) => {
-          const time = Date.parse(item.releaseAt);
-          return time >= now || now - time <= RECENT_RELEASE_MS;
-        }),
-      actuals
-    );
+    const events = await fetchForexFactoryEvents();
+    const baseItems = events
+      .filter(isImportantUsdEvent)
+      .map(toMacroItem)
+      .filter((item): item is MacroEventItem => Boolean(item))
+      .filter((item) => {
+        const time = Date.parse(item.releaseAt);
+        return time >= now || now - time <= RECENT_RELEASE_MS;
+      });
+    const enrichments = await getOfficialEnrichments(baseItems);
+    const items = normalizeMacroEvents(baseItems, enrichments, now);
     const sorted = sortItems(items).slice(0, 18);
     const updatedAt = new Date().toISOString();
     const payload: MacroCalendarPayload = {
       updatedAt,
       updatedAtLabel: `${formatKstDateTime(updatedAt)} 자동 갱신`,
-      source: actuals.length ? "automatic-mixed" : "forex-factory",
-      sourceLabel: actuals.length ? "공개 캘린더 + 공식 통계" : "공개 경제 캘린더",
-      sourceNote: "일정과 예상치는 공개 경제 캘린더에서 자동 확인하고, CPI/PPI 실제값은 BLS 공식 통계로 보강합니다.",
+      source: enrichments.length ? "automatic-mixed" : "forex-factory",
+      sourceLabel: enrichments.length ? "공개 캘린더 + 공식 발표 확인" : "공개 경제 캘린더",
+      sourceNote: "일정은 공개 캘린더로 자동 확인하고, 숫자형 지표는 가능한 공식 통계로 보강합니다. 문서형 이벤트는 실제값 대신 공식 문서 공개 상태로 표시합니다.",
       isAutomatic: true,
       nextRefreshMs: getRefreshMs(sorted),
       items: sorted.length ? sorted : getFallbackPayload("공개 캘린더가 비어 있어 예비 일정을 표시합니다.").items,
-      warning: actuals.length ? undefined : "일부 실제값은 공식 발표 반영까지 지연될 수 있습니다."
+      warning: enrichments.length ? undefined : "일부 공식 발표 확인이 지연될 수 있습니다."
     };
 
     cachedPayload = { payload, expiresAt: now + payload.nextRefreshMs };

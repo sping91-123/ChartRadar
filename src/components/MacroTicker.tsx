@@ -7,10 +7,24 @@ import { type MacroEventItem, type MacroEventSource } from "@/data/macroEvents";
 import { getMacroCalendarFallbackPayload, type MacroCalendarPayload } from "@/lib/macroCalendar";
 
 const RECENT_RELEASE_WINDOW_MS = 24 * 60 * 60 * 1000;
-const EMPTY_ACTUAL_VALUES = new Set(["", "발표 전", "결과 확인 중", "미정", "-"]);
+const EMPTY_ACTUAL_VALUES = new Set([
+  "",
+  "발표 전",
+  "결과 확인 중",
+  "결과 확인중",
+  "공식 발표 확인 중",
+  "공식값 확인 중",
+  "공식 발표 확인 필요",
+  "공식 문서 확인 필요",
+  "공식 자료 확인 필요",
+  "미정",
+  "-"
+]);
 const fallbackCalendar = getMacroCalendarFallbackPayload();
 
 function hasActualValue(item: MacroEventItem) {
+  if (item.isDocumentEvent || item.eventType === "document_release" || item.eventType === "meeting_event" || item.eventType === "speech_event") return false;
+  if (item.isNumericEvent === false) return false;
   return Boolean(item.actual && !EMPTY_ACTUAL_VALUES.has(item.actual.trim()));
 }
 
@@ -45,8 +59,11 @@ function macroValueText(value?: string) {
 }
 
 function displayActual(item: MacroEventItem) {
+  if (item.isDocumentEvent || item.eventType === "document_release" || item.eventType === "meeting_event" || item.eventType === "speech_event") {
+    return item.statusLabel ?? (hasReleaseTimePassed(item) ? "공식 자료 확인 필요" : "예정");
+  }
   if (hasActualValue(item)) return macroValueText(item.actual);
-  if (hasReleaseTimePassed(item)) return "공식값 확인 중";
+  if (hasReleaseTimePassed(item)) return item.statusLabel ?? "공식 발표 확인 중";
   return "발표 전";
 }
 
@@ -61,6 +78,7 @@ function getTimeLabel(releaseAt: string) {
 }
 
 function stateLabel(item: MacroEventItem) {
+  if (item.statusLabel) return item.statusLabel;
   if (isRecentlyReleased(item)) return hasActualValue(item) ? "결과 반영" : "결과 확인 중";
   if (item.state === "released") return "발표 완료";
   if (item.state === "watch") return "관찰";
@@ -68,12 +86,19 @@ function stateLabel(item: MacroEventItem) {
 }
 
 function stateClass(item: MacroEventItem) {
-  if (isRecentlyReleased(item) || item.state === "released") return "border-signal-success/25 bg-signal-success/10 text-signal-success";
-  if (item.state === "watch") return "border-signal-warning/25 bg-signal-warning/10 text-signal-warning";
+  if (item.status === "released" || item.status === "document_released" || item.status === "meeting_completed" || item.state === "released") {
+    return "border-signal-success/25 bg-signal-success/10 text-signal-success";
+  }
+  if (item.status === "checking" || item.status === "official_check_needed" || item.status === "delayed" || item.status === "stale" || item.state === "watch") {
+    return "border-signal-warning/25 bg-signal-warning/10 text-signal-warning";
+  }
+  if (isRecentlyReleased(item)) return "border-signal-success/25 bg-signal-success/10 text-signal-success";
   return "border-accent-blue/25 bg-accent-blue/10 text-accent-blue";
 }
 
 function compactStateClass(item: MacroEventItem) {
+  if (item.status === "released" || item.status === "document_released" || item.status === "meeting_completed") return "text-signal-success";
+  if (item.status === "checking" || item.status === "official_check_needed" || item.status === "delayed" || item.status === "stale") return "text-signal-warning";
   if (isRecentlyReleased(item) || item.state === "released") return "text-signal-success";
   if (item.state === "watch") return "text-signal-warning";
   return "text-accent-blue";
@@ -118,11 +143,11 @@ function sourceClass(source: MacroEventSource) {
 }
 
 function sourceLabel(source: MacroEventSource) {
-  if (source === "BLS") return "미 노동통계국";
-  if (source === "BEA") return "미 경제분석국";
-  if (source === "Fed") return "연준";
-  if (source === "Census") return "미 인구조사국";
-  if (source === "DOL") return "미 노동부";
+  if (source === "BLS") return "BLS 공식 통계";
+  if (source === "BEA") return "BEA";
+  if (source === "Fed") return "Federal Reserve";
+  if (source === "Census") return "Census";
+  if (source === "DOL") return "DOL";
   if (source === "NAR") return "미 부동산협회";
   if (source === "ForexFactory") return "공개 캘린더";
   return "공식 출처";
@@ -175,6 +200,7 @@ function ValuePill({ label, value, tone = "default" }: { label: string; value?: 
 
 function MacroItemCard({ item, compact = false }: { item: MacroEventItem; compact?: boolean }) {
   const highImpact = isHighImpactMacro(item);
+  const primaryValueLabel = item.isDocumentEvent || item.eventType === "document_release" || item.eventType === "meeting_event" || item.eventType === "speech_event" ? "상태" : "실제";
   return (
     <article
       className={`rounded-md border px-3 py-2.5 ${
@@ -193,7 +219,7 @@ function MacroItemCard({ item, compact = false }: { item: MacroEventItem; compac
       <p className="mt-2 text-xs font-black text-white">{macroLabel(item.label)}</p>
       <p className="mt-1 text-[11px] font-bold text-slate-400">한국시간 {item.dateKst}</p>
       <div className="mt-2 grid grid-cols-3 gap-1 text-[10px] font-bold">
-        <ValuePill label="실제" value={displayActual(item)} tone={!hasActualValue(item) && hasReleaseTimePassed(item) ? "pending" : "default"} />
+        <ValuePill label={primaryValueLabel} value={displayActual(item)} tone={!hasActualValue(item) && hasReleaseTimePassed(item) ? "pending" : "default"} />
         <ValuePill label="예상" value={macroValueText(item.forecast)} />
         <ValuePill label="이전" value={macroValueText(item.previous)} />
       </div>
@@ -256,6 +282,8 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
     }
 
     const isTodayCheck = isRecentlyReleased(item) || isWithinNextDay(item);
+    const primaryValueLabel =
+      item.isDocumentEvent || item.eventType === "document_release" || item.eventType === "meeting_event" || item.eventType === "speech_event" ? "상태" : "실제";
 
     return (
       <Link
@@ -277,7 +305,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
             {compactLeadLabel(item)} · <span className={compactStateClass(item)}>{stateLabel(item)}</span> · {macroLabel(item.label)}
           </p>
           <p className="mt-0.5 truncate text-[11px] font-bold text-slate-500">
-            한국시간 {item.dateKst} · 실제 {displayActual(item)} · 예상 {macroValueText(item.forecast)} · 이전 {macroValueText(item.previous)}
+            한국시간 {item.dateKst} · {primaryValueLabel} {displayActual(item)} · 예상 {macroValueText(item.forecast)} · 이전 {macroValueText(item.previous)}
           </p>
         </div>
         <ChevronRight size={14} className="shrink-0 text-slate-600 transition group-hover:text-accent-blue" aria-hidden />
@@ -294,7 +322,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
         <div className="min-w-0">
           <p className="text-xs font-black text-white">매크로 레이더</p>
           <p className="truncate text-[11px] font-bold text-slate-500">
-            시장 영향 가능성이 큰 일정 우선 표시
+            공식 발표 전후 자동 확인
           </p>
         </div>
         <div className="ml-auto hidden items-center gap-2 sm:flex">

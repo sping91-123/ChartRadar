@@ -21,7 +21,7 @@ export default function NewsPage({ searchParams }: { searchParams?: { market?: s
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-accent-blue">매크로 일정</p>
                 <h2 className="mt-1 text-lg font-black text-white">이번 주 주요 매크로 일정</h2>
                 <p className="mt-1 text-sm leading-6 text-slate-500 [word-break:keep-all]">
-                  AI 브리핑을 먼저 확인한 뒤, 금리·물가·고용처럼 시장 변동성을 키울 수 있는 일정을 함께 점검하세요.
+                  AI 브리핑을 먼저 확인한 뒤, 금리·물가·고용처럼 시장 변동성을 키울 수 있는 일정과 공식 발표 상태를 함께 점검하세요.
                 </p>
               </div>
               <div className="mt-3">
