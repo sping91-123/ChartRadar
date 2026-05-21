@@ -233,6 +233,7 @@ export async function POST(request: Request) {
     const periodEnd = new Date(now);
     periodEnd.setDate(periodEnd.getDate() + durationDays);
     const providerOrderId = `manual_tester_${target.id}_${plan.id}`;
+    const targetIsAdmin = isAdminUser(target);
     const [profileColumns, subscriptionColumns] = await Promise.all([
       getSupabaseRestTableColumns("profiles"),
       getSupabaseRestTableColumns("subscriptions")
@@ -242,7 +243,7 @@ export async function POST(request: Request) {
       email: (target.email ?? email) || undefined,
       display_name: getUserDisplayName(target),
       avatar_url: getUserAvatarUrl(target),
-      plan: plan.id,
+      plan: targetIsAdmin ? "admin" : plan.id,
       membership_tier: "premium",
       updated_at: now.toISOString()
     });

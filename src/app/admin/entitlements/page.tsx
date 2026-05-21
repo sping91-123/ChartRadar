@@ -65,7 +65,7 @@ export default function AdminEntitlementsPage() {
   const isAdmin = isAdminAccount(profile?.plan, user?.app_metadata?.role ?? user?.app_metadata?.plan);
 
   const loadMembers = useCallback(async (query: string) => {
-    if (!session?.accessToken || !isAdmin) return;
+    if (!session?.accessToken) return;
     setIsLoadingMembers(true);
     setMemberError("");
 
@@ -85,13 +85,13 @@ export default function AdminEntitlementsPage() {
     } finally {
       setIsLoadingMembers(false);
     }
-  }, [isAdmin, session?.accessToken]);
+  }, [session?.accessToken]);
 
   useEffect(() => {
-    if (session?.accessToken && isAdmin) {
+    if (session?.accessToken) {
       void loadMembers("");
     }
-  }, [isAdmin, loadMembers, session?.accessToken]);
+  }, [loadMembers, session?.accessToken]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -177,7 +177,7 @@ export default function AdminEntitlementsPage() {
                 로그인하기
               </Link>
             </div>
-          ) : !isAdmin ? (
+          ) : !isAdmin && memberError ? (
             <div className="mt-6 rounded-xl border border-rose-300/25 bg-rose-300/10 p-4 text-sm leading-6 text-rose-100">
               현재 계정은 관리자 권한이 없어 테스터 Pro 권한을 부여할 수 없습니다.
             </div>
