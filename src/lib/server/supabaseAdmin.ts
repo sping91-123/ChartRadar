@@ -8,6 +8,12 @@ export function isSupabaseAdminConfigured() {
   return Boolean(supabaseUrl && supabaseServiceRoleKey);
 }
 
+async function readJsonOrNull<T>(response: Response) {
+  const text = await response.text();
+  if (!text.trim()) return null as T;
+  return JSON.parse(text) as T;
+}
+
 export async function fetchSupabaseUserOnServer(accessToken: string) {
   if (!supabaseUrl || !supabasePublishableKey) throw new Error("Supabase 환경변수가 설정되지 않았습니다.");
 
@@ -20,7 +26,9 @@ export async function fetchSupabaseUserOnServer(accessToken: string) {
   });
 
   if (!response.ok) throw new Error("로그인 정보를 확인하지 못했습니다.");
-  return (await response.json()) as SupabaseUser;
+  const user = await readJsonOrNull<SupabaseUser>(response);
+  if (!user) throw new Error("濡쒓렇???뺣낫瑜??뺤씤?섏? 紐삵뻽?듬땲??");
+  return user;
 }
 
 export async function supabaseAdminRest<T>(
@@ -51,7 +59,7 @@ export async function supabaseAdminRest<T>(
   }
 
   if (response.status === 204) return null as T;
-  return (await response.json()) as T;
+  return readJsonOrNull<T>(response);
 }
 
 export async function supabaseAdminAuth<T>(
@@ -80,7 +88,7 @@ export async function supabaseAdminAuth<T>(
   }
 
   if (response.status === 204) return null as T;
-  return (await response.json()) as T;
+  return readJsonOrNull<T>(response);
 }
 
 export async function getSupabaseRestTableColumns(table: string) {
