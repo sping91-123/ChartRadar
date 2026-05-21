@@ -182,6 +182,7 @@ export async function GET(request: Request) {
 
     const members = Array.from(memberMap.values())
       .filter((member) => {
+        if (!member.email) return false;
         if (!query) return true;
         return member.email?.toLowerCase().includes(query) || member.displayName?.toLowerCase().includes(query);
       })
