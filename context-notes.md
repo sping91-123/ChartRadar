@@ -1714,3 +1714,14 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 베타 초반 운영은 Supabase Dashboard, Play Console, Vercel 로그를 사용해 임시 대응한다.
 - 출시 후 관리자 콘솔 MVP가 필요해지면 가입자 목록, 유저 검색, 계정 상태 확인, 수동 권한 부여, 푸시 토큰 확인, 감사 로그 범위로 구현한다.
 - 이번 결정은 코드 구현 없이 문서/메모로만 남기며, 현재 변경사항은 아직 push하지 않는다.
+
+## 2026-05-21 글로벌 레이더 루틴 UX 강화.
+
+- 이번 범위는 `/global`과 글로벌 탭/섹션 UX만 다룬다. 로그인, 푸시, 결제, Pro 가격, Android 네이티브 설정, Play Console 설정은 건드리지 않는다.
+- 상단 글로벌 탭은 보조 메뉴를 늘리지 않고 `시장`, `자산`, `일정`, `복기` 루틴으로 정리한다. 알림은 기존 우측 상단 종모양 접근을 유지한다.
+- `/global` 첫 화면은 개별 티커 나열보다 오늘의 시장 판단, 시장 온도계, 먼저 볼 자산 TOP 3, 자산 간 관계성 체크를 먼저 보여줘야 한다.
+- 기존 선택 자산 상세 레이더는 제거하지 않고 `자산` 탭과 `asset-radar` 앵커로 이어지는 하단 심화 영역으로 유지한다.
+- 기존 `/news?market=global` 경로는 유지하되 글로벌 화면에서는 `일정`으로 보이게 하고, 공개 뉴스는 오늘 변동성을 만들 이벤트/일정 맥락 안에 흡수한다.
+- 데이터가 부족하면 없는 데이터를 꾸미지 않고 `확인 필요` 또는 기본 체크리스트 fallback으로 표시한다.
+- 360px과 340px 폭에서 `/global` 탭, 결론 카드, 시장 온도계, TOP 3, 관계성 체크, 자산 앵커, 일정/복기 경로를 확인했고 가로 오버플로우는 없었다.
+- 검증은 `git diff --check`, `npx.cmd tsc --noEmit`, `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`을 통과했다.

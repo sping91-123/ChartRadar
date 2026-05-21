@@ -42,6 +42,30 @@ type EventRiskPayload = {
   warning?: string;
 };
 
+type ThermometerAxis = {
+  key: string;
+  label: string;
+  status: "강함" | "중립" | "약함" | "부담" | "확인 필요";
+  tone: PressureTone;
+  detail: string;
+  symbols: string[];
+};
+
+type FocusAsset = {
+  symbol: string;
+  label: string;
+  reason: string;
+  tone: PressureTone;
+};
+
+type RelationshipCheck = {
+  title: string;
+  status: "우호" | "중립" | "부담" | "확인 필요";
+  tone: PressureTone;
+  detail: string;
+  symbols: string[];
+};
+
 const INDEX_FUTURES = ["NQ=F", "ES=F", "YM=F", "RTY=F"] as const;
 const MACRO_PROXIES = ["^VIX", "VIXY", "UUP", "TLT", "ZN=F", "IEF", "SHY", "GLD", "CL=F"] as const;
 const SECTOR_SYMBOLS = ["XLK", "XLY", "XLP", "XLV", "XLI", "XLU", "XLC", "XLF", "XLE", "SMH", "SOXX"] as const;
@@ -247,6 +271,25 @@ function buildHeadline(mode: MarketMode, futuresSummary: string, macroSummary: s
   return `오늘 미국장은 Neutral에 가깝습니다. ${futuresSummary} ${macroSummary}`;
 }
 
+function decisionLabel(mode: MarketMode, strength: number) {
+  if (mode === "Risk-On") return "리스크온 우위";
+  if (mode === "Risk-Off") return "리스크오프";
+  return strength < 50 ? "관망" : "혼조";
+}
+
+function strengthLabel(strength: number) {
+  if (strength >= 75) return "높음";
+  if (strength >= 55) return "중간";
+  return "낮음";
+}
+
+function chaseWarning(eventRisk: EventRiskPayload, macroBlock: ReturnType<typeof buildMacroBlock>, futuresBlock: ReturnType<typeof buildFuturesBlock>) {
+  if (eventRisk.nextEvent && eventRisk.nextEvent.importance >= 3) return "주요 일정 전에는 추격보다 발표 후 반응 확인이 우선입니다.";
+  if (macroBlock.tone === "burden") return "매크로 압력이 남아 있어 본장 초반 확인이 필요합니다.";
+  if (futuresBlock.isDivergent) return "지수선물이 엇갈려 한쪽 방향 추격은 신중해야 합니다.";
+  return "방향이 유지되는지 본장 초반 거래량과 함께 확인하세요.";
+}
+
 function buildCorePressures(items: BoardItem[]) {
   const ranked = [...items]
     .filter((item) => item.pressure !== "mixed")
@@ -266,6 +309,217 @@ function buildCorePressures(items: BoardItem[]) {
   }
 
   return selected;
+}
+
+function itemBySymbol(items: BoardItem[], symbol: string) {
+  return items.find((item) => item.symbol === symbol) ?? null;
+}
+
+function averageForSymbols(items: BoardItem[], symbols: string[]) {
+  return average(symbols.map((symbol) => itemBySymbol(items, symbol)).filter((item): item is BoardItem => Boolean(item)));
+}
+
+function statusFromAverage(value: number, missing: boolean): ThermometerAxis["status"] {
+  if (missing) return "확인 필요";
+  if (value >= 0.35) return "강함";
+  if (value <= -0.35) return "약함";
+  return "중립";
+}
+
+function toneFromStatus(status: ThermometerAxis["status"]): PressureTone {
+  if (status === "강함") return "supportive";
+  if (status === "약함" || status === "부담") return "burden";
+  return "mixed";
+}
+
+function buildMarketThermometer(items: BoardItem[]): ThermometerAxis[] {
+  const indexSymbols = ["QQQ", "SPY", "NQ=F", "ES=F"];
+  const chipSymbols = ["NVDA", "SMH"];
+  const havenSymbols = ["GLD", "CL=F"];
+  const rateDollarSymbols = ["UUP", "TLT", "ZN=F", "IEF", "SHY"];
+  const vix = itemBySymbol(items, "^VIX") ?? itemBySymbol(items, "VIXY");
+  const indexAverage = averageForSymbols(items, indexSymbols);
+  const chipAverage = averageForSymbols(items, chipSymbols);
+  const havenItems = havenSymbols.map((symbol) => itemBySymbol(items, symbol)).filter((item): item is BoardItem => Boolean(item));
+  const rateDollarItems = rateDollarSymbols.map((symbol) => itemBySymbol(items, symbol)).filter((item): item is BoardItem => Boolean(item));
+  const indexStatus = statusFromAverage(indexAverage, !indexSymbols.some((symbol) => itemBySymbol(items, symbol)));
+  const chipStatus = statusFromAverage(chipAverage, !chipSymbols.some((symbol) => itemBySymbol(items, symbol)));
+  const havenBurden = havenItems.some((item) => item.pressure === "burden");
+  const rateDollarBurden = rateDollarItems.some((item) => item.pressure === "burden");
+  const rateDollarSupport = rateDollarItems.some((item) => item.pressure === "supportive");
+  const vixStatus: ThermometerAxis["status"] = vix ? (vix.pressure === "burden" ? "부담" : vix.pressure === "supportive" ? "강함" : "중립") : "확인 필요";
+  const havenStatus: ThermometerAxis["status"] = havenItems.length ? (havenBurden ? "부담" : havenItems.every((item) => item.pressure === "supportive") ? "강함" : "중립") : "확인 필요";
+  const rateDollarStatus: ThermometerAxis["status"] = rateDollarItems.length ? (rateDollarBurden ? "부담" : rateDollarSupport ? "강함" : "중립") : "확인 필요";
+
+  return [
+    {
+      key: "index",
+      label: "지수",
+      status: indexStatus,
+      tone: toneFromStatus(indexStatus),
+      detail: indexStatus === "확인 필요" ? "QQQ, SPY, NQ, ES 데이터 확인이 필요합니다." : `QQQ/SPY/NQ/ES 평균 흐름은 ${indexAverage >= 0 ? "+" : ""}${indexAverage.toFixed(2)}%입니다.`,
+      symbols: indexSymbols
+    },
+    {
+      key: "volatility",
+      label: "변동성",
+      status: vixStatus,
+      tone: toneFromStatus(vixStatus),
+      detail: vix ? vix.interpretation : "VIX 확인이 필요합니다.",
+      symbols: ["^VIX", "VIXY"]
+    },
+    {
+      key: "chips",
+      label: "반도체/성장주",
+      status: chipStatus,
+      tone: toneFromStatus(chipStatus),
+      detail: chipStatus === "확인 필요" ? "NVDA와 SMH 주도력 확인이 필요합니다." : `NVDA/SMH 평균 흐름은 ${chipAverage >= 0 ? "+" : ""}${chipAverage.toFixed(2)}%입니다.`,
+      symbols: chipSymbols
+    },
+    {
+      key: "commodities",
+      label: "안전자산/원자재",
+      status: havenStatus,
+      tone: toneFromStatus(havenStatus),
+      detail: havenStatus === "확인 필요" ? "GLD와 유가 데이터 확인이 필요합니다." : havenBurden ? "금 또는 유가가 리스크 점검 축으로 남아 있습니다." : "금과 유가는 부담 완화 쪽으로 해석됩니다.",
+      symbols: havenSymbols
+    },
+    {
+      key: "rates-dollar",
+      label: "금리/달러",
+      status: rateDollarStatus,
+      tone: toneFromStatus(rateDollarStatus),
+      detail: rateDollarStatus === "확인 필요" ? "금리/달러 프록시 확인이 필요합니다." : rateDollarBurden ? "UUP 또는 채권 프록시가 성장주에 부담으로 남아 있습니다." : "금리/달러 프록시는 부담 완화 쪽입니다.",
+      symbols: rateDollarSymbols
+    }
+  ];
+}
+
+function focusReason(symbol: string) {
+  const reasons: Record<string, string> = {
+    QQQ: "기술주 방향 확인",
+    SPY: "광범위한 시장 체력 확인",
+    "NQ=F": "나스닥 선물 선행 흐름 확인",
+    "ES=F": "S&P 선물 확산 확인",
+    "^VIX": "추격 위험 확인",
+    NVDA: "AI 대장주 지수 기여 확인",
+    SMH: "반도체 주도력 확인",
+    GLD: "안전자산 선호 확인",
+    "CL=F": "유가 리스크 확인"
+  };
+  return reasons[symbol] ?? "시장 영향 확인";
+}
+
+function buildFocusAssets(items: BoardItem[]): FocusAsset[] {
+  const preferred = ["QQQ", "SPY", "NQ=F", "ES=F", "^VIX", "NVDA", "SMH", "GLD", "CL=F"];
+  const ranked = preferred
+    .map((symbol) => itemBySymbol(items, symbol))
+    .filter((item): item is BoardItem => Boolean(item))
+    .sort((a, b) => Math.abs(scoreItem(b)) - Math.abs(scoreItem(a)))
+    .slice(0, 3)
+    .map((item) => ({
+      symbol: item.symbol,
+      label: item.label,
+      reason: focusReason(item.symbol),
+      tone: item.pressure
+    }));
+
+  const fallback: FocusAsset[] = [
+    { symbol: "QQQ", label: "나스닥 ETF", reason: "기술주 방향 확인", tone: "mixed" },
+    { symbol: "^VIX", label: "VIX 변동성", reason: "추격 위험 확인", tone: "mixed" },
+    { symbol: "SMH", label: "반도체", reason: "반도체 주도력 확인", tone: "mixed" }
+  ];
+  return ranked.length >= 3 ? ranked : [...ranked, ...fallback.filter((item) => !ranked.some((rankedItem) => rankedItem.symbol === item.symbol))].slice(0, 3);
+}
+
+function comparePair(items: BoardItem[], leftSymbol: string, rightSymbol: string) {
+  const left = itemBySymbol(items, leftSymbol);
+  const right = itemBySymbol(items, rightSymbol);
+  if (!left || !right) return null;
+  return { left, right, diff: left.changePercent - right.changePercent };
+}
+
+function buildRelationshipChecks(items: BoardItem[]): RelationshipCheck[] {
+  const qqqSpy = comparePair(items, "QQQ", "SPY");
+  const nqEs = comparePair(items, "NQ=F", "ES=F");
+  const qqq = itemBySymbol(items, "QQQ");
+  const vix = itemBySymbol(items, "^VIX") ?? itemBySymbol(items, "VIXY");
+  const smh = itemBySymbol(items, "SMH") ?? itemBySymbol(items, "SOXX");
+  const nvda = itemBySymbol(items, "NVDA");
+  const gld = itemBySymbol(items, "GLD");
+  const oil = itemBySymbol(items, "CL=F");
+
+  const checks: RelationshipCheck[] = [
+    qqqSpy
+      ? {
+          title: "QQQ vs SPY",
+          status: qqqSpy.diff > 0.25 ? "우호" : qqqSpy.diff < -0.25 ? "부담" : "중립",
+          tone: qqqSpy.diff > 0.25 ? "supportive" : qqqSpy.diff < -0.25 ? "burden" : "mixed",
+          detail: qqqSpy.diff > 0.25 ? "기술주가 전체 시장보다 강합니다." : qqqSpy.diff < -0.25 ? "기술주가 전체 시장보다 약해 주도력이 부족합니다." : "기술주와 전체 시장 흐름이 비슷합니다.",
+          symbols: ["QQQ", "SPY"]
+        }
+      : {
+          title: "QQQ vs SPY",
+          status: "확인 필요",
+          tone: "mixed",
+          detail: "기술주와 전체 시장 상대 강도 확인이 필요합니다.",
+          symbols: ["QQQ", "SPY"]
+        },
+    smh && qqq
+      ? {
+          title: "반도체 vs QQQ",
+          status: smh.changePercent > qqq.changePercent + 0.25 || nvda?.pressure === "supportive" ? "우호" : smh.changePercent < qqq.changePercent - 0.25 ? "부담" : "중립",
+          tone: smh.changePercent > qqq.changePercent + 0.25 || nvda?.pressure === "supportive" ? "supportive" : smh.changePercent < qqq.changePercent - 0.25 ? "burden" : "mixed",
+          detail: smh.changePercent > qqq.changePercent + 0.25 ? "반도체가 나스닥을 이끄는지 확인할 수 있습니다." : smh.changePercent < qqq.changePercent - 0.25 ? "반도체가 약하면 지수 상승 신뢰도가 낮아질 수 있습니다." : "반도체 주도력은 아직 중립권입니다.",
+          symbols: ["NVDA", "SMH", "QQQ"]
+        }
+      : {
+          title: "반도체 vs QQQ",
+          status: "확인 필요",
+          tone: "mixed",
+          detail: "NVDA/SMH와 QQQ 관계 확인이 필요합니다.",
+          symbols: ["NVDA", "SMH", "QQQ"]
+        },
+    vix && qqq
+      ? {
+          title: "VIX vs QQQ",
+          status: qqq.pressure === "supportive" && vix.pressure === "burden" ? "부담" : qqq.pressure === "supportive" && vix.pressure !== "burden" ? "우호" : "중립",
+          tone: qqq.pressure === "supportive" && vix.pressure === "burden" ? "burden" : qqq.pressure === "supportive" && vix.pressure !== "burden" ? "supportive" : "mixed",
+          detail: qqq.pressure === "supportive" && vix.pressure === "burden" ? "지수 상승과 변동성 상승이 겹치면 불안한 상승일 수 있습니다." : qqq.pressure === "supportive" ? "지수 상승과 변동성이 충돌하지 않는지 확인합니다." : "지수와 변동성 모두 본장 반응 확인이 필요합니다.",
+          symbols: ["^VIX", "QQQ"]
+        }
+      : {
+          title: "VIX vs QQQ",
+          status: "확인 필요",
+          tone: "mixed",
+          detail: "지수 상승의 안정성 확인이 필요합니다.",
+          symbols: ["^VIX", "QQQ"]
+        },
+    {
+      title: "GLD/CL vs 지수",
+      status: gld?.pressure === "burden" || oil?.pressure === "burden" ? "부담" : gld || oil ? "중립" : "확인 필요",
+      tone: gld?.pressure === "burden" || oil?.pressure === "burden" ? "burden" : "mixed",
+      detail: gld?.pressure === "burden" || oil?.pressure === "burden" ? "금이나 유가가 강하면 안전자산 선호와 인플레 부담을 함께 봐야 합니다." : gld || oil ? "원자재와 안전자산은 아직 지수 판단을 크게 흔들지 않습니다." : "GLD와 유가 확인이 필요합니다.",
+      symbols: ["GLD", "CL=F", "SPY"]
+    },
+    nqEs
+      ? {
+          title: "NQ=F vs ES=F",
+          status: nqEs.diff > 0.25 ? "우호" : nqEs.diff < -0.25 ? "부담" : "중립",
+          tone: nqEs.diff > 0.25 ? "supportive" : nqEs.diff < -0.25 ? "burden" : "mixed",
+          detail: nqEs.diff > 0.25 ? "나스닥 선물이 S&P보다 강해 성장주 주도 흐름을 점검합니다." : nqEs.diff < -0.25 ? "나스닥 선물이 S&P보다 약해 성장주 부담을 점검합니다." : "나스닥과 S&P 선물 흐름이 크게 벌어지지 않았습니다.",
+          symbols: ["NQ=F", "ES=F"]
+        }
+      : {
+          title: "NQ=F vs ES=F",
+          status: "확인 필요",
+          tone: "mixed",
+          detail: "나스닥과 S&P 선물 상대 강도 확인이 필요합니다.",
+          symbols: ["NQ=F", "ES=F"]
+        }
+  ];
+
+  return checks;
 }
 
 function buildFuturesBlock(items: BoardItem[]) {
@@ -503,8 +757,14 @@ type MarketBoardPayload = {
   tone: PressureTone;
   score: number;
   topRisk: string;
+  decisionLabel: string;
+  strengthLabel: string;
+  chaseWarning: string;
   dataWarning: string | null;
   corePressures: ReturnType<typeof buildCorePressures>;
+  marketThermometer: ThermometerAxis[];
+  focusAssets: FocusAsset[];
+  relationshipChecks: RelationshipCheck[];
   basicIndexSummary: {
     symbol: string;
     label: string;
@@ -617,8 +877,14 @@ export async function GET(request: Request) {
     tone: toneFromMode(marketMode),
     score: Number(score.toFixed(2)),
     topRisk: topRisk(eventRisk, macro, futures),
+    decisionLabel: decisionLabel(marketMode, strength),
+    strengthLabel: strengthLabel(strength),
+    chaseWarning: chaseWarning(eventRisk, macro, futures),
     dataWarning,
     corePressures: buildCorePressures(items),
+    marketThermometer: buildMarketThermometer(items),
+    focusAssets: buildFocusAssets(items),
+    relationshipChecks: buildRelationshipChecks(items),
     basicIndexSummary: qqqOrNq
       ? {
           symbol: qqqOrNq.symbol,

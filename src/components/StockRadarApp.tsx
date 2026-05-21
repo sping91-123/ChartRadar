@@ -946,15 +946,15 @@ export function StockRadarApp() {
   );
 
   return (
-    <section className="rounded-lg border border-surface-line bg-surface-card p-4 pb-36 shadow-glow sm:p-5 sm:pb-36">
+    <section id="asset-radar" className="scroll-mt-24 rounded-lg border border-surface-line bg-surface-card p-4 pb-36 shadow-glow sm:p-5 sm:pb-36">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-accent-blue/30 bg-accent-blue/15 text-accent-blue">
             <BarChart3 size={21} aria-hidden />
           </div>
           <div>
-            <p className="text-xs font-bold tracking-[0.18em] text-accent-blue">GLOBAL DETAIL RADAR</p>
-            <h2 className="mt-1 text-xl font-black text-white">선택 종목 상세 판단</h2>
+            <p className="text-xs font-bold tracking-[0.18em] text-accent-blue">자산레이더</p>
+            <h2 className="mt-1 text-xl font-black text-white">선택 자산 상세 판단</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
               글로벌 전체 판단 이후 개별 종목을 확인하는 심화 영역입니다.
               상단 대시보드의 시장 모드, 매크로 압력, 섹터 로테이션과 함께 해석하세요.
@@ -978,7 +978,7 @@ export function StockRadarApp() {
               <Sparkles size={13} aria-hidden />
               상세 확인할 글로벌 자산
             </p>
-            <h3 className="mt-2 text-2xl font-black text-white">
+            <h3 className="mt-2 break-words text-2xl font-black text-white">
               {symbol}{" "}
               <span className="ml-2 text-base font-bold text-slate-400">{selectedInfo?.name ?? symbol}</span>
             </h3>
