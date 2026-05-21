@@ -1,6 +1,7 @@
 // Android 앱 푸시 권한, FCM 토큰, 서버 동기화를 관리합니다.
 import { Capacitor } from "@capacitor/core";
 import { getActiveSupabaseSession } from "@/lib/supabase";
+import type { PushTestKind } from "@/lib/pushTestMessages";
 import type { SetupAlertPreset } from "@/lib/setupAlertPresets";
 
 export type AppPushPermission = "unsupported" | "prompt" | "prompt-with-rationale" | "granted" | "denied";
@@ -25,7 +26,7 @@ export interface AppPushPreferences {
 
 const appPushStorageKey = "chartRadar.appPush.device.v1";
 const appPushChangedEvent = "chartRadar:appPushChanged";
-const appPushRegistrationTimeoutMs = 15000;
+const appPushRegistrationTimeoutMs = 10000;
 export const radarPushChannelId = "radar-alerts";
 let pushListenersRegistered = false;
 
@@ -269,7 +270,7 @@ export async function registerAndroidAppPush(preferences: AppPushPreferences) {
       supported: true,
       platform: "android",
       synced: false,
-      lastError: error instanceof Error ? error.message : "앱 푸시 등록에 실패했습니다.",
+      lastError: error instanceof Error ? error.message : "앱 푸시 알림 연결에 실패했습니다.",
       updatedAt: new Date().toISOString()
     });
   }
@@ -331,7 +332,7 @@ export async function disableAndroidAppPush() {
   });
 }
 
-export async function sendAndroidAppPushTest() {
+export async function sendAndroidAppPushTest(kind: PushTestKind = "default") {
   if (!isAndroidNativeApp()) throw new Error("앱에서만 테스트 알림을 보낼 수 있습니다.");
 
   const session = await getActiveSupabaseSession();
@@ -342,7 +343,8 @@ export async function sendAndroidAppPushTest() {
     headers: {
       Authorization: `Bearer ${session.accessToken}`,
       "Content-Type": "application/json"
-    }
+    },
+    body: JSON.stringify({ kind })
   });
 
   const payload = (await response.json().catch(() => ({}))) as { error?: string };

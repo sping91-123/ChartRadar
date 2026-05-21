@@ -1698,6 +1698,13 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 글로벌 푸시 시그널은 기존 `stock-momentum` 규칙 안에서 QQQ/SPY/NQ/ES, VIX/VIXY, SMH/SOXX/NVDA/AMD, UUP/GLD/TLT를 확인하고 리스크오프 조합과 반도체 주도력 비교 이벤트를 추가한다. `macro-news` 규칙에는 24시간 이내 중요 매크로 일정 리마인더를 추가한다.
 - 검증은 `.next` 캐시 삭제 후 `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`, `npm.cmd run app:android:debug`, `cmd /c npx tsc --noEmit`, `git diff --check`로 통과했다. ADB는 SDK 경로에서 실행됐지만 연결된 기기가 없어 실기기 버튼 클릭과 실제 수신 테스트는 남았다.
 
+## 2026-05-22 푸시 테스트 패널.
+
+- 베타 운영 검증 목적은 대표가 직접 앱 푸시 권한, 연결 상태, 테스트 알림 형태를 확인하는 것이다. 범위는 푸시 권한, 저장, 테스트 발송, 알림 표시 형태로 제한한다.
+- 테스트 발송은 `/api/push-test`에서 현재 Bearer 세션의 사용자만 조회하고, enabled 상태의 최신 앱 푸시 연결 1개만 대상으로 제한한다.
+- 사용자 화면에는 구현 용어를 노출하지 않는다. 서버와 코드 내부에서는 FCM, token을 다루더라도 UI 문구는 `앱 푸시 알림`, `알림 권한`, `테스트 알림`, `연결됨`으로 유지한다.
+- 검증은 `cmd /c npx tsc --noEmit`, `git diff --check`, `.next` 삭제 후 `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`, `npm.cmd run app:android:debug`로 통과했다. ADB에 연결된 기기가 없어 실기기 권한 팝업과 실제 푸시 수신 확인은 남았다.
+
 ## 2026-05-21 설정 지표 안내 정리.
 
 - 범위는 설정 메뉴의 `/learn` 지표 안내와 해당 메뉴 설명 문구로 제한한다. 실제 레이더 계산, 점수 산식, 알림 스캐너 조건은 변경하지 않는다.

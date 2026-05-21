@@ -26,6 +26,7 @@ import {
 import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { hasMarketEntitlement } from "@/lib/billing";
+import { getPushTestMessage, pushTestMessages, type PushTestKind } from "@/lib/pushTestMessages";
 import {
   disableAndroidAppPush,
   readAppPushState,
@@ -127,6 +128,27 @@ function appPushPermissionLabel(state: AppPushDeviceState) {
   return "앱 푸시 알림을 켤 수 있습니다";
 }
 
+function appPushConnectionLabel(state: AppPushDeviceState) {
+  if (!state.supported) return "앱에서 사용 가능";
+  if (state.permission === "granted" && state.synced) return "연결됨";
+  if (state.permission === "granted" && state.token) return "연결 확인 필요";
+  if (state.permission === "denied") return "권한이 꺼져 있음";
+  return "연결 전";
+}
+
+function formatAppPushUpdatedAt(iso: string | null) {
+  if (!iso) return "아직 없음";
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) return "확인 필요";
+  return new Intl.DateTimeFormat("ko-KR", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(date);
+}
+
 function compactSymbol(symbol: string) {
   return symbol.replace("USDT.P", "").replace("USDT", "");
 }
@@ -226,10 +248,11 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
   const [permission, setPermission] = useState<PermissionState>("default");
   const [appPushState, setAppPushState] = useState<AppPushDeviceState>(() => readAppPushState());
   const [isRequesting, setIsRequesting] = useState(false);
-  const [isSendingTestPush, setIsSendingTestPush] = useState(false);
+  const [activeTestKind, setActiveTestKind] = useState<PushTestKind | null>(null);
   const [isDisablingPush, setIsDisablingPush] = useState(false);
   const [isManualChecking, setIsManualChecking] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<string | null>(null);
 
   useEffect(() => {
     setEnabledRuleIds(readStoredRuleIds(market));
@@ -317,6 +340,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
   }, [setupMatches]);
   const alertUsageBucketId = market === "stocks" ? "stocksAlertRule" : "cryptoAlertRule";
   const isAndroidAppPush = appPushState.supported && appPushState.platform === "android";
+  const canSendAppPushTest = isAndroidAppPush && appPushState.permission === "granted" && Boolean(appPushState.token);
 
   function toggleRule(ruleId: RadarAlertRuleId) {
     if (!enabledRuleIds.includes(ruleId)) {
@@ -386,15 +410,55 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
     }
   }
 
-  async function requestTestPush() {
-    setIsSendingTestPush(true);
+  async function requestBrowserPreview(kind: PushTestKind) {
+    const message = getPushTestMessage(kind);
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      setPermission("unsupported");
+      setTestResult("현재 브라우저에서는 알림 미리보기를 표시할 수 없습니다.");
+      return;
+    }
+
+    let result = Notification.permission as PermissionState;
+    if (result === "default") {
+      result = (await Notification.requestPermission()) as PermissionState;
+      setPermission(result);
+    }
+
+    if (result !== "granted") {
+      setTestResult("브라우저 알림 권한이 꺼져 있습니다. 브라우저 설정에서 알림을 허용해 주세요.");
+      return;
+    }
+
+    new Notification(message.title, {
+      body: message.body,
+      icon: "/brand/chart-radar-mark.png"
+    });
+    setTestResult("브라우저 알림 미리보기를 표시했습니다. 실제 앱 푸시는 설치된 앱에서 확인할 수 있습니다.");
+  }
+
+  async function requestTestPush(kind: PushTestKind) {
+    if (!isAndroidAppPush) {
+      await requestBrowserPreview(kind);
+      return;
+    }
+    if (appPushState.permission !== "granted" || !appPushState.token) {
+      setTestResult("먼저 앱 푸시 알림을 켜 주세요.");
+      return;
+    }
+
+    setActiveTestKind(kind);
     try {
-      await sendAndroidAppPushTest();
-      setToast("테스트 알림을 보냈습니다. 휴대폰 알림 영역에서 수신 여부를 확인해 주세요.");
+      const result = (await sendAndroidAppPushTest(kind)) as { logged?: boolean };
+      const message = getPushTestMessage(kind);
+      setTestResult(
+        result.logged === false
+          ? `${message.label}을 보냈습니다. 수신 여부를 휴대폰 알림 영역에서 확인해 주세요.`
+          : `${message.label}을 보냈습니다. 휴대폰 알림 영역에서 수신 여부를 확인해 주세요.`
+      );
     } catch (error) {
-      setToast(error instanceof Error ? error.message : "테스트 알림 발송에 실패했습니다.");
+      setTestResult(error instanceof Error ? error.message : "테스트 알림 발송에 실패했습니다.");
     } finally {
-      setIsSendingTestPush(false);
+      setActiveTestKind(null);
     }
   }
 
@@ -503,15 +567,6 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             <>
               <button
                 type="button"
-                onClick={requestTestPush}
-                disabled={isSendingTestPush}
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-cyan-300/30 bg-cyan-300/10 px-4 text-sm font-black text-cyan-100 disabled:cursor-wait disabled:opacity-60"
-              >
-                {isSendingTestPush ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Smartphone size={16} aria-hidden />}
-                테스트 발송
-              </button>
-              <button
-                type="button"
                 onClick={requestDisablePush}
                 disabled={isDisablingPush}
                 className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-300/25 bg-red-300/10 px-4 text-sm font-black text-red-100 disabled:cursor-wait disabled:opacity-60"
@@ -529,6 +584,79 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
           {toast}
         </p>
       ) : null}
+
+      <div className="mt-4 rounded-xl border border-surface-line bg-surface-cardSoft p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-sm font-black text-white">푸시 테스트 / 알림 미리보기</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500 [word-break:keep-all]">
+              {isAndroidAppPush
+                ? "현재 로그인한 내 계정과 이 기기 연결로만 테스트 알림을 보냅니다."
+                : "앱 푸시는 설치된 앱에서 사용할 수 있습니다. 웹에서는 브라우저 알림 미리보기만 확인합니다."}
+            </p>
+          </div>
+          <span className="w-fit rounded-md border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-[11px] font-black text-cyan-200">
+            {isAndroidAppPush ? "앱 알림 테스트" : "브라우저 미리보기"}
+          </span>
+        </div>
+
+        <div className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
+          <div className="rounded-md border border-white/10 bg-black/25 p-3">
+            <p className="font-bold text-slate-500">알림 권한</p>
+            <p className="mt-1 font-black text-white">{isAndroidAppPush ? appPushPermissionLabel(appPushState) : permissionLabel(permission)}</p>
+          </div>
+          <div className="rounded-md border border-white/10 bg-black/25 p-3">
+            <p className="font-bold text-slate-500">앱 푸시 연결</p>
+            <p className="mt-1 font-black text-white">{isAndroidAppPush ? appPushConnectionLabel(appPushState) : "앱에서 사용 가능"}</p>
+          </div>
+          <div className="rounded-md border border-white/10 bg-black/25 p-3">
+            <p className="font-bold text-slate-500">마지막 연결 시각</p>
+            <p className="mt-1 font-black text-white">{isAndroidAppPush ? formatAppPushUpdatedAt(appPushState.updatedAt) : "앱에서 확인"}</p>
+          </div>
+        </div>
+
+        {isAndroidAppPush && !canSendAppPushTest ? (
+          <div className="mt-3 rounded-md border border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
+            <p>앱 푸시 알림을 켜면 주요 조건이 감지될 때 알려드립니다.</p>
+            <button
+              type="button"
+              onClick={requestNotificationPermission}
+              disabled={isRequesting}
+              className="mt-2 inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-amber-200/30 bg-amber-200/15 px-3 text-xs font-black text-amber-50 disabled:cursor-wait disabled:opacity-60"
+            >
+              {isRequesting ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <CheckCircle2 size={14} aria-hidden />}
+              앱 푸시 알림 켜기
+            </button>
+          </div>
+        ) : null}
+
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {pushTestMessages.map((message) => {
+            const isActive = activeTestKind === message.kind;
+            return (
+              <button
+                key={message.kind}
+                type="button"
+                onClick={() => void requestTestPush(message.kind)}
+                disabled={Boolean(activeTestKind) || (isAndroidAppPush && !canSendAppPushTest)}
+                className="min-h-16 rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 text-left transition hover:border-cyan-200 hover:bg-cyan-300/15 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <span className="flex items-center gap-2 text-xs font-black text-cyan-100">
+                  {isActive ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <BellRing size={14} aria-hidden />}
+                  {message.label}
+                </span>
+                <span className="mt-1 block text-[11px] leading-4 text-slate-400">{message.title}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {testResult ? (
+          <p className="mt-3 rounded-md border border-accent-blue/20 bg-accent-blue/10 p-3 text-xs leading-5 text-accent-blue">
+            {testResult}
+          </p>
+        ) : null}
+      </div>
 
       <div className="mt-4 rounded-xl border border-surface-line bg-surface-cardSoft p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
