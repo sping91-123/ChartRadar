@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeft, CheckCircle2, Crown, LogIn, LogOut, ShieldCheck, Trash2, UserCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Crown, LogIn, LogOut, ShieldCheck, Trash2, UserCircle, UserPlus } from "lucide-react";
 import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
 import { getEntitlementLabel, hasAnyPaidEntitlement } from "@/lib/billing";
@@ -45,6 +45,7 @@ export default function AccountPage() {
   const planLabel = getEntitlementLabel(plan);
   const email = user?.email ?? profile?.email ?? null;
   const provider = user?.app_metadata?.provider ?? user?.app_metadata?.providers?.[0] ?? null;
+  const isAdmin = profile?.plan === "admin" || user?.app_metadata?.role === "admin" || user?.app_metadata?.plan === "admin";
   const createdAt = formatAccountDate(user?.created_at ?? profile?.created_at);
   const lastSignInAt = formatAccountDate(user?.last_sign_in_at);
   const displayName =
@@ -115,6 +116,23 @@ export default function AccountPage() {
                   {createdAt ? <AccountInfoRow label="가입일" value={createdAt} /> : null}
                   {lastSignInAt ? <AccountInfoRow label="마지막 로그인" value={lastSignInAt} /> : null}
                 </section>
+                {isAdmin ? (
+                  <section className="rounded-xl border border-amber-300/25 bg-amber-300/10 p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-sm font-black text-white">운영자 도구</p>
+                        <p className="mt-1 text-xs leading-5 text-slate-400">테스터 이메일로 Pro 권한을 수동 부여합니다.</p>
+                      </div>
+                      <Link
+                        href="/admin/entitlements"
+                        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-amber-300/35 bg-amber-300 px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-amber-200"
+                      >
+                        <UserPlus size={16} aria-hidden />
+                        테스터 권한 주기
+                      </Link>
+                    </div>
+                  </section>
+                ) : null}
               </>
             ) : (
               <section className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
