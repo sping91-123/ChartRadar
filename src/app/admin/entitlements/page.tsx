@@ -2,8 +2,8 @@
 // 운영자가 테스터 이메일로 Pro 권한을 부여하는 관리자 화면입니다.
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
-import { ArrowLeft, Crown, Loader2, ShieldCheck, UserPlus } from "lucide-react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import { ArrowLeft, Crown, Loader2, Search, ShieldCheck, UserPlus } from "lucide-react";
 import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
@@ -14,8 +14,28 @@ const planOptions = [
   { id: "stocks_monthly", label: "Global Pro", description: "글로벌 시장 권한" }
 ];
 
+interface AdminMember {
+  id: string;
+  email: string | null;
+  displayName: string | null;
+  profilePlan: string | null;
+  createdAt: string;
+  updatedAt: string;
+  activePlan: string | null;
+  activeMarketScope: string | null;
+  activeStatus: string | null;
+  activeUntil: string | null;
+}
+
 function isAdminAccount(userPlan?: string | null, role?: string | null) {
   return userPlan === "admin" || role === "admin";
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return "없음";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "없음";
+  return date.toLocaleDateString("ko-KR");
 }
 
 export default function AdminEntitlementsPage() {
@@ -23,10 +43,43 @@ export default function AdminEntitlementsPage() {
   const [email, setEmail] = useState("");
   const [planId, setPlanId] = useState(planOptions[0].id);
   const [durationDays, setDurationDays] = useState(90);
+  const [members, setMembers] = useState<AdminMember[]>([]);
+  const [memberQuery, setMemberQuery] = useState("");
+  const [memberError, setMemberError] = useState("");
+  const [isLoadingMembers, setIsLoadingMembers] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isAdmin = isAdminAccount(profile?.plan, user?.app_metadata?.role ?? user?.app_metadata?.plan);
+
+  const loadMembers = useCallback(async (query: string) => {
+    if (!session?.accessToken || !isAdmin) return;
+    setIsLoadingMembers(true);
+    setMemberError("");
+
+    try {
+      const params = new URLSearchParams();
+      if (query.trim()) params.set("q", query.trim());
+      const response = await fetch(`/api/admin/entitlements${params.size ? `?${params.toString()}` : ""}`, {
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`
+        }
+      });
+      const payload = (await response.json()) as { members?: AdminMember[]; error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "회원 목록을 불러오지 못했습니다.");
+      setMembers(payload.members ?? []);
+    } catch (loadError) {
+      setMemberError(loadError instanceof Error ? loadError.message : "회원 목록을 불러오지 못했습니다.");
+    } finally {
+      setIsLoadingMembers(false);
+    }
+  }, [isAdmin, session?.accessToken]);
+
+  useEffect(() => {
+    if (session?.accessToken && isAdmin) {
+      void loadMembers("");
+    }
+  }, [isAdmin, loadMembers, session?.accessToken]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,6 +115,7 @@ export default function AdminEntitlementsPage() {
 
       const endDate = payload.currentPeriodEnd ? new Date(payload.currentPeriodEnd).toLocaleDateString("ko-KR") : "만료일 미확인";
       setMessage(`${payload.email ?? email} 계정에 ${payload.planName ?? "Pro"} 권한을 ${endDate}까지 부여했습니다.`);
+      void loadMembers(memberQuery);
     } catch (grantError) {
       setError(grantError instanceof Error ? grantError.message : "테스터 권한 부여에 실패했습니다.");
     } finally {
@@ -110,9 +164,74 @@ export default function AdminEntitlementsPage() {
               현재 계정은 관리자 권한이 없어 테스터 Pro 권한을 부여할 수 없습니다.
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="mt-6 grid gap-4">
+            <div className="mt-6 grid gap-5">
+              <section className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                  <label className="grid flex-1 gap-2 text-sm font-bold text-slate-300">
+                    가입 회원 검색
+                    <input
+                      type="search"
+                      value={memberQuery}
+                      onChange={(event) => setMemberQuery(event.target.value)}
+                      placeholder="이메일 또는 이름으로 검색"
+                      className="min-h-11 rounded-xl border border-surface-line bg-slate-950 px-4 text-base font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/55"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => void loadMembers(memberQuery)}
+                    disabled={isLoadingMembers}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-cyan-300/35 bg-cyan-300/10 px-4 py-2 text-sm font-black text-cyan-100 transition hover:border-cyan-300/55 disabled:cursor-wait disabled:opacity-70"
+                  >
+                    {isLoadingMembers ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Search size={16} aria-hidden />}
+                    회원 불러오기
+                  </button>
+                </div>
+
+                {memberError ? <p className="mt-3 rounded-xl border border-rose-300/25 bg-rose-300/10 p-3 text-sm font-bold text-rose-100">{memberError}</p> : null}
+
+                <div className="mt-4 grid max-h-[28rem] gap-2 overflow-y-auto pr-1">
+                  {isLoadingMembers && members.length === 0 ? (
+                    <p className="rounded-xl border border-surface-line bg-slate-950/50 p-4 text-sm font-bold text-slate-400">회원 목록을 불러오고 있습니다.</p>
+                  ) : members.length > 0 ? (
+                    members.map((member) => {
+                      const selected = email.toLowerCase() === (member.email ?? "").toLowerCase();
+                      return (
+                        <button
+                          key={member.id}
+                          type="button"
+                          onClick={() => setEmail(member.email ?? "")}
+                          className={`rounded-xl border p-4 text-left transition ${
+                            selected ? "border-amber-300/55 bg-amber-300/10" : "border-surface-line bg-slate-950/45 hover:border-cyan-300/35"
+                          }`}
+                        >
+                          <span className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <span className="min-w-0">
+                              <span className="block truncate text-sm font-black text-white">{member.email ?? "이메일 없음"}</span>
+                              {member.displayName ? <span className="mt-1 block truncate text-xs text-slate-400">{member.displayName}</span> : null}
+                            </span>
+                            <span className="shrink-0 rounded-full border border-white/10 px-2.5 py-1 text-xs font-black text-slate-300">
+                              {member.activePlan ?? member.profilePlan ?? "free"}
+                            </span>
+                          </span>
+                          <span className="mt-3 grid gap-1 text-xs leading-5 text-slate-500 sm:grid-cols-2">
+                            <span>가입일 {formatDate(member.createdAt)}</span>
+                            <span>권한 만료 {formatDate(member.activeUntil)}</span>
+                          </span>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <p className="rounded-xl border border-surface-line bg-slate-950/50 p-4 text-sm font-bold text-slate-400">
+                      표시할 가입 회원이 없습니다. 테스터가 먼저 한 번 로그인해야 목록에 나타납니다.
+                    </p>
+                  )}
+                </div>
+              </section>
+
+              <form onSubmit={handleSubmit} className="grid gap-4">
               <label className="grid gap-2 text-sm font-bold text-slate-300">
-                테스터 이메일
+                선택한 테스터 이메일
                 <input
                   type="email"
                   value={email}
@@ -174,7 +293,8 @@ export default function AdminEntitlementsPage() {
                 {isSubmitting ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <ShieldCheck size={16} aria-hidden />}
                 권한 부여하기
               </button>
-            </form>
+              </form>
+            </div>
           )}
         </section>
 
