@@ -54,13 +54,17 @@ export async function grantBillingEntitlement(params: {
       ]
         .filter(Boolean)
         .join("&");
+  const canWriteDetailedSubscription =
+    subscriptionColumns.has("plan") || subscriptionColumns.has("market_scope") || subscriptionColumns.has("provider_order_id");
+  if (!canWriteDetailedSubscription) return;
+
   const existing = await supabaseAdminRest<Array<{ id: string }>>(existingSubscriptionPath);
   const subscriptionBody = pickSchemaBody(subscriptionColumns, {
     user_id: params.userId,
     provider: params.provider,
     status: "active",
     plan: params.planId,
-    tier: params.planId,
+    tier: "premium",
     market_scope: marketScope,
     current_period_start: now.toISOString(),
     current_period_end: periodEnd.toISOString(),

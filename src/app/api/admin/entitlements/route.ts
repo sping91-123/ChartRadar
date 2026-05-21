@@ -229,44 +229,6 @@ export async function POST(request: Request) {
       getSupabaseRestTableColumns("profiles"),
       getSupabaseRestTableColumns("subscriptions")
     ]);
-    const subscriptionBody = pickSchemaBody(subscriptionColumns, {
-      user_id: target.id,
-      provider: "manual",
-      status: "active",
-      plan: plan.id,
-      tier: plan.id,
-      market_scope: getMarketScopeForPlan(plan.id),
-      current_period_start: now.toISOString(),
-      current_period_end: periodEnd.toISOString(),
-      provider_subscription_id: "manual_tester",
-      provider_order_id: providerOrderId
-    });
-
-    const existingSubscriptionPath = subscriptionColumns.has("provider_order_id")
-      ? `subscriptions?select=id&provider=eq.manual&provider_order_id=eq.${encodeURIComponent(providerOrderId)}&limit=1`
-      : [
-          `subscriptions?select=id`,
-          `user_id=eq.${encodeURIComponent(target.id)}`,
-          subscriptionColumns.has("provider") ? "provider=eq.manual" : "",
-          subscriptionColumns.has("provider_subscription_id") ? "provider_subscription_id=eq.manual_tester" : "",
-          "limit=1"
-        ]
-          .filter(Boolean)
-          .join("&");
-    const existing = await supabaseAdminRest<Array<{ id: string }>>(existingSubscriptionPath);
-
-    if (existing[0]?.id) {
-      await supabaseAdminRest(`subscriptions?id=eq.${encodeURIComponent(existing[0].id)}`, {
-        method: "PATCH",
-        body: subscriptionBody
-      });
-    } else {
-      await supabaseAdminRest("subscriptions", {
-        method: "POST",
-        body: subscriptionBody
-      });
-    }
-
     const profileBody = pickSchemaBody(profileColumns, {
       id: target.id,
       email: target.email ?? email,
@@ -282,12 +244,54 @@ export async function POST(request: Request) {
       body: profileBody
     });
 
+    const canWriteDetailedSubscription =
+      subscriptionColumns.has("plan") || subscriptionColumns.has("market_scope") || subscriptionColumns.has("provider_order_id");
+    const subscriptionBody = pickSchemaBody(subscriptionColumns, {
+      user_id: target.id,
+      provider: "manual",
+      status: "active",
+      plan: plan.id,
+      tier: "premium",
+      market_scope: getMarketScopeForPlan(plan.id),
+      current_period_start: now.toISOString(),
+      current_period_end: periodEnd.toISOString(),
+      provider_subscription_id: "manual_tester",
+      provider_order_id: providerOrderId
+    });
+
+    if (canWriteDetailedSubscription) {
+      const existingSubscriptionPath = subscriptionColumns.has("provider_order_id")
+        ? `subscriptions?select=id&provider=eq.manual&provider_order_id=eq.${encodeURIComponent(providerOrderId)}&limit=1`
+        : [
+            `subscriptions?select=id`,
+            `user_id=eq.${encodeURIComponent(target.id)}`,
+            subscriptionColumns.has("provider") ? "provider=eq.manual" : "",
+            subscriptionColumns.has("provider_subscription_id") ? "provider_subscription_id=eq.manual_tester" : "",
+            "limit=1"
+          ]
+            .filter(Boolean)
+            .join("&");
+      const existing = await supabaseAdminRest<Array<{ id: string }>>(existingSubscriptionPath);
+
+      if (existing[0]?.id) {
+        await supabaseAdminRest(`subscriptions?id=eq.${encodeURIComponent(existing[0].id)}`, {
+          method: "PATCH",
+          body: subscriptionBody
+        });
+      } else {
+        await supabaseAdminRest("subscriptions", {
+          method: "POST",
+          body: subscriptionBody
+        });
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       email: target.email ?? email,
       planId: plan.id,
       planName: plan.name,
-      marketScope: subscriptionBody.market_scope,
+      marketScope: getMarketScopeForPlan(plan.id),
       currentPeriodEnd: subscriptionBody.current_period_end
     });
   } catch (error) {
