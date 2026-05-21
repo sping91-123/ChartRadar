@@ -6,6 +6,15 @@ import type { SetupAlertPreset } from "@/lib/setupAlertPresets";
 
 export type AppPushPermission = "unsupported" | "prompt" | "prompt-with-rationale" | "granted" | "denied";
 export type AppPushPlatform = "android";
+export type AppPushRegistrationStage =
+  | "idle"
+  | "checking_permission"
+  | "requesting_permission"
+  | "registering_device"
+  | "saving_token"
+  | "enabled"
+  | "denied"
+  | "failed";
 
 export interface AppPushDeviceState {
   supported: boolean;
@@ -13,6 +22,8 @@ export interface AppPushDeviceState {
   permission: AppPushPermission;
   token: string | null;
   synced: boolean;
+  registrationStage: AppPushRegistrationStage;
+  lastFailureStage: AppPushRegistrationStage | null;
   updatedAt: string | null;
   lastError: string | null;
   lastNotificationTitle: string | null;
@@ -27,6 +38,13 @@ export interface AppPushPreferences {
 const appPushStorageKey = "chartRadar.appPush.device.v1";
 const appPushChangedEvent = "chartRadar:appPushChanged";
 const appPushRegistrationTimeoutMs = 10000;
+const activeAppPushStages = new Set<AppPushRegistrationStage>([
+  "checking_permission",
+  "requesting_permission",
+  "registering_device",
+  "saving_token"
+]);
+const appPushTimeoutMessage = "앱 푸시 연결이 완료되지 않았습니다. 앱을 다시 실행하거나 알림 권한을 확인해 주세요.";
 export const radarPushChannelId = "radar-alerts";
 let pushListenersRegistered = false;
 
@@ -37,6 +55,8 @@ function emptyAppPushState(): AppPushDeviceState {
     permission: isAndroidNativeApp() ? "prompt" : "unsupported",
     token: null,
     synced: false,
+    registrationStage: "idle",
+    lastFailureStage: null,
     updatedAt: null,
     lastError: null,
     lastNotificationTitle: null
@@ -49,6 +69,35 @@ function canUseStorage() {
 
 export function isAndroidNativeApp() {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
+}
+
+function isAppPushRegistrationStage(value: unknown): value is AppPushRegistrationStage {
+  return (
+    value === "idle" ||
+    value === "checking_permission" ||
+    value === "requesting_permission" ||
+    value === "registering_device" ||
+    value === "saving_token" ||
+    value === "enabled" ||
+    value === "denied" ||
+    value === "failed"
+  );
+}
+
+function inferRegistrationStage(parsed: Partial<AppPushDeviceState>) {
+  if (isAppPushRegistrationStage(parsed.registrationStage)) return parsed.registrationStage;
+  if (parsed.permission === "granted" && parsed.synced && parsed.token) return "enabled";
+  if (parsed.permission === "denied") return "denied";
+  if (parsed.lastError) return "failed";
+  return "idle";
+}
+
+function normalizeStaleRegistrationStage(stage: AppPushRegistrationStage, updatedAt: string | null | undefined) {
+  if (!activeAppPushStages.has(stage)) return stage;
+  if (!updatedAt) return "failed";
+  const updatedTime = new Date(updatedAt).getTime();
+  if (!Number.isFinite(updatedTime)) return "failed";
+  return Date.now() - updatedTime > appPushRegistrationTimeoutMs ? "failed" : stage;
 }
 
 export function readAppPushState(): AppPushDeviceState {
@@ -67,11 +116,16 @@ export function readAppPushState(): AppPushDeviceState {
         permission: "unsupported",
         token: null,
         synced: false,
+        registrationStage: "idle",
+        lastFailureStage: null,
         updatedAt: parsed.updatedAt ?? null,
         lastError: null,
         lastNotificationTitle: null
       };
     }
+
+    const inferredStage = inferRegistrationStage(parsed);
+    const registrationStage = normalizeStaleRegistrationStage(inferredStage, parsed.updatedAt);
 
     return {
       ...emptyAppPushState(),
@@ -81,8 +135,17 @@ export function readAppPushState(): AppPushDeviceState {
       permission: parsed.permission ?? "prompt",
       token: parsed.token ?? null,
       synced: Boolean(parsed.synced && parsed.token),
+      registrationStage,
+      lastFailureStage:
+        registrationStage === "failed"
+          ? isAppPushRegistrationStage(parsed.lastFailureStage)
+            ? parsed.lastFailureStage
+            : activeAppPushStages.has(inferredStage)
+              ? inferredStage
+              : null
+          : null,
       updatedAt: parsed.updatedAt ?? null,
-      lastError: parsed.lastError ?? null,
+      lastError: registrationStage === "failed" ? parsed.lastError ?? appPushTimeoutMessage : parsed.lastError ?? null,
       lastNotificationTitle: parsed.lastNotificationTitle ?? null
     };
   } catch {
@@ -100,6 +163,8 @@ function writeAppPushState(next: AppPushDeviceState) {
         permission: "unsupported" as const,
         token: null,
         synced: false,
+        registrationStage: "idle" as const,
+        lastFailureStage: null,
         updatedAt: next.updatedAt,
         lastError: next.lastError,
         lastNotificationTitle: null
@@ -117,6 +182,47 @@ export function subscribeAppPushState(listener: (state: AppPushDeviceState) => v
   return () => window.removeEventListener(appPushChangedEvent, handler);
 }
 
+function createAndroidAppPushState(patch: Partial<AppPushDeviceState>): AppPushDeviceState {
+  return {
+    ...readAppPushState(),
+    supported: true,
+    platform: "android",
+    updatedAt: new Date().toISOString(),
+    ...patch
+  };
+}
+
+function writeAndroidAppPushStage(stage: AppPushRegistrationStage, patch: Partial<AppPushDeviceState> = {}) {
+  console.info("[app-push] registration stage", stage);
+  return writeAppPushState(
+    createAndroidAppPushState({
+      registrationStage: stage,
+      lastFailureStage: stage === "failed" ? patch.lastFailureStage ?? readAppPushState().lastFailureStage : null,
+      lastError: stage === "failed" ? patch.lastError ?? appPushTimeoutMessage : patch.lastError ?? null,
+      ...patch
+    })
+  );
+}
+
+function userFacingPushError(error: unknown) {
+  if (error instanceof Error && error.message) return error.message;
+  return "앱 푸시 알림 연결에 실패했습니다.";
+}
+
+function withAppPushTimeout<T>(promise: Promise<T>, stage: AppPushRegistrationStage, message = appPushTimeoutMessage) {
+  let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutHandle = setTimeout(() => {
+      console.warn("[app-push] registration stage timeout", { stage });
+      reject(new Error(message));
+    }, appPushRegistrationTimeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+  });
+}
+
 async function loadPushNotifications() {
   if (!isAndroidNativeApp()) return null;
   const pushNotificationsModule = await import("@capacitor/push-notifications");
@@ -131,7 +237,7 @@ async function waitForPushRegistration(PushNotifications: PushNotificationsPlugi
     let registrationHandle: { remove: () => Promise<void> } | null = null;
     let errorHandle: { remove: () => Promise<void> } | null = null;
     const timeoutHandle = setTimeout(() => {
-      finish(() => reject(new Error("앱 알림 연결 응답이 지연되고 있습니다. 앱을 다시 실행한 뒤 다시 시도해주세요.")));
+      finish(() => reject(new Error("기기 푸시 토큰을 받지 못했습니다. 최신 앱으로 다시 설치한 뒤 시도해 주세요.")));
     }, appPushRegistrationTimeoutMs);
 
     function cleanup() {
@@ -151,9 +257,10 @@ async function waitForPushRegistration(PushNotifications: PushNotificationsPlugi
       try {
         registrationHandle = await PushNotifications.addListener("registration", (registration) => {
           const value = typeof registration.value === "string" ? registration.value.trim() : "";
+          console.info("[app-push] registration event received", { hasValue: Boolean(value) });
           finish(() => {
             if (value) resolve(value);
-            else reject(new Error("앱 알림 연결 정보를 받지 못했습니다. 다시 시도해주세요."));
+            else reject(new Error("기기 푸시 토큰을 받지 못했습니다. 최신 앱으로 다시 설치한 뒤 시도해 주세요."));
           });
         });
         if (settled) {
@@ -161,14 +268,17 @@ async function waitForPushRegistration(PushNotifications: PushNotificationsPlugi
           return;
         }
         errorHandle = await PushNotifications.addListener("registrationError", (error) => {
-          finish(() => reject(new Error(error.error || "앱 푸시 알림 연결에 실패했습니다.")));
+          console.warn("[app-push] registrationError event", error);
+          finish(() => reject(new Error(appPushTimeoutMessage)));
         });
         if (settled) {
           void errorHandle.remove();
           return;
         }
+        console.info("[app-push] register called");
         await PushNotifications.register();
       } catch (error) {
+        console.warn("[app-push] registration call failed", error);
         finish(() => reject(error instanceof Error ? error : new Error("앱 푸시 알림 연결에 실패했습니다.")));
       }
     })();
@@ -223,55 +333,70 @@ async function ensureRadarPushChannel() {
 }
 
 export async function registerAndroidAppPush(preferences: AppPushPreferences) {
-  const PushNotifications = await loadPushNotifications();
-  if (!PushNotifications) {
-    return writeAppPushState({
-      ...emptyAppPushState(),
-      permission: "unsupported",
-      lastError: "앱에서만 푸시 알림을 켤 수 있습니다."
-    });
-  }
-
+  let currentStage: AppPushRegistrationStage = "checking_permission";
   try {
-    let permission = await PushNotifications.checkPermissions();
-    if (permission.receive === "prompt" || permission.receive === "prompt-with-rationale") {
-      permission = await PushNotifications.requestPermissions();
-    }
-
-    if (permission.receive !== "granted") {
+    writeAndroidAppPushStage("checking_permission");
+    const PushNotifications = await withAppPushTimeout(loadPushNotifications(), "checking_permission");
+    if (!PushNotifications) {
       return writeAppPushState({
-        ...readAppPushState(),
-        supported: true,
-        platform: "android",
-        permission: permission.receive,
-        synced: false,
-        lastError: "알림 권한이 거부되었습니다. 휴대폰 설정에서 알림을 허용해주세요.",
-        updatedAt: new Date().toISOString()
+        ...emptyAppPushState(),
+        permission: "unsupported",
+        registrationStage: "failed",
+        lastFailureStage: "checking_permission",
+        lastError: "앱에서만 푸시 알림을 켤 수 있습니다."
       });
     }
 
-    await ensureRadarPushChannel();
+    let permission = await withAppPushTimeout(PushNotifications.checkPermissions(), "checking_permission");
+
+    if (permission.receive === "prompt" || permission.receive === "prompt-with-rationale") {
+      currentStage = "requesting_permission";
+      writeAndroidAppPushStage("requesting_permission", { permission: permission.receive });
+      permission = await withAppPushTimeout(PushNotifications.requestPermissions(), "requesting_permission");
+    }
+
+    if (permission.receive !== "granted") {
+      return writeAndroidAppPushStage("denied", {
+        permission: permission.receive,
+        token: null,
+        synced: false,
+        lastFailureStage: null,
+        lastError: "알림 권한이 거부되었습니다. 휴대폰 설정에서 알림을 허용해주세요.",
+      });
+    }
+
+    currentStage = "registering_device";
+    writeAndroidAppPushStage("registering_device", { permission: "granted", synced: false, token: null });
+    await withAppPushTimeout(ensureRadarPushChannel(), "registering_device");
     const token = await waitForPushRegistration(PushNotifications);
 
-    const syncResult = await syncTokenToServer(token, preferences);
-    return writeAppPushState({
-      supported: true,
-      platform: "android",
+    currentStage = "saving_token";
+    writeAndroidAppPushStage("saving_token", { permission: "granted", token, synced: false });
+    const syncResult = await withAppPushTimeout(syncTokenToServer(token, preferences), "saving_token");
+    if (!syncResult.synced) {
+      return writeAndroidAppPushStage("failed", {
+        permission: "granted",
+        token,
+        synced: false,
+        lastFailureStage: "saving_token",
+        lastError: syncResult.error ?? "앱 푸시 알림 연결에 실패했습니다."
+      });
+    }
+
+    return writeAndroidAppPushStage("enabled", {
       permission: "granted",
       token,
-      synced: syncResult.synced,
-      updatedAt: new Date().toISOString(),
-      lastError: syncResult.error,
+      synced: true,
+      lastFailureStage: null,
+      lastError: null,
       lastNotificationTitle: readAppPushState().lastNotificationTitle
     });
   } catch (error) {
-    return writeAppPushState({
-      ...readAppPushState(),
-      supported: true,
-      platform: "android",
+    console.warn("[app-push] registration failed", { stage: currentStage, error });
+    return writeAndroidAppPushStage("failed", {
       synced: false,
-      lastError: error instanceof Error ? error.message : "앱 푸시 알림 연결에 실패했습니다.",
-      updatedAt: new Date().toISOString()
+      lastFailureStage: currentStage,
+      lastError: userFacingPushError(error)
     });
   }
 }
@@ -285,6 +410,8 @@ export async function syncAndroidAppPushPreferences(preferences: AppPushPreferen
   return writeAppPushState({
     ...state,
     synced: syncResult.synced,
+    registrationStage: syncResult.synced ? "enabled" : "failed",
+    lastFailureStage: syncResult.synced ? null : "saving_token",
     lastError: syncResult.error,
     updatedAt: new Date().toISOString()
   });

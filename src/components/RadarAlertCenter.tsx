@@ -35,6 +35,7 @@ import {
   sendAndroidAppPushTest,
   subscribeAppPushState,
   syncAndroidAppPushPreferences,
+  type AppPushRegistrationStage,
   type AppPushDeviceState
 } from "@/lib/appPush";
 
@@ -122,6 +123,11 @@ function permissionLabel(permission: PermissionState) {
 
 function appPushPermissionLabel(state: AppPushDeviceState) {
   if (!state.supported) return "현재 환경에서는 앱 푸시 알림을 켤 수 없습니다";
+  if (state.registrationStage === "checking_permission") return "알림 권한을 확인하고 있습니다";
+  if (state.registrationStage === "requesting_permission") return "알림 권한을 요청하고 있습니다";
+  if (state.registrationStage === "registering_device") return "앱 푸시 알림을 연결하고 있습니다";
+  if (state.registrationStage === "saving_token") return "앱 푸시 알림 연결을 저장하고 있습니다";
+  if (state.registrationStage === "failed") return "앱 푸시 알림 연결에 실패했습니다";
   if (state.permission === "granted" && state.synced) return "앱 푸시 알림이 켜져 있습니다";
   if (state.permission === "granted" && state.token) return "앱 알림 연결 확인이 필요합니다";
   if (state.permission === "denied") return "알림 권한이 거부되었습니다";
@@ -130,10 +136,35 @@ function appPushPermissionLabel(state: AppPushDeviceState) {
 
 function appPushConnectionLabel(state: AppPushDeviceState) {
   if (!state.supported) return "앱에서 사용 가능";
+  if (state.registrationStage === "checking_permission") return "권한 확인 중";
+  if (state.registrationStage === "requesting_permission") return "권한 요청 중";
+  if (state.registrationStage === "registering_device") return "기기 연결 중";
+  if (state.registrationStage === "saving_token") return "연결 저장 중";
+  if (state.registrationStage === "failed") return "연결 실패";
+  if (state.registrationStage === "denied") return "권한이 꺼져 있음";
   if (state.permission === "granted" && state.synced) return "연결됨";
   if (state.permission === "granted" && state.token) return "연결 확인 필요";
   if (state.permission === "denied") return "권한이 꺼져 있음";
   return "연결 전";
+}
+
+function appPushStageLabel(stage: AppPushRegistrationStage | null) {
+  if (stage === "checking_permission") return "권한 확인 중";
+  if (stage === "requesting_permission") return "권한 요청 중";
+  if (stage === "registering_device") return "기기 연결 중";
+  if (stage === "saving_token") return "연결 저장 중";
+  if (stage === "enabled") return "연결됨";
+  if (stage === "denied") return "권한이 꺼져 있음";
+  if (stage === "failed") return "실패";
+  return "대기 중";
+}
+
+function appPushActionLabel(stage: AppPushRegistrationStage) {
+  if (stage === "checking_permission") return "권한 확인 중";
+  if (stage === "requesting_permission") return "권한 요청 중";
+  if (stage === "registering_device") return "기기 연결 중";
+  if (stage === "saving_token") return "연결 저장 중";
+  return "앱 푸시 알림 켜기";
 }
 
 function formatAppPushUpdatedAt(iso: string | null) {
@@ -340,7 +371,14 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
   }, [setupMatches]);
   const alertUsageBucketId = market === "stocks" ? "stocksAlertRule" : "cryptoAlertRule";
   const isAndroidAppPush = appPushState.supported && appPushState.platform === "android";
-  const canSendAppPushTest = isAndroidAppPush && appPushState.permission === "granted" && Boolean(appPushState.token);
+  const isAppPushConnecting =
+    isRequesting ||
+    appPushState.registrationStage === "checking_permission" ||
+    appPushState.registrationStage === "requesting_permission" ||
+    appPushState.registrationStage === "registering_device" ||
+    appPushState.registrationStage === "saving_token";
+  const canSendAppPushTest =
+    isAndroidAppPush && appPushState.permission === "granted" && Boolean(appPushState.token) && appPushState.synced && appPushState.registrationStage === "enabled";
 
   function toggleRule(ruleId: RadarAlertRuleId) {
     if (!enabledRuleIds.includes(ruleId)) {
@@ -368,19 +406,16 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
     }
 
     setIsRequesting(true);
+    setTestResult(null);
     try {
       if (isAndroidAppPush) {
         const next = await registerAndroidAppPush({ market, ruleIds: scopedEnabledRuleIds, presets: readSetupAlertPresets(market) });
         setAppPushState(next);
         recordUsageEvent(alertUsageBucketId);
-        if (next.permission === "granted" && next.token) {
-          setToast(
-            next.synced
-              ? "앱 푸시 알림이 켜졌습니다. 저장한 조건과 알림 규칙이 연결되었습니다."
-              : next.lastError ?? "앱 푸시 알림 권한은 켜졌고, 로그인 후 계정 연결을 완료할 수 있습니다."
-          );
+        if (next.registrationStage === "enabled" && next.synced) {
+          setToast("앱 푸시 알림이 켜졌습니다. 저장한 조건과 알림 규칙이 연결되었습니다.");
         } else {
-          setToast(next.lastError ?? "알림 권한이 거부되었습니다. 휴대폰 설정에서 알림을 허용해주세요.");
+          setToast(next.lastError ?? "앱 푸시 연결이 완료되지 않았습니다. 앱을 다시 실행하거나 알림 권한을 확인해 주세요.");
         }
         return;
       }
@@ -405,6 +440,8 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
       } else {
         setToast("브라우저 알림이 꺼져 있습니다. 브라우저 설정에서 언제든 다시 켤 수 있습니다.");
       }
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "앱 푸시 연결이 완료되지 않았습니다. 앱을 다시 실행하거나 알림 권한을 확인해 주세요.");
     } finally {
       setIsRequesting(false);
     }
@@ -557,11 +594,11 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
           <button
             type="button"
             onClick={requestNotificationPermission}
-            disabled={isRequesting || (!isAndroidAppPush && permission === "unsupported")}
+            disabled={isAppPushConnecting || (!isAndroidAppPush && permission === "unsupported")}
             className="enterprise-button inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isRequesting ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <CheckCircle2 size={16} aria-hidden />}
-            {isAndroidAppPush ? "앱 푸시 알림 켜기" : "브라우저 알림 켜기"}
+            {isAppPushConnecting ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <CheckCircle2 size={16} aria-hidden />}
+            {isAndroidAppPush ? appPushActionLabel(appPushState.registrationStage) : "브라우저 알림 켜기"}
           </button>
           {isAndroidAppPush && appPushState.token ? (
             <>
@@ -600,7 +637,11 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
           </span>
         </div>
 
-        <div className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
+        <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-md border border-white/10 bg-black/25 p-3">
+            <p className="font-bold text-slate-500">앱 환경</p>
+            <p className="mt-1 font-black text-white">{isAndroidAppPush ? "확인됨" : "확인 안 됨"}</p>
+          </div>
           <div className="rounded-md border border-white/10 bg-black/25 p-3">
             <p className="font-bold text-slate-500">알림 권한</p>
             <p className="mt-1 font-black text-white">{isAndroidAppPush ? appPushPermissionLabel(appPushState) : permissionLabel(permission)}</p>
@@ -615,18 +656,24 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
           </div>
         </div>
 
+        {isAndroidAppPush ? (
+          <div className="mt-2 rounded-md border border-white/10 bg-black/20 p-3 text-xs leading-5 text-slate-400">
+            <p>
+              <span className="font-bold text-slate-500">연결 단계.</span> {appPushStageLabel(appPushState.registrationStage)}
+              {appPushState.lastFailureStage ? ` · 실패 단계 ${appPushStageLabel(appPushState.lastFailureStage)}` : ""}
+            </p>
+            {appPushState.lastError ? (
+              <p className="mt-1 text-amber-100">
+                <span className="font-bold text-amber-200">마지막 오류.</span> {appPushState.lastError}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         {isAndroidAppPush && !canSendAppPushTest ? (
           <div className="mt-3 rounded-md border border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
             <p>앱 푸시 알림을 켜면 주요 조건이 감지될 때 알려드립니다.</p>
-            <button
-              type="button"
-              onClick={requestNotificationPermission}
-              disabled={isRequesting}
-              className="mt-2 inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-amber-200/30 bg-amber-200/15 px-3 text-xs font-black text-amber-50 disabled:cursor-wait disabled:opacity-60"
-            >
-              {isRequesting ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <CheckCircle2 size={14} aria-hidden />}
-              앱 푸시 알림 켜기
-            </button>
+            <p className="mt-1 text-amber-100/80">상단의 앱 푸시 알림 켜기 버튼으로 연결한 뒤 테스트 알림을 보낼 수 있습니다.</p>
           </div>
         ) : null}
 
@@ -638,7 +685,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
                 key={message.kind}
                 type="button"
                 onClick={() => void requestTestPush(message.kind)}
-                disabled={Boolean(activeTestKind) || (isAndroidAppPush && !canSendAppPushTest)}
+                disabled={Boolean(activeTestKind) || (isAndroidAppPush && (isAppPushConnecting || !canSendAppPushTest))}
                 className="min-h-16 rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 text-left transition hover:border-cyan-200 hover:bg-cyan-300/15 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <span className="flex items-center gap-2 text-xs font-black text-cyan-100">

@@ -1698,6 +1698,13 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 글로벌 푸시 시그널은 기존 `stock-momentum` 규칙 안에서 QQQ/SPY/NQ/ES, VIX/VIXY, SMH/SOXX/NVDA/AMD, UUP/GLD/TLT를 확인하고 리스크오프 조합과 반도체 주도력 비교 이벤트를 추가한다. `macro-news` 규칙에는 24시간 이내 중요 매크로 일정 리마인더를 추가한다.
 - 검증은 `.next` 캐시 삭제 후 `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`, `npm.cmd run app:android:debug`, `cmd /c npx tsc --noEmit`, `git diff --check`로 통과했다. ADB는 SDK 경로에서 실행됐지만 연결된 기기가 없어 실기기 버튼 클릭과 실제 수신 테스트는 남았다.
 
+## 2026-05-22 앱 푸시 등록 무한 로딩 방지.
+
+- 실기기에서 앱 푸시 켜기 버튼이 계속 도는 증상은 권한 요청, 기기 등록, 서버 저장 중 하나가 끝나지 않을 때 UI가 단계 실패 상태로 전환되지 못하는 흐름으로 본다.
+- 앱 푸시 등록 상태는 `idle`, `checking_permission`, `requesting_permission`, `registering_device`, `saving_token`, `enabled`, `denied`, `failed`로 분리한다. 사용자 화면에는 구현 용어 대신 권한, 연결 단계, 마지막 오류만 보여준다.
+- 테스트 알림은 계속 현재 로그인 사용자와 최신 enabled Android 앱 푸시 연결 1개만 대상으로 유지한다. 전체 사용자 발송 로직은 추가하지 않는다.
+- 검증은 `.next` 삭제 후 `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`, `npm.cmd run app:android:debug`, `cmd /c npx tsc --noEmit`, `git diff --check`로 통과했다. `google-services.json`은 존재하고 debug 빌드에서 `processDebugGoogleServices`가 실행됐다. ADB 연결 기기가 없어 실기기 권한 팝업과 logcat 확인은 남았다.
+
 ## 2026-05-22 푸시 테스트 패널.
 
 - 베타 운영 검증 목적은 대표가 직접 앱 푸시 권한, 연결 상태, 테스트 알림 형태를 확인하는 것이다. 범위는 푸시 권한, 저장, 테스트 발송, 알림 표시 형태로 제한한다.
