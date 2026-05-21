@@ -9,6 +9,9 @@ reports
 .env.local
 .env*.local
 android/app/google-services.json
+android/keystore.properties
+android/app/*.jks
+android/app/*.keystore
 .tools
 .next-dev*.log
 dev-server*.log
