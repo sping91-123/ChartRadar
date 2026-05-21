@@ -6,6 +6,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Crown, Loader2, Search, ShieldCheck, UserPlus } from "lucide-react";
 import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
+import { supabaseAuthRefreshEvent } from "@/lib/supabase";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 const planOptions = [
@@ -31,6 +32,16 @@ function isAdminAccount(userPlan?: string | null, role?: string | null) {
   return userPlan === "admin" || role === "admin";
 }
 
+function getMemberLabel(member: AdminMember) {
+  return member.email ?? member.displayName ?? `계정 ${member.id.slice(0, 8)}`;
+}
+
+function getMemberSubLabel(member: AdminMember) {
+  if (member.email && member.displayName) return member.displayName;
+  if (!member.email) return "이메일 없는 소셜 로그인 계정";
+  return null;
+}
+
 function formatDate(value?: string | null) {
   if (!value) return "없음";
   const date = new Date(value);
@@ -41,6 +52,7 @@ function formatDate(value?: string | null) {
 export default function AdminEntitlementsPage() {
   const { session, user, profile, isLoading } = useSupabaseAuth();
   const [email, setEmail] = useState("");
+  const [selectedMemberId, setSelectedMemberId] = useState("");
   const [planId, setPlanId] = useState(planOptions[0].id);
   const [durationDays, setDurationDays] = useState(90);
   const [members, setMembers] = useState<AdminMember[]>([]);
@@ -99,12 +111,14 @@ export default function AdminEntitlementsPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.accessToken}`
         },
-        body: JSON.stringify({ email, planId, durationDays })
+        body: JSON.stringify({ email, userId: selectedMemberId || undefined, planId, durationDays })
       });
       const payload = (await response.json()) as {
         ok?: boolean;
         error?: string;
         email?: string;
+        accountLabel?: string;
+        userId?: string;
         planName?: string;
         currentPeriodEnd?: string;
       };
@@ -115,6 +129,10 @@ export default function AdminEntitlementsPage() {
 
       const endDate = payload.currentPeriodEnd ? new Date(payload.currentPeriodEnd).toLocaleDateString("ko-KR") : "만료일 미확인";
       setMessage(`${payload.email ?? email} 계정에 ${payload.planName ?? "Pro"} 권한을 ${endDate}까지 부여했습니다.`);
+      if (payload.accountLabel && !payload.email) {
+        setMessage(`${payload.accountLabel} 계정에 ${payload.planName ?? "Pro"} 권한을 ${endDate}까지 부여했습니다.`);
+      }
+      window.dispatchEvent(new Event(supabaseAuthRefreshEvent));
       void loadMembers(memberQuery);
     } catch (grantError) {
       setError(grantError instanceof Error ? grantError.message : "테스터 권한 부여에 실패했습니다.");
@@ -195,12 +213,17 @@ export default function AdminEntitlementsPage() {
                     <p className="rounded-xl border border-surface-line bg-slate-950/50 p-4 text-sm font-bold text-slate-400">회원 목록을 불러오고 있습니다.</p>
                   ) : members.length > 0 ? (
                     members.map((member) => {
-                      const selected = email.toLowerCase() === (member.email ?? "").toLowerCase();
+                      const selected = selectedMemberId ? selectedMemberId === member.id : email.toLowerCase() === (member.email ?? "").toLowerCase();
+                      const subLabel = getMemberSubLabel(member);
                       return (
                         <button
                           key={member.id}
                           type="button"
-                          onClick={() => setEmail(member.email ?? "")}
+                          title={getMemberLabel(member)}
+                          onClick={() => {
+                            setSelectedMemberId(member.id);
+                            setEmail(member.email ?? "");
+                          }}
                           className={`rounded-xl border p-4 text-left transition ${
                             selected ? "border-amber-300/55 bg-amber-300/10" : "border-surface-line bg-slate-950/45 hover:border-cyan-300/35"
                           }`}
@@ -235,10 +258,13 @@ export default function AdminEntitlementsPage() {
                 <input
                   type="email"
                   value={email}
-                  onChange={(event) => setEmail(event.target.value)}
+                  onChange={(event) => {
+                    setSelectedMemberId("");
+                    setEmail(event.target.value);
+                  }}
                   placeholder="tester@example.com"
                   className="min-h-12 rounded-xl border border-surface-line bg-slate-950 px-4 text-base font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/55"
-                  required
+                  required={!selectedMemberId}
                 />
               </label>
 

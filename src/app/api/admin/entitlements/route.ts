@@ -41,6 +41,11 @@ function normalizeEmail(value: unknown) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
 
+function normalizeUserId(value: unknown) {
+  const userId = typeof value === "string" ? value.trim() : "";
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId) ? userId : "";
+}
+
 function normalizeDurationDays(value: unknown) {
   const days = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(days)) return 90;
@@ -200,15 +205,17 @@ export async function POST(request: Request) {
 
     const body = (await request.json()) as {
       email?: unknown;
+      userId?: unknown;
       planId?: unknown;
       durationDays?: unknown;
     };
     const email = normalizeEmail(body.email);
+    const userId = normalizeUserId(body.userId);
     const planId = typeof body.planId === "string" ? body.planId : "";
     const plan = findBillingPlan(planId);
     const durationDays = normalizeDurationDays(body.durationDays);
 
-    if (!email || !email.includes("@")) {
+    if (!userId && (!email || !email.includes("@"))) {
       return NextResponse.json({ error: "테스터 이메일을 입력해 주세요." }, { status: 400 });
     }
     if (!plan || plan.id === "free" || !grantablePlanIds.has(plan.id)) {
@@ -216,7 +223,7 @@ export async function POST(request: Request) {
     }
 
     const authUsers = await listSupabaseAuthUsers(memberListLimit);
-    const target = authUsers.find((user) => user.email?.toLowerCase() === email);
+    const target = authUsers.find((user) => (userId ? user.id === userId : user.email?.toLowerCase() === email));
     if (!target) {
       return NextResponse.json({ error: "해당 이메일의 가입 계정을 찾지 못했습니다. 테스터가 먼저 한 번 로그인해야 합니다." }, { status: 404 });
     }
@@ -231,7 +238,7 @@ export async function POST(request: Request) {
     ]);
     const profileBody = pickSchemaBody(profileColumns, {
       id: target.id,
-      email: target.email ?? email,
+      email: (target.email ?? email) || undefined,
       display_name: getUserDisplayName(target),
       avatar_url: getUserAvatarUrl(target),
       plan: plan.id,
@@ -288,11 +295,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
-      email: target.email ?? email,
+      email: (target.email ?? email) || null,
+      accountLabel: target.email ?? getUserDisplayName(target) ?? target.id,
+      userId: target.id,
       planId: plan.id,
       planName: plan.name,
       marketScope: getMarketScopeForPlan(plan.id),
-      currentPeriodEnd: subscriptionBody.current_period_end
+      currentPeriodEnd: subscriptionBody.current_period_end ?? periodEnd.toISOString()
     });
   } catch (error) {
     return NextResponse.json(

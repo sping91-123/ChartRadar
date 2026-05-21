@@ -29,6 +29,7 @@ const supabaseMetadataPlans = new Set<SupabaseProfile["plan"]>([
   "bundle_monthly",
   "bundle_yearly"
 ]);
+const entitlementRefreshIntervalMs = 30 * 1000;
 
 function resolveSupabaseMetadataPlan(user: SupabaseUser): SupabaseProfile["plan"] | null {
   const plan = user.app_metadata?.plan;
@@ -95,6 +96,7 @@ export function useSupabaseAuth() {
 
   useEffect(() => {
     let isMounted = true;
+    let isRefreshing = false;
 
     async function loadAuth() {
       const baseSession = getSupabaseSession();
@@ -149,22 +151,39 @@ export function useSupabaseAuth() {
         setProfile(null);
     }
 
-    function refreshAuth() {
-      setIsLoading(true);
+    function refreshAuth({ silent = false }: { silent?: boolean } = {}) {
+      if (isRefreshing) return;
+      isRefreshing = true;
+      if (!silent) setIsLoading(true);
       loadAuth()
         .then(applyAuthResult)
-        .catch(handleAuthError)
+        .catch(() => {
+          if (!silent) handleAuthError();
+        })
         .finally(() => {
-          if (isMounted) setIsLoading(false);
+          isRefreshing = false;
+          if (isMounted && !silent) setIsLoading(false);
         });
     }
 
     refreshAuth();
-    window.addEventListener(supabaseAuthRefreshEvent, refreshAuth);
+    const handleRefreshEvent = () => refreshAuth();
+    const handleFocusRefresh = () => refreshAuth({ silent: true });
+    const handleVisibilityRefresh = () => {
+      if (document.visibilityState === "visible") refreshAuth({ silent: true });
+    };
+    const intervalId = window.setInterval(() => refreshAuth({ silent: true }), entitlementRefreshIntervalMs);
+
+    window.addEventListener(supabaseAuthRefreshEvent, handleRefreshEvent);
+    window.addEventListener("focus", handleFocusRefresh);
+    document.addEventListener("visibilitychange", handleVisibilityRefresh);
 
     return () => {
       isMounted = false;
-      window.removeEventListener(supabaseAuthRefreshEvent, refreshAuth);
+      window.clearInterval(intervalId);
+      window.removeEventListener(supabaseAuthRefreshEvent, handleRefreshEvent);
+      window.removeEventListener("focus", handleFocusRefresh);
+      document.removeEventListener("visibilitychange", handleVisibilityRefresh);
     };
   }, []);
 
