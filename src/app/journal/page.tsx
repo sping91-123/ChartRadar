@@ -146,8 +146,8 @@ function resultToOutcome(result: TradeResult): OutcomeType | undefined {
 function outcomeClass(outcome?: OutcomeType | null) {
   if (outcome === "win") return "border-signal-success/40 bg-signal-success/15 text-signal-success";
   if (outcome === "loss") return "border-signal-danger/40 bg-signal-danger/15 text-signal-danger";
-  if (outcome === "breakeven") return "border-slate-500/40 bg-slate-500/15 text-slate-300";
-  if (outcome === "missed") return "border-amber-400/30 bg-amber-400/10 text-amber-200";
+  if (outcome === "breakeven") return "border-slate-500/30 bg-slate-500/10 text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/15 dark:text-slate-300";
+  if (outcome === "missed") return "border-amber-400/40 bg-amber-400/10 text-amber-700 dark:border-amber-400/30 dark:text-amber-200";
   return "border-accent-blue/25 bg-accent-blue/10 text-accent-blue";
 }
 
@@ -228,16 +228,16 @@ function SourceBadge({ entry }: { entry: JournalEntry }) {
       <span className="rounded-md border border-accent-blue/20 bg-accent-blue/10 px-2 py-1 text-[11px] font-bold text-accent-blue">
         {entry.bias || "방향 미기록"}
       </span>
-      <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] font-bold text-slate-300">
+      <span className="rounded-md border border-slate-200/80 bg-white/70 px-2 py-1 text-[11px] font-bold text-slate-600 dark:border-white/10 dark:bg-black/20 dark:text-slate-300">
         {sourceLabel}
       </span>
       {entry.symbol ? (
-        <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] font-bold text-slate-300">
+        <span className="rounded-md border border-slate-200/80 bg-white/70 px-2 py-1 text-[11px] font-bold text-slate-600 dark:border-white/10 dark:bg-black/20 dark:text-slate-300">
           {entry.symbol}
         </span>
       ) : null}
       {entry.timeframe ? (
-        <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] font-bold text-slate-300">
+        <span className="rounded-md border border-slate-200/80 bg-white/70 px-2 py-1 text-[11px] font-bold text-slate-600 dark:border-white/10 dark:bg-black/20 dark:text-slate-300">
           {entry.timeframe}
         </span>
       ) : null}
@@ -300,9 +300,9 @@ function ChipGroup({
         : "border-accent-blue bg-accent-blue text-slate-950";
 
   return (
-    <div className="rounded-xl border border-white/10 bg-black/15 p-3">
+    <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/15">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="text-xs font-black text-slate-200">{label}</p>
+        <p className="text-xs font-black text-slate-700 dark:text-slate-200">{label}</p>
         {helper ? <span className="text-[11px] text-slate-500">{helper}</span> : null}
       </div>
       <div className="flex flex-wrap gap-2">
@@ -314,7 +314,7 @@ function ChipGroup({
               type="button"
               onClick={() => onToggle(item)}
               className={`min-h-10 rounded-md border px-3 text-sm font-bold transition ${
-                active ? activeClass : "border-surface-line bg-surface-cardSoft text-slate-300 hover:border-accent-blue/50 hover:text-white"
+                active ? activeClass : "border-slate-200 bg-white/80 text-slate-700 hover:border-accent-blue/50 hover:text-slate-950 dark:border-surface-line dark:bg-surface-cardSoft dark:text-slate-300 dark:hover:text-white"
               }`}
             >
               {item}
@@ -537,21 +537,21 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
         <RadarTopNav market={market} />
 
         <section className="enterprise-panel overflow-hidden p-0">
-          <div className="relative border-b border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.22),transparent_36%),linear-gradient(135deg,rgba(15,23,42,0.96),rgba(2,6,23,0.98))] p-5 sm:p-7">
+          <div className="relative border-b border-slate-200/80 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.16),transparent_36%),linear-gradient(135deg,rgba(255,255,255,0.96),rgba(241,245,249,0.94))] p-5 dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.22),transparent_36%),linear-gradient(135deg,rgba(15,23,42,0.96),rgba(2,6,23,0.98))] sm:p-7">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-3xl">
                 <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-accent-blue/25 bg-accent-blue/10 px-3 py-1 text-xs font-black text-accent-blue">
                   <Radar size={14} aria-hidden />
                   복기 레이더
                 </div>
-                <h1 className="text-2xl font-black tracking-tight text-white sm:text-4xl">오늘의 판단을 다음 매매의 기준으로 바꿉니다.</h1>
-                <p className="mt-3 text-sm leading-6 text-slate-300 sm:text-base">{marketHeroLine}</p>
+                <h1 className="text-2xl font-black tracking-tight text-slate-950 dark:text-white sm:text-4xl">오늘의 판단을 다음 매매의 기준으로 바꿉니다.</h1>
+                <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300 sm:text-base">{marketHeroLine}</p>
                 <p className="mt-2 text-xs font-semibold text-slate-500">좋은 매매보다 지킨 매매를 먼저 기록해보세요.</p>
               </div>
-              <div className="grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-black/20 p-2 text-center">
+              <div className="grid grid-cols-3 gap-2 rounded-xl border border-slate-200/80 bg-white/70 p-2 text-center dark:border-white/10 dark:bg-black/20">
                 {["차트 분석", "근거 저장", "결과 복기"].map((item) => (
-                  <div key={item} className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2">
-                    <p className="text-[11px] font-bold text-slate-400">{item}</p>
+                  <div key={item} className="rounded-lg border border-slate-200/80 bg-white/80 px-3 py-2 dark:border-white/10 dark:bg-white/[0.03]">
+                    <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400">{item}</p>
                   </div>
                 ))}
               </div>
@@ -564,7 +564,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                 <div>
                   <div className="flex items-center gap-2">
                     <ClipboardCheck size={18} className="text-accent-blue" aria-hidden />
-                    <h2 className="text-lg font-black text-white">오늘의 복기 요약</h2>
+                    <h2 className="text-lg font-black text-slate-950 dark:text-white">오늘의 복기 요약</h2>
                   </div>
                   <p className="mt-1 text-sm leading-6 text-slate-400">
                     {summary.total
@@ -576,7 +576,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                   <button
                     type="button"
                     onClick={() => document.getElementById("pending-radar")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                    className="min-h-11 rounded-md border border-accent-blue/40 bg-black/20 px-4 text-sm font-extrabold text-accent-blue hover:bg-accent-blue/10"
+                    className="min-h-11 rounded-md border border-accent-blue/40 bg-white/70 px-4 text-sm font-extrabold text-accent-blue hover:bg-accent-blue/10 dark:bg-black/20"
                   >
                     저장한 레이더로 복기하기
                   </button>
@@ -591,38 +591,38 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
               </div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
                   <p className="text-[11px] font-black text-slate-500">이번 주 복기 수</p>
-                  <p className="mt-2 text-2xl font-black text-white">{summary.total ? `${summary.weekCount}건` : "대기 중"}</p>
+                  <p className="mt-2 text-2xl font-black text-slate-950 dark:text-white">{summary.total ? `${summary.weekCount}건` : "대기 중"}</p>
                   <p className="mt-1 text-xs text-slate-500">{summary.total ? "최근 7일 기준입니다." : "복기 1건 이상 저장 시 표시됩니다."}</p>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
                   <p className="text-[11px] font-black text-slate-500">원칙 준수율</p>
-                  <p className="mt-2 text-2xl font-black text-white">{summary.complianceRate === null ? "대기 중" : `${summary.complianceRate}%`}</p>
+                  <p className="mt-2 text-2xl font-black text-slate-950 dark:text-white">{summary.complianceRate === null ? "대기 중" : `${summary.complianceRate}%`}</p>
                   <p className="mt-1 text-xs text-slate-500">{summary.complianceRate === null ? "지킨 기준과 깨진 기준 저장 후 표시됩니다." : "기록된 기준 기반입니다."}</p>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
                   <p className="text-[11px] font-black text-slate-500">반복 실수</p>
-                  <p className="mt-2 text-lg font-black text-white">{summary.repeatedMistake || "대기 중"}</p>
+                  <p className="mt-2 text-lg font-black text-slate-950 dark:text-white">{summary.repeatedMistake || "대기 중"}</p>
                   <p className="mt-1 text-xs text-slate-500">{summary.repeatedMistake ? "가장 자주 나온 깨진 기준입니다." : "깨진 기준 저장 후 표시됩니다."}</p>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
                   <p className="text-[11px] font-black text-slate-500">다음 매매 전 체크포인트</p>
-                  <p className="mt-2 text-sm font-bold leading-6 text-white">{summary.checkpoint}</p>
+                  <p className="mt-2 text-sm font-bold leading-6 text-slate-950 dark:text-white">{summary.checkpoint}</p>
                 </div>
               </div>
             </section>
 
-            <section id="pending-radar" className="scroll-mt-4 scroll-mb-56 rounded-xl border border-white/10 bg-surface-cardSoft p-4">
+            <section id="pending-radar" className="scroll-mt-4 scroll-mb-56 rounded-xl border border-slate-200/80 bg-white/80 p-4 dark:border-white/10 dark:bg-surface-cardSoft">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
                     <Target size={18} className="text-accent-blue" aria-hidden />
-                    <h2 className="text-lg font-black text-white">복기 대기 중인 레이더</h2>
+                    <h2 className="text-lg font-black text-slate-950 dark:text-white">복기 대기 중인 레이더</h2>
                   </div>
                   <p className="mt-1 text-sm leading-6 text-slate-400">분석 화면에서 저장한 레이더를 결과 확인과 복기로 이어갑니다.</p>
                 </div>
-                <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-xs font-bold text-slate-400">
+                <span className="rounded-md border border-slate-200/80 bg-white/70 px-2 py-1 text-xs font-bold text-slate-600 dark:border-white/10 dark:bg-black/20 dark:text-slate-400">
                   {pendingRadarEntries.length ? `${pendingRadarEntries.length}건 대기` : "대기 없음"}
                 </span>
               </div>
@@ -635,24 +635,24 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                         ? `무효화 기준 ${entry.scoutSnapshot.invalidation.toLocaleString()} 확인`
                         : entry.verdict || "저장 당시 근거와 결과를 확인하세요.";
                     return (
-                      <article key={entry.id} className="rounded-xl border border-accent-blue/15 bg-black/20 p-4">
+                      <article key={entry.id} className="rounded-xl border border-accent-blue/20 bg-white/75 p-4 dark:border-accent-blue/15 dark:bg-black/20">
                         <SourceBadge entry={entry} />
                         <div className="mt-3 grid gap-2 text-sm">
                           <div className="flex items-center justify-between gap-3">
                             <span className="text-slate-500">종목/시장</span>
-                            <span className="font-bold text-white">{entry.symbol || marketLabel}</span>
+                            <span className="font-bold text-slate-950 dark:text-white">{entry.symbol || marketLabel}</span>
                           </div>
                           <div className="flex items-center justify-between gap-3">
                             <span className="text-slate-500">저장 당시 방향성</span>
-                            <span className="font-bold text-white">{entry.bias || "관망"}</span>
+                            <span className="font-bold text-slate-950 dark:text-white">{entry.bias || "관망"}</span>
                           </div>
                           <div className="flex items-center justify-between gap-3">
                             <span className="text-slate-500">저장 시간</span>
-                            <span className="font-bold text-white">{formatDateTime(entry.createdAt)}</span>
+                            <span className="font-bold text-slate-950 dark:text-white">{formatDateTime(entry.createdAt)}</span>
                           </div>
-                          <div className="rounded-md border border-white/10 bg-black/20 p-3">
+                          <div className="rounded-md border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
                             <p className="text-[11px] font-black text-slate-500">체크포인트</p>
-                            <p className="mt-1 text-sm font-semibold leading-6 text-slate-200">{checkpoint}</p>
+                            <p className="mt-1 text-sm font-semibold leading-6 text-slate-700 dark:text-slate-200">{checkpoint}</p>
                           </div>
                         </div>
                         <OutcomeButtons entry={entry} onOutcome={recordOutcome} />
@@ -668,8 +668,8 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                   })}
                 </div>
               ) : (
-                <div className="mt-4 rounded-xl border border-dashed border-white/15 bg-black/20 p-5">
-                  <p className="text-sm font-bold text-slate-200">아직 복기할 저장 레이더가 없습니다.</p>
+                <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white/70 p-5 dark:border-white/15 dark:bg-black/20">
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200">아직 복기할 저장 레이더가 없습니다.</p>
                   <p className="mt-2 text-sm leading-6 text-slate-500">
                     분석 화면에서 레이더를 저장하면 이곳에서 결과를 확인할 수 있습니다. 저장된 근거가 생기면 복기 대기 카드로 이어집니다.
                   </p>
@@ -677,37 +677,37 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
               )}
             </section>
 
-            <section id="quick-journal-form" className="scroll-mt-4 scroll-mb-56 rounded-xl border border-white/10 bg-surface-cardSoft p-4">
+            <section id="quick-journal-form" className="scroll-mt-4 scroll-mb-56 rounded-xl border border-slate-200/80 bg-white/80 p-4 dark:border-white/10 dark:bg-surface-cardSoft">
               <div className="flex items-start gap-3">
                 <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
                   <ListChecks size={20} aria-hidden />
                 </div>
                 <div>
-                  <h2 className="text-lg font-black text-white">빠른 복기 입력</h2>
+                  <h2 className="text-lg font-black text-slate-950 dark:text-white">빠른 복기 입력</h2>
                   <p className="mt-1 text-sm leading-6 text-slate-400">긴 글 대신 칩을 눌러 30초 안에 진입 근거, 지킨 기준, 깨진 기준을 남깁니다.</p>
                 </div>
               </div>
 
               <div className="mt-5 grid gap-4">
                 <div className="grid gap-3 lg:grid-cols-2">
-                  <label className="grid gap-2 text-xs font-black text-slate-300" htmlFor="journal-title">
+                  <label className="grid gap-2 text-xs font-black text-slate-700 dark:text-slate-300" htmlFor="journal-title">
                     복기 제목
                     <input
                       id="journal-title"
                       value={title}
                       onChange={(event) => setTitle(event.target.value)}
                       placeholder={market === "stocks" ? "예: NVDA 지지 반응 복기" : "예: BTC 눌림목 관찰 복기"}
-                      className="min-h-12 rounded-md border border-surface-line bg-black/20 px-4 text-base font-semibold text-white outline-none placeholder:text-slate-600 focus:border-accent-blue"
+                      className="min-h-12 rounded-md border border-slate-200 bg-white/80 px-4 text-base font-semibold text-slate-950 outline-none placeholder:text-slate-400 focus:border-accent-blue dark:border-surface-line dark:bg-black/20 dark:text-white dark:placeholder:text-slate-600"
                     />
                   </label>
-                  <label className="grid gap-2 text-xs font-black text-slate-300" htmlFor="journal-symbol">
+                  <label className="grid gap-2 text-xs font-black text-slate-700 dark:text-slate-300" htmlFor="journal-symbol">
                     시장/종목
                     <input
                       id="journal-symbol"
                       value={symbol}
                       onChange={(event) => setSymbol(event.target.value)}
                       placeholder={market === "stocks" ? "예: SPY, NVDA, QQQ" : "예: BTC, ETH, SOL"}
-                      className="min-h-12 rounded-md border border-surface-line bg-black/20 px-4 text-base font-semibold text-white outline-none placeholder:text-slate-600 focus:border-accent-blue"
+                      className="min-h-12 rounded-md border border-slate-200 bg-white/80 px-4 text-base font-semibold text-slate-950 outline-none placeholder:text-slate-400 focus:border-accent-blue dark:border-surface-line dark:bg-black/20 dark:text-white dark:placeholder:text-slate-600"
                     />
                   </label>
                 </div>
@@ -715,8 +715,8 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                 <div className="grid gap-3 lg:grid-cols-3">
                   <ChipGroup label="방향" options={directions} selected={[direction]} onToggle={(item) => setDirection(item as DirectionType)} />
                   <ChipGroup label="결과" options={resultOptions} selected={[result]} onToggle={(item) => setResult(item as TradeResult)} tone="green" />
-                  <div className="rounded-xl border border-white/10 bg-black/15 p-3">
-                    <p className="mb-2 text-xs font-black text-slate-200">손익 결과</p>
+                  <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/15">
+                    <p className="mb-2 text-xs font-black text-slate-700 dark:text-slate-200">손익 결과</p>
                     <div className="flex flex-wrap gap-2">
                       {rResultOptions.map((item) => (
                         <button
@@ -726,7 +726,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                           className={`min-h-10 rounded-md border px-3 text-sm font-bold transition ${
                             rResult === item
                               ? "border-accent-blue bg-accent-blue text-slate-950"
-                              : "border-surface-line bg-surface-cardSoft text-slate-300 hover:border-accent-blue/50 hover:text-white"
+                              : "border-slate-200 bg-white/80 text-slate-700 hover:border-accent-blue/50 hover:text-slate-950 dark:border-surface-line dark:bg-surface-cardSoft dark:text-slate-300 dark:hover:text-white"
                           }`}
                         >
                           {profitResultLabel(item)}
@@ -738,7 +738,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                         value={customRResult}
                         onChange={(event) => setCustomRResult(event.target.value)}
                         placeholder="예: 소폭 수익 / 약손실"
-                        className="mt-2 min-h-10 w-full rounded-md border border-surface-line bg-black/20 px-3 text-sm font-semibold text-white outline-none placeholder:text-slate-600 focus:border-accent-blue"
+                        className="mt-2 min-h-10 w-full rounded-md border border-slate-200 bg-white/80 px-3 text-sm font-semibold text-slate-950 outline-none placeholder:text-slate-400 focus:border-accent-blue dark:border-surface-line dark:bg-black/20 dark:text-white dark:placeholder:text-slate-600"
                       />
                     ) : null}
                   </div>
@@ -768,18 +768,18 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                   tone="red"
                 />
 
-                <label className="grid gap-2 text-xs font-black text-slate-300" htmlFor="journal-next-fix">
+                <label className="grid gap-2 text-xs font-black text-slate-700 dark:text-slate-300" htmlFor="journal-next-fix">
                   다음에 고칠 점 한 줄
                   <input
                     id="journal-next-fix"
                     value={nextFix}
                     onChange={(event) => setNextFix(event.target.value)}
                     placeholder="예: 다음 매매 전 손절 기준을 먼저 적고 확인하기"
-                    className="min-h-12 rounded-md border border-surface-line bg-black/20 px-4 text-base font-semibold text-white outline-none placeholder:text-slate-600 focus:border-accent-blue"
+                    className="min-h-12 rounded-md border border-slate-200 bg-white/80 px-4 text-base font-semibold text-slate-950 outline-none placeholder:text-slate-400 focus:border-accent-blue dark:border-surface-line dark:bg-black/20 dark:text-white dark:placeholder:text-slate-600"
                   />
                 </label>
 
-                <label className="grid gap-2 text-xs font-black text-slate-300" htmlFor="journal-memo">
+                <label className="grid gap-2 text-xs font-black text-slate-700 dark:text-slate-300" htmlFor="journal-memo">
                   선택 메모
                   <textarea
                     id="journal-memo"
@@ -787,12 +787,12 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                     onChange={(event) => setMemo(event.target.value)}
                     placeholder="차트 상황이나 감정 상태를 짧게 남겨도 좋습니다."
                     rows={3}
-                    className="w-full resize-none rounded-md border border-surface-line bg-black/20 px-4 py-3 text-base leading-7 text-white outline-none placeholder:text-slate-600 focus:border-accent-blue"
+                    className="w-full resize-none rounded-md border border-slate-200 bg-white/80 px-4 py-3 text-base leading-7 text-slate-950 outline-none placeholder:text-slate-400 focus:border-accent-blue dark:border-surface-line dark:bg-black/20 dark:text-white dark:placeholder:text-slate-600"
                   />
                 </label>
 
-                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-                  <p className="text-xs font-bold text-slate-400">
+                <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
+                  <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
                     {isSubmitReady
                       ? "필수 항목이 준비되었습니다. 저장하면 이번 복기 요약과 다음 체크포인트를 바로 보여드립니다."
                       : "복기 제목, 시장/종목, 다음 체크포인트를 채우면 저장할 수 있습니다. 진입 근거와 지킨 기준은 칩으로 빠르게 더해보세요."}
@@ -803,7 +803,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                   type="button"
                   onClick={addEntry}
                   disabled={!isSubmitReady}
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-accent-blue px-4 text-sm font-extrabold text-slate-950 transition hover:bg-sky-300 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-accent-blue px-4 text-sm font-extrabold text-slate-950 transition hover:bg-sky-300 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
                 >
                   <Plus size={18} aria-hidden />
                   복기 저장하고 요약 보기
@@ -818,37 +818,37 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                     <ShieldCheck size={20} aria-hidden />
                   </div>
                   <div>
-                    <h2 className="text-lg font-black text-white">이번 복기 요약</h2>
-                    <p className="mt-1 text-sm leading-6 text-slate-300">{lastFeedback.message}</p>
+                    <h2 className="text-lg font-black text-slate-950 dark:text-white">이번 복기 요약</h2>
+                    <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-300">{lastFeedback.message}</p>
                   </div>
                 </div>
                 <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-                  <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                  <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
                     <p className="text-[11px] font-black text-slate-500">원칙 준수 상태</p>
-                    <p className="mt-2 text-sm font-bold text-white">{lastFeedback.principleStatus}</p>
+                    <p className="mt-2 text-sm font-bold text-slate-950 dark:text-white">{lastFeedback.principleStatus}</p>
                   </div>
-                  <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                  <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
                     <p className="text-[11px] font-black text-slate-500">주요 실수</p>
-                    <p className="mt-2 text-sm font-bold text-white">{lastFeedback.mistake}</p>
+                    <p className="mt-2 text-sm font-bold text-slate-950 dark:text-white">{lastFeedback.mistake}</p>
                   </div>
-                  <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                  <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
                     <p className="text-[11px] font-black text-slate-500">잘한 점</p>
-                    <p className="mt-2 text-sm font-bold text-white">{lastFeedback.wellDone}</p>
+                    <p className="mt-2 text-sm font-bold text-slate-950 dark:text-white">{lastFeedback.wellDone}</p>
                   </div>
-                  <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                  <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
                     <p className="text-[11px] font-black text-slate-500">다음 매매 전 체크포인트</p>
-                    <p className="mt-2 text-sm font-bold leading-6 text-white">{lastFeedback.checkpoint}</p>
+                    <p className="mt-2 text-sm font-bold leading-6 text-slate-950 dark:text-white">{lastFeedback.checkpoint}</p>
                   </div>
                 </div>
               </section>
             ) : null}
 
-            <section className="scroll-mb-56 rounded-xl border border-white/10 bg-surface-cardSoft p-4">
+            <section className="scroll-mb-56 rounded-xl border border-slate-200/80 bg-white/80 p-4 dark:border-white/10 dark:bg-surface-cardSoft">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <div className="flex items-center gap-2">
                     <History size={18} className="text-accent-blue" aria-hidden />
-                    <h2 className="text-lg font-black text-white">복기 히스토리</h2>
+                    <h2 className="text-lg font-black text-slate-950 dark:text-white">복기 히스토리</h2>
                   </div>
                   <p className="mt-1 text-sm leading-6 text-slate-400">결과보다 원칙, 리스크 관리, 다음 체크포인트가 한눈에 보이도록 정리합니다.</p>
                 </div>
@@ -861,7 +861,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                       className={`min-h-10 rounded-md border px-3 text-sm font-bold ${
                         activeFilter === filter
                           ? "border-accent-blue bg-accent-blue text-slate-950"
-                          : "border-surface-line bg-black/20 text-slate-300 hover:border-accent-blue/50 hover:text-white"
+                          : "border-slate-200 bg-white/70 text-slate-700 hover:border-accent-blue/50 hover:text-slate-950 dark:border-surface-line dark:bg-black/20 dark:text-slate-300 dark:hover:text-white"
                       }`}
                     >
                       {filter}
@@ -872,7 +872,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
 
               <div className="mt-4 space-y-3">
                 {isLoadingRemote ? (
-                  <div className="flex items-center gap-2 rounded-md border border-white/10 bg-black/20 p-4 text-sm text-slate-300">
+                  <div className="flex items-center gap-2 rounded-md border border-slate-200/80 bg-white/70 p-4 text-sm text-slate-700 dark:border-white/10 dark:bg-black/20 dark:text-slate-300">
                     <Loader2 className="animate-spin text-accent-blue" size={17} aria-hidden />
                     복기 기록을 불러오는 중입니다.
                   </div>
@@ -881,25 +881,25 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                     const parsed = parseEntryMeta(entry);
                     const expanded = expandedEntryId === entry.id;
                     return (
-                      <article key={entry.id} className="rounded-xl border border-surface-line bg-black/20 p-4">
+                      <article key={entry.id} className="rounded-xl border border-slate-200/80 bg-white/75 p-4 dark:border-surface-line dark:bg-black/20">
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <SourceBadge entry={entry} />
-                            <h3 className="mt-2 text-base font-black text-white">{entry.title}</h3>
+                            <h3 className="mt-2 text-base font-black text-slate-950 dark:text-white">{entry.title}</h3>
                             <div className="mt-2 flex flex-wrap gap-2">
-                              <span className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs font-bold text-slate-300">
+                              <span className="rounded-md border border-slate-200/80 bg-white/70 px-2 py-1 text-xs font-bold text-slate-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300">
                                 {parsed.symbol}
                               </span>
-                              <span className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs font-bold text-slate-300">
+                              <span className="rounded-md border border-slate-200/80 bg-white/70 px-2 py-1 text-xs font-bold text-slate-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300">
                                 방향 {entry.bias || "미기록"}
                               </span>
                               <span className={`rounded-md border px-2 py-1 text-xs font-bold ${outcomeClass(entry.outcome)}`}>
                                 결과 {parsed.result}
                               </span>
-                              <span className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs font-bold text-slate-300">
+                              <span className="rounded-md border border-slate-200/80 bg-white/70 px-2 py-1 text-xs font-bold text-slate-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300">
                                 손익 {profitResultLabel(parsed.rResult)}
                               </span>
-                              <span className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs font-bold text-slate-300">
+                              <span className="rounded-md border border-slate-200/80 bg-white/70 px-2 py-1 text-xs font-bold text-slate-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300">
                                 <Clock3 className="mr-1 inline" size={12} aria-hidden />
                                 {formatDateTime(entry.createdAt)}
                               </span>
@@ -916,20 +916,20 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                         </div>
 
                         <div className="mt-3 grid gap-2 md:grid-cols-3">
-                          <div className="rounded-md border border-white/10 bg-black/20 p-3">
+                          <div className="rounded-md border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
                             <p className="text-[11px] font-black text-slate-500">실수 태그</p>
-                            <p className="mt-1 text-sm font-bold text-white">{parsed.brokenReal.length ? parsed.brokenReal.join(", ") : "없음"}</p>
+                            <p className="mt-1 text-sm font-bold text-slate-950 dark:text-white">{parsed.brokenReal.length ? parsed.brokenReal.join(", ") : "없음"}</p>
                           </div>
-                          <div className="rounded-md border border-white/10 bg-black/20 p-3">
+                          <div className="rounded-md border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
                             <p className="text-[11px] font-black text-slate-500">원칙 준수 상태</p>
-                            <p className="mt-1 flex items-center gap-1 text-sm font-bold text-white">
+                            <p className="mt-1 flex items-center gap-1 text-sm font-bold text-slate-950 dark:text-white">
                               {parsed.brokenReal.length ? <AlertTriangle size={14} className="text-signal-danger" aria-hidden /> : <CheckCircle2 size={14} className="text-signal-success" aria-hidden />}
                               {parsed.principleStatus}
                             </p>
                           </div>
-                          <div className="rounded-md border border-white/10 bg-black/20 p-3">
+                          <div className="rounded-md border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
                             <p className="text-[11px] font-black text-slate-500">다음 매매 전 체크</p>
-                            <p className="mt-1 text-sm font-bold leading-6 text-white">{parsed.nextCheckpoint}</p>
+                            <p className="mt-1 text-sm font-bold leading-6 text-slate-950 dark:text-white">{parsed.nextCheckpoint}</p>
                           </div>
                         </div>
 
@@ -938,33 +938,33 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                         <button
                           type="button"
                           onClick={() => setExpandedEntryId(expanded ? null : entry.id)}
-                          className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-md border border-white/10 bg-black/20 px-3 text-sm font-bold text-slate-300 hover:border-accent-blue/50 hover:text-white"
+                          className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-md border border-slate-200/80 bg-white/70 px-3 text-sm font-bold text-slate-700 hover:border-accent-blue/50 hover:text-slate-950 dark:border-white/10 dark:bg-black/20 dark:text-slate-300 dark:hover:text-white"
                         >
                           자세히 보기
                           {expanded ? <ChevronUp size={16} aria-hidden /> : <ChevronDown size={16} aria-hidden />}
                         </button>
 
                         {expanded ? (
-                          <div className="mt-3 rounded-md border border-white/10 bg-black/20 p-3">
-                            <div className="grid gap-3 text-sm leading-6 text-slate-300">
+                          <div className="mt-3 rounded-md border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
+                            <div className="grid gap-3 text-sm leading-6 text-slate-700 dark:text-slate-300">
                               <p>
-                                <span className="font-black text-slate-100">진입 근거.</span>{" "}
+                                <span className="font-black text-slate-950 dark:text-slate-100">진입 근거.</span>{" "}
                                 {parsed.entryReasons.length ? parsed.entryReasons.join(", ") : "기록 대기"}
                               </p>
                               <p>
-                                <span className="font-black text-slate-100">지킨 기준.</span>{" "}
+                                <span className="font-black text-slate-950 dark:text-slate-100">지킨 기준.</span>{" "}
                                 {parsed.keptPrinciples.length ? parsed.keptPrinciples.join(", ") : "기록 대기"}
                               </p>
                               <p>
-                                <span className="font-black text-slate-100">깨진 기준.</span>{" "}
+                                <span className="font-black text-slate-950 dark:text-slate-100">깨진 기준.</span>{" "}
                                 {parsed.brokenPrinciples.length ? parsed.brokenPrinciples.join(", ") : "기록 대기"}
                               </p>
                               <p>
-                                <span className="font-black text-slate-100">손익 결과.</span> {profitResultLabel(parsed.rResult)}
+                                <span className="font-black text-slate-950 dark:text-slate-100">손익 결과.</span> {profitResultLabel(parsed.rResult)}
                               </p>
                               {parsed.memo ? (
                                 <p>
-                                  <span className="font-black text-slate-100">선택 메모.</span> {parsed.memo}
+                                  <span className="font-black text-slate-950 dark:text-slate-100">선택 메모.</span> {parsed.memo}
                                 </p>
                               ) : entry.note && !isStructuredJournalNote(entry.note) ? (
                                 <p className="whitespace-pre-wrap">{entry.note}</p>
@@ -976,8 +976,8 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                     );
                   })
                 ) : (
-                  <div className="rounded-xl border border-dashed border-white/15 bg-black/20 p-5">
-                    <p className="text-sm font-bold text-slate-200">아직 저장된 복기가 없습니다.</p>
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-white/70 p-5 dark:border-white/15 dark:bg-black/20">
+                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">아직 저장된 복기가 없습니다.</p>
                     <p className="mt-2 text-sm leading-6 text-slate-500">
                       첫 복기는 짧아도 됩니다. 진입 이유와 깨진 원칙만 남겨도 다음 판단이 선명해집니다.
                     </p>
