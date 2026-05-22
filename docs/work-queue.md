@@ -91,4 +91,4 @@ git ls-files | Select-String -Pattern '(^|/)(\.env|\.env\.local|google-services\
 | P1 | DONE | 신규 실업수당 청구 결과 확인중 문제 | 뉴스 / 매크로 레이더 | 높음 | Jobless Claims가 발표 후에도 결과 확인중으로 남지 않게 수정 | `6f1e70f` |
 | P2 | DONE | 글로벌 일정 뉴스 압력 명칭/한글화 | /Global | 중간 | 일정 뉴스 압력 표현을 자연스럽게 정리하고 글로벌 뉴스 제목을 한국어 우선 표시 | `0f6be13` |
 | P3 | DONE | UI 디자인 시스템 진단 | UI 디자인 시스템 / 브랜드 리뉴얼 | xhigh | AI스럽게 보이는 UI 문제를 진단하고 디자인 시스템 개선안을 작성 | `docs/ui-design-system-audit.md` |
-| P4 | TODO | 앱 푸시 로그인 후 실제 테스트 후속 | 알림 시스템 | 높음 | 로그인 상태에서 `push_tokens` 저장과 테스트 알림 수신까지 확인 |  |
+| P4 | DONE | 앱 푸시 로그인 후 실제 테스트 후속 | 알림 시스템 | 높음 | 로그인 상태에서 `push_tokens` 저장과 테스트 알림 수신까지 확인. 실제 폰에서 알림 권한 팝업 및 테스트 푸시 수신 성공 | 실기기 확인 |

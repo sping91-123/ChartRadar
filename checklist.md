@@ -1990,3 +1990,14 @@
 - [x] 글로벌 뉴스 제목의 한국어 우선 표시 구조를 확인하고 필요한 최소 보강을 한다.
 - [x] build, 모바일 smoke, 전체 smoke, `/global`, `/news?market=global`로 검증한다.
 - [x] P2를 `DONE`으로 바꾸고 완료 커밋 해시를 기록한다.
+
+## 2026-05-22 P4 앱 푸시 로그인 후 실제 테스트 후속.
+
+- [x] 작업 전 git 상태와 `docs/work-queue.md` P4 상태를 확인한다.
+- [x] P4 상태를 `IN_PROGRESS`로 변경한다.
+- [x] `/api/push-tokens` 저장 조건과 Bearer 세션 기준을 확인한다.
+- [x] `/api/push-test` 대상 제한과 발송 조건을 확인한다.
+- [x] Supabase, Vercel Logs, 실기기 테스트 절차를 정리한다.
+- [x] build, 모바일 smoke, 전체 smoke로 검증한다.
+- [x] 실제 폰에서 알림 권한 팝업과 기본 테스트 푸시 수신 성공을 확인한다.
+- [x] P4 상태를 `DONE`으로 변경한다.

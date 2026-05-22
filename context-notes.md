@@ -1759,3 +1759,16 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 글로벌 뉴스 제목은 `/api/radar-news`에서는 `translatedTitle`과 `fallbackKoreanNewsTitle()`이 이미 있고, `/news?market=global`의 `RadarNewsPanel`도 한국어 우선 표시를 사용한다. 반면 `/api/stocks/market-board`의 `newsPressure`는 RSS 원문 제목을 그대로 내려 보내므로 여기만 최소 보강한다.
 - `/api/stocks/market-board`의 뉴스 제목은 `fallbackKoreanNewsTitle(title, "stocks")`와 `localizeNewsSourceText()`를 거쳐 한국어 우선으로 내려보내고, 원문은 `originalTitle`로 보존한다.
 - 검증은 `git diff --check`, `cmd /c npx tsc --noEmit`, `npm.cmd run lint`, `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`, `/global`, `/news?market=global`, `/api/stocks/market-board` 직접 호출로 통과했다.
+
+## 2026-05-22 P4 앱 푸시 로그인 후 실제 테스트 후속.
+
+- 이번 범위는 로그인된 Android 앱에서 앱 푸시 연결, `push_tokens` 저장, 테스트 알림 실제 수신을 확인하는 절차 정리와 코드 확인이다.
+- 바로 코드를 수정하지 않고 `/api/push-tokens`, `/api/push-test`, Supabase row 조건, Vercel Logs 확인 경로, 실기기 테스트 순서, 실패 분기표를 먼저 확정한다.
+- P4 완료는 대표가 실제 폰에서 연결 성공과 테스트 알림 수신을 확인하거나, 실패 단계와 원인을 명확히 확인해 별도 TODO로 남기는 경우에만 가능하다.
+- GitHub Deployments 기준 Production 최신 배포는 `fbc3ec85fae5a579c8a0ab1c1c5901f9bd13f743`이고, `origin/main`도 같은 커밋이다. `https://chartradar.kr/alerts?market=crypto`는 Vercel에서 200으로 응답했다.
+- `/api/push-tokens`는 Authorization Bearer 세션으로 Supabase 사용자를 확인하고, `platform=android`, `provider=fcm`, `enabled=true`, `app_id=com.staronlabs.chartradar`로 `push_tokens`에 upsert한다.
+- `/api/push-test`는 같은 Bearer 세션의 사용자만 조회하고, `enabled=true`, `platform=android`, `provider=fcm` 조건에서 `last_registered_at desc limit 1`인 최신 토큰 1개만 FCM으로 발송한다.
+- Supabase 확인 기준은 `push_tokens.user_id`, `platform`, `provider`, `enabled`, `last_registered_at`, `last_seen_at`, `markets`, `rule_ids`이며, 테스트 성공 후 `push_alert_events.rule_id=push-test`와 `payload.type=push_test`도 확인한다.
+- Vercel Logs 확인 경로는 `/api/push-tokens`와 `/api/push-test`다. `/api/push-test`는 응답 payload에 `requestPath=/api/push-test`를 포함하고, 발송 실패는 `[push-test] send failed`, 이벤트 기록 실패는 `[push-test] event log failed`로 남긴다.
+- 검증은 `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`, `.next` 삭제 후 `npm.cmd run build`, 재실행한 `npm.cmd run smoke:all`, `git diff --check`로 통과했다. 최초 build는 병렬 실행 중 stale `.next`에서 `PageNotFoundError: /_document`가 발생해 `.next` 삭제 후 통과했다.
+- 실제 폰에서 앱 알림 권한 허용 팝업 표시, 권한 허용, 기본 테스트 알림 발송, 폰 알림 수신까지 성공 확인됐다. 따라서 P4는 `DONE`으로 처리한다.
