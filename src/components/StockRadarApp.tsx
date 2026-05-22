@@ -702,15 +702,17 @@ function GlobalRadarControlDock({
   timeframe,
   onTimeframeChange,
   radarMode,
-  onRadarModeChange
+  onRadarModeChange,
+  showMobileDock
 }: {
   timeframe: ChartTimeframe;
   onTimeframeChange: (value: ChartTimeframe) => void;
   radarMode: GlobalRadarMode;
   onRadarModeChange: (value: GlobalRadarMode) => void;
+  showMobileDock: boolean;
 }) {
-  return (
-    <div className="sticky top-3 z-20 mx-auto max-w-5xl rounded-lg border border-surface-line bg-slate-950/92 p-2 shadow-2xl shadow-black/40 backdrop-blur">
+  const renderContent = () => (
+    <>
       <div className="grid grid-cols-5 gap-1.5">
         {chartTimeframes.map((item) => (
           <button
@@ -744,13 +746,31 @@ function GlobalRadarControlDock({
           </button>
         ))}
       </div>
-    </div>
+    </>
+  );
+
+  return (
+    <>
+      <div
+        className={`fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 mx-auto rounded-lg border border-surface-line bg-slate-950/94 p-2 shadow-2xl shadow-black/50 backdrop-blur sm:hidden ${showMobileDock ? "block" : "hidden"}`}
+        aria-label="글로벌 자산레이더 모바일 조작 패널"
+      >
+        {renderContent()}
+      </div>
+      <div
+        className="sticky top-3 z-20 mx-auto hidden max-w-5xl rounded-lg border border-surface-line bg-slate-950/92 p-2 shadow-2xl shadow-black/40 backdrop-blur sm:block"
+        aria-label="글로벌 자산레이더 조작 패널"
+      >
+        {renderContent()}
+      </div>
+    </>
   );
 }
 
 export function StockRadarApp() {
   const { profile } = useSupabaseAuth();
   const isPaid = hasMarketEntitlement(profile?.plan, "stocks");
+  const sectionRef = useRef<HTMLElement | null>(null);
   const chartRef = useRef<HTMLDivElement | null>(null);
   const chartApiRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -763,6 +783,7 @@ export function StockRadarApp() {
   const [state, setState] = useState<LoadState>({ status: "idle" });
   const [sessionState, setSessionState] = useState<ReturnType<typeof getGlobalSessionState> | null>(null);
   const [savedSymbols, setSavedSymbols] = useState<string[]>([]);
+  const [showMobileDock, setShowMobileDock] = useState(false);
   const watchlistLimit = getWatchlistLimit(profile?.plan ?? "free");
 
   const selectedInfo = useMemo(() => universe.find((item) => item.symbol === symbol) ?? null, [symbol, universe]);
@@ -840,6 +861,29 @@ export function StockRadarApp() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) {
+      setShowMobileDock(true);
+      return;
+    }
+
+    const updateDockVisibility = () => {
+      const rect = section.getBoundingClientRect();
+      setShowMobileDock(window.location.hash === "#asset-radar" || (rect.top < window.innerHeight && rect.bottom > 120));
+    };
+
+    updateDockVisibility();
+    window.addEventListener("hashchange", updateDockVisibility);
+    window.addEventListener("resize", updateDockVisibility);
+    window.addEventListener("scroll", updateDockVisibility, { passive: true });
+    return () => {
+      window.removeEventListener("hashchange", updateDockVisibility);
+      window.removeEventListener("resize", updateDockVisibility);
+      window.removeEventListener("scroll", updateDockVisibility);
+    };
+  }, []);
 
   useEffect(() => {
     setSessionState(getGlobalSessionState());
@@ -946,7 +990,11 @@ export function StockRadarApp() {
   );
 
   return (
-    <section id="asset-radar" className="scroll-mt-24 rounded-lg border border-surface-line bg-surface-card p-4 pb-36 shadow-glow sm:p-5 sm:pb-36">
+    <section
+      id="asset-radar"
+      ref={sectionRef}
+      className="scroll-mt-24 rounded-lg border border-surface-line bg-surface-card p-4 pb-40 shadow-glow sm:p-5 sm:pb-36"
+    >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-accent-blue/30 bg-accent-blue/15 text-accent-blue">
@@ -1182,6 +1230,7 @@ export function StockRadarApp() {
         onTimeframeChange={setTimeframe}
         radarMode={radarMode}
         onRadarModeChange={setRadarMode}
+        showMobileDock={showMobileDock}
       />
     </section>
   );

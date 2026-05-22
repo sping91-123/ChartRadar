@@ -1791,3 +1791,13 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 라이트모드 반투명 문제는 패널 루트에 전용 클래스를 두고, 라이트모드에서 불투명한 `#f8fafc` 배경을 직접 지정해 해결한다.
 - 헤더 내부에서 `fixed inset-0`을 렌더링하면 상위 레이아웃에 묶일 수 있어 `createPortal`로 `document.body`에 직접 붙인다. 이 방식이 실제 모바일 풀스크린 동작에 더 안전하다.
 - 검증은 `git diff --check`, `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`을 통과했다. 브라우저에서는 340px 라이트모드와 360px 다크모드에서 패널이 viewport 전체를 덮고, 가로 overflow 없이 뒤로 버튼으로 닫히는 것을 확인했다.
+
+## 2026-05-22 P1 글로벌 하단 고정 패널 복구.
+
+- 작업 범위는 `/global` 자산레이더 조작 UI 복구로 제한한다. 로그인, 푸시, 결제, Android, 알림 route는 건드리지 않는다.
+- 현재 글로벌 자산레이더의 타임프레임과 분석 모드 상태는 `StockRadarApp`에 남아 있지만, 컨트롤은 카드 내부 `sticky top` 형태라 모바일에서 하단 조작 패널처럼 보이지 않는다.
+- 코인 레이더 `LiveMarketChart`에는 `fixed inset-x-3 bottom-3` 하단 고정 컨트롤이 남아 있어 글로벌 모바일 복구 기준으로 삼는다.
+- 데스크톱은 기존 흐름을 해치지 않도록 상단 sticky 컨트롤을 유지하고, 모바일만 safe-area를 고려한 하단 fixed 컨트롤을 제공하는 방향이 가장 작다.
+- 모바일 하단 패널은 `#asset-radar`가 화면에 들어오거나 `/global#asset-radar`로 진입했을 때만 표시한다. 시장흐름 상단에서는 글로벌 결론 카드가 주인공이어야 하므로 불필요한 패널 노출을 피한다.
+- 340px와 360px 폭에서 5개 타임프레임과 3개 분석 모드가 잘리지 않고, `1h`와 `ICT` 선택 후 상세 요약이 `1h · ICT`로 바뀌는 것을 확인했다.
+- 검증은 `git diff --check`, `cmd /c npx tsc --noEmit`, `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`을 통과했다.
