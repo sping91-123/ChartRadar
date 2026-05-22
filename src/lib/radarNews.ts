@@ -17,7 +17,10 @@ export type RadarNewsSignal = {
 export type RadarNewsItem = RadarNewsSignal & {
   id: string;
   source: string;
+  originalTitle: string;
   title: string;
+  titleKo?: string;
+  displayTitle: string;
   translatedTitle?: string;
   excerpt?: string;
   link: string;
@@ -119,9 +122,25 @@ const stockBearishRules: Rule[] = [
 ];
 
 const urgencyKeywords = ["breaking", "urgent", "fed", "fomc", "sec", "binance", "coinbase", "blackrock", "hack", "liquidation", "etf"];
+const forbiddenCopyPatterns = [
+  /폭등/g,
+  /폭락/g,
+  /매수\s*기회/g,
+  /수익\s*찬스/g,
+  /확정\s*신호/g,
+  /시장\s*충격\s*확정/g
+];
+
+function keywordInText(text: string, keyword: string) {
+  const normalized = keyword.toLowerCase();
+  if (/^[a-z0-9.]+$/i.test(normalized)) {
+    return new RegExp(`\\b${normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(text);
+  }
+  return text.includes(normalized);
+}
 
 function includesAny(text: string, keywords: string[]) {
-  return keywords.some((keyword) => text.includes(keyword.toLowerCase()));
+  return keywords.some((keyword) => keywordInText(text, keyword));
 }
 
 function unique<T>(items: T[]) {
@@ -148,6 +167,21 @@ function sanitizeNewsText(text: string) {
     .replace(/[\u3400-\u4DBF\u4E00-\u9FFF]/g, "")
     .replace(/\s{2,}/g, " ")
     .trim();
+}
+
+function sanitizeMarketCopy(text: string) {
+  let next = sanitizeNewsText(text);
+  for (const pattern of forbiddenCopyPatterns) {
+    next = next.replace(pattern, (match) => {
+      if (match.includes("폭등")) return "강세";
+      if (match.includes("폭락")) return "약세";
+      if (match.includes("매수")) return "확인 구간";
+      if (match.includes("수익")) return "시장 관심";
+      if (match.includes("확정")) return "확인 필요";
+      return "확인 필요";
+    });
+  }
+  return next.replace(/\s+/g, " ").trim();
 }
 
 export function localizeNewsSourceText(text: string) {
@@ -177,29 +211,104 @@ function hasKorean(value: string) {
   return /[가-힣]/.test(value);
 }
 
+function hasMeaningfulKoreanTitle(value: string) {
+  const text = sanitizeMarketCopy(value);
+  if (!hasKorean(text)) return false;
+  if (text.length < 6) return false;
+  const koreanCount = text.match(/[가-힣]/g)?.length ?? 0;
+  const latinCount = text.match(/[A-Za-z]/g)?.length ?? 0;
+  if (latinCount > Math.max(12, koreanCount * 1.2)) return false;
+  return !/주요 이슈가 업데이트되었습니다|확인해야 하는 뉴스입니다|관련 뉴스입니다|뉴스입니다/.test(text);
+}
+
+function companyOrAssetLabel(text: string, market: RadarNewsMarket) {
+  if (market === "crypto") {
+    if (/\bbitcoin\b|\bbtc\b/i.test(text)) return "BTC";
+    if (/\beth\b|\bether\b|ethereum/i.test(text)) return "ETH";
+    if (/stablecoin|usdt|usdc/i.test(text)) return "스테이블코인";
+    if (/crypto|digital asset/i.test(text)) return "코인 시장";
+    return "코인 시장";
+  }
+
+  if (/nvidia|\bnvda\b/i.test(text)) return "엔비디아";
+  if (/semiconductor|chip|broadcom|amd|\bsmh\b/i.test(text)) return "반도체주";
+  if (/tesla|\btsla\b/i.test(text)) return "테슬라";
+  if (/apple|\baapl\b/i.test(text)) return "애플";
+  if (/microsoft|\bmsft\b/i.test(text)) return "마이크로소프트";
+  if (/nasdaq|\bqqq\b|ndx/i.test(text)) return "나스닥";
+  if (/s&p|spy|spx/i.test(text)) return "S&P500";
+  if (/dow/i.test(text)) return "다우";
+  return "미국 증시";
+}
+
+function compactDollarPrice(text: string) {
+  const match = text.match(/\$\s*([0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.[0-9]+)?/);
+  if (!match) return "";
+  return `${match[1]}달러`;
+}
+
+function contextualFallbackTitle(originalTitle: string, market: RadarNewsMarket) {
+  const raw = originalTitle.trim();
+  const text = raw.toLowerCase();
+  const asset = companyOrAssetLabel(raw, market);
+  const dollarPrice = compactDollarPrice(raw);
+
+  if (market === "crypto") {
+    if (/bitcoin|btc/.test(text) && dollarPrice) return `BTC ${dollarPrice} 부근 흐름 점검`;
+    if (/ethereum|ether|eth/.test(text) && dollarPrice) return `ETH ${dollarPrice} 부근 흐름 점검`;
+    if (/etf/.test(text) && /inflow|outflow|flow/.test(text)) return `${asset} ETF 수급 흐름 점검`;
+    if (/stablecoin|usdt|usdc/.test(text)) return "스테이블코인 수급과 규제 흐름 점검";
+    if (/fed|fomc|rate|yield|treasury|dollar/.test(text)) return "금리·달러 부담에 코인 시장 방향성 점검";
+    if (/cpi|ppi|pce|inflation/.test(text)) return "물가 지표 앞두고 코인 시장 변동성 점검";
+    if (/jobless|payroll|jobs|unemployment/.test(text)) return "고용지표 대기 속 위험자산 흐름 점검";
+    if (/liquidation|sell-off|correction|slump|drop/.test(text)) return "청산과 변동성 확대 가능성 점검";
+    if (/regulation|sec|cftc|congress|stablecoin bill|clarity act|genius act/.test(text)) return "규제 이슈가 코인 시장 심리에 미치는 영향 점검";
+    return `${asset} 주요 시장 이슈 점검`;
+  }
+
+  if (/fomc|minutes/.test(text)) return "FOMC 의사록 공개 앞두고 금리 경계감 유지";
+  if (/fed|powell|rate|yield|treasury/.test(text)) return "미국 금리 경계감에 지수 방향성 점검";
+  if (/cpi|ppi|pce|inflation/.test(text)) return "물가 지표 앞두고 인플레 부담 재점검";
+  if (/jobless|payroll|jobs|employment|unemployment/.test(text)) return "고용지표 발표 전 미국 지수선물 흐름 점검";
+  if (/oil|crude|brent|wti|gas prices|energy/.test(text)) return "유가 흐름에 인플레 부담 재점검";
+  if (/dollar|dxy/.test(text)) return "달러 강세 여부에 위험자산 부담 점검";
+  if (/vix|volatility/.test(text)) return "변동성 확대 가능성에 위험자산 경계";
+  if (/nvidia|\bnvda\b|semiconductor|chip|ai demand|data center/.test(text)) return `${asset} 기대감에 반도체주 주목`;
+  if (/earnings|guidance|revenue|profit/.test(text)) return `${asset} 실적과 가이던스에 시장 반응 점검`;
+  if (/futures|nasdaq|s&p|dow|wall street/.test(text)) return `${asset} 흐름에 미국장 방향성 점검`;
+  return `${asset} 주요 시장 이슈 점검`;
+}
+
+export function marketNewsDisplayTitle(originalTitle: string, candidateTitle: string | undefined, market: RadarNewsMarket = "crypto") {
+  const candidate = sanitizeMarketCopy(candidateTitle ?? "");
+  const fallback = contextualFallbackTitle(originalTitle, market);
+  const title = hasMeaningfulKoreanTitle(candidate) ? candidate : fallback;
+  return sanitizeMarketCopy(title).replace(/[.!?。]+$/g, "").slice(0, 72);
+}
+
 export function fallbackKoreanNewsTitle(title: string, market: RadarNewsMarket = "crypto") {
   const localized = localizeNewsSourceText(title).trim();
-  if (hasKorean(localized)) return localized;
+  if (hasMeaningfulKoreanTitle(localized)) return marketNewsDisplayTitle(title, localized, market);
 
   const text = localized.toLowerCase();
   if (market === "crypto") {
     const asset = cryptoAssets.find((rule) => rule.keywords.some((keyword) => text.includes(keyword)))?.asset ?? "코인 시장";
-    if (text.includes("etf")) return `${asset} ETF 흐름이 시장에 영향을 줄 수 있는 뉴스입니다.`;
-    if (text.includes("inflow") || text.includes("outflow")) return `${asset} 자금 유입과 유출 흐름을 확인해야 하는 뉴스입니다.`;
-    if (text.includes("sec") || text.includes("lawsuit") || text.includes("regulation")) return `${asset} 규제 리스크를 확인해야 하는 뉴스입니다.`;
-    if (text.includes("hack") || text.includes("exploit")) return `${asset} 보안 리스크가 감지된 뉴스입니다.`;
-    if (text.includes("rally") || text.includes("surge") || text.includes("breakout")) return `${asset} 상승 모멘텀을 확인해야 하는 뉴스입니다.`;
-    if (text.includes("liquidation") || text.includes("sell-off") || text.includes("plunge")) return `${asset} 하방 변동성을 조심해야 하는 뉴스입니다.`;
-    return `${asset} 주요 이슈가 업데이트되었습니다.`;
+    if (text.includes("etf")) return `${asset} ETF 수급 흐름 점검`;
+    if (text.includes("inflow") || text.includes("outflow")) return `${asset} 자금 유입·유출 흐름 점검`;
+    if (text.includes("sec") || text.includes("lawsuit") || text.includes("regulation")) return `${asset} 규제 리스크 점검`;
+    if (text.includes("hack") || text.includes("exploit")) return `${asset} 보안 리스크 점검`;
+    if (text.includes("rally") || text.includes("surge") || text.includes("breakout")) return `${asset} 강세 흐름 지속 여부 점검`;
+    if (text.includes("liquidation") || text.includes("sell-off") || text.includes("plunge")) return `${asset} 하방 변동성 확대 여부 점검`;
+    return contextualFallbackTitle(title, market);
   }
 
   const asset = stockAssets.find((rule) => rule.keywords.some((keyword) => text.includes(keyword)))?.asset ?? "글로벌 시장";
-  if (text.includes("earnings") || text.includes("guidance")) return `${asset} 실적과 가이던스를 확인해야 하는 뉴스입니다.`;
-  if (text.includes("fed") || text.includes("rate") || text.includes("yield")) return `${asset} 금리와 채권금리 영향을 확인해야 하는 뉴스입니다.`;
-  if (text.includes("upgrade") || text.includes("downgrade")) return `${asset} 투자 의견 변화 관련 뉴스입니다.`;
-  if (text.includes("oil") || text.includes("crude")) return "유가와 에너지 섹터 흐름을 확인해야 하는 뉴스입니다.";
-  if (text.includes("gold")) return "금 가격과 안전자산 흐름을 확인해야 하는 뉴스입니다.";
-  return `${asset} 주요 이슈가 업데이트되었습니다.`;
+  if (text.includes("earnings") || text.includes("guidance")) return `${asset} 실적과 가이던스에 시장 반응 점검`;
+  if (text.includes("fed") || text.includes("rate") || text.includes("yield")) return `${asset} 금리 부담에 시장 방향성 점검`;
+  if (text.includes("upgrade") || text.includes("downgrade")) return `${asset} 투자 의견 변화에 주가 반응 점검`;
+  if (text.includes("oil") || text.includes("crude")) return "유가 흐름에 인플레 부담 재점검";
+  if (text.includes("gold")) return "금 가격과 안전자산 선호 흐름 점검";
+  return contextualFallbackTitle(title, market);
 }
 
 export function analyzeNewsText(input: string, market: RadarNewsMarket = "crypto"): RadarNewsSignal {
@@ -217,6 +326,11 @@ export function analyzeNewsText(input: string, market: RadarNewsMarket = "crypto
     }
   }
 
+  if (market === "stocks" && /(treasury|yield|yields|bond)/i.test(raw) && /(surge|higher|rise|rises|jump|jumps)/i.test(raw)) {
+    rawScore -= 16;
+    tags.push("금리 부담");
+  }
+
   for (const rule of ruleSet.bearishRules) {
     if (includesAny(text, rule.keywords)) {
       rawScore += rule.score;
@@ -230,15 +344,19 @@ export function analyzeNewsText(input: string, market: RadarNewsMarket = "crypto
   const urgency: RadarNewsUrgency = urgencyHits >= 2 || score >= 72 || score <= 28 ? "high" : urgencyHits === 1 ? "medium" : "low";
   const displayAssets = assets.length ? assets : [ruleSet.defaultAsset];
   const assetLabel = displayAssets.join(", ");
+  const uniqueTags = unique(tags).slice(0, 5);
+  const hasRateBurden = uniqueTags.includes("금리 부담");
 
   const headline =
     direction === "bullish" ? "상방에 우호적인 뉴스입니다." : direction === "bearish" ? "하방 변동성을 조심해야 하는 뉴스입니다." : "방향성보다 확인이 필요한 뉴스입니다.";
 
   const summary =
     direction === "bullish"
-      ? `${assetLabel}에 수요, 유동성, 실적 또는 모멘텀 측면의 긍정 재료가 감지됩니다. 다만 실제 진입은 차트 구조와 거래량 반응까지 함께 확인해야 합니다.`
+      ? `${assetLabel}에 수요, 유동성, 실적 또는 모멘텀 측면의 긍정 재료가 감지됩니다. 다만 실제 판단은 차트 구조와 거래량 반응까지 함께 확인해야 합니다.`
       : direction === "bearish"
-        ? `${assetLabel}에 규제, 매도 압력, 금리 또는 실적 리스크가 감지됩니다. 추격보다 지지선 이탈과 변동성 확대 여부를 먼저 확인하는 편이 안전합니다.`
+        ? hasRateBurden
+          ? `${assetLabel}에 금리 상승 부담이 감지됩니다. 지수선물과 성장주가 같은 방향으로 약해지는지 확인해야 합니다.`
+          : `${assetLabel}에 규제, 매도 압력, 금리 또는 실적 리스크가 감지됩니다. 추격보다 지지선 이탈과 변동성 확대 여부를 먼저 확인해야 합니다.`
         : `${assetLabel} 관련 이슈지만 방향성은 아직 선명하지 않습니다. 같은 방향의 추가 뉴스와 가격 반응이 이어지는지 확인해야 합니다.`;
 
   const actionHint =
@@ -259,7 +377,7 @@ export function analyzeNewsText(input: string, market: RadarNewsMarket = "crypto
     urgency,
     score,
     assets: displayAssets,
-    tags: unique(tags).slice(0, 5).length ? unique(tags).slice(0, 5) : [ruleSet.defaultTag],
+    tags: uniqueTags.length ? uniqueTags : [ruleSet.defaultTag],
     headline,
     summary,
     actionHint
@@ -272,12 +390,17 @@ export function createRadarNewsItem(
 ): RadarNewsItem {
   const signal = analyzeNewsText(`${input.title} ${input.translatedTitle ?? ""} ${input.excerpt ?? ""}`, market);
   const publishedAt = input.publishedAt || new Date().toISOString();
+  const titleKo = marketNewsDisplayTitle(input.title, input.translatedTitle, market);
+  const displayTitle = titleKo || input.title;
   return {
     ...signal,
     id: `${input.source}-${publishedAt}-${input.link}`.replace(/\s+/g, "-"),
     source: input.source,
+    originalTitle: input.title,
     title: input.title,
-    translatedTitle: input.translatedTitle ? localizeNewsSourceText(input.translatedTitle) : undefined,
+    titleKo,
+    displayTitle,
+    translatedTitle: titleKo,
     excerpt: input.excerpt ? localizeNewsSourceText(input.excerpt) : undefined,
     link: input.link,
     publishedAt

@@ -109,6 +109,11 @@ expectIncludes(radarNewsApi, "USE_GEMINI_NEWS_FALLBACK", "뉴스 Gemini fallback
 expectIncludes(radarNewsApi, "ensureKoreanText", "뉴스 브리핑 한국어 보정", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsApi, "오늘 확인할 주요 시장 이슈", "뉴스 기본 브리핑 문구", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsApi, "미국 물가 이슈", "뉴스 물가 표현 보강", "src/app/api/radar-news/route.ts");
+expectIncludes(radarNewsApi, "correctDollarToWonDrift", "뉴스 달러 금액 원화 오역 보정", "src/app/api/radar-news/route.ts");
+expectIncludes(radarNewsApi, "원문의 달러 금액", "뉴스 달러 단위 보존 프롬프트", "src/app/api/radar-news/route.ts");
+expectIncludes(radarNewsLib, "originalTitle", "뉴스 원문 제목 보존", "src/lib/radarNews.ts");
+expectIncludes(radarNewsLib, "displayTitle", "뉴스 한국어 표시 제목 분리", "src/lib/radarNews.ts");
+expectIncludes(radarNewsLib, "marketNewsDisplayTitle", "뉴스 시장형 제목 정리", "src/lib/radarNews.ts");
 expectIncludes(radarNewsApi, "PERSONAL_FINANCE_NOISE_KEYWORDS", "뉴스 개인재무 노이즈 차단", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsApi, "GLOBAL_MARKET_CONFIRMATION_KEYWORDS", "뉴스 매크로 문맥 확인", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsPanel, "뉴스 레이더", "코인 뉴스 요약 화면", "src/components/RadarNewsPanel.tsx");

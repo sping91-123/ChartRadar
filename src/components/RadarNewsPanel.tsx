@@ -163,9 +163,9 @@ function refreshLabel(refreshIntervalMs?: number) {
 }
 
 function itemTitle(item: RadarNewsItem, market: RadarNewsMarket) {
-  const title = item.translatedTitle?.trim();
+  const title = item.displayTitle?.trim() || item.titleKo?.trim() || item.translatedTitle?.trim();
   if (title && /[가-힣]/.test(title)) return cleanDisplayText(title);
-  return cleanDisplayText(fallbackKoreanNewsTitle(item.title, market));
+  return cleanDisplayText(fallbackKoreanNewsTitle(item.originalTitle ?? item.title, market));
 }
 
 function sourceDomain(link: string) {
@@ -194,7 +194,7 @@ function isPlaceholderSourceTitle(title: string) {
 }
 
 function sourceReferenceTitle(item: RadarNewsItem) {
-  const candidates = [item.translatedTitle, item.title].map((title) => cleanDisplayText(title)).filter(Boolean);
+  const candidates = [item.displayTitle, item.titleKo, item.translatedTitle, item.originalTitle, item.title].map((title) => cleanDisplayText(title)).filter(Boolean);
   return candidates.find((title) => !isPlaceholderSourceTitle(title)) ?? "";
 }
 
@@ -658,6 +658,9 @@ function SourceReferenceList({ items }: { items: RadarNewsItem[] }) {
                 <span className="line-clamp-3">{sourceReferenceTitle(item)}</span>
                 <ExternalLink size={13} className="mt-1 shrink-0 text-accent-blue" aria-hidden />
               </a>
+              {item.originalTitle && item.originalTitle !== sourceReferenceTitle(item) ? (
+                <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-500 [word-break:break-word]">원문: {item.originalTitle}</p>
+              ) : null}
               <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-400 [word-break:keep-all]">{cleanDisplayText(item.summary)}</p>
             </article>
           );

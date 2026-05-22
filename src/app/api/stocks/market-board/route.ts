@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { XMLParser } from "fast-xml-parser";
 import { getMacroCalendarPayload } from "@/lib/macroCalendar";
 import type { MacroEventItem } from "@/data/macroEvents";
-import { fallbackKoreanNewsTitle, localizeNewsSourceText } from "@/lib/radarNews";
+import { localizeNewsSourceText, marketNewsDisplayTitle } from "@/lib/radarNews";
 import { fetchStockCandles, findStockSymbol } from "@/lib/stockMarket";
 import { rateLimit } from "@/lib/server/rateLimit";
 import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
@@ -683,8 +683,7 @@ function newsDirection(title: string) {
 }
 
 function newsDisplayTitle(title: string) {
-  const fallback = fallbackKoreanNewsTitle(title, "stocks");
-  return localizeNewsSourceText(fallback || title);
+  return marketNewsDisplayTitle(title, localizeNewsSourceText(title), "stocks");
 }
 
 async function loadNewsFeed(feed: NewsFeed) {

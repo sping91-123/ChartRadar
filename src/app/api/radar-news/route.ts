@@ -495,6 +495,67 @@ function parseStringArray(raw: string) {
   }
 }
 
+function extractUsdAmounts(text: string) {
+  const amounts = new Map<number, string>();
+  const dollarPrefix = /\$\s*([0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.[0-9]+)?/g;
+  const dollarSuffix = /\b([0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.[0-9]+)?\s*(?:dollars?|usd)\b/gi;
+
+  for (const pattern of [dollarPrefix, dollarSuffix]) {
+    for (const match of Array.from(text.matchAll(pattern))) {
+      const value = Number(match[1].replace(/,/g, ""));
+      if (Number.isFinite(value) && value >= 1_000) {
+        amounts.set(value, `${Math.round(value).toLocaleString("en-US")}달러`);
+      }
+    }
+  }
+
+  return Array.from(amounts, ([value, label]) => ({ value, label }));
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function correctDollarToWonDrift(sourceText: string, translatedText: string) {
+  let next = translatedText;
+  for (const amount of extractUsdAmounts(sourceText)) {
+    const compact = String(Math.round(amount.value));
+    const comma = Math.round(amount.value).toLocaleString("en-US");
+    const wrongManwon = amount.value % 10 === 0 ? String(Math.round(amount.value / 10)) : "";
+    const wrongPatterns = [
+      `${compact}원`,
+      `${compact} 원`,
+      `${comma}원`,
+      `${comma} 원`,
+      wrongManwon ? `${wrongManwon}만원` : "",
+      wrongManwon ? `${wrongManwon}만 원` : ""
+    ].filter(Boolean);
+
+    for (const pattern of wrongPatterns) {
+      next = next.replace(new RegExp(escapeRegExp(pattern), "g"), amount.label);
+    }
+  }
+
+  return next;
+}
+
+function correctBriefingCurrencyDrift(items: RadarNewsItem[], value: string) {
+  const sourceText = items.map((item) => `${item.originalTitle ?? item.title} ${item.excerpt ?? ""}`).join(" ");
+  return correctDollarToWonDrift(sourceText, value);
+}
+
+function polishBriefingCopy(items: RadarNewsItem[], value: string) {
+  return correctBriefingCurrencyDrift(items, value)
+    .replace(/기름값/g, "유가")
+    .replace(/투자자들은\s*이러한\s*변동성에\s*대응하기\s*위한\s*전략을\s*수립해야\s*합니다\.?/g, "시장에서는 변동성 확대 가능성을 함께 점검해야 합니다.")
+    .replace(/투자자들은/g, "시장 참여자들은")
+    .replace(/전략 수립/g, "변동성 대응 여부 점검")
+    .replace(/큰 수익/g, "시장 관심")
+    .replace(/매수해야/g, "확인해야")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 async function translateTitlesWithGroq(titles: string[], market: RadarNewsMarket) {
   const apiKey = process.env.GROQ_API_KEY;
   const uniqueTitles = Array.from(new Set(titles.filter(Boolean)));
@@ -532,7 +593,14 @@ async function translateTitlesWithGroq(titles: string[], market: RadarNewsMarket
         messages: [
           {
             role: "user",
-            content: `${marketLabel} 뉴스 제목을 한국 투자자가 바로 이해하기 쉽게 자연스럽게 번역해 주세요. JSON 문자열 배열만 반환하세요.\n\n${pending
+            content: `${marketLabel} 뉴스 제목을 한국 투자자가 바로 이해하기 쉽게 자연스럽게 번역해 주세요. JSON 문자열 배열만 반환하세요.
+
+중요 규칙.
+- 원문의 달러 금액은 절대 원화, 만원, 억원으로 환산하거나 바꾸지 마세요.
+- "$77,000"은 "77,000달러" 또는 "7만 7,000달러"로만 쓰고, "7700만원"처럼 쓰면 안 됩니다.
+- BTC, ETH, 나스닥, S&P500 같은 가격·지수 단위는 원문 단위를 유지하세요.
+
+${pending
               .map((title, index) => `${index + 1}. ${title}`)
               .join("\n")}`
           }
@@ -547,7 +615,8 @@ async function translateTitlesWithGroq(titles: string[], market: RadarNewsMarket
       const translated = parseStringArray(payload.choices?.[0]?.message?.content ?? "");
       pending.forEach((title, index) => {
         const candidate = translated[index]?.trim();
-        const next = candidate && hasKorean(candidate) ? candidate : fallbackKoreanNewsTitle(title, market);
+        const rawNext = candidate && hasKorean(candidate) ? candidate : fallbackKoreanNewsTitle(title, market);
+        const next = correctDollarToWonDrift(title, rawNext);
         translationCache.set(`${market}:${title}`, next);
         result.set(title, next);
       });
@@ -620,7 +689,7 @@ function toneLabel(tone: RadarNewsDirection) {
 }
 
 function itemTitle(item: RadarNewsItem, market: RadarNewsMarket) {
-  return item.translatedTitle || fallbackKoreanNewsTitle(item.title, market);
+  return item.displayTitle || item.titleKo || item.translatedTitle || fallbackKoreanNewsTitle(item.originalTitle ?? item.title, market);
 }
 
 function fallbackIssueTitle(item: RadarNewsItem, market: RadarNewsMarket) {
@@ -640,7 +709,7 @@ function issueTone(items: RadarNewsItem[]): RadarNewsDirection {
 
 function matchIssueItems(items: RadarNewsItem[], patterns: RegExp[]) {
   return items.filter((item) => {
-    const text = `${item.title} ${item.translatedTitle ?? ""} ${item.excerpt ?? ""} ${item.tags.join(" ")}`.toLowerCase();
+    const text = `${item.originalTitle ?? item.title} ${item.displayTitle ?? ""} ${item.titleKo ?? ""} ${item.translatedTitle ?? ""} ${item.excerpt ?? ""} ${item.tags.join(" ")}`.toLowerCase();
     return patterns.some((pattern) => pattern.test(text));
   });
 }
@@ -792,7 +861,7 @@ function buildNewsBriefingPrompt(items: RadarNewsItem[], market: RadarNewsMarket
     .slice(0, 10)
     .map(
       (item, index) =>
-        `${index + 1}. [${displayNewsSource(item.source)}] ${itemTitle(item, market)}\n방향: ${toneLabel(item.direction)}\n기사 내용 일부: ${
+        `${index + 1}. [${displayNewsSource(item.source)}] ${itemTitle(item, market)}\n원문 제목: ${item.originalTitle ?? item.title}\n방향: ${toneLabel(item.direction)}\n기사 내용 일부: ${
           item.excerpt || "RSS 요약 없음"
         }\n시장 분류: ${item.summary}`
     )
@@ -810,10 +879,15 @@ function buildNewsBriefingPrompt(items: RadarNewsItem[], market: RadarNewsMarket
 규칙.
 - 모든 문장은 한국어로 씁니다.
 - 영어 기사 제목을 그대로 옮기지 말고 한국어 소제목으로 바꿉니다.
+- 원문 제목은 사실 확인용으로만 참고하고, 사용자에게 보일 제목은 짧고 자연스러운 한국어 시장 뉴스 제목으로 씁니다.
+- QQQ, SPY, NVDA, FOMC, CPI, PPI, VIX, Fed 같은 티커·지표·고유명사는 임의로 풀어 쓰거나 다른 의미로 바꾸지 않습니다.
 - 직접적인 매수·매도 지시는 금지합니다.
+- 과격한 급등락 표현, 매수 유도, 수익 암시, 단정적 신호 표현은 쓰지 않습니다.
 - 과장하지 말고 시장 영향과 확인 사인을 중심으로 씁니다.
 - 읽을거리 있는 리포트처럼 현황, 배경, 시장 영향, 확인할 지표를 연결해서 씁니다.
 - 단순 제목 요약이 아니라 여러 기사의 공통 흐름을 묶어 설명합니다.
+- 원문의 달러 금액은 원화, 만원, 억원으로 환산하지 말고 달러 단위로 유지합니다. 예: "$77,000"은 "77,000달러" 또는 "7만 7,000달러"로 씁니다.
+- BTC, ETH, 나스닥, S&P500 같은 가격·지수 단위는 원문 단위를 유지합니다.
 ${focusRule}
 
 뉴스 자료.
@@ -833,8 +907,8 @@ function parseAIJsonBriefing(raw: string, items: RadarNewsItem[], model: string,
       .map((issue, index) => {
         const fallbackIssue = fallback.keyIssues[index] ?? fallback.keyIssues[0];
         return {
-          title: ensureKoreanText(issue?.title, fallbackIssue.title).slice(0, 120),
-          detail: ensureKoreanText(issue?.detail, fallbackIssue.detail).slice(0, 520),
+          title: polishBriefingCopy(items, ensureKoreanText(issue?.title, fallbackIssue.title)).slice(0, 120),
+          detail: polishBriefingCopy(items, ensureKoreanText(issue?.detail, fallbackIssue.detail)).slice(0, 520),
           tone: issue?.tone === "bullish" || issue?.tone === "bearish" || issue?.tone === "neutral" ? issue.tone : fallbackIssue.tone
         };
       });
@@ -842,11 +916,11 @@ function parseAIJsonBriefing(raw: string, items: RadarNewsItem[], model: string,
     return {
       generatedAt: new Date().toISOString(),
       model,
-      overview: ensureKoreanText(parsed.overview, fallback.overview).slice(0, 700),
+      overview: polishBriefingCopy(items, ensureKoreanText(parsed.overview, fallback.overview)).slice(0, 700),
       keyIssues: keyIssues.length ? keyIssues : fallback.keyIssues,
-      marketImpact: ensureKoreanList(parsed.marketImpact, fallback.marketImpact, 3),
-      strategyNotes: ensureKoreanList(parsed.strategyNotes, fallback.strategyNotes, 3),
-      finalSummary: ensureKoreanText(parsed.finalSummary, fallback.finalSummary).slice(0, 360)
+      marketImpact: ensureKoreanList(parsed.marketImpact, fallback.marketImpact, 3).map((item) => polishBriefingCopy(items, item)),
+      strategyNotes: ensureKoreanList(parsed.strategyNotes, fallback.strategyNotes, 3).map((item) => polishBriefingCopy(items, item)),
+      finalSummary: polishBriefingCopy(items, ensureKoreanText(parsed.finalSummary, fallback.finalSummary)).slice(0, 360)
     };
   } catch {
     return fallback;
