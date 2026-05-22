@@ -1829,3 +1829,4 @@ The health endpoint now reports a launch readiness score and structured blocking
 - `RadarInsightPanel`을 직접 재작성하지 않고 `/crypto`에서만 선택형 compact summary 경로를 사용한다.
 - 모바일 첫 화면에서는 선택 자산, 현재 상태, 판단 강도, 현재가, 핵심 근거, 다음 확인 조건이 먼저 보여야 한다.
 - 실기기 Chrome에서 Basic 요약과 Pro 상세 상태를 모두 확인한다. Pro 확인은 임시 로컬 Supabase 응답과 `/crypto` 세션으로 재현하며 앱 코드는 변경하지 않는다.
+- `npm.cmd run smoke:all` 실패 원인은 `/api/macro-calendar` 상태 전환이 아니라 `src/data/macroEvents.ts` 예비 일정이 모두 과거가 된 정적 데이터 신선도 문제였다. `/crypto` 변경을 stash로 분리한 뒤 공식 미래 일정으로 fallback을 갱신했고, stash 복원 후 최종 검증을 통과했다.

@@ -41,66 +41,66 @@ export type MacroEventItem = {
   isNumericEvent?: boolean;
 };
 
-export const macroCalendarUpdatedAt = "2026년 5월 21일 예비 일정 갱신";
-export const macroCalendarUpdatedAtIso = "2026-05-21T00:00:00.000Z";
+export const macroCalendarUpdatedAt = "2026년 5월 22일 예비 일정 갱신";
+export const macroCalendarUpdatedAtIso = "2026-05-22T00:00:00.000Z";
 export const macroCalendarSourceNote =
   "공개 경제 캘린더와 공식 통계 데이터를 우선 확인합니다. 문서형 이벤트는 실제값 대신 공식 문서 공개 상태로 표시하고, 자동 확인이 막히면 예비 일정으로 보여줍니다.";
 
 export const macroItems: MacroEventItem[] = [
   {
-    label: "Initial Jobless Claims",
-    releaseAt: "2026-05-21T12:30:00.000Z",
-    dateKst: "05.21 21:30",
+    label: "New Home Sales",
+    releaseAt: "2026-05-27T14:00:00.000Z",
+    dateKst: "05.27 23:00",
+    state: "upcoming",
+    importance: 2,
+    forecast: "확인 예정",
+    previous: "확인 예정",
+    summary: "미국 신규 주택 판매 흐름과 주택 수요의 탄력을 확인하는 지표입니다.",
+    marketImpact:
+      "판매가 예상보다 강하면 경기 체력에는 우호적일 수 있지만, 금리 부담과 주택시장 과열 우려도 함께 확인해야 합니다.",
+    source: "Census",
+    sourceUrl: "https://www.census.gov/construction/nrs/"
+  },
+  {
+    label: "GDP Second Estimate and Corporate Profits",
+    releaseAt: "2026-05-28T12:30:00.000Z",
+    dateKst: "05.28 21:30",
     state: "upcoming",
     importance: 3,
     forecast: "확인 예정",
     previous: "확인 예정",
-    summary: "미국 고용 둔화 여부를 매주 확인하는 지표입니다.",
+    summary: "미국 1분기 성장률 수정치와 기업이익을 함께 확인하는 핵심 성장 지표입니다.",
     marketImpact:
-      "청구건수가 예상보다 크게 늘면 경기 둔화 우려가 커질 수 있고, 예상보다 낮으면 금리 인하 기대가 약해질 수 있습니다.",
-    source: "DOL",
-    sourceUrl: "https://oui.doleta.gov/unemploy/claims.asp"
+      "성장률과 이익이 예상보다 강하면 경기 체력 해석은 좋아질 수 있지만, 금리 인하 기대가 약해지는지도 같이 봐야 합니다.",
+    source: "BEA",
+    sourceUrl: "https://www.bea.gov/news/schedule/full"
   },
   {
-    label: "Existing Home Sales",
-    releaseAt: "2026-05-21T14:00:00.000Z",
-    dateKst: "05.21 23:00",
+    label: "Personal Income and Outlays",
+    releaseAt: "2026-05-28T12:30:00.000Z",
+    dateKst: "05.28 21:30",
+    state: "upcoming",
+    importance: 3,
+    forecast: "확인 예정",
+    previous: "확인 예정",
+    summary: "미국 소비와 소득 흐름, PCE 물가 압력을 함께 확인하는 핵심 지표입니다.",
+    marketImpact:
+      "소비와 물가 압력이 강하면 위험자산에는 금리 부담이 커질 수 있고, 둔화되면 경기 우려와 금리 기대를 함께 해석해야 합니다.",
+    source: "BEA",
+    sourceUrl: "https://www.bea.gov/news/schedule/full"
+  },
+  {
+    label: "Durable Goods Orders",
+    releaseAt: "2026-05-28T12:30:00.000Z",
+    dateKst: "05.28 21:30",
     state: "upcoming",
     importance: 2,
     forecast: "확인 예정",
     previous: "확인 예정",
-    summary: "미국 주택시장 체력과 소비 심리를 함께 가늠할 수 있는 지표입니다.",
+    summary: "미국 제조업 주문과 기업 투자 흐름을 빠르게 확인하는 지표입니다.",
     marketImpact:
-      "주택 판매가 강하면 경기 체력이 좋다는 해석이 가능하지만, 금리 부담이 다시 부각될 수도 있습니다.",
-    source: "NAR",
-    sourceUrl: "https://www.nar.realtor/research-and-statistics"
-  },
-  {
-    label: "S&P Global US Manufacturing PMI Flash",
-    releaseAt: "2026-05-21T13:45:00.000Z",
-    dateKst: "05.21 22:45",
-    state: "upcoming",
-    importance: 2,
-    forecast: "확인 예정",
-    previous: "확인 예정",
-    summary: "미국 제조업 경기의 단기 온도를 빠르게 확인하는 지표입니다.",
-    marketImpact:
-      "예상보다 강하면 경기 민감 자산에는 긍정적일 수 있지만, 동시에 금리 부담을 키울 수 있어 발표 직후 반응 확인이 중요합니다.",
-    source: "ForexFactory",
-    sourceUrl: "https://www.forexfactory.com/calendar"
-  },
-  {
-    label: "University of Michigan Consumer Sentiment Final",
-    releaseAt: "2026-05-22T14:00:00.000Z",
-    dateKst: "05.22 23:00",
-    state: "upcoming",
-    importance: 2,
-    forecast: "확인 예정",
-    previous: "확인 예정",
-    summary: "미국 소비자 심리와 기대 인플레이션을 같이 확인할 수 있는 지표입니다.",
-    marketImpact:
-      "기대 인플레이션이 높게 나오면 금리 부담이 커질 수 있고, 심리가 개선되면 소비 관련 자산에는 우호적일 수 있습니다.",
-    source: "Official",
-    sourceUrl: "https://www.sca.isr.umich.edu/"
+      "주문이 강하면 경기 체력 해석은 좋아질 수 있지만, 금리 부담과 달러 반응까지 같이 확인해야 합니다.",
+    source: "Census",
+    sourceUrl: "https://www.census.gov/economic-indicators/"
   }
 ];
