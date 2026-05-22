@@ -237,7 +237,7 @@ async function waitForPushRegistration(PushNotifications: PushNotificationsPlugi
     let registrationHandle: { remove: () => Promise<void> } | null = null;
     let errorHandle: { remove: () => Promise<void> } | null = null;
     const timeoutHandle = setTimeout(() => {
-      finish(() => reject(new Error("기기 푸시 토큰을 받지 못했습니다. 최신 앱으로 다시 설치한 뒤 시도해 주세요.")));
+      finish(() => reject(new Error("기기 푸시 연결 정보를 받지 못했습니다. 최신 앱으로 다시 설치한 뒤 시도해 주세요.")));
     }, appPushRegistrationTimeoutMs);
 
     function cleanup() {
@@ -260,7 +260,7 @@ async function waitForPushRegistration(PushNotifications: PushNotificationsPlugi
           console.info("[app-push] registration event received", { hasValue: Boolean(value) });
           finish(() => {
             if (value) resolve(value);
-            else reject(new Error("기기 푸시 토큰을 받지 못했습니다. 최신 앱으로 다시 설치한 뒤 시도해 주세요."));
+            else reject(new Error("기기 푸시 연결 정보를 받지 못했습니다. 최신 앱으로 다시 설치한 뒤 시도해 주세요."));
           });
         });
         if (settled) {

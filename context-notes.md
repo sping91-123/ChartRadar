@@ -1772,3 +1772,13 @@ The health endpoint now reports a launch readiness score and structured blocking
 - Vercel Logs 확인 경로는 `/api/push-tokens`와 `/api/push-test`다. `/api/push-test`는 응답 payload에 `requestPath=/api/push-test`를 포함하고, 발송 실패는 `[push-test] send failed`, 이벤트 기록 실패는 `[push-test] event log failed`로 남긴다.
 - 검증은 `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`, `.next` 삭제 후 `npm.cmd run build`, 재실행한 `npm.cmd run smoke:all`, `git diff --check`로 통과했다. 최초 build는 병렬 실행 중 stale `.next`에서 `PageNotFoundError: /_document`가 발생해 `.next` 삭제 후 통과했다.
 - 실제 폰에서 앱 알림 권한 허용 팝업 표시, 권한 허용, 기본 테스트 알림 발송, 폰 알림 수신까지 성공 확인됐다. 따라서 P4는 `DONE`으로 처리한다.
+
+## 2026-05-22 P1 알림 테스트 패널 관리자 전용화.
+
+- 이번 범위는 알림 화면의 테스트 알림 패널 노출 제어로 제한한다. 푸시 등록, 로그인, 결제, 글로벌, 매크로 로직은 건드리지 않는다.
+- 일반 사용자에게는 앱 푸시 연결 상태, 권한 상태, 켜기/끄기, 실제 알림 조건 목록만 보여주고, `테스트`, `디버그`, `토큰`, `Firebase`, `FCM` 같은 운영 검증용 용어는 노출하지 않는다.
+- 관리자 판정은 기존 인증/권한 구조가 있으면 그 구조를 사용하고, 없으면 테스트 패널만 숨기는 최소 구현으로 제한한다.
+- 기존 관리자 판정은 `profiles.plan = admin` 또는 Supabase Auth `app_metadata.role/plan = admin` 구조가 있다. 알림 화면도 같은 기준으로 관리자 전용 테스트 패널을 표시한다.
+- 일반 사용자 화면에는 `앱 푸시 알림 상태`, 연결 상태, 권한 상태, 마지막 연결 시각, 연결 단계, 켜기/끄기 버튼, 실제 알림 조건 목록만 남긴다.
+- `/api/push-test`는 기존처럼 현재 Bearer 세션 사용자와 최신 enabled Android FCM 연결 1개만 대상으로 삼고, 추가로 관리자 계정이 아니면 403을 반환한다.
+- 사용자 화면에 노출될 수 있는 푸시 오류 문구에서 `토큰` 표현을 `기기 푸시 연결 정보`로 바꿔 운영자용 구현 용어 노출을 줄였다.

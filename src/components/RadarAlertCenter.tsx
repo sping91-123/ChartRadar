@@ -266,7 +266,7 @@ function RuleCard({
 }
 
 export function RadarAlertCenter({ compact = false, market = "crypto" }: { compact?: boolean; market?: AlertMarket }) {
-  const { session, profile, isLoading: isAuthLoading } = useSupabaseAuth();
+  const { session, user, profile, isLoading: isAuthLoading } = useSupabaseAuth();
   const isPaid = hasMarketEntitlement(profile?.plan, market);
   const copy = alertMarketCopy[market];
   const isGlobal = market === "stocks";
@@ -371,6 +371,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
   }, [setupMatches]);
   const alertUsageBucketId = market === "stocks" ? "stocksAlertRule" : "cryptoAlertRule";
   const isAndroidAppPush = appPushState.supported && appPushState.platform === "android";
+  const isAdmin = profile?.plan === "admin" || user?.app_metadata?.role === "admin" || user?.app_metadata?.plan === "admin";
   const alertsMarketParam = market === "stocks" ? "global" : "crypto";
   const loginHref = `/login?returnTo=${encodeURIComponent(`/alerts?market=${alertsMarketParam}`)}`;
   const isAppPushConnecting =
@@ -644,15 +645,15 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
       <div className="mt-4 rounded-xl border border-surface-line bg-surface-cardSoft p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-sm font-black text-white">푸시 테스트 / 알림 미리보기</p>
+            <p className="text-sm font-black text-white">앱 푸시 알림 상태</p>
             <p className="mt-1 text-xs leading-5 text-slate-500 [word-break:keep-all]">
               {isAndroidAppPush
-                ? "현재 로그인한 내 계정과 이 기기 연결로만 테스트 알림을 보냅니다."
-                : "앱 푸시는 설치된 앱에서 사용할 수 있습니다. 웹에서는 브라우저 알림 미리보기만 확인합니다."}
+                ? "주요 조건이 감지되면 연결된 앱으로 알림을 받을 수 있습니다."
+                : "앱 푸시는 설치된 앱에서 사용할 수 있습니다."}
             </p>
           </div>
           <span className="w-fit rounded-md border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-[11px] font-black text-cyan-200">
-            {isAndroidAppPush ? "앱 알림 테스트" : "브라우저 미리보기"}
+            {isAndroidAppPush ? appPushConnectionLabel(appPushState) : "앱에서 사용 가능"}
           </span>
         </div>
 
@@ -692,35 +693,46 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
         {isAndroidAppPush && !canSendAppPushTest ? (
           <div className="mt-3 rounded-md border border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
             <p>{session ? "앱 푸시 알림을 켜면 주요 조건이 감지될 때 알려드립니다." : "로그인 후 앱 푸시 알림을 계정에 연결할 수 있습니다."}</p>
-            <p className="mt-1 text-amber-100/80">상단의 앱 푸시 알림 켜기 버튼으로 연결한 뒤 테스트 알림을 보낼 수 있습니다.</p>
+            <p className="mt-1 text-amber-100/80">상단의 앱 푸시 알림 켜기 버튼으로 연결 상태를 활성화할 수 있습니다.</p>
           </div>
         ) : null}
 
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          {pushTestMessages.map((message) => {
-            const isActive = activeTestKind === message.kind;
-            return (
-              <button
-                key={message.kind}
-                type="button"
-                onClick={() => void requestTestPush(message.kind)}
-                disabled={Boolean(activeTestKind) || (isAndroidAppPush && (isAppPushConnecting || !canSendAppPushTest))}
-                className="min-h-16 rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 text-left transition hover:border-cyan-200 hover:bg-cyan-300/15 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <span className="flex items-center gap-2 text-xs font-black text-cyan-100">
-                  {isActive ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <BellRing size={14} aria-hidden />}
-                  {message.label}
-                </span>
-                <span className="mt-1 block text-[11px] leading-4 text-slate-400">{message.title}</span>
-              </button>
-            );
-          })}
-        </div>
+        {isAdmin ? (
+          <div className="mt-4 rounded-lg border border-cyan-300/20 bg-cyan-300/5 p-3">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs font-black text-cyan-100">관리자 테스트 알림</p>
+              <span className="w-fit rounded-md border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-[11px] font-black text-cyan-200">
+                관리자 전용
+              </span>
+            </div>
+            <p className="mt-1 text-[11px] leading-4 text-slate-500">현재 로그인한 내 계정과 이 기기 연결로만 테스트 알림을 보냅니다.</p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {pushTestMessages.map((message) => {
+                const isActive = activeTestKind === message.kind;
+                return (
+                  <button
+                    key={message.kind}
+                    type="button"
+                    onClick={() => void requestTestPush(message.kind)}
+                    disabled={Boolean(activeTestKind) || (isAndroidAppPush && (isAppPushConnecting || !canSendAppPushTest))}
+                    className="min-h-16 rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 text-left transition hover:border-cyan-200 hover:bg-cyan-300/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span className="flex items-center gap-2 text-xs font-black text-cyan-100">
+                      {isActive ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <BellRing size={14} aria-hidden />}
+                      {message.label}
+                    </span>
+                    <span className="mt-1 block text-[11px] leading-4 text-slate-400">{message.title}</span>
+                  </button>
+                );
+              })}
+            </div>
 
-        {testResult ? (
-          <p className="mt-3 rounded-md border border-accent-blue/20 bg-accent-blue/10 p-3 text-xs leading-5 text-accent-blue">
-            {testResult}
-          </p>
+            {testResult ? (
+              <p className="mt-3 rounded-md border border-accent-blue/20 bg-accent-blue/10 p-3 text-xs leading-5 text-accent-blue">
+                {testResult}
+              </p>
+            ) : null}
+          </div>
         ) : null}
       </div>
 

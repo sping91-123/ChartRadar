@@ -14,6 +14,10 @@ function bearerToken(request: Request) {
   return match?.[1] ?? "";
 }
 
+function isAdminUser(user: Awaited<ReturnType<typeof fetchSupabaseUserOnServer>>) {
+  return user.app_metadata?.role === "admin" || user.app_metadata?.plan === "admin";
+}
+
 async function recordPushTestEvent(userId: string, message: ReturnType<typeof getPushTestMessage>, sent: number) {
   const eventKey = `push-test:${message.kind}:${Date.now()}`;
   await supabaseAdminRest("push_alert_events", {
@@ -51,6 +55,10 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as { kind?: PushTestKind };
   const message = getPushTestMessage(body.kind);
   const user = await fetchSupabaseUserOnServer(accessToken);
+  if (!isAdminUser(user)) {
+    return NextResponse.json({ error: "관리자 계정만 테스트 알림을 보낼 수 있습니다.", requestPath }, { status: 403 });
+  }
+
   const tokens = await supabaseAdminRest<PushTokenRow[]>(
     `push_tokens?select=token&user_id=eq.${encodeURIComponent(user.id)}&enabled=eq.true&platform=eq.android&provider=eq.fcm&order=last_registered_at.desc&limit=1`
   );
