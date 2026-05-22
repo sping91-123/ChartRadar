@@ -23,6 +23,8 @@ import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 type HeaderMarket = "crypto" | "stocks";
 type AuthState = ReturnType<typeof useSupabaseAuth>;
+const appVersion = "1.0.3";
+const appBuild = "6";
 
 function marketAlertHref(market?: HeaderMarket) {
   return market === "stocks" ? "/alerts?market=global" : "/alerts?market=crypto";
@@ -179,6 +181,31 @@ function AccountSettingsSection({
   );
 }
 
+function DisplaySettingsSection() {
+  return (
+    <SettingsSection title="화면 설정">
+      <div className="rounded-lg border border-white/10 bg-white/[0.035] p-3">
+        <div className="flex items-center justify-between gap-3">
+          <span className="min-w-0">
+            <span className="block text-sm font-black text-white">테마</span>
+            <span className="mt-0.5 block text-xs leading-5 text-slate-400">라이트/다크 모드를 전환합니다.</span>
+          </span>
+          <ThemeToggle variant="switch" />
+        </div>
+      </div>
+    </SettingsSection>
+  );
+}
+
+function AppInfoSection() {
+  return (
+    <section className="border-t border-white/10 px-3 pb-2.5 pt-3">
+      <p className="text-sm font-black text-white">Chart Radar</p>
+      <p className="mt-1 text-xs font-semibold text-slate-500">앱 버전 {appVersion} / 빌드 {appBuild}</p>
+    </section>
+  );
+}
+
 export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
   const auth = useSupabaseAuth();
   const alertHref = marketAlertHref(market);
@@ -212,9 +239,6 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
           </span>
         ) : null}
       </Link>
-      <div className="hidden sm:block">
-        <ThemeToggle />
-      </div>
       <details className="group relative">
         <summary
           className="grid min-h-9 min-w-9 cursor-pointer list-none place-items-center rounded-lg border border-surface-line bg-surface-cardSoft text-slate-300 transition hover:border-cyan-300/45 hover:text-white [&::-webkit-details-marker]:hidden"
@@ -226,6 +250,7 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
         <div className="absolute right-0 z-50 mt-2 w-[min(22rem,calc(100vw-1.5rem))] rounded-xl border border-cyan-300/20 bg-slate-950 p-2 shadow-[0_24px_80px_rgba(0,0,0,0.72)] ring-1 ring-white/10">
           <MyAccountSection planLabel={planLabel} isPaid={isPaid} proHref={proHref} />
           <AccountSettingsSection auth={auth} loginHref={loginHref} />
+          <DisplaySettingsSection />
           <SettingsSection title="고객지원">
             <div className="grid gap-1">
               <SettingsLink href="/learn" icon={BookOpen} label="지표 안내" description="판단 강도, 코인·알트·글로벌 주요 용어를 확인합니다." />
@@ -234,6 +259,7 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
               <SettingsPlaceholder icon={ReceiptText} label="정기결제 현황" description="결제 시스템 구축 후 구독 상태와 갱신일을 연결합니다." />
             </div>
           </SettingsSection>
+          <AppInfoSection />
         </div>
       </details>
     </div>

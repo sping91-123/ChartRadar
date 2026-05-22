@@ -13,7 +13,7 @@ function applyTheme(theme: ThemeMode) {
   document.documentElement.style.colorScheme = theme;
 }
 
-export function ThemeToggle() {
+export function ThemeToggle({ variant = "button" }: { variant?: "button" | "switch" } = {}) {
   const [theme, setTheme] = useState<ThemeMode>("dark");
 
   useEffect(() => {
@@ -32,6 +32,28 @@ export function ThemeToggle() {
 
   const isLight = theme === "light";
   const Icon = isLight ? Moon : Sun;
+
+  if (variant === "switch") {
+    return (
+      <button
+        type="button"
+        onClick={toggleTheme}
+        className={`relative h-8 w-14 shrink-0 rounded-full border p-1 transition ${
+          isLight ? "border-cyan-300/40 bg-cyan-300/20" : "border-white/10 bg-slate-800"
+        }`}
+        aria-label={isLight ? "다크 모드로 전환" : "라이트 모드로 전환"}
+        title={isLight ? "라이트 모드 사용 중" : "다크 모드 사용 중"}
+      >
+        <span
+          className={`grid h-6 w-6 place-items-center rounded-full bg-white text-slate-950 shadow transition ${
+            isLight ? "translate-x-6" : "translate-x-0"
+          }`}
+        >
+          <Icon size={13} aria-hidden />
+        </span>
+      </button>
+    );
+  }
 
   return (
     <button
