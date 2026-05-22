@@ -24,7 +24,7 @@ export function classifyMacroEvent(title: string): MacroEventType {
     return "meeting_event";
   }
   if (
-    /cpi|ppi|payroll|non-farm|nonfarm|nfp|unemployment rate|average hourly earnings|gdp|pce|retail sales|durable goods|jobless|claims|pmi|ism|jolts/i.test(
+    /cpi|ppi|payroll|non-farm|nonfarm|nfp|unemployment rate|average hourly earnings|gdp|pce|retail sales|durable goods|jobless|claims|initial claims|initial jobless claims|unemployment insurance weekly claims|신규\s*실업수당\s*청구|pmi|ism|jolts/i.test(
       normalizedTitle
     )
   ) {
@@ -92,6 +92,23 @@ function unresolvedAfterReleaseStatus(elapsedMs: number, labelPrefix: "결과" |
   };
 }
 
+function unresolvedNumericReleaseStatus(elapsedMs: number): MacroStatusDecision {
+  if (elapsedMs <= 30 * MINUTE_MS) {
+    return {
+      status: "checking",
+      statusLabel: "결과 확인중",
+      nextRefreshMs: 60 * 1000
+    };
+  }
+
+  return {
+    status: "official_check_needed",
+    statusLabel: "공식 발표 확인 필요",
+    nextRefreshMs: elapsedMs <= 3 * HOUR_MS ? 5 * MINUTE_MS : 30 * MINUTE_MS,
+    staleReason: "발표 시간이 지났지만 공식 실제값이 아직 확인되지 않았습니다."
+  };
+}
+
 export function resolveMacroStatus(input: {
   title: string;
   eventType: MacroEventType;
@@ -155,7 +172,7 @@ export function resolveMacroStatus(input: {
   if (distanceMs > 0) return scheduledStatus(distanceMs);
   const elapsedMs = Math.abs(distanceMs);
 
-  if (input.eventType === "numeric_release") return unresolvedAfterReleaseStatus(elapsedMs, "결과");
+  if (input.eventType === "numeric_release") return unresolvedNumericReleaseStatus(elapsedMs);
   if (input.eventType === "document_release") return unresolvedAfterReleaseStatus(elapsedMs, "공식 문서");
   if (input.eventType === "meeting_event") {
     if (elapsedMs <= 90 * MINUTE_MS) {

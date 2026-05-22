@@ -34,7 +34,9 @@ export function normalizeMacroEvent(item: MacroEventItem, enrichments: MacroSour
   const releaseTime = Date.parse(item.releaseAt);
   const canUseOfficialActual = !Number.isFinite(releaseTime) || releaseTime <= nowMs;
   const actualValue = canUseOfficialActual ? (enrichment?.actualValue ?? item.actualValue ?? item.actual) : (item.actualValue ?? item.actual);
-  const officialUrl = enrichment?.officialUrl ?? item.officialUrl;
+  const source = enrichment?.source ?? item.source;
+  const sourceUrl = enrichment?.sourceUrl ?? item.sourceUrl;
+  const officialUrl = enrichment?.officialUrl ?? item.officialUrl ?? (source !== "ForexFactory" ? sourceUrl : undefined);
   const releasedAt = enrichment?.releasedAt ?? item.releasedAt;
   const status = enrichment?.status
     ? {
@@ -54,8 +56,6 @@ export function normalizeMacroEvent(item: MacroEventItem, enrichments: MacroSour
         nowMs
       });
 
-  const source = enrichment?.source ?? item.source;
-  const sourceUrl = enrichment?.sourceUrl ?? item.sourceUrl;
   const isDocumentEvent = eventType === "document_release" || eventType === "meeting_event" || eventType === "speech_event";
   const isNumericEvent = eventType === "numeric_release";
 

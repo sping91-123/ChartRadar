@@ -2,6 +2,8 @@
 import { type MacroCalendarPayload } from "@/lib/macroCalendar";
 import { isSupabaseAdminConfigured, supabaseAdminRest } from "@/lib/server/supabaseAdmin";
 import { type MacroEventItem } from "@/data/macroEvents";
+import { normalizeMacroEvents } from "@/lib/macro/normalizeMacroEvent";
+import { fetchDolOfficialEnrichments } from "@/lib/macro/sourceAdapters/dol";
 
 type MacroEventRow = {
   id?: string;
@@ -137,7 +139,9 @@ export async function readStoredMacroCalendarPayload(): Promise<MacroCalendarPay
     .at(-1);
   if (!updatedAt || Date.now() - Date.parse(updatedAt) > 60 * 60 * 1000) return null;
 
-  const items = rows.map(rowToItem);
+  const baseItems = rows.map(rowToItem);
+  const dolEnrichments = await fetchDolOfficialEnrichments(baseItems).catch(() => []);
+  const items = normalizeMacroEvents(baseItems, dolEnrichments, Date.now());
   return {
     updatedAt,
     updatedAtLabel: "저장된 공식 확인 결과",

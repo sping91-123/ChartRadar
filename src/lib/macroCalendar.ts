@@ -11,7 +11,7 @@ import { normalizeMacroEvents } from "@/lib/macro/normalizeMacroEvent";
 import { getBeaOfficialEnrichments } from "@/lib/macro/sourceAdapters/bea";
 import { fetchBlsOfficialActuals } from "@/lib/macro/sourceAdapters/bls";
 import { getCensusOfficialEnrichments } from "@/lib/macro/sourceAdapters/census";
-import { getDolOfficialEnrichments } from "@/lib/macro/sourceAdapters/dol";
+import { fetchDolOfficialEnrichments } from "@/lib/macro/sourceAdapters/dol";
 import { fetchFedOfficialEnrichments } from "@/lib/macro/sourceAdapters/fed";
 import { type MacroSourceEnrichment } from "@/lib/macro/types";
 
@@ -42,12 +42,14 @@ type ForexFactoryEvent = {
 const FOREX_FACTORY_THIS_WEEK = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
 const KST_TIME_ZONE = "Asia/Seoul";
 const RECENT_RELEASE_MS = 24 * 60 * 60 * 1000;
+const JOBLESS_CLAIMS_PATTERN =
+  /신규\s*실업수당\s*청구|initial\s+jobless\s+claims|initial\s+claims|jobless\s+claims|unemployment\s+claims|unemployment\s+insurance\s+weekly\s+claims|continuing\s+claims/i;
 
 const IMPORTANT_USD_EVENTS = [
   /cpi/i,
   /ppi/i,
   /retail sales/i,
-  /jobless|unemployment claims/i,
+  JOBLESS_CLAIMS_PATTERN,
   /non-farm|nonfarm|nfp/i,
   /unemployment rate/i,
   /average hourly earnings/i,
@@ -125,7 +127,7 @@ function importanceFromImpact(impact?: string): MacroEventImportance {
 }
 
 function sourceFromTitle(title: string): MacroEventItem["source"] {
-  if (/jobless|unemployment claims/i.test(title)) return "DOL";
+  if (JOBLESS_CLAIMS_PATTERN.test(title)) return "DOL";
   if (/new home sales/i.test(title)) return "Census";
   if (/existing home sales/i.test(title)) return "NAR";
   if (/retail|durable goods/i.test(title)) return "Census";
@@ -136,7 +138,7 @@ function sourceFromTitle(title: string): MacroEventItem["source"] {
 }
 
 function sourceUrlFromTitle(title: string) {
-  if (/jobless|unemployment claims/i.test(title)) return "https://oui.doleta.gov/unemploy/claims.asp";
+  if (JOBLESS_CLAIMS_PATTERN.test(title)) return "https://oui.doleta.gov/unemploy/claims.asp";
   if (/retail/i.test(title)) return "https://www.census.gov/retail";
   if (/new home sales/i.test(title)) return "https://www.census.gov/construction/nrs/";
   if (/existing home sales/i.test(title)) return "https://www.nar.realtor/research-and-statistics";
@@ -157,7 +159,7 @@ function eventSummary(title: string) {
   if (/cpi/i.test(title)) return "미국 소비자물가 발표입니다. 예상보다 높으면 금리 부담이 커지고, 예상보다 낮으면 위험자산 반등 명분이 생길 수 있습니다.";
   if (/ppi/i.test(title)) return "미국 생산자물가 발표입니다. 기업 비용 압력과 향후 소비자물가 흐름을 가늠하는 자료입니다.";
   if (/retail sales/i.test(title)) return "미국 소비 흐름을 확인하는 발표입니다. 소비가 강하면 경기 체력은 좋지만 금리 부담도 다시 커질 수 있습니다.";
-  if (/jobless|unemployment claims/i.test(title)) return "미국 고용 둔화 여부를 매주 확인하는 지표입니다. 청구건수가 급증하면 경기 둔화 우려가 커질 수 있습니다.";
+  if (JOBLESS_CLAIMS_PATTERN.test(title)) return "미국 고용 둔화 여부를 매주 확인하는 지표입니다. 청구건수가 급증하면 경기 둔화 우려가 커질 수 있습니다.";
   if (/fomc|fed|powell/i.test(title)) return "연준의 금리 경로와 유동성 기대가 바뀔 수 있는 이벤트입니다.";
   if (/gdp/i.test(title)) return "미국 성장률을 확인하는 지표입니다. 성장 둔화와 물가 압력을 함께 해석해야 합니다.";
   if (/pce/i.test(title)) return "연준이 중요하게 보는 물가 지표입니다. 금리 기대에 직접적인 영향을 줄 수 있습니다.";
@@ -172,7 +174,7 @@ function marketImpact(title: string) {
   if (/retail sales|gdp/i.test(title)) {
     return "강한 수치는 경기 자신감에는 긍정적이지만 금리 인하 기대를 늦출 수 있습니다. 약한 수치는 경기 둔화 우려와 금리 완화 기대가 동시에 나올 수 있습니다.";
   }
-  if (/jobless|unemployment|payroll|nfp/i.test(title)) {
+  if (JOBLESS_CLAIMS_PATTERN.test(title) || /unemployment|payroll|nfp/i.test(title)) {
     return "고용이 너무 강하면 금리 부담, 너무 약하면 경기 둔화 우려가 커집니다. 발표 직후에는 방향보다 변동성 관리가 먼저입니다.";
   }
   if (/fomc|fed|powell/i.test(title)) {
@@ -244,9 +246,10 @@ function toMacroItem(event: ForexFactoryEvent): MacroEventItem | null {
 }
 
 async function getOfficialEnrichments(items: MacroEventItem[]) {
-  const [blsEnrichments, fedEnrichments] = await Promise.all([
+  const [blsEnrichments, fedEnrichments, dolEnrichments] = await Promise.all([
     fetchBlsOfficialActuals().catch(() => [] as MacroSourceEnrichment[]),
-    fetchFedOfficialEnrichments(items).catch(() => [] as MacroSourceEnrichment[])
+    fetchFedOfficialEnrichments(items).catch(() => [] as MacroSourceEnrichment[]),
+    fetchDolOfficialEnrichments(items).catch(() => [] as MacroSourceEnrichment[])
   ]);
 
   return [
@@ -254,7 +257,7 @@ async function getOfficialEnrichments(items: MacroEventItem[]) {
     ...fedEnrichments,
     ...getBeaOfficialEnrichments(),
     ...getCensusOfficialEnrichments(),
-    ...getDolOfficialEnrichments()
+    ...dolEnrichments
   ];
 }
 
@@ -308,7 +311,15 @@ export async function getMacroCalendarPayload(): Promise<MacroCalendarPayload> {
     cachedPayload = { payload, expiresAt: now + payload.nextRefreshMs };
     return payload;
   } catch (error) {
-    const payload = getFallbackPayload(error instanceof Error ? error.message : "매크로 자동 갱신 실패");
+    const fallback = getFallbackPayload(error instanceof Error ? error.message : "매크로 자동 갱신 실패");
+    const enrichments = await getOfficialEnrichments(fallback.items).catch(() => [] as MacroSourceEnrichment[]);
+    const items = enrichments.length ? sortItems(normalizeMacroEvents(fallback.items, enrichments, now)) : fallback.items;
+    const payload = {
+      ...fallback,
+      sourceLabel: enrichments.length ? "예비 일정 + 공식 발표 확인" : fallback.sourceLabel,
+      nextRefreshMs: getRefreshMs(items),
+      items
+    };
     cachedPayload = { payload, expiresAt: now + payload.nextRefreshMs };
     return payload;
   }
