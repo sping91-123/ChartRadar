@@ -1810,3 +1810,13 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 카테고리는 레이더 판단, 코인 지표, 알트코인 지표, 글로벌 지표, 매크로/뉴스, 알림 시그널, 복기/저널, 계정/Pro 용어로 정리한다.
 - 설정 진입은 `/crypto` 헤더 설정 패널에서 `지표 안내` 링크 클릭으로 확인했다. 340px 라이트모드와 360px 다크모드에서 `/learn` 이동, 카테고리 접힘 초기 상태, `판단 강도` 용어 펼침, 가로 overflow 없음까지 확인했다.
 - 검증은 `git diff --check`, `cmd /c npx tsc --noEmit`, `.next` 삭제 후 `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`을 통과했다. `next start`는 이 로컬 한글 경로에서 404가 발생해 화면 확인에는 `next dev -p 3102`를 사용했다.
+
+## 2026-05-22 P2 글로벌 상단 탭 정렬 균일화.
+
+- 작업 범위는 `RadarTopNav`의 글로벌 4탭 모바일 정렬로 제한한다. 하단 고정 패널, 데이터 로직, 알림/설정/푸시/로그인/결제는 건드리지 않는다.
+- 현재 `RadarTopNav`는 모바일에서 `flex overflow-x-auto`를 사용해 4개 글로벌 탭이 균등 폭이 아니라 왼쪽부터 내용 폭으로 배치된다. 이 때문에 `시장 / 자산 / 일정 / 복기`가 왼쪽으로 쏠려 보인다.
+- 글로벌 탭은 작은 폰에서도 4개가 모두 들어가는 짧은 한글 라벨이므로 모바일부터 `grid-cols-4` 균등 폭을 적용하는 것이 가장 작은 수정이다.
+- `market === "stocks"`일 때만 `grid grid-cols-4`를 적용하고, 링크는 `w-full min-w-0 text-center`로 맞췄다. 다른 시장의 탭 구조와 하단 고정 패널은 변경하지 않는다.
+- 360px에서는 각 탭 72px, 340px에서는 각 탭 67px로 균등 표시되고 탭 간격은 모두 6px였다. 가로 overflow와 viewport 밖 이탈은 없었다.
+- 340px에서 `시장 / 자산 / 일정 / 복기` 링크가 각각 `/global`, `/global#asset-radar`, `/news?market=global`, `/journal?market=global`로 이동하는 것을 확인했다.
+- 최초 `npm.cmd run build`는 stale `.next`로 `/api/admin/entitlements` page module 오류가 났고, `.next` 삭제 후 같은 명령을 재실행해 통과했다.

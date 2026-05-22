@@ -48,6 +48,7 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
   const [hash, setHash] = useState("");
   const market = forcedMarket ?? inferMarket(pathname);
   const navItems = market === "all" ? allNavItems : market === "stocks" ? stockNavItems : cryptoNavItems;
+  const isGlobalNav = market === "stocks";
 
   useEffect(() => {
     const updateHash = () => setHash(window.location.hash.replace("#", ""));
@@ -58,7 +59,14 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
 
   return (
     <nav className="sticky top-2 z-30 overflow-hidden rounded-xl border border-surface-line bg-slate-950/78 p-1.5 shadow-[0_14px_42px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-      <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid" style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}>
+      <div
+        className={
+          isGlobalNav
+            ? "grid grid-cols-4 gap-1.5"
+            : "flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid"
+        }
+        style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
+      >
         {navItems.map(({ label, icon: Icon, href, match, market: itemMarket, hash: itemHash }) => {
           const isMarketRoute = pathname === "/news" || pathname === "/alerts" || pathname === "/journal";
           const routeMatches = match.some((path) => path === pathname) && (!itemMarket || marketParam === itemMarket || !isMarketRoute);
@@ -71,7 +79,9 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
             <Link
               key={label}
               href={href}
-              className={`group flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[11px] font-black tracking-tight transition sm:min-h-12 sm:px-3 sm:text-xs md:shrink ${
+              className={`group flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-lg px-1.5 text-center text-[11px] font-black tracking-tight transition sm:min-h-12 sm:px-3 sm:text-xs ${
+                isGlobalNav ? "w-full" : "shrink-0 md:shrink"
+              } ${
                 active
                   ? "bg-cyan-300/12 text-cyan-200 shadow-[inset_0_0_0_1px_rgba(103,232,249,0.16)]"
                   : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-100"
