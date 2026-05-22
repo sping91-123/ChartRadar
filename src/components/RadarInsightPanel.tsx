@@ -1,12 +1,26 @@
 // 공통 레이더 판단 모델을 Free와 Pro 노출 정책에 맞춰 보여주는 패널.
 import { ArrowDownRight, ArrowUpRight, Eye, Gauge, Lock, ShieldAlert } from "lucide-react";
 import type { RadarFinalView, RadarInsight } from "@/lib/radarInsight";
+import { AppSurface, MetricRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
+
+type SummaryMetricTone = "long" | "short" | "watch" | "risk" | "locked" | "info";
+
+export interface RadarInsightSummaryMetric {
+  label: string;
+  value: string;
+  detail?: string;
+  tone?: SummaryMetricTone;
+}
 
 interface RadarInsightPanelProps {
   insight: RadarInsight;
   isPro: boolean;
   className?: string;
   strengthHelp?: string[];
+  variant?: "default" | "cryptoSummary";
+  priceLabel?: string;
+  dataStatusLabel?: string;
+  summaryMetrics?: RadarInsightSummaryMetric[];
 }
 
 function finalViewClass(finalView: RadarFinalView) {
@@ -108,7 +122,153 @@ function LockedValue({ label }: { label: string }) {
   );
 }
 
-export function RadarInsightPanel({ insight, isPro, className = "", strengthHelp }: RadarInsightPanelProps) {
+function finalViewTone(finalView: RadarFinalView): SummaryMetricTone {
+  if (finalView === "long_bias") return "long";
+  if (finalView === "short_bias") return "short";
+  if (finalView === "high_risk") return "risk";
+  return "watch";
+}
+
+function compactLine(value: string | undefined, maxLength = 92) {
+  if (!value) return "-";
+  return value.length > maxLength ? `${value.slice(0, maxLength).trim()}…` : value;
+}
+
+function defaultNextChecks(insight: RadarInsight, isPro: boolean) {
+  if (!isPro) return ["조건 충족 전 대기", "세부 추적 조건은 Pro에서 확인"];
+  if (insight.finalView === "long_bias") return [insight.longConditions[0], insight.invalidationConditions[0]].filter(Boolean);
+  if (insight.finalView === "short_bias") return [insight.shortConditions[0], insight.invalidationConditions[0]].filter(Boolean);
+  if (insight.finalView === "high_risk") return [insight.risks[0], insight.invalidationConditions[0]].filter(Boolean);
+  return [insight.longConditions[0], insight.shortConditions[0]].filter(Boolean);
+}
+
+function CompactRadarInsightPanel({
+  insight,
+  isPro,
+  className = "",
+  strengthHelp,
+  priceLabel,
+  dataStatusLabel,
+  summaryMetrics = []
+}: RadarInsightPanelProps) {
+  const statusTone = finalViewTone(insight.finalView);
+  const keyReasons = listItems(insight.keyReasons, 3);
+  const nextChecks = defaultNextChecks(insight, isPro).slice(0, 2);
+  const strengthHelpText = strengthHelp?.join(" ");
+
+  return (
+    <AppSurface tone="elevated" padding="md" className={`overflow-hidden ${className}`}>
+      <SectionHeader
+        eyebrow="오늘 먼저 볼 판단"
+        title={insight.symbol}
+        description={`${insight.timeframe ?? "종합"} · 상태, 강도, 핵심 근거`}
+        action={<StatusPill tone={statusTone}>{insight.finalViewLabel}</StatusPill>}
+      />
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusPill tone={statusTone}>{insight.strengthLabel}</StatusPill>
+            <StatusPill tone={isPro ? "info" : "locked"}>{isPro ? "Pro 상세" : "Basic 요약"}</StatusPill>
+          </div>
+          <p className="mt-3 hidden max-w-3xl text-sm leading-6 text-ui-muted [word-break:keep-all] sm:block">{compactLine(insight.summary, 128)}</p>
+        </div>
+
+        <PanelCard className="bg-ui-inset shadow-none">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <Gauge size={16} className="text-ui-brand" aria-hidden />
+              <p className="text-ui-label font-semibold text-ui-subtle">판단 강도</p>
+              {strengthHelpText ? (
+                <span
+                  className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-ui-lineStrong bg-ui-panel text-[11px] font-semibold text-ui-muted"
+                  title={strengthHelpText}
+                  aria-label={`판단 강도 도움말: ${strengthHelpText}`}
+                >
+                  ?
+                </span>
+              ) : null}
+            </div>
+            <p className="text-sm font-semibold text-ui-text">{insight.strengthLabel}</p>
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-ui-panel">
+            <div className={`h-full rounded-full ${strengthClass(insight.finalView)}`} style={{ width: `${Math.max(4, insight.strength)}%` }} />
+          </div>
+          <p className="mt-2 text-xs font-semibold text-ui-muted">{insight.strength} / 100</p>
+          <div className="mt-3">
+            <MetricRow label="현재가" value={priceLabel ?? "-"} />
+            <MetricRow label="데이터" value={dataStatusLabel ?? "-"} />
+          </div>
+        </PanelCard>
+      </div>
+
+      {summaryMetrics.length ? (
+        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+          {summaryMetrics.slice(0, 3).map((metric) => (
+            <PanelCard key={metric.label} className="bg-ui-inset p-3 shadow-none">
+              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{metric.label}</p>
+              <p className="mt-2 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{compactLine(metric.value, 44)}</p>
+              {metric.detail ? <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{metric.detail}</p> : null}
+            </PanelCard>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <PanelCard className="bg-ui-inset shadow-none">
+          <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">핵심 근거</p>
+          <ul className="mt-2 divide-y divide-ui-line">
+            {keyReasons.map((item) => (
+              <li key={item} className="py-2 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">
+                {compactLine(item, 72)}
+              </li>
+            ))}
+          </ul>
+        </PanelCard>
+        <PanelCard className="bg-ui-inset shadow-none">
+          <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">다음 확인</p>
+          <ul className="mt-2 divide-y divide-ui-line">
+            {nextChecks.length ? (
+              nextChecks.map((item) => (
+                <li key={item} className="py-2 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">
+                  {compactLine(item, 56)}
+                </li>
+              ))
+            ) : (
+              <li className="py-2 text-sm font-semibold leading-5 text-ui-text">확인 필요</li>
+            )}
+          </ul>
+        </PanelCard>
+      </div>
+    </AppSurface>
+  );
+}
+
+export function RadarInsightPanel({
+  insight,
+  isPro,
+  className = "",
+  strengthHelp,
+  variant = "default",
+  priceLabel,
+  dataStatusLabel,
+  summaryMetrics
+}: RadarInsightPanelProps) {
+  if (variant === "cryptoSummary") {
+    return (
+      <CompactRadarInsightPanel
+        insight={insight}
+        isPro={isPro}
+        className={className}
+        strengthHelp={strengthHelp}
+        variant={variant}
+        priceLabel={priceLabel}
+        dataStatusLabel={dataStatusLabel}
+        summaryMetrics={summaryMetrics}
+      />
+    );
+  }
+
   const keyReasons = listItems(insight.keyReasons, isPro ? null : 1);
   const risks = listItems(insight.risks, isPro ? null : 1);
   const strengthHelpText = strengthHelp?.join(" ");

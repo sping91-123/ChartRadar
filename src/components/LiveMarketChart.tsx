@@ -49,14 +49,14 @@ import { evaluateRadarDecision, type RadarDecision } from "@/lib/radarDecisionEn
 import { getActiveSupabaseSession } from "@/lib/supabase";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import { BeginnerActionGuide, type BeginnerGuideStep, type BeginnerGuideTone } from "@/components/BeginnerActionGuide";
-import { RadarInsightPanel } from "@/components/RadarInsightPanel";
+import { RadarInsightPanel, type RadarInsightSummaryMetric } from "@/components/RadarInsightPanel";
 import { TechnicalRadarPanel } from "@/components/TechnicalRadarPanel";
 import { LiquidationPressurePanel } from "@/components/LiquidationPressurePanel";
 import { hasMarketEntitlement } from "@/lib/billing";
 import { recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { getChartThemeOptions, observeChartThemeChange } from "@/lib/chartTheme";
-import { marketAnalysisToRadarInsight, visibleRadarInsightForPlan } from "@/lib/radarInsight";
+import { marketAnalysisToRadarInsight, visibleRadarInsightForPlan, type RadarInsight } from "@/lib/radarInsight";
 
 const symbols = [
   "BTCUSDT.P",
@@ -802,6 +802,41 @@ const MAJOR_STRENGTH_HELP = [
   "높을수록 조건이 더 선명하지만, 진입을 보장하지는 않습니다.",
   "낮을수록 신호가 약하거나 관망 성격이 강합니다."
 ];
+
+function compactSummaryText(value: string | undefined, maxLength = 46) {
+  if (!value) return "확인 필요";
+  return value.length > maxLength ? `${value.slice(0, maxLength).trim()}…` : value;
+}
+
+function buildMajorSummaryMetrics(
+  analysis: MarketAnalysis,
+  activeAnalysis: TimeframeAnalysis | undefined,
+  insight: RadarInsight
+): RadarInsightSummaryMetric[] {
+  const volatilityExpanded = activeAnalysis?.condition.volatilityState === "expanded";
+  return [
+    {
+      label: "구조",
+      value: activeAnalysis ? `MSB ${stateLabel(activeAnalysis.msb)} · CHoCH ${stateLabel(activeAnalysis.choch)}` : "구조 확인 중",
+      detail: "현재 타임프레임 구조",
+      tone: insight.finalView === "long_bias" ? "long" : insight.finalView === "short_bias" ? "short" : "watch"
+    },
+    {
+      label: "변동성",
+      value: activeAnalysis
+        ? `${formatIndicatorValue(activeAnalysis.condition.atrPercent, 2, "%")} · ${conditionLabel(activeAnalysis.condition.volatilityState)}`
+        : "변동성 확인 중",
+      detail: "ATR 기준 압력",
+      tone: volatilityExpanded ? "risk" : "info"
+    },
+    {
+      label: "리스크",
+      value: compactSummaryText(insight.risks[0] ?? analysis.riskFlags[0] ?? analysis.warnings[0]),
+      detail: "추격 전 확인",
+      tone: insight.finalView === "high_risk" ? "risk" : insight.finalView === "watch" ? "watch" : "info"
+    }
+  ];
+}
 
 function radarPulseClasses(tone: RadarPulseTone) {
   if (tone === "long") return "border-signal-success/20 bg-black/20 text-signal-success";
@@ -2177,26 +2212,45 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
   }
 
   return (
-    <section id="basic-coins" className="scroll-mt-24 rounded-lg border border-surface-line bg-surface-card p-4 pb-28 shadow-glow sm:p-5 sm:pb-28">
+    <section
+      id="basic-coins"
+      className={
+        isMajorScreen
+          ? "scroll-mt-24 rounded-ui-lg border border-ui-line bg-ui-panel p-3 pb-28 text-ui-text shadow-ui-panel sm:p-4 sm:pb-28"
+          : "scroll-mt-24 rounded-lg border border-surface-line bg-surface-card p-4 pb-28 shadow-glow sm:p-5 sm:pb-28"
+      }
+    >
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
+            <div
+              className={
+                isMajorScreen
+                  ? "grid h-10 w-10 shrink-0 place-items-center rounded-ui border border-ui-line bg-ui-inset text-ui-muted"
+                  : "grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-accent-blue/25 bg-accent-blue/10 text-accent-blue"
+              }
+            >
               <BarChart3 size={21} aria-hidden />
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-xl font-black text-white">{chartTitle}</h2>
+                <h2 className={isMajorScreen ? "text-ui-heading font-semibold tracking-tight text-ui-text" : "text-xl font-black text-white"}>{chartTitle}</h2>
                 {!isMajorScreen ? (
                   <span className="rounded border border-accent-blue/30 bg-accent-blue/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-accent-blue">
                     Live
                   </span>
                 ) : null}
-                <span className="rounded border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] font-bold text-slate-400">
+                <span
+                  className={
+                    isMajorScreen
+                      ? "rounded-ui-sm border border-ui-line bg-ui-inset px-2 py-0.5 text-ui-label font-semibold text-ui-muted"
+                      : "rounded border border-white/10 bg-black/20 px-2 py-0.5 text-[10px] font-bold text-slate-400"
+                  }
+                >
                   Binance 기준
                 </span>
               </div>
-              <p className="mt-1 text-sm leading-6 text-slate-400 [word-break:keep-all]">
+              <p className={isMajorScreen ? "mt-1 text-ui-body text-ui-muted [word-break:keep-all]" : "mt-1 text-sm leading-6 text-slate-400 [word-break:keep-all]"}>
                 {chartDescription}
               </p>
             </div>
@@ -2213,8 +2267,12 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             onClick={() => selectSymbol(item, { userSelected: true })}
             className={`min-h-10 whitespace-nowrap rounded-md border px-3 text-sm font-black transition ${
               symbol === item
-                ? "border-accent-blue bg-accent-blue text-slate-950"
-                : "border-surface-line bg-surface-cardSoft text-slate-300 hover:border-accent-blue/60"
+                ? isMajorScreen
+                  ? "border-ui-lineStrong bg-ui-active text-ui-activeText ring-1 ring-inset ring-ui-lineStrong"
+                  : "border-accent-blue bg-accent-blue text-slate-950"
+                : isMajorScreen
+                  ? "border-ui-line bg-ui-inset text-ui-muted hover:border-ui-lineStrong hover:text-ui-text"
+                  : "border-surface-line bg-surface-cardSoft text-slate-300 hover:border-accent-blue/60"
             }`}
           >
             {symbolLabel(item)}
@@ -2306,40 +2364,42 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         </div>
       ) : null}
 
-      <div className="mt-3 rounded-lg border border-surface-line bg-surface-cardSoft p-3">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-black text-white">구조 감지 기준</p>
-            <p className="mt-1 text-[11px] leading-5 text-slate-500 [word-break:keep-all]">
-              초보자는 균형 감지를 기본으로 두고, 더 빠른 변화를 보고 싶을 때만 빠른 변화 감지를 쓰면 됩니다.
-            </p>
+      {!isMajorScreen ? (
+        <div className="mt-3 rounded-lg border border-surface-line bg-surface-cardSoft p-3">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-black text-white">구조 감지 기준</p>
+              <p className="mt-1 text-[11px] leading-5 text-slate-500 [word-break:keep-all]">
+                초보자는 균형 감지를 기본으로 두고, 더 빠른 변화를 보고 싶을 때만 빠른 변화 감지를 쓰면 됩니다.
+              </p>
+            </div>
+            <span className="text-[11px] font-bold text-slate-500">
+              현재 {structureSensitivityLabel(structureSensitivity)}
+            </span>
           </div>
-          <span className="text-[11px] font-bold text-slate-500">
-            현재 {structureSensitivityLabel(structureSensitivity)}
-          </span>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            {structureSensitivityOptions.map((item) => {
+              const active = structureSensitivity === item.value;
+              return (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => applyStructurePreset(item)}
+                  className={`min-h-16 rounded-md border px-3 py-2 text-left transition ${
+                    active
+                      ? "border-accent-blue bg-accent-blue text-slate-950"
+                      : "border-surface-line bg-black/20 text-slate-300 hover:border-accent-blue/60"
+                  }`}
+                >
+                  <span className="block text-sm font-black">{item.label}</span>
+                  <span className="mt-1 block text-[11px] font-semibold opacity-80">{item.description}</span>
+                  <span className="mt-1 block text-[10px] font-semibold opacity-70">{item.detail}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          {structureSensitivityOptions.map((item) => {
-            const active = structureSensitivity === item.value;
-            return (
-              <button
-                key={item.value}
-                type="button"
-                onClick={() => applyStructurePreset(item)}
-                className={`min-h-16 rounded-md border px-3 py-2 text-left transition ${
-                  active
-                    ? "border-accent-blue bg-accent-blue text-slate-950"
-                    : "border-surface-line bg-black/20 text-slate-300 hover:border-accent-blue/60"
-                }`}
-              >
-                <span className="block text-sm font-black">{item.label}</span>
-                <span className="mt-1 block text-[11px] font-semibold opacity-80">{item.description}</span>
-                <span className="mt-1 block text-[10px] font-semibold opacity-70">{item.detail}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      ) : null}
 
       {altOnly && !visibleAltAnalysisGate.allowed ? (
         <div className="mt-4 rounded-lg border border-amber-300/30 bg-amber-300/10 p-4">
@@ -2377,7 +2437,15 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         </div>
       ) : analysis && visibleRadarInsight ? (
         <div className="mt-4 space-y-4">
-          <RadarInsightPanel insight={visibleRadarInsight} isPro={hasCoinPro} strengthHelp={isMajorScreen ? MAJOR_STRENGTH_HELP : undefined} />
+          <RadarInsightPanel
+            insight={visibleRadarInsight}
+            isPro={hasCoinPro}
+            strengthHelp={isMajorScreen ? MAJOR_STRENGTH_HELP : undefined}
+            variant={isMajorScreen ? "cryptoSummary" : "default"}
+            priceLabel={isMajorScreen ? formatPrice(analysis.price) : undefined}
+            dataStatusLabel={isMajorScreen ? `${isUsingCachedData ? "최근 저장본" : "실시간 확인"} · ${formatUpdatedAt(analysis.updatedAt)}` : undefined}
+            summaryMetrics={isMajorScreen ? buildMajorSummaryMetrics(analysis, activeAnalysis, visibleRadarInsight) : undefined}
+          />
           <div className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
             <BeginnerActionGuide
               title={isMajorScreen ? "화면은 이 순서로 읽습니다" : "지금은 이 순서로 보면 됩니다"}
@@ -2429,6 +2497,39 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               }
             />
           </div>
+          {isMajorScreen ? (
+            <div className="rounded-ui border border-ui-line bg-ui-inset p-3">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">구조 감지 기준</p>
+                  <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">
+                    기본은 균형 감지입니다. 빠른 변화 감지는 더 민감하게 구조 변화를 확인할 때만 사용합니다.
+                  </p>
+                </div>
+                <span className="text-xs font-semibold text-ui-muted">현재 {structureSensitivityLabel(structureSensitivity)}</span>
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                {structureSensitivityOptions.map((item) => {
+                  const active = structureSensitivity === item.value;
+                  return (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => applyStructurePreset(item)}
+                      className={`min-h-14 rounded-ui-sm border px-3 py-2 text-left transition ${
+                        active
+                          ? "border-ui-lineStrong bg-ui-active text-ui-activeText ring-1 ring-inset ring-ui-lineStrong"
+                          : "border-ui-line bg-ui-panel text-ui-muted hover:border-ui-lineStrong hover:text-ui-text"
+                      }`}
+                    >
+                      <span className="block text-sm font-semibold">{item.label}</span>
+                      <span className="mt-1 block text-[11px] font-semibold opacity-80">{item.description}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : (
         <div className="mt-4 min-h-56 animate-pulse rounded-lg border border-surface-line bg-surface-cardSoft p-4">

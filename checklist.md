@@ -2049,3 +2049,11 @@
 - [x] 340px~360px 폭과 탭 이동을 확인한다.
 - [x] build, 모바일 smoke, 전체 smoke로 검증한다.
 - [x] P2 상태를 `DONE`으로 바꾸고 완료 커밋 해시를 기록한다.
+
+## 2026-05-22 코인 레이더 상단 판단 영역 1차 리뉴얼.
+
+- [x] 작업 전 git 상태, origin/main 동기화, DesignPrimitives, UI audit, `/crypto` 렌더링 구조를 확인한다.
+- [x] `/crypto` 전용으로 BTC/ETH 선택과 상단 판단 요약의 첫인상을 정리한다.
+- [x] `RadarInsightPanel`은 기본 사용처에 영향이 없도록 선택형 compact summary 경로만 추가한다.
+- [x] 레이더 계산, fetch, Pro/결제/로그인/푸시, `/alts`, `/global` 동작을 변경하지 않는다.
+- [x] 340px/360px, BTC/ETH, 타임프레임, 라이트/다크, build와 smoke를 검증한다.
