@@ -90,6 +90,11 @@ body {
   scrollbar-gutter: stable;
 }
 
+.market-selection-lock .app-scroll-root {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 .journal-page {
   max-width: 100%;
   overflow-x: hidden;

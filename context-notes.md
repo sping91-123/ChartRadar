@@ -1849,3 +1849,11 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 운영 오류 `column profiles.plan does not exist`가 확인되어 스캐너 권한 조회를 `profiles?select=*` 기반으로 바꿨다. `profiles.plan`, `profiles.membership_tier`, 활성 `subscriptions.plan/tier`를 조합해 권한을 판정한다.
 - 자동 푸시 기준은 앱 내부 카드보다 엄격하게 유지한다. 메이저 코인 setup은 80점 이상, 알트 setup은 82점 이상, 글로벌 setup은 80점 이상만 푸시 후보로 삼고 저장 조건 재감지도 같은 최종 quality gate를 통과해야 한다.
 - `skippedLowScoreCount`는 저장 조건 재감지 등 후보 생성 후 최종 점수 게이트에서 걸러진 이벤트 수를 운영 로그와 `/api/push-cron` 응답에서 확인하기 위한 값이다.
+
+## 2026-05-23 시장 선택 화면 높이 고정.
+
+- 이번 범위는 홈 `/`의 시장 선택 화면으로 제한한다. `/crypto`, `/alts`, `/global`, `/news`, `/journal` 같은 실제 콘텐츠 화면 스크롤은 건드리지 않는다.
+- 현재 루트 레이아웃은 `app-scroll-root`가 모든 페이지에서 `overflow-y:auto`를 가진다. 시장 선택 화면 자체가 `h-[100dvh]`여도 이 스크롤 루트가 남아 있으면 모바일 WebView에서 위아래로 움직이는 체감이 생길 수 있다.
+- 해결 방향은 시장 선택 컴포넌트가 마운트된 동안에만 문서에 전용 클래스를 붙이고, 그 클래스 아래의 `app-scroll-root`만 `overflow:hidden`으로 잠그는 방식이다.
+- 스플래시 화면도 홈 진입 흐름의 일부이므로 `100dvh` 고정 높이와 overflow hidden을 적용하고, 로고/문구 묶음을 약간 위로 보정해 모바일에서 시각적으로 중앙에 보이게 한다.
+- 340px/360px, 높이 640px 기준으로 홈 `/`은 `app-scroll-root`가 `overflow:hidden`, `scrollHeight=clientHeight=640`으로 확인됐다. `/crypto`, `/global`, `/journal`은 `market-selection-lock`이 빠지고 `overflow-y:auto`와 실제 scrollHeight가 유지됐다.

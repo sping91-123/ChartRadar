@@ -37,7 +37,7 @@ const marketEntries = [
 ] as const;
 
 function BrandMark({ size = "default" }: { size?: "default" | "large" }) {
-  const frameSize = size === "large" ? "h-20 w-20" : "h-14 w-14";
+  const frameSize = size === "large" ? "h-20 w-20" : "h-12 w-12 sm:h-14 sm:w-14";
   const imageSize = size === "large" ? 80 : 56;
 
   return (
@@ -116,8 +116,8 @@ function AnimatedBrandText() {
 
 function SplashScreen() {
   return (
-    <main className="grid min-h-screen place-items-center px-4 py-8">
-      <section className="flex flex-col items-center gap-5 text-center">
+    <main className="grid h-[100dvh] max-h-[100dvh] place-items-center overflow-hidden px-4">
+      <section className="flex -translate-y-[3dvh] flex-col items-center gap-5 text-center">
         <SplashBrandMark />
         <div>
           <p className="mb-2 text-sm font-bold text-cyan-200">근거를 포착해, 방향을 더 선명하게</p>
@@ -158,33 +158,38 @@ function LoginPrompt({ onBrowseBasic }: { onBrowseBasic: () => void }) {
 }
 
 function MarketSelector() {
+  useEffect(() => {
+    document.documentElement.classList.add("market-selection-lock");
+    return () => document.documentElement.classList.remove("market-selection-lock");
+  }, []);
+
   return (
-    <main className="grid h-[100dvh] place-items-center overflow-hidden px-3 py-3 sm:px-6 sm:py-6">
-      <section className="enterprise-panel w-[calc(100vw-1.5rem)] max-w-5xl rounded-2xl p-4 sm:w-full sm:p-6 lg:p-10">
-        <div className="flex flex-col items-center gap-4 sm:gap-6 lg:gap-9">
-          <header className="flex w-full flex-col items-center gap-2 text-center sm:gap-4">
+    <main className="grid h-[100dvh] max-h-[100dvh] min-h-0 place-items-center overflow-hidden px-3 py-2 sm:px-6 sm:py-6">
+      <section className="enterprise-panel max-h-full w-[calc(100vw-1.5rem)] max-w-5xl overflow-hidden rounded-2xl p-3 sm:w-full sm:p-6 lg:p-10">
+        <div className="flex min-h-0 flex-col items-center gap-3 sm:gap-6 lg:gap-9">
+          <header className="flex w-full shrink-0 flex-col items-center gap-1.5 text-center sm:gap-4">
             <div className="flex items-center justify-center gap-2 sm:gap-3">
               <BrandMark />
-              <h1 className="text-2xl font-black tracking-tight text-white sm:text-4xl">Chart Radar</h1>
+              <h1 className="text-xl font-black tracking-tight text-white sm:text-4xl">Chart Radar</h1>
             </div>
 
-            <p className="max-w-2xl text-xs font-semibold leading-relaxed text-slate-200 sm:text-base">
+            <p className="max-w-2xl text-xs font-semibold leading-snug text-slate-200 sm:text-base sm:leading-relaxed">
               오늘 시장의 방향성과 핵심 대응 포인트를 한눈에 제공합니다.
             </p>
           </header>
 
-          <div className="grid w-full gap-3 sm:gap-4 md:grid-cols-2">
+          <div className="grid min-h-0 w-full flex-1 gap-2.5 sm:gap-4 md:grid-cols-2">
             {marketEntries.map(({ title, scope, href, icon: Icon, iconFrame, iconRing, accent, glow }) => (
               <Link
                 key={title}
                 href={href}
-                className="group relative grid min-h-[8.5rem] place-items-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-center transition hover:-translate-y-0.5 hover:border-cyan-300/35 hover:bg-white/[0.055] hover:shadow-[0_22px_60px_rgba(0,0,0,0.22)] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:min-h-[12rem] sm:p-6 md:min-h-[16rem]"
+                className="group relative grid min-h-[7.25rem] place-items-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-center transition hover:-translate-y-0.5 hover:border-cyan-300/35 hover:bg-white/[0.055] hover:shadow-[0_22px_60px_rgba(0,0,0,0.22)] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:min-h-[12rem] sm:p-6 md:min-h-[16rem]"
               >
                 <div className={`absolute inset-x-0 top-0 h-28 bg-gradient-to-b ${glow} to-transparent`} aria-hidden />
-                <div className="relative flex flex-col items-center gap-2.5 sm:gap-4">
-                  <div className={`grid h-12 w-12 place-items-center border sm:h-16 sm:w-16 ${iconFrame} ${accent}`}>
+                <div className="relative flex flex-col items-center gap-2 sm:gap-4">
+                  <div className={`grid h-11 w-11 place-items-center border sm:h-16 sm:w-16 ${iconFrame} ${accent}`}>
                     {iconRing ? (
-                      <div className={`grid h-8 w-8 place-items-center border sm:h-11 sm:w-11 ${iconRing}`} aria-hidden>
+                      <div className={`grid h-7 w-7 place-items-center border sm:h-11 sm:w-11 ${iconRing}`} aria-hidden>
                         <Icon size={22} aria-hidden className="sm:hidden" />
                         <Icon size={26} aria-hidden className="hidden sm:block" />
                       </div>
@@ -195,8 +200,8 @@ function MarketSelector() {
                       </>
                     )}
                   </div>
-                  <h2 className="text-2xl font-black tracking-tight text-white sm:text-4xl">{title}</h2>
-                  <p className="text-xs font-bold text-slate-400">{scope}</p>
+                  <h2 className="text-xl font-black tracking-tight text-white sm:text-4xl">{title}</h2>
+                  <p className="text-[11px] font-bold leading-tight text-slate-400 sm:text-xs">{scope}</p>
                 </div>
               </Link>
             ))}
