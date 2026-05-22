@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { CalendarClock, Coins, Crown, History, Newspaper, Radar, TrendingUp } from "lucide-react";
+import { AppSurface } from "@/components/ui/DesignPrimitives";
 
 type MarketScope = "crypto" | "stocks" | "all";
 
@@ -58,7 +59,7 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
   }, [pathname]);
 
   return (
-    <nav className="sticky top-2 z-30 overflow-hidden rounded-xl border border-surface-line bg-slate-950/78 p-1.5 shadow-[0_14px_42px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+    <AppSurface as="nav" tone="panel" padding="sm" className="sticky top-2 z-30 overflow-hidden backdrop-blur-xl">
       <div
         className={
           isGlobalNav
@@ -83,23 +84,23 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
                 isGlobalNav ? "w-full" : "shrink-0 md:shrink"
               } ${
                 active
-                  ? "bg-cyan-300/12 text-cyan-200 shadow-[inset_0_0_0_1px_rgba(103,232,249,0.16)]"
-                  : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-100"
+                  ? "bg-ui-active text-ui-activeText ring-1 ring-inset ring-ui-lineStrong"
+                  : "text-ui-muted hover:bg-ui-inset hover:text-ui-text"
               }`}
             >
-              <Icon size={15} aria-hidden className={active ? "text-cyan-300" : "text-slate-500 transition group-hover:text-slate-300"} />
+              <Icon size={15} aria-hidden className={active ? "text-ui-activeText" : "text-ui-subtle transition group-hover:text-ui-muted"} />
               <span className="whitespace-nowrap">{label}</span>
             </Link>
           );
         })}
       </div>
-    </nav>
+    </AppSurface>
   );
 }
 
 export function RadarTopNav({ market }: { market?: MarketScope } = {}) {
   return (
-    <Suspense fallback={<div className="h-[52px] rounded-xl border border-surface-line bg-slate-950/70" />}>
+    <Suspense fallback={<div className="h-[52px] rounded-ui border border-ui-line bg-ui-panel" />}>
       <RadarTopNavContent market={market} />
     </Suspense>
   );
