@@ -2689,7 +2689,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             </div>
           ) : null}
           <div className="relative">
-            <div ref={chartRef} className="h-[420px] w-full sm:h-[520px]" />
+            <div ref={chartRef} className={isMajorScreen ? "h-[260px] w-full sm:h-[520px]" : "h-[420px] w-full sm:h-[520px]"} />
             {isLoading && !analysis ? (
               <div className="absolute inset-0 flex items-center justify-center bg-surface-cardSoft/85 backdrop-blur-sm">
                 <div className="rounded-md border border-white/10 bg-black/30 px-4 py-3 text-sm font-semibold text-slate-200">
