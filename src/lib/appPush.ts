@@ -226,10 +226,10 @@ function withAppPushTimeout<T>(promise: Promise<T>, stage: AppPushRegistrationSt
 async function loadPushNotifications() {
   if (!isAndroidNativeApp()) return null;
   const pushNotificationsModule = await import("@capacitor/push-notifications");
-  return pushNotificationsModule.PushNotifications;
+  return { plugin: pushNotificationsModule.PushNotifications };
 }
 
-type PushNotificationsPlugin = NonNullable<Awaited<ReturnType<typeof loadPushNotifications>>>;
+type PushNotificationsPlugin = NonNullable<Awaited<ReturnType<typeof loadPushNotifications>>>["plugin"];
 
 async function waitForPushRegistration(PushNotifications: PushNotificationsPlugin) {
   return new Promise<string>((resolve, reject) => {
@@ -317,7 +317,8 @@ async function syncTokenToServer(token: string, preferences: AppPushPreferences)
 }
 
 async function ensureRadarPushChannel() {
-  const PushNotifications = await loadPushNotifications();
+  const pushNotifications = await loadPushNotifications();
+  const PushNotifications = pushNotifications?.plugin;
   if (!PushNotifications) return;
 
   await PushNotifications.createChannel({
@@ -336,7 +337,8 @@ export async function registerAndroidAppPush(preferences: AppPushPreferences) {
   let currentStage: AppPushRegistrationStage = "checking_permission";
   try {
     writeAndroidAppPushStage("checking_permission");
-    const PushNotifications = await withAppPushTimeout(loadPushNotifications(), "checking_permission");
+    const pushNotifications = await withAppPushTimeout(loadPushNotifications(), "checking_permission");
+    const PushNotifications = pushNotifications?.plugin;
     if (!PushNotifications) {
       return writeAppPushState({
         ...emptyAppPushState(),
@@ -447,8 +449,8 @@ export async function disableAndroidAppPush() {
   const payload = (await response.json().catch(() => ({}))) as { error?: string };
   if (!response.ok) throw new Error(payload.error ?? "앱 푸시 알림 해제에 실패했습니다.");
 
-  const PushNotifications = await loadPushNotifications();
-  await PushNotifications?.unregister();
+  const pushNotifications = await loadPushNotifications();
+  await pushNotifications?.plugin.unregister();
 
   return writeAppPushState({
     ...emptyAppPushState(),
@@ -480,7 +482,8 @@ export async function sendAndroidAppPushTest(kind: PushTestKind = "default") {
 }
 
 export async function registerAppPushListeners() {
-  const PushNotifications = await loadPushNotifications();
+  const pushNotifications = await loadPushNotifications();
+  const PushNotifications = pushNotifications?.plugin;
   if (!PushNotifications) return;
   if (pushListenersRegistered) return;
   pushListenersRegistered = true;

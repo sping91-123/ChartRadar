@@ -399,24 +399,23 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
   }
 
   async function requestNotificationPermission() {
-    const usageGate = getUsageGate(alertUsageBucketId, isPaid);
-    if (!usageGate.allowed) {
-      setToast(usageGate.message);
-      return;
-    }
-
     setIsRequesting(true);
     setTestResult(null);
     try {
       if (isAndroidAppPush) {
         const next = await registerAndroidAppPush({ market, ruleIds: scopedEnabledRuleIds, presets: readSetupAlertPresets(market) });
         setAppPushState(next);
-        recordUsageEvent(alertUsageBucketId);
         if (next.registrationStage === "enabled" && next.synced) {
           setToast("앱 푸시 알림이 켜졌습니다. 저장한 조건과 알림 규칙이 연결되었습니다.");
         } else {
           setToast(next.lastError ?? "앱 푸시 연결이 완료되지 않았습니다. 앱을 다시 실행하거나 알림 권한을 확인해 주세요.");
         }
+        return;
+      }
+
+      const usageGate = getUsageGate(alertUsageBucketId, isPaid);
+      if (!usageGate.allowed) {
+        setToast(usageGate.message);
         return;
       }
 
