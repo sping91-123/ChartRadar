@@ -1857,3 +1857,5 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 해결 방향은 시장 선택 컴포넌트가 마운트된 동안에만 문서에 전용 클래스를 붙이고, 그 클래스 아래의 `app-scroll-root`만 `overflow:hidden`으로 잠그는 방식이다.
 - 스플래시 화면도 홈 진입 흐름의 일부이므로 `100dvh` 고정 높이와 overflow hidden을 적용하고, 로고/문구 묶음을 약간 위로 보정해 모바일에서 시각적으로 중앙에 보이게 한다.
 - 340px/360px, 높이 640px 기준으로 홈 `/`은 `app-scroll-root`가 `overflow:hidden`, `scrollHeight=clientHeight=640`으로 확인됐다. `/crypto`, `/global`, `/journal`은 `market-selection-lock`이 빠지고 `overflow-y:auto`와 실제 scrollHeight가 유지됐다.
+- 추가 실기기 피드백 기준으로 카드 묶음 중심을 측정하니 340px에서 viewport 중앙보다 약 50px, 360px에서 약 41px 아래에 있었다. 모바일에서만 패널을 `6dvh` 위로 보정해 카드 묶음이 시각적 중앙에 오게 한다.
+- 스플래시는 700ms가 깜빡임처럼 느껴질 수 있어 일반 첫 진입 기준 850ms로 늘린다. 로그인 직후 skip flag가 있는 경로는 기존처럼 스플래시를 생략한다.

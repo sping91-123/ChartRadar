@@ -11,6 +11,7 @@ import { getSupabaseSession } from "@/lib/supabase";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 const skipSplashAfterAuthKey = "chartRadar.skipSplashAfterAuth.v1";
+const splashDurationMs = 850;
 const brandLetters = Array.from("Chart Radar");
 
 const marketEntries = [
@@ -165,7 +166,7 @@ function MarketSelector() {
 
   return (
     <main className="grid h-[100dvh] max-h-[100dvh] min-h-0 place-items-center overflow-hidden px-3 py-2 sm:px-6 sm:py-6">
-      <section className="enterprise-panel max-h-full w-[calc(100vw-1.5rem)] max-w-5xl overflow-hidden rounded-2xl p-3 sm:w-full sm:p-6 lg:p-10">
+      <section className="enterprise-panel max-h-full w-[calc(100vw-1.5rem)] max-w-5xl -translate-y-[6dvh] overflow-hidden rounded-2xl p-3 sm:w-full sm:translate-y-0 sm:p-6 lg:p-10">
         <div className="flex min-h-0 flex-col items-center gap-3 sm:gap-6 lg:gap-9">
           <header className="flex w-full shrink-0 flex-col items-center gap-1.5 text-center sm:gap-4">
             <div className="flex items-center justify-center gap-2 sm:gap-3">
@@ -229,7 +230,7 @@ export function HomeEntryGate() {
       return;
     }
 
-    const timer = window.setTimeout(() => setShowSplash(false), 700);
+    const timer = window.setTimeout(() => setShowSplash(false), splashDurationMs);
     return () => window.clearTimeout(timer);
   }, []);
 
