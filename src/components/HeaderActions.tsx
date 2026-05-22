@@ -295,7 +295,7 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
               <DisplaySettingsSection />
               <SettingsSection title="고객지원">
                 <div className="grid gap-1">
-                  <SettingsLink href="/learn" icon={BookOpen} label="지표 안내" description="판단 강도, 코인·알트·글로벌 주요 용어를 확인합니다." />
+              <SettingsLink href="/learn" icon={BookOpen} label="지표 안내" description="판단 강도와 시장별 용어를 카테고리별로 확인합니다." />
                   <SettingsPlaceholder icon={LifeBuoy} label="고객센터" description="문의 접수 방식과 답변 기준을 준비 중입니다." />
                   <SettingsPlaceholder icon={HelpCircle} label="자주 묻는 질문" description="로그인, 알림, 구독 관련 FAQ를 정리할 예정입니다." />
                   <SettingsPlaceholder icon={ReceiptText} label="정기결제 현황" description="결제 시스템 구축 후 구독 상태와 갱신일을 연결합니다." />

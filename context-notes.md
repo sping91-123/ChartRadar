@@ -1801,3 +1801,12 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 모바일 하단 패널은 `#asset-radar`가 화면에 들어오거나 `/global#asset-radar`로 진입했을 때만 표시한다. 시장흐름 상단에서는 글로벌 결론 카드가 주인공이어야 하므로 불필요한 패널 노출을 피한다.
 - 340px와 360px 폭에서 5개 타임프레임과 3개 분석 모드가 잘리지 않고, `1h`와 `ICT` 선택 후 상세 요약이 `1h · ICT`로 바뀌는 것을 확인했다.
 - 검증은 `git diff --check`, `cmd /c npx tsc --noEmit`, `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`을 통과했다.
+
+## 2026-05-22 P2 지표 안내 카테고리/상세 구조 개편.
+
+- 작업 범위는 설정 메뉴의 지표 안내(`/learn`) UX 구조로 제한한다. 실제 계산 로직, 코인/글로벌/알트 분석, 로그인, 푸시, 결제, Android 설정은 건드리지 않는다.
+- 현재 `/learn`은 모든 용어 설명을 세로 카드 그리드로 즉시 노출해 모바일에서 길게 읽어야 한다. 1차 개선은 별도 검색보다 카테고리 선택과 용어별 접힘 구조를 우선한다.
+- 서버 컴포넌트와 HTML `details/summary`를 사용하면 새 상태 관리 없이 카테고리 진입과 용어 아코디언을 구현할 수 있다. 모바일 초기 화면에는 카테고리 카드만 보이고, 설명은 사용자가 펼칠 때만 노출한다.
+- 카테고리는 레이더 판단, 코인 지표, 알트코인 지표, 글로벌 지표, 매크로/뉴스, 알림 시그널, 복기/저널, 계정/Pro 용어로 정리한다.
+- 설정 진입은 `/crypto` 헤더 설정 패널에서 `지표 안내` 링크 클릭으로 확인했다. 340px 라이트모드와 360px 다크모드에서 `/learn` 이동, 카테고리 접힘 초기 상태, `판단 강도` 용어 펼침, 가로 overflow 없음까지 확인했다.
+- 검증은 `git diff --check`, `cmd /c npx tsc --noEmit`, `.next` 삭제 후 `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`을 통과했다. `next start`는 이 로컬 한글 경로에서 404가 발생해 화면 확인에는 `next dev -p 3102`를 사용했다.
