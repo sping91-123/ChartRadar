@@ -1838,3 +1838,11 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 앱바에는 Pro 상태를 넣지 않고, 상단 판단 카드 내부에서 `상세 근거 잠금` 또는 `상세 근거 열림`으로 표시한다.
 - 기존 `Pro 상세`과 `Basic 요약` 배지는 모바일에서 의미가 모호해 보여 제거하고 상세 근거 상태로 바꾼다.
 - Basic과 Pro 실기기 상태를 각각 확인하고, 340px/360px에서 nav 균등 폭과 가로 overflow 없음을 확인한다.
+
+## 2026-05-23 자동 조건 감시 푸시 점검.
+
+- 테스트 푸시는 성공했지만 자동 조건 감시 푸시는 별도 흐름이다. 운영 확인은 `/api/push-cron`, `pushAlertScanner`, `push_tokens`, `push_alert_presets`, `push_alert_events` 순서로 봐야 한다.
+- Vercel Cron은 `vercel.json` 기준 `/api/push-cron`을 5분마다 호출한다. 운영에서 `CRON_SECRET`, Supabase 관리자 환경변수, Firebase 메시징 환경변수 중 하나가 빠지면 자동 발송은 시작되지 않는다.
+- 스캐너는 `platform=android`, `provider=fcm`, `enabled=true` 토큰만 대상으로 삼고, 사용자별 `markets`, `rule_ids`, `profiles.plan`, `push_alert_events.event_key` 중복 여부를 통과해야 발송한다.
+- 자동 시그널은 A급 코인 레이더, 청산 압력 과열, 관심 조건 재감지, 뉴스/시장 이벤트 리마인더, 글로벌 모멘텀, 리스크오프 조합, 반도체 주도력 변화로 구성된다.
+- 운영 로그에 토큰 수, 프리셋 수, 감지 이벤트 수, 권한 차단 수, 선호 조건 스킵 수, 중복 스킵 수, 발송 대상 토큰 수가 남도록 진단 카운터를 추가했다.

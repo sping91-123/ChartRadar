@@ -56,6 +56,47 @@ interface OptionalEventSourceResult {
   warning: string | null;
 }
 
+interface PushScanDiagnostics {
+  tokenCount: number;
+  userCount: number;
+  profileCount: number;
+  presetCount: number;
+  cryptoPresetCount: number;
+  stockPresetCount: number;
+  cryptoSetupCount: number;
+  stockPresetSetupCount: number;
+  stockMomentumSetupCount: number;
+  optionalEventCount: number;
+  genericEventCount: number;
+  eligibleEventCount: number;
+  entitlementBlockedEventCount: number;
+  preferenceSkippedTokenCount: number;
+  duplicateSkippedTokenCount: number;
+  sendTargetTokenCount: number;
+}
+
+function emptyDiagnostics(overrides: Partial<PushScanDiagnostics> = {}): PushScanDiagnostics {
+  return {
+    tokenCount: 0,
+    userCount: 0,
+    profileCount: 0,
+    presetCount: 0,
+    cryptoPresetCount: 0,
+    stockPresetCount: 0,
+    cryptoSetupCount: 0,
+    stockPresetSetupCount: 0,
+    stockMomentumSetupCount: 0,
+    optionalEventCount: 0,
+    genericEventCount: 0,
+    eligibleEventCount: 0,
+    entitlementBlockedEventCount: 0,
+    preferenceSkippedTokenCount: 0,
+    duplicateSkippedTokenCount: 0,
+    sendTargetTokenCount: 0,
+    ...overrides
+  };
+}
+
 const cryptoModes: TradingMode[] = ["scalp", "swing"];
 const stockMomentumSymbols = ["QQQ", "SPY", "NQ=F", "ES=F", "^VIX", "VIXY", "SMH", "SOXX", "NVDA", "AMD", "UUP", "GLD", "TLT"];
 const stockIndexSymbols = new Set(["QQQ", "SPY", "NQ=F", "ES=F"]);
@@ -492,8 +533,20 @@ async function recordSentEvent(userId: string, event: PushAlertEvent, sentCount:
 
 async function sendEventToUser(userId: string, tokens: PushTokenRow[], event: PushAlertEvent) {
   const targetTokens = tokens.filter((token) => tokenWants(token, event.market, event.ruleId));
-  if (targetTokens.length === 0) return { sent: 0, skipped: 0, failed: 0 };
-  if (await alreadySent(userId, event.eventKey)) return { sent: 0, skipped: targetTokens.length, failed: 0 };
+  const preferenceSkipped = Math.max(0, tokens.length - targetTokens.length);
+  if (targetTokens.length === 0) {
+    return { sent: 0, skipped: 0, failed: 0, preferenceSkipped, duplicateSkipped: 0, targetTokens: 0 };
+  }
+  if (await alreadySent(userId, event.eventKey)) {
+    return {
+      sent: 0,
+      skipped: targetTokens.length,
+      failed: 0,
+      preferenceSkipped,
+      duplicateSkipped: targetTokens.length,
+      targetTokens: targetTokens.length
+    };
+  }
 
   const results = await Promise.allSettled(
     targetTokens.map((token) =>
@@ -508,14 +561,29 @@ async function sendEventToUser(userId: string, tokens: PushTokenRow[], event: Pu
   const sent = results.filter((result) => result.status === "fulfilled").length;
   const failed = results.length - sent;
   if (sent > 0) await recordSentEvent(userId, event, sent);
-  return { sent, skipped: 0, failed };
+  return { sent, skipped: 0, failed, preferenceSkipped, duplicateSkipped: 0, targetTokens: targetTokens.length };
 }
 
 export async function runPushAlertScan(context: ScanContext) {
   const tokens = await supabaseAdminRest<PushTokenRow[]>(
     "push_tokens?select=id,user_id,token,markets,rule_ids&enabled=eq.true&platform=eq.android&provider=eq.fcm&limit=500"
   );
-  if (tokens.length === 0) return { users: 0, events: 0, sent: 0, skipped: 0, failed: 0 };
+  if (tokens.length === 0) {
+    return {
+      users: 0,
+      events: 0,
+      sent: 0,
+      skipped: 0,
+      failed: 0,
+      sources: {
+        succeeded: [],
+        skipped: [],
+        failed: []
+      },
+      warnings: [],
+      diagnostics: emptyDiagnostics()
+    };
+  }
 
   const userIds = Array.from(new Set(tokens.map((token) => token.user_id)));
   const profiles = await supabaseAdminRest<PushProfileRow[]>(`profiles?select=id,plan&id=in.(${userIds.join(",")})`);
@@ -554,6 +622,10 @@ export async function runPushAlertScan(context: ScanContext) {
   let skipped = 0;
   let failed = 0;
   let events = 0;
+  let entitlementBlockedEventCount = 0;
+  let preferenceSkippedTokenCount = 0;
+  let duplicateSkippedTokenCount = 0;
+  let sendTargetTokenCount = 0;
 
   for (const userId of userIds) {
     const userTokens = tokens.filter((token) => token.user_id === userId);
@@ -570,7 +642,9 @@ export async function runPushAlertScan(context: ScanContext) {
       "stocks"
     ).map((match) => matchedSetupToEvent(match.setup, "stock-momentum", "stocks", "preset"));
 
-    const userEvents = [...genericEvents, ...cryptoPresetMatches, ...stockPresetMatches].filter((event) => ruleAllowed(event.ruleId, plan));
+    const allUserEvents = [...genericEvents, ...cryptoPresetMatches, ...stockPresetMatches];
+    const userEvents = allUserEvents.filter((event) => ruleAllowed(event.ruleId, plan));
+    entitlementBlockedEventCount += allUserEvents.length - userEvents.length;
     events += userEvents.length;
 
     for (const event of userEvents) {
@@ -578,6 +652,9 @@ export async function runPushAlertScan(context: ScanContext) {
       sent += result.sent;
       skipped += result.skipped;
       failed += result.failed;
+      preferenceSkippedTokenCount += result.preferenceSkipped;
+      duplicateSkippedTokenCount += result.duplicateSkipped;
+      sendTargetTokenCount += result.targetTokens;
     }
   }
 
@@ -592,6 +669,24 @@ export async function runPushAlertScan(context: ScanContext) {
       skipped: optionalEventSources.filter((source) => !source.warning && !source.event).map((source) => source.label),
       failed: optionalEventSources.filter((source) => source.warning).map((source) => source.label)
     },
-    warnings
+    warnings,
+    diagnostics: emptyDiagnostics({
+      tokenCount: tokens.length,
+      userCount: userIds.length,
+      profileCount: profiles.length,
+      presetCount: presetRows.length,
+      cryptoPresetCount: presetRows.filter((preset) => preset.market === "crypto").length,
+      stockPresetCount: presetRows.filter((preset) => preset.market === "stocks").length,
+      cryptoSetupCount: cryptoSetups.length,
+      stockPresetSetupCount: stockPresetSetups.length,
+      stockMomentumSetupCount: stockMomentumSetups.length,
+      optionalEventCount: optionalEventSources.filter((source) => source.event).length,
+      genericEventCount: genericEvents.length,
+      eligibleEventCount: events,
+      entitlementBlockedEventCount,
+      preferenceSkippedTokenCount,
+      duplicateSkippedTokenCount,
+      sendTargetTokenCount
+    })
   };
 }

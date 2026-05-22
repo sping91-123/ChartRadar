@@ -26,9 +26,21 @@ export async function GET(request: Request) {
 
   const origin = new URL(request.url).origin;
   const result = await runPushAlertScan({ origin });
+  const scannedAt = new Date().toISOString();
+  console.info("[push-cron] scan summary", {
+    scannedAt,
+    users: result.users,
+    events: result.events,
+    sent: result.sent,
+    skipped: result.skipped,
+    failed: result.failed,
+    sources: result.sources,
+    diagnostics: result.diagnostics,
+    warningCount: result.warnings?.length ?? 0
+  });
   return NextResponse.json({
     ok: true,
-    scannedAt: new Date().toISOString(),
+    scannedAt,
     ...result
   });
 }
