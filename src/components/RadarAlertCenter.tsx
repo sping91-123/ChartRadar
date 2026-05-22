@@ -266,7 +266,7 @@ function RuleCard({
 }
 
 export function RadarAlertCenter({ compact = false, market = "crypto" }: { compact?: boolean; market?: AlertMarket }) {
-  const { profile } = useSupabaseAuth();
+  const { session, profile, isLoading: isAuthLoading } = useSupabaseAuth();
   const isPaid = hasMarketEntitlement(profile?.plan, market);
   const copy = alertMarketCopy[market];
   const isGlobal = market === "stocks";
@@ -371,6 +371,8 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
   }, [setupMatches]);
   const alertUsageBucketId = market === "stocks" ? "stocksAlertRule" : "cryptoAlertRule";
   const isAndroidAppPush = appPushState.supported && appPushState.platform === "android";
+  const alertsMarketParam = market === "stocks" ? "global" : "crypto";
+  const loginHref = `/login?returnTo=${encodeURIComponent(`/alerts?market=${alertsMarketParam}`)}`;
   const isAppPushConnecting =
     isRequesting ||
     appPushState.registrationStage === "checking_permission" ||
@@ -399,6 +401,12 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
   }
 
   async function requestNotificationPermission() {
+    if (isAndroidAppPush && !session) {
+      setTestResult(null);
+      setToast("로그인 후 앱 푸시 알림을 계정에 연결할 수 있습니다.");
+      return;
+    }
+
     setIsRequesting(true);
     setTestResult(null);
     try {
@@ -593,11 +601,11 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
           <button
             type="button"
             onClick={requestNotificationPermission}
-            disabled={isAppPushConnecting || (!isAndroidAppPush && permission === "unsupported")}
+            disabled={isAppPushConnecting || (isAndroidAppPush && isAuthLoading) || (!isAndroidAppPush && permission === "unsupported")}
             className="enterprise-button inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isAppPushConnecting ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <CheckCircle2 size={16} aria-hidden />}
-            {isAndroidAppPush ? appPushActionLabel(appPushState.registrationStage) : "브라우저 알림 켜기"}
+            {isAndroidAppPush ? (isAuthLoading ? "로그인 확인 중" : appPushActionLabel(appPushState.registrationStage)) : "브라우저 알림 켜기"}
           </button>
           {isAndroidAppPush && appPushState.token ? (
             <>
@@ -619,6 +627,18 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
         <p className="mt-3 rounded-xl border border-accent-blue/20 bg-accent-blue/10 px-3 py-2 text-xs leading-5 text-accent-blue">
           {toast}
         </p>
+      ) : null}
+
+      {isAndroidAppPush && !isAuthLoading && !session ? (
+        <div className="mt-3 flex flex-col gap-3 rounded-xl border border-cyan-300/20 bg-cyan-300/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs leading-5 text-cyan-100">로그인 후 앱 푸시 알림을 계정에 연결할 수 있습니다.</p>
+          <Link
+            href={loginHref}
+            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-cyan-200/40 bg-cyan-300/15 px-4 text-sm font-black text-cyan-50 transition hover:bg-cyan-300/25"
+          >
+            로그인하기
+          </Link>
+        </div>
       ) : null}
 
       <div className="mt-4 rounded-xl border border-surface-line bg-surface-cardSoft p-4">
@@ -671,7 +691,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
 
         {isAndroidAppPush && !canSendAppPushTest ? (
           <div className="mt-3 rounded-md border border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
-            <p>앱 푸시 알림을 켜면 주요 조건이 감지될 때 알려드립니다.</p>
+            <p>{session ? "앱 푸시 알림을 켜면 주요 조건이 감지될 때 알려드립니다." : "로그인 후 앱 푸시 알림을 계정에 연결할 수 있습니다."}</p>
             <p className="mt-1 text-amber-100/80">상단의 앱 푸시 알림 켜기 버튼으로 연결한 뒤 테스트 알림을 보낼 수 있습니다.</p>
           </div>
         ) : null}
