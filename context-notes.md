@@ -1847,3 +1847,5 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 자동 시그널은 A급 코인 레이더, 청산 압력 과열, 관심 조건 재감지, 뉴스/시장 이벤트 리마인더, 글로벌 모멘텀, 리스크오프 조합, 반도체 주도력 변화로 구성된다.
 - 운영 로그에 토큰 수, 프리셋 수, 감지 이벤트 수, 권한 차단 수, 선호 조건 스킵 수, 중복 스킵 수, 발송 대상 토큰 수가 남도록 진단 카운터를 추가했다.
 - 운영 오류 `column profiles.plan does not exist`가 확인되어 스캐너 권한 조회를 `profiles?select=*` 기반으로 바꿨다. `profiles.plan`, `profiles.membership_tier`, 활성 `subscriptions.plan/tier`를 조합해 권한을 판정한다.
+- 자동 푸시 기준은 앱 내부 카드보다 엄격하게 유지한다. 메이저 코인 setup은 80점 이상, 알트 setup은 82점 이상, 글로벌 setup은 80점 이상만 푸시 후보로 삼고 저장 조건 재감지도 같은 최종 quality gate를 통과해야 한다.
+- `skippedLowScoreCount`는 저장 조건 재감지 등 후보 생성 후 최종 점수 게이트에서 걸러진 이벤트 수를 운영 로그와 `/api/push-cron` 응답에서 확인하기 위한 값이다.

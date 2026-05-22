@@ -51,6 +51,9 @@ interface PushAlertEvent {
   title: string;
   body: string;
   data: Record<string, string>;
+  score?: number;
+  quality?: ScoutSetup["plan"]["quality"];
+  symbol?: string;
 }
 
 interface ScanContext {
@@ -81,6 +84,7 @@ interface PushScanDiagnostics {
   preferenceSkippedTokenCount: number;
   duplicateSkippedTokenCount: number;
   sendTargetTokenCount: number;
+  skippedLowScoreCount: number;
 }
 
 function emptyDiagnostics(overrides: Partial<PushScanDiagnostics> = {}): PushScanDiagnostics {
@@ -102,11 +106,16 @@ function emptyDiagnostics(overrides: Partial<PushScanDiagnostics> = {}): PushSca
     preferenceSkippedTokenCount: 0,
     duplicateSkippedTokenCount: 0,
     sendTargetTokenCount: 0,
+    skippedLowScoreCount: 0,
     ...overrides
   };
 }
 
 const cryptoModes: TradingMode[] = ["scalp", "swing"];
+const cryptoMajorSymbols = new Set(["BTCUSDT.P", "ETHUSDT.P", "BTCUSDT", "ETHUSDT", "BTC", "ETH"]);
+const cryptoMajorPushScoreThreshold = 80;
+const cryptoAltPushScoreThreshold = 82;
+const genericSetupPushScoreThreshold = 80;
 const stockMomentumSymbols = ["QQQ", "SPY", "NQ=F", "ES=F", "^VIX", "VIXY", "SMH", "SOXX", "NVDA", "AMD", "UUP", "GLD", "TLT"];
 const stockIndexSymbols = new Set(["QQQ", "SPY", "NQ=F", "ES=F"]);
 const volatilitySymbols = new Set(["^VIX", "VIXY"]);
@@ -119,6 +128,10 @@ function eventBucket(minutes: number) {
 
 function compactSymbol(symbol: string) {
   return symbol.replace("USDT.P", "").replace("USDT", "");
+}
+
+function isCryptoMajor(symbol: string) {
+  return cryptoMajorSymbols.has(symbol) || cryptoMajorSymbols.has(compactSymbol(symbol));
 }
 
 function sideLabel(side: "long" | "short", market: SetupAlertMarket) {
@@ -243,10 +256,18 @@ function setupToEvent(setup: ScoutSetup, ruleId: RadarAlertRuleId, market: Setup
     market,
     ruleId,
     eventKey: `${prefix}:${market}:${setup.symbol}:${setup.timeframe}:${side}:${eventBucket(15)}`,
-    title: isGlobalMomentum ? stockSignalTitle(setup.symbol, side) : market === "stocks" ? "Chart Radar 글로벌 감지" : "Chart Radar 레이더 감지",
+    title: isGlobalMomentum
+      ? stockSignalTitle(setup.symbol, side)
+      : market === "stocks"
+        ? "Chart Radar 글로벌 감지"
+        : isCryptoMajor(setup.symbol)
+          ? "Chart Radar 강한 레이더 후보 감지"
+          : "Chart Radar 알트 구조 변화 감지",
     body: isGlobalMomentum
       ? stockSignalBody(setup)
-      : `${compactSymbol(setup.symbol)} ${setup.timeframe} ${sideLabel(side, market)} ${Math.round(setup.score)}점이 다시 감지됐습니다.`,
+      : market === "stocks"
+        ? `${stockSignalLabel(setup.symbol)} ${setup.timeframe} 구조 변화가 감지됐습니다. 앱에서 상세 흐름을 확인해 주세요.`
+        : `${compactSymbol(setup.symbol)} ${setup.timeframe} 강한 구조 변화가 감지됐습니다. 앱에서 상세 흐름을 확인해 주세요.`,
     data: {
       type: ruleId,
       market,
@@ -255,12 +276,15 @@ function setupToEvent(setup: ScoutSetup, ruleId: RadarAlertRuleId, market: Setup
       timeframe: setup.timeframe,
       side,
       signal: isGlobalMomentum ? stockSignalTitle(setup.symbol, side).replace("Chart Radar ", "") : ruleId
-    }
+    },
+    score: setup.score,
+    quality: setup.plan.quality,
+    symbol: setup.symbol
   };
 }
 
 function matchedSetupToEvent(
-  setup: { symbol: string; timeframe: string; side: "long" | "short"; score: number },
+  setup: { symbol: string; timeframe: string; side: "long" | "short"; score: number; quality?: ScoutSetup["plan"]["quality"] },
   ruleId: RadarAlertRuleId,
   market: SetupAlertMarket,
   prefix: string
@@ -273,7 +297,7 @@ function matchedSetupToEvent(
     body:
       market === "stocks"
         ? `${stockSignalLabel(setup.symbol)} ${setup.timeframe} ${sideLabel(setup.side, market)} ${Math.round(setup.score)}점으로 저장한 글로벌 조건과 다시 맞았습니다.`
-        : `${compactSymbol(setup.symbol)} ${setup.timeframe} ${sideLabel(setup.side, market)} ${Math.round(setup.score)}점 조건이 다시 맞았습니다.`,
+        : `${compactSymbol(setup.symbol)} ${setup.timeframe} 저장한 조건과 다시 맞았습니다. 앱에서 상세 흐름을 확인해 주세요.`,
     data: {
       type: ruleId,
       market,
@@ -281,8 +305,27 @@ function matchedSetupToEvent(
       symbol: setup.symbol,
       timeframe: setup.timeframe,
       side: setup.side
-    }
+    },
+    score: setup.score,
+    quality: setup.quality,
+    symbol: setup.symbol
   };
+}
+
+function requiredSetupPushScore(event: PushAlertEvent) {
+  if (event.market === "crypto") {
+    return event.symbol && !isCryptoMajor(event.symbol) ? cryptoAltPushScoreThreshold : cryptoMajorPushScoreThreshold;
+  }
+  return genericSetupPushScoreThreshold;
+}
+
+function isSetupPushEvent(event: PushAlertEvent) {
+  return event.score !== undefined && (event.ruleId === "radar-grade" || event.ruleId === "watchlist-surge" || event.ruleId === "stock-momentum");
+}
+
+function passesSetupPushQuality(event: PushAlertEvent) {
+  if (!isSetupPushEvent(event)) return true;
+  return (event.score ?? 0) >= requiredSetupPushScore(event);
 }
 
 async function buildStockSetup(symbol: string, timeframe: ChartTimeframe): Promise<ScoutSetup | null> {
@@ -448,16 +491,17 @@ async function scanMacroCalendarEvent(origin: string): Promise<PushAlertEvent | 
 
 function buildRiskOffEvent(setups: ScoutSetup[]): PushAlertEvent | null {
   const weakIndex = setups
-    .filter((setup) => stockIndexSymbols.has(setup.symbol) && setup.plan.side === "short" && setup.score >= 70)
+    .filter((setup) => stockIndexSymbols.has(setup.symbol) && setup.plan.side === "short" && setup.score >= 75)
     .sort((a, b) => b.score - a.score)[0];
   const strongVolatility = setups
-    .filter((setup) => volatilitySymbols.has(setup.symbol) && setup.plan.side === "long" && setup.score >= 70)
+    .filter((setup) => volatilitySymbols.has(setup.symbol) && setup.plan.side === "long" && setup.score >= 75)
     .sort((a, b) => b.score - a.score)[0];
   const strongDefense = setups
-    .filter((setup) => riskOffAssetSymbols.has(setup.symbol) && setup.plan.side === "long" && setup.score >= 70)
+    .filter((setup) => riskOffAssetSymbols.has(setup.symbol) && setup.plan.side === "long" && setup.score >= 75)
     .sort((a, b) => b.score - a.score)[0];
   const companion = strongVolatility ?? strongDefense;
   if (!weakIndex || !companion) return null;
+  const score = Math.min(weakIndex.score, companion.score);
 
   return {
     market: "stocks",
@@ -474,22 +518,26 @@ function buildRiskOffEvent(setups: ScoutSetup[]): PushAlertEvent | null {
       companion: companion.symbol,
       timeframe: weakIndex.timeframe,
       side: "short"
-    }
+    },
+    score,
+    quality: stockQuality(score),
+    symbol: weakIndex.symbol
   };
 }
 
 function buildSemiconductorLeadershipEvent(setups: ScoutSetup[]): PushAlertEvent | null {
   const semiconductor = setups
-    .filter((setup) => semiconductorSymbols.has(setup.symbol) && setup.score >= 70)
+    .filter((setup) => semiconductorSymbols.has(setup.symbol) && setup.score >= 75)
     .sort((a, b) => Math.abs(stockDirectionScore(b)) - Math.abs(stockDirectionScore(a)))[0];
   const index = setups
-    .filter((setup) => stockIndexSymbols.has(setup.symbol) && setup.score >= 70)
+    .filter((setup) => stockIndexSymbols.has(setup.symbol) && setup.score >= 75)
     .sort((a, b) => Math.abs(stockDirectionScore(b)) - Math.abs(stockDirectionScore(a)))[0];
   if (!semiconductor || !index) return null;
 
   const delta = stockDirectionScore(semiconductor) - stockDirectionScore(index);
   if (Math.abs(delta) < 24) return null;
   const strengthened = delta > 0;
+  const score = Math.min(semiconductor.score, index.score);
 
   return {
     market: "stocks",
@@ -506,7 +554,10 @@ function buildSemiconductorLeadershipEvent(setups: ScoutSetup[]): PushAlertEvent
       companion: index.symbol,
       timeframe: semiconductor.timeframe,
       side: semiconductor.plan.side
-    }
+    },
+    score,
+    quality: stockQuality(score),
+    symbol: semiconductor.symbol
   };
 }
 
@@ -640,12 +691,8 @@ export async function runPushAlertScan(context: ScanContext) {
     .filter((warning): warning is string => Boolean(warning));
   const globalCompositeEvents = [buildRiskOffEvent(stockMomentumSetups), buildSemiconductorLeadershipEvent(stockMomentumSetups)];
   const genericEvents = [
-    ...topSetups(cryptoSetups, 3)
-      .filter((setup) => setup.score >= 80 || setup.plan.quality === "A")
-      .map((setup) => setupToEvent(setup, "radar-grade", "crypto", "radar-grade")),
-    ...topSetups(stockMomentumSetups, 4)
-      .filter((setup) => setup.score >= 78)
-      .map((setup) => setupToEvent(setup, "stock-momentum", "stocks", "stock-momentum")),
+    ...topSetups(cryptoSetups, 3).map((setup) => setupToEvent(setup, "radar-grade", "crypto", "radar-grade")),
+    ...topSetups(stockMomentumSetups, 4).map((setup) => setupToEvent(setup, "stock-momentum", "stocks", "stock-momentum")),
     ...globalCompositeEvents,
     ...optionalEventSources.map((source) => source.event)
   ].filter((event): event is PushAlertEvent => event !== null);
@@ -658,6 +705,7 @@ export async function runPushAlertScan(context: ScanContext) {
   let preferenceSkippedTokenCount = 0;
   let duplicateSkippedTokenCount = 0;
   let sendTargetTokenCount = 0;
+  let skippedLowScoreCount = 0;
 
   for (const userId of userIds) {
     const userTokens = tokens.filter((token) => token.user_id === userId);
@@ -675,8 +723,13 @@ export async function runPushAlertScan(context: ScanContext) {
     ).map((match) => matchedSetupToEvent(match.setup, "stock-momentum", "stocks", "preset"));
 
     const allUserEvents = [...genericEvents, ...cryptoPresetMatches, ...stockPresetMatches];
-    const userEvents = allUserEvents.filter((event) => ruleAllowed(event.ruleId, plan));
-    entitlementBlockedEventCount += allUserEvents.length - userEvents.length;
+    const qualityCheckedEvents = allUserEvents.filter((event) => {
+      const allowed = passesSetupPushQuality(event);
+      if (!allowed) skippedLowScoreCount += 1;
+      return allowed;
+    });
+    const userEvents = qualityCheckedEvents.filter((event) => ruleAllowed(event.ruleId, plan));
+    entitlementBlockedEventCount += qualityCheckedEvents.length - userEvents.length;
     events += userEvents.length;
 
     for (const event of userEvents) {
@@ -719,7 +772,8 @@ export async function runPushAlertScan(context: ScanContext) {
       entitlementBlockedEventCount,
       preferenceSkippedTokenCount,
       duplicateSkippedTokenCount,
-      sendTargetTokenCount
+      sendTargetTokenCount,
+      skippedLowScoreCount
     })
   };
 }
