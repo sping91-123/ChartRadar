@@ -130,6 +130,11 @@ button {
     0 10px 22px rgba(14, 165, 233, 0.12);
 }
 
+.settings-fullscreen-panel {
+  background: #050812;
+  color: #f8fafc;
+}
+
 a,
 button {
   touch-action: manipulation;
@@ -188,6 +193,11 @@ html.theme-light body {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.8),
     0 22px 62px rgba(15, 23, 42, 0.1);
+}
+
+.theme-light .settings-fullscreen-panel {
+  background: #f8fafc;
+  color: #0f172a;
 }
 
 .theme-light .news-radar-hero {

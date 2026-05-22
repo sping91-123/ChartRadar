@@ -3,7 +3,9 @@
 
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
+  ArrowLeft,
   Bell,
   BookOpen,
   Crown,
@@ -215,11 +217,25 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
   const isPaid = hasAnyPaidEntitlement(plan);
   const planLabel = getEntitlementLabel(plan);
   const [loginHref, setLoginHref] = useState("/login");
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   useEffect(() => {
     const currentPath = `${window.location.pathname}${window.location.search}`;
     setLoginHref(`/login?returnTo=${encodeURIComponent(currentPath)}`);
   }, []);
+
+  useEffect(() => {
+    if (!isSettingsOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsSettingsOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isSettingsOpen]);
 
   return (
     <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -239,29 +255,58 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
           </span>
         ) : null}
       </Link>
-      <details className="group relative">
-        <summary
-          className="grid min-h-9 min-w-9 cursor-pointer list-none place-items-center rounded-lg border border-surface-line bg-surface-cardSoft text-slate-300 transition hover:border-cyan-300/45 hover:text-white [&::-webkit-details-marker]:hidden"
-          aria-label="설정 메뉴"
-          title="설정"
+      <button
+        type="button"
+        onClick={() => setIsSettingsOpen(true)}
+        className="grid min-h-9 min-w-9 place-items-center rounded-lg border border-surface-line bg-surface-cardSoft text-slate-300 transition hover:border-cyan-300/45 hover:text-white"
+        aria-label="설정 열기"
+        title="설정"
+      >
+        <Settings size={16} aria-hidden />
+      </button>
+      {isSettingsOpen ? createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="settings-panel-title"
+          className="settings-fullscreen-panel fixed inset-0 z-[100] overflow-y-auto px-3 py-3 sm:px-5 sm:py-5"
         >
-          <Settings size={16} aria-hidden />
-        </summary>
-        <div className="absolute right-0 z-50 mt-2 w-[min(22rem,calc(100vw-1.5rem))] rounded-xl border border-cyan-300/20 bg-slate-950 p-2 shadow-[0_24px_80px_rgba(0,0,0,0.72)] ring-1 ring-white/10">
-          <MyAccountSection planLabel={planLabel} isPaid={isPaid} proHref={proHref} />
-          <AccountSettingsSection auth={auth} loginHref={loginHref} />
-          <DisplaySettingsSection />
-          <SettingsSection title="고객지원">
-            <div className="grid gap-1">
-              <SettingsLink href="/learn" icon={BookOpen} label="지표 안내" description="판단 강도, 코인·알트·글로벌 주요 용어를 확인합니다." />
-              <SettingsPlaceholder icon={LifeBuoy} label="고객센터" description="문의 접수 방식과 답변 기준을 준비 중입니다." />
-              <SettingsPlaceholder icon={HelpCircle} label="자주 묻는 질문" description="로그인, 알림, 구독 관련 FAQ를 정리할 예정입니다." />
-              <SettingsPlaceholder icon={ReceiptText} label="정기결제 현황" description="결제 시스템 구축 후 구독 상태와 갱신일을 연결합니다." />
-            </div>
-          </SettingsSection>
-          <AppInfoSection />
-        </div>
-      </details>
+          <div className="mx-auto flex min-h-full w-full max-w-md flex-col">
+            <header className="sticky top-0 z-10 -mx-3 flex items-center gap-3 border-b border-white/10 bg-inherit px-3 py-2.5 sm:-mx-5 sm:px-5">
+              <button
+                type="button"
+                onClick={() => setIsSettingsOpen(false)}
+                className="grid min-h-10 min-w-10 place-items-center rounded-lg border border-surface-line bg-surface-cardSoft text-slate-300 transition hover:border-cyan-300/45 hover:text-white"
+                aria-label="설정 닫기"
+                title="뒤로"
+              >
+                <ArrowLeft size={18} aria-hidden />
+              </button>
+              <div className="min-w-0">
+                <p id="settings-panel-title" className="text-base font-black text-white">
+                  설정
+                </p>
+                <p className="text-xs font-semibold text-slate-500">Chart Radar</p>
+              </div>
+            </header>
+            <main className="grid gap-2 py-3">
+              <MyAccountSection planLabel={planLabel} isPaid={isPaid} proHref={proHref} />
+              <AccountSettingsSection auth={auth} loginHref={loginHref} />
+              <DisplaySettingsSection />
+              <SettingsSection title="고객지원">
+                <div className="grid gap-1">
+                  <SettingsLink href="/learn" icon={BookOpen} label="지표 안내" description="판단 강도, 코인·알트·글로벌 주요 용어를 확인합니다." />
+                  <SettingsPlaceholder icon={LifeBuoy} label="고객센터" description="문의 접수 방식과 답변 기준을 준비 중입니다." />
+                  <SettingsPlaceholder icon={HelpCircle} label="자주 묻는 질문" description="로그인, 알림, 구독 관련 FAQ를 정리할 예정입니다." />
+                  <SettingsPlaceholder icon={ReceiptText} label="정기결제 현황" description="결제 시스템 구축 후 구독 상태와 갱신일을 연결합니다." />
+                </div>
+              </SettingsSection>
+              <AppInfoSection />
+            </main>
+          </div>
+        </div>,
+        document.body
+      ) : null}
     </div>
   );
 }
