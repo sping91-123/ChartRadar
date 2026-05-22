@@ -1981,3 +1981,12 @@
 - [x] MacroTicker와 글로벌 일정 문구에서 실제값이 없는 문서형 이벤트를 숫자형 결과처럼 보이지 않게 한다.
 - [x] 빌드, 라우트 smoke, 모바일 smoke, 타입 검사와 API 직접 호출로 매크로 변경 범위를 검증한다.
 - [ ] `npm.cmd run smoke:all`은 기존 `smoke:billing` 권한 갱신 이벤트 정적 검사에서 실패해 로그인/결제 방에서 별도 확인한다.
+
+## 2026-05-22 P2 글로벌 일정 뉴스 압력 명칭/한글화.
+
+- [x] 작업 전 git 상태와 `docs/work-queue.md` P2 상태를 확인한다.
+- [x] P2 담당방을 실제 방 이름 `/Global` 기준으로 `IN_PROGRESS` 처리한다.
+- [x] `/global`의 일정·뉴스 압력 카드와 API 생성 문구를 확인한다.
+- [x] 글로벌 뉴스 제목의 한국어 우선 표시 구조를 확인하고 필요한 최소 보강을 한다.
+- [x] build, 모바일 smoke, 전체 smoke, `/global`, `/news?market=global`로 검증한다.
+- [ ] P2를 `DONE`으로 바꾸고 완료 커밋 해시를 기록한다.

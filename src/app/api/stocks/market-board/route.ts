@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { XMLParser } from "fast-xml-parser";
 import { getMacroCalendarPayload } from "@/lib/macroCalendar";
 import type { MacroEventItem } from "@/data/macroEvents";
+import { fallbackKoreanNewsTitle, localizeNewsSourceText } from "@/lib/radarNews";
 import { fetchStockCandles, findStockSymbol } from "@/lib/stockMarket";
 import { rateLimit } from "@/lib/server/rateLimit";
 import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
@@ -655,7 +656,7 @@ async function buildEventRisk(): Promise<EventRiskPayload> {
       title: highRisk ? "이벤트 전 변동성 주의" : "이벤트 리스크 제한",
       summary: highRisk
         ? `${highRisk.label} 전후에는 추격보다 본장 반응 확인이 우선입니다.`
-        : "가까운 주요 이벤트가 제한적입니다. 가격 반응과 뉴스 압력을 함께 봅니다.",
+        : "가까운 주요 이벤트가 제한적입니다. 일정과 가격 반응을 함께 봅니다.",
       nextEvent: next,
       items,
       sourceNote: payload.sourceNote,
@@ -681,6 +682,11 @@ function newsDirection(title: string) {
   return null;
 }
 
+function newsDisplayTitle(title: string) {
+  const fallback = fallbackKoreanNewsTitle(title, "stocks");
+  return localizeNewsSourceText(fallback || title);
+}
+
 async function loadNewsFeed(feed: NewsFeed) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 5000);
@@ -701,17 +707,18 @@ async function loadNewsFeed(feed: NewsFeed) {
         if (!title || !direction) return null;
         return {
           source: feed.source,
-          title,
+          title: newsDisplayTitle(title),
+          originalTitle: title,
           tone: direction,
           summary:
             direction === "supportive"
-              ? "뉴스 흐름은 위험자산에 우호적인 쪽입니다."
+              ? "이벤트와 뉴스 흐름은 위험자산에 우호적인 쪽입니다."
               : direction === "burden"
-                ? "뉴스 흐름은 리스크 점검 쪽입니다."
-                : "뉴스는 변동성 확대 요인으로 분류됩니다."
+                ? "이벤트와 뉴스 흐름은 리스크 점검 쪽입니다."
+                : "이벤트와 뉴스는 변동성 확대 요인으로 분류됩니다."
         };
       })
-      .filter((item): item is { source: string; title: string; tone: PressureTone; summary: string } => Boolean(item))
+      .filter((item): item is { source: string; title: string; originalTitle: string; tone: PressureTone; summary: string } => Boolean(item))
       .slice(0, 6);
   } catch {
     return [];
@@ -727,15 +734,15 @@ async function buildNewsPressure() {
   const burden = items.filter((item) => item.tone === "burden").length;
   const tone: PressureTone = supportive > burden ? "supportive" : burden > supportive ? "burden" : "mixed";
   return {
-    title: tone === "supportive" ? "뉴스 압력 우호" : tone === "burden" ? "뉴스 압력 부담" : "뉴스 압력 중립",
+    title: tone === "supportive" ? "오늘의 이벤트 압력 우호" : tone === "burden" ? "오늘의 이벤트 압력 부담" : "오늘의 이벤트 압력 중립",
     summary:
       items.length === 0
-        ? "강한 공개 뉴스 압력은 아직 제한적입니다. 이벤트와 가격 반응을 함께 확인하세요."
+        ? "강한 공개 이벤트 압력은 아직 제한적입니다. 일정과 가격 반응을 함께 확인하세요."
         : tone === "supportive"
-          ? "공개 뉴스 흐름은 위험자산에 우호적인 재료가 조금 더 많습니다."
+          ? "공개 일정과 뉴스 흐름은 위험자산에 우호적인 재료가 조금 더 많습니다."
           : tone === "burden"
-            ? "공개 뉴스 흐름은 리스크 점검 재료가 조금 더 많습니다."
-            : "공개 뉴스 흐름은 방향보다 변동성 점검에 가깝습니다.",
+            ? "공개 일정과 뉴스 흐름은 리스크 점검 재료가 조금 더 많습니다."
+            : "공개 일정과 뉴스 흐름은 방향보다 변동성 점검에 가깝습니다.",
     tone,
     items: items.slice(0, 3)
   };

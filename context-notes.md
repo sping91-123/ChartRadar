@@ -1751,3 +1751,11 @@ The health endpoint now reports a launch readiness score and structured blocking
 - `/api/macro-sync`는 로컬에 `CRON_SECRET`이 없으면 개발 편의를 위해 실행되고, 운영에서는 Bearer secret을 요구한다. 현재 로컬 Supabase에는 `macro_events` 테이블이 아직 적용되지 않아 `checked` 상태와 `macro_events 테이블 적용이 필요합니다.` 메시지를 반환한다.
 - 2026-05-21 확인 시 ForexFactory는 정상 응답했고 첫 항목 `FOMC Meeting Minutes`가 `document_release`와 `의사록 공개 완료`로 표시됐다. BLS 공개 API는 일일 한도 초과 응답을 반환해 CPI/PPI 실제값은 이번 실행에서 비어 있었지만, 화면은 공식 발표 확인/예비 일정 fallback으로 유지된다.
 - `npm.cmd run smoke:all`은 매크로/운영/모바일 단계는 통과했지만 기존 `smoke:billing`의 `권한 갱신 이벤트 수신` 정적 검사에서 실패했다. 이번 작업 범위가 로그인/결제 금지라 해당 코드는 수정하지 않는다.
+
+## 2026-05-22 P2 글로벌 일정 뉴스 압력 명칭/한글화.
+
+- `docs/work-queue.md`의 P2 담당방은 `글로벌 레이더 /global`로 적혀 있었지만, 실제 담당 방 이름 기준으로 `/Global`로 정리한다.
+- `일정·뉴스 압력`은 `/global` 상단 30초 체크 안의 뉴스/일정 요약 카드에서 생성된다. 화면 목적은 유지하되 명칭은 `오늘의 이벤트 압력`처럼 일정과 뉴스가 시장 변동성에 주는 영향을 설명하는 쪽이 자연스럽다.
+- 글로벌 뉴스 제목은 `/api/radar-news`에서는 `translatedTitle`과 `fallbackKoreanNewsTitle()`이 이미 있고, `/news?market=global`의 `RadarNewsPanel`도 한국어 우선 표시를 사용한다. 반면 `/api/stocks/market-board`의 `newsPressure`는 RSS 원문 제목을 그대로 내려 보내므로 여기만 최소 보강한다.
+- `/api/stocks/market-board`의 뉴스 제목은 `fallbackKoreanNewsTitle(title, "stocks")`와 `localizeNewsSourceText()`를 거쳐 한국어 우선으로 내려보내고, 원문은 `originalTitle`로 보존한다.
+- 검증은 `git diff --check`, `cmd /c npx tsc --noEmit`, `npm.cmd run lint`, `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`, `/global`, `/news?market=global`, `/api/stocks/market-board` 직접 호출로 통과했다.

@@ -47,6 +47,7 @@ type EventRiskItem = {
 type NewsPressureItem = {
   source: string;
   title: string;
+  originalTitle?: string;
   tone: PressureTone;
   summary: string;
 };
@@ -475,7 +476,7 @@ function NewsBlock({ payload, isPaid }: { payload: DashboardPayload; isPaid: boo
   const items = isPaid ? payload.newsPressure.items : payload.newsPressure.items.slice(0, 1);
 
   return (
-    <SectionShell icon={Newspaper} title="일정·뉴스 압력" summary={payload.newsPressure.summary}>
+    <SectionShell icon={Newspaper} title="오늘의 이벤트 압력" summary={payload.newsPressure.summary}>
       {items.length ? (
         <div className="space-y-2">
           {items.map((item) => (
@@ -485,14 +486,17 @@ function NewsBlock({ payload, isPaid }: { payload: DashboardPayload; isPaid: boo
                 {itemToneBadge({ tone: item.tone })}
               </div>
               <p className="mt-1 text-[11px] font-bold opacity-75">{item.source}</p>
+              {isPaid && item.originalTitle && item.originalTitle !== item.title ? (
+                <p className="mt-1 text-[10px] font-bold leading-4 text-slate-500 [word-break:break-word]">원문: {item.originalTitle}</p>
+              ) : null}
               {isPaid ? <p className="mt-2 text-[11px] font-bold leading-5 opacity-80 [word-break:keep-all]">{item.summary}</p> : null}
             </div>
           ))}
         </div>
       ) : (
-        <p className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-xs font-bold text-slate-500">강한 뉴스 압력은 아직 제한적입니다.</p>
+        <p className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-xs font-bold text-slate-500">강한 이벤트 압력은 아직 제한적입니다.</p>
       )}
-      {!isPaid ? <LockedDetail title="일정·뉴스 상세">Global Pro에서는 핵심 뉴스 1~3개를 Risk-On, Risk-Off, 변동성 확대 요인으로 나눠 봅니다.</LockedDetail> : null}
+      {!isPaid ? <LockedDetail title="이벤트 압력 상세">Global Pro에서는 핵심 일정과 뉴스 1~3개를 Risk-On, Risk-Off, 변동성 확대 요인으로 나눠 봅니다.</LockedDetail> : null}
     </SectionShell>
   );
 }
