@@ -2057,3 +2057,11 @@
 - [x] `RadarInsightPanel`은 기본 사용처에 영향이 없도록 선택형 compact summary 경로만 추가한다.
 - [x] 레이더 계산, fetch, Pro/결제/로그인/푸시, `/alts`, `/global` 동작을 변경하지 않는다.
 - [x] 340px/360px, BTC/ETH, 타임프레임, 라이트/다크, build와 smoke를 검증한다.
+
+## 2026-05-23 코인 레이더 모바일 탭/배지 정리.
+
+- [x] 코인 상단 탭을 모바일에서 4분할 균등 정렬로 정리한다.
+- [x] `/crypto` 상단 판단 요약의 Pro/Basic 배지 문구를 명확하게 바꾼다.
+- [x] 리스크와 판단 강도를 모바일 상태 row로 재배치한다.
+- [x] 340px/360px, Basic/Pro, BTC/ETH, 타임프레임 전환을 확인한다.
+- [x] build, 모바일 smoke, 전체 smoke, tsc, diff check로 검증한다.

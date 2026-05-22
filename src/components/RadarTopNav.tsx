@@ -50,6 +50,7 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
   const market = forcedMarket ?? inferMarket(pathname);
   const navItems = market === "all" ? allNavItems : market === "stocks" ? stockNavItems : cryptoNavItems;
   const isGlobalNav = market === "stocks";
+  const isCryptoNav = market === "crypto";
 
   useEffect(() => {
     const updateHash = () => setHash(window.location.hash.replace("#", ""));
@@ -62,7 +63,7 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
     <AppSurface as="nav" tone="panel" padding="sm" className="sticky top-2 z-30 overflow-hidden backdrop-blur-xl">
       <div
         className={
-          isGlobalNav
+          isGlobalNav || isCryptoNav
             ? "grid grid-cols-4 gap-1.5"
             : "flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid"
         }
@@ -80,15 +81,15 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
             <Link
               key={label}
               href={href}
-              className={`group flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-lg px-1.5 text-center text-[11px] font-black tracking-tight transition sm:min-h-12 sm:px-3 sm:text-xs ${
-                isGlobalNav ? "w-full" : "shrink-0 md:shrink"
+              className={`group flex min-h-11 min-w-0 items-center justify-center gap-1 rounded-lg px-1 text-center text-[10.5px] font-black tracking-tight transition sm:min-h-12 sm:gap-1.5 sm:px-3 sm:text-xs ${
+                isGlobalNav || isCryptoNav ? "w-full" : "shrink-0 md:shrink"
               } ${
                 active
                   ? "bg-ui-active text-ui-activeText ring-1 ring-inset ring-ui-lineStrong"
                   : "text-ui-muted hover:bg-ui-inset hover:text-ui-text"
               }`}
             >
-              <Icon size={15} aria-hidden className={active ? "text-ui-activeText" : "text-ui-subtle transition group-hover:text-ui-muted"} />
+              <Icon size={14} aria-hidden className={`shrink-0 ${active ? "text-ui-activeText" : "text-ui-subtle transition group-hover:text-ui-muted"}`} />
               <span className="whitespace-nowrap">{label}</span>
             </Link>
           );

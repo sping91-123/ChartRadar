@@ -129,6 +129,20 @@ function finalViewTone(finalView: RadarFinalView): SummaryMetricTone {
   return "watch";
 }
 
+function compactFinalViewLabel(finalView: RadarFinalView) {
+  if (finalView === "long_bias") return "상방 우위";
+  if (finalView === "short_bias") return "하방 우위";
+  if (finalView === "high_risk") return "리스크 확인";
+  return "관망 우위";
+}
+
+function riskStateLabel(insight: RadarInsight) {
+  if (insight.finalView === "high_risk") return "리스크 높음";
+  if (insight.risks.length >= 2) return "리스크 점검";
+  if (insight.risks.length === 1) return "리스크 보통";
+  return "리스크 낮음";
+}
+
 function compactLine(value: string | undefined, maxLength = 92) {
   if (!value) return "-";
   return value.length > maxLength ? `${value.slice(0, maxLength).trim()}…` : value;
@@ -155,21 +169,32 @@ function CompactRadarInsightPanel({
   const keyReasons = listItems(insight.keyReasons, 3);
   const nextChecks = defaultNextChecks(insight, isPro).slice(0, 2);
   const strengthHelpText = strengthHelp?.join(" ");
+  const compactStatusItems: Array<{ label: string; value: string; tone: SummaryMetricTone }> = [
+    { label: "현재 판단", value: compactFinalViewLabel(insight.finalView), tone: statusTone },
+    { label: "판단 강도", value: `판단 강도 ${insight.strengthLabel}`, tone: "info" },
+    { label: "리스크 상태", value: riskStateLabel(insight), tone: insight.finalView === "high_risk" ? "risk" : "watch" },
+    { label: "상세 근거", value: isPro ? "상세 근거 열림" : "상세 근거 잠금", tone: isPro ? "info" : "locked" }
+  ];
 
   return (
     <AppSurface tone="elevated" padding="md" className={`overflow-hidden ${className}`}>
       <SectionHeader
         eyebrow="오늘 먼저 볼 판단"
         title={insight.symbol}
-        description={`${insight.timeframe ?? "종합"} · 상태, 강도, 핵심 근거`}
-        action={<StatusPill tone={statusTone}>{insight.finalViewLabel}</StatusPill>}
+        description={`${insight.timeframe ?? "종합"} · 종합`}
       />
 
       <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusPill tone={statusTone}>{insight.strengthLabel}</StatusPill>
-            <StatusPill tone={isPro ? "info" : "locked"}>{isPro ? "Pro 상세" : "Basic 요약"}</StatusPill>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            {compactStatusItems.map((item) => (
+              <div key={item.label} className="min-w-0 rounded-ui-sm border border-ui-line bg-ui-inset px-2.5 py-2 sm:inline-flex sm:items-center sm:gap-2 sm:bg-transparent">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ui-subtle">{item.label}</p>
+                <div className="mt-1 sm:mt-0">
+                  <StatusPill tone={item.tone} className="whitespace-nowrap">{item.value}</StatusPill>
+                </div>
+              </div>
+            ))}
           </div>
           <p className="mt-3 hidden max-w-3xl text-sm leading-6 text-ui-muted [word-break:keep-all] sm:block">{compactLine(insight.summary, 128)}</p>
         </div>
