@@ -1846,3 +1846,4 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 스캐너는 `platform=android`, `provider=fcm`, `enabled=true` 토큰만 대상으로 삼고, 사용자별 `markets`, `rule_ids`, `profiles.plan`, `push_alert_events.event_key` 중복 여부를 통과해야 발송한다.
 - 자동 시그널은 A급 코인 레이더, 청산 압력 과열, 관심 조건 재감지, 뉴스/시장 이벤트 리마인더, 글로벌 모멘텀, 리스크오프 조합, 반도체 주도력 변화로 구성된다.
 - 운영 로그에 토큰 수, 프리셋 수, 감지 이벤트 수, 권한 차단 수, 선호 조건 스킵 수, 중복 스킵 수, 발송 대상 토큰 수가 남도록 진단 카운터를 추가했다.
+- 운영 오류 `column profiles.plan does not exist`가 확인되어 스캐너 권한 조회를 `profiles?select=*` 기반으로 바꿨다. `profiles.plan`, `profiles.membership_tier`, 활성 `subscriptions.plan/tier`를 조합해 권한을 판정한다.

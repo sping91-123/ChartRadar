@@ -1,5 +1,5 @@
 // 서버 크론에서 알림 조건을 스캔하고 Android FCM 푸시를 발송한다.
-import { hasMarketEntitlement, type BillingEntitlementPlan } from "@/lib/billing";
+import { hasMarketEntitlement, resolveCombinedBillingEntitlementPlan, type BillingEntitlementPlan } from "@/lib/billing";
 import { getLiquidCryptoSymbols } from "@/lib/cryptoUniverse";
 import { chartTimeframes, type Candle, type ChartTimeframe, type TradingMode } from "@/lib/marketAnalysis";
 import { radarAlertRules, type RadarAlertRuleId } from "@/lib/radarAlerts";
@@ -20,7 +20,14 @@ interface PushTokenRow {
 
 interface PushProfileRow {
   id: string;
-  plan: BillingEntitlementPlan;
+  plan?: BillingEntitlementPlan;
+  membership_tier?: BillingEntitlementPlan;
+}
+
+interface PushSubscriptionRow {
+  user_id: string;
+  plan?: BillingEntitlementPlan;
+  tier?: BillingEntitlementPlan;
 }
 
 interface PushAlertPresetRow {
@@ -60,6 +67,7 @@ interface PushScanDiagnostics {
   tokenCount: number;
   userCount: number;
   profileCount: number;
+  subscriptionCount: number;
   presetCount: number;
   cryptoPresetCount: number;
   stockPresetCount: number;
@@ -80,6 +88,7 @@ function emptyDiagnostics(overrides: Partial<PushScanDiagnostics> = {}): PushSca
     tokenCount: 0,
     userCount: 0,
     profileCount: 0,
+    subscriptionCount: 0,
     presetCount: 0,
     cryptoPresetCount: 0,
     stockPresetCount: 0,
@@ -178,8 +187,21 @@ function stockQuality(score: number): ScoutSetup["plan"]["quality"] {
   return "C";
 }
 
-function profilePlan(profiles: Map<string, PushProfileRow>, userId: string): BillingEntitlementPlan {
-  return profiles.get(userId)?.plan ?? "free";
+function profilePlan(row: PushProfileRow | undefined): BillingEntitlementPlan {
+  return row?.plan ?? row?.membership_tier ?? null;
+}
+
+function subscriptionPlan(row: PushSubscriptionRow): BillingEntitlementPlan {
+  return row.plan ?? row.tier ?? null;
+}
+
+function userPlan(
+  profiles: Map<string, PushProfileRow>,
+  subscriptions: Map<string, PushSubscriptionRow[]>,
+  userId: string
+): BillingEntitlementPlan {
+  const plans = [...(subscriptions.get(userId) ?? []).map(subscriptionPlan), profilePlan(profiles.get(userId))];
+  return resolveCombinedBillingEntitlementPlan(plans, "all") ?? "free";
 }
 
 function ruleAllowed(ruleId: RadarAlertRuleId, plan: BillingEntitlementPlan) {
@@ -586,8 +608,18 @@ export async function runPushAlertScan(context: ScanContext) {
   }
 
   const userIds = Array.from(new Set(tokens.map((token) => token.user_id)));
-  const profiles = await supabaseAdminRest<PushProfileRow[]>(`profiles?select=id,plan&id=in.(${userIds.join(",")})`);
+  const profiles = await supabaseAdminRest<PushProfileRow[]>(`profiles?select=*&id=in.(${userIds.join(",")})`);
   const profileMap = new Map(profiles.map((profile) => [profile.id, profile]));
+  const now = encodeURIComponent(new Date().toISOString());
+  const subscriptionRows = await supabaseAdminRest<PushSubscriptionRow[]>(
+    `subscriptions?select=*&user_id=in.(${userIds.join(",")})&status=in.(active,trialing)&current_period_end=gt.${now}&order=current_period_end.desc&limit=1000`
+  );
+  const subscriptionsByUser = new Map<string, PushSubscriptionRow[]>();
+  for (const subscription of subscriptionRows) {
+    const rows = subscriptionsByUser.get(subscription.user_id) ?? [];
+    rows.push(subscription);
+    subscriptionsByUser.set(subscription.user_id, rows);
+  }
   const presetRows = await supabaseAdminRest<PushAlertPresetRow[]>(
     `push_alert_presets?select=user_id,market,preset_id,symbol,mode,timeframe,side,quality,score,headline,saved_at&enabled=eq.true&user_id=in.(${userIds.join(",")})&limit=1000`
   );
@@ -629,7 +661,7 @@ export async function runPushAlertScan(context: ScanContext) {
 
   for (const userId of userIds) {
     const userTokens = tokens.filter((token) => token.user_id === userId);
-    const plan = profilePlan(profileMap, userId);
+    const plan = userPlan(profileMap, subscriptionsByUser, userId);
     const userPresets = presetRows.filter((preset) => preset.user_id === userId);
     const cryptoPresetMatches = findSetupAlertMatches(
       userPresets.filter((preset) => preset.market === "crypto").map(presetFromRow),
@@ -674,6 +706,7 @@ export async function runPushAlertScan(context: ScanContext) {
       tokenCount: tokens.length,
       userCount: userIds.length,
       profileCount: profiles.length,
+      subscriptionCount: subscriptionRows.length,
       presetCount: presetRows.length,
       cryptoPresetCount: presetRows.filter((preset) => preset.market === "crypto").length,
       stockPresetCount: presetRows.filter((preset) => preset.market === "stocks").length,
