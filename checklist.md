@@ -2096,3 +2096,13 @@
 - [x] `/global/assets` 모바일 하단 패널과 타임프레임/분석 모드 변경을 확인한다.
 - [x] build, 모바일 smoke, 전체 smoke로 검증한다.
 - [x] 검증 통과 후 커밋한다.
+
+## 2026-05-23 글로벌 자산레이더 차트 렌더링 수정.
+
+- [x] `/global/assets`에서 `StockRadarApp`이 렌더링되는지 확인했다.
+- [x] 차트 컨테이너가 `ready` 상태에서만 DOM에 생겨 초기 `lightweight-charts` 생성 effect가 놓치는 문제를 확인했다.
+- [x] 차트 컨테이너를 로딩/에러/대기 상태에서도 항상 렌더링되도록 수정했다.
+- [x] 모바일 340px/360px에서 차트 canvas, 하단 패널, overflow 상태를 확인했다.
+- [x] QQQ, SPY, NVDA, SMH, ^VIX, NQ=F, ES=F, GLD, CL=F API 데이터를 확인했다.
+- [x] build, 모바일 smoke, 전체 smoke로 최종 검증한다.
+- [x] 검증 통과 후 커밋한다.

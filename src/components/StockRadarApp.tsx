@@ -1164,20 +1164,30 @@ export function StockRadarApp() {
           ) : null}
         </div>
 
-        {state.status === "loading" ? (
-          <div className="grid h-[360px] place-items-center rounded-md border border-white/10 bg-white/[0.02] text-sm text-slate-400">
-            <span className="inline-flex items-center gap-2">
-              <Loader2 className="animate-spin" size={16} aria-hidden />
-              글로벌 시장 데이터를 불러오는 중입니다.
-            </span>
-          </div>
-        ) : state.status === "error" ? (
-          <div className="rounded-md border border-signal-danger/30 bg-signal-danger/10 p-4 text-sm text-signal-danger">
-            {state.message}
-          </div>
-        ) : (
-          <div ref={chartRef} className="h-[360px] w-full" />
-        )}
+        <div className="relative min-h-[320px] overflow-hidden rounded-md border border-white/10 bg-white/[0.02] sm:min-h-[360px]">
+          <div ref={chartRef} className="h-[320px] w-full sm:h-[360px]" />
+          {state.status === "loading" ? (
+            <div className="absolute inset-0 grid place-items-center bg-slate-950/70 text-sm text-slate-300 backdrop-blur-sm">
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="animate-spin" size={16} aria-hidden />
+                차트 데이터를 불러오는 중입니다.
+              </span>
+            </div>
+          ) : null}
+          {state.status === "error" ? (
+            <div className="absolute inset-0 grid place-items-center bg-slate-950/80 p-4 text-center text-sm text-signal-danger backdrop-blur-sm">
+              <div className="max-w-sm rounded-md border border-signal-danger/30 bg-signal-danger/10 p-4">
+                <p className="font-black">차트 데이터를 불러오지 못했습니다.</p>
+                <p className="mt-2 text-xs leading-5 text-signal-danger/90">{state.message || "잠시 후 다시 확인해 주세요."}</p>
+              </div>
+            </div>
+          ) : null}
+          {state.status === "idle" ? (
+            <div className="absolute inset-0 grid place-items-center bg-slate-950/70 text-sm text-slate-400">
+              차트 데이터를 준비하고 있습니다.
+            </div>
+          ) : null}
+        </div>
       </div>
 
       {state.status === "ready" ? (

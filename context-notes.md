@@ -1871,3 +1871,12 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 340px에서 `/news?market=global`은 `일정`, `/journal?market=global`은 `복기` active로 표시됐다. `/global#asset-radar`는 `/global/assets`로 이동했다.
 - `/global/assets`에서 하단 패널의 `1h`와 `ICT`를 클릭하면 화면 요약에 `1h · ICT`가 반영됐다. 340px와 360px 모두 가로 overflow는 없었다.
 - 검증은 `git diff --check`, `cmd /c npx tsc --noEmit`, `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`을 통과했다.
+
+## 2026-05-23 글로벌 자산레이더 차트 렌더링 수정.
+
+- `/global/assets` 페이지 자체와 `StockRadarApp` 렌더링은 정상이다. 문제는 차트 DOM이 `state.status === "ready"`일 때만 생성되는데, `lightweight-charts` 초기화 effect는 `timeframe` 의존성만 갖고 있어 최초 loading 렌더에서 `chartRef.current`가 없어 반환한 뒤 ready 렌더에서 다시 실행되지 않는 구조였다.
+- 해결은 데이터 로직 변경 없이 차트 container를 항상 렌더링하고, loading/error/idle은 absolute overlay로 표시하는 방식으로 제한했다. 이렇게 하면 `lightweight-charts`가 보이는 컨테이너에서 먼저 초기화되고, 데이터 ready 시 기존 `setData` effect가 정상 작동한다.
+- 차트 container는 모바일 `h-[320px]`, 데스크톱 `sm:h-[360px]`와 같은 min-height를 갖는다. 하단 fixed 패널은 기존대로 `/global/assets`에서만 보이고, asset section의 bottom padding은 유지했다.
+- Browser 확인에서 360px `/global/assets`는 `자산` active, 모바일 하단 패널 표시, canvas 7개와 최대 높이 332px, overflow 없음이었다. 340px도 canvas와 하단 패널이 표시되고 overflow가 없었다. `/global`은 `시장` active이고 asset radar와 하단 패널이 없었다.
+- 직접 API 확인 결과 QQQ 5m/15m/1h/4h/1d와 SPY, NVDA, SMH, ^VIX, NQ=F, ES=F, GLD, CL=F 1d 모두 200 응답과 candles 배열을 반환했다.
+- Browser에서 여러 종목을 빠르게 반복 클릭하면 Basic 사용량 제한 문구가 나타날 수 있다. 이는 기존 `usageMeter` 정책이며 이번 차트 렌더링 문제와 별개다.
