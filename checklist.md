@@ -2085,3 +2085,14 @@
 - [x] `/crypto`, `/global`, `/journal` 내부 스크롤 영향이 없는지 확인한다.
 - [x] build, 모바일 smoke, 전체 smoke로 검증한다.
 - [x] 커밋한다.
+
+## 2026-05-23 글로벌 시장·자산 페이지 분리.
+
+- [x] 작업 전 git 상태와 글로벌 라우팅 구조를 확인했다.
+- [x] `/global`을 시장흐름 대시보드 전용 페이지로 분리했다.
+- [x] `/global/assets` 자산레이더 전용 route를 추가했다.
+- [x] 상단 탭 active 판정을 hash가 아니라 pathname/query 기준으로 바꿨다.
+- [x] `/global`, `/global/assets`, 글로벌 일정, 글로벌 복기 active 상태를 확인한다.
+- [x] `/global/assets` 모바일 하단 패널과 타임프레임/분석 모드 변경을 확인한다.
+- [x] build, 모바일 smoke, 전체 smoke로 검증한다.
+- [x] 검증 통과 후 커밋한다.

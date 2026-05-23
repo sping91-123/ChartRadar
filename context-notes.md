@@ -1859,3 +1859,15 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 340px/360px, 높이 640px 기준으로 홈 `/`은 `app-scroll-root`가 `overflow:hidden`, `scrollHeight=clientHeight=640`으로 확인됐다. `/crypto`, `/global`, `/journal`은 `market-selection-lock`이 빠지고 `overflow-y:auto`와 실제 scrollHeight가 유지됐다.
 - 추가 실기기 피드백 기준으로 카드 묶음 중심을 측정하니 340px에서 viewport 중앙보다 약 50px, 360px에서 약 41px 아래에 있었다. 모바일에서만 패널을 `6dvh` 위로 보정해 카드 묶음이 시각적 중앙에 오게 한다.
 - 스플래시는 700ms가 깜빡임처럼 느껴질 수 있어 일반 첫 진입 기준 850ms로 늘린다. 로그인 직후 skip flag가 있는 경로는 기존처럼 스플래시를 생략한다.
+
+## 2026-05-23 글로벌 시장·자산 페이지 분리.
+
+- 기존 `/global`은 `src/app/stocks/page.tsx`를 그대로 재사용해 시장흐름과 `StockRadarApp`이 한 화면에 같이 있었다. 이 구조 때문에 `자산` 탭이 같은 페이지 앵커 이동처럼 보이고 hash 기반 active 판정도 불안정했다.
+- 새 구조는 `/global`을 시장흐름 전용 페이지로 만들고, `/global/assets`를 자산레이더 전용 페이지로 추가한다. `/stocks`는 기존 해외시장 통합 화면을 유지한다.
+- `RadarTopNav`의 글로벌 `자산` href는 `/global/assets`로 바꾸고, active 상태는 pathname과 `market=global` query로만 판단한다. hash 상태와 hash listener는 제거한다.
+- `/global#asset-radar`로 들어오는 과거 링크는 클라이언트 보조 컴포넌트에서 `/global/assets`로 이동시켜 호환한다.
+- 모바일 하단 고정 패널은 `StockRadarApp`의 현재 pathname이 `/global/assets`일 때만 표시한다. `/global`, `/news?market=global`, `/journal?market=global`에서는 렌더링 조건이 맞지 않는다.
+- 360px에서 `/global`은 `시장` active이고 자산 상세 제목과 하단 패널이 없었다. `/global/assets`는 `자산` active이고 `글로벌 자산레이더`, `선택 자산 상세 판단`, 모바일 하단 패널이 표시됐다.
+- 340px에서 `/news?market=global`은 `일정`, `/journal?market=global`은 `복기` active로 표시됐다. `/global#asset-radar`는 `/global/assets`로 이동했다.
+- `/global/assets`에서 하단 패널의 `1h`와 `ICT`를 클릭하면 화면 요약에 `1h · ICT`가 반영됐다. 340px와 360px 모두 가로 overflow는 없었다.
+- 검증은 `git diff --check`, `cmd /c npx tsc --noEmit`, `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`을 통과했다.

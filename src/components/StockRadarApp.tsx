@@ -1,6 +1,7 @@
 "use client";
 // 글로벌 시장 주요 종목을 차트와 기술지표 레이더로 보여주는 화면.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { CandlestickSeries, createChart, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { Activity, AlertTriangle, BarChart3, Bookmark, BookmarkCheck, Clock3, Compass, Gauge, Loader2, RefreshCw, Search, Shield, Sparkles, Target } from "lucide-react";
 import { BeginnerActionGuide, type BeginnerGuideStep, type BeginnerGuideTone } from "@/components/BeginnerActionGuide";
@@ -769,8 +770,8 @@ function GlobalRadarControlDock({
 
 export function StockRadarApp() {
   const { profile } = useSupabaseAuth();
+  const pathname = usePathname();
   const isPaid = hasMarketEntitlement(profile?.plan, "stocks");
-  const sectionRef = useRef<HTMLElement | null>(null);
   const chartRef = useRef<HTMLDivElement | null>(null);
   const chartApiRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -783,8 +784,8 @@ export function StockRadarApp() {
   const [state, setState] = useState<LoadState>({ status: "idle" });
   const [sessionState, setSessionState] = useState<ReturnType<typeof getGlobalSessionState> | null>(null);
   const [savedSymbols, setSavedSymbols] = useState<string[]>([]);
-  const [showMobileDock, setShowMobileDock] = useState(false);
   const watchlistLimit = getWatchlistLimit(profile?.plan ?? "free");
+  const showMobileDock = pathname === "/global/assets";
 
   const selectedInfo = useMemo(() => universe.find((item) => item.symbol === symbol) ?? null, [symbol, universe]);
   const featuredItems = useMemo(
@@ -861,29 +862,6 @@ export function StockRadarApp() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => {
-    const section = sectionRef.current;
-    if (!section) {
-      setShowMobileDock(true);
-      return;
-    }
-
-    const updateDockVisibility = () => {
-      const rect = section.getBoundingClientRect();
-      setShowMobileDock(window.location.hash === "#asset-radar" || (rect.top < window.innerHeight && rect.bottom > 120));
-    };
-
-    updateDockVisibility();
-    window.addEventListener("hashchange", updateDockVisibility);
-    window.addEventListener("resize", updateDockVisibility);
-    window.addEventListener("scroll", updateDockVisibility, { passive: true });
-    return () => {
-      window.removeEventListener("hashchange", updateDockVisibility);
-      window.removeEventListener("resize", updateDockVisibility);
-      window.removeEventListener("scroll", updateDockVisibility);
-    };
-  }, []);
 
   useEffect(() => {
     setSessionState(getGlobalSessionState());
@@ -992,7 +970,6 @@ export function StockRadarApp() {
   return (
     <section
       id="asset-radar"
-      ref={sectionRef}
       className="scroll-mt-24 rounded-lg border border-surface-line bg-surface-card p-4 pb-40 shadow-glow sm:p-5 sm:pb-36"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

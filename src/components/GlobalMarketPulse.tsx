@@ -542,6 +542,13 @@ export function GlobalMarketPulse() {
           </div>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
+          <Link
+            href="/global/assets"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-cyan-300/30 bg-cyan-300/10 px-3 text-xs font-black text-cyan-100 transition hover:border-cyan-300/60 hover:bg-cyan-300/15"
+          >
+            <BarChart3 size={13} aria-hidden />
+            자산레이더 보기
+          </Link>
           {!isPaid ? <ProCta /> : null}
           <button
             type="button"

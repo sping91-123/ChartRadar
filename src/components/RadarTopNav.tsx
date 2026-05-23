@@ -1,6 +1,6 @@
 "use client";
 // 시장별 주요 페이지로 이동하는 상단 레이더 내비게이션입니다.
-import { Suspense, useEffect, useState } from "react";
+import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { CalendarClock, Coins, Crown, History, Newspaper, Radar, TrendingUp } from "lucide-react";
@@ -14,7 +14,6 @@ type NavItem = {
   href: string;
   match: string[];
   market?: "crypto" | "global";
-  hash?: string;
 };
 
 const cryptoNavItems: NavItem[] = [
@@ -25,20 +24,20 @@ const cryptoNavItems: NavItem[] = [
 ];
 
 const stockNavItems: NavItem[] = [
-  { label: "시장", icon: TrendingUp, href: "/global", match: ["/stocks", "/global"], hash: "" },
-  { label: "자산", icon: Radar, href: "/global#asset-radar", match: ["/stocks", "/global"], hash: "asset-radar" },
+  { label: "시장", icon: TrendingUp, href: "/global", match: ["/stocks", "/global"] },
+  { label: "자산", icon: Radar, href: "/global/assets", match: ["/global/assets"] },
   { label: "일정", icon: CalendarClock, href: "/news?market=global", match: ["/news"], market: "global" },
   { label: "복기", icon: History, href: "/journal?market=global", match: ["/journal"], market: "global" }
 ];
 
 const allNavItems: NavItem[] = [
   { label: "BTC/ETH", icon: Radar, href: "/crypto", match: ["/crypto", "/alts"] },
-  { label: "글로벌", icon: TrendingUp, href: "/global", match: ["/stocks", "/global"] },
+  { label: "글로벌", icon: TrendingUp, href: "/global", match: ["/stocks", "/global", "/global/assets"] },
   { label: "요금제", icon: Crown, href: "/pro", match: ["/pro", "/checkout/success", "/checkout/fail", "/refund"] }
 ];
 
 function inferMarket(pathname: string): MarketScope {
-  if (pathname === "/stocks" || pathname === "/global") return "stocks";
+  if (pathname === "/stocks" || pathname === "/global" || pathname.startsWith("/global/")) return "stocks";
   return "crypto";
 }
 
@@ -46,18 +45,10 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const marketParam = searchParams.get("market");
-  const [hash, setHash] = useState("");
   const market = forcedMarket ?? inferMarket(pathname);
   const navItems = market === "all" ? allNavItems : market === "stocks" ? stockNavItems : cryptoNavItems;
   const isGlobalNav = market === "stocks";
   const isCryptoNav = market === "crypto";
-
-  useEffect(() => {
-    const updateHash = () => setHash(window.location.hash.replace("#", ""));
-    updateHash();
-    window.addEventListener("hashchange", updateHash);
-    return () => window.removeEventListener("hashchange", updateHash);
-  }, [pathname]);
 
   return (
     <AppSurface as="nav" tone="panel" padding="sm" className="sticky top-2 z-30 overflow-hidden backdrop-blur-xl">
@@ -69,13 +60,10 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
         }
         style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
       >
-        {navItems.map(({ label, icon: Icon, href, match, market: itemMarket, hash: itemHash }) => {
+        {navItems.map(({ label, icon: Icon, href, match, market: itemMarket }) => {
           const isMarketRoute = pathname === "/news" || pathname === "/alerts" || pathname === "/journal";
           const routeMatches = match.some((path) => path === pathname) && (!itemMarket || marketParam === itemMarket || !isMarketRoute);
-          const active =
-            itemHash === undefined
-              ? routeMatches
-              : routeMatches && (itemHash ? hash === itemHash : hash !== "asset-radar");
+          const active = routeMatches;
 
           return (
             <Link
