@@ -2106,3 +2106,13 @@
 - [x] QQQ, SPY, NVDA, SMH, ^VIX, NQ=F, ES=F, GLD, CL=F API 데이터를 확인했다.
 - [x] build, 모바일 smoke, 전체 smoke로 최종 검증한다.
 - [x] 검증 통과 후 커밋한다.
+
+## 2026-05-23 자동 푸시 eligibility 긴급 점검.
+
+- [x] 화면 A급/100점 후보와 서버 push scanner 후보 선정 로직의 불일치 가능성을 확인한다.
+- [x] 알트 UI 스캐너 대상과 서버 자동 푸시 스캐너 대상 차이를 확인한다.
+- [x] A급/강한 setup은 저장 조건 없이 기본 시스템 알림 후보가 되도록 분리한다.
+- [x] `/api/liquidation-pressure` 응답 wrapper 때문에 청산압력 이벤트가 생성되지 않던 문제를 수정한다.
+- [x] `/api/push-cron`에 실제 발송 없는 `dryRun` 진단 응답을 추가한다.
+- [x] build, 모바일 smoke, 전체 smoke, 운영 smoke, tsc, diff check로 검증한다.
+- [x] 검증 통과 후 커밋한다.

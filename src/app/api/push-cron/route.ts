@@ -14,21 +14,27 @@ function isAuthorized(request: Request) {
 }
 
 export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const dryRun =
+    url.searchParams.get("dryRun") === "1" ||
+    url.searchParams.get("dryRun") === "true" ||
+    url.searchParams.get("diagnostics") === "1";
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (!isSupabaseAdminConfigured()) {
     return NextResponse.json({ error: "Supabase 관리자 환경변수가 필요합니다." }, { status: 503 });
   }
-  if (!isFirebaseMessagingConfigured()) {
+  if (!dryRun && !isFirebaseMessagingConfigured()) {
     return NextResponse.json({ error: "Firebase 메시징 환경변수가 필요합니다." }, { status: 503 });
   }
 
-  const origin = new URL(request.url).origin;
-  const result = await runPushAlertScan({ origin });
+  const origin = url.origin;
+  const result = await runPushAlertScan({ origin, dryRun });
   const scannedAt = new Date().toISOString();
   console.info("[push-cron] scan summary", {
     scannedAt,
+    dryRun,
     users: result.users,
     events: result.events,
     sent: result.sent,
@@ -40,6 +46,7 @@ export async function GET(request: Request) {
   });
   return NextResponse.json({
     ok: true,
+    dryRun,
     scannedAt,
     ...result
   });

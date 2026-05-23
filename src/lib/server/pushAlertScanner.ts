@@ -4,7 +4,7 @@ import { getLiquidCryptoSymbols } from "@/lib/cryptoUniverse";
 import { chartTimeframes, type Candle, type ChartTimeframe, type TradingMode } from "@/lib/marketAnalysis";
 import { radarAlertRules, type RadarAlertRuleId } from "@/lib/radarAlerts";
 import { findSetupAlertMatches, type SetupAlertMarket, type SetupAlertPreset } from "@/lib/setupAlertPresets";
-import { scanAllSetups, topSetups, type ScoutSetup } from "@/lib/setupScout";
+import { scanAllSetups, type ScoutSetup } from "@/lib/setupScout";
 import { sendFcmMessage } from "@/lib/server/firebaseMessaging";
 import { supabaseAdminRest } from "@/lib/server/supabaseAdmin";
 import { fetchStockCandles } from "@/lib/stockMarket";
@@ -54,16 +54,35 @@ interface PushAlertEvent {
   score?: number;
   quality?: ScoutSetup["plan"]["quality"];
   symbol?: string;
+  system?: boolean;
 }
 
 interface ScanContext {
   origin: string;
+  dryRun?: boolean;
+  diagnosticsLimit?: number;
 }
 
 interface OptionalEventSourceResult {
   label: string;
   event: PushAlertEvent | null;
   warning: string | null;
+}
+
+interface PushEventDiagnostic {
+  signalType: string;
+  ruleId: RadarAlertRuleId;
+  market: SetupAlertMarket;
+  symbol?: string;
+  score?: number;
+  quality?: ScoutSetup["plan"]["quality"];
+  title: string;
+  reason: string;
+  eventKey: string;
+  wouldSend: boolean;
+  skippedReason: "low_score" | "entitlement" | "token_preferences" | "duplicate" | "dry_run" | null;
+  targetTokenCount: number;
+  system: boolean;
 }
 
 interface PushScanDiagnostics {
@@ -113,6 +132,7 @@ function emptyDiagnostics(overrides: Partial<PushScanDiagnostics> = {}): PushSca
 
 const cryptoModes: TradingMode[] = ["scalp", "swing"];
 const cryptoMajorSymbols = new Set(["BTCUSDT.P", "ETHUSDT.P", "BTCUSDT", "ETHUSDT", "BTC", "ETH"]);
+const minimumSetupPushScore = 75;
 const cryptoMajorPushScoreThreshold = 80;
 const cryptoAltPushScoreThreshold = 82;
 const genericSetupPushScoreThreshold = 80;
@@ -217,7 +237,9 @@ function userPlan(
   return resolveCombinedBillingEntitlementPlan(plans, "all") ?? "free";
 }
 
-function ruleAllowed(ruleId: RadarAlertRuleId, plan: BillingEntitlementPlan) {
+function ruleAllowed(event: PushAlertEvent, plan: BillingEntitlementPlan) {
+  if (event.system) return true;
+  const ruleId = event.ruleId;
   const rule = radarAlertRules.find((item) => item.id === ruleId);
   if (!rule) return false;
   if (rule.tier === "free") return true;
@@ -279,7 +301,8 @@ function setupToEvent(setup: ScoutSetup, ruleId: RadarAlertRuleId, market: Setup
     },
     score: setup.score,
     quality: setup.plan.quality,
-    symbol: setup.symbol
+    symbol: setup.symbol,
+    system: true
   };
 }
 
@@ -312,11 +335,13 @@ function matchedSetupToEvent(
   };
 }
 
-function requiredSetupPushScore(event: PushAlertEvent) {
-  if (event.market === "crypto") {
-    return event.symbol && !isCryptoMajor(event.symbol) ? cryptoAltPushScoreThreshold : cryptoMajorPushScoreThreshold;
+function setupSignalPassesPushQuality(score: number, quality: ScoutSetup["plan"]["quality"] | undefined, market: SetupAlertMarket, symbol?: string) {
+  if (score < minimumSetupPushScore) return false;
+  if (quality === "A") return true;
+  if (market === "crypto") {
+    return score >= (symbol && !isCryptoMajor(symbol) ? cryptoAltPushScoreThreshold : cryptoMajorPushScoreThreshold);
   }
-  return genericSetupPushScoreThreshold;
+  return score >= genericSetupPushScoreThreshold;
 }
 
 function isSetupPushEvent(event: PushAlertEvent) {
@@ -325,7 +350,40 @@ function isSetupPushEvent(event: PushAlertEvent) {
 
 function passesSetupPushQuality(event: PushAlertEvent) {
   if (!isSetupPushEvent(event)) return true;
-  return (event.score ?? 0) >= requiredSetupPushScore(event);
+  return setupSignalPassesPushQuality(event.score ?? 0, event.quality, event.market, event.symbol);
+}
+
+function setupStatusRank(setup: ScoutSetup) {
+  if (setup.status === "entry") return 3;
+  if (setup.status === "active") return 2;
+  return 1;
+}
+
+function setupQualityRank(setup: ScoutSetup) {
+  if (setup.plan.quality === "A") return 3;
+  if (setup.plan.quality === "B") return 2;
+  return 1;
+}
+
+function topPushSetups(setups: ScoutSetup[], limit: number) {
+  const picked: ScoutSetup[] = [];
+  const usedSymbols = new Set<string>();
+  const ranked = [...setups].sort((a, b) => {
+    const scoreDiff = b.score - a.score;
+    if (scoreDiff !== 0) return scoreDiff;
+    const qualityDiff = setupQualityRank(b) - setupQualityRank(a);
+    if (qualityDiff !== 0) return qualityDiff;
+    return setupStatusRank(b) - setupStatusRank(a);
+  });
+
+  for (const setup of ranked) {
+    if (usedSymbols.has(setup.symbol)) continue;
+    picked.push(setup);
+    usedSymbols.add(setup.symbol);
+    if (picked.length >= limit) break;
+  }
+
+  return picked;
 }
 
 async function buildStockSetup(symbol: string, timeframe: ChartTimeframe): Promise<ScoutSetup | null> {
@@ -378,11 +436,15 @@ async function buildStockSetup(symbol: string, timeframe: ChartTimeframe): Promi
 }
 
 async function scanCryptoSetups() {
-  const symbols = await getLiquidCryptoSymbols({ includeMajor: true, limit: 32 });
+  const symbolGroups = await Promise.all([
+    getLiquidCryptoSymbols({ includeMajor: true, limit: 40 }),
+    getLiquidCryptoSymbols({ excludeMajor: true, limit: 36 })
+  ]);
+  const symbols = Array.from(new Set(["BTCUSDT.P", "ETHUSDT.P", ...symbolGroups.flat()]));
   const settled = await Promise.allSettled(
     cryptoModes.map(async (mode) => {
       const all = await scanAllSetups({ mode, riskProfile: "radar", symbols });
-      return topSetups(all, 12);
+      return topPushSetups(all, 16);
     })
   );
   return settled.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
@@ -401,8 +463,16 @@ async function scanStockSetups(symbolsAndTimeframes: Array<{ symbol: string; tim
 
 async function scanLiquidationEvent(origin: string): Promise<PushAlertEvent | null> {
   const response = await fetch(`${origin}/api/liquidation-pressure?symbol=BTCUSDT&period=15m`, { cache: "no-store" });
-  if (!response.ok) return null;
-  const report = (await response.json()) as {
+  if (!response.ok) throw new Error(`liquidation-pressure ${response.status}`);
+  const payload = (await response.json()) as {
+    report?: {
+      grade?: string;
+      symbol?: string;
+      dominantSide?: string;
+      upsideShortPressure?: number;
+      downsideLongPressure?: number;
+      summary?: string;
+    };
     grade?: string;
     symbol?: string;
     dominantSide?: string;
@@ -410,6 +480,7 @@ async function scanLiquidationEvent(origin: string): Promise<PushAlertEvent | nu
     downsideLongPressure?: number;
     summary?: string;
   };
+  const report = payload.report ?? payload;
   if (report.grade !== "heated" && report.grade !== "extreme") return null;
 
   const pressure = Math.max(report.upsideShortPressure ?? 0, report.downsideLongPressure ?? 0);
@@ -417,14 +488,15 @@ async function scanLiquidationEvent(origin: string): Promise<PushAlertEvent | nu
     market: "crypto",
     ruleId: "liquidation-pressure",
     eventKey: `liquidation-pressure:crypto:${report.symbol ?? "BTCUSDT"}:${report.grade}:${eventBucket(30)}`,
-    title: "Chart Radar 청산 압력",
-    body: `BTC 청산 압력이 ${report.grade === "extreme" ? "매우 높음" : "높음"} 구간입니다. 변동성 확대를 확인하세요.`,
+    title: "Chart Radar 청산 압력 급등 감지",
+    body: `BTC 청산 압력이 ${report.grade === "extreme" ? "매우 높음" : "높음"} 구간입니다. 리스크를 확인해 주세요.`,
     data: {
       type: "liquidation-pressure",
       market: "crypto",
       target: "/crypto",
       pressure: String(pressure)
-    }
+    },
+    system: true
   };
 }
 
@@ -446,7 +518,8 @@ async function scanNewsEvent(origin: string, market: SetupAlertMarket): Promise<
       type: "macro-news",
       market,
       target: market === "stocks" ? "/news?market=global" : "/news?market=crypto"
-    }
+    },
+    system: true
   };
 }
 
@@ -485,7 +558,8 @@ async function scanMacroCalendarEvent(origin: string): Promise<PushAlertEvent | 
       target: "/news?market=global",
       eventLabel: nextEvent.label,
       releaseAt: nextEvent.releaseAt
-    }
+    },
+    system: true
   };
 }
 
@@ -521,7 +595,8 @@ function buildRiskOffEvent(setups: ScoutSetup[]): PushAlertEvent | null {
     },
     score,
     quality: stockQuality(score),
-    symbol: weakIndex.symbol
+    symbol: weakIndex.symbol,
+    system: true
   };
 }
 
@@ -557,7 +632,8 @@ function buildSemiconductorLeadershipEvent(setups: ScoutSetup[]): PushAlertEvent
     },
     score,
     quality: stockQuality(score),
-    symbol: semiconductor.symbol
+    symbol: semiconductor.symbol,
+    system: true
   };
 }
 
@@ -637,7 +713,36 @@ async function sendEventToUser(userId: string, tokens: PushTokenRow[], event: Pu
   return { sent, skipped: 0, failed, preferenceSkipped, duplicateSkipped: 0, targetTokens: targetTokens.length };
 }
 
+function eventDiagnostic(
+  event: PushAlertEvent,
+  skippedReason: PushEventDiagnostic["skippedReason"],
+  targetTokenCount = 0
+): PushEventDiagnostic {
+  return {
+    signalType: event.data.type ?? event.ruleId,
+    ruleId: event.ruleId,
+    market: event.market,
+    symbol: event.symbol,
+    score: event.score,
+    quality: event.quality,
+    title: event.title,
+    reason: event.body,
+    eventKey: event.eventKey,
+    wouldSend: skippedReason === null || skippedReason === "dry_run",
+    skippedReason,
+    targetTokenCount,
+    system: event.system === true
+  };
+}
+
 export async function runPushAlertScan(context: ScanContext) {
+  const dryRun = context.dryRun === true;
+  const diagnosticsLimit = Math.max(0, Math.min(context.diagnosticsLimit ?? 40, 100));
+  const eventDiagnostics: PushEventDiagnostic[] = [];
+  const pushDiagnostic = (diagnostic: PushEventDiagnostic) => {
+    if (eventDiagnostics.length < diagnosticsLimit) eventDiagnostics.push(diagnostic);
+  };
+
   const tokens = await supabaseAdminRest<PushTokenRow[]>(
     "push_tokens?select=id,user_id,token,markets,rule_ids&enabled=eq.true&platform=eq.android&provider=eq.fcm&limit=500"
   );
@@ -654,7 +759,8 @@ export async function runPushAlertScan(context: ScanContext) {
         failed: []
       },
       warnings: [],
-      diagnostics: emptyDiagnostics()
+      diagnostics: emptyDiagnostics(),
+      eventDiagnostics
     };
   }
 
@@ -691,8 +797,8 @@ export async function runPushAlertScan(context: ScanContext) {
     .filter((warning): warning is string => Boolean(warning));
   const globalCompositeEvents = [buildRiskOffEvent(stockMomentumSetups), buildSemiconductorLeadershipEvent(stockMomentumSetups)];
   const genericEvents = [
-    ...topSetups(cryptoSetups, 3).map((setup) => setupToEvent(setup, "radar-grade", "crypto", "radar-grade")),
-    ...topSetups(stockMomentumSetups, 4).map((setup) => setupToEvent(setup, "stock-momentum", "stocks", "stock-momentum")),
+    ...topPushSetups(cryptoSetups, 8).map((setup) => setupToEvent(setup, "radar-grade", "crypto", "radar-grade")),
+    ...topPushSetups(stockMomentumSetups, 6).map((setup) => setupToEvent(setup, "stock-momentum", "stocks", "stock-momentum")),
     ...globalCompositeEvents,
     ...optionalEventSources.map((source) => source.event)
   ].filter((event): event is PushAlertEvent => event !== null);
@@ -726,13 +832,37 @@ export async function runPushAlertScan(context: ScanContext) {
     const qualityCheckedEvents = allUserEvents.filter((event) => {
       const allowed = passesSetupPushQuality(event);
       if (!allowed) skippedLowScoreCount += 1;
+      if (!allowed) pushDiagnostic(eventDiagnostic(event, "low_score"));
       return allowed;
     });
-    const userEvents = qualityCheckedEvents.filter((event) => ruleAllowed(event.ruleId, plan));
+    const userEvents = qualityCheckedEvents.filter((event) => {
+      const allowed = ruleAllowed(event, plan);
+      if (!allowed) pushDiagnostic(eventDiagnostic(event, "entitlement"));
+      return allowed;
+    });
     entitlementBlockedEventCount += qualityCheckedEvents.length - userEvents.length;
     events += userEvents.length;
 
     for (const event of userEvents) {
+      if (dryRun) {
+        const targetTokens = userTokens.filter((token) => tokenWants(token, event.market, event.ruleId));
+        preferenceSkippedTokenCount += Math.max(0, userTokens.length - targetTokens.length);
+        if (targetTokens.length === 0) {
+          pushDiagnostic(eventDiagnostic(event, "token_preferences"));
+          continue;
+        }
+        if (await alreadySent(userId, event.eventKey)) {
+          skipped += targetTokens.length;
+          duplicateSkippedTokenCount += targetTokens.length;
+          sendTargetTokenCount += targetTokens.length;
+          pushDiagnostic(eventDiagnostic(event, "duplicate", targetTokens.length));
+          continue;
+        }
+        sendTargetTokenCount += targetTokens.length;
+        pushDiagnostic(eventDiagnostic(event, "dry_run", targetTokens.length));
+        continue;
+      }
+
       const result = await sendEventToUser(userId, userTokens, event);
       sent += result.sent;
       skipped += result.skipped;
@@ -774,6 +904,7 @@ export async function runPushAlertScan(context: ScanContext) {
       duplicateSkippedTokenCount,
       sendTargetTokenCount,
       skippedLowScoreCount
-    })
+    }),
+    eventDiagnostics
   };
 }

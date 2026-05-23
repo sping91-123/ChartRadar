@@ -1880,3 +1880,13 @@ The health endpoint now reports a launch readiness score and structured blocking
 - Browser 확인에서 360px `/global/assets`는 `자산` active, 모바일 하단 패널 표시, canvas 7개와 최대 높이 332px, overflow 없음이었다. 340px도 canvas와 하단 패널이 표시되고 overflow가 없었다. `/global`은 `시장` active이고 asset radar와 하단 패널이 없었다.
 - 직접 API 확인 결과 QQQ 5m/15m/1h/4h/1d와 SPY, NVDA, SMH, ^VIX, NQ=F, ES=F, GLD, CL=F 1d 모두 200 응답과 candles 배열을 반환했다.
 - Browser에서 여러 종목을 빠르게 반복 클릭하면 Basic 사용량 제한 문구가 나타날 수 있다. 이는 기존 `usageMeter` 정책이며 이번 차트 렌더링 문제와 별개다.
+
+## 2026-05-23 자동 푸시 eligibility 긴급 점검.
+
+- 자동 푸시 불발의 핵심 원인은 낮은 점수 알림 차단 이후 후보를 먼저 잘라내는 순서에 있었다. 기존 서버 스캐너는 `topSetups`로 상위 몇 개만 먼저 고른 뒤 quality gate를 적용해, status 우선 정렬에 걸린 낮은 점수 후보가 skip되고 뒤쪽의 A급 또는 100점 후보는 이벤트 후보가 되지 못할 수 있었다.
+- 알트 UI는 `/api/scout?scope=alts`에서 `getLiquidCryptoSymbols({ excludeMajor: true, limit: 36 })`를 쓰지만, 자동 푸시 스캐너는 `includeMajor: true, limit: 32` 중심이라 알트 화면의 강한 후보와 서버 푸시 대상이 어긋날 수 있었다. 서버 자동 스캔은 메이저 40개, 알트 36개, BTC/ETH 고정값의 합집합으로 보강했다.
+- A급/강한 후보, 청산압력, 뉴스·시장 이벤트, 글로벌 복합 이벤트는 저장 조건 없이 발생하는 기본 시스템 알림으로 분리했다. 이 시스템 이벤트는 Pro 권한 필터로 막지 않고, 사용자의 토큰 시장·규칙 선호와 중복 방지만 통과하면 발송 후보가 된다.
+- 저장 조건 재감지는 여전히 `push_alert_presets`와 권한 판정을 따른다. 기본 시스템 알림과 저장 조건 알림을 분리해 대표가 기대하는 A급 후보와 청산압력 급등은 별도 preset 없이 감지될 수 있게 했다.
+- 청산압력 자동 이벤트는 `/api/liquidation-pressure` 응답이 `{ report, cachedAt, cached }` wrapper를 반환하는데 scanner가 top-level `grade`를 읽고 있어 항상 skip될 수 있었다. 이제 `payload.report ?? payload`를 읽고 `heated` 또는 `extreme`이면 시스템 이벤트 후보를 만든다.
+- `/api/push-cron?dryRun=1` 또는 `?diagnostics=1`은 기존 `CRON_SECRET` 보호를 그대로 사용하고 Firebase 설정 없이도 scanner를 실행한다. 실제 FCM 발송과 `push_alert_events` 기록은 하지 않고 `eventDiagnostics`에 `signalType`, `symbol`, `score`, `reason`, `skippedReason`, `wouldSend`, `targetTokenCount`를 반환한다.
+- 낮은 점수 차단은 유지한다. 75점 미만은 skip, A급은 75점 이상에서 허용, 메이저 코인은 80점 이상, 알트는 82점 이상, 글로벌 setup은 80점 이상만 자동 푸시 후보가 된다. 58점과 62점 같은 약한 방향성 이벤트는 계속 `skippedLowScoreCount`로 걸러진다.
