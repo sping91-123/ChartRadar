@@ -20,13 +20,12 @@ import {
 } from "lucide-react";
 import { AuthStatus } from "@/components/AuthStatus";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { APP_VERSION_DISPLAY } from "@/lib/appVersion";
 import { billingPlans, getEntitlementLabel, hasAnyPaidEntitlement } from "@/lib/billing";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 type HeaderMarket = "crypto" | "stocks";
 type AuthState = ReturnType<typeof useSupabaseAuth>;
-const appVersion = "1.0.3";
-const appBuild = "6";
 
 function marketAlertHref(market?: HeaderMarket) {
   return market === "stocks" ? "/alerts?market=global" : "/alerts?market=crypto";
@@ -203,7 +202,7 @@ function AppInfoSection() {
   return (
     <section className="border-t border-white/10 px-3 pb-2.5 pt-3">
       <p className="text-sm font-black text-white">Chart Radar</p>
-      <p className="mt-1 text-xs font-semibold text-slate-500">앱 버전 {appVersion} / 빌드 {appBuild}</p>
+      <p className="mt-1 text-xs font-semibold text-slate-500">{APP_VERSION_DISPLAY}</p>
     </section>
   );
 }

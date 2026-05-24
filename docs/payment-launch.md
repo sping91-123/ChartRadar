@@ -48,8 +48,8 @@ NEXT_PUBLIC_STOCKS_YEARLY_PAYMENT_URL=
 3. 결제가 성공하면 결제사가 `/checkout/success`로 돌아옵니다.
 4. 성공 URL에는 `paymentKey`, `orderId`, `amount`가 포함되어야 합니다.
 5. `/checkout/success`가 `/api/billing/confirm`을 호출합니다.
-6. `/api/billing/confirm`은 결제 승인 API로 결제를 다시 확인합니다.
-7. 결제 금액과 주문번호가 맞으면 Supabase `profiles`와 `subscriptions` 권한을 갱신합니다.
+6. `/api/billing/confirm`은 토스페이먼츠 승인 API로 결제를 다시 확인합니다.
+7. 결제 금액과 주문번호가 맞으면 Supabase의 `profiles.plan`과 `subscriptions` 권한을 갱신합니다.
 
 서버 전용 환경변수는 아래 값이 필요합니다.
 
