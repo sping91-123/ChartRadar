@@ -1890,3 +1890,13 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 청산압력 자동 이벤트는 `/api/liquidation-pressure` 응답이 `{ report, cachedAt, cached }` wrapper를 반환하는데 scanner가 top-level `grade`를 읽고 있어 항상 skip될 수 있었다. 이제 `payload.report ?? payload`를 읽고 `heated` 또는 `extreme`이면 시스템 이벤트 후보를 만든다.
 - `/api/push-cron?dryRun=1` 또는 `?diagnostics=1`은 기존 `CRON_SECRET` 보호를 그대로 사용하고 Firebase 설정 없이도 scanner를 실행한다. 실제 FCM 발송과 `push_alert_events` 기록은 하지 않고 `eventDiagnostics`에 `signalType`, `symbol`, `score`, `reason`, `skippedReason`, `wouldSend`, `targetTokenCount`를 반환한다.
 - 낮은 점수 차단은 유지한다. 75점 미만은 skip, A급은 75점 이상에서 허용, 메이저 코인은 80점 이상, 알트는 82점 이상, 글로벌 setup은 80점 이상만 자동 푸시 후보가 된다. 58점과 62점 같은 약한 방향성 이벤트는 계속 `skippedLowScoreCount`로 걸러진다.
+
+## 2026-05-24 자동 알트 푸시 기준 재조정.
+
+- 대표 판단에 따라 A급 자동 푸시 최소 점수는 75점이 아니라 80점으로 상향한다. 75~79점 A급은 앱 화면 참고용 후보로 남을 수 있지만 자동 푸시 후보에서는 제외한다.
+- `강한 구조 변화` 문구는 별도 구조 변화 조건이 아니라 generic crypto market-scout 이벤트에 붙던 표현이었다. 실제 조건은 점수와 quality gate였고 거래량·변동성·구조 근거를 독립적으로 모두 확인한 문구가 아니어서 자동 푸시 문구에서 제거한다.
+- 관심코인/저장조건 알림은 `alertKind=watchlist`, `isWatchlist=true`, `isMarketScout=false`로 분리한다. 제목은 `관심코인 조건 재감지`이고 저장한 조건에 가까운 흐름이 다시 감지됐다는 문구만 사용한다.
+- 시장 레이더 자동 알림은 `alertKind=market_scout`, `isMarketScout=true`로 분리한다. 알트 시장 자동 후보는 TOP 후보 안에서 score 85 이상이거나 A급 80점 이상이어야 하며, 거래량·변동성·구조 근거 중 최소 2개가 있어야 한다.
+- 비관심 알트 시장 레이더 후보는 사용자별 저장 심볼 여부를 보고 본문을 다르게 만든다. 저장 심볼이 아니면 `관심코인은 아니지만, {symbol}가 알트 시장 스캔에서 강한 후보로 감지되었습니다.`라고 설명해 관심코인 알림으로 오해하지 않게 한다.
+- dry-run 진단은 `alertTitle`, `alertBody`, `isWatchlist`, `isMarketScout`, `isWatchedSymbol`, `evidenceLabels`, `marketScoutRank`를 내려준다. 운영에서는 실제 발송 없이 왜 wouldSend 또는 skippedLowScore인지 확인할 수 있다.
+- 설정 UI의 큰 구조 변경은 이번 범위에서 하지 않는다. 다만 알림 규칙 문구는 `시장 레이더 후보 감지`, `관심코인 조건 재감지`, `청산 압력`처럼 분리했고, 향후 UI에서는 관심코인 알림과 시장 레이더 후보 알림을 더 명확한 섹션으로 나누는 TODO가 필요하다.

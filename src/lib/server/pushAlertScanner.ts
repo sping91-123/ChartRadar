@@ -47,6 +47,7 @@ interface PushAlertPresetRow {
 interface PushAlertEvent {
   market: SetupAlertMarket;
   ruleId: RadarAlertRuleId;
+  alertKind: "market_scout" | "watchlist" | "liquidation" | "macro" | "global";
   eventKey: string;
   title: string;
   body: string;
@@ -55,6 +56,11 @@ interface PushAlertEvent {
   quality?: ScoutSetup["plan"]["quality"];
   symbol?: string;
   system?: boolean;
+  isWatchlist?: boolean;
+  isMarketScout?: boolean;
+  isWatchedSymbol?: boolean;
+  evidenceLabels?: string[];
+  marketScoutRank?: number;
 }
 
 interface ScanContext {
@@ -76,6 +82,8 @@ interface PushEventDiagnostic {
   symbol?: string;
   score?: number;
   quality?: ScoutSetup["plan"]["quality"];
+  alertTitle: string;
+  alertBody: string;
   title: string;
   reason: string;
   eventKey: string;
@@ -83,6 +91,11 @@ interface PushEventDiagnostic {
   skippedReason: "low_score" | "entitlement" | "token_preferences" | "duplicate" | "dry_run" | null;
   targetTokenCount: number;
   system: boolean;
+  isWatchlist: boolean;
+  isMarketScout: boolean;
+  isWatchedSymbol: boolean;
+  evidenceLabels: string[];
+  marketScoutRank?: number;
 }
 
 interface PushScanDiagnostics {
@@ -132,9 +145,11 @@ function emptyDiagnostics(overrides: Partial<PushScanDiagnostics> = {}): PushSca
 
 const cryptoModes: TradingMode[] = ["scalp", "swing"];
 const cryptoMajorSymbols = new Set(["BTCUSDT.P", "ETHUSDT.P", "BTCUSDT", "ETHUSDT", "BTC", "ETH"]);
-const minimumSetupPushScore = 75;
+const minimumSetupPushScore = 80;
 const cryptoMajorPushScoreThreshold = 80;
 const cryptoAltPushScoreThreshold = 82;
+const cryptoAltMarketScoutScoreThreshold = 85;
+const cryptoAltMarketScoutMinimumEvidenceCount = 2;
 const genericSetupPushScoreThreshold = 80;
 const stockMomentumSymbols = ["QQQ", "SPY", "NQ=F", "ES=F", "^VIX", "VIXY", "SMH", "SOXX", "NVDA", "AMD", "UUP", "GLD", "TLT"];
 const stockIndexSymbols = new Set(["QQQ", "SPY", "NQ=F", "ES=F"]);
@@ -271,38 +286,84 @@ function presetFromRow(row: PushAlertPresetRow): SetupAlertPreset {
   };
 }
 
-function setupToEvent(setup: ScoutSetup, ruleId: RadarAlertRuleId, market: SetupAlertMarket, prefix: string): PushAlertEvent {
+function setupEvidenceLabels(setup: ScoutSetup) {
+  const active = setup.analysis.timeframeAnalyses.find((analysis) => analysis.timeframe === setup.timeframe);
+  const direction = setup.plan.side === "long" ? "bullish" : "bearish";
+  const labels: string[] = [];
+  const hasVolume = active ? active.condition.volumeState === "high" || (active.condition.volumeRatio ?? 0) >= 1.5 : false;
+  const hasVolatility = active ? active.condition.volatilityState === "expanded" || Boolean(active.latestDisplacement) : false;
+  const hasStructure = Boolean(
+    active &&
+      (active.msb === direction ||
+        active.choch === direction ||
+        active.latestCisd?.direction === direction ||
+        active.latestSweep?.direction === direction ||
+        (active.inOb && active.latestOb?.direction === direction) ||
+        (active.inFvg && active.latestFvg?.direction === direction))
+  );
+
+  if (hasVolume) labels.push("거래량");
+  if (hasVolatility) labels.push("변동성");
+  if (hasStructure) labels.push("구조");
+  return labels;
+}
+
+function setupMarketScoutTitle(setup: ScoutSetup, market: SetupAlertMarket, ruleId: RadarAlertRuleId) {
+  if (market === "stocks" && ruleId === "stock-momentum") return stockSignalTitle(setup.symbol, setup.plan.side);
+  if (market === "stocks") return "Chart Radar 글로벌 레이더 후보 감지";
+  return isCryptoMajor(setup.symbol) ? "Chart Radar 레이더 후보 감지" : "Chart Radar 알트 시장 레이더 후보 감지";
+}
+
+function setupMarketScoutBody(setup: ScoutSetup, market: SetupAlertMarket, ruleId: RadarAlertRuleId) {
+  if (market === "stocks" && ruleId === "stock-momentum") return stockSignalBody(setup);
+  if (market === "stocks") {
+    return `${stockSignalLabel(setup.symbol)} ${setup.timeframe} 시장 레이더 후보로 감지되었습니다. 앱에서 점수와 근거를 확인해 주세요.`;
+  }
+  if (isCryptoMajor(setup.symbol)) {
+    return `${compactSymbol(setup.symbol)} ${setup.timeframe} 레이더 후보로 감지되었습니다. 앱에서 점수와 근거를 확인해 주세요.`;
+  }
+  return `${compactSymbol(setup.symbol)}가 알트 시장 레이더 후보에 잡혔습니다. 앱에서 거래량·변동성·구조 근거를 확인해 주세요.`;
+}
+
+function setupToEvent(
+  setup: ScoutSetup,
+  ruleId: RadarAlertRuleId,
+  market: SetupAlertMarket,
+  prefix: string,
+  marketScoutRank?: number
+): PushAlertEvent {
   const side = setup.plan.side;
   const isGlobalMomentum = market === "stocks" && ruleId === "stock-momentum";
+  const evidenceLabels = setupEvidenceLabels(setup);
   return {
     market,
     ruleId,
+    alertKind: market === "stocks" ? "global" : "market_scout",
     eventKey: `${prefix}:${market}:${setup.symbol}:${setup.timeframe}:${side}:${eventBucket(15)}`,
-    title: isGlobalMomentum
-      ? stockSignalTitle(setup.symbol, side)
-      : market === "stocks"
-        ? "Chart Radar 글로벌 감지"
-        : isCryptoMajor(setup.symbol)
-          ? "Chart Radar 강한 레이더 후보 감지"
-          : "Chart Radar 알트 구조 변화 감지",
-    body: isGlobalMomentum
-      ? stockSignalBody(setup)
-      : market === "stocks"
-        ? `${stockSignalLabel(setup.symbol)} ${setup.timeframe} 구조 변화가 감지됐습니다. 앱에서 상세 흐름을 확인해 주세요.`
-        : `${compactSymbol(setup.symbol)} ${setup.timeframe} 강한 구조 변화가 감지됐습니다. 앱에서 상세 흐름을 확인해 주세요.`,
+    title: setupMarketScoutTitle(setup, market, ruleId),
+    body: setupMarketScoutBody(setup, market, ruleId),
     data: {
       type: ruleId,
       market,
+      alert_kind: market === "stocks" ? "global" : "market_scout",
       target: market === "stocks" ? "/alerts?market=global" : "/alerts?market=crypto",
       symbol: setup.symbol,
       timeframe: setup.timeframe,
       side,
-      signal: isGlobalMomentum ? stockSignalTitle(setup.symbol, side).replace("Chart Radar ", "") : ruleId
+      signal: isGlobalMomentum ? stockSignalTitle(setup.symbol, side).replace("Chart Radar ", "") : ruleId,
+      is_market_scout: "true",
+      is_watchlist: "false",
+      evidence: evidenceLabels.join(","),
+      ...(marketScoutRank !== undefined ? { market_scout_rank: String(marketScoutRank) } : {})
     },
     score: setup.score,
     quality: setup.plan.quality,
     symbol: setup.symbol,
-    system: true
+    system: true,
+    isWatchlist: false,
+    isMarketScout: true,
+    evidenceLabels,
+    marketScoutRank
   };
 }
 
@@ -315,28 +376,43 @@ function matchedSetupToEvent(
   return {
     market,
     ruleId,
+    alertKind: "watchlist",
     eventKey: `${prefix}:${market}:${setup.symbol}:${setup.timeframe}:${setup.side}:${eventBucket(15)}`,
-    title: market === "stocks" ? "Chart Radar 글로벌 감시 조건" : "Chart Radar 관심 조건 감지",
+    title: market === "stocks" ? "Chart Radar 글로벌 조건 재감지" : "Chart Radar 관심코인 조건 재감지",
     body:
       market === "stocks"
-        ? `${stockSignalLabel(setup.symbol)} ${setup.timeframe} ${sideLabel(setup.side, market)} ${Math.round(setup.score)}점으로 저장한 글로벌 조건과 다시 맞았습니다.`
-        : `${compactSymbol(setup.symbol)} ${setup.timeframe} 저장한 조건과 다시 맞았습니다. 앱에서 상세 흐름을 확인해 주세요.`,
+        ? `${stockSignalLabel(setup.symbol)} ${setup.timeframe} 저장한 조건에 가까운 흐름이 다시 감지되었습니다. 앱에서 근거를 확인해 주세요.`
+        : `${compactSymbol(setup.symbol)} ${setup.timeframe} 저장한 조건에 가까운 흐름이 다시 감지되었습니다. 앱에서 근거를 확인해 주세요.`,
     data: {
       type: ruleId,
       market,
+      alert_kind: "watchlist",
       target: market === "stocks" ? "/alerts?market=global" : "/alerts?market=crypto",
       symbol: setup.symbol,
       timeframe: setup.timeframe,
-      side: setup.side
+      side: setup.side,
+      is_market_scout: "false",
+      is_watchlist: "true"
     },
     score: setup.score,
     quality: setup.quality,
-    symbol: setup.symbol
+    symbol: setup.symbol,
+    isWatchlist: true,
+    isMarketScout: false
   };
 }
 
-function setupSignalPassesPushQuality(score: number, quality: ScoutSetup["plan"]["quality"] | undefined, market: SetupAlertMarket, symbol?: string) {
+function setupSignalPassesPushQuality(event: PushAlertEvent) {
+  const score = event.score ?? 0;
+  const quality = event.quality;
+  const market = event.market;
+  const symbol = event.symbol;
   if (score < minimumSetupPushScore) return false;
+  if (market === "crypto" && symbol && !isCryptoMajor(symbol) && event.isMarketScout) {
+    const evidenceCount = event.evidenceLabels?.length ?? 0;
+    if (evidenceCount < cryptoAltMarketScoutMinimumEvidenceCount) return false;
+    return score >= cryptoAltMarketScoutScoreThreshold || quality === "A";
+  }
   if (quality === "A") return true;
   if (market === "crypto") {
     return score >= (symbol && !isCryptoMajor(symbol) ? cryptoAltPushScoreThreshold : cryptoMajorPushScoreThreshold);
@@ -350,7 +426,7 @@ function isSetupPushEvent(event: PushAlertEvent) {
 
 function passesSetupPushQuality(event: PushAlertEvent) {
   if (!isSetupPushEvent(event)) return true;
-  return setupSignalPassesPushQuality(event.score ?? 0, event.quality, event.market, event.symbol);
+  return setupSignalPassesPushQuality(event);
 }
 
 function setupStatusRank(setup: ScoutSetup) {
@@ -487,12 +563,14 @@ async function scanLiquidationEvent(origin: string): Promise<PushAlertEvent | nu
   return {
     market: "crypto",
     ruleId: "liquidation-pressure",
+    alertKind: "liquidation",
     eventKey: `liquidation-pressure:crypto:${report.symbol ?? "BTCUSDT"}:${report.grade}:${eventBucket(30)}`,
-    title: "Chart Radar 청산 압력 급등 감지",
-    body: `BTC 청산 압력이 ${report.grade === "extreme" ? "매우 높음" : "높음"} 구간입니다. 리스크를 확인해 주세요.`,
+    title: "Chart Radar 청산 압력 확대 감지",
+    body: `BTC 청산 압력이 ${report.grade === "extreme" ? "매우 높음" : "높음"} 구간입니다. 변동성 확대 가능성이 있어 리스크 확인이 필요합니다.`,
     data: {
       type: "liquidation-pressure",
       market: "crypto",
+      alert_kind: "liquidation",
       target: "/crypto",
       pressure: String(pressure)
     },
@@ -511,12 +589,14 @@ async function scanNewsEvent(origin: string, market: SetupAlertMarket): Promise<
   return {
     market,
     ruleId: "macro-news",
+    alertKind: "macro",
     eventKey: `macro-news:${market}:${firstIssue ?? headline}:${eventBucket(180)}`,
     title: market === "stocks" ? "Chart Radar 시장 이벤트 리마인더" : "Chart Radar 코인 뉴스",
     body: firstIssue ?? headline ?? "주요 뉴스 브리핑이 갱신되었습니다.",
     data: {
       type: "macro-news",
       market,
+      alert_kind: "macro",
       target: market === "stocks" ? "/news?market=global" : "/news?market=crypto"
     },
     system: true
@@ -548,12 +628,14 @@ async function scanMacroCalendarEvent(origin: string): Promise<PushAlertEvent | 
   return {
     market: "stocks",
     ruleId: "macro-news",
+    alertKind: "macro",
     eventKey: `macro-event-reminder:stocks:${nextEvent.label}:${nextEvent.releaseAt}:${eventBucket(360)}`,
     title: "Chart Radar 시장 이벤트 리마인더",
     body: `${nextEvent.dateKst ?? "곧"} ${nextEvent.label} 예정입니다. 발표 전후 변동성 확대 가능성을 확인하세요.`,
     data: {
       type: "macro-news",
       market: "stocks",
+      alert_kind: "macro",
       signal: "시장 이벤트 리마인더",
       target: "/news?market=global",
       eventLabel: nextEvent.label,
@@ -580,12 +662,14 @@ function buildRiskOffEvent(setups: ScoutSetup[]): PushAlertEvent | null {
   return {
     market: "stocks",
     ruleId: "stock-momentum",
+    alertKind: "global",
     eventKey: `risk-off:stocks:${weakIndex.symbol}:${companion.symbol}:${eventBucket(30)}`,
     title: "Chart Radar 리스크오프 조합",
     body: `${stockSignalLabel(weakIndex.symbol)} 약세와 ${stockSignalLabel(companion.symbol)} 강세가 함께 감지됐습니다. 변동성·달러·금 흐름을 확인하세요.`,
     data: {
       type: "stock-momentum",
       market: "stocks",
+      alert_kind: "global",
       signal: "리스크오프 조합",
       target: "/alerts?market=global",
       symbol: weakIndex.symbol,
@@ -596,7 +680,8 @@ function buildRiskOffEvent(setups: ScoutSetup[]): PushAlertEvent | null {
     score,
     quality: stockQuality(score),
     symbol: weakIndex.symbol,
-    system: true
+    system: true,
+    isMarketScout: true
   };
 }
 
@@ -617,12 +702,14 @@ function buildSemiconductorLeadershipEvent(setups: ScoutSetup[]): PushAlertEvent
   return {
     market: "stocks",
     ruleId: "stock-momentum",
+    alertKind: "global",
     eventKey: `semiconductor-leadership:stocks:${semiconductor.symbol}:${index.symbol}:${strengthened ? "strong" : "weak"}:${eventBucket(30)}`,
     title: `Chart Radar 반도체 주도력 ${strengthened ? "강화" : "약화"}`,
     body: `${stockSignalLabel(semiconductor.symbol)} 흐름이 ${stockSignalLabel(index.symbol)}보다 ${strengthened ? "강하게" : "약하게"} 감지됐습니다. 지수와 섹터 흐름 차이를 확인하세요.`,
     data: {
       type: "stock-momentum",
       market: "stocks",
+      alert_kind: "global",
       signal: strengthened ? "반도체 주도력 강화" : "반도체 주도력 약화",
       target: "/alerts?market=global",
       symbol: semiconductor.symbol,
@@ -633,7 +720,8 @@ function buildSemiconductorLeadershipEvent(setups: ScoutSetup[]): PushAlertEvent
     score,
     quality: stockQuality(score),
     symbol: semiconductor.symbol,
-    system: true
+    system: true,
+    isMarketScout: true
   };
 }
 
@@ -725,13 +813,60 @@ function eventDiagnostic(
     symbol: event.symbol,
     score: event.score,
     quality: event.quality,
+    alertTitle: event.title,
+    alertBody: event.body,
     title: event.title,
     reason: event.body,
     eventKey: event.eventKey,
     wouldSend: skippedReason === null || skippedReason === "dry_run",
     skippedReason,
     targetTokenCount,
-    system: event.system === true
+    system: event.system === true,
+    isWatchlist: event.isWatchlist === true,
+    isMarketScout: event.isMarketScout === true,
+    isWatchedSymbol: event.isWatchedSymbol === true,
+    evidenceLabels: event.evidenceLabels ?? [],
+    marketScoutRank: event.marketScoutRank
+  };
+}
+
+function personalizeEventForUser(event: PushAlertEvent, userPresets: PushAlertPresetRow[]): PushAlertEvent {
+  const watchedSymbols = new Set(userPresets.map((preset) => preset.symbol));
+  const isWatchedSymbol = event.symbol ? watchedSymbols.has(event.symbol) : event.isWatchlist === true;
+  if (!event.isMarketScout) {
+    return {
+      ...event,
+      isWatchedSymbol,
+      data: {
+        ...event.data,
+        is_watched_symbol: String(isWatchedSymbol)
+      }
+    };
+  }
+
+  if (event.market === "crypto" && event.symbol && !isCryptoMajor(event.symbol)) {
+    const symbol = compactSymbol(event.symbol);
+    const body = isWatchedSymbol
+      ? `${symbol}가 알트 시장 레이더 후보에 잡혔습니다. 저장 여부와 별개로 시장 전체 스캔 기준을 통과했습니다. 앱에서 거래량·변동성·구조 근거를 확인해 주세요.`
+      : `관심코인은 아니지만, ${symbol}가 알트 시장 스캔에서 강한 후보로 감지되었습니다. 앱에서 거래량·변동성·구조 근거를 확인해 주세요.`;
+    return {
+      ...event,
+      body,
+      isWatchedSymbol,
+      data: {
+        ...event.data,
+        is_watched_symbol: String(isWatchedSymbol)
+      }
+    };
+  }
+
+  return {
+    ...event,
+    isWatchedSymbol,
+    data: {
+      ...event.data,
+      is_watched_symbol: String(isWatchedSymbol)
+    }
   };
 }
 
@@ -796,9 +931,15 @@ export async function runPushAlertScan(context: ScanContext) {
     .map((source) => source.warning)
     .filter((warning): warning is string => Boolean(warning));
   const globalCompositeEvents = [buildRiskOffEvent(stockMomentumSetups), buildSemiconductorLeadershipEvent(stockMomentumSetups)];
+  const cryptoMarketScoutEvents = topPushSetups(cryptoSetups, 8).map((setup, index) =>
+    setupToEvent(setup, "radar-grade", "crypto", "radar-grade", index + 1)
+  );
+  const stockMarketScoutEvents = topPushSetups(stockMomentumSetups, 6).map((setup, index) =>
+    setupToEvent(setup, "stock-momentum", "stocks", "stock-momentum", index + 1)
+  );
   const genericEvents = [
-    ...topPushSetups(cryptoSetups, 8).map((setup) => setupToEvent(setup, "radar-grade", "crypto", "radar-grade")),
-    ...topPushSetups(stockMomentumSetups, 6).map((setup) => setupToEvent(setup, "stock-momentum", "stocks", "stock-momentum")),
+    ...cryptoMarketScoutEvents,
+    ...stockMarketScoutEvents,
     ...globalCompositeEvents,
     ...optionalEventSources.map((source) => source.event)
   ].filter((event): event is PushAlertEvent => event !== null);
@@ -828,7 +969,8 @@ export async function runPushAlertScan(context: ScanContext) {
       "stocks"
     ).map((match) => matchedSetupToEvent(match.setup, "stock-momentum", "stocks", "preset"));
 
-    const allUserEvents = [...genericEvents, ...cryptoPresetMatches, ...stockPresetMatches];
+    const userGenericEvents = genericEvents.map((event) => personalizeEventForUser(event, userPresets));
+    const allUserEvents = [...userGenericEvents, ...cryptoPresetMatches, ...stockPresetMatches];
     const qualityCheckedEvents = allUserEvents.filter((event) => {
       const allowed = passesSetupPushQuality(event);
       if (!allowed) skippedLowScoreCount += 1;
