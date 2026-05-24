@@ -1,35 +1,69 @@
-# Chart Radar 모바일 앱 준비 메모
+# Chart Radar 모바일 앱 가이드
 
-## 현재 완료된 것
+Chart Radar Android 앱은 Capacitor WebView로 운영 웹앱 `https://chartradar.kr`을 여는 하이브리드 앱입니다. 화면과 라우팅의 기준은 Next.js 웹앱이며, Android native 쪽은 로그인, 푸시, 앱 패키징을 담당합니다.
 
-- PWA 매니페스트가 `/manifest.webmanifest`로 제공됩니다.
-- 프로덕션 환경에서는 `/sw.js` 서비스워커가 등록되어 홈 화면 설치와 기본 오프라인 안내가 가능합니다.
-- Android 앱 래퍼를 위한 Capacitor 설정이 추가되었습니다.
+## 현재 기준
 
-## 가장 빠른 공개 순서
+- 운영 URL: `https://chartradar.kr`
+- Android package: `com.staronlabs.chartradar`
+- WebView 서버 URL: `CAPACITOR_SERVER_URL=https://chartradar.kr`
+- Firebase 설정 파일: `android/app/google-services.json`
+- Firebase 설정 파일과 keystore, 비밀키는 Git에 커밋하지 않습니다.
 
-1. 웹을 먼저 Vercel 같은 호스팅에 배포합니다.
-2. 배포 주소를 `NEXT_PUBLIC_SITE_URL`에 넣습니다.
-3. Android 앱 빌드 전 PowerShell에서 아래처럼 앱 주소를 지정합니다.
+## 주요 앱 라우트
+
+- `/` - 시장 선택 홈
+- `/crypto` - BTC/ETH 코인 레이더
+- `/alts` - 알트코인 레이더
+- `/global` - 글로벌 시장흐름
+- `/global/assets` - 글로벌 자산레이더
+- `/news?market=crypto` - 코인 뉴스/이벤트
+- `/news?market=global` - 글로벌 일정/이벤트/뉴스
+- `/alerts?market=crypto` - 코인 앱 푸시 알림 조건과 상태
+- `/alerts?market=global` - 글로벌 앱 푸시 알림 조건과 상태
+- `/journal?market=crypto` - 코인 복기/저널
+- `/journal?market=global` - 글로벌 복기/저널
+- `/learn` - 지표 안내
+- `/login` - 로그인
+- `/pro` - Pro 구독
+
+## Android 빌드 기본 순서
+
+PowerShell 기준입니다.
 
 ```powershell
-$env:CAPACITOR_SERVER_URL="https://실제도메인"
-npm run app:add:android
-npm run app:sync
-npm run app:android
+$env:CAPACITOR_SERVER_URL="https://chartradar.kr"
+npm.cmd run build
+npm.cmd run app:sync
+npm.cmd run app:android:debug
 ```
 
-## iOS 앱 출시
+release AAB 생성은 별도 제출 지시가 있을 때만 실행합니다.
 
-iOS는 Windows에서 최종 빌드가 어렵습니다. Mac에서 같은 저장소를 받은 뒤 아래 순서로 진행합니다.
+```powershell
+$env:CAPACITOR_SERVER_URL="https://chartradar.kr"
+npm.cmd run build
+npm.cmd run app:sync
+npm.cmd run app:android:release
+```
+
+## 확인할 기능
+
+- 앱 시작 시 `https://chartradar.kr` 기준 화면이 열리는지 확인합니다.
+- Google 네이티브 로그인이 동작하는지 확인합니다.
+- Android 13 이상에서 푸시 권한 팝업이 표시되는지 확인합니다.
+- FCM 토큰이 서버에 저장되는지 확인합니다.
+- 테스트 푸시는 관리자 계정에서만 노출되어야 합니다.
+- `/global/assets`에서 자산레이더 차트와 하단 모바일 컨트롤이 보이는지 확인합니다.
+- `/global`, `/news?market=global`, `/journal?market=global`에서는 자산레이더 하단 컨트롤이 노출되지 않아야 합니다.
+
+## iOS 참고
+
+iOS는 Windows에서 최종 빌드할 수 없습니다. Mac에서 같은 저장소를 받은 뒤 아래 흐름으로 진행합니다.
 
 ```bash
-export CAPACITOR_SERVER_URL="https://실제도메인"
-npx cap add ios
+export CAPACITOR_SERVER_URL="https://chartradar.kr"
+npm run build
 npx cap sync ios
 npx cap open ios
 ```
-
-## 중요한 결정
-
-현재 Next.js API와 실시간 Binance 데이터, AI 브리핑을 그대로 쓰려면 앱은 배포된 웹앱을 안전하게 감싸는 방식이 가장 빠릅니다. 나중에 완전 네이티브 화면이 필요해지면 Expo 앱을 별도 프로젝트로 만들고, `src/lib`의 분석 로직만 공유하는 방향이 좋습니다.
