@@ -148,7 +148,7 @@ async function syncAnyAppStoreEntitlement(params: NativeRestoreParams & { platfo
 
   const data = (await response.json().catch(() => ({}))) as AppStoreSyncResponse;
   if (!response.ok || !data.active) {
-    throw new Error(data.error ?? data.message ?? "복원한 구독 상태를 계정에 연결하지 못했습니다. 잠시 후 다시 확인해 주세요.");
+    throw new Error(data.error ?? data.message ?? "불러온 구독 권한을 계정에 연결하지 못했습니다. 잠시 후 다시 확인해 주세요.");
   }
 
   if (typeof window !== "undefined") {
@@ -198,7 +198,7 @@ export async function purchaseNativePlan(params: NativePurchaseParams) {
     if (!hasActivePlan(result.customerInfo, params.plan)) {
       const { customerInfo } = await Purchases.getCustomerInfo();
       if (!hasActivePlan(customerInfo, params.plan)) {
-        throw new Error("결제는 완료되었지만 활성 구독 권한을 확인하지 못했습니다. 구매 복원을 눌러 다시 연결해 주세요.");
+        throw new Error("결제는 완료되었지만 활성 구독 권한을 확인하지 못했습니다. 구독 권한 불러오기를 눌러 다시 연결해 주세요.");
       }
     }
 
@@ -234,26 +234,26 @@ export async function fetchNativePlanPriceLabels(plans: BillingPlan[], userId: s
 
 export async function restoreNativePurchases(params: NativePurchaseParams) {
   const platform = getNativePurchasePlatform();
-  if (!platform) throw new Error("구매 복원은 Android 또는 iOS 앱에서만 사용할 수 있습니다.");
+  if (!platform) throw new Error("구독 권한 불러오기는 Android 또는 iOS 앱에서만 사용할 수 있습니다.");
 
   await configurePurchases(platform, params.userId);
   const Purchases = await getRevenueCatPurchases();
   const { customerInfo } = await Purchases.restorePurchases();
   if (!hasActivePlan(customerInfo, params.plan)) {
-    throw new Error("복원 가능한 활성 구독을 찾지 못했습니다.");
+    throw new Error("불러올 수 있는 활성 구독 권한을 찾지 못했습니다.");
   }
 
   await syncAppStoreEntitlement({ ...params, platform });
-  return { message: "구독을 복원하고 Pro 권한을 다시 연결했습니다." };
+  return { message: "구독 권한을 불러와 Pro 권한을 다시 연결했습니다." };
 }
 
 export async function restoreNativeEntitlement(params: NativeRestoreParams) {
   const platform = getNativePurchasePlatform();
-  if (!platform) throw new Error("구매 복원은 Android 또는 iOS 앱에서만 사용할 수 있습니다.");
+  if (!platform) throw new Error("구독 권한 불러오기는 Android 또는 iOS 앱에서만 사용할 수 있습니다.");
 
   await configurePurchases(platform, params.userId);
   const Purchases = await getRevenueCatPurchases();
   await Purchases.restorePurchases();
   await syncAnyAppStoreEntitlement({ ...params, platform });
-  return { message: "활성 구독을 확인하고 Pro 권한을 다시 연결했습니다." };
+  return { message: "구독 권한을 확인하고 Pro 권한을 다시 연결했습니다." };
 }

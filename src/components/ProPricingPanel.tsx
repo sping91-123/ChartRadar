@@ -214,7 +214,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
     }
 
     if (!session?.accessToken || !user?.id) {
-      setCheckoutState({ status: "message", tone: "info", text: "구매 복원을 하려면 먼저 구글 로그인이 필요합니다." });
+      setCheckoutState({ status: "message", tone: "info", text: "구독 권한을 불러오려면 먼저 구글 로그인이 필요합니다." });
       return;
     }
 
@@ -224,7 +224,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
       const result = await restoreNativeEntitlement({ userId: user.id, accessToken: session.accessToken });
       setCheckoutState({ status: "message", tone: "info", text: result.message });
     } catch (error) {
-      setCheckoutState({ status: "message", tone: "error", text: error instanceof Error ? error.message : "구매 복원 상태를 확인하지 못했습니다." });
+      setCheckoutState({ status: "message", tone: "error", text: error instanceof Error ? error.message : "구독 권한 상태를 확인하지 못했습니다." });
     }
   }
 
@@ -297,7 +297,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
       {nativePurchaseAvailable ? (
         <ActionButton onClick={restoreCheckout} disabled={checkoutState.status === "restoring"} tone="secondary" className="w-full sm:w-auto">
           {checkoutState.status === "restoring" ? <Loader2 className="mr-2 animate-spin" size={16} aria-hidden /> : null}
-          앱 구독 복원
+          구독 권한 불러오기
         </ActionButton>
       ) : null}
 
