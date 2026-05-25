@@ -41,16 +41,16 @@ export type MacroEventItem = {
   isNumericEvent?: boolean;
 };
 
-export const macroCalendarUpdatedAt = "2026년 5월 22일 예비 일정 갱신";
-export const macroCalendarUpdatedAtIso = "2026-05-22T00:00:00.000Z";
+export const macroCalendarUpdatedAt = "2026년 5월 25일 예비 일정 갱신";
+export const macroCalendarUpdatedAtIso = "2026-05-25T00:00:00.000Z";
 export const macroCalendarSourceNote =
   "공개 경제 캘린더와 공식 통계 데이터를 우선 확인합니다. 문서형 이벤트는 실제값 대신 공식 문서 공개 상태로 표시하고, 자동 확인이 막히면 예비 일정으로 보여줍니다.";
 
 export const macroItems: MacroEventItem[] = [
   {
     label: "New Home Sales",
-    releaseAt: "2026-05-27T14:00:00.000Z",
-    dateKst: "05.27 23:00",
+    releaseAt: "2026-05-28T14:00:00.000Z",
+    dateKst: "05.28 23:00",
     state: "upcoming",
     importance: 2,
     forecast: "확인 예정",
