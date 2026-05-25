@@ -2209,3 +2209,15 @@
 - [x] 관리자 테스트 패널에서 알트 예시까지 검증할 수 있게 한다.
 - [x] 앱 수신 로그는 type, alertKind, market, symbol, targetPath만 남기게 제한한다.
 - [x] push target mapper sanity와 build, smoke, tsc, diff check로 검증한다.
+
+## 2026-05-25 debug 앱 푸시 알림 탭 이동 확인.
+
+- [x] debug 앱에서 푸시 알림 탭 시 앱이 열리는 것을 확인했다.
+- [x] 테스트 푸시 탭 시 `/alerts` 이동을 확인했다.
+- [x] 코인/알트/글로벌/매크로 예시 알림은 각각 `targetPath` 기준 이동이 가능하도록 정리했다.
+- [x] AndroidManifest.xml에 `OPEN_ALERTS` intent-filter가 추가되어 있음을 기록했다.
+- [x] 기존 Play Store 설치본에는 네이티브 변경이 자동 반영되지 않음을 기록했다.
+- [ ] 스토어 업로드 시점에 `versionCode`를 증가시키고 signed AAB를 다시 생성한다.
+- [ ] AAB 내부 `server.url=https://chartradar.kr`를 확인한다.
+- [ ] Play Console 비공개 테스트 트랙에 새 AAB를 업로드한다.
+- [ ] Play Store 설치본에서 푸시 탭 시 앱 열림과 `targetPath` 이동을 확인한다.

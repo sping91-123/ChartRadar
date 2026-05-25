@@ -1974,3 +1974,12 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 테스트 메시지 정의에 `targetPath`, `alertKind`, `symbol`을 추가하고 API가 그 값을 그대로 FCM data와 `push_alert_events.payload`에 기록하도록 바꾼다.
 - 기본 테스트는 `/alerts`, 코인 예시는 `/crypto`, 알트 예시는 `/alts`, 글로벌 예시는 `/global`, 매크로 예시는 `/news?market=global`로 이동한다.
 - 앱 수신 로그는 실제 payload 확인을 위해 type, alertKind, market, symbol, targetPath만 출력하고 토큰이나 사용자 식별자는 출력하지 않는다.
+
+## 2026-05-25 debug 앱 푸시 알림 탭 이동 확인.
+
+- debug 앱 기준으로 푸시 알림 탭 이동이 정상 동작하는 것을 확인했다.
+- 테스트 푸시를 탭하면 앱이 열리고 `/alerts`로 이동하는 것을 확인했다.
+- 코인, 알트, 글로벌, 매크로 예시 알림은 각각 payload의 `targetPath` 기준으로 `/crypto`, `/alts`, `/global`, `/news?market=global` 이동이 가능하도록 구성되어 있다.
+- AndroidManifest.xml에는 `OPEN_ALERTS` intent-filter가 추가되어 있으며, FCM `click_action`과 MainActivity intent-filter가 연결된다.
+- 이 변경은 네이티브 Android Manifest 변경이므로 Vercel 배포만으로 기존 Play Store 설치본에 자동 반영되지 않는다.
+- Play Store 테스터에게 반영하려면 나중에 `versionCode`를 증가시키고 signed AAB를 다시 생성한 뒤 Play Console 비공개 테스트 트랙에 업로드해야 한다.
