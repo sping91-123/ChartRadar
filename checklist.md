@@ -2138,3 +2138,13 @@
 - [x] build, mobile smoke, tsc, diff check, 관리자 접근 정적 검증을 통과한다.
 - [x] all smoke와 ops smoke는 기존 매크로 갱신 신선도 실패로 막히는 것을 확인한다.
 - [x] P1 상태를 `DONE`으로 변경한다.
+
+## 2026-05-25 Vercel 자동 푸시 Cron 점검.
+
+- [x] `vercel.json`에 `/api/push-cron` cron 설정이 있는지 확인한다.
+- [x] `origin/main`에도 같은 cron 설정이 있는지 확인한다.
+- [x] 운영 `/api/push-cron?dryRun=1` route가 인증 가드를 반환하는지 확인한다.
+- [x] `dryRun`과 `diagnostics`가 실제 FCM 발송 없이 안전한지 코드로 확인한다.
+- [x] Vercel Dashboard Cron Jobs 확인 절차와 Logs 필터 기준을 문서화한다.
+- [x] Hobby 플랜의 cron 주기 제한과 현재 `*/5` schedule 위험을 확인한다.
+- [x] build, ops smoke, all smoke로 검증한다.

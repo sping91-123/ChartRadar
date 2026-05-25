@@ -1910,3 +1910,12 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 최근 `push_alert_events`는 `user_id`를 선택하지 않고 title/body/payload 일부만 요약해 토큰, 이메일, CRON_SECRET, 원문 user_id가 노출되지 않게 한다.
 - 일반 사용자에게는 진단 UI가 렌더링되지 않는다.
 - 검증에서 build, mobile smoke, tsc, diff check, 관리자 접근 정적 검증은 통과했다. `smoke:all`과 `smoke:ops`는 이번 변경과 무관한 `매크로 갱신 신선도 - macroCalendarUpdatedAtIso가 없거나 72시간보다 오래되었습니다.` 항목에서 실패한다.
+
+## 2026-05-25 Vercel 자동 푸시 Cron 점검.
+
+- Vercel Logs에서 5월 23일 이후 `/api/push-cron` 로그가 없다면 조건 감지나 FCM 발송보다 Cron Jobs 등록, 비활성화, latest Production 반영 여부, 플랜 제한을 먼저 봐야 한다.
+- 로컬 `vercel.json`과 `origin/main:vercel.json` 모두 `/api/push-cron`을 `*/5 * * * *`로 등록하고 있다.
+- 운영 `https://chartradar.kr/api/push-cron?dryRun=1`은 인증 없이 `401 Unauthorized`를 반환했다. production route는 존재하고 인증 가드는 동작한다.
+- `/api/push-cron?dryRun=1`과 `?diagnostics=1`은 `CRON_SECRET` 인증 후 `runPushAlertScan({ dryRun: true })`를 실행한다. dry-run 분기에서는 `sendEventToUser`, `sendFcmMessage`, `recordSentEvent`를 호출하지 않는다.
+- Vercel 공식 문서 기준 Hobby 플랜은 Cron Jobs가 하루 1회까지만 허용된다. 현재 `*/5` 자동 푸시와 `*/10` 매크로 sync는 Pro 이상 전제가 필요하다.
+- 대표 확인 경로는 Vercel Dashboard → ChartRadar Project → Settings → Cron Jobs → `/api/push-cron` → View Logs다. 일반 Logs에서는 `requestPath:/api/push-cron` 필터와 `vercel-cron/1.0` user agent를 확인한다.
