@@ -146,15 +146,15 @@ export default function AdminEntitlementsPage() {
   }
 
   return (
-    <main className="min-h-screen max-w-full overflow-x-hidden px-3 pb-10 sm:px-4">
-      <div className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-5">
+    <main className="min-h-screen max-w-full overflow-x-hidden px-2 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:px-4 sm:pb-10">
+      <div className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-3 sm:gap-5">
         <Header />
         <Link href="/account" className="inline-flex w-fit items-center gap-2 text-sm font-bold text-slate-400 hover:text-white">
           <ArrowLeft size={16} aria-hidden />
           회원정보관리로 돌아가기
         </Link>
 
-        <section className="enterprise-panel min-w-0 overflow-hidden p-4 sm:p-5">
+        <section className="enterprise-panel min-w-0 overflow-visible p-3 sm:p-5">
           <div className="flex items-start gap-3">
             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-amber-300/25 bg-amber-300/10 text-amber-200">
               <UserPlus size={20} aria-hidden />
@@ -274,7 +274,7 @@ export default function AdminEntitlementsPage() {
 
                 <fieldset className="grid gap-2">
                   <legend className="text-sm font-bold text-slate-300">변경할 권한</legend>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {planOptions.map((option) => (
                       <button
                         key={option.id}
@@ -282,7 +282,7 @@ export default function AdminEntitlementsPage() {
                         role="radio"
                         aria-checked={planId === option.id}
                         onClick={() => setPlanId(option.id)}
-                        className={`min-w-0 rounded-xl border p-3 text-left transition sm:p-4 ${
+                        className={`min-w-0 rounded-xl border p-2.5 text-left transition sm:p-4 ${
                           planId === option.id ? "border-amber-300/45 bg-amber-300/10" : "border-surface-line bg-surface-cardSoft hover:border-cyan-300/35"
                         }`}
                       >
@@ -290,7 +290,7 @@ export default function AdminEntitlementsPage() {
                           {option.id === "free" ? <ShieldCheck size={15} aria-hidden /> : <Crown size={15} aria-hidden />}
                           <span className="min-w-0 truncate">{option.label}</span>
                         </span>
-                        <span className="mt-1 block text-xs leading-5 text-slate-400">{option.description}</span>
+                        <span className="mt-1 hidden text-xs leading-5 text-slate-400 sm:block">{option.description}</span>
                       </button>
                     ))}
                   </div>
@@ -309,7 +309,7 @@ export default function AdminEntitlementsPage() {
                     />
                   </label>
                 ) : (
-                  <p className="rounded-xl border border-surface-line bg-surface-cardSoft p-3 text-sm font-bold leading-6 text-slate-300">
+                  <p className="rounded-xl border border-surface-line bg-surface-cardSoft p-3 text-xs font-bold leading-5 text-slate-300 sm:text-sm sm:leading-6">
                     Basic은 기본 플랜이라 유지기간을 설정하지 않습니다. 선택한 계정의 수동 Pro 권한을 제거합니다.
                   </p>
                 )}
@@ -320,7 +320,7 @@ export default function AdminEntitlementsPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-amber-300/35 bg-amber-300 px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-amber-200 disabled:cursor-wait disabled:opacity-70"
+                  className="mb-[env(safe-area-inset-bottom)] inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-amber-300/35 bg-amber-300 px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-amber-200 disabled:cursor-wait disabled:opacity-70"
                 >
                   {isSubmitting ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <ShieldCheck size={16} aria-hidden />}
                   {isBasicPlan ? "Basic으로 전환하기" : "권한 부여하기"}
