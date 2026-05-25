@@ -2006,3 +2006,10 @@ The health endpoint now reports a launch readiness score and structured blocking
 - Basic 카드는 별도 가격 카드로 반복하지 않고 현재 이용 상태와 Basic 둘러보기 액션으로 분리한다.
 - 결제 버튼은 기존 `startCheckout`, 네이티브 구매, 웹 checkout 분기를 그대로 호출한다.
 - 340px와 360px 라이트/다크 모드에서 `/pro`, `/pro?market=crypto`, `/pro?market=stocks` 가로 overflow가 없음을 확인했다.
+
+## 2026-05-25 인증 세션 저장 점검
+
+- 현재 앱은 `supabase-js` 기본 세션 저장 대신 `src/lib/supabase.ts`의 커스텀 세션 유틸을 사용한다.
+- Android 네이티브 Google 로그인은 Google idToken을 Supabase id_token grant로 교환하고, 최종 Supabase 세션을 웹/앱 공통 `localStorage` 키에 저장한다.
+- `NEXT_PUBLIC_ALLOW_LOCAL_REFRESH_TOKEN=true`는 앱 재실행 후 로그인/Pro 권한 유지에는 필요하지만, refresh token이 WebView JS 접근 가능한 localStorage에 남는 보안 트레이드오프가 있다.
+- 이번 작업에서는 대규모 auth 재구성 대신 `docs/auth-session-audit.md`에 위험도와 후속 대안을 문서화하고, corrupt session cleanup 및 native signOut 실패 흡수만 최소 보정한다.

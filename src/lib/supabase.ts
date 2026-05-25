@@ -158,6 +158,7 @@ export function getSupabaseSession(): SupabaseSession | null {
     }
     return session;
   } catch {
+    clearSupabaseSession();
     return null;
   }
 }

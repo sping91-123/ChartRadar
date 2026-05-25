@@ -188,7 +188,7 @@ export function useSupabaseAuth() {
   }, []);
 
   function signOut() {
-    void nativeGoogleSignOut();
+    void nativeGoogleSignOut().catch(() => undefined);
     clearSupabaseSession();
     setSession(null);
     setUser(null);

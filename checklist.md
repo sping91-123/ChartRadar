@@ -2243,3 +2243,11 @@
 - [x] 기존 DesignPrimitives 사용 비중을 높인다.
 - [x] 340px, 360px 모바일과 라이트/다크 모드를 확인한다.
 - [x] 빌드, 타입, 스모크 검증 후 커밋한다.
+
+## 2026-05-25 인증 세션 저장 점검
+
+- [x] `docs/work-queue.md`의 세션 저장/refresh token 점검 항목을 `IN_PROGRESS`로 변경.
+- [x] Supabase 세션 저장, Google native sign-in, OAuth callback, Pro 권한 refresh 흐름 점검.
+- [x] refresh token localStorage 저장 위험도와 후속 대안을 `docs/auth-session-audit.md`에 기록.
+- [x] corrupt session 정리와 native signOut 실패 흡수 최소 보정.
+- [x] 검증 명령 전체 실행 후 work queue를 `DONE`으로 변경하고 커밋.
