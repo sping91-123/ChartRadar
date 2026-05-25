@@ -44,6 +44,51 @@ const baseStorageKey = "chartRadar.alertRules.v1";
 type PermissionState = "unsupported" | "default" | "granted" | "denied";
 type AlertMarket = "crypto" | "stocks";
 
+interface AdminPushDiagnostics {
+  scannedAt: string;
+  last24h: {
+    loggedEventCount: number;
+    sentCount: number;
+    failureCount: number;
+  };
+  diagnostics: {
+    tokenCount: number;
+    presetCount: number;
+    genericEventCount: number;
+    eligibleEventCount: number;
+    skippedLowScoreCount: number;
+    duplicateSkippedTokenCount: number;
+    sendTargetTokenCount: number;
+    subscriptionCount: number;
+  };
+  candidateEvents: Array<{
+    signalType: string;
+    market: string;
+    symbol: string | null;
+    score: number | null;
+    alertKind: string;
+    skippedReason: string | null;
+    wouldSend: boolean;
+    alertTitle: string;
+    alertBody: string;
+    isWatchlist: boolean;
+    isMarketScout: boolean;
+    isWatchedSymbol: boolean;
+    targetTokenCount: number;
+  }>;
+  recentEvents: Array<{
+    createdAt: string;
+    market: string;
+    ruleId: string;
+    signalType: string;
+    alertKind: string | null;
+    symbol: string | null;
+    title: string;
+    sentCount: number;
+  }>;
+  warnings: string[];
+}
+
 const alertMarketCopy = {
   crypto: {
     eyebrow: "알림 설정",
@@ -202,6 +247,19 @@ function formatCheckedAt(ms: number) {
   return text.replace(" 저장", "");
 }
 
+function formatAbsoluteTime(iso: string | null) {
+  if (!iso) return "아직 없음";
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) return "확인 필요";
+  return new Intl.DateTimeFormat("ko-KR", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(date);
+}
+
 function monitorReasonLabel(reason: SetupAlertMonitorStatus["reason"]) {
   if (reason === "manual") return "직접 확인";
   if (reason === "preset-change") return "조건 변경";
@@ -282,8 +340,11 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
   const [activeTestKind, setActiveTestKind] = useState<PushTestKind | null>(null);
   const [isDisablingPush, setIsDisablingPush] = useState(false);
   const [isManualChecking, setIsManualChecking] = useState(false);
+  const [isLoadingPushDiagnostics, setIsLoadingPushDiagnostics] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<string | null>(null);
+  const [pushDiagnostics, setPushDiagnostics] = useState<AdminPushDiagnostics | null>(null);
+  const [pushDiagnosticsError, setPushDiagnosticsError] = useState<string | null>(null);
 
   useEffect(() => {
     setEnabledRuleIds(readStoredRuleIds(market));
@@ -504,6 +565,29 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
       setTestResult(error instanceof Error ? error.message : "테스트 알림 발송에 실패했습니다.");
     } finally {
       setActiveTestKind(null);
+    }
+  }
+
+  async function requestPushDiagnostics() {
+    if (!session?.accessToken) {
+      setPushDiagnosticsError("관리자 로그인이 필요합니다.");
+      return;
+    }
+
+    setIsLoadingPushDiagnostics(true);
+    setPushDiagnosticsError(null);
+    try {
+      const response = await fetch("/api/admin/push-diagnostics", {
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+        cache: "no-store"
+      });
+      const payload = (await response.json().catch(() => ({}))) as AdminPushDiagnostics & { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "자동 알림 진단을 불러오지 못했습니다.");
+      setPushDiagnostics(payload);
+    } catch (error) {
+      setPushDiagnosticsError(error instanceof Error ? error.message : "자동 알림 진단을 불러오지 못했습니다.");
+    } finally {
+      setIsLoadingPushDiagnostics(false);
     }
   }
 
@@ -732,6 +816,87 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
                 {testResult}
               </p>
             ) : null}
+
+            <details className="mt-4 rounded-lg border border-white/10 bg-black/20 p-3">
+              <summary className="cursor-pointer text-xs font-black text-cyan-100">자동 알림 진단</summary>
+              <p className="mt-2 text-[11px] leading-4 text-slate-500">
+                실제 발송 없이 dry-run으로 후보와 skip 사유를 확인합니다. 토큰 원문, 이메일, 사용자 ID는 표시하지 않습니다.
+              </p>
+              <button
+                type="button"
+                onClick={() => void requestPushDiagnostics()}
+                disabled={isLoadingPushDiagnostics}
+                className="mt-3 inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-3 text-xs font-black text-cyan-100 disabled:cursor-wait disabled:opacity-60"
+              >
+                {isLoadingPushDiagnostics ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Radar size={14} aria-hidden />}
+                진단 새로고침
+              </button>
+              {pushDiagnosticsError ? (
+                <p className="mt-3 rounded-md border border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
+                  {pushDiagnosticsError}
+                </p>
+              ) : null}
+              {pushDiagnostics ? (
+                <div className="mt-3 space-y-3">
+                  <div className="grid gap-2 text-xs sm:grid-cols-4">
+                    <div className="rounded-md border border-white/10 bg-black/25 p-3">
+                      <p className="font-bold text-slate-500">진단 시각</p>
+                      <p className="mt-1 font-black text-white">{formatAbsoluteTime(pushDiagnostics.scannedAt)}</p>
+                    </div>
+                    <div className="rounded-md border border-white/10 bg-black/25 p-3">
+                      <p className="font-bold text-slate-500">토큰</p>
+                      <p className="mt-1 font-black text-white">{pushDiagnostics.diagnostics.tokenCount}개</p>
+                    </div>
+                    <div className="rounded-md border border-white/10 bg-black/25 p-3">
+                      <p className="font-bold text-slate-500">발송 후보</p>
+                      <p className="mt-1 font-black text-white">{pushDiagnostics.diagnostics.eligibleEventCount}개</p>
+                    </div>
+                    <div className="rounded-md border border-white/10 bg-black/25 p-3">
+                      <p className="font-bold text-slate-500">발송 대상</p>
+                      <p className="mt-1 font-black text-white">{pushDiagnostics.diagnostics.sendTargetTokenCount}개</p>
+                    </div>
+                  </div>
+                  <div className="grid gap-2 text-xs sm:grid-cols-4">
+                    <div className="rounded-md border border-white/10 bg-black/25 p-3">
+                      <p className="font-bold text-slate-500">저장 조건</p>
+                      <p className="mt-1 font-black text-white">{pushDiagnostics.diagnostics.presetCount}개</p>
+                    </div>
+                    <div className="rounded-md border border-white/10 bg-black/25 p-3">
+                      <p className="font-bold text-slate-500">자동 후보</p>
+                      <p className="mt-1 font-black text-white">{pushDiagnostics.diagnostics.genericEventCount}개</p>
+                    </div>
+                    <div className="rounded-md border border-white/10 bg-black/25 p-3">
+                      <p className="font-bold text-slate-500">낮은 점수 skip</p>
+                      <p className="mt-1 font-black text-white">{pushDiagnostics.diagnostics.skippedLowScoreCount}개</p>
+                    </div>
+                    <div className="rounded-md border border-white/10 bg-black/25 p-3">
+                      <p className="font-bold text-slate-500">중복 skip</p>
+                      <p className="mt-1 font-black text-white">{pushDiagnostics.diagnostics.duplicateSkippedTokenCount}개</p>
+                    </div>
+                  </div>
+                  <div className="rounded-md border border-white/10 bg-black/25 p-3 text-xs">
+                    <p className="font-bold text-slate-500">최근 24시간 기록</p>
+                    <p className="mt-1 font-black text-white">
+                      기록 {pushDiagnostics.last24h.loggedEventCount}개 · 발송 합계 {pushDiagnostics.last24h.sentCount}개 · dry-run 실패 {pushDiagnostics.last24h.failureCount}개
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-white/10 bg-black/25 p-3">
+                    <p className="text-xs font-black text-slate-300">최근 후보 이벤트</p>
+                    <div className="mt-2 space-y-2">
+                      {pushDiagnostics.candidateEvents.slice(0, 5).map((event, index) => (
+                        <div key={`${event.signalType}-${event.symbol ?? "market"}-${index}`} className="rounded-md border border-white/10 bg-black/20 p-2 text-[11px] leading-4 text-slate-400">
+                          <p className="font-black text-white">{event.alertTitle}</p>
+                          <p>
+                            {event.market} · {event.symbol ?? "시장"} · {event.score ?? "-"}점 · {event.alertKind} · {event.wouldSend ? "wouldSend" : event.skippedReason ?? "skip"}
+                          </p>
+                        </div>
+                      ))}
+                      {pushDiagnostics.candidateEvents.length === 0 ? <p className="text-[11px] text-slate-500">후보 이벤트가 없습니다.</p> : null}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </details>
           </div>
         ) : null}
       </div>

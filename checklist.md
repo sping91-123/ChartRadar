@@ -2126,3 +2126,15 @@
 - [x] dry-run 진단에 관심코인 여부, 시장 레이더 여부, 알림 제목/본문, 근거 라벨을 포함한다.
 - [x] build, 모바일 smoke, 전체 smoke, 운영 smoke, tsc, diff check, eligibility sanity로 검증한다.
 - [x] 검증 통과 후 커밋한다.
+
+## 2026-05-25 P1 자동 푸시 운영 진단.
+
+- [x] 작업 전 git 상태와 `docs/work-queue.md` P1 상태를 확인한다.
+- [x] P1 상태를 `IN_PROGRESS`로 변경한다.
+- [x] 기존 관리자 판정 방식과 push-cron dry-run 응답 구조를 확인한다.
+- [x] 관리자 전용 push diagnostics API를 추가한다.
+- [x] 알림 화면에 관리자 전용 접이식 진단 패널을 추가한다.
+- [x] 토큰 원문, 이메일, user_id가 응답과 화면에 노출되지 않는지 확인한다.
+- [x] build, mobile smoke, tsc, diff check, 관리자 접근 정적 검증을 통과한다.
+- [x] all smoke와 ops smoke는 기존 매크로 갱신 신선도 실패로 막히는 것을 확인한다.
+- [x] P1 상태를 `DONE`으로 변경한다.

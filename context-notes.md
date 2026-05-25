@@ -1900,3 +1900,13 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 비관심 알트 시장 레이더 후보는 사용자별 저장 심볼 여부를 보고 본문을 다르게 만든다. 저장 심볼이 아니면 `관심코인은 아니지만, {symbol}가 알트 시장 스캔에서 강한 후보로 감지되었습니다.`라고 설명해 관심코인 알림으로 오해하지 않게 한다.
 - dry-run 진단은 `alertTitle`, `alertBody`, `isWatchlist`, `isMarketScout`, `isWatchedSymbol`, `evidenceLabels`, `marketScoutRank`를 내려준다. 운영에서는 실제 발송 없이 왜 wouldSend 또는 skippedLowScore인지 확인할 수 있다.
 - 설정 UI의 큰 구조 변경은 이번 범위에서 하지 않는다. 다만 알림 규칙 문구는 `시장 레이더 후보 감지`, `관심코인 조건 재감지`, `청산 압력`처럼 분리했고, 향후 UI에서는 관심코인 알림과 시장 레이더 후보 알림을 더 명확한 섹션으로 나누는 TODO가 필요하다.
+
+## 2026-05-25 P1 자동 푸시 운영 진단.
+
+- 이번 범위는 전체 관리자 페이지가 아니라 알림 화면 관리자 전용 요약과 API로 제한한다.
+- 관리자 판정은 기존 테스트 패널과 동일하게 `profile.plan=admin` 또는 `app_metadata.role/plan=admin`을 사용한다.
+- `/api/admin/push-diagnostics`는 Bearer Supabase 세션으로 관리자만 접근 가능하며 `runPushAlertScan`을 dry-run으로만 실행하므로 실제 FCM 발송과 `push_alert_events` 기록은 하지 않는다.
+- API 응답은 `tokenCount`, `presetCount`, `genericEventCount`, `eligibleEventCount`, `skippedLowScoreCount`, `duplicateSkippedTokenCount`, `sendTargetTokenCount`, `subscriptionCount`와 후보 이벤트 일부를 반환한다.
+- 최근 `push_alert_events`는 `user_id`를 선택하지 않고 title/body/payload 일부만 요약해 토큰, 이메일, CRON_SECRET, 원문 user_id가 노출되지 않게 한다.
+- 일반 사용자에게는 진단 UI가 렌더링되지 않는다.
+- 검증에서 build, mobile smoke, tsc, diff check, 관리자 접근 정적 검증은 통과했다. `smoke:all`과 `smoke:ops`는 이번 변경과 무관한 `매크로 갱신 신선도 - macroCalendarUpdatedAtIso가 없거나 72시간보다 오래되었습니다.` 항목에서 실패한다.
