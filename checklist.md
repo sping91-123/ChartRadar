@@ -2192,3 +2192,12 @@
 - [x] `pushNotificationActionPerformed`에서 targetPath 로그와 내부 이동을 유지한다.
 - [x] 테스트 푸시와 자동 푸시의 `targetPath` 문자열 포함 여부를 재확인한다.
 - [x] build, mobile smoke, all smoke, ops smoke, tsc, diff check, Android debug build로 검증한다.
+
+## 2026-05-25 푸시 탭 종류별 라우팅 수정.
+
+- [x] 모든 알림이 `/alerts`로 fallback되는 원인을 앱 수신 mapper와 legacy `target` 값에서 확인한다.
+- [x] `resolvePushTargetPath` helper를 추가해 `targetPath`, `alertKind`, `market`, `symbol`, `type` 기반 이동을 통합한다.
+- [x] 서버 자동 푸시 payload에 camelCase `alertKind`와 종류별 `targetPath`를 명확히 유지한다.
+- [x] 허용 route allowlist와 외부 URL 차단 규칙을 적용한다.
+- [x] push_test, BTC, ETH, ADA, liquidation, macro, global_momentum, QQQ sanity mapping을 검증한다.
+- [x] build, mobile smoke, all smoke, ops smoke, tsc, diff check로 검증한다.

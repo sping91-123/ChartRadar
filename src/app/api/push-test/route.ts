@@ -32,6 +32,7 @@ async function recordPushTestEvent(userId: string, message: ReturnType<typeof ge
       payload: {
         type: "push_test",
         kind: message.kind,
+        alertKind: "push_test",
         target: message.target,
         targetPath: "/alerts",
         sent
@@ -77,6 +78,7 @@ export async function POST(request: Request) {
       data: {
         type: "push_test",
         kind: message.kind,
+        alertKind: "push_test",
         target: message.target,
         targetPath: "/alerts"
       }

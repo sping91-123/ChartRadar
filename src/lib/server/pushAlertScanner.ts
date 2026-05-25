@@ -48,7 +48,7 @@ interface PushAlertPresetRow {
 interface PushAlertEvent {
   market: SetupAlertMarket;
   ruleId: RadarAlertRuleId;
-  alertKind: "market_scout" | "watchlist" | "liquidation" | "macro" | "global";
+  alertKind: "market_scout" | "watchlist" | "liquidation" | "macro" | "global" | "global_momentum" | "global_asset" | "risk_off" | "semiconductor_leadership";
   eventKey: string;
   title: string;
   body: string;
@@ -230,6 +230,10 @@ function stockSetupTargetPath(symbol?: string) {
 
 function setupTargetPath(market: SetupAlertMarket, symbol?: string) {
   return market === "crypto" ? cryptoSetupTargetPath(symbol) : stockSetupTargetPath(symbol);
+}
+
+function stockSetupAlertKind(symbol: string): PushAlertEvent["alertKind"] {
+  return stockIndexSymbols.has(symbol) ? "global_momentum" : "global_asset";
 }
 
 function asArray<T>(value: T[] | null | undefined): T[] {
@@ -448,17 +452,19 @@ function setupToEvent(
   const side = setup.plan.side;
   const isGlobalMomentum = market === "stocks" && ruleId === "stock-momentum";
   const evidenceLabels = setupEvidenceLabels(setup);
+  const alertKind = market === "stocks" ? stockSetupAlertKind(setup.symbol) : "market_scout";
   return {
     market,
     ruleId,
-    alertKind: market === "stocks" ? "global" : "market_scout",
+    alertKind,
     eventKey: `${prefix}:${market}:${setup.symbol}:${setup.timeframe}:${side}:${eventBucket(15)}`,
     title: setupMarketScoutTitle(setup, market, ruleId),
     body: setupMarketScoutBody(setup, market, ruleId),
     data: {
       type: ruleId,
       market,
-      alert_kind: market === "stocks" ? "global" : "market_scout",
+      alert_kind: alertKind,
+      alertKind,
       target: market === "stocks" ? "/alerts?market=global" : "/alerts?market=crypto",
       targetPath: setupTargetPath(market, setup.symbol),
       symbol: setup.symbol,
@@ -501,6 +507,7 @@ function matchedSetupToEvent(
       type: ruleId,
       market,
       alert_kind: "watchlist",
+      alertKind: "watchlist",
       target: market === "stocks" ? "/alerts?market=global" : "/alerts?market=crypto",
       targetPath: setupTargetPath(market, setup.symbol),
       symbol: setup.symbol,
@@ -668,6 +675,7 @@ async function scanLiquidationEvent(): Promise<PushAlertEvent | null> {
       type: "liquidation-pressure",
       market: "crypto",
       alert_kind: "liquidation",
+      alertKind: "liquidation",
       target: "/crypto",
       targetPath: "/crypto",
       pressure: String(pressure)
@@ -695,6 +703,7 @@ async function scanNewsEvent(origin: string, market: SetupAlertMarket): Promise<
       type: "macro-news",
       market,
       alert_kind: "macro",
+      alertKind: "macro",
       target: market === "stocks" ? "/news?market=global" : "/news?market=crypto",
       targetPath: market === "stocks" ? "/news?market=global" : "/news?market=crypto"
     },
@@ -735,6 +744,7 @@ async function scanMacroCalendarEvent(origin: string): Promise<PushAlertEvent | 
       type: "macro-news",
       market: "stocks",
       alert_kind: "macro",
+      alertKind: "macro",
       signal: "시장 이벤트 리마인더",
       target: "/news?market=global",
       targetPath: "/news?market=global",
@@ -762,14 +772,15 @@ function buildRiskOffEvent(setups: ScoutSetup[]): PushAlertEvent | null {
   return {
     market: "stocks",
     ruleId: "stock-momentum",
-    alertKind: "global",
+    alertKind: "risk_off",
     eventKey: `risk-off:stocks:${weakIndex.symbol}:${companion.symbol}:${eventBucket(30)}`,
     title: "Chart Radar 리스크오프 조합",
     body: `${stockSignalLabel(weakIndex.symbol)} 약세와 ${stockSignalLabel(companion.symbol)} 강세가 함께 감지됐습니다. 변동성·달러·금 흐름을 확인하세요.`,
     data: {
       type: "stock-momentum",
-      market: "stocks",
-      alert_kind: "global",
+      market: "global",
+      alert_kind: "risk_off",
+      alertKind: "risk_off",
       signal: "리스크오프 조합",
       target: "/alerts?market=global",
       targetPath: "/global",
@@ -803,14 +814,15 @@ function buildSemiconductorLeadershipEvent(setups: ScoutSetup[]): PushAlertEvent
   return {
     market: "stocks",
     ruleId: "stock-momentum",
-    alertKind: "global",
+    alertKind: "semiconductor_leadership",
     eventKey: `semiconductor-leadership:stocks:${semiconductor.symbol}:${index.symbol}:${strengthened ? "strong" : "weak"}:${eventBucket(30)}`,
     title: `Chart Radar 반도체 주도력 ${strengthened ? "강화" : "약화"}`,
     body: `${stockSignalLabel(semiconductor.symbol)} 흐름이 ${stockSignalLabel(index.symbol)}보다 ${strengthened ? "강하게" : "약하게"} 감지됐습니다. 지수와 섹터 흐름 차이를 확인하세요.`,
     data: {
       type: "stock-momentum",
-      market: "stocks",
-      alert_kind: "global",
+      market: "global",
+      alert_kind: "semiconductor_leadership",
+      alertKind: "semiconductor_leadership",
       signal: strengthened ? "반도체 주도력 강화" : "반도체 주도력 약화",
       target: "/alerts?market=global",
       targetPath: "/global/assets",

@@ -1960,3 +1960,10 @@ The health endpoint now reports a launch readiness score and structured blocking
 - AndroidManifest의 MainActivity에는 `MAIN`/`LAUNCHER` intent-filter만 있어, Android가 `OPEN_ALERTS` click action을 앱 Activity로 해석하지 못할 수 있었다.
 - 앱이 아예 열리지 않는 증상은 JS router나 `targetPath` 문제가 아니라 Android notification click intent와 Activity intent-filter 불일치 가능성이 가장 높다.
 - MainActivity에 `OPEN_ALERTS` + `DEFAULT` intent-filter를 추가해 알림 탭이 앱을 열 수 있게 하고, 열린 뒤에는 기존 `targetPath` 내부 경로 검증 규칙으로 이동한다.
+
+## 2026-05-25 푸시 탭 종류별 라우팅 수정.
+
+- 이전 수신부는 `targetPath ?? target`만 사용해서 `targetPath`가 누락되거나 legacy `target=/alerts?...`만 들어온 알림은 종류별 라우팅을 재계산하지 못했다.
+- `resolvePushTargetPath`는 먼저 안전한 `targetPath`를 보되, `/alerts` 계열 fallback이면 `type`, `alertKind`/`alert_kind`, `market`, `symbol`을 기준으로 다시 계산한다.
+- 서버 payload는 테스트 알림에 `alertKind=push_test`, 자동 글로벌 이벤트에 `global_momentum`, `global_asset`, `risk_off`, `semiconductor_leadership` 같은 명확한 alertKind를 싣는다.
+- 허용 경로는 `/alerts`, `/crypto`, `/alts`, `/global`, `/global/assets`, `/news?market=global`, `/news?market=crypto`, `/journal?market=global`, `/journal?market=crypto`로 제한한다.

@@ -1,6 +1,7 @@
 // Android 앱 푸시 권한, FCM 토큰, 서버 동기화를 관리합니다.
 import { Capacitor } from "@capacitor/core";
 import { getActiveSupabaseSession } from "@/lib/supabase";
+import { resolvePushTargetPath } from "@/lib/pushTargetPath";
 import type { PushTestKind } from "@/lib/pushTestMessages";
 import type { SetupAlertPreset } from "@/lib/setupAlertPresets";
 
@@ -49,8 +50,12 @@ export const radarPushChannelId = "radar-alerts";
 let pushListenersRegistered = false;
 
 interface PushNotificationActionEvent {
+  data?: Record<string, unknown> | null;
   notification?: {
     data?: Record<string, unknown> | null;
+    notification?: {
+      data?: Record<string, unknown> | null;
+    } | null;
   } | null;
 }
 
@@ -237,25 +242,12 @@ async function loadPushNotifications() {
 
 type PushNotificationsPlugin = NonNullable<Awaited<ReturnType<typeof loadPushNotifications>>>["plugin"];
 
-function safeInternalPushPath(value: unknown) {
-  if (typeof window === "undefined" || typeof value !== "string") return "/alerts";
-
-  const trimmed = value.trim();
-  if (!trimmed.startsWith("/") || trimmed.startsWith("//") || trimmed.includes("\\")) return "/alerts";
-  if (/[\u0000-\u001f]/.test(trimmed)) return "/alerts";
-
-  try {
-    const url = new URL(trimmed, window.location.origin);
-    if (url.origin !== window.location.origin) return "/alerts";
-    return `${url.pathname}${url.search}${url.hash}` || "/alerts";
-  } catch {
-    return "/alerts";
-  }
-}
-
-function pushActionTargetPath(event: PushNotificationActionEvent) {
-  const data = event.notification?.data ?? {};
-  return safeInternalPushPath(data.targetPath ?? data.target);
+function pushActionData(event: PushNotificationActionEvent) {
+  return {
+    ...(event.notification?.notification?.data ?? {}),
+    ...(event.notification?.data ?? {}),
+    ...(event.data ?? {})
+  };
 }
 
 async function waitForPushRegistration(PushNotifications: PushNotificationsPlugin) {
@@ -524,8 +516,12 @@ export async function registerAppPushListeners() {
   });
 
   await PushNotifications.addListener("pushNotificationActionPerformed", (event) => {
-    const targetPath = pushActionTargetPath(event as PushNotificationActionEvent);
-    console.info("[app-push] notification action performed", { targetPath });
+    const pushData = pushActionData(event as PushNotificationActionEvent);
+    const targetPath = resolvePushTargetPath(pushData);
+    console.info("[app-push] notification action performed", {
+      targetPath,
+      dataKeys: Object.keys(pushData).sort()
+    });
     if (typeof window !== "undefined") window.location.assign(targetPath);
   });
 }
