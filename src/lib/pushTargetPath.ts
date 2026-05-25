@@ -63,7 +63,6 @@ function routeFromPushMetadata(data: PushTargetData) {
   const market = normalizedValue(data.market);
   const symbol = normalizedSymbol(data.symbol);
 
-  if (type === "push_test") return "/alerts";
   if (alertKind === "liquidation" || type === "liquidation" || type === "liquidation_pressure") return "/crypto";
   if (isMacroLike(type, alertKind)) return market === "crypto" ? "/news?market=crypto" : "/news?market=global";
   if (alertKind === "global_momentum" || alertKind === "risk_off" || alertKind === "semiconductor_leadership") return "/global";
@@ -75,6 +74,7 @@ function routeFromPushMetadata(data: PushTargetData) {
     return isCryptoMajorSymbol(symbol) ? "/crypto" : "/alts";
   }
   if (market === "crypto") return "/crypto";
+  if (type === "push_test") return "/alerts";
 
   return null;
 }

@@ -1967,3 +1967,10 @@ The health endpoint now reports a launch readiness score and structured blocking
 - `resolvePushTargetPath`는 먼저 안전한 `targetPath`를 보되, `/alerts` 계열 fallback이면 `type`, `alertKind`/`alert_kind`, `market`, `symbol`을 기준으로 다시 계산한다.
 - 서버 payload는 테스트 알림에 `alertKind=push_test`, 자동 글로벌 이벤트에 `global_momentum`, `global_asset`, `risk_off`, `semiconductor_leadership` 같은 명확한 alertKind를 싣는다.
 - 허용 경로는 `/alerts`, `/crypto`, `/alts`, `/global`, `/global/assets`, `/news?market=global`, `/news?market=crypto`, `/journal?market=global`, `/journal?market=crypto`로 제한한다.
+
+## 2026-05-25 테스트 푸시 종류별 targetPath 수정.
+
+- `/api/push-test`가 모든 테스트 종류에 `type=push_test`와 `targetPath=/alerts`를 넣고 있어, 기본/코인/글로벌/매크로 테스트를 눌러도 모두 `/alerts`로 이동했다.
+- 테스트 메시지 정의에 `targetPath`, `alertKind`, `symbol`을 추가하고 API가 그 값을 그대로 FCM data와 `push_alert_events.payload`에 기록하도록 바꾼다.
+- 기본 테스트는 `/alerts`, 코인 예시는 `/crypto`, 알트 예시는 `/alts`, 글로벌 예시는 `/global`, 매크로 예시는 `/news?market=global`로 이동한다.
+- 앱 수신 로그는 실제 payload 확인을 위해 type, alertKind, market, symbol, targetPath만 출력하고 토큰이나 사용자 식별자는 출력하지 않는다.

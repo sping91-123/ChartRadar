@@ -250,6 +250,20 @@ function pushActionData(event: PushNotificationActionEvent) {
   };
 }
 
+function pushDebugValue(value: unknown) {
+  return typeof value === "string" ? value.slice(0, 120) : undefined;
+}
+
+function pushActionDebugData(data: Record<string, unknown>) {
+  return {
+    type: pushDebugValue(data.type),
+    alertKind: pushDebugValue(data.alertKind ?? data.alert_kind),
+    market: pushDebugValue(data.market),
+    symbol: pushDebugValue(data.symbol),
+    targetPath: pushDebugValue(data.targetPath)
+  };
+}
+
 async function waitForPushRegistration(PushNotifications: PushNotificationsPlugin) {
   return new Promise<string>((resolve, reject) => {
     let settled = false;
@@ -520,7 +534,7 @@ export async function registerAppPushListeners() {
     const targetPath = resolvePushTargetPath(pushData);
     console.info("[app-push] notification action performed", {
       targetPath,
-      dataKeys: Object.keys(pushData).sort()
+      data: pushActionDebugData(pushData)
     });
     if (typeof window !== "undefined") window.location.assign(targetPath);
   });

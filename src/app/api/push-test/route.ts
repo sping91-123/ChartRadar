@@ -32,9 +32,12 @@ async function recordPushTestEvent(userId: string, message: ReturnType<typeof ge
       payload: {
         type: "push_test",
         kind: message.kind,
-        alertKind: "push_test",
+        alertKind: message.alertKind,
+        alert_kind: message.alertKind,
+        market: message.market === "stocks" ? "global" : message.market,
+        ...(message.symbol ? { symbol: message.symbol } : {}),
         target: message.target,
-        targetPath: "/alerts",
+        targetPath: message.targetPath,
         sent
       }
     }
@@ -78,9 +81,12 @@ export async function POST(request: Request) {
       data: {
         type: "push_test",
         kind: message.kind,
-        alertKind: "push_test",
+        alertKind: message.alertKind,
+        alert_kind: message.alertKind,
+        market: message.market === "stocks" ? "global" : message.market,
+        ...(message.symbol ? { symbol: message.symbol } : {}),
         target: message.target,
-        targetPath: "/alerts"
+        targetPath: message.targetPath
       }
     });
   } catch (error) {

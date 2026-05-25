@@ -2201,3 +2201,11 @@
 - [x] 허용 route allowlist와 외부 URL 차단 규칙을 적용한다.
 - [x] push_test, BTC, ETH, ADA, liquidation, macro, global_momentum, QQQ sanity mapping을 검증한다.
 - [x] build, mobile smoke, all smoke, ops smoke, tsc, diff check로 검증한다.
+
+## 2026-05-25 테스트 푸시 종류별 targetPath 수정.
+
+- [x] `/api/push-test`가 기본/코인/글로벌/매크로 테스트를 모두 `targetPath=/alerts`로 보내는지 확인한다.
+- [x] 테스트 메시지 정의에 종류별 `targetPath`, `alertKind`, `symbol`을 추가한다.
+- [x] 관리자 테스트 패널에서 알트 예시까지 검증할 수 있게 한다.
+- [x] 앱 수신 로그는 type, alertKind, market, symbol, targetPath만 남기게 제한한다.
+- [x] push target mapper sanity와 build, smoke, tsc, diff check로 검증한다.
