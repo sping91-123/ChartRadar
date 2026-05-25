@@ -4,6 +4,7 @@ import { Header } from "@/components/Header";
 import { MacroTicker } from "@/components/MacroTicker";
 import { RadarNewsPanel } from "@/components/RadarNewsPanel";
 import { RadarTopNav } from "@/components/RadarTopNav";
+import { PanelCard, SectionHeader } from "@/components/ui/DesignPrimitives";
 
 export default function NewsPage({ searchParams }: { searchParams?: { market?: string } }) {
   const market = searchParams?.market === "stocks" || searchParams?.market === "global" ? "stocks" : "crypto";
@@ -16,18 +17,16 @@ export default function NewsPage({ searchParams }: { searchParams?: { market?: s
         <RadarNewsPanel
           market={market}
           afterBriefing={
-            <section className="rounded-2xl border border-surface-line bg-surface-card/75 p-4">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-accent-blue">매크로 일정</p>
-                <h2 className="mt-1 text-lg font-black text-white">이번 주 주요 매크로 일정</h2>
-                <p className="mt-1 text-sm leading-6 text-slate-500 [word-break:keep-all]">
-                  AI 브리핑을 먼저 확인한 뒤, 금리·물가·고용처럼 시장 변동성을 키울 수 있는 일정과 공식 발표 상태를 함께 점검하세요.
-                </p>
-              </div>
+            <PanelCard className="space-y-3 shadow-none">
+              <SectionHeader
+                eyebrow="매크로 일정"
+                title={market === "stocks" ? "이번 주 주요 이벤트" : "이번 주 주요 매크로 일정"}
+                description="금리·물가·고용처럼 시장 변동성을 키울 수 있는 일정과 공식 발표 상태를 보조 정보로 점검합니다."
+              />
               <div className="mt-3">
                 <MacroTicker compact market={market} />
               </div>
-            </section>
+            </PanelCard>
           }
         />
         <AppFooter />

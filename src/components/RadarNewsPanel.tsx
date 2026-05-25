@@ -28,6 +28,7 @@ import {
   type RadarNewsDirection,
   type RadarNewsItem
 } from "@/lib/radarNews";
+import { ActionButton, AppSurface, MetricRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 
 type NewsPayload = {
   updatedAt: number;
@@ -54,9 +55,9 @@ type BriefingCard = {
 
 const marketCopy = {
   crypto: {
-    eyebrow: "AI 시장 브리핑",
+    eyebrow: "시장 뉴스 리포트",
     title: "뉴스 레이더",
-    description: "오늘 시장을 움직이는 이슈를 AI가 요약하고, 차트 판단에 필요한 체크포인트로 정리합니다.",
+    description: "가격 변동성, 청산·거래량, ETF·규제·거시 이벤트를 중심으로 시장 흐름을 점검합니다.",
     marketLabel: "코인 시장",
     radarTitle: "오늘의 시장 레이더",
     directionLabel: "BTC 방향성",
@@ -66,11 +67,11 @@ const marketCopy = {
       "현재 코인 시장 전체를 흔들 만한 강한 매크로 뉴스는 잡히지 않았습니다. 개별 알트·프로젝트 뉴스는 제외하고, BTC·ETH·ETF·금리·달러·물가·고용·규제·청산 흐름에 영향을 주는 이슈가 잡히면 이곳에 표시됩니다."
   },
   stocks: {
-    eyebrow: "AI 글로벌 일정 브리핑",
-    title: "일정 레이더",
-    description: "오늘 변동성을 만들 매크로 일정과 공개 뉴스를 차트 판단에 필요한 체크포인트로 정리합니다.",
+    eyebrow: "글로벌 이벤트 리포트",
+    title: "뉴스 레이더",
+    description: "중요 일정과 공개 뉴스가 지수·금리·달러 흐름에 미칠 영향을 정리합니다.",
     marketLabel: "글로벌 시장",
-    radarTitle: "오늘의 글로벌 일정 레이더",
+    radarTitle: "오늘의 시장 레이더",
     directionLabel: "지수 방향성",
     subMarketLabel: "섹터 분위기",
     cadenceLine: "일정 레이더는 공식 발표 전후 자동 확인되며, CPI, FOMC, 고용, 금리, 원자재와 공개 뉴스의 공통 흐름을 먼저 정리합니다.",
@@ -238,6 +239,19 @@ function directionBadge(direction: RadarNewsDirection) {
   };
 }
 
+function directionTone(direction: RadarNewsDirection): "long" | "short" | "watch" {
+  if (direction === "bullish") return "long";
+  if (direction === "bearish") return "short";
+  return "watch";
+}
+
+function moodTone(mood: Mood): "long" | "short" | "watch" | "risk" {
+  if (mood === "up") return "long";
+  if (mood === "down") return "short";
+  if (mood === "risk") return "risk";
+  return "watch";
+}
+
 function moodCopy(mood: Mood) {
   if (mood === "up") {
     return {
@@ -395,6 +409,7 @@ function MarketRadarCard({
   const moodStyle = moodCopy(mood);
   const MoodIcon = moodStyle.icon;
   const copy = marketCopy[market];
+  const summary = leadSummary(briefing, mood, market);
   const checkpoint = cleanDisplayText(
     briefing?.strategyNotes?.[0],
     market === "stocks"
@@ -403,63 +418,51 @@ function MarketRadarCard({
   );
 
   return (
-    <article className={`rounded-2xl border p-4 shadow-[0_18px_50px_rgba(0,0,0,0.24)] sm:p-5 ${moodStyle.panel}`}>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-accent-blue">{copy.radarTitle}</p>
-          <h3 className="mt-2 text-2xl font-black leading-8 text-white [word-break:keep-all]">{moodStyle.risk}</h3>
-          <p className="mt-3 text-sm leading-6 text-slate-300 [word-break:keep-all]">{leadSummary(briefing, mood, market)}</p>
-        </div>
-        <div className={`inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-black ${moodStyle.badge}`}>
-          <MoodIcon size={16} aria-hidden />
-          <span>{moodStyle.label}</span>
-          {moodStyle.caption ? <span className="text-[11px] opacity-80">{moodStyle.caption}</span> : null}
-        </div>
+    <PanelCard className="space-y-4">
+      <SectionHeader
+        eyebrow={copy.radarTitle}
+        title={moodStyle.risk}
+        description={summary}
+        action={
+          <StatusPill tone={moodTone(mood)} icon={MoodIcon}>
+            {moodStyle.label}
+          </StatusPill>
+        }
+      />
+
+      <div className="grid gap-x-5 sm:grid-cols-2">
+        <MetricRow label="위험자산 심리" value={moodStyle.risk} />
+        <MetricRow label={copy.directionLabel} value={moodStyle.chartTone} />
+        <MetricRow label={copy.subMarketLabel} value={moodStyle.subTone} />
+        <MetricRow label="업데이트" value={reportTimeLabel(updatedAt)} />
       </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-          <p className="text-[11px] font-bold text-slate-500">위험자산 심리</p>
-          <p className="mt-1 text-sm font-black text-white">{moodStyle.risk}</p>
+      <AppSurface tone="inset" padding="sm" className="shadow-none">
+        <div className="flex items-start gap-2">
+          <ListChecks size={15} className="mt-0.5 shrink-0 text-ui-brand" aria-hidden />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-ui-text">오늘 체크포인트</p>
+            <p className="mt-1 text-sm leading-6 text-ui-muted [word-break:keep-all]">{checkpoint}</p>
+          </div>
         </div>
-        <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-          <p className="text-[11px] font-bold text-slate-500">{copy.directionLabel}</p>
-          <p className="mt-1 text-sm font-black text-white">{moodStyle.chartTone}</p>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-          <p className="text-[11px] font-bold text-slate-500">{copy.subMarketLabel}</p>
-          <p className="mt-1 text-sm font-black text-white">{moodStyle.subTone}</p>
-        </div>
-        <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-          <p className="text-[11px] font-bold text-slate-500">업데이트 시간</p>
-          <p className="mt-1 text-sm font-black text-white">{reportTimeLabel(updatedAt)}</p>
-        </div>
-      </div>
-
-      <div className="mt-4 rounded-xl border border-accent-blue/20 bg-accent-blue/10 p-3">
-        <div className="flex items-center gap-2">
-          <ListChecks size={15} className="text-accent-blue" aria-hidden />
-          <p className="text-sm font-black text-white">오늘 체크포인트</p>
-        </div>
-        <p className="mt-2 text-sm leading-6 text-slate-300 [word-break:keep-all]">{checkpoint}</p>
-      </div>
-    </article>
+      </AppSurface>
+    </PanelCard>
   );
 }
 
 function EmptyBriefingCard({ copy }: { copy: (typeof marketCopy)[RadarNewsMarket] }) {
   return (
-    <div className="rounded-2xl border border-accent-blue/20 bg-accent-blue/10 p-5">
+    <PanelCard>
       <div className="flex items-start gap-3">
-        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-accent-blue/25 bg-black/20 text-accent-blue">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-ui-sm border border-ui-line bg-ui-inset text-ui-brand">
           <Clock3 size={18} aria-hidden />
         </div>
         <div>
-          <h3 className="text-base font-black text-white">브리핑 준비 중</h3>
-          <p className="mt-2 text-sm leading-6 text-slate-300 [word-break:keep-all]">{copy.emptyState}</p>
+          <h3 className="text-base font-semibold text-ui-text">리포트 준비 중</h3>
+          <p className="mt-2 text-sm leading-6 text-ui-muted [word-break:keep-all]">{copy.emptyState}</p>
         </div>
       </div>
-    </div>
+    </PanelCard>
   );
 }
 
@@ -481,29 +484,29 @@ function BriefingDetail({
   const relatedItems = sourceReferenceItems(card.relatedItems);
 
   return (
-    <div className="mt-3 space-y-3 rounded-2xl border border-accent-blue/20 bg-black/25 p-4">
-      <section className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+    <AppSurface tone="inset" padding="md" className="mt-3 space-y-4 shadow-none">
+      <section>
         <div className="flex items-center gap-2">
-          <Sparkles size={15} className="text-accent-blue" aria-hidden />
-          <h4 className="text-sm font-black text-white">핵심 요약</h4>
+          <Sparkles size={15} className="text-ui-brand" aria-hidden />
+          <h4 className="text-sm font-semibold text-ui-text">핵심 요약</h4>
         </div>
-        <p className="mt-2 text-sm leading-6 text-slate-300 [word-break:keep-all]">{keySummary}</p>
+        <p className="mt-2 text-sm leading-6 text-ui-muted [word-break:keep-all]">{keySummary}</p>
       </section>
 
-      <section className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+      <section className="border-t border-ui-line pt-4">
         <div className="flex items-center gap-2">
-          <Activity size={15} className="text-accent-blue" aria-hidden />
-          <h4 className="text-sm font-black text-white">시장 현황</h4>
+          <Activity size={15} className="text-ui-brand" aria-hidden />
+          <h4 className="text-sm font-semibold text-ui-text">시장 현황</h4>
         </div>
-        <p className="mt-2 text-sm leading-6 text-slate-300 [word-break:keep-all]">{marketStatus}</p>
+        <p className="mt-2 text-sm leading-6 text-ui-muted [word-break:keep-all]">{marketStatus}</p>
       </section>
 
-      <section className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+      <section className="border-t border-ui-line pt-4">
         <div className="flex items-center gap-2">
-          <Newspaper size={15} className="text-accent-blue" aria-hidden />
-          <h4 className="text-sm font-black text-white">주요 이슈</h4>
+          <Newspaper size={15} className="text-ui-brand" aria-hidden />
+          <h4 className="text-sm font-semibold text-ui-text">주요 이슈</h4>
         </div>
-        <p className="mt-2 text-sm leading-6 text-slate-300 [word-break:keep-all]">
+        <p className="mt-2 text-sm leading-6 text-ui-muted [word-break:keep-all]">
           {issueDetail}
         </p>
         {relatedItems.length ? (
@@ -514,40 +517,40 @@ function BriefingDetail({
                 href={item.link}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-start justify-between gap-3 rounded-lg border border-white/10 bg-black/20 p-2 text-xs leading-5 text-slate-400 transition hover:border-accent-blue/35 hover:text-slate-200"
+                className="flex items-start justify-between gap-3 rounded-ui-sm border border-ui-line bg-ui-panel p-2 text-xs leading-5 text-ui-muted transition hover:border-ui-lineStrong hover:text-ui-text"
               >
                 <span className="[word-break:keep-all]">{sourceReferenceTitle(item)}</span>
-                <ExternalLink size={12} className="mt-1 shrink-0 text-accent-blue" aria-hidden />
+                <ExternalLink size={12} className="mt-1 shrink-0 text-ui-brand" aria-hidden />
               </a>
             ))}
           </div>
         ) : null}
       </section>
 
-      <section className="grid gap-3 md:grid-cols-2">
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+      <section className="grid gap-4 border-t border-ui-line pt-4 md:grid-cols-2">
+        <div>
           <div className="flex items-center gap-2">
-            <BarChart3 size={15} className="text-accent-blue" aria-hidden />
-            <h4 className="text-sm font-black text-white">차트레이더 해석</h4>
+            <BarChart3 size={15} className="text-ui-brand" aria-hidden />
+            <h4 className="text-sm font-semibold text-ui-text">차트레이더 해석</h4>
           </div>
           <ul className="mt-2 space-y-2">
             {(marketImpact.length ? marketImpact : [keySummary]).slice(0, 3).map((item) => (
-              <li key={item} className="flex gap-2 text-sm leading-6 text-slate-300 [word-break:keep-all]">
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent-blue" />
+              <li key={item} className="flex gap-2 text-sm leading-6 text-ui-muted [word-break:keep-all]">
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-ui-brand" />
                 <span>{item}</span>
               </li>
             ))}
           </ul>
         </div>
-        <div className="rounded-xl border border-signal-warning/20 bg-signal-warning/10 p-3">
+        <div>
           <div className="flex items-center gap-2">
-            <Target size={15} className="text-signal-warning" aria-hidden />
-            <h4 className="text-sm font-black text-white">오늘 체크할 포인트</h4>
+            <Target size={15} className="text-ui-risk" aria-hidden />
+            <h4 className="text-sm font-semibold text-ui-text">오늘 체크할 포인트</h4>
           </div>
           <ul className="mt-2 space-y-2">
             {checkpoints.slice(0, 3).map((item) => (
-              <li key={item} className="flex gap-2 text-sm leading-6 text-slate-300 [word-break:keep-all]">
-                <CheckCircle2 size={14} className="mt-1 shrink-0 text-signal-warning" aria-hidden />
+              <li key={item} className="flex gap-2 text-sm leading-6 text-ui-muted [word-break:keep-all]">
+                <CheckCircle2 size={14} className="mt-1 shrink-0 text-ui-risk" aria-hidden />
                 <span>{item}</span>
               </li>
             ))}
@@ -555,16 +558,16 @@ function BriefingDetail({
         </div>
       </section>
 
-      <section className="rounded-xl border border-accent-blue/20 bg-accent-blue/10 p-3">
+      <section className="border-t border-ui-line pt-4">
         <div className="flex items-center gap-2">
-          <Compass size={15} className="text-accent-blue" aria-hidden />
-          <h4 className="text-sm font-black text-white">요약</h4>
+          <Compass size={15} className="text-ui-brand" aria-hidden />
+          <h4 className="text-sm font-semibold text-ui-text">요약</h4>
         </div>
-        <p className="mt-2 text-sm font-bold leading-6 text-slate-200 [word-break:keep-all]">
+        <p className="mt-2 text-sm font-semibold leading-6 text-ui-text [word-break:keep-all]">
           {finalSummary}
         </p>
       </section>
-    </div>
+    </AppSurface>
   );
 }
 
@@ -585,42 +588,34 @@ function BriefingCardView({
   const Icon = style.icon;
 
   return (
-    <article className="rounded-2xl border border-white/10 bg-surface-card/90 p-4 shadow-[0_18px_45px_rgba(0,0,0,0.18)]">
+    <PanelCard className="space-y-3 shadow-none">
       <div className="flex flex-wrap items-center gap-2">
-        <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[11px] font-black ${style.badge}`}>
-          <Icon size={13} aria-hidden />
+        <StatusPill tone={directionTone(card.tone)} icon={Icon}>
           {style.label}
-          {style.caption ? <span className="opacity-80">{style.caption}</span> : null}
-        </span>
-        <span className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-black/20 px-2 py-1 text-[11px] font-bold text-slate-500">
-          <Clock3 size={12} aria-hidden />
+        </StatusPill>
+        <StatusPill tone="info" icon={Clock3}>
           {timeLabel(updatedAt)}
-        </span>
+        </StatusPill>
       </div>
 
-      <h3 className="mt-3 text-lg font-black leading-7 text-white [word-break:keep-all]">{card.title}</h3>
-      <p className="mt-2 line-clamp-3 text-sm leading-6 text-slate-300 [word-break:keep-all]">{card.summary}</p>
+      <h3 className="text-base font-semibold leading-6 text-ui-text [word-break:keep-all] sm:text-lg">{card.title}</h3>
+      <p className="line-clamp-2 text-sm leading-6 text-ui-muted [word-break:keep-all]">{card.summary}</p>
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {card.tags.slice(0, 5).map((tag) => (
-          <span key={tag} className="rounded-md border border-accent-blue/20 bg-accent-blue/10 px-2 py-1 text-[11px] font-black text-accent-blue">
+      <div className="flex flex-wrap gap-1.5">
+        {card.tags.slice(0, 3).map((tag) => (
+          <span key={tag} className="rounded-ui-sm border border-ui-line bg-ui-inset px-2 py-1 text-[11px] font-semibold text-ui-muted">
             {tag}
           </span>
         ))}
       </div>
 
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={expanded}
-        className="mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-accent-blue/30 bg-accent-blue/10 px-3 text-sm font-black text-accent-blue transition hover:border-accent-blue/50 hover:bg-accent-blue/20 sm:w-auto"
-      >
+      <ActionButton tone={expanded ? "ghost" : "secondary"} onClick={onToggle} aria-expanded={expanded} className="w-full sm:w-auto">
         {expanded ? "상세 접기" : "자세히 보기"}
         {expanded ? <ChevronUp size={15} aria-hidden /> : <ChevronDown size={15} aria-hidden />}
-      </button>
+      </ActionButton>
 
       {expanded ? <BriefingDetail card={card} briefing={briefing} /> : null}
-    </article>
+    </PanelCard>
   );
 }
 
@@ -629,44 +624,46 @@ function SourceReferenceList({ items }: { items: RadarNewsItem[] }) {
 
   if (!references.length) {
     return (
-      <div className="rounded-2xl border border-surface-line bg-surface-card/55 p-3 text-xs font-bold text-slate-500">
+      <AppSurface tone="inset" padding="sm" className="text-xs font-semibold text-ui-muted shadow-none">
         확인된 원문 링크 없음
-      </div>
+      </AppSurface>
     );
   }
 
   return (
-    <details className="rounded-2xl border border-surface-line bg-surface-card/70 p-4">
-      <summary className="cursor-pointer text-sm font-black text-white">참고 뉴스 원문 보기</summary>
-      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <AppSurface as="details" tone="panel" padding="md" className="shadow-none">
+      <summary className="cursor-pointer text-sm font-semibold text-ui-text">참고 뉴스 원문 보기</summary>
+      <div className="mt-3 grid gap-2">
         {references.slice(0, 12).map((item) => {
           const style = directionBadge(item.direction);
           const sourceName = displayNewsSource(item.source) || sourceDomain(item.link);
           return (
-            <article key={item.id} className="rounded-xl border border-white/10 bg-black/20 p-3">
-              <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-slate-500">
+            <article key={item.id} className="border-t border-ui-line pt-3 first:border-t-0 first:pt-0">
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-ui-subtle">
                 {sourceName ? <span>{sourceName}</span> : null}
                 <span>{timeLabel(item.publishedAt)}</span>
-                <span className={`rounded-md border px-1.5 py-0.5 ${style.badge}`}>{style.label}</span>
+                <StatusPill tone={directionTone(item.direction)} className="min-h-5 px-1.5 py-0 text-[10px]">
+                  {style.label}
+                </StatusPill>
               </div>
               <a
                 href={item.link}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-2 flex items-start justify-between gap-3 text-sm font-black leading-5 text-white transition hover:text-accent-blue [word-break:keep-all]"
+                className="mt-2 flex items-start justify-between gap-3 text-sm font-semibold leading-5 text-ui-text transition hover:text-ui-brand [word-break:keep-all]"
               >
-                <span className="line-clamp-3">{sourceReferenceTitle(item)}</span>
-                <ExternalLink size={13} className="mt-1 shrink-0 text-accent-blue" aria-hidden />
+                <span className="line-clamp-2">{sourceReferenceTitle(item)}</span>
+                <ExternalLink size={13} className="mt-1 shrink-0 text-ui-brand" aria-hidden />
               </a>
               {item.originalTitle && item.originalTitle !== sourceReferenceTitle(item) ? (
-                <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-500 [word-break:break-word]">원문: {item.originalTitle}</p>
+                <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-ui-subtle [word-break:break-word]">원문: {item.originalTitle}</p>
               ) : null}
-              <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-400 [word-break:keep-all]">{cleanDisplayText(item.summary)}</p>
+              <p className="mt-2 line-clamp-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{cleanDisplayText(item.summary)}</p>
             </article>
           );
         })}
       </div>
-    </details>
+    </AppSurface>
   );
 }
 
@@ -728,51 +725,48 @@ export function RadarNewsPanel({ market = "crypto", afterBriefing }: { market?: 
 
   return (
     <section className="space-y-5">
-      <div className="news-radar-hero overflow-hidden rounded-2xl border border-accent-blue/20 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.16),transparent_32%),linear-gradient(135deg,rgba(15,23,42,0.96),rgba(2,6,23,0.96))] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.32)] sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 rounded-full border border-accent-blue/20 bg-accent-blue/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-accent-blue">
-              <Sparkles size={13} aria-hidden />
-              {copy.eyebrow}
+      <PanelCard>
+        <SectionHeader
+          eyebrow={copy.eyebrow}
+          title={copy.title}
+          description={copy.description}
+          action={
+            <div className="flex flex-col gap-1 sm:items-end">
+              <ActionButton tone="secondary" onClick={loadNews} disabled={status === "loading"}>
+                <RefreshCcw className={status === "loading" ? "animate-spin" : ""} size={16} aria-hidden />
+                다시 정리
+              </ActionButton>
+              <p className="text-[11px] font-semibold text-ui-subtle">{payload?.cached ? "저장된 1시간 리포트" : refreshLabel(payload?.refreshIntervalMs)}</p>
             </div>
-            <h2 className="mt-4 text-3xl font-black leading-9 text-white sm:text-4xl">{copy.title}</h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 [word-break:keep-all]">{copy.description}</p>
-          </div>
-          <div className="flex flex-col gap-2 sm:items-end">
-            <button
-              type="button"
-              onClick={loadNews}
-              disabled={status === "loading"}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-accent-blue/30 bg-accent-blue/15 px-4 text-sm font-black text-accent-blue transition hover:border-accent-blue/50 hover:bg-accent-blue/20 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <RefreshCcw className={status === "loading" ? "animate-spin" : ""} size={16} aria-hidden />
-              다시 정리
-            </button>
-            <p className="text-[11px] font-bold text-slate-500">{payload?.cached ? "저장된 1시간 리포트" : refreshLabel(payload?.refreshIntervalMs)}</p>
-          </div>
-        </div>
-      </div>
+          }
+        />
+      </PanelCard>
 
-      {error ? <div className="rounded-xl border border-signal-danger/25 bg-signal-danger/10 p-3 text-sm font-bold text-signal-danger">{error}</div> : null}
+      {error ? (
+        <AppSurface tone="inset" padding="sm" className="border-rose-400/24 bg-rose-400/10 text-sm font-semibold text-ui-short shadow-none">
+          {error}
+        </AppSurface>
+      ) : null}
 
       {isInitialLoading ? (
-        <div className="rounded-2xl border border-accent-blue/20 bg-accent-blue/10 p-5 text-sm font-bold leading-6 text-accent-blue">
-          브리핑 준비 중입니다. 공개 뉴스와 매크로 흐름을 읽어 시장 해석과 체크포인트를 정리하고 있습니다.
-        </div>
+        <AppSurface tone="inset" padding="md" className="text-sm font-semibold leading-6 text-ui-brand shadow-none">
+          리포트 준비 중입니다. 공개 뉴스와 매크로 흐름을 읽어 시장 해석과 체크포인트를 정리하고 있습니다.
+        </AppSurface>
       ) : null}
 
       <MarketRadarCard briefing={briefing} digest={digest} market={market} updatedAt={payload?.updatedAt} hasBriefing={hasBriefing} />
 
       <section className="space-y-3">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-accent-blue">AI 브리핑</p>
-            <h3 className="mt-1 text-xl font-black text-white">오늘의 AI 브리핑</h3>
-          </div>
-          <span className="hidden rounded-lg border border-white/10 bg-black/20 px-2 py-1 text-[11px] font-bold text-slate-500 sm:inline-flex">
-            {refreshLabel(payload?.refreshIntervalMs)}
-          </span>
-        </div>
+        <SectionHeader
+          eyebrow={market === "stocks" ? "이벤트 리포트" : "시장 구조 리포트"}
+          title="오늘의 AI 브리핑"
+          description={market === "stocks" ? "지수, 금리, 달러와 연결되는 공개 일정과 뉴스 흐름입니다." : "가격 변동성, 주요 코인 흐름, 규제·ETF·거시 재료를 중심으로 정리합니다."}
+          action={
+            <StatusPill tone="info" icon={Clock3}>
+              {refreshLabel(payload?.refreshIntervalMs)}
+            </StatusPill>
+          }
+        />
 
         {cards.length ? (
           <div className="grid gap-3">
@@ -796,13 +790,15 @@ export function RadarNewsPanel({ market = "crypto", afterBriefing }: { market?: 
 
       {afterBriefing}
 
-      <div className="rounded-2xl border border-accent-blue/20 bg-accent-blue/10 p-4">
-        <div className="flex items-center gap-2">
-          <ShieldAlert size={15} className="text-accent-blue" aria-hidden />
-          <p className="text-sm font-black text-white">시장 해석 기준</p>
+      <PanelCard className="shadow-none">
+        <div className="flex items-start gap-2">
+          <ShieldAlert size={15} className="mt-0.5 shrink-0 text-ui-brand" aria-hidden />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-ui-text">시장 해석 기준</p>
+            <p className="mt-2 text-sm leading-6 text-ui-muted [word-break:keep-all]">{copy.cadenceLine}</p>
+          </div>
         </div>
-        <p className="mt-2 text-sm leading-6 text-slate-300 [word-break:keep-all]">{copy.cadenceLine}</p>
-      </div>
+      </PanelCard>
 
     </section>
   );
