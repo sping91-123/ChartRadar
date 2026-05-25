@@ -292,7 +292,7 @@ function MacroNewsItem({ item, sectionLabel, subdued = false }: { item: MacroEve
         <MacroNewsValue label="이전" value={previousDisplay} pending={previousDisplay === "이전 확인 필요"} />
       </div>
 
-      <p className="mt-2 line-clamp-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{item.marketImpact}</p>
+      <p className="mt-2 min-w-0 whitespace-normal text-xs leading-relaxed text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]">{item.marketImpact}</p>
       {sourceUrl ? (
         <a href={sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex max-w-full items-center gap-1 text-[11px] font-semibold text-ui-brand hover:underline">
           <span className="truncate">{item.officialUrl ? "공식 확인" : "출처 확인"}</span>
