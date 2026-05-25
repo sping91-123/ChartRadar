@@ -7,6 +7,7 @@ import {
   type MacroEventImportance,
   type MacroEventItem
 } from "@/data/macroEvents";
+import { hasConfirmedActualValue } from "@/lib/macro/macroStatus";
 import { normalizeMacroEvents } from "@/lib/macro/normalizeMacroEvent";
 import { getBeaOfficialEnrichments } from "@/lib/macro/sourceAdapters/bea";
 import { fetchBlsOfficialActuals } from "@/lib/macro/sourceAdapters/bls";
@@ -197,6 +198,51 @@ function sortItems(items: MacroEventItem[]) {
   });
 }
 
+function eventDedupeKey(item: MacroEventItem) {
+  const dateKey = Number.isFinite(Date.parse(item.releaseAt)) ? new Date(item.releaseAt).toISOString().slice(0, 10) : item.releaseAt;
+  return `${normalizeTitle(item.label).toLowerCase()}|${dateKey}|${item.source}`;
+}
+
+function isRecentReleasedMacroFallback(item: MacroEventItem, now: number) {
+  const releaseTime = Date.parse(item.releaseAt);
+  if (!Number.isFinite(releaseTime)) return false;
+  if (releaseTime > now || now - releaseTime > PREVIOUS_RELEASE_RETENTION_MS) return false;
+  if (item.importance === 3) return true;
+  return IMPORTANT_USD_EVENTS.some((pattern) => pattern.test(item.label));
+}
+
+function normalizeRecentReleasedFallback(item: MacroEventItem): MacroEventItem {
+  const hasActual = hasConfirmedActualValue(item.actualValue ?? item.actual);
+  const isDocumentEvent = item.eventType === "document_release" || item.eventType === "meeting_event" || item.eventType === "speech_event" || item.isDocumentEvent;
+
+  return {
+    ...item,
+    state: "released",
+    status: hasActual ? "released" : isDocumentEvent ? "official_check_needed" : "official_check_needed",
+    statusLabel: hasActual ? "결과 공개" : isDocumentEvent ? "공식 문서 확인 필요" : "공식 발표 확인 필요",
+    actual: hasActual ? item.actual : undefined,
+    actualValue: hasActual ? item.actualValue : undefined
+  };
+}
+
+function getRecentReleasedMacroFallbacks(now: number) {
+  return macroItems.filter((item) => isRecentReleasedMacroFallback(item, now)).map(normalizeRecentReleasedFallback);
+}
+
+function mergeRecentReleasedEvents(baseItems: MacroEventItem[], now: number) {
+  const seen = new Set(baseItems.map(eventDedupeKey));
+  const merged = [...baseItems];
+
+  for (const item of getRecentReleasedMacroFallbacks(now)) {
+    const key = eventDedupeKey(item);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(item);
+  }
+
+  return merged;
+}
+
 function getRefreshMs(items: MacroEventItem[]) {
   const itemRefreshMs = items
     .map((item) => item.nextRefreshMs)
@@ -293,8 +339,9 @@ export async function getMacroCalendarPayload(): Promise<MacroCalendarPayload> {
         const time = Date.parse(item.releaseAt);
         return time >= now || now - time <= PREVIOUS_RELEASE_RETENTION_MS;
       });
-    const enrichments = await getOfficialEnrichments(baseItems);
-    const items = normalizeMacroEvents(baseItems, enrichments, now);
+    const mergedBaseItems = mergeRecentReleasedEvents(baseItems, now);
+    const enrichments = await getOfficialEnrichments(mergedBaseItems);
+    const items = normalizeMacroEvents(mergedBaseItems, enrichments, now);
     const sorted = sortItems(items).slice(0, 18);
     const updatedAt = new Date().toISOString();
     const payload: MacroCalendarPayload = {
