@@ -1,5 +1,13 @@
 # 작업 맥락 메모
 
+## 2026-05-26 운영 푸시 선호 필터 진단 보강.
+
+- 로컬 main과 origin/main은 `029f69c`로 일치했고, 로컬 코드에는 시스템 알림의 `rule_ids` 우회 로직이 포함되어 있다.
+- 로컬에는 Vercel CLI 인증과 `CRON_SECRET`이 없어 production dry-run을 직접 호출하지 못했다.
+- 실제 Vercel cron은 `dryRun=false`로 실행되므로 기존 코드에서는 `preferenceSkippedSamples`가 채워지지 않았다.
+- 운영 로그에서 샘플 없이 `sendTargetTokenCount=0`만 보이면 배포 미반영인지, 시장 설정 불일치인지 구분하기 어렵다.
+- 로컬 dry-run에서는 `ruleAllowed=true`, `marketAllowed=false`, `skippedBy=market` 샘플이 확인되어 rule_ids 우회는 동작하고 시장 설정 불일치가 남은 병목임을 확인했다.
+
 ## 2026-05-26 시스템 자동 푸시 선호 필터 보정.
 
 - 운영 로그의 `sendTargetTokenCount=0`은 품질 gate 이후 후보는 있었지만 토큰 선호 필터에서 모두 제외된 상태였다.

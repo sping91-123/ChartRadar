@@ -619,6 +619,22 @@ function personalizeEventForUser(event: PushAlertEvent, userPresets: PushAlertPr
   };
 }
 
+function pushPreferenceSkippedSample(
+  samples: PushPreferenceSkippedSample[],
+  event: PushAlertEvent,
+  firstDecision: ReturnType<typeof tokenPreferenceDecision> | undefined
+) {
+  pushSample(samples, {
+    market: event.market,
+    alertKind: event.alertKind,
+    ruleId: event.ruleId,
+    reason: "token_preferences",
+    skippedBy: firstDecision?.skippedBy ?? undefined,
+    marketAllowed: firstDecision?.marketOk,
+    ruleAllowed: firstDecision?.ruleOk
+  });
+}
+
 export async function runPushAlertScan(context: ScanContext) {
   const dryRun = context.dryRun === true;
   const diagnosticsLimit = Math.max(0, Math.min(context.diagnosticsLimit ?? 40, 100));
@@ -787,22 +803,13 @@ export async function runPushAlertScan(context: ScanContext) {
       deliveryEligibleEventCount += userEvents.length;
 
       for (const event of userEvents) {
+        const preferenceDecisions = userTokens.map((token) => tokenPreferenceDecision(token, event));
+        const targetTokens = userTokens.filter((_, index) => preferenceDecisions[index]?.allowed === true);
         if (dryRun) {
-          const preferenceDecisions = userTokens.map((token) => tokenPreferenceDecision(token, event));
-          const targetTokens = userTokens.filter((_, index) => preferenceDecisions[index]?.allowed === true);
           preferenceSkippedTokenCount += Math.max(0, userTokens.length - targetTokens.length);
           if (targetTokens.length === 0) {
-            const firstDecision = preferenceDecisions[0];
             pushDiagnostic(eventDiagnostic(event, "token_preferences"));
-            pushSample(preferenceSkippedSamples, {
-              market: event.market,
-              alertKind: event.alertKind,
-              ruleId: event.ruleId,
-              reason: "token_preferences",
-              skippedBy: firstDecision?.skippedBy ?? undefined,
-              marketAllowed: firstDecision?.marketOk,
-              ruleAllowed: firstDecision?.ruleOk
-            });
+            pushPreferenceSkippedSample(preferenceSkippedSamples, event, preferenceDecisions[0]);
             continue;
           }
           if (await alreadySent(userId, event.eventKey)) {
@@ -826,6 +833,7 @@ export async function runPushAlertScan(context: ScanContext) {
         }
 
         const result = await sendEventToUser(userId, userTokens, event);
+        if (result.targetTokens === 0) pushPreferenceSkippedSample(preferenceSkippedSamples, event, preferenceDecisions[0]);
         sent += result.sent;
         skipped += result.skipped;
         failed += result.failed;

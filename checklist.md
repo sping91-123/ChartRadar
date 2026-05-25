@@ -1,5 +1,13 @@
 # 작업 체크리스트
 
+## 2026-05-26 운영 푸시 선호 필터 진단 보강.
+
+- [x] production 배포 확인 가능성과 로컬 코드 반영 상태를 분리해 확인한다.
+- [x] 실제 cron에서 `preferenceSkippedSamples`가 비는 원인을 확인한다.
+- [x] 발송 조건 변경 없이 실제 cron에도 안전한 preference skip 샘플을 남긴다.
+- [x] dry-run에서 시장 설정 skip과 rule_ids 우회 상태를 확인한다.
+- [x] 빌드, 스모크, 타입 체크, diff check로 검증한다.
+
 ## 2026-05-26 시스템 자동 푸시 선호 필터 보정.
 
 - [x] `push_tokens.markets`와 `rule_ids` 저장·필터 구조를 확인한다.
