@@ -229,8 +229,8 @@ export default function AdminEntitlementsPage() {
                           }`}
                         >
                           <span className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                            <span className="min-w-0">
-                              <span className="block truncate text-sm font-black text-white">{member.email ?? "이메일 없음"}</span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block break-all text-sm font-black leading-5 text-white">{member.email ?? "이메일 없음"}</span>
                               {member.displayName ? <span className="mt-1 block truncate text-xs text-slate-400">{member.displayName}</span> : null}
                             </span>
                             <span className="shrink-0 rounded-full border border-white/10 px-2.5 py-1 text-xs font-black text-slate-300">
