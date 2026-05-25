@@ -1,5 +1,13 @@
 # 작업 맥락 메모
 
+## 2026-05-25 pushAlertScanner 구조 분리 2단계.
+
+- 이번 작업은 `pushAlertScanner.ts`의 동작 변경 없는 구조 분리만 대상으로 한다.
+- 자동 푸시 threshold, 낮은 점수 차단, A급 80점 이상, 알트 market scout 기준, eventKey 의미, DB 기록, FCM 발송 흐름은 변경하지 않는다.
+- 분리 대상은 권한 판정 helper, 토큰 선호 필터 helper, 중복 방지 helper로 제한한다.
+- 검증은 dry-run diagnostics와 기존 build/smoke/tsc/diff check로 회귀를 확인한다.
+- dry-run diagnostics는 200 응답, `dryRun=true`, raw token/user_id/email/secret 미노출, preference/duplicate 카운터 존재를 확인했다.
+
 ## 2026-05-25 저널 화면 디자인 시스템 2차 적용.
 
 - 이번 작업은 `/journal` 화면의 UI 구조와 시각 톤만 정리했다.

@@ -1,5 +1,13 @@
 # 작업 체크리스트
 
+## 2026-05-25 pushAlertScanner 구조 분리 2단계.
+
+- [x] 권한 판정, 알림 선호, 중복 방지 helper 위치를 실제 코드 기준으로 확인한다.
+- [x] 동작 변경 없이 `entitlements.ts`, `preferences.ts`, `duplicateGuard.ts`로 순수 helper를 이동한다.
+- [x] threshold, eventKey, DB write, FCM 발송, 권한 결과가 바뀌지 않았는지 확인한다.
+- [x] dry-run diagnostics에서 토큰·사용자·비밀값 원문 노출이 없는지 확인한다.
+- [x] 빌드, 스모크, 타입 체크, diff check로 검증한다.
+
 ## 2026-05-25 저널 화면 디자인 시스템 2차 적용.
 
 - [x] `/journal`, `/journal?market=crypto`, `/journal?market=global` 현재 구조와 모바일 폭을 확인했다.

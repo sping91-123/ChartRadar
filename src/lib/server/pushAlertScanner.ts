@@ -1,12 +1,12 @@
 // 서버 크론에서 알림 조건을 스캔하고 Android FCM 푸시를 발송한다.
-import { hasMarketEntitlement, resolveCombinedBillingEntitlementPlan, type BillingEntitlementPlan } from "@/lib/billing";
 import { getLiquidCryptoSymbols } from "@/lib/cryptoUniverse";
 import { chartTimeframes, type Candle, type ChartTimeframe, type TradingMode } from "@/lib/marketAnalysis";
-import { radarAlertRules, type RadarAlertRuleId } from "@/lib/radarAlerts";
+import type { RadarAlertRuleId } from "@/lib/radarAlerts";
 import { findSetupAlertMatches, type SetupAlertMarket, type SetupAlertPreset } from "@/lib/setupAlertPresets";
 import { scanAllSetups, type ScoutSetup } from "@/lib/setupScout";
 import { sendFcmMessage } from "@/lib/server/firebaseMessaging";
 import { fetchLiquidationPressureReport } from "@/lib/server/liquidationPressureSource";
+import { alreadySent, duplicateBucket, eventBucket, recordSentEvent } from "@/lib/server/push/duplicateGuard";
 import {
   asArray,
   compactPushSymbol as compactSymbol,
@@ -14,6 +14,8 @@ import {
   isCryptoMajorPushSymbol as isCryptoMajor,
   passesSetupPushQuality
 } from "@/lib/server/push/eligibility";
+import { ruleAllowed, userPlan } from "@/lib/server/push/entitlements";
+import { tokenWants } from "@/lib/server/push/preferences";
 import type {
   OptionalEventSourceResult,
   PushAlertEvent,
@@ -72,10 +74,6 @@ const stockIndexSymbols = new Set(["QQQ", "SPY", "NQ=F", "ES=F"]);
 const volatilitySymbols = new Set(["^VIX", "VIXY"]);
 const semiconductorSymbols = new Set(["SMH", "SOXX", "NVDA", "AMD"]);
 const riskOffAssetSymbols = new Set(["UUP", "GLD", "TLT"]);
-
-function eventBucket(minutes: number) {
-  return Math.floor(Date.now() / (minutes * 60 * 1000));
-}
 
 function cryptoSetupTargetPath(symbol?: string) {
   return symbol && !isCryptoMajor(symbol) ? "/alts" : "/crypto";
@@ -164,43 +162,6 @@ function stockQuality(score: number): ScoutSetup["plan"]["quality"] {
   return "C";
 }
 
-function profilePlan(row: PushProfileRow | undefined): BillingEntitlementPlan {
-  return row?.plan ?? row?.membership_tier ?? null;
-}
-
-function subscriptionPlan(row: PushSubscriptionRow): BillingEntitlementPlan {
-  return row.plan ?? row.tier ?? null;
-}
-
-function userPlan(
-  profiles: Map<string, PushProfileRow>,
-  subscriptions: Map<string, PushSubscriptionRow[]>,
-  userId: string
-): BillingEntitlementPlan {
-  const plans = [...(subscriptions.get(userId) ?? []).map(subscriptionPlan), profilePlan(profiles.get(userId))];
-  return resolveCombinedBillingEntitlementPlan(plans, "all") ?? "free";
-}
-
-function ruleAllowed(event: PushAlertEvent, plan: BillingEntitlementPlan) {
-  if (event.system) return true;
-  const ruleId = event.ruleId;
-  const rules = asArray(radarAlertRules);
-  const rule = rules.find((item) => item.id === ruleId);
-  if (!rule) return false;
-  if (rule.tier === "free") return true;
-  if (rule.category === "stocks") return hasMarketEntitlement(plan, "stocks");
-  if (rule.category === "crypto") return hasMarketEntitlement(plan, "crypto");
-  return hasMarketEntitlement(plan, "crypto") || hasMarketEntitlement(plan, "stocks");
-}
-
-function tokenWants(token: PushTokenRow, market: SetupAlertMarket, ruleId: RadarAlertRuleId) {
-  const markets = token.markets ?? [];
-  const ruleIds = token.rule_ids ?? [];
-  const marketOk = markets.length === 0 || markets.includes(market);
-  const ruleOk = ruleIds.length === 0 || ruleIds.includes(ruleId);
-  return marketOk && ruleOk;
-}
-
 function eventTimeframe(event: PushAlertEvent) {
   return event.data.timeframe;
 }
@@ -217,11 +178,6 @@ function eventDiagnosticSample(event: PushAlertEvent, skippedReason: PushEventDi
     threshold: eventQualityThreshold(event),
     ...(wouldSend === undefined ? {} : { wouldSend })
   };
-}
-
-function duplicateBucket(eventKey: string) {
-  const parts = eventKey.split(":");
-  return parts[parts.length - 1] ?? null;
 }
 
 function pushSample<T>(samples: T[], sample: T, limit = 8) {
@@ -669,31 +625,6 @@ async function scanOptionalEventSource(label: string, scan: () => Promise<PushAl
       warning: `${label}: ${message.slice(0, 180)}`
     };
   }
-}
-
-async function alreadySent(userId: string, eventKey: string) {
-  const rows = await supabaseAdminRest<Array<{ id: string }>>(
-    `push_alert_events?select=id&user_id=eq.${encodeURIComponent(userId)}&event_key=eq.${encodeURIComponent(eventKey)}&limit=1`
-  );
-  return rows.length > 0;
-}
-
-async function recordSentEvent(userId: string, event: PushAlertEvent, sentCount: number) {
-  await supabaseAdminRest("push_alert_events", {
-    method: "POST",
-    body: {
-      user_id: userId,
-      market: event.market,
-      rule_id: event.ruleId,
-      event_key: event.eventKey,
-      title: event.title,
-      body: event.body,
-      payload: {
-        ...event.data,
-        sentCount
-      }
-    }
-  });
 }
 
 async function sendEventToUser(userId: string, tokens: PushTokenRow[], event: PushAlertEvent) {
