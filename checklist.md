@@ -2167,3 +2167,12 @@
 - [x] 기존 `/api/liquidation-pressure` route는 같은 공통 소스를 사용하게 유지한다.
 - [x] dry-run에서 liquidation-pressure 401 warning이 사라지고 `sources.failed`가 비어 있는지 확인한다.
 - [x] build, mobile smoke, all smoke, ops smoke, tsc, diff check로 검증한다.
+
+## 2026-05-25 push-cron skip 진단 명확화.
+
+- [x] `eligibleEventCount`, `skippedLowScoreCount`, `preferenceSkippedTokenCount`, `duplicateSkippedTokenCount` 증가 위치를 확인한다.
+- [x] `candidateEventCount`, `qualityPassedEventCount`, `deliveryEligibleEventCount`, `finalSendAttemptCount`를 추가한다.
+- [x] 낮은 점수 skip 샘플에 symbol, market, timeframe, score, quality, alertKind, threshold를 포함한다.
+- [x] token preference skip 샘플과 duplicate skip 샘플을 토큰/사용자 식별자 없이 추가한다.
+- [x] top candidate 샘플에 wouldSend와 skippedReason을 포함한다.
+- [x] dry-run에서 샘플 진단이 토큰/개인정보 없이 표시되는지 확인한다.

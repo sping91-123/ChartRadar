@@ -81,8 +81,10 @@ interface PushEventDiagnostic {
   ruleId: RadarAlertRuleId;
   market: SetupAlertMarket;
   symbol?: string;
+  timeframe?: string;
   score?: number;
   quality?: ScoutSetup["plan"]["quality"];
+  alertKind: PushAlertEvent["alertKind"];
   alertTitle: string;
   alertBody: string;
   title: string;
@@ -97,6 +99,7 @@ interface PushEventDiagnostic {
   isWatchedSymbol: boolean;
   evidenceLabels: string[];
   marketScoutRank?: number;
+  threshold: string;
 }
 
 interface PushScanDiagnostics {
@@ -112,6 +115,10 @@ interface PushScanDiagnostics {
   stockMomentumSetupCount: number;
   optionalEventCount: number;
   genericEventCount: number;
+  candidateEventCount: number;
+  qualityPassedEventCount: number;
+  deliveryEligibleEventCount: number;
+  finalSendAttemptCount: number;
   eligibleEventCount: number;
   entitlementBlockedEventCount: number;
   preferenceSkippedTokenCount: number;
@@ -120,6 +127,37 @@ interface PushScanDiagnostics {
   skippedLowScoreCount: number;
   lookupErrorCount: number;
   scannerErrorCount: number;
+  skippedLowScoreSamples: PushEventDiagnosticSample[];
+  preferenceSkippedSamples: PushPreferenceSkippedSample[];
+  duplicateSkippedSamples: PushDuplicateSkippedSample[];
+  topCandidateSamples: PushEventDiagnosticSample[];
+}
+
+interface PushEventDiagnosticSample {
+  symbol: string | null;
+  market: SetupAlertMarket;
+  timeframe: string | null;
+  score: number | null;
+  quality: ScoutSetup["plan"]["quality"] | null;
+  alertKind: PushAlertEvent["alertKind"];
+  skippedReason: PushEventDiagnostic["skippedReason"];
+  threshold: string;
+  wouldSend?: boolean;
+}
+
+interface PushPreferenceSkippedSample {
+  market: SetupAlertMarket;
+  alertKind: PushAlertEvent["alertKind"];
+  ruleId: RadarAlertRuleId;
+  reason: "token_preferences";
+}
+
+interface PushDuplicateSkippedSample {
+  eventKey: string;
+  market: SetupAlertMarket;
+  symbol: string | null;
+  bucket: string | null;
+  reason: "duplicate";
 }
 
 function emptyDiagnostics(overrides: Partial<PushScanDiagnostics> = {}): PushScanDiagnostics {
@@ -136,6 +174,10 @@ function emptyDiagnostics(overrides: Partial<PushScanDiagnostics> = {}): PushSca
     stockMomentumSetupCount: 0,
     optionalEventCount: 0,
     genericEventCount: 0,
+    candidateEventCount: 0,
+    qualityPassedEventCount: 0,
+    deliveryEligibleEventCount: 0,
+    finalSendAttemptCount: 0,
     eligibleEventCount: 0,
     entitlementBlockedEventCount: 0,
     preferenceSkippedTokenCount: 0,
@@ -144,6 +186,10 @@ function emptyDiagnostics(overrides: Partial<PushScanDiagnostics> = {}): PushSca
     skippedLowScoreCount: 0,
     lookupErrorCount: 0,
     scannerErrorCount: 0,
+    skippedLowScoreSamples: [],
+    preferenceSkippedSamples: [],
+    duplicateSkippedSamples: [],
+    topCandidateSamples: [],
     ...overrides
   };
 }
@@ -284,6 +330,45 @@ function tokenWants(token: PushTokenRow, market: SetupAlertMarket, ruleId: Radar
   const marketOk = markets.length === 0 || markets.includes(market);
   const ruleOk = ruleIds.length === 0 || ruleIds.includes(ruleId);
   return marketOk && ruleOk;
+}
+
+function eventTimeframe(event: PushAlertEvent) {
+  return event.data.timeframe;
+}
+
+function eventQualityThreshold(event: PushAlertEvent) {
+  if (!isSetupPushEvent(event)) {
+    return event.ruleId === "liquidation-pressure" ? "grade=heated|extreme" : "event-specific";
+  }
+  if (event.market === "crypto" && event.symbol && !isCryptoMajor(event.symbol) && event.isMarketScout) {
+    return `score>=${cryptoAltMarketScoutScoreThreshold} or A>=${minimumSetupPushScore}, evidence>=${cryptoAltMarketScoutMinimumEvidenceCount}`;
+  }
+  if (event.market === "crypto" && event.symbol && !isCryptoMajor(event.symbol)) return `score>=${cryptoAltPushScoreThreshold} or A>=${minimumSetupPushScore}`;
+  if (event.market === "crypto") return `score>=${cryptoMajorPushScoreThreshold} or A>=${minimumSetupPushScore}`;
+  return `score>=${genericSetupPushScoreThreshold} or A>=${minimumSetupPushScore}`;
+}
+
+function eventDiagnosticSample(event: PushAlertEvent, skippedReason: PushEventDiagnostic["skippedReason"], wouldSend?: boolean): PushEventDiagnosticSample {
+  return {
+    symbol: event.symbol ?? null,
+    market: event.market,
+    timeframe: eventTimeframe(event) ?? null,
+    score: event.score ?? null,
+    quality: event.quality ?? null,
+    alertKind: event.alertKind,
+    skippedReason,
+    threshold: eventQualityThreshold(event),
+    ...(wouldSend === undefined ? {} : { wouldSend })
+  };
+}
+
+function duplicateBucket(eventKey: string) {
+  const parts = eventKey.split(":");
+  return parts[parts.length - 1] ?? null;
+}
+
+function pushSample<T>(samples: T[], sample: T, limit = 8) {
+  if (samples.length < limit) samples.push(sample);
 }
 
 function presetFromRow(row: PushAlertPresetRow): SetupAlertPreset {
@@ -809,8 +894,10 @@ function eventDiagnostic(
     ruleId: event.ruleId,
     market: event.market,
     symbol: event.symbol,
+    timeframe: eventTimeframe(event),
     score: event.score,
     quality: event.quality,
+    alertKind: event.alertKind,
     alertTitle: event.title,
     alertBody: event.body,
     title: event.title,
@@ -824,7 +911,8 @@ function eventDiagnostic(
     isMarketScout: event.isMarketScout === true,
     isWatchedSymbol: event.isWatchedSymbol === true,
     evidenceLabels: event.evidenceLabels ?? [],
-    marketScoutRank: event.marketScoutRank
+    marketScoutRank: event.marketScoutRank,
+    threshold: eventQualityThreshold(event)
   };
 }
 
@@ -983,6 +1071,14 @@ export async function runPushAlertScan(context: ScanContext) {
   let duplicateSkippedTokenCount = 0;
   let sendTargetTokenCount = 0;
   let skippedLowScoreCount = 0;
+  let candidateEventCount = 0;
+  let qualityPassedEventCount = 0;
+  let deliveryEligibleEventCount = 0;
+  let finalSendAttemptCount = 0;
+  const skippedLowScoreSamples: PushEventDiagnosticSample[] = [];
+  const preferenceSkippedSamples: PushPreferenceSkippedSample[] = [];
+  const duplicateSkippedSamples: PushDuplicateSkippedSample[] = [];
+  const topCandidateSampleMap = new Map<string, PushEventDiagnosticSample>();
 
   for (const userId of userIds) {
     const userTokens = tokens.filter((token) => token.user_id === userId);
@@ -1002,12 +1098,22 @@ export async function runPushAlertScan(context: ScanContext) {
 
       const userGenericEvents = genericEvents.map((event) => personalizeEventForUser(event, userPresets));
       const allUserEvents = [...userGenericEvents, ...cryptoPresetMatches, ...stockPresetMatches];
+      candidateEventCount += allUserEvents.length;
+      for (const event of allUserEvents) {
+        const skippedReason = passesSetupPushQuality(event) ? null : "low_score";
+        const key = event.eventKey;
+        if (!topCandidateSampleMap.has(key)) topCandidateSampleMap.set(key, eventDiagnosticSample(event, skippedReason, skippedReason === null));
+      }
       const qualityCheckedEvents = allUserEvents.filter((event) => {
         const allowed = passesSetupPushQuality(event);
         if (!allowed) skippedLowScoreCount += 1;
-        if (!allowed) pushDiagnostic(eventDiagnostic(event, "low_score"));
+        if (!allowed) {
+          pushDiagnostic(eventDiagnostic(event, "low_score"));
+          pushSample(skippedLowScoreSamples, eventDiagnosticSample(event, "low_score"));
+        }
         return allowed;
       });
+      qualityPassedEventCount += qualityCheckedEvents.length;
       const userEvents = qualityCheckedEvents.filter((event) => {
         const allowed = ruleAllowed(event, plan);
         if (!allowed) pushDiagnostic(eventDiagnostic(event, "entitlement"));
@@ -1015,6 +1121,7 @@ export async function runPushAlertScan(context: ScanContext) {
       });
       entitlementBlockedEventCount += qualityCheckedEvents.length - userEvents.length;
       events += userEvents.length;
+      deliveryEligibleEventCount += userEvents.length;
 
       for (const event of userEvents) {
         if (dryRun) {
@@ -1022,6 +1129,12 @@ export async function runPushAlertScan(context: ScanContext) {
           preferenceSkippedTokenCount += Math.max(0, userTokens.length - targetTokens.length);
           if (targetTokens.length === 0) {
             pushDiagnostic(eventDiagnostic(event, "token_preferences"));
+            pushSample(preferenceSkippedSamples, {
+              market: event.market,
+              alertKind: event.alertKind,
+              ruleId: event.ruleId,
+              reason: "token_preferences"
+            });
             continue;
           }
           if (await alreadySent(userId, event.eventKey)) {
@@ -1029,9 +1142,17 @@ export async function runPushAlertScan(context: ScanContext) {
             duplicateSkippedTokenCount += targetTokens.length;
             sendTargetTokenCount += targetTokens.length;
             pushDiagnostic(eventDiagnostic(event, "duplicate", targetTokens.length));
+            pushSample(duplicateSkippedSamples, {
+              eventKey: event.eventKey,
+              market: event.market,
+              symbol: event.symbol ?? null,
+              bucket: duplicateBucket(event.eventKey),
+              reason: "duplicate"
+            });
             continue;
           }
           sendTargetTokenCount += targetTokens.length;
+          finalSendAttemptCount += targetTokens.length;
           pushDiagnostic(eventDiagnostic(event, "dry_run", targetTokens.length));
           continue;
         }
@@ -1043,6 +1164,7 @@ export async function runPushAlertScan(context: ScanContext) {
         preferenceSkippedTokenCount += result.preferenceSkipped;
         duplicateSkippedTokenCount += result.duplicateSkipped;
         sendTargetTokenCount += result.targetTokens;
+        finalSendAttemptCount += result.sent + result.failed;
       }
     } catch (error) {
       scannerErrorCount += 1;
@@ -1078,6 +1200,10 @@ export async function runPushAlertScan(context: ScanContext) {
       stockMomentumSetupCount: stockMomentumSetups.length,
       optionalEventCount: optionalEventSources.filter((source) => source.event).length,
       genericEventCount: genericEvents.length,
+      candidateEventCount,
+      qualityPassedEventCount,
+      deliveryEligibleEventCount,
+      finalSendAttemptCount,
       eligibleEventCount: events,
       entitlementBlockedEventCount,
       preferenceSkippedTokenCount,
@@ -1085,7 +1211,13 @@ export async function runPushAlertScan(context: ScanContext) {
       sendTargetTokenCount,
       skippedLowScoreCount,
       lookupErrorCount,
-      scannerErrorCount
+      scannerErrorCount,
+      skippedLowScoreSamples,
+      preferenceSkippedSamples,
+      duplicateSkippedSamples,
+      topCandidateSamples: Array.from(topCandidateSampleMap.values())
+        .sort((a, b) => (b.score ?? -1) - (a.score ?? -1))
+        .slice(0, 8)
     }),
     eventDiagnostics
   };

@@ -1938,3 +1938,11 @@ The health endpoint now reports a launch readiness score and structured blocking
 - `/api/liquidation-pressure` route는 기존 public API와 캐시/rate limit은 유지하되, 실제 Binance fetch와 report 계산은 같은 공통 소스를 사용한다.
 - push-cron dry-run은 이 경로에서 FCM 발송 없이 청산압력 후보 가능 여부만 판단하며, 청산압력 grade가 `heated` 또는 `extreme`일 때만 후보 이벤트를 만든다.
 - 로컬 `/api/push-cron?dryRun=1&diagnostics=1`은 200을 반환했고 liquidation-pressure 401 warning은 사라졌다. 현재 데이터 기준 청산압력 grade가 후보 조건을 만족하지 않아 `sources.skipped`에 남았지만 `sources.failed`는 비어 있다.
+
+## 2026-05-25 push-cron skip 진단 명확화.
+
+- 기존 `eligibleEventCount`는 품질 필터와 권한 필터를 통과한 사용자별 이벤트 수다. 발송까지 가능한 토큰 수나 최종 발송 시도 수가 아니므로 `deliveryEligibleEventCount`를 같은 의미로 추가하고, 후보 전체는 `candidateEventCount`로 별도 표시한다.
+- `skippedLowScoreCount`는 후보 생성 후 `passesSetupPushQuality`에서 탈락한 사용자별 이벤트 수다. 같은 시장 후보가 사용자 2명에게 평가되면 2개로 집계될 수 있다.
+- `preferenceSkippedTokenCount`는 이벤트가 품질과 권한을 통과했지만 토큰의 `markets` 또는 `rule_ids` 선호와 맞지 않아 제외된 토큰 수다.
+- `duplicateSkippedTokenCount`는 같은 `eventKey`가 이미 `push_alert_events`에 기록되어 중복 발송 방지에 걸린 토큰 수다.
+- 운영 로그와 dry-run 응답에 낮은 점수 샘플, 토큰 선호 skip 샘플, 중복 skip 샘플, 상위 후보 샘플을 추가한다. 샘플에는 symbol, market, timeframe, score, quality, alertKind, threshold, skippedReason만 포함하고 token, user_id, email은 포함하지 않는다.

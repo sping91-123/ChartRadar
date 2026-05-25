@@ -55,6 +55,10 @@ interface AdminPushDiagnostics {
     tokenCount: number;
     presetCount: number;
     genericEventCount: number;
+    candidateEventCount?: number;
+    qualityPassedEventCount?: number;
+    deliveryEligibleEventCount?: number;
+    finalSendAttemptCount?: number;
     eligibleEventCount: number;
     skippedLowScoreCount: number;
     duplicateSkippedTokenCount: number;
@@ -883,6 +887,11 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
                     </p>
                     <p className="mt-1 text-[11px] font-bold text-slate-500">
                       조회 오류 {pushDiagnostics.diagnostics.lookupErrorCount ?? 0}개 · 스캐너 오류 {pushDiagnostics.diagnostics.scannerErrorCount ?? 0}개
+                    </p>
+                    <p className="mt-1 text-[11px] font-bold text-slate-500">
+                      후보 {pushDiagnostics.diagnostics.candidateEventCount ?? pushDiagnostics.diagnostics.genericEventCount}개 · 품질 통과{" "}
+                      {pushDiagnostics.diagnostics.qualityPassedEventCount ?? pushDiagnostics.diagnostics.eligibleEventCount}개 · 최종 시도{" "}
+                      {pushDiagnostics.diagnostics.finalSendAttemptCount ?? 0}개
                     </p>
                   </div>
                   <div className="rounded-md border border-white/10 bg-black/25 p-3">
