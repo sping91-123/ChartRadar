@@ -58,6 +58,8 @@ export function normalizeMacroEvent(item: MacroEventItem, enrichments: MacroSour
 
   const isDocumentEvent = eventType === "document_release" || eventType === "meeting_event" || eventType === "speech_event";
   const isNumericEvent = eventType === "numeric_release";
+  const consensusValue = enrichment?.consensusValue ?? item.consensusValue ?? item.forecast;
+  const previousValue = enrichment?.previousValue ?? item.previousValue ?? item.previous;
 
   return {
     ...item,
@@ -71,9 +73,11 @@ export function normalizeMacroEvent(item: MacroEventItem, enrichments: MacroSour
     scheduledAt: item.scheduledAt ?? item.releaseAt,
     releasedAt: status.releasedAt ?? releasedAt,
     actual: actualValue ?? item.actual,
+    forecast: consensusValue ?? item.forecast,
+    previous: previousValue ?? item.previous,
     actualValue,
-    consensusValue: enrichment?.consensusValue ?? item.consensusValue ?? item.forecast,
-    previousValue: enrichment?.previousValue ?? item.previousValue ?? item.previous,
+    consensusValue,
+    previousValue,
     unit: enrichment?.unit ?? item.unit,
     source,
     sourceType: enrichment?.sourceType ?? item.sourceType ?? (source === "ForexFactory" ? "public_calendar" : "official_page"),

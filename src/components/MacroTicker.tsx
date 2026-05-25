@@ -20,6 +20,9 @@ const EMPTY_ACTUAL_VALUES = new Set([
   "공식 발표 확인 필요",
   "공식 문서 확인 필요",
   "공식 자료 확인 필요",
+  "확인 예정",
+  "예상 확인 필요",
+  "이전 확인 필요",
   "미정",
   "-"
 ]);
@@ -70,6 +73,22 @@ function macroValueText(value?: string) {
     .replace(/\bPrevious\b/gi, "이전")
     .replace(/\bForecast\b/gi, "예상")
     .replace(/\bActual\b/gi, "실제");
+}
+
+function displayMacroValue(candidates: Array<string | undefined>, missingLabel: string) {
+  for (const candidate of candidates) {
+    const text = macroValueText(candidate).trim();
+    if (text && !EMPTY_ACTUAL_VALUES.has(text)) return text;
+  }
+  return missingLabel;
+}
+
+function displayConsensusValue(item: MacroEventItem) {
+  return displayMacroValue([item.consensusValue, item.forecast], "예상 확인 필요");
+}
+
+function displayPreviousValue(item: MacroEventItem) {
+  return displayMacroValue([item.previousValue, item.previous], "이전 확인 필요");
 }
 
 function displayActual(item: MacroEventItem) {
@@ -247,6 +266,8 @@ function MacroNewsItem({ item, sectionLabel, subdued = false }: { item: MacroEve
   const primaryValueLabel = item.isDocumentEvent || item.eventType === "document_release" || item.eventType === "meeting_event" || item.eventType === "speech_event" ? "상태" : "실제";
   const sourceUrl = item.officialUrl ?? item.sourceUrl;
   const pendingActual = !hasActualValue(item) && hasReleaseTimePassed(item) && !item.isDocumentEvent;
+  const consensusDisplay = displayConsensusValue(item);
+  const previousDisplay = displayPreviousValue(item);
 
   return (
     <article className={`rounded-ui-sm border border-ui-line bg-ui-inset p-3 ${subdued ? "opacity-95" : ""}`}>
@@ -267,8 +288,8 @@ function MacroNewsItem({ item, sectionLabel, subdued = false }: { item: MacroEve
 
       <div className="mt-2 flex flex-wrap gap-1.5">
         <MacroNewsValue label={primaryValueLabel} value={displayActual(item)} pending={pendingActual} />
-        <MacroNewsValue label="예상" value={macroValueText(item.forecast)} />
-        <MacroNewsValue label="이전" value={macroValueText(item.previous)} />
+        <MacroNewsValue label="예상" value={consensusDisplay} pending={consensusDisplay === "예상 확인 필요"} />
+        <MacroNewsValue label="이전" value={previousDisplay} pending={previousDisplay === "이전 확인 필요"} />
       </div>
 
       <p className="mt-2 line-clamp-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{item.marketImpact}</p>
@@ -304,8 +325,8 @@ function MacroItemCard({ item, compact = false }: { item: MacroEventItem; compac
       <p className="mt-1 text-[11px] font-bold text-slate-400">한국시간 {item.dateKst}</p>
       <div className="mt-2 grid grid-cols-3 gap-1 text-[10px] font-bold">
         <ValuePill label={primaryValueLabel} value={displayActual(item)} tone={!hasActualValue(item) && hasReleaseTimePassed(item) ? "pending" : "default"} />
-        <ValuePill label="예상" value={macroValueText(item.forecast)} />
-        <ValuePill label="이전" value={macroValueText(item.previous)} />
+        <ValuePill label="예상" value={displayConsensusValue(item)} tone={displayConsensusValue(item) === "예상 확인 필요" ? "pending" : "default"} />
+        <ValuePill label="이전" value={displayPreviousValue(item)} tone={displayPreviousValue(item) === "이전 확인 필요" ? "pending" : "default"} />
       </div>
       <p className="mt-2 text-[11px] leading-5 text-slate-500 [word-break:keep-all]">{item.marketImpact}</p>
       {compact ? (
@@ -439,7 +460,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
             {compactLeadLabel(item)} · <span className={compactStateClass(item)}>{stateLabel(item)}</span> · {macroLabel(item.label)}
           </p>
           <p className="mt-0.5 truncate text-[11px] font-bold text-slate-500">
-            한국시간 {item.dateKst} · {primaryValueLabel} {displayActual(item)} · 예상 {macroValueText(item.forecast)} · 이전 {macroValueText(item.previous)}
+            한국시간 {item.dateKst} · {primaryValueLabel} {displayActual(item)} · 예상 {displayConsensusValue(item)} · 이전 {displayPreviousValue(item)}
           </p>
         </div>
         <ChevronRight size={14} className="shrink-0 text-slate-600 transition group-hover:text-accent-blue" aria-hidden />
