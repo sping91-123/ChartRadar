@@ -1,8 +1,8 @@
 "use client";
 // 사용자가 받을 레이더 알림 조건을 설정하고 Pro 가치를 확인하는 패널입니다.
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { BellRing, CheckCircle2, Clock3, Crown, Loader2, Radar, ShieldCheck, Smartphone, Zap } from "lucide-react";
+import { BellRing, CheckCircle2, Clock3, Crown, Loader2, Radar, ShieldCheck } from "lucide-react";
+import { ActionButton, AppSurface, DataRow, MetricRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import {
   getDefaultRadarAlertRuleIds,
   radarAlertRules,
@@ -43,6 +43,7 @@ const baseStorageKey = "chartRadar.alertRules.v1";
 
 type PermissionState = "unsupported" | "default" | "granted" | "denied";
 type AlertMarket = "crypto" | "stocks";
+type AlertStatusTone = "long" | "short" | "watch" | "risk" | "locked" | "info";
 
 interface AdminPushDiagnostics {
   scannedAt: string;
@@ -158,31 +159,11 @@ function categoryLabel(category: RadarAlertRule["category"]) {
   return "시스템";
 }
 
-function categoryClass(category: RadarAlertRule["category"]) {
-  if (category === "crypto") return "border-cyan-300/25 bg-cyan-300/10 text-cyan-200";
-  if (category === "stocks") return "border-emerald-300/25 bg-emerald-300/10 text-emerald-200";
-  if (category === "news") return "border-amber-300/25 bg-amber-300/10 text-amber-200";
-  return "border-slate-300/20 bg-slate-300/10 text-slate-200";
-}
-
-function permissionLabel(permission: PermissionState) {
-  if (permission === "granted") return "브라우저 알림 권한이 켜져 있습니다";
-  if (permission === "denied") return "브라우저 알림이 꺼져 있습니다";
-  if (permission === "unsupported") return "현재 브라우저에서는 알림을 켤 수 없습니다";
-  return "브라우저 알림 권한을 켤 수 있습니다";
-}
-
-function appPushPermissionLabel(state: AppPushDeviceState) {
-  if (!state.supported) return "현재 환경에서는 앱 푸시 알림을 켤 수 없습니다";
-  if (state.registrationStage === "checking_permission") return "알림 권한을 확인하고 있습니다";
-  if (state.registrationStage === "requesting_permission") return "알림 권한을 요청하고 있습니다";
-  if (state.registrationStage === "registering_device") return "앱 푸시 알림을 연결하고 있습니다";
-  if (state.registrationStage === "saving_token") return "앱 푸시 알림 연결을 저장하고 있습니다";
-  if (state.registrationStage === "failed") return "앱 푸시 알림 연결에 실패했습니다";
-  if (state.permission === "granted" && state.synced) return "앱 푸시 알림이 켜져 있습니다";
-  if (state.permission === "granted" && state.token) return "앱 알림 연결 확인이 필요합니다";
-  if (state.permission === "denied") return "알림 권한이 거부되었습니다";
-  return "앱 푸시 알림을 켤 수 있습니다";
+function categoryTone(category: RadarAlertRule["category"]): AlertStatusTone {
+  if (category === "stocks") return "long";
+  if (category === "news") return "risk";
+  if (category === "system") return "info";
+  return "watch";
 }
 
 function appPushConnectionLabel(state: AppPushDeviceState) {
@@ -197,6 +178,37 @@ function appPushConnectionLabel(state: AppPushDeviceState) {
   if (state.permission === "granted" && state.token) return "연결 확인 필요";
   if (state.permission === "denied") return "권한이 꺼져 있음";
   return "연결 전";
+}
+
+function appPushConnectionTone(state: AppPushDeviceState): AlertStatusTone {
+  if (!state.supported) return "info";
+  if (state.registrationStage === "failed" || state.registrationStage === "denied" || state.permission === "denied") return "risk";
+  if (state.registrationStage === "checking_permission" || state.registrationStage === "requesting_permission" || state.registrationStage === "registering_device" || state.registrationStage === "saving_token") return "watch";
+  if (state.permission === "granted" && state.synced) return "long";
+  return "info";
+}
+
+function permissionTone(permission: PermissionState, appState: AppPushDeviceState, isAndroidAppPush: boolean): AlertStatusTone {
+  if (isAndroidAppPush) {
+    if (appState.permission === "granted") return "long";
+    if (appState.permission === "denied" || appState.registrationStage === "denied") return "risk";
+    return "watch";
+  }
+  if (permission === "granted") return "long";
+  if (permission === "denied" || permission === "unsupported") return "risk";
+  return "watch";
+}
+
+function permissionSummaryLabel(permission: PermissionState, appState: AppPushDeviceState, isAndroidAppPush: boolean) {
+  if (isAndroidAppPush) {
+    if (appState.permission === "granted") return "권한 허용됨";
+    if (appState.permission === "denied" || appState.registrationStage === "denied") return "권한이 꺼져 있음";
+    return "권한 확인 필요";
+  }
+  if (permission === "granted") return "권한 허용됨";
+  if (permission === "denied") return "권한이 꺼져 있음";
+  if (permission === "unsupported") return "지원 안 됨";
+  return "권한 확인 필요";
 }
 
 function appPushStageLabel(stage: AppPushRegistrationStage | null) {
@@ -283,32 +295,24 @@ function RuleCard({
   onToggle: (ruleId: RadarAlertRuleId) => void;
 }) {
   return (
-    <article className={`rounded-xl border p-4 transition ${enabled ? "border-accent-blue/35 bg-accent-blue/10" : "border-surface-line bg-surface-cardSoft"}`}>
+    <PanelCard className={enabled ? "border-ui-brand/35 bg-ui-inset shadow-none" : "bg-ui-inset shadow-none"}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`rounded-md border px-2 py-1 text-[11px] font-black ${categoryClass(rule.category)}`}>
-              {categoryLabel(rule.category)}
-            </span>
-            {rule.tier === "pro" ? (
-              <span className="inline-flex items-center gap-1 rounded-md border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-[11px] font-black text-cyan-200">
-                <Crown size={12} aria-hidden />
-                Pro
-              </span>
-            ) : (
-              <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] font-bold text-slate-300">
-                Basic
-              </span>
-            )}
+            <StatusPill tone={categoryTone(rule.category)}>{categoryLabel(rule.category)}</StatusPill>
+            <StatusPill tone={rule.tier === "pro" ? "locked" : "info"} icon={rule.tier === "pro" ? Crown : undefined}>
+              {rule.tier === "pro" ? "Pro" : "Basic"}
+            </StatusPill>
+            <StatusPill tone={enabled ? "long" : "info"}>{enabled ? "켜짐" : "꺼짐"}</StatusPill>
           </div>
-          <h3 className="mt-3 text-base font-black text-white">{rule.title}</h3>
-          <p className="mt-2 text-sm leading-6 text-slate-400 [word-break:keep-all]">{rule.description}</p>
+          <h3 className="mt-3 text-base font-semibold text-ui-text">{rule.title}</h3>
+          <p className="mt-1 text-sm leading-6 text-ui-muted [word-break:keep-all]">{rule.description}</p>
         </div>
         <button
           type="button"
           onClick={() => onToggle(rule.id)}
           className={`relative h-7 w-12 shrink-0 rounded-full border transition ${
-            enabled ? "border-cyan-300 bg-cyan-300" : "border-surface-line bg-slate-800"
+            enabled ? "border-ui-brand bg-ui-brand" : "border-ui-lineStrong bg-ui-panel"
           }`}
           aria-pressed={enabled}
           aria-label={`${rule.title} 알림 ${enabled ? "끄기" : "켜기"}`}
@@ -316,16 +320,11 @@ function RuleCard({
           <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${enabled ? "left-6" : "left-1"}`} />
         </button>
       </div>
-      <div className="mt-4 grid gap-2 text-xs leading-5 text-slate-400 sm:grid-cols-2">
-        <p className="rounded-md border border-white/10 bg-black/20 p-3">
-          <span className="font-black text-slate-200">조건.</span> {rule.trigger}
-        </p>
-        <p className="rounded-md border border-white/10 bg-black/20 p-3">
-          <span className="font-black text-slate-200">효용.</span> {rule.value}
-        </p>
+      <div className="mt-3">
+        <DataRow label="조건" value="감시 중" detail={rule.trigger} />
+        <DataRow label="확인 주기" value={rule.cadence} />
       </div>
-      <p className="mt-3 text-[11px] font-bold text-slate-500">{rule.cadence}</p>
-    </article>
+    </PanelCard>
   );
 }
 
@@ -623,396 +622,190 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
   }
 
   return (
-    <section className="enterprise-panel p-4 sm:p-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
-            <BellRing size={22} aria-hidden />
+    <AppSurface padding="lg" className="space-y-4">
+      <SectionHeader
+        eyebrow={copy.eyebrow}
+        title={copy.title}
+        description={`${copy.description} 주요 조건이 감지되면 앱 푸시 알림으로 알려드립니다.`}
+        action={
+          <div className="flex flex-wrap gap-2">
+            <StatusPill tone={isAndroidAppPush ? appPushConnectionTone(appPushState) : "info"} icon={BellRing}>
+              {isAndroidAppPush ? appPushConnectionLabel(appPushState) : "앱에서 사용 가능"}
+            </StatusPill>
+            <StatusPill tone="info">{summary.enabledCount}개 켜짐</StatusPill>
           </div>
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-300">{copy.eyebrow}</p>
-            <h2 className="mt-1 text-xl font-black text-white">{copy.title}</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400 [word-break:keep-all]">
-              {copy.description} 주요 조건이 감지되면 앱 알림으로 알려드립니다.
+        }
+      />
+
+      <PanelCard className="bg-ui-inset shadow-none">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusPill tone={isAndroidAppPush ? appPushConnectionTone(appPushState) : "info"} icon={ShieldCheck}>
+                {isAndroidAppPush ? appPushConnectionLabel(appPushState) : "앱에서 사용 가능"}
+              </StatusPill>
+              <StatusPill tone={permissionTone(permission, appPushState, isAndroidAppPush)}>
+                {permissionSummaryLabel(permission, appPushState, isAndroidAppPush)}
+              </StatusPill>
+            </div>
+            <h3 className="mt-3 text-base font-semibold text-ui-text">앱 푸시 알림 상태</h3>
+            <p className="mt-1 text-sm leading-6 text-ui-muted [word-break:keep-all]">
+              {isAndroidAppPush
+                ? "시장 상황과 설정한 조건에 따라 알림을 보냅니다."
+                : "앱 푸시는 설치된 앱에서 사용할 수 있습니다. 브라우저 알림은 현재 열린 화면의 미리보기 수준으로만 동작합니다."}
             </p>
           </div>
-        </div>
-        <div className="rounded-xl border border-surface-line bg-surface-cardSoft p-3 lg:w-72">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-xs font-bold text-slate-400">켜진 알림</span>
-            <span className="text-lg font-black text-cyan-200">{summary.enabledCount}개</span>
-          </div>
-          <p className="mt-2 text-xs leading-5 text-slate-400 [word-break:keep-all]">{summary.headline}</p>
-          <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] font-bold">
-            <span className="rounded-md border border-accent-blue/25 bg-accent-blue/10 px-2 py-1 text-accent-blue">
-              Pro {summary.proCount}
-            </span>
-            <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-slate-300">
-              Basic {summary.freeCount}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
-        <div className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
-          <Radar className="text-cyan-300" size={20} aria-hidden />
-          <p className="mt-3 text-sm font-black text-white">{isGlobal ? "지수·변동성 감지" : "레이더 감지"}</p>
-          <p className="mt-2 text-xs leading-5 text-slate-400">
-            {isGlobal ? "QQQ/SPY, NQ/ES, VIX 흐름 변화를 함께 확인합니다." : "A급 후보와 관심코인 변화를 빠르게 확인합니다."}
-          </p>
-        </div>
-        <div className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
-          <Zap className="text-orange-200" size={20} aria-hidden />
-          <p className="mt-3 text-sm font-black text-white">{isGlobal ? "리스크오프 조합" : "위험 압력"}</p>
-          <p className="mt-2 text-xs leading-5 text-slate-400">
-            {isGlobal ? "지수 약세, 변동성 상승, 달러·금 흐름을 함께 점검합니다." : "청산 압력과 과열 구간을 추격 전에 먼저 봅니다."}
-          </p>
-        </div>
-        <div className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
-          <Smartphone className="text-emerald-200" size={20} aria-hidden />
-          <p className="mt-3 text-sm font-black text-white">앱 푸시 알림</p>
-          <p className="mt-2 text-xs leading-5 text-slate-400">앱에서는 주요 조건을 알림으로 받고, 웹 알림은 열린 브라우저 안에서만 확인합니다.</p>
-        </div>
-      </div>
-
-      <div className="mt-4 flex flex-col gap-3 rounded-xl border border-surface-line bg-surface-cardSoft p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="flex items-center gap-2 text-sm font-black text-white">
-            <ShieldCheck size={16} className="text-cyan-300" aria-hidden />
-            {isAndroidAppPush ? appPushPermissionLabel(appPushState) : permissionLabel(permission)}
-          </p>
-          <p className="mt-1 text-xs leading-5 text-slate-500">
-            {isAndroidAppPush
-              ? "알림은 시장 상황과 설정한 조건에 따라 발송됩니다. 주요 조건이 감지되면 앱 알림으로 알려드립니다."
-              : "브라우저 알림은 현재 열린 화면에서 조건 일치를 알려주는 테스트 알림입니다. 백그라운드 웹 알림은 추후 별도로 지원할 예정입니다."}
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-          <button
-            type="button"
-            onClick={requestNotificationPermission}
-            disabled={isAppPushConnecting || (isAndroidAppPush && isAuthLoading) || (!isAndroidAppPush && permission === "unsupported")}
-            className="enterprise-button inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-black disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isAppPushConnecting ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <CheckCircle2 size={16} aria-hidden />}
-            {isAndroidAppPush ? (isAuthLoading ? "로그인 확인 중" : appPushActionLabel(appPushState.registrationStage)) : "브라우저 알림 켜기"}
-          </button>
-          {isAndroidAppPush && appPushState.token ? (
-            <>
-              <button
-                type="button"
+          <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto lg:shrink-0">
+            <ActionButton
+              tone="primary"
+              onClick={requestNotificationPermission}
+              disabled={isAppPushConnecting || (isAndroidAppPush && isAuthLoading) || (!isAndroidAppPush && permission === "unsupported")}
+              className="min-h-10 w-full px-4 text-sm sm:w-auto"
+            >
+              {isAppPushConnecting ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <CheckCircle2 size={16} aria-hidden />}
+              {isAndroidAppPush ? (isAuthLoading ? "로그인 확인 중" : appPushActionLabel(appPushState.registrationStage)) : "브라우저 알림 켜기"}
+            </ActionButton>
+            {isAndroidAppPush && appPushState.token ? (
+              <ActionButton
+                tone="danger"
                 onClick={requestDisablePush}
                 disabled={isDisablingPush}
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-300/25 bg-red-300/10 px-4 text-sm font-black text-red-100 disabled:cursor-wait disabled:opacity-60"
+                className="min-h-10 w-full px-4 text-sm sm:w-auto"
               >
                 {isDisablingPush ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <ShieldCheck size={16} aria-hidden />}
                 앱 푸시 알림 끄기
-              </button>
-            </>
-          ) : null}
-        </div>
-      </div>
-
-      {toast ? (
-        <p className="mt-3 rounded-xl border border-accent-blue/20 bg-accent-blue/10 px-3 py-2 text-xs leading-5 text-accent-blue">
-          {toast}
-        </p>
-      ) : null}
-
-      {isAndroidAppPush && !isAuthLoading && !session ? (
-        <div className="mt-3 flex flex-col gap-3 rounded-xl border border-cyan-300/20 bg-cyan-300/10 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs leading-5 text-cyan-100">로그인 후 앱 푸시 알림을 계정에 연결할 수 있습니다.</p>
-          <Link
-            href={loginHref}
-            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-cyan-200/40 bg-cyan-300/15 px-4 text-sm font-black text-cyan-50 transition hover:bg-cyan-300/25"
-          >
-            로그인하기
-          </Link>
-        </div>
-      ) : null}
-
-      <div className="mt-4 rounded-xl border border-surface-line bg-surface-cardSoft p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-sm font-black text-white">앱 푸시 알림 상태</p>
-            <p className="mt-1 text-xs leading-5 text-slate-500 [word-break:keep-all]">
-              {isAndroidAppPush
-                ? "주요 조건이 감지되면 연결된 앱으로 알림을 받을 수 있습니다."
-                : "앱 푸시는 설치된 앱에서 사용할 수 있습니다."}
-            </p>
+              </ActionButton>
+            ) : null}
           </div>
-          <span className="w-fit rounded-md border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-[11px] font-black text-cyan-200">
-            {isAndroidAppPush ? appPushConnectionLabel(appPushState) : "앱에서 사용 가능"}
-          </span>
         </div>
 
-        <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-md border border-white/10 bg-black/25 p-3">
-            <p className="font-bold text-slate-500">앱 환경</p>
-            <p className="mt-1 font-black text-white">{isAndroidAppPush ? "확인됨" : "확인 안 됨"}</p>
-          </div>
-          <div className="rounded-md border border-white/10 bg-black/25 p-3">
-            <p className="font-bold text-slate-500">알림 권한</p>
-            <p className="mt-1 font-black text-white">{isAndroidAppPush ? appPushPermissionLabel(appPushState) : permissionLabel(permission)}</p>
-          </div>
-          <div className="rounded-md border border-white/10 bg-black/25 p-3">
-            <p className="font-bold text-slate-500">앱 푸시 연결</p>
-            <p className="mt-1 font-black text-white">{isAndroidAppPush ? appPushConnectionLabel(appPushState) : "앱에서 사용 가능"}</p>
-          </div>
-          <div className="rounded-md border border-white/10 bg-black/25 p-3">
-            <p className="font-bold text-slate-500">마지막 연결 시각</p>
-            <p className="mt-1 font-black text-white">{isAndroidAppPush ? formatAppPushUpdatedAt(appPushState.updatedAt) : "앱에서 확인"}</p>
-          </div>
+        <div className="mt-4">
+          <DataRow label="앱 푸시 연결" value={<StatusPill tone={isAndroidAppPush ? appPushConnectionTone(appPushState) : "info"}>{isAndroidAppPush ? appPushConnectionLabel(appPushState) : "앱에서 사용 가능"}</StatusPill>} />
+          <DataRow label="알림 권한" value={<StatusPill tone={permissionTone(permission, appPushState, isAndroidAppPush)}>{permissionSummaryLabel(permission, appPushState, isAndroidAppPush)}</StatusPill>} />
+          <DataRow label="마지막 연결" value={isAndroidAppPush ? formatAppPushUpdatedAt(appPushState.updatedAt) : "앱에서 확인"} />
         </div>
 
         {isAndroidAppPush ? (
-          <div className="mt-2 rounded-md border border-white/10 bg-black/20 p-3 text-xs leading-5 text-slate-400">
+          <AppSurface tone="inset" padding="sm" className="mt-3 text-xs leading-5 text-ui-muted shadow-none">
             <p>
-              <span className="font-bold text-slate-500">연결 단계.</span> {appPushStageLabel(appPushState.registrationStage)}
+              <span className="font-semibold text-ui-subtle">현재 단계</span> {appPushStageLabel(appPushState.registrationStage)}
               {appPushState.lastFailureStage ? ` · 실패 단계 ${appPushStageLabel(appPushState.lastFailureStage)}` : ""}
             </p>
             {appPushState.lastError ? (
-              <p className="mt-1 text-amber-100">
-                <span className="font-bold text-amber-200">마지막 오류.</span> {appPushState.lastError}
+              <p className="mt-1 text-ui-risk">
+                <span className="font-semibold">마지막 오류</span> {appPushState.lastError}
               </p>
             ) : null}
-          </div>
+          </AppSurface>
         ) : null}
 
         {isAndroidAppPush && !canSendAppPushTest ? (
-          <div className="mt-3 rounded-md border border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
+          <AppSurface tone="inset" padding="sm" className="mt-3 border-amber-400/24 bg-amber-400/10 text-xs leading-5 text-ui-risk shadow-none">
             <p>{session ? "앱 푸시 알림을 켜면 주요 조건이 감지될 때 알려드립니다." : "로그인 후 앱 푸시 알림을 계정에 연결할 수 있습니다."}</p>
-            <p className="mt-1 text-amber-100/80">상단의 앱 푸시 알림 켜기 버튼으로 연결 상태를 활성화할 수 있습니다.</p>
-          </div>
+          </AppSurface>
         ) : null}
+      </PanelCard>
 
-        {isAdmin ? (
-          <div className="mt-4 rounded-lg border border-cyan-300/20 bg-cyan-300/5 p-3">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs font-black text-cyan-100">관리자 테스트 알림</p>
-              <span className="w-fit rounded-md border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-[11px] font-black text-cyan-200">
-                관리자 전용
-              </span>
-            </div>
-            <p className="mt-1 text-[11px] leading-4 text-slate-500">현재 로그인한 내 계정과 이 기기 연결로만 테스트 알림을 보냅니다.</p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              {pushTestMessages.map((message) => {
-                const isActive = activeTestKind === message.kind;
-                return (
-                  <button
-                    key={message.kind}
-                    type="button"
-                    onClick={() => void requestTestPush(message.kind)}
-                    disabled={Boolean(activeTestKind) || (isAndroidAppPush && (isAppPushConnecting || !canSendAppPushTest))}
-                    className="min-h-16 rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 text-left transition hover:border-cyan-200 hover:bg-cyan-300/15 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <span className="flex items-center gap-2 text-xs font-black text-cyan-100">
-                      {isActive ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <BellRing size={14} aria-hidden />}
-                      {message.label}
-                    </span>
-                    <span className="mt-1 block text-[11px] leading-4 text-slate-400">{message.title}</span>
-                  </button>
-                );
-              })}
-            </div>
+      {toast ? (
+        <AppSurface as="p" tone="inset" padding="sm" className="text-xs leading-5 text-ui-brand shadow-none">
+          {toast}
+        </AppSurface>
+      ) : null}
 
-            {testResult ? (
-              <p className="mt-3 rounded-md border border-accent-blue/20 bg-accent-blue/10 p-3 text-xs leading-5 text-accent-blue">
-                {testResult}
-              </p>
-            ) : null}
+      {isAndroidAppPush && !isAuthLoading && !session ? (
+        <PanelCard className="flex flex-col gap-3 bg-ui-inset shadow-none sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm leading-6 text-ui-muted">로그인 후 앱 푸시 알림을 계정에 연결할 수 있습니다.</p>
+          <ActionButton href={loginHref} tone="primary" className="min-h-10 w-full px-4 text-sm sm:w-auto">
+            로그인하기
+          </ActionButton>
+        </PanelCard>
+      ) : null}
 
-            <details className="mt-4 rounded-lg border border-white/10 bg-black/20 p-3">
-              <summary className="cursor-pointer text-xs font-black text-cyan-100">자동 알림 진단</summary>
-              <p className="mt-2 text-[11px] leading-4 text-slate-500">
-                실제 발송 없이 dry-run으로 후보와 skip 사유를 확인합니다. 토큰 원문, 이메일, 사용자 ID는 표시하지 않습니다.
-              </p>
-              <button
-                type="button"
-                onClick={() => void requestPushDiagnostics()}
-                disabled={isLoadingPushDiagnostics}
-                className="mt-3 inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-3 text-xs font-black text-cyan-100 disabled:cursor-wait disabled:opacity-60"
-              >
-                {isLoadingPushDiagnostics ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Radar size={14} aria-hidden />}
-                진단 새로고침
-              </button>
-              {pushDiagnosticsError ? (
-                <p className="mt-3 rounded-md border border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
-                  {pushDiagnosticsError}
-                </p>
-              ) : null}
-              {pushDiagnostics ? (
-                <div className="mt-3 space-y-3">
-                  <div className="grid gap-2 text-xs sm:grid-cols-4">
-                    <div className="rounded-md border border-white/10 bg-black/25 p-3">
-                      <p className="font-bold text-slate-500">진단 시각</p>
-                      <p className="mt-1 font-black text-white">{formatAbsoluteTime(pushDiagnostics.scannedAt)}</p>
-                    </div>
-                    <div className="rounded-md border border-white/10 bg-black/25 p-3">
-                      <p className="font-bold text-slate-500">토큰</p>
-                      <p className="mt-1 font-black text-white">{pushDiagnostics.diagnostics.tokenCount}개</p>
-                    </div>
-                    <div className="rounded-md border border-white/10 bg-black/25 p-3">
-                      <p className="font-bold text-slate-500">발송 후보</p>
-                      <p className="mt-1 font-black text-white">{pushDiagnostics.diagnostics.eligibleEventCount}개</p>
-                    </div>
-                    <div className="rounded-md border border-white/10 bg-black/25 p-3">
-                      <p className="font-bold text-slate-500">발송 대상</p>
-                      <p className="mt-1 font-black text-white">{pushDiagnostics.diagnostics.sendTargetTokenCount}개</p>
-                    </div>
-                  </div>
-                  <div className="grid gap-2 text-xs sm:grid-cols-4">
-                    <div className="rounded-md border border-white/10 bg-black/25 p-3">
-                      <p className="font-bold text-slate-500">저장 조건</p>
-                      <p className="mt-1 font-black text-white">{pushDiagnostics.diagnostics.presetCount}개</p>
-                    </div>
-                    <div className="rounded-md border border-white/10 bg-black/25 p-3">
-                      <p className="font-bold text-slate-500">자동 후보</p>
-                      <p className="mt-1 font-black text-white">{pushDiagnostics.diagnostics.genericEventCount}개</p>
-                    </div>
-                    <div className="rounded-md border border-white/10 bg-black/25 p-3">
-                      <p className="font-bold text-slate-500">낮은 점수 skip</p>
-                      <p className="mt-1 font-black text-white">{pushDiagnostics.diagnostics.skippedLowScoreCount}개</p>
-                    </div>
-                    <div className="rounded-md border border-white/10 bg-black/25 p-3">
-                      <p className="font-bold text-slate-500">중복 skip</p>
-                      <p className="mt-1 font-black text-white">{pushDiagnostics.diagnostics.duplicateSkippedTokenCount}개</p>
-                    </div>
-                  </div>
-                  <div className="rounded-md border border-white/10 bg-black/25 p-3 text-xs">
-                    <p className="font-bold text-slate-500">최근 24시간 기록</p>
-                    <p className="mt-1 font-black text-white">
-                      기록 {pushDiagnostics.last24h.loggedEventCount}개 · 발송 합계 {pushDiagnostics.last24h.sentCount}개 · dry-run 실패 {pushDiagnostics.last24h.failureCount}개
-                    </p>
-                    <p className="mt-1 text-[11px] font-bold text-slate-500">
-                      조회 오류 {pushDiagnostics.diagnostics.lookupErrorCount ?? 0}개 · 스캐너 오류 {pushDiagnostics.diagnostics.scannerErrorCount ?? 0}개
-                    </p>
-                    <p className="mt-1 text-[11px] font-bold text-slate-500">
-                      후보 {pushDiagnostics.diagnostics.candidateEventCount ?? pushDiagnostics.diagnostics.genericEventCount}개 · 품질 통과{" "}
-                      {pushDiagnostics.diagnostics.qualityPassedEventCount ?? pushDiagnostics.diagnostics.eligibleEventCount}개 · 최종 시도{" "}
-                      {pushDiagnostics.diagnostics.finalSendAttemptCount ?? 0}개
-                    </p>
-                  </div>
-                  <div className="rounded-md border border-white/10 bg-black/25 p-3">
-                    <p className="text-xs font-black text-slate-300">최근 후보 이벤트</p>
-                    <div className="mt-2 space-y-2">
-                      {pushDiagnostics.candidateEvents.slice(0, 5).map((event, index) => (
-                        <div key={`${event.signalType}-${event.symbol ?? "market"}-${index}`} className="rounded-md border border-white/10 bg-black/20 p-2 text-[11px] leading-4 text-slate-400">
-                          <p className="font-black text-white">{event.alertTitle}</p>
-                          <p>
-                            {event.market} · {event.symbol ?? "시장"} · {event.score ?? "-"}점 · {event.alertKind} · {event.wouldSend ? "wouldSend" : event.skippedReason ?? "skip"}
-                          </p>
-                        </div>
-                      ))}
-                      {pushDiagnostics.candidateEvents.length === 0 ? <p className="text-[11px] text-slate-500">후보 이벤트가 없습니다.</p> : null}
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-            </details>
-          </div>
-        ) : null}
-      </div>
-
-      <div className="mt-4 rounded-xl border border-surface-line bg-surface-cardSoft p-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-black text-white">내가 저장한 레이더 감시</p>
-            <p className="mt-1 text-xs leading-5 text-slate-500">
-              관심 있는 자산과 조건만 모아두고, 다시 맞아떨어지는 순간을 빠르게 확인합니다.
-            </p>
-          </div>
-          <span className="rounded-md border border-accent-blue/25 bg-accent-blue/10 px-2 py-1 text-xs font-black text-accent-blue">
-            {setupPresets.length}개 저장
-          </span>
+      <PanelCard>
+        <SectionHeader
+          title="저장 조건"
+          description="관심 있는 자산과 조건을 모아두고 다시 맞아떨어지는 순간을 확인합니다."
+          action={<StatusPill tone="info">{setupPresets.length}개 저장</StatusPill>}
+        />
+        <div className="mt-4">
+          <ActionButton
+            tone="secondary"
+            onClick={requestManualAlertCheck}
+            disabled={isManualChecking}
+            className="min-h-10 w-full text-sm"
+          >
+            {isManualChecking ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Radar size={16} aria-hidden />}
+            저장 조건 다시 확인
+          </ActionButton>
         </div>
-        <button
-          type="button"
-          onClick={requestManualAlertCheck}
-          disabled={isManualChecking}
-          className="enterprise-button mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg px-3 text-sm font-black disabled:cursor-wait disabled:opacity-70"
-        >
-          {isManualChecking ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Radar size={16} aria-hidden />}
-          저장 조건 다시 확인
-        </button>
+
         {monitorStatus ? (
-          <div className="mt-3 grid gap-2 text-xs sm:grid-cols-3">
-            <div className="rounded-md border border-white/10 bg-black/25 p-3">
-              <p className="font-bold text-slate-500">마지막 확인</p>
-              <p className="mt-1 font-black text-white">{formatCheckedAt(monitorStatus.checkedAt)}</p>
-            </div>
-            <div className="rounded-md border border-white/10 bg-black/25 p-3">
-              <p className="font-bold text-slate-500">확인 범위</p>
-              <p className="mt-1 font-black text-white">
-                조건 {monitorStatus.presetCount}개 · 후보 {monitorStatus.setupCount}개
-              </p>
-            </div>
-            <div className="rounded-md border border-white/10 bg-black/25 p-3">
-              <p className="font-bold text-slate-500">{monitorReasonLabel(monitorStatus.reason)}</p>
-              <p className={monitorStatus.matchCount > 0 ? "mt-1 font-black text-emerald-200" : "mt-1 font-black text-slate-300"}>
-                일치 {monitorStatus.matchCount}개
-              </p>
-            </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <PanelCard className="bg-ui-inset p-3 shadow-none">
+              <MetricRow label="마지막 확인" value={formatCheckedAt(monitorStatus.checkedAt)} />
+            </PanelCard>
+            <PanelCard className="bg-ui-inset p-3 shadow-none">
+              <MetricRow label="확인 범위" value={`조건 ${monitorStatus.presetCount}개 · 후보 ${monitorStatus.setupCount}개`} />
+            </PanelCard>
+            <PanelCard className="bg-ui-inset p-3 shadow-none">
+              <MetricRow
+                label={monitorReasonLabel(monitorStatus.reason)}
+                value={<StatusPill tone={monitorStatus.matchCount > 0 ? "long" : "info"}>일치 {monitorStatus.matchCount}개</StatusPill>}
+              />
+            </PanelCard>
           </div>
         ) : (
-          <p className="mt-3 rounded-md border border-white/10 bg-black/25 p-3 text-xs leading-5 text-slate-500">
-            알림 화면을 열면 저장한 조건을 다시 훑고, 마지막 확인 상태가 여기에 표시됩니다.
-          </p>
+          <AppSurface tone="inset" padding="sm" className="mt-4 text-xs leading-5 text-ui-muted shadow-none">
+            알림 화면을 열면 저장한 조건을 다시 확인하고 마지막 확인 상태를 표시합니다.
+          </AppSurface>
         )}
+
         {visibleSetupMatches.length > 0 ? (
-          <div className="mt-3 rounded-md border border-emerald-300/25 bg-emerald-300/10 p-3">
+          <AppSurface tone="inset" padding="sm" className="mt-4 border-emerald-400/24 bg-emerald-400/10 shadow-none">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-black text-emerald-200">최근 일치 감지</p>
-              <span className="text-[11px] font-bold text-emerald-200/80">{formatSavedAt(visibleSetupMatches[0].matchedAt)}</span>
+              <p className="text-xs font-semibold text-ui-long">최근 일치 감지</p>
+              <span className="text-ui-label font-semibold text-ui-muted">{formatSavedAt(visibleSetupMatches[0].matchedAt)}</span>
             </div>
             <div className="mt-2 grid gap-2 md:grid-cols-2">
               {visibleSetupMatches.slice(0, compact ? 1 : 2).map((match) => (
-                <article key={match.id} className="rounded border border-emerald-300/20 bg-black/20 p-3">
+                <article key={match.id} className="rounded-ui-sm border border-ui-line bg-ui-panel p-3">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-sm font-black text-white">{compactSymbol(match.setup.symbol)}</span>
-                    <span className="rounded border border-white/10 bg-black/30 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">
-                      {match.setup.timeframe}
-                    </span>
-                    <span className={match.setup.side === "long" ? "rounded border border-emerald-300/25 bg-emerald-300/10 px-1.5 py-0.5 text-[10px] font-black text-emerald-200" : "rounded border border-red-300/25 bg-red-300/10 px-1.5 py-0.5 text-[10px] font-black text-red-200"}>
+                    <span className="text-sm font-semibold text-ui-text">{compactSymbol(match.setup.symbol)}</span>
+                    <StatusPill tone="info" className="min-h-0 px-1.5 py-0.5 text-[10px]">{match.setup.timeframe}</StatusPill>
+                    <StatusPill tone={match.setup.side === "long" ? "long" : "short"} className="min-h-0 px-1.5 py-0.5 text-[10px]">
                       {presetSideLabel(match.setup.side, market)}
-                    </span>
-                    <span className="rounded border border-cyan-300/25 bg-cyan-300/10 px-1.5 py-0.5 text-[10px] font-black text-cyan-200">
-                      {match.setup.score}점
-                    </span>
+                    </StatusPill>
+                    <StatusPill tone="watch" className="min-h-0 px-1.5 py-0.5 text-[10px]">{match.setup.score}점</StatusPill>
                   </div>
-                  <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-300">{match.setup.headline}</p>
+                  <p className="mt-2 line-clamp-2 text-xs leading-5 text-ui-muted">{match.setup.headline}</p>
                 </article>
               ))}
             </div>
-          </div>
+          </AppSurface>
         ) : (
-          <p className="mt-3 rounded-md border border-white/10 bg-black/25 p-3 text-xs leading-5 text-slate-500">
-            저장 조건이 현재 레이더 결과와 다시 맞아떨어지면 최근 일치 감지로 모아 보여줍니다.
-          </p>
+          <AppSurface tone="inset" padding="sm" className="mt-4 text-xs leading-5 text-ui-muted shadow-none">
+            저장 조건이 현재 레이더 결과와 다시 맞아떨어지면 최근 일치 감지로 표시합니다.
+          </AppSurface>
         )}
+
         {setupPresets.length > 0 ? (
-          <div className="mt-3 grid gap-2 md:grid-cols-2">
+          <div className="mt-4 grid gap-2 md:grid-cols-2">
             {setupPresets.slice(0, compact ? 2 : 6).map((preset) => (
-              <article key={preset.id} className="rounded-md border border-white/10 bg-black/25 p-3">
+              <article key={preset.id} className="rounded-ui-sm border border-ui-line bg-ui-inset p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-sm font-black text-white">{compactSymbol(preset.symbol)}</span>
-                      <span className="rounded border border-white/10 bg-black/30 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">
-                        {preset.timeframe}
-                      </span>
-                      <span className={preset.side === "long" ? "rounded border border-emerald-300/25 bg-emerald-300/10 px-1.5 py-0.5 text-[10px] font-black text-emerald-200" : "rounded border border-red-300/25 bg-red-300/10 px-1.5 py-0.5 text-[10px] font-black text-red-200"}>
+                      <span className="text-sm font-semibold text-ui-text">{compactSymbol(preset.symbol)}</span>
+                      <StatusPill tone="info" className="min-h-0 px-1.5 py-0.5 text-[10px]">{preset.timeframe}</StatusPill>
+                      <StatusPill tone={preset.side === "long" ? "long" : "short"} className="min-h-0 px-1.5 py-0.5 text-[10px]">
                         {presetSideLabel(preset.side, market)}
-                      </span>
+                      </StatusPill>
                     </div>
-                    <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-400">{preset.headline}</p>
+                    <p className="mt-2 line-clamp-2 text-xs leading-5 text-ui-muted">{preset.headline}</p>
                   </div>
-                  <span className="shrink-0 rounded border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-[11px] font-black text-cyan-200">
-                    {preset.score}점
-                  </span>
+                  <StatusPill tone="watch" className="shrink-0">{preset.score}점</StatusPill>
                 </div>
-                <p className="mt-3 flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
+                <p className="mt-3 flex items-center gap-1.5 text-ui-label font-semibold text-ui-subtle">
                   <Clock3 size={12} aria-hidden />
                   {formatSavedAt(preset.savedAt)}
                 </p>
@@ -1020,26 +813,160 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             ))}
           </div>
         ) : (
-          <p className="mt-3 rounded-md border border-white/10 bg-black/25 p-3 text-xs leading-5 text-slate-500">
+          <AppSurface tone="inset" padding="sm" className="mt-4 text-xs leading-5 text-ui-muted shadow-none">
             아직 저장한 감시 조건이 없습니다. 레이더 감지 카드에서 감시 저장을 누르면 여기에 모입니다.
-          </p>
+          </AppSurface>
         )}
-      </div>
+      </PanelCard>
 
-      <div className={`mt-4 grid gap-3 ${compact ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
-        {visibleRules.map((rule) => (
-          <RuleCard key={rule.id} rule={rule} enabled={enabledRuleIds.includes(rule.id)} onToggle={toggleRule} />
-        ))}
-      </div>
+      <PanelCard>
+        <SectionHeader
+          title="알림 조건"
+          description={summary.headline}
+          action={
+            <div className="flex flex-wrap gap-2">
+              <StatusPill tone="locked">Pro {summary.proCount}</StatusPill>
+              <StatusPill tone="info">Basic {summary.freeCount}</StatusPill>
+            </div>
+          }
+        />
+        <div className={`mt-4 grid gap-3 ${compact ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
+          {visibleRules.map((rule) => (
+            <RuleCard key={rule.id} rule={rule} enabled={enabledRuleIds.includes(rule.id)} onToggle={toggleRule} />
+          ))}
+        </div>
+      </PanelCard>
+
+      {isAdmin ? (
+        <AppSurface tone="inset" padding="md" className="space-y-4 border-amber-400/24 shadow-none">
+          <SectionHeader
+            eyebrow="관리자 전용"
+            title="운영 도구"
+            description="테스트 알림과 자동 알림 진단은 관리자에게만 표시됩니다."
+            action={<StatusPill tone="risk">관리자</StatusPill>}
+          />
+
+          <PanelCard className="bg-ui-panel shadow-none">
+            <SectionHeader
+              title="테스트 알림"
+              description="현재 로그인한 내 계정과 이 기기 연결로만 테스트 알림을 보냅니다."
+            />
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {pushTestMessages.map((message) => {
+                const isActive = activeTestKind === message.kind;
+                return (
+                  <ActionButton
+                    key={message.kind}
+                    tone="secondary"
+                    onClick={() => void requestTestPush(message.kind)}
+                    disabled={Boolean(activeTestKind) || (isAndroidAppPush && (isAppPushConnecting || !canSendAppPushTest))}
+                    className="min-h-16 flex-col items-start justify-start px-3 py-2 text-left"
+                  >
+                    <span className="flex items-center gap-2 text-xs font-semibold text-ui-text">
+                      {isActive ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <BellRing size={14} aria-hidden />}
+                      {message.label}
+                    </span>
+                    <span className="text-[11px] leading-4 text-ui-muted">{message.title}</span>
+                  </ActionButton>
+                );
+              })}
+            </div>
+            {testResult ? (
+              <AppSurface as="p" tone="inset" padding="sm" className="mt-3 text-xs leading-5 text-ui-brand shadow-none">
+                {testResult}
+              </AppSurface>
+            ) : null}
+          </PanelCard>
+
+          <details className="rounded-ui border border-ui-line bg-ui-panel p-4">
+            <summary className="cursor-pointer text-sm font-semibold text-ui-text">자동 알림 진단</summary>
+            <p className="mt-2 text-xs leading-5 text-ui-muted">
+              실제 발송 없이 후보와 제외 사유를 확인합니다. 기기 식별값, 이메일, 사용자 ID는 표시하지 않습니다.
+            </p>
+            <ActionButton
+              tone="secondary"
+              onClick={() => void requestPushDiagnostics()}
+              disabled={isLoadingPushDiagnostics}
+              className="mt-3"
+            >
+              {isLoadingPushDiagnostics ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Radar size={14} aria-hidden />}
+              진단 새로고침
+            </ActionButton>
+            {pushDiagnosticsError ? (
+              <AppSurface as="p" tone="inset" padding="sm" className="mt-3 border-amber-400/24 bg-amber-400/10 text-xs leading-5 text-ui-risk shadow-none">
+                {pushDiagnosticsError}
+              </AppSurface>
+            ) : null}
+            {pushDiagnostics ? (
+              <div className="mt-3 space-y-3">
+                <div className="grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                  <PanelCard className="bg-ui-inset p-3 shadow-none">
+                    <MetricRow label="진단 시각" value={formatAbsoluteTime(pushDiagnostics.scannedAt)} />
+                  </PanelCard>
+                  <PanelCard className="bg-ui-inset p-3 shadow-none">
+                    <MetricRow label="연결 기기" value={`${pushDiagnostics.diagnostics.tokenCount}개`} />
+                  </PanelCard>
+                  <PanelCard className="bg-ui-inset p-3 shadow-none">
+                    <MetricRow label="발송 후보" value={`${pushDiagnostics.diagnostics.eligibleEventCount}개`} />
+                  </PanelCard>
+                  <PanelCard className="bg-ui-inset p-3 shadow-none">
+                    <MetricRow label="발송 대상" value={`${pushDiagnostics.diagnostics.sendTargetTokenCount}개`} />
+                  </PanelCard>
+                  <PanelCard className="bg-ui-inset p-3 shadow-none">
+                    <MetricRow label="저장 조건" value={`${pushDiagnostics.diagnostics.presetCount}개`} />
+                  </PanelCard>
+                  <PanelCard className="bg-ui-inset p-3 shadow-none">
+                    <MetricRow label="자동 후보" value={`${pushDiagnostics.diagnostics.genericEventCount}개`} />
+                  </PanelCard>
+                  <PanelCard className="bg-ui-inset p-3 shadow-none">
+                    <MetricRow label="낮은 점수 제외" value={`${pushDiagnostics.diagnostics.skippedLowScoreCount}개`} />
+                  </PanelCard>
+                  <PanelCard className="bg-ui-inset p-3 shadow-none">
+                    <MetricRow label="중복 제외" value={`${pushDiagnostics.diagnostics.duplicateSkippedTokenCount}개`} />
+                  </PanelCard>
+                </div>
+                <AppSurface tone="inset" padding="sm" className="text-xs leading-5 text-ui-muted shadow-none">
+                  <p className="font-semibold text-ui-text">
+                    최근 24시간 기록 {pushDiagnostics.last24h.loggedEventCount}개 · 발송 합계 {pushDiagnostics.last24h.sentCount}개 · 진단 실패 {pushDiagnostics.last24h.failureCount}개
+                  </p>
+                  <p className="mt-1">
+                    조회 오류 {pushDiagnostics.diagnostics.lookupErrorCount ?? 0}개 · 스캐너 오류 {pushDiagnostics.diagnostics.scannerErrorCount ?? 0}개
+                  </p>
+                  <p className="mt-1">
+                    후보 {pushDiagnostics.diagnostics.candidateEventCount ?? pushDiagnostics.diagnostics.genericEventCount}개 · 품질 통과{" "}
+                    {pushDiagnostics.diagnostics.qualityPassedEventCount ?? pushDiagnostics.diagnostics.eligibleEventCount}개 · 최종 시도{" "}
+                    {pushDiagnostics.diagnostics.finalSendAttemptCount ?? 0}개
+                  </p>
+                </AppSurface>
+                <PanelCard className="bg-ui-inset shadow-none">
+                  <p className="text-xs font-semibold text-ui-text">최근 후보 이벤트</p>
+                  <div className="mt-2 space-y-2">
+                    {pushDiagnostics.candidateEvents.slice(0, 5).map((event, index) => (
+                      <article key={`${event.signalType}-${event.symbol ?? "market"}-${index}`} className="rounded-ui-sm border border-ui-line bg-ui-panel p-2 text-[11px] leading-4 text-ui-muted">
+                        <p className="font-semibold text-ui-text">{event.alertTitle}</p>
+                        <p>
+                          {event.market} · {event.symbol ?? "시장"} · {event.score ?? "-"}점 · {event.alertKind} · {event.wouldSend ? "발송 가능" : event.skippedReason ?? "제외"}
+                        </p>
+                      </article>
+                    ))}
+                    {pushDiagnostics.candidateEvents.length === 0 ? <p className="text-[11px] text-ui-muted">후보 이벤트가 없습니다.</p> : null}
+                  </div>
+                </PanelCard>
+              </div>
+            ) : null}
+          </details>
+        </AppSurface>
+      ) : null}
 
       {compact ? (
-        <Link
+        <ActionButton
           href={market === "stocks" ? "/alerts?market=global" : "/alerts?market=crypto"}
-          className="mt-4 inline-flex min-h-10 w-full items-center justify-center rounded-md border border-cyan-300/30 bg-cyan-300/10 px-4 text-sm font-black text-cyan-200 transition hover:bg-cyan-300 hover:text-slate-950"
+          tone="secondary"
+          className="min-h-10 w-full text-sm"
         >
           알림 조건 전체 설정하기
-        </Link>
+        </ActionButton>
       ) : null}
-    </section>
+    </AppSurface>
   );
 }
