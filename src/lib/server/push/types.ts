@@ -155,6 +155,7 @@ export interface PushPreferenceSkippedSample {
   skippedBy?: "market" | "rule" | "market_and_rule";
   marketAllowed?: boolean;
   ruleAllowed?: boolean;
+  tokenMarkets?: string[];
 }
 
 export interface PushDuplicateSkippedSample {

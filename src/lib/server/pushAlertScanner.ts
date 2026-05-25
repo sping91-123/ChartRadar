@@ -622,6 +622,7 @@ function personalizeEventForUser(event: PushAlertEvent, userPresets: PushAlertPr
 function pushPreferenceSkippedSample(
   samples: PushPreferenceSkippedSample[],
   event: PushAlertEvent,
+  tokens: PushTokenRow[],
   firstDecision: ReturnType<typeof tokenPreferenceDecision> | undefined
 ) {
   pushSample(samples, {
@@ -631,7 +632,8 @@ function pushPreferenceSkippedSample(
     reason: "token_preferences",
     skippedBy: firstDecision?.skippedBy ?? undefined,
     marketAllowed: firstDecision?.marketOk,
-    ruleAllowed: firstDecision?.ruleOk
+    ruleAllowed: firstDecision?.ruleOk,
+    tokenMarkets: Array.from(new Set(tokens.flatMap((token) => token.markets ?? []))).slice(0, 8)
   });
 }
 
@@ -809,7 +811,7 @@ export async function runPushAlertScan(context: ScanContext) {
           preferenceSkippedTokenCount += Math.max(0, userTokens.length - targetTokens.length);
           if (targetTokens.length === 0) {
             pushDiagnostic(eventDiagnostic(event, "token_preferences"));
-            pushPreferenceSkippedSample(preferenceSkippedSamples, event, preferenceDecisions[0]);
+            pushPreferenceSkippedSample(preferenceSkippedSamples, event, userTokens, preferenceDecisions[0]);
             continue;
           }
           if (await alreadySent(userId, event.eventKey)) {
@@ -833,7 +835,7 @@ export async function runPushAlertScan(context: ScanContext) {
         }
 
         const result = await sendEventToUser(userId, userTokens, event);
-        if (result.targetTokens === 0) pushPreferenceSkippedSample(preferenceSkippedSamples, event, preferenceDecisions[0]);
+        if (result.targetTokens === 0) pushPreferenceSkippedSample(preferenceSkippedSamples, event, userTokens, preferenceDecisions[0]);
         sent += result.sent;
         skipped += result.skipped;
         failed += result.failed;

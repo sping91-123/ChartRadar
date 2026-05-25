@@ -1,5 +1,14 @@
 # 작업 맥락 메모
 
+## 2026-05-26 글로벌 푸시 market alias 보정.
+
+- 운영 로그에서 QQQ/SPY/NQ/ES/^VIX/VIXY는 `market=stocks`, `score=95`, `quality=A`, `wouldSend=true`로 생성됐다.
+- 같은 로그의 preference 샘플은 `skippedBy=market`, `marketAllowed=false`, `ruleAllowed=true`로 rule_ids가 아니라 market 이름 매칭이 병목임을 보여준다.
+- `/alerts?market=global`은 화면에서 `market=stocks`로 변환되며, 기존 서버 이벤트도 내부 시장명으로 `stocks`를 사용한다.
+- 앞으로 푸시 preference 비교에서는 `stocks`와 `global`을 글로벌 시장 alias로 취급하되, DB preset 구조와 기존 scanner 타입은 `stocks`를 유지한다.
+- 로컬 dry-run의 preference sample은 `tokenMarkets=["crypto"]`로 확인되어 현재 저장된 토큰은 글로벌이 아니라 코인 시장만 켜진 상태였다.
+- alias 보정 후에도 토큰에 `global` 또는 `stocks`가 없으면 글로벌 이벤트는 의도대로 market preference에서 제외된다.
+
 ## 2026-05-26 푸시 크론 운영 로그 샘플 가독성 보강.
 
 - Vercel 로그에 `preferenceSkippedSamples`가 남지만 `console.info`에 객체를 직접 넘겨 nested sample이 `[Object]`로 접힌다.

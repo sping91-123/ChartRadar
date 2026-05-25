@@ -1,5 +1,13 @@
 # 작업 체크리스트
 
+## 2026-05-26 글로벌 푸시 market alias 보정.
+
+- [x] `push_tokens.markets` 저장 값과 글로벌 화면 market 용어를 확인한다.
+- [x] `stocks`와 `global`을 같은 글로벌 푸시 시장으로 매칭한다.
+- [x] 토큰 등록 시 `global` 입력이 들어와도 기존 DB 구조와 호환되게 정규화한다.
+- [x] dry-run에서 글로벌 후보의 `marketAllowed`와 `sendTargetTokenCount`를 확인한다.
+- [x] 빌드, 스모크, 타입 체크, diff check로 검증한다.
+
 ## 2026-05-26 푸시 크론 운영 로그 샘플 가독성 보강.
 
 - [x] Vercel 로그에서 샘플이 `[Object]`로 접히는 원인을 확인한다.

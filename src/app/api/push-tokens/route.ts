@@ -52,6 +52,24 @@ function normalizeStringList(values: unknown, allowed?: Set<string>) {
   ).slice(0, 40);
 }
 
+function normalizePushMarketValue(value: string) {
+  const market = value.trim();
+  if (market === "global") return "stocks";
+  return market;
+}
+
+function normalizePushMarkets(values: unknown) {
+  if (!Array.isArray(values)) return [];
+  return Array.from(
+    new Set(
+      values
+        .filter((item): item is string => typeof item === "string")
+        .map(normalizePushMarketValue)
+        .filter((item) => item === "crypto" || item === "stocks")
+    )
+  ).slice(0, 40);
+}
+
 function mergeStringLists(current: string[] | null | undefined, next: string[], allowed?: Set<string>) {
   return Array.from(
     new Set(
@@ -61,6 +79,10 @@ function mergeStringLists(current: string[] | null | undefined, next: string[], 
         .filter((item) => item && (!allowed || allowed.has(item)))
     )
   ).slice(0, 40);
+}
+
+function mergePushMarkets(current: string[] | null | undefined, next: string[]) {
+  return normalizePushMarkets([...(current ?? []), ...next]);
 }
 
 function normalizePreset(item: unknown, fallbackMarket: "crypto" | "stocks"): NormalizedPushPreset | null {
@@ -109,7 +131,7 @@ export async function POST(request: Request) {
   const platform: PushPlatform = "android";
 
   const appId = typeof body.appId === "string" && body.appId.trim() ? body.appId.trim() : "com.staronlabs.chartradar";
-  const markets = normalizeStringList(body.markets, new Set(["crypto", "stocks"]));
+  const markets = normalizePushMarkets(body.markets);
   const ruleIds = normalizeStringList(body.ruleIds);
   const fallbackMarket = markets.includes("stocks") && !markets.includes("crypto") ? "stocks" : "crypto";
   const shouldSyncPresets = Array.isArray(body.presets);
@@ -127,7 +149,7 @@ export async function POST(request: Request) {
     `push_tokens?select=id,user_id,markets,rule_ids&token=eq.${encodeURIComponent(token)}&user_id=eq.${encodeURIComponent(user.id)}&limit=1`
   );
   const existing = existingRows[0] ?? null;
-  const mergedMarkets = mergeStringLists(existing?.markets, markets, new Set(["crypto", "stocks"]));
+  const mergedMarkets = mergePushMarkets(existing?.markets, markets);
   const mergedRuleIds = mergeStringLists(existing?.rule_ids, ruleIds);
 
   const rows = await supabaseAdminRest<Array<{ id: string }>>("push_tokens?on_conflict=token", {

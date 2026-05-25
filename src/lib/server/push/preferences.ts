@@ -3,6 +3,15 @@ import type { PushAlertEvent, PushTokenRow } from "@/lib/server/push/types";
 
 type PushTokenPreferenceSkipReason = "market" | "rule" | "market_and_rule";
 
+const globalMarketAliases = new Set(["stocks", "global"]);
+
+export function marketMatchesPreference(preferredMarket: string, eventMarket: PushAlertEvent["market"]) {
+  const preferred = preferredMarket.trim();
+  if (!preferred) return false;
+  if (preferred === eventMarket) return true;
+  return globalMarketAliases.has(preferred) && globalMarketAliases.has(eventMarket);
+}
+
 function tokenPreferenceSkipReason(marketOk: boolean, ruleOk: boolean): PushTokenPreferenceSkipReason | null {
   if (!marketOk && !ruleOk) return "market_and_rule";
   if (!marketOk) return "market";
@@ -13,7 +22,7 @@ function tokenPreferenceSkipReason(marketOk: boolean, ruleOk: boolean): PushToke
 export function tokenPreferenceDecision(token: PushTokenRow, event: PushAlertEvent) {
   const markets = token.markets ?? [];
   const ruleIds = token.rule_ids ?? [];
-  const marketOk = markets.length === 0 || markets.includes(event.market);
+  const marketOk = markets.length === 0 || markets.some((market) => marketMatchesPreference(market, event.market));
   const shouldBypassRulePreference = event.system === true && event.isWatchlist !== true;
   const ruleOk = shouldBypassRulePreference || ruleIds.length === 0 || ruleIds.includes(event.ruleId);
   return {
