@@ -17,7 +17,7 @@ export default function ProPage({ searchParams }: { searchParams?: { market?: st
   const headerMarket = marketScope === "stocks" ? "stocks" : marketScope === "crypto" ? "crypto" : undefined;
 
   return (
-    <main className="min-h-screen px-3 pb-10 sm:px-5">
+    <main className="min-h-full px-3 pb-[calc(3rem+env(safe-area-inset-bottom))] sm:px-5">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-5">
         <Header market={headerMarket} />
         <RadarTopNav market={navMarket} />

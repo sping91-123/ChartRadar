@@ -1997,3 +1997,12 @@ The health endpoint now reports a launch readiness score and structured blocking
 - AndroidManifest.xml에는 `OPEN_ALERTS` intent-filter가 추가되어 있으며, FCM `click_action`과 MainActivity intent-filter가 연결된다.
 - 이 변경은 네이티브 Android Manifest 변경이므로 Vercel 배포만으로 기존 Play Store 설치본에 자동 반영되지 않는다.
 - Play Store 테스터에게 반영하려면 나중에 `versionCode`를 증가시키고 signed AAB를 다시 생성한 뒤 Play Console 비공개 테스트 트랙에 업로드해야 한다.
+## 2026-05-25 Pro 화면 디자인 시스템 2차 적용.
+
+- 이번 작업은 `/pro` 화면을 결제 랜딩이 아니라 구독 상태와 플랜 비교 화면처럼 보이게 하는 UI 정리다.
+- RevenueCat, Google Play Billing, Toss, Supabase 권한 로직, planId, productId, 가격 정책은 변경하지 않는다.
+- `docs/ui-design-system-audit.md` 기준으로 glow, 과한 gradient, 마케팅성 배지, 반복 카드 느낌을 줄이고 기존 DesignPrimitives를 우선 사용한다.
+- 모바일 340px와 360px에서 가격과 CTA가 깨지지 않는지 확인해야 한다.
+- Basic 카드는 별도 가격 카드로 반복하지 않고 현재 이용 상태와 Basic 둘러보기 액션으로 분리한다.
+- 결제 버튼은 기존 `startCheckout`, 네이티브 구매, 웹 checkout 분기를 그대로 호출한다.
+- 340px와 360px 라이트/다크 모드에서 `/pro`, `/pro?market=crypto`, `/pro?market=stocks` 가로 overflow가 없음을 확인했다.

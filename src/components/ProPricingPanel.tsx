@@ -1,18 +1,21 @@
 "use client";
 // Pro 구독 플랜과 결제 시작 버튼을 보여주는 판매 패널입니다.
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
 import {
+  type BillingEntitlementPlan,
   type BillingPlanId,
   type BillingPageScope,
   type BillingPlan,
   getBillingPlansForPage,
   formatKrw,
+  getEntitlementLabel,
+  hasMarketEntitlement,
   subscriptionTrustNotes
 } from "@/lib/billing";
 import { fetchNativePlanPriceLabels, isNativePurchaseAvailable, purchaseNativePlan, restoreNativeEntitlement } from "@/lib/mobilePurchases";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
+import { ActionButton, AppSurface, DataRow, MetricRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 
 type CheckoutState =
   | { status: "idle" }
@@ -24,7 +27,7 @@ function scopeCopy(scope: BillingPageScope) {
   if (scope === "crypto") {
     return {
       eyebrow: "COIN PRO",
-      title: "Coin Pro로 코인 상세 판단을 엽니다.",
+      title: "Coin Pro 권한과 플랜을 확인합니다.",
       body: "BTC/ETH·알트 추적 조건, 무효화 기준, 세부 리스크를 코인 시장 기준으로 정리합니다."
     };
   }
@@ -32,14 +35,14 @@ function scopeCopy(scope: BillingPageScope) {
   if (scope === "stocks") {
     return {
       eyebrow: "GLOBAL PRO",
-      title: "Global Pro로 미국장 상세 판단을 엽니다.",
+      title: "Global Pro 권한과 플랜을 확인합니다.",
       body: "미국장 30초 체크, 지수선물, 매크로 압력, 섹터 로테이션, 대장주 레이더를 한 화면에서 정리합니다."
     };
   }
 
   return {
     eyebrow: "ALL MARKET PRO",
-    title: "All Market Pro로 전체 시장 판단을 엽니다.",
+    title: "All Market Pro 권한과 플랜을 확인합니다.",
     body: "Coin Pro와 Global Pro를 통합해 코인과 미국장을 함께 보는 사용자를 위한 판단 보조 흐름을 제공합니다."
   };
 }
@@ -51,95 +54,98 @@ function checkoutCtaLabel(plan: BillingPlan) {
   return "Pro 시작하기";
 }
 
+function planScopeLabel(plan: BillingPlan) {
+  if (plan.marketScope === "crypto") return "Coin Pro";
+  if (plan.marketScope === "stocks") return "Global Pro";
+  if (plan.marketScope === "bundle") return "All Market Pro";
+  return "Basic";
+}
+
+function planScopeTone(plan: BillingPlan) {
+  if (plan.marketScope === "trial") return "locked" as const;
+  if (plan.marketScope === "bundle") return "watch" as const;
+  return "info" as const;
+}
+
+function AccessValue({ open }: { open: boolean }) {
+  return <span className={open ? "text-ui-long" : "text-ui-locked"}>{open ? "열림" : "Basic"}</span>;
+}
+
 function PlanCard({
   plan,
   isBusy,
+  isCurrent,
   priceLabel,
   onCheckout
 }: {
   plan: BillingPlan;
   isBusy: boolean;
+  isCurrent: boolean;
   priceLabel: string;
   onCheckout: (plan: BillingPlan) => void;
 }) {
-  const isFree = plan.id === "free";
-  const isRecommended = plan.marketScope === "bundle" && plan.billingPeriodMonths === 1;
   const hasMonthlyValue = plan.monthlyValue > 0 && plan.billingPeriodMonths > 1;
 
   return (
-    <article
-      className={`relative flex h-full flex-col rounded-2xl border p-5 ${
-        isRecommended
-          ? "border-cyan-300/35 bg-cyan-300/10 shadow-[0_24px_70px_rgba(34,211,238,0.12)]"
-          : "border-surface-line bg-white/70 dark:bg-white/[0.035]"
-      }`}
-    >
+    <AppSurface as="article" tone={plan.marketScope === "bundle" ? "elevated" : "panel"} padding="md" className="flex h-full min-w-0 flex-col">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-black tracking-[0.22em] text-accent-blue">{plan.badge}</p>
-          <h3 className="mt-2 text-xl font-black text-slate-950 dark:text-white">{plan.displayName}</h3>
-          <p className="mt-1 text-xs font-bold text-slate-500 dark:text-slate-400">{plan.periodLabel}</p>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <StatusPill tone={planScopeTone(plan)}>{planScopeLabel(plan)}</StatusPill>
+            {isCurrent ? <StatusPill tone="long">현재 플랜</StatusPill> : null}
+          </div>
+          <h3 className="mt-3 break-keep text-ui-title font-semibold tracking-tight text-ui-text">{plan.displayName}</h3>
+          <p className="mt-1 text-ui-label font-semibold text-ui-subtle">{plan.periodLabel}</p>
         </div>
-        {isRecommended ? (
-          <span className="rounded-full bg-cyan-300 px-2.5 py-1 text-[11px] font-black text-slate-950">통합</span>
-        ) : null}
       </div>
 
-      <p className="mt-4 text-3xl font-black text-slate-950 dark:text-white">{priceLabel}</p>
+      <p className="mt-4 break-keep text-[1.35rem] font-semibold leading-tight tracking-tight text-ui-text min-[360px]:text-2xl">{priceLabel}</p>
       {hasMonthlyValue ? (
-        <p className="mt-1 text-xs font-bold text-slate-500">월 환산 {formatKrw(plan.monthlyValue)}</p>
+        <p className="mt-1 text-ui-label font-semibold text-ui-muted">월 환산 {formatKrw(plan.monthlyValue)}</p>
       ) : null}
-      <p className="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-300">{plan.description}</p>
-      {!isFree ? <p className="mt-3 text-xs font-bold leading-5 text-slate-500 dark:text-slate-400">{plan.renewalText}</p> : null}
+      <p className="mt-3 text-ui-body text-ui-muted [word-break:keep-all]">{plan.description}</p>
+      <p className="mt-3 text-xs font-semibold leading-5 text-ui-subtle [word-break:keep-all]">{plan.renewalText}</p>
 
-      <ul className="mt-5 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+      <ul className="mt-4 space-y-2 text-sm text-ui-muted">
         {plan.highlights.map((item) => (
-          <li key={item} className="flex gap-2">
-            <CheckCircle2 className="mt-0.5 shrink-0 text-signal-success" size={15} aria-hidden />
+          <li key={item} className="flex gap-2 [word-break:keep-all]">
+            <CheckCircle2 className="mt-0.5 shrink-0 text-ui-long" size={15} aria-hidden />
             <span>{item}</span>
           </li>
         ))}
       </ul>
 
-      <div className="mt-5 grid gap-2 rounded-xl border border-white/10 bg-black/5 p-3 text-xs font-bold text-slate-500 dark:bg-black/20">
-        <p>레이더: {plan.limits.radarScans}</p>
-        <p>AI 브리핑: {plan.limits.aiBriefings}</p>
-        <p>관심목록: {plan.limits.watchlist}</p>
-        <p>알림: {plan.limits.alerts}</p>
-      </div>
+      <AppSurface tone="inset" padding="sm" className="mt-4">
+        <MetricRow label="시장" value={<span className="block max-w-[9rem] whitespace-normal break-keep">{plan.limits.markets}</span>} />
+        <MetricRow label="레이더" value={<span className="block max-w-[9rem] whitespace-normal break-keep">{plan.limits.radarScans}</span>} />
+        <MetricRow label="관심목록" value={<span className="block max-w-[9rem] whitespace-normal break-keep">{plan.limits.watchlist}</span>} />
+        <MetricRow label="알림" value={<span className="block max-w-[9rem] whitespace-normal break-keep">{plan.limits.alerts}</span>} />
+      </AppSurface>
 
       <div className="mt-auto pt-5">
-        {isFree ? (
-          <Link
-            href="/crypto"
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-surface-line bg-white/80 px-4 text-sm font-black text-slate-700 dark:bg-black/20 dark:text-slate-200"
-          >
-            무료로 둘러보기
-          </Link>
-        ) : (
-          <button
-            type="button"
-            onClick={() => onCheckout(plan)}
-            disabled={isBusy}
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-accent-blue px-4 text-center text-sm font-black leading-5 text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isBusy ? <Loader2 className="mr-2 animate-spin" size={16} aria-hidden /> : null}
-            {checkoutCtaLabel(plan)}
-          </button>
-        )}
+        <ActionButton tone="primary" onClick={() => onCheckout(plan)} disabled={isBusy} className="w-full whitespace-normal break-keep px-2 text-center leading-5 min-[360px]:px-3">
+          {isBusy ? <Loader2 className="mr-2 animate-spin" size={16} aria-hidden /> : null}
+          {checkoutCtaLabel(plan)}
+        </ActionButton>
       </div>
-    </article>
+    </AppSurface>
   );
 }
 
 export function ProPricingPanel({ marketScope = "all" }: { marketScope?: BillingPageScope } = {}) {
-  const { session, user, isLoading } = useSupabaseAuth();
+  const { session, user, profile, isLoading } = useSupabaseAuth();
   const [checkoutState, setCheckoutState] = useState<CheckoutState>({ status: "idle" });
   const [nativePriceLabels, setNativePriceLabels] = useState<Partial<Record<BillingPlanId, string>>>({});
   const visiblePlans = useMemo(() => getBillingPlansForPage(marketScope), [marketScope]);
+  const freePlan = visiblePlans.find((plan) => plan.id === "free");
+  const paidPlans = visiblePlans.filter((plan) => plan.id !== "free");
   const visiblePlanIds = useMemo(() => visiblePlans.map((plan) => plan.id).join("|"), [visiblePlans]);
   const copy = scopeCopy(marketScope);
   const nativePurchaseAvailable = isNativePurchaseAvailable();
+  const currentPlanId = (profile?.plan ?? "free") as BillingEntitlementPlan;
+  const currentPlanLabel = isLoading ? "확인 중" : session ? getEntitlementLabel(currentPlanId) : "로그인 필요";
+  const hasCryptoAccess = hasMarketEntitlement(currentPlanId, "crypto");
+  const hasGlobalAccess = hasMarketEntitlement(currentPlanId, "stocks");
 
   useEffect(() => {
     if (!nativePurchaseAvailable || !user?.id) {
@@ -223,60 +229,92 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
   }
 
   return (
-    <section className="flex flex-col gap-5">
-      <div className="enterprise-panel p-6">
-        <p className="text-xs font-black tracking-[0.24em] text-accent-blue">{copy.eyebrow}</p>
-        <h2 className="mt-3 max-w-3xl text-3xl font-black tracking-tight text-slate-950 dark:text-white">{copy.title}</h2>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">{copy.body}</p>
+    <section className="flex flex-col gap-4 sm:gap-5">
+      <AppSurface tone="panel" padding="lg" className="shadow-none">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <SectionHeader eyebrow={copy.eyebrow} title={copy.title} description={copy.body} />
+          <StatusPill tone={session ? "info" : "locked"} className="self-start">{currentPlanLabel}</StatusPill>
+        </div>
+      </AppSurface>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <PanelCard>
+          <SectionHeader
+            eyebrow="CURRENT PLAN"
+            title="현재 이용 상태"
+            description="로그인된 계정의 Pro 권한과 Basic에서 확인 가능한 범위를 먼저 보여줍니다."
+          />
+          <div className="mt-4">
+            <DataRow label="현재 플랜" value={currentPlanLabel} detail={session ? "구독 권한은 계정 기준으로 적용됩니다." : "결제 전 Google 로그인이 필요합니다."} />
+            <DataRow label="코인 Pro" value={<AccessValue open={hasCryptoAccess} />} detail="BTC/ETH, 알트 추적 조건, 무효화 기준." />
+            <DataRow label="글로벌 Pro" value={<AccessValue open={hasGlobalAccess} />} detail="미국장 30초 체크, 지수선물, 매크로 압력." />
+          </div>
+          {freePlan ? (
+            <ActionButton href="/crypto" tone="secondary" className="mt-4 w-full">
+              Basic으로 먼저 둘러보기
+            </ActionButton>
+          ) : null}
+        </PanelCard>
+
+        <PanelCard>
+          <SectionHeader
+            eyebrow="PLAN DIFFERENCE"
+            title="Basic과 Pro 차이"
+            description="Basic은 방향 요약 중심이고, Pro는 상세 근거와 리스크 세부 정보를 열어 확인하는 구조입니다."
+          />
+          <div className="mt-4">
+            <DataRow label="Basic" value="방향 요약" detail="상세 조건, 무효화 기준, 세부 리스크는 제한됩니다." />
+            <DataRow label="Coin Pro" value="코인 상세" detail="BTC/ETH·알트 리스크, 추적 조건, 무효화 기준." />
+            <DataRow label="Global Pro" value="미국장 상세" detail="지수선물, 매크로 압력, 섹터 로테이션, 대장주 레이더." />
+            <DataRow label="All Market" value="전체 시장" detail="Coin Pro + Global Pro 통합 권한." />
+          </div>
+        </PanelCard>
       </div>
 
       {checkoutState.status === "message" ? (
-        <div
-          className={`rounded-2xl border p-4 text-sm font-bold ${
-            checkoutState.tone === "error"
-              ? "border-signal-danger/30 bg-signal-danger/10 text-signal-danger"
-              : "border-accent-blue/30 bg-accent-blue/10 text-accent-blue"
-          }`}
-        >
-          {checkoutState.text}
-        </div>
+        <AppSurface tone="inset" padding="md" className={checkoutState.tone === "error" ? "text-ui-short" : "text-ui-muted"}>
+          <StatusPill tone={checkoutState.tone === "error" ? "risk" : "info"}>{checkoutState.tone === "error" ? "확인 필요" : "결제 상태"}</StatusPill>
+          <p className="mt-2 text-ui-body font-semibold [word-break:keep-all]">{checkoutState.text}</p>
+        </AppSurface>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        {visiblePlans.map((plan) => (
-          <PlanCard
-            key={plan.id}
-            plan={plan}
-            isBusy={checkoutState.status === "loading" && checkoutState.planId === plan.id}
-            priceLabel={nativePriceLabels[plan.id] ?? plan.priceLabel}
-            onCheckout={startCheckout}
-          />
-        ))}
+      <div className="flex flex-col gap-3">
+        <SectionHeader eyebrow="AVAILABLE PLANS" title="선택 가능한 Pro 플랜" description="가격과 권한 범위를 확인한 뒤 필요한 시장만 선택할 수 있습니다." />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {paidPlans.map((plan) => (
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              isBusy={checkoutState.status === "loading" && checkoutState.planId === plan.id}
+              isCurrent={currentPlanId === plan.id}
+              priceLabel={nativePriceLabels[plan.id] ?? plan.priceLabel}
+              onCheckout={startCheckout}
+            />
+          ))}
+        </div>
       </div>
 
       {nativePurchaseAvailable ? (
-        <button
-          type="button"
-          onClick={restoreCheckout}
-          disabled={checkoutState.status === "restoring"}
-          className="inline-flex min-h-11 items-center justify-center rounded-xl border border-surface-line bg-white/80 px-4 text-sm font-black text-slate-700 dark:bg-black/20 dark:text-slate-200 disabled:cursor-wait disabled:opacity-60"
-        >
+        <ActionButton onClick={restoreCheckout} disabled={checkoutState.status === "restoring"} tone="secondary" className="w-full sm:w-auto">
           {checkoutState.status === "restoring" ? <Loader2 className="mr-2 animate-spin" size={16} aria-hidden /> : null}
           앱 구독 복원
-        </button>
+        </ActionButton>
       ) : null}
 
-      <div className="enterprise-panel p-5">
+      <PanelCard>
         <div className="flex items-center gap-2">
-          <ShieldCheck size={18} className="text-accent-blue" aria-hidden />
-          <h3 className="text-base font-black text-slate-950 dark:text-white">구독 전 확인할 점</h3>
+          <ShieldCheck size={18} className="text-ui-brand" aria-hidden />
+          <h3 className="text-ui-title font-semibold text-ui-text">구독 전 확인할 점</h3>
         </div>
-        <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+        <ul className="mt-3 space-y-2 text-ui-body text-ui-muted">
           {subscriptionTrustNotes.map((note) => (
-            <li key={note}>· {note}</li>
+            <li key={note} className="flex gap-2 [word-break:keep-all]">
+              <span className="text-ui-subtle" aria-hidden>·</span>
+              <span>{note}</span>
+            </li>
           ))}
         </ul>
-      </div>
+      </PanelCard>
     </section>
   );
 }

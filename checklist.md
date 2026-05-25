@@ -2236,3 +2236,10 @@
 - [ ] AAB 내부 `server.url=https://chartradar.kr`를 확인한다.
 - [ ] Play Console 비공개 테스트 트랙에 새 AAB를 업로드한다.
 - [ ] Play Store 설치본에서 푸시 탭 시 앱 열림과 `targetPath` 이동을 확인한다.
+## 2026-05-25 Pro 화면 디자인 시스템 2차 적용.
+
+- [x] `/pro` 현재 화면 구조와 결제 컴포넌트 범위를 확인한다.
+- [x] 결제 로직을 건드리지 않고 ProPricingPanel의 시각 구조만 정리한다.
+- [x] 기존 DesignPrimitives 사용 비중을 높인다.
+- [x] 340px, 360px 모바일과 라이트/다크 모드를 확인한다.
+- [x] 빌드, 타입, 스모크 검증 후 커밋한다.
