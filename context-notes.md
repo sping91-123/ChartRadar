@@ -2013,3 +2013,12 @@ The health endpoint now reports a launch readiness score and structured blocking
 - Android 네이티브 Google 로그인은 Google idToken을 Supabase id_token grant로 교환하고, 최종 Supabase 세션을 웹/앱 공통 `localStorage` 키에 저장한다.
 - `NEXT_PUBLIC_ALLOW_LOCAL_REFRESH_TOKEN=true`는 앱 재실행 후 로그인/Pro 권한 유지에는 필요하지만, refresh token이 WebView JS 접근 가능한 localStorage에 남는 보안 트레이드오프가 있다.
 - 이번 작업에서는 대규모 auth 재구성 대신 `docs/auth-session-audit.md`에 위험도와 후속 대안을 문서화하고, corrupt session cleanup 및 native signOut 실패 흡수만 최소 보정한다.
+
+## 2026-05-25 `/learn` 디자인 시스템 2차 적용.
+
+- 이번 작업은 지표 설명의 의미나 레이더 계산 로직이 아니라 `/learn` 화면의 시각 구조와 디자인 시스템 적용만 다룬다.
+- 기존 8개 카테고리와 용어 목록은 유지하고, `enterprise-panel`, 직접 cyan/black 배경 조합, 강한 shadow를 줄인다.
+- 우선 적용 primitive는 `AppSurface`, `SectionHeader`, `StatusPill`, `DataRow`, `ActionButton`이다.
+- 카테고리와 용어 아코디언은 native `details/summary` 구조를 유지해 추가 클라이언트 상태를 만들지 않는다.
+- 검증은 `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`, `npm.cmd run smoke:ops`, `cmd /c npx tsc --noEmit`, `git diff --check`로 통과했다.
+- 인앱 브라우저에서 `/learn`을 340px 라이트 모드와 360px 다크 모드로 확인했고, 펼친 카테고리와 용어 설명에서 가로 overflow가 없었다.

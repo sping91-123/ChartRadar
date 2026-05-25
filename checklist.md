@@ -2251,3 +2251,12 @@
 - [x] refresh token localStorage 저장 위험도와 후속 대안을 `docs/auth-session-audit.md`에 기록.
 - [x] corrupt session 정리와 native signOut 실패 흡수 최소 보정.
 - [x] 검증 명령 전체 실행 후 work queue를 `DONE`으로 변경하고 커밋.
+
+## 2026-05-25 `/learn` 디자인 시스템 2차 적용.
+
+- [x] `docs/ui-design-system-audit.md`, `DesignPrimitives`, `/learn` 구조를 확인한다.
+- [x] 기존 용어 의미와 카테고리 구조를 유지한 채 UI primitive 중심으로 재구성한다.
+- [x] 레이더 계산, 로그인, 푸시, 결제, Android 설정 파일을 건드리지 않았는지 확인한다.
+- [x] build, smoke, tsc, diff check를 실행한다.
+- [x] 340px/360px 및 라이트/다크 모드에서 `/learn`을 확인한다.
+- [x] 검증 통과 후 커밋한다.

@@ -1,9 +1,9 @@
 // Chart Radar에서 사용하는 주요 지표와 구조 판독 기준을 카테고리별로 안내합니다.
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Activity, ArrowLeft, BarChart3, Bell, BookOpen, BriefcaseBusiness, Gauge, Globe2, Newspaper, ShieldAlert, Sparkles } from "lucide-react";
+import { Activity, ArrowLeft, BarChart3, Bell, BookOpen, ChevronDown, Gauge, Globe2, Newspaper, ShieldAlert, Sparkles } from "lucide-react";
 import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
+import { ActionButton, AppSurface, DataRow, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 
 export const metadata: Metadata = {
   title: "지표 안내",
@@ -296,72 +296,75 @@ const guideCategories = [
 export default function LearnPage() {
   return (
     <main className="min-h-screen px-3 pb-10 sm:px-4">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
         <Header />
-        <Link href="/" className="inline-flex w-fit items-center gap-2 text-sm font-bold text-slate-400 hover:text-white">
+
+        <ActionButton href="/" tone="ghost" className="w-fit">
           <ArrowLeft size={16} aria-hidden />
           홈으로 돌아가기
-        </Link>
+        </ActionButton>
 
-        <section className="enterprise-panel p-4 sm:p-6">
-          <div className="flex items-start gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-cyan-300/25 bg-cyan-300/10 text-cyan-200">
-              <BriefcaseBusiness size={20} aria-hidden />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black text-white">지표 안내</h1>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-                먼저 궁금한 분야를 고른 뒤 필요한 용어만 펼쳐서 확인하세요. 모든 설명은 방향을 단정하지 않는 판단 보조 기준입니다.
-              </p>
-            </div>
-          </div>
+        <AppSurface tone="panel" padding="lg" className="space-y-5">
+          <SectionHeader
+            eyebrow="Learn Center"
+            title="용어 사전"
+            description="궁금한 분야를 먼저 고른 뒤 필요한 용어만 펼쳐서 확인하세요. 모든 설명은 방향을 단정하지 않는 판단 보조 기준입니다."
+            action={<StatusPill tone="info">{guideCategories.length}개 카테고리</StatusPill>}
+          />
 
-          <div className="mt-5 grid gap-3">
+          <div className="grid gap-2">
             {guideCategories.map(({ title, summary, icon: Icon, items }, index) => (
-              <details key={title} className="group rounded-xl border border-surface-line bg-surface-cardSoft shadow-[0_10px_34px_rgba(0,0,0,0.16)]">
-                <summary className="flex cursor-pointer list-none items-center gap-3 p-4 marker:hidden [&::-webkit-details-marker]:hidden">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-cyan-300/20 bg-cyan-300/10 text-cyan-200">
+              <details key={title} className="group rounded-ui border border-ui-line bg-ui-elevated">
+                <summary className="flex cursor-pointer list-none items-start gap-3 p-3 marker:hidden sm:p-4 [&::-webkit-details-marker]:hidden">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-ui-sm border border-ui-line bg-ui-inset text-ui-muted">
                     <Icon size={18} aria-hidden />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-center gap-2">
-                      <span className="text-base font-black text-white">{title}</span>
-                      <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[11px] font-black text-slate-400">{items.length}개 용어</span>
+                    <span className="flex min-w-0 flex-wrap items-center gap-2">
+                      <span className="text-base font-semibold text-ui-text">{title}</span>
+                      <StatusPill tone="info" className="min-h-6 px-2">{items.length}개 용어</StatusPill>
                     </span>
-                    <span className="mt-1 block text-xs font-bold leading-5 text-slate-400 [word-break:keep-all]">{summary}</span>
+                    <span className="mt-1 block text-ui-body leading-5 text-ui-muted [word-break:keep-all]">{summary}</span>
                   </span>
-                  <span className="shrink-0 rounded-md border border-white/10 bg-black/20 px-2 py-1 text-xs font-black text-cyan-100 group-open:hidden">보기</span>
-                  <span className="hidden shrink-0 rounded-md border border-cyan-300/25 bg-cyan-300/10 px-2 py-1 text-xs font-black text-cyan-100 group-open:inline-flex">닫기</span>
+                  <ChevronDown className="mt-1 shrink-0 text-ui-subtle transition group-open:rotate-180" size={17} aria-hidden />
                 </summary>
 
-                <div className="border-t border-surface-line p-3 pt-0 sm:p-4 sm:pt-0">
-                  <div className="mt-3 grid gap-2">
+                <div className="border-t border-ui-line px-3 pb-3 sm:px-4 sm:pb-4">
+                  <DataRow
+                    label={`카테고리 ${index + 1}`}
+                    value="선택 확인"
+                    detail="용어를 펼쳐 짧은 정의만 확인하는 구조입니다."
+                    className="py-3"
+                  />
+                  <div className="rounded-ui-sm border border-ui-line bg-ui-inset">
                     {items.map((item) => (
-                      <details key={`${title}-${item.name}`} className="group/item rounded-lg border border-white/10 bg-black/15">
+                      <details key={`${title}-${item.name}`} className="group/item border-t border-ui-line first:border-t-0">
                         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-left marker:hidden [&::-webkit-details-marker]:hidden">
-                          <span className="min-w-0 text-sm font-black text-cyan-100 [word-break:keep-all]">{item.name}</span>
-                          <span className="shrink-0 text-xs font-black text-slate-500 group-open/item:hidden">펼치기</span>
-                          <span className="hidden shrink-0 text-xs font-black text-cyan-200 group-open/item:inline">접기</span>
+                          <span className="min-w-0 text-sm font-semibold text-ui-text [word-break:keep-all]">{item.name}</span>
+                          <span className="inline-flex shrink-0 items-center gap-1 text-ui-label font-semibold text-ui-subtle">
+                            <span className="group-open/item:hidden">펼치기</span>
+                            <span className="hidden group-open/item:inline">접기</span>
+                            <ChevronDown className="transition group-open/item:rotate-180" size={14} aria-hidden />
+                          </span>
                         </summary>
-                        <p className="border-t border-white/10 px-3 pb-3 pt-2 text-sm leading-6 text-slate-400 [word-break:keep-all]">{item.body}</p>
+                        <p className="border-t border-ui-line px-3 pb-3 pt-2 text-ui-body leading-6 text-ui-muted [word-break:keep-all]">{item.body}</p>
                       </details>
                     ))}
                   </div>
-                  <p className="mt-3 text-[11px] font-bold text-slate-500">카테고리 {index + 1} / {guideCategories.length}. 필요한 용어만 펼쳐 확인하는 구조입니다.</p>
                 </div>
               </details>
             ))}
           </div>
-        </section>
+        </AppSurface>
 
-        <section className="rounded-xl border border-signal-warning/25 bg-signal-warning/10 p-4 text-sm leading-6 text-signal-warning">
+        <AppSurface tone="inset" padding="md" className="border-amber-400/28 bg-amber-400/10 text-ui-risk">
           <div className="flex items-start gap-3">
             <ShieldAlert className="mt-0.5 shrink-0" size={18} aria-hidden />
-            <p>
+            <p className="text-ui-body leading-6 [word-break:keep-all]">
               지표가 여러 개 같은 방향을 가리켜도 결과를 보장하지 않습니다. 실제 판단 전에는 손절 기준, 포지션 크기, 발표 일정, 거래량을 따로 확인해야 합니다.
             </p>
           </div>
-        </section>
+        </AppSurface>
 
         <AppFooter />
       </div>
