@@ -15,6 +15,10 @@
 - 기존 자동 발송 기준, 중복 방지, 관리자 진단 응답이 유지되어야 합니다.
 - `docs/push-alert-scanner-refactor-plan.md` 기준으로 단계별 구현합니다.
 
+## 진행 기록
+
+- 1단계: 타입, threshold, 순수 eligibility helper를 `src/lib/server/push/` 아래로 분리합니다. 발송, DB 기록, 중복 방지, 권한 판정은 변경하지 않습니다.
+
 ## 검증 기준
 
 - `git diff --check`

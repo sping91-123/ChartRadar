@@ -7,158 +7,30 @@ import { findSetupAlertMatches, type SetupAlertMarket, type SetupAlertPreset } f
 import { scanAllSetups, type ScoutSetup } from "@/lib/setupScout";
 import { sendFcmMessage } from "@/lib/server/firebaseMessaging";
 import { fetchLiquidationPressureReport } from "@/lib/server/liquidationPressureSource";
+import {
+  asArray,
+  compactPushSymbol as compactSymbol,
+  eventQualityThreshold,
+  isCryptoMajorPushSymbol as isCryptoMajor,
+  passesSetupPushQuality
+} from "@/lib/server/push/eligibility";
+import type {
+  OptionalEventSourceResult,
+  PushAlertEvent,
+  PushAlertPresetRow,
+  PushDuplicateSkippedSample,
+  PushEventDiagnostic,
+  PushEventDiagnosticSample,
+  PushPreferenceSkippedSample,
+  PushProfileRow,
+  PushScanDiagnostics,
+  PushSubscriptionRow,
+  PushTokenRow,
+  ScanContext
+} from "@/lib/server/push/types";
 import { supabaseAdminRest } from "@/lib/server/supabaseAdmin";
 import { fetchStockCandles } from "@/lib/stockMarket";
 import { analyzeTechnicalRadar } from "@/lib/technicalRadar";
-
-interface PushTokenRow {
-  id: string;
-  user_id: string;
-  token: string;
-  markets: string[] | null;
-  rule_ids: string[] | null;
-}
-
-interface PushProfileRow {
-  id: string;
-  plan?: BillingEntitlementPlan;
-  membership_tier?: BillingEntitlementPlan;
-}
-
-interface PushSubscriptionRow {
-  user_id: string;
-  plan?: BillingEntitlementPlan;
-  tier?: BillingEntitlementPlan;
-}
-
-interface PushAlertPresetRow {
-  user_id: string;
-  market: SetupAlertMarket;
-  preset_id: string;
-  symbol: string;
-  mode: TradingMode | null;
-  timeframe: string;
-  side: "long" | "short";
-  quality: "A" | "B" | "C";
-  score: number;
-  headline: string;
-  saved_at: string;
-}
-
-interface PushAlertEvent {
-  market: SetupAlertMarket;
-  ruleId: RadarAlertRuleId;
-  alertKind: "market_scout" | "watchlist" | "liquidation" | "macro" | "global" | "global_momentum" | "global_asset" | "risk_off" | "semiconductor_leadership";
-  eventKey: string;
-  title: string;
-  body: string;
-  data: Record<string, string>;
-  score?: number;
-  quality?: ScoutSetup["plan"]["quality"];
-  symbol?: string;
-  system?: boolean;
-  isWatchlist?: boolean;
-  isMarketScout?: boolean;
-  isWatchedSymbol?: boolean;
-  evidenceLabels?: string[];
-  marketScoutRank?: number;
-}
-
-interface ScanContext {
-  origin: string;
-  dryRun?: boolean;
-  diagnosticsLimit?: number;
-}
-
-interface OptionalEventSourceResult {
-  label: string;
-  event: PushAlertEvent | null;
-  warning: string | null;
-}
-
-interface PushEventDiagnostic {
-  signalType: string;
-  ruleId: RadarAlertRuleId;
-  market: SetupAlertMarket;
-  symbol?: string;
-  timeframe?: string;
-  score?: number;
-  quality?: ScoutSetup["plan"]["quality"];
-  alertKind: PushAlertEvent["alertKind"];
-  alertTitle: string;
-  alertBody: string;
-  title: string;
-  reason: string;
-  eventKey: string;
-  wouldSend: boolean;
-  skippedReason: "low_score" | "entitlement" | "token_preferences" | "duplicate" | "dry_run" | null;
-  targetTokenCount: number;
-  system: boolean;
-  isWatchlist: boolean;
-  isMarketScout: boolean;
-  isWatchedSymbol: boolean;
-  evidenceLabels: string[];
-  marketScoutRank?: number;
-  threshold: string;
-}
-
-interface PushScanDiagnostics {
-  tokenCount: number;
-  userCount: number;
-  profileCount: number;
-  subscriptionCount: number;
-  presetCount: number;
-  cryptoPresetCount: number;
-  stockPresetCount: number;
-  cryptoSetupCount: number;
-  stockPresetSetupCount: number;
-  stockMomentumSetupCount: number;
-  optionalEventCount: number;
-  genericEventCount: number;
-  candidateEventCount: number;
-  qualityPassedEventCount: number;
-  deliveryEligibleEventCount: number;
-  finalSendAttemptCount: number;
-  eligibleEventCount: number;
-  entitlementBlockedEventCount: number;
-  preferenceSkippedTokenCount: number;
-  duplicateSkippedTokenCount: number;
-  sendTargetTokenCount: number;
-  skippedLowScoreCount: number;
-  lookupErrorCount: number;
-  scannerErrorCount: number;
-  skippedLowScoreSamples: PushEventDiagnosticSample[];
-  preferenceSkippedSamples: PushPreferenceSkippedSample[];
-  duplicateSkippedSamples: PushDuplicateSkippedSample[];
-  topCandidateSamples: PushEventDiagnosticSample[];
-}
-
-interface PushEventDiagnosticSample {
-  symbol: string | null;
-  market: SetupAlertMarket;
-  timeframe: string | null;
-  score: number | null;
-  quality: ScoutSetup["plan"]["quality"] | null;
-  alertKind: PushAlertEvent["alertKind"];
-  skippedReason: PushEventDiagnostic["skippedReason"];
-  threshold: string;
-  wouldSend?: boolean;
-}
-
-interface PushPreferenceSkippedSample {
-  market: SetupAlertMarket;
-  alertKind: PushAlertEvent["alertKind"];
-  ruleId: RadarAlertRuleId;
-  reason: "token_preferences";
-}
-
-interface PushDuplicateSkippedSample {
-  eventKey: string;
-  market: SetupAlertMarket;
-  symbol: string | null;
-  bucket: string | null;
-  reason: "duplicate";
-}
 
 function emptyDiagnostics(overrides: Partial<PushScanDiagnostics> = {}): PushScanDiagnostics {
   return {
@@ -195,13 +67,6 @@ function emptyDiagnostics(overrides: Partial<PushScanDiagnostics> = {}): PushSca
 }
 
 const cryptoModes: TradingMode[] = ["scalp", "swing"];
-const cryptoMajorSymbols = new Set(["BTCUSDT.P", "ETHUSDT.P", "BTCUSDT", "ETHUSDT", "BTC", "ETH"]);
-const minimumSetupPushScore = 80;
-const cryptoMajorPushScoreThreshold = 80;
-const cryptoAltPushScoreThreshold = 82;
-const cryptoAltMarketScoutScoreThreshold = 85;
-const cryptoAltMarketScoutMinimumEvidenceCount = 2;
-const genericSetupPushScoreThreshold = 80;
 const stockMomentumSymbols = ["QQQ", "SPY", "NQ=F", "ES=F", "^VIX", "VIXY", "SMH", "SOXX", "NVDA", "AMD", "UUP", "GLD", "TLT"];
 const stockIndexSymbols = new Set(["QQQ", "SPY", "NQ=F", "ES=F"]);
 const volatilitySymbols = new Set(["^VIX", "VIXY"]);
@@ -210,14 +75,6 @@ const riskOffAssetSymbols = new Set(["UUP", "GLD", "TLT"]);
 
 function eventBucket(minutes: number) {
   return Math.floor(Date.now() / (minutes * 60 * 1000));
-}
-
-function compactSymbol(symbol: string) {
-  return symbol.replace("USDT.P", "").replace("USDT", "");
-}
-
-function isCryptoMajor(symbol: string) {
-  return cryptoMajorSymbols.has(symbol) || cryptoMajorSymbols.has(compactSymbol(symbol));
 }
 
 function cryptoSetupTargetPath(symbol?: string) {
@@ -234,10 +91,6 @@ function setupTargetPath(market: SetupAlertMarket, symbol?: string) {
 
 function stockSetupAlertKind(symbol: string): PushAlertEvent["alertKind"] {
   return stockIndexSymbols.has(symbol) ? "global_momentum" : "global_asset";
-}
-
-function asArray<T>(value: T[] | null | undefined): T[] {
-  return Array.isArray(value) ? value : [];
 }
 
 function safeErrorMessage(error: unknown) {
@@ -350,18 +203,6 @@ function tokenWants(token: PushTokenRow, market: SetupAlertMarket, ruleId: Radar
 
 function eventTimeframe(event: PushAlertEvent) {
   return event.data.timeframe;
-}
-
-function eventQualityThreshold(event: PushAlertEvent) {
-  if (!isSetupPushEvent(event)) {
-    return event.ruleId === "liquidation-pressure" ? "grade=heated|extreme" : "event-specific";
-  }
-  if (event.market === "crypto" && event.symbol && !isCryptoMajor(event.symbol) && event.isMarketScout) {
-    return `score>=${cryptoAltMarketScoutScoreThreshold} or A>=${minimumSetupPushScore}, evidence>=${cryptoAltMarketScoutMinimumEvidenceCount}`;
-  }
-  if (event.market === "crypto" && event.symbol && !isCryptoMajor(event.symbol)) return `score>=${cryptoAltPushScoreThreshold} or A>=${minimumSetupPushScore}`;
-  if (event.market === "crypto") return `score>=${cryptoMajorPushScoreThreshold} or A>=${minimumSetupPushScore}`;
-  return `score>=${genericSetupPushScoreThreshold} or A>=${minimumSetupPushScore}`;
 }
 
 function eventDiagnosticSample(event: PushAlertEvent, skippedReason: PushEventDiagnostic["skippedReason"], wouldSend?: boolean): PushEventDiagnosticSample {
@@ -522,33 +363,6 @@ function matchedSetupToEvent(
     isWatchlist: true,
     isMarketScout: false
   };
-}
-
-function setupSignalPassesPushQuality(event: PushAlertEvent) {
-  const score = event.score ?? 0;
-  const quality = event.quality;
-  const market = event.market;
-  const symbol = event.symbol;
-  if (score < minimumSetupPushScore) return false;
-  if (market === "crypto" && symbol && !isCryptoMajor(symbol) && event.isMarketScout) {
-    const evidenceCount = event.evidenceLabels?.length ?? 0;
-    if (evidenceCount < cryptoAltMarketScoutMinimumEvidenceCount) return false;
-    return score >= cryptoAltMarketScoutScoreThreshold || quality === "A";
-  }
-  if (quality === "A") return true;
-  if (market === "crypto") {
-    return score >= (symbol && !isCryptoMajor(symbol) ? cryptoAltPushScoreThreshold : cryptoMajorPushScoreThreshold);
-  }
-  return score >= genericSetupPushScoreThreshold;
-}
-
-function isSetupPushEvent(event: PushAlertEvent) {
-  return event.score !== undefined && (event.ruleId === "radar-grade" || event.ruleId === "watchlist-surge" || event.ruleId === "stock-momentum");
-}
-
-function passesSetupPushQuality(event: PushAlertEvent) {
-  if (!isSetupPushEvent(event)) return true;
-  return setupSignalPassesPushQuality(event);
 }
 
 function setupStatusRank(setup: ScoutSetup) {
