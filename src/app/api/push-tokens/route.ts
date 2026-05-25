@@ -192,7 +192,7 @@ export async function POST(request: Request) {
     });
   }
 
-  return NextResponse.json({ ok: true, id: rows[0]?.id ?? null });
+  return NextResponse.json({ ok: true, id: rows[0]?.id ?? null, markets: mergedMarkets });
 }
 
 export async function DELETE(request: Request) {

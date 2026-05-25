@@ -7,6 +7,7 @@ import type { SetupAlertPreset } from "@/lib/setupAlertPresets";
 
 export type AppPushPermission = "unsupported" | "prompt" | "prompt-with-rationale" | "granted" | "denied";
 export type AppPushPlatform = "android";
+export type AppPushMarket = "crypto" | "stocks";
 export type AppPushRegistrationStage =
   | "idle"
   | "checking_permission"
@@ -22,6 +23,7 @@ export interface AppPushDeviceState {
   platform: AppPushPlatform | "web";
   permission: AppPushPermission;
   token: string | null;
+  markets: AppPushMarket[];
   synced: boolean;
   registrationStage: AppPushRegistrationStage;
   lastFailureStage: AppPushRegistrationStage | null;
@@ -31,7 +33,7 @@ export interface AppPushDeviceState {
 }
 
 export interface AppPushPreferences {
-  market: "crypto" | "stocks";
+  market: AppPushMarket;
   ruleIds: string[];
   presets?: SetupAlertPreset[];
 }
@@ -65,6 +67,7 @@ function emptyAppPushState(): AppPushDeviceState {
     platform: isAndroidNativeApp() ? "android" : "web",
     permission: isAndroidNativeApp() ? "prompt" : "unsupported",
     token: null,
+    markets: [],
     synced: false,
     registrationStage: "idle",
     lastFailureStage: null,
@@ -76,6 +79,22 @@ function emptyAppPushState(): AppPushDeviceState {
 
 function canUseStorage() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+}
+
+function normalizeAppPushMarkets(values: unknown): AppPushMarket[] {
+  if (!Array.isArray(values)) return [];
+  return Array.from(
+    new Set(
+      values
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => (item.trim() === "global" ? "stocks" : item.trim()))
+        .filter((item): item is AppPushMarket => item === "crypto" || item === "stocks")
+    )
+  );
+}
+
+function mergeAppPushMarkets(current: unknown, next: AppPushMarket) {
+  return normalizeAppPushMarkets([...normalizeAppPushMarkets(current), next]);
 }
 
 export function isAndroidNativeApp() {
@@ -126,6 +145,7 @@ export function readAppPushState(): AppPushDeviceState {
         platform: "web",
         permission: "unsupported",
         token: null,
+        markets: [],
         synced: false,
         registrationStage: "idle",
         lastFailureStage: null,
@@ -145,6 +165,7 @@ export function readAppPushState(): AppPushDeviceState {
       platform: "android",
       permission: parsed.permission ?? "prompt",
       token: parsed.token ?? null,
+      markets: normalizeAppPushMarkets(parsed.markets),
       synced: Boolean(parsed.synced && parsed.token),
       registrationStage,
       lastFailureStage:
@@ -173,6 +194,7 @@ function writeAppPushState(next: AppPushDeviceState) {
         platform: "web" as const,
         permission: "unsupported" as const,
         token: null,
+        markets: [],
         synced: false,
         registrationStage: "idle" as const,
         lastFailureStage: null,
@@ -321,7 +343,7 @@ async function waitForPushRegistration(PushNotifications: PushNotificationsPlugi
 async function syncTokenToServer(token: string, preferences: AppPushPreferences) {
   const session = await getActiveSupabaseSession();
   if (!session?.accessToken) {
-    return { synced: false, error: "로그인 후 앱 푸시 알림을 계정에 연결할 수 있습니다." };
+    return { synced: false, error: "로그인 후 앱 푸시 알림을 계정에 연결할 수 있습니다.", markets: readAppPushState().markets };
   }
 
   const response = await fetch("/api/push-tokens", {
@@ -343,10 +365,11 @@ async function syncTokenToServer(token: string, preferences: AppPushPreferences)
 
   if (!response.ok) {
     const payload = (await response.json().catch(() => ({}))) as { error?: string };
-    return { synced: false, error: payload.error ?? "앱 푸시 알림 연결에 실패했습니다." };
+    return { synced: false, error: payload.error ?? "앱 푸시 알림 연결에 실패했습니다.", markets: readAppPushState().markets };
   }
 
-  return { synced: true, error: null };
+  const payload = (await response.json().catch(() => ({}))) as { markets?: unknown };
+  return { synced: true, error: null, markets: normalizeAppPushMarkets(payload.markets) };
 }
 
 async function ensureRadarPushChannel() {
@@ -421,6 +444,7 @@ export async function registerAndroidAppPush(preferences: AppPushPreferences) {
     return writeAndroidAppPushStage("enabled", {
       permission: "granted",
       token,
+      markets: syncResult.markets.length > 0 ? syncResult.markets : mergeAppPushMarkets(readAppPushState().markets, preferences.market),
       synced: true,
       lastFailureStage: null,
       lastError: null,
@@ -445,6 +469,7 @@ export async function syncAndroidAppPushPreferences(preferences: AppPushPreferen
   return writeAppPushState({
     ...state,
     synced: syncResult.synced,
+    markets: syncResult.synced ? (syncResult.markets.length > 0 ? syncResult.markets : mergeAppPushMarkets(state.markets, preferences.market)) : state.markets,
     registrationStage: syncResult.synced ? "enabled" : "failed",
     lastFailureStage: syncResult.synced ? null : "saving_token",
     lastError: syncResult.error,

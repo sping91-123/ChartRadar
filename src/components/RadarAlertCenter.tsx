@@ -35,6 +35,7 @@ import {
   sendAndroidAppPushTest,
   subscribeAppPushState,
   syncAndroidAppPushPreferences,
+  type AppPushMarket,
   type AppPushRegistrationStage,
   type AppPushDeviceState
 } from "@/lib/appPush";
@@ -243,6 +244,26 @@ function formatAppPushUpdatedAt(iso: string | null) {
   }).format(date);
 }
 
+function marketDisplayName(market: AlertMarket | AppPushMarket) {
+  return market === "stocks" ? "글로벌" : "코인";
+}
+
+function formatPushMarkets(markets: AppPushMarket[]) {
+  if (markets.length === 0) return "아직 없음";
+  return markets.map(marketDisplayName).join(", ");
+}
+
+function marketPushActionLabel(market: AlertMarket, state: AppPushDeviceState, isLoading: boolean) {
+  if (isLoading) return "로그인 확인 중";
+  const marketName = marketDisplayName(market);
+  if (state.registrationStage === "checking_permission") return "권한 확인 중";
+  if (state.registrationStage === "requesting_permission") return "권한 요청 중";
+  if (state.registrationStage === "registering_device") return "기기 연결 중";
+  if (state.registrationStage === "saving_token") return "설정 저장 중";
+  if (state.synced && state.markets.includes(market)) return `${marketName} 알림 다시 저장`;
+  return `${marketName} 알림 켜기`;
+}
+
 function compactSymbol(symbol: string) {
   return symbol.replace("USDT.P", "").replace("USDT", "");
 }
@@ -448,6 +469,9 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
     appPushState.registrationStage === "saving_token";
   const canSendAppPushTest =
     isAndroidAppPush && appPushState.permission === "granted" && Boolean(appPushState.token) && appPushState.synced && appPushState.registrationStage === "enabled";
+  const isCurrentMarketPushEnabled = appPushState.synced && appPushState.markets.includes(market);
+  const otherMarket = market === "stocks" ? "crypto" : "stocks";
+  const otherMarketHref = market === "stocks" ? "/alerts?market=crypto" : "/alerts?market=global";
 
   function toggleRule(ruleId: RadarAlertRuleId) {
     if (!enabledRuleIds.includes(ruleId)) {
@@ -663,7 +687,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
               className="min-h-10 w-full px-4 text-sm sm:w-auto"
             >
               {isAppPushConnecting ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <CheckCircle2 size={16} aria-hidden />}
-              {isAndroidAppPush ? (isAuthLoading ? "로그인 확인 중" : appPushActionLabel(appPushState.registrationStage)) : "브라우저 알림 켜기"}
+              {isAndroidAppPush ? marketPushActionLabel(market, appPushState, isAuthLoading) : "브라우저 알림 켜기"}
             </ActionButton>
             {isAndroidAppPush && appPushState.token ? (
               <ActionButton
@@ -684,6 +708,20 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
           <DataRow label="알림 권한" value={<StatusPill tone={permissionTone(permission, appPushState, isAndroidAppPush)}>{permissionSummaryLabel(permission, appPushState, isAndroidAppPush)}</StatusPill>} />
           <DataRow label="마지막 연결" value={isAndroidAppPush ? formatAppPushUpdatedAt(appPushState.updatedAt) : "앱에서 확인"} />
         </div>
+
+        {isAndroidAppPush ? (
+          <div className="mt-3">
+            <DataRow label="현재 수신 시장" value={formatPushMarkets(appPushState.markets)} />
+            <DataRow
+              label={`${marketDisplayName(market)} 알림`}
+              value={<StatusPill tone={isCurrentMarketPushEnabled ? "long" : "info"}>{isCurrentMarketPushEnabled ? "켜짐" : "꺼짐"}</StatusPill>}
+              detail={`${marketDisplayName(otherMarket)} 알림은 ${marketDisplayName(otherMarket)} 알림 화면에서 별도로 켤 수 있습니다.`}
+            />
+            <ActionButton href={otherMarketHref} tone="secondary" className="mt-2 min-h-9 w-full text-xs sm:w-auto">
+              {marketDisplayName(otherMarket)} 알림 설정하기
+            </ActionButton>
+          </div>
+        ) : null}
 
         {isAndroidAppPush ? (
           <AppSurface tone="inset" padding="sm" className="mt-3 text-xs leading-5 text-ui-muted shadow-none">
