@@ -1,5 +1,5 @@
 "use client";
-// 운영자가 테스터 이메일로 Pro 권한을 부여하는 관리자 화면입니다.
+// 운영자가 가입 회원의 테스트 권한을 수동으로 관리하는 관리자 화면입니다.
 
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
@@ -12,7 +12,8 @@ import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 const planOptions = [
   { id: "bundle_monthly", label: "All Market Pro", description: "코인과 글로벌 전체 권한" },
   { id: "crypto_monthly", label: "Coin Pro", description: "코인 시장 권한" },
-  { id: "stocks_monthly", label: "Global Pro", description: "글로벌 시장 권한" }
+  { id: "stocks_monthly", label: "Global Pro", description: "글로벌 시장 권한" },
+  { id: "free", label: "Basic", description: "Pro 권한을 제거하고 기본 플랜으로 전환" }
 ];
 
 interface AdminMember {
@@ -63,6 +64,7 @@ export default function AdminEntitlementsPage() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isAdmin = isAdminAccount(profile?.plan, user?.app_metadata?.role ?? user?.app_metadata?.plan);
+  const isBasicPlan = planId === "free";
 
   const loadMembers = useCallback(async (query: string) => {
     if (!session?.accessToken) return;
@@ -116,26 +118,28 @@ export default function AdminEntitlementsPage() {
       const payload = (await response.json()) as {
         ok?: boolean;
         error?: string;
-        email?: string;
+        email?: string | null;
         accountLabel?: string;
         userId?: string;
         planName?: string;
-        currentPeriodEnd?: string;
+        currentPeriodEnd?: string | null;
       };
 
       if (!response.ok || !payload.ok) {
-        throw new Error(payload.error ?? "테스터 권한 부여에 실패했습니다.");
+        throw new Error(payload.error ?? "테스터 권한 변경에 실패했습니다.");
       }
 
-      const endDate = payload.currentPeriodEnd ? new Date(payload.currentPeriodEnd).toLocaleDateString("ko-KR") : "만료일 미확인";
-      setMessage(`${payload.email ?? email} 계정에 ${payload.planName ?? "Pro"} 권한을 ${endDate}까지 부여했습니다.`);
-      if (payload.accountLabel && !payload.email) {
-        setMessage(`${payload.accountLabel} 계정에 ${payload.planName ?? "Pro"} 권한을 ${endDate}까지 부여했습니다.`);
-      }
+      const accountLabel = payload.accountLabel ?? payload.email ?? email;
+      const endDate = payload.currentPeriodEnd ? new Date(payload.currentPeriodEnd).toLocaleDateString("ko-KR") : "만료일 미확정";
+      setMessage(
+        isBasicPlan
+          ? `${accountLabel} 계정을 Basic으로 전환했습니다.`
+          : `${accountLabel} 계정에 ${payload.planName ?? "Pro"} 권한을 ${endDate}까지 부여했습니다.`
+      );
       window.dispatchEvent(new Event(supabaseAuthRefreshEvent));
       void loadMembers(memberQuery);
     } catch (grantError) {
-      setError(grantError instanceof Error ? grantError.message : "테스터 권한 부여에 실패했습니다.");
+      setError(grantError instanceof Error ? grantError.message : "테스터 권한 변경에 실패했습니다.");
     } finally {
       setIsSubmitting(false);
     }
@@ -156,9 +160,9 @@ export default function AdminEntitlementsPage() {
               <UserPlus size={20} aria-hidden />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-white">테스터 Pro 권한 부여</h1>
+              <h1 className="text-2xl font-black text-white">테스터 Pro 권한 관리</h1>
               <p className="mt-2 text-sm leading-6 text-slate-400 [word-break:keep-all]">
-                가입한 테스터 이메일을 입력해 수동 Pro 권한을 부여합니다. 테스터는 권한 부여 후 앱을 재실행하거나 다시 로그인해야 새 권한을 읽습니다.
+                가입한 테스터 계정을 선택해 Pro 권한을 부여하거나 Basic으로 되돌립니다. Basic은 기본 상태라 유지기간이 적용되지 않습니다.
               </p>
             </div>
           </div>
@@ -179,7 +183,7 @@ export default function AdminEntitlementsPage() {
             </div>
           ) : !isAdmin && memberError ? (
             <div className="mt-6 rounded-xl border border-rose-300/25 bg-rose-300/10 p-4 text-sm leading-6 text-rose-100">
-              현재 계정은 관리자 권한이 없어 테스터 Pro 권한을 부여할 수 없습니다.
+              현재 계정은 관리자 권한이 없어 테스터 권한을 변경할 수 없습니다.
             </div>
           ) : (
             <div className="mt-6 grid min-w-0 gap-5">
@@ -231,7 +235,7 @@ export default function AdminEntitlementsPage() {
                           <span className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                             <span className="min-w-0 flex-1">
                               <span className="block break-all text-sm font-black leading-5 text-white">{member.email ?? "이메일 없음"}</span>
-                              {member.displayName ? <span className="mt-1 block truncate text-xs text-slate-400">{member.displayName}</span> : null}
+                              {subLabel ? <span className="mt-1 block truncate text-xs text-slate-400">{subLabel}</span> : null}
                             </span>
                             <span className="shrink-0 rounded-full border border-white/10 px-2.5 py-1 text-xs font-black text-slate-300">
                               {member.activePlan ?? member.profilePlan ?? "free"}
@@ -253,79 +257,85 @@ export default function AdminEntitlementsPage() {
               </section>
 
               <form onSubmit={handleSubmit} className="grid min-w-0 gap-4">
-              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-300">
-                선택한 테스터 이메일
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(event) => {
-                    setSelectedMemberId("");
-                    setEmail(event.target.value);
-                  }}
-                  placeholder="tester@example.com"
-                  className="min-h-12 w-full min-w-0 rounded-xl border border-surface-line bg-slate-950 px-4 text-base font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/55"
-                  required={!selectedMemberId}
-                />
-              </label>
+                <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-300">
+                  선택한 테스터 이메일
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(event) => {
+                      setSelectedMemberId("");
+                      setEmail(event.target.value);
+                    }}
+                    placeholder="tester@example.com"
+                    className="min-h-12 w-full min-w-0 rounded-xl border border-surface-line bg-slate-950 px-4 text-base font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/55"
+                    required={!selectedMemberId}
+                  />
+                </label>
 
-              <fieldset className="grid gap-2">
-                <legend className="text-sm font-bold text-slate-300">부여할 권한</legend>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {planOptions.map((option) => (
-                    <label
-                      key={option.id}
-                      className={`cursor-pointer rounded-xl border p-4 transition ${
-                        planId === option.id ? "border-amber-300/45 bg-amber-300/10" : "border-surface-line bg-surface-cardSoft hover:border-cyan-300/35"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="planId"
-                        value={option.id}
-                        checked={planId === option.id}
-                        onChange={(event) => setPlanId(event.target.value)}
-                        className="sr-only"
-                      />
-                      <span className="flex items-center gap-2 text-sm font-black text-white">
-                        <Crown size={15} aria-hidden />
-                        {option.label}
-                      </span>
-                      <span className="mt-1 block text-xs leading-5 text-slate-400">{option.description}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
+                <fieldset className="grid gap-2">
+                  <legend className="text-sm font-bold text-slate-300">변경할 권한</legend>
+                  <div className="grid gap-2 sm:grid-cols-4">
+                    {planOptions.map((option) => (
+                      <label
+                        key={option.id}
+                        className={`cursor-pointer rounded-xl border p-4 transition ${
+                          planId === option.id ? "border-amber-300/45 bg-amber-300/10" : "border-surface-line bg-surface-cardSoft hover:border-cyan-300/35"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="planId"
+                          value={option.id}
+                          checked={planId === option.id}
+                          onChange={(event) => setPlanId(event.target.value)}
+                          className="sr-only"
+                        />
+                        <span className="flex items-center gap-2 text-sm font-black text-white">
+                          {option.id === "free" ? <ShieldCheck size={15} aria-hidden /> : <Crown size={15} aria-hidden />}
+                          {option.label}
+                        </span>
+                        <span className="mt-1 block text-xs leading-5 text-slate-400">{option.description}</span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
 
-              <label className="grid gap-2 text-sm font-bold text-slate-300">
-                권한 유지 기간
-                <input
-                  type="number"
-                  min={1}
-                  max={365}
-                  value={durationDays}
-                  onChange={(event) => setDurationDays(Number(event.target.value))}
-                  className="min-h-12 rounded-xl border border-surface-line bg-slate-950 px-4 text-base font-bold text-white outline-none transition focus:border-cyan-300/55"
-                />
-              </label>
+                {!isBasicPlan ? (
+                  <label className="grid gap-2 text-sm font-bold text-slate-300">
+                    권한 유지 기간
+                    <input
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={durationDays}
+                      onChange={(event) => setDurationDays(Number(event.target.value))}
+                      className="min-h-12 rounded-xl border border-surface-line bg-slate-950 px-4 text-base font-bold text-white outline-none transition focus:border-cyan-300/55"
+                    />
+                  </label>
+                ) : (
+                  <p className="rounded-xl border border-surface-line bg-surface-cardSoft p-3 text-sm font-bold leading-6 text-slate-300">
+                    Basic은 기본 플랜이라 유지기간을 설정하지 않습니다. 선택한 계정의 수동 Pro 권한을 제거합니다.
+                  </p>
+                )}
 
-              {error ? <p className="rounded-xl border border-rose-300/25 bg-rose-300/10 p-3 text-sm font-bold text-rose-100">{error}</p> : null}
-              {message ? <p className="rounded-xl border border-signal-success/25 bg-signal-success/10 p-3 text-sm font-bold text-signal-success">{message}</p> : null}
+                {error ? <p className="rounded-xl border border-rose-300/25 bg-rose-300/10 p-3 text-sm font-bold text-rose-100">{error}</p> : null}
+                {message ? <p className="rounded-xl border border-signal-success/25 bg-signal-success/10 p-3 text-sm font-bold text-signal-success">{message}</p> : null}
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-amber-300/35 bg-amber-300 px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-amber-200 disabled:cursor-wait disabled:opacity-70"
-              >
-                {isSubmitting ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <ShieldCheck size={16} aria-hidden />}
-                권한 부여하기
-              </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-amber-300/35 bg-amber-300 px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-amber-200 disabled:cursor-wait disabled:opacity-70"
+                >
+                  {isSubmitting ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <ShieldCheck size={16} aria-hidden />}
+                  {isBasicPlan ? "Basic으로 전환하기" : "권한 부여하기"}
+                </button>
               </form>
             </div>
           )}
         </section>
 
         <section className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 p-4 text-sm leading-6 text-slate-300">
-          이 화면은 결제 상품을 새로 만드는 기능이 아닙니다. 가입된 테스터 계정의 `subscriptions`에 수동 활성 권한을 추가하는 운영 도구입니다.
+          이 화면은 결제 상품을 새로 만드는 기능이 아닙니다. 가입된 테스터 계정의 수동 권한만 운영 목적으로 변경합니다.
         </section>
 
         <AppFooter />

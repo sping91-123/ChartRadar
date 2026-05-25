@@ -1,4 +1,4 @@
-// 관리자 전용으로 테스터 Pro 권한을 수동 부여하는 API입니다.
+// 愿由ъ옄 ?꾩슜?쇰줈 ?뚯뒪??Pro 沅뚰븳???섎룞 遺?ы븯??API?낅땲??
 import { NextResponse } from "next/server";
 import { findBillingPlan, getMarketScopeForPlan, type BillingPlanId } from "@/lib/billing";
 import {
@@ -94,14 +94,14 @@ async function requireAdmin(request: Request) {
   const token = authorization.replace(/^Bearer\s+/i, "").trim();
   if (!token) {
     return {
-      error: NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 })
+      error: NextResponse.json({ error: "濡쒓렇?몄씠 ?꾩슂?⑸땲??" }, { status: 401 })
     };
   }
 
   const requester = await fetchSupabaseUserOnServer(token);
   if (!isAdminUser(requester)) {
     return {
-      error: NextResponse.json({ error: "관리자 계정만 사용할 수 있습니다." }, { status: 403 })
+      error: NextResponse.json({ error: "愿由ъ옄 怨꾩젙留??ъ슜?????덉뒿?덈떎." }, { status: 403 })
     };
   }
 
@@ -192,7 +192,7 @@ export async function GET(request: Request) {
   } catch (error) {
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "회원 목록을 불러오지 못했습니다."
+        error: error instanceof Error ? error.message : "?뚯썝 紐⑸줉??遺덈윭?ㅼ? 紐삵뻽?듬땲??"
       },
       { status: 500 }
     );
@@ -217,16 +217,16 @@ export async function POST(request: Request) {
     const durationDays = normalizeDurationDays(body.durationDays);
 
     if (!userId && (!email || !email.includes("@"))) {
-      return NextResponse.json({ error: "테스터 이메일을 입력해 주세요." }, { status: 400 });
+      return NextResponse.json({ error: "?뚯뒪???대찓?쇱쓣 ?낅젰??二쇱꽭??" }, { status: 400 });
     }
-    if (!plan || plan.id === "free" || !grantablePlanIds.has(plan.id)) {
-      return NextResponse.json({ error: "부여할 Pro 권한을 선택해 주세요." }, { status: 400 });
+    if (!plan || (plan.id !== "free" && !grantablePlanIds.has(plan.id))) {
+      return NextResponse.json({ error: "遺?ы븷 Pro 沅뚰븳???좏깮??二쇱꽭??" }, { status: 400 });
     }
 
     const authUsers = await listSupabaseAuthUsers(memberListLimit);
     const target = authUsers.find((user) => (userId ? user.id === userId : user.email?.toLowerCase() === email));
     if (!target) {
-      return NextResponse.json({ error: "해당 이메일의 가입 계정을 찾지 못했습니다. 테스터가 먼저 한 번 로그인해야 합니다." }, { status: 404 });
+      return NextResponse.json({ error: "?대떦 ?대찓?쇱쓽 媛??怨꾩젙??李얠? 紐삵뻽?듬땲?? ?뚯뒪?곌? 癒쇱? ??踰?濡쒓렇?명빐???⑸땲??" }, { status: 404 });
     }
 
     const now = new Date();
@@ -244,7 +244,7 @@ export async function POST(request: Request) {
       display_name: getUserDisplayName(target),
       avatar_url: getUserAvatarUrl(target),
       plan: targetIsAdmin ? "admin" : plan.id,
-      membership_tier: "premium",
+      membership_tier: plan.id === "free" ? "free" : "premium",
       updated_at: now.toISOString()
     });
     await supabaseAdminRest("profiles", {
@@ -252,6 +252,42 @@ export async function POST(request: Request) {
       prefer: "resolution=merge-duplicates",
       body: profileBody
     });
+
+    if (plan.id === "free") {
+      const deactivateBody = pickSchemaBody(subscriptionColumns, {
+        status: "canceled",
+        plan: "free",
+        tier: "free",
+        market_scope: "trial",
+        current_period_end: now.toISOString(),
+        updated_at: now.toISOString()
+      });
+      const deactivatePath = [
+        `subscriptions?user_id=eq.${encodeURIComponent(target.id)}`,
+        subscriptionColumns.has("provider") ? "provider=eq.manual" : "",
+        subscriptionColumns.has("status") ? "status=in.(active,trialing)" : ""
+      ]
+        .filter(Boolean)
+        .join("&");
+
+      if (Object.keys(deactivateBody).length > 0) {
+        await supabaseAdminRest(deactivatePath, {
+          method: "PATCH",
+          body: deactivateBody
+        });
+      }
+
+      return NextResponse.json({
+        ok: true,
+        email: (target.email ?? email) || null,
+        accountLabel: target.email ?? getUserDisplayName(target) ?? target.id,
+        userId: target.id,
+        planId: plan.id,
+        planName: plan.name,
+        marketScope: getMarketScopeForPlan(plan.id),
+        currentPeriodEnd: null
+      });
+    }
 
     const canWriteDetailedSubscription =
       subscriptionColumns.has("plan") || subscriptionColumns.has("market_scope") || subscriptionColumns.has("provider_order_id");
@@ -308,7 +344,7 @@ export async function POST(request: Request) {
   } catch (error) {
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "테스터 권한 부여에 실패했습니다."
+        error: error instanceof Error ? error.message : "?뚯뒪??沅뚰븳 遺?ъ뿉 ?ㅽ뙣?덉뒿?덈떎."
       },
       { status: 500 }
     );
