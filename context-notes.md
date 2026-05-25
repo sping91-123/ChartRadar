@@ -1929,3 +1929,12 @@ The health endpoint now reports a launch readiness score and structured blocking
 - crypto/stock setup scanner 실패는 빈 후보 배열로 계속 진행하고 `scannerErrorCount`와 warnings에 남긴다.
 - 유저별 preset/권한/중복 처리 중 예외가 나도 전체 cron을 죽이지 않고 해당 유저만 skip하며 토큰 원문, user_id, 이메일은 로그에 남기지 않는다.
 - 로컬 dev route에서 `/api/push-cron?dryRun=1&diagnostics=1`은 200을 반환했고 `lookupErrorCount=0`, `scannerErrorCount=0`이었다. dry-run이라 실제 FCM 발송은 하지 않았다.
+
+## 2026-05-25 liquidation-pressure push-cron 인증 수정.
+
+- `/api/push-cron`의 liquidation-pressure optional source는 기존에 `${origin}/api/liquidation-pressure?symbol=BTCUSDT&period=15m` HTTP self-call을 사용했다.
+- `/api/liquidation-pressure`는 일반 사용자용 API라 rate limit과 운영 edge 보호 계층을 거칠 수 있고, Vercel Cron 내부 호출에서는 401이 발생할 수 있다.
+- 청산압력 계산 로직을 `src/lib/server/liquidationPressureSource.ts`로 분리해 push scanner가 내부 함수로 직접 호출하게 바꾼다.
+- `/api/liquidation-pressure` route는 기존 public API와 캐시/rate limit은 유지하되, 실제 Binance fetch와 report 계산은 같은 공통 소스를 사용한다.
+- push-cron dry-run은 이 경로에서 FCM 발송 없이 청산압력 후보 가능 여부만 판단하며, 청산압력 grade가 `heated` 또는 `extreme`일 때만 후보 이벤트를 만든다.
+- 로컬 `/api/push-cron?dryRun=1&diagnostics=1`은 200을 반환했고 liquidation-pressure 401 warning은 사라졌다. 현재 데이터 기준 청산압력 grade가 후보 조건을 만족하지 않아 `sources.skipped`에 남았지만 `sources.failed`는 비어 있다.

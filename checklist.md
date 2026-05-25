@@ -2158,3 +2158,12 @@
 - [x] 진단값에 `lookupErrorCount`, `scannerErrorCount`를 추가한다.
 - [x] 로컬 `/api/push-cron?dryRun=1&diagnostics=1`이 실제 발송 없이 200 응답을 내는지 확인한다.
 - [x] build, mobile smoke, all smoke, ops smoke, tsc, diff check로 검증한다.
+
+## 2026-05-25 liquidation-pressure push-cron 인증 수정.
+
+- [x] `pushAlertScanner.ts`의 liquidation-pressure 호출 경로를 확인한다.
+- [x] `/api/liquidation-pressure` route가 rate limit 계층을 거치는 일반 사용자 API임을 확인한다.
+- [x] push-cron의 HTTP self-call을 제거하고 서버 공통 소스로 직접 계산하도록 분리한다.
+- [x] 기존 `/api/liquidation-pressure` route는 같은 공통 소스를 사용하게 유지한다.
+- [x] dry-run에서 liquidation-pressure 401 warning이 사라지고 `sources.failed`가 비어 있는지 확인한다.
+- [x] build, mobile smoke, all smoke, ops smoke, tsc, diff check로 검증한다.

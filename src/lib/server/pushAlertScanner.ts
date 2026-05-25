@@ -6,6 +6,7 @@ import { radarAlertRules, type RadarAlertRuleId } from "@/lib/radarAlerts";
 import { findSetupAlertMatches, type SetupAlertMarket, type SetupAlertPreset } from "@/lib/setupAlertPresets";
 import { scanAllSetups, type ScoutSetup } from "@/lib/setupScout";
 import { sendFcmMessage } from "@/lib/server/firebaseMessaging";
+import { fetchLiquidationPressureReport } from "@/lib/server/liquidationPressureSource";
 import { supabaseAdminRest } from "@/lib/server/supabaseAdmin";
 import { fetchStockCandles } from "@/lib/stockMarket";
 import { analyzeTechnicalRadar } from "@/lib/technicalRadar";
@@ -552,26 +553,8 @@ async function scanStockSetups(symbolsAndTimeframes: Array<{ symbol: string; tim
   return settled.flatMap((result) => (result.status === "fulfilled" && result.value ? [result.value] : []));
 }
 
-async function scanLiquidationEvent(origin: string): Promise<PushAlertEvent | null> {
-  const response = await fetch(`${origin}/api/liquidation-pressure?symbol=BTCUSDT&period=15m`, { cache: "no-store" });
-  if (!response.ok) throw new Error(`liquidation-pressure ${response.status}`);
-  const payload = (await response.json()) as {
-    report?: {
-      grade?: string;
-      symbol?: string;
-      dominantSide?: string;
-      upsideShortPressure?: number;
-      downsideLongPressure?: number;
-      summary?: string;
-    };
-    grade?: string;
-    symbol?: string;
-    dominantSide?: string;
-    upsideShortPressure?: number;
-    downsideLongPressure?: number;
-    summary?: string;
-  };
-  const report = payload.report ?? payload;
+async function scanLiquidationEvent(): Promise<PushAlertEvent | null> {
+  const report = await fetchLiquidationPressureReport("BTCUSDT", "15m");
   if (report.grade !== "heated" && report.grade !== "extreme") return null;
 
   const pressure = Math.max(report.upsideShortPressure ?? 0, report.downsideLongPressure ?? 0);
@@ -967,7 +950,7 @@ export async function runPushAlertScan(context: ScanContext) {
     scanStockSetups(stockMomentumSymbols.map((symbol) => ({ symbol, timeframe: "1d" })))
   );
   const optionalEventSources = await Promise.all([
-    scanOptionalEventSource("liquidation-pressure", () => scanLiquidationEvent(context.origin)),
+    scanOptionalEventSource("liquidation-pressure", scanLiquidationEvent),
     scanOptionalEventSource("radar-news-crypto", () => scanNewsEvent(context.origin, "crypto")),
     scanOptionalEventSource("radar-news-stocks", () => scanNewsEvent(context.origin, "stocks")),
     scanOptionalEventSource("macro-calendar-stocks", () => scanMacroCalendarEvent(context.origin))
