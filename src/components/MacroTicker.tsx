@@ -1,12 +1,15 @@
 "use client";
 // 자동 매크로 캘린더를 상단 전광판과 뉴스 화면에 표시하는 패널입니다.
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CalendarClock, ChevronDown, ChevronRight, ExternalLink, Radio } from "lucide-react";
 import { type MacroEventItem, type MacroEventSource } from "@/data/macroEvents";
 import { getMacroCalendarFallbackPayload, type MacroCalendarPayload } from "@/lib/macroCalendar";
+import { StatusPill } from "@/components/ui/DesignPrimitives";
 
 const RECENT_RELEASE_WINDOW_MS = 24 * 60 * 60 * 1000;
+const PREVIOUS_RELEASE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const EMPTY_ACTUAL_VALUES = new Set([
   "",
   "발표 전",
@@ -37,6 +40,17 @@ function isRecentlyReleased(item: MacroEventItem) {
   return diff >= 0 && diff <= RECENT_RELEASE_WINDOW_MS;
 }
 
+function isPreviousReleaseVisible(item: MacroEventItem) {
+  const diff = Date.now() - new Date(item.releaseAt).getTime();
+  return diff >= 0 && diff <= PREVIOUS_RELEASE_WINDOW_MS;
+}
+
+function minutesSinceRelease(item: MacroEventItem) {
+  const diff = Date.now() - new Date(item.releaseAt).getTime();
+  if (!Number.isFinite(diff) || diff < 0) return 0;
+  return Math.floor(diff / 60000);
+}
+
 function isWithinNextDay(item: MacroEventItem) {
   const diff = new Date(item.releaseAt).getTime() - Date.now();
   return diff > 0 && diff <= RECENT_RELEASE_WINDOW_MS;
@@ -63,7 +77,7 @@ function displayActual(item: MacroEventItem) {
     return item.statusLabel ?? (hasReleaseTimePassed(item) ? "공식 자료 확인 필요" : "예정");
   }
   if (hasActualValue(item)) return macroValueText(item.actual);
-  if (hasReleaseTimePassed(item)) return item.statusLabel ?? "공식 발표 확인 중";
+  if (hasReleaseTimePassed(item)) return item.statusLabel ?? (minutesSinceRelease(item) >= 30 ? "공식 발표 확인 필요" : "공식 발표 확인 중");
   return "발표 전";
 }
 
@@ -79,7 +93,7 @@ function getTimeLabel(releaseAt: string) {
 
 function stateLabel(item: MacroEventItem) {
   if (item.statusLabel) return item.statusLabel;
-  if (isRecentlyReleased(item)) return hasActualValue(item) ? "결과 반영" : "결과 확인 중";
+  if (isRecentlyReleased(item)) return hasActualValue(item) ? "결과 공개" : minutesSinceRelease(item) >= 30 ? "공식 발표 확인 필요" : "결과 확인 중";
   if (item.state === "released") return "발표 완료";
   if (item.state === "watch") return "관찰";
   return getTimeLabel(item.releaseAt);
@@ -116,8 +130,13 @@ function isHighImpactMacro(item: MacroEventItem) {
     lower.includes("payroll") ||
     lower.includes("non-farm") ||
     lower.includes("nonfarm") ||
+    lower.includes("employment") ||
     lower.includes("jobless") ||
-    lower.includes("unemployment")
+    lower.includes("unemployment") ||
+    lower.includes("claims") ||
+    lower.includes("ppi") ||
+    lower.includes("pce") ||
+    lower.includes("gdp")
   );
 }
 
@@ -163,9 +182,11 @@ function macroLabel(label: string) {
   if (lower.includes("jobless") || lower.includes("unemployment claims")) return "신규 실업수당 청구";
   if (lower.includes("non-farm") || lower.includes("nonfarm")) return "비농업 고용";
   if (lower.includes("unemployment rate")) return "실업률";
+  if (lower.includes("fomc") && lower.includes("minutes")) return "FOMC 의사록";
   if (lower.includes("fomc")) return "FOMC";
   if (lower.includes("fed")) return "연준 이벤트";
-  if (lower.includes("gdp")) return "GDP";
+  if (lower.includes("gdp")) return lower.includes("estimate") ? "GDP 수정치" : "GDP";
+  if (lower.includes("personal income and outlays")) return "PCE·개인소득";
   if (lower.includes("pce")) return "PCE 물가";
   if (lower.includes("existing home sales")) return "기존주택판매";
   if (lower.includes("manufacturing pmi")) return "제조업 PMI";
@@ -186,6 +207,12 @@ function getRecentReleasedItems(items: MacroEventItem[]) {
     .sort((a, b) => new Date(b.releaseAt).getTime() - new Date(a.releaseAt).getTime());
 }
 
+function getPreviousReleasedItems(items: MacroEventItem[]) {
+  return items
+    .filter((item) => isPreviousReleaseVisible(item))
+    .sort((a, b) => new Date(b.releaseAt).getTime() - new Date(a.releaseAt).getTime());
+}
+
 function getCompactItem(items: MacroEventItem[]) {
   return getRecentReleasedItems(items)[0] ?? getUpcomingItems(items)[0] ?? items[0];
 }
@@ -195,6 +222,63 @@ function ValuePill({ label, value, tone = "default" }: { label: string; value?: 
     <span className={`rounded px-1.5 py-1 ${tone === "pending" ? "bg-signal-warning/10 text-signal-warning" : "bg-white/5 text-slate-300"}`}>
       {label} {value ?? "미정"}
     </span>
+  );
+}
+
+function newsStatusTone(item: MacroEventItem): "long" | "watch" | "risk" | "info" {
+  if (item.status === "released" || item.status === "document_released" || item.status === "meeting_completed" || hasActualValue(item)) return "long";
+  if (item.status === "official_check_needed" || item.status === "delayed" || item.status === "stale") return "risk";
+  if (hasReleaseTimePassed(item)) return minutesSinceRelease(item) >= 30 ? "risk" : "watch";
+  return "info";
+}
+
+function MacroNewsValue({ label, value, pending = false }: { label: string; value?: string; pending?: boolean }) {
+  return (
+    <span className={`inline-flex min-w-0 max-w-full flex-wrap items-center gap-1 rounded-ui-sm border px-2 py-1 text-[11px] font-semibold ${
+      pending ? "border-amber-400/24 bg-amber-400/10 text-ui-risk" : "border-ui-line bg-ui-panel text-ui-muted"
+    }`}>
+      <span className="shrink-0 text-ui-subtle">{label}</span>
+      <span className="min-w-0 break-words">{value ?? "미정"}</span>
+    </span>
+  );
+}
+
+function MacroNewsItem({ item, sectionLabel, subdued = false }: { item: MacroEventItem; sectionLabel: string; subdued?: boolean }) {
+  const primaryValueLabel = item.isDocumentEvent || item.eventType === "document_release" || item.eventType === "meeting_event" || item.eventType === "speech_event" ? "상태" : "실제";
+  const sourceUrl = item.officialUrl ?? item.sourceUrl;
+  const pendingActual = !hasActualValue(item) && hasReleaseTimePassed(item) && !item.isDocumentEvent;
+
+  return (
+    <article className={`rounded-ui-sm border border-ui-line bg-ui-inset p-3 ${subdued ? "opacity-95" : ""}`}>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <StatusPill tone={sectionLabel === "직전 발표" ? "watch" : "info"} className="min-h-6 px-2 text-[10px]">
+          {sectionLabel}
+        </StatusPill>
+        <StatusPill tone={newsStatusTone(item)} className="min-h-6 px-2 text-[10px]">
+          {stateLabel(item)}
+        </StatusPill>
+        <StatusPill tone={isHighImpactMacro(item) ? "risk" : "info"} className="min-h-6 px-2 text-[10px]">
+          {importanceLabel(item)}
+        </StatusPill>
+      </div>
+
+      <h4 className="mt-2 line-clamp-2 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{macroLabel(item.label)}</h4>
+      <p className="mt-1 text-[11px] font-semibold leading-4 text-ui-muted">한국시간 {item.dateKst}</p>
+
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        <MacroNewsValue label={primaryValueLabel} value={displayActual(item)} pending={pendingActual} />
+        <MacroNewsValue label="예상" value={macroValueText(item.forecast)} />
+        <MacroNewsValue label="이전" value={macroValueText(item.previous)} />
+      </div>
+
+      <p className="mt-2 line-clamp-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{item.marketImpact}</p>
+      {sourceUrl ? (
+        <a href={sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex max-w-full items-center gap-1 text-[11px] font-semibold text-ui-brand hover:underline">
+          <span className="truncate">{item.officialUrl ? "공식 확인" : "출처 확인"}</span>
+          <ExternalLink size={11} className="shrink-0" aria-hidden />
+        </a>
+      ) : null}
+    </article>
   );
 }
 
@@ -235,12 +319,15 @@ function MacroItemCard({ item, compact = false }: { item: MacroEventItem; compac
 }
 
 export function MacroTicker({ compact = false, market = "crypto" }: { compact?: boolean; market?: "crypto" | "stocks" } = {}) {
+  const pathname = usePathname();
   const [calendar, setCalendar] = useState<MacroCalendarPayload>(fallbackCalendar);
   const upcomingItems = getUpcomingItems(calendar.items);
   const releasedItems = getRecentReleasedItems(calendar.items).slice(0, 4);
+  const previousReleasedItems = getPreviousReleasedItems(calendar.items);
   const nearestUpcoming = upcomingItems[0];
   const laterUpcomingItems = upcomingItems.slice(1, 7);
   const latestRelease = releasedItems[0];
+  const isNewsMacroReport = compact && pathname === "/news";
 
   useEffect(() => {
     let cancelled = false;
@@ -270,6 +357,53 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
       if (timer) clearTimeout(timer);
     };
   }, [market]);
+
+  if (isNewsMacroReport) {
+    const previousRelease = previousReleasedItems[0];
+    const visibleLaterItems = laterUpcomingItems.slice(0, 4);
+
+    return (
+      <section className="space-y-3">
+        <div className="grid gap-3 md:grid-cols-2">
+          {previousRelease ? (
+            <MacroNewsItem item={previousRelease} sectionLabel="직전 발표" />
+          ) : (
+            <div className="rounded-ui-sm border border-ui-line bg-ui-inset p-3 text-xs leading-5 text-ui-muted [word-break:keep-all]">
+              직전 발표는 공식 캘린더에서 확인되는 즉시 이 영역에 유지됩니다.
+            </div>
+          )}
+          {nearestUpcoming ? (
+            <MacroNewsItem item={nearestUpcoming} sectionLabel="다음 일정" />
+          ) : (
+            <div className="rounded-ui-sm border border-ui-line bg-ui-inset p-3 text-xs leading-5 text-ui-muted [word-break:keep-all]">
+              다가오는 주요 USD 일정을 확인하는 중입니다.
+            </div>
+          )}
+        </div>
+
+        {visibleLaterItems.length ? (
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-ui-subtle">이후 주요 일정</p>
+              <span className="text-[11px] font-semibold text-ui-muted">가까운 일정 {visibleLaterItems.length}개</span>
+            </div>
+            <div className="grid gap-2 lg:grid-cols-2">
+              {visibleLaterItems.map((item, index) => (
+                <div key={`${item.label}-${item.releaseAt}`} className={index >= 2 ? "hidden md:block" : ""}>
+                  <MacroNewsItem item={item} sectionLabel="이후 일정" subdued />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="flex items-start gap-2 border-t border-ui-line pt-3 text-[11px] leading-5 text-ui-muted">
+          <CalendarClock size={13} className="mt-0.5 shrink-0 text-ui-brand" aria-hidden />
+          <span className="[word-break:keep-all]">{calendar.sourceNote}</span>
+        </div>
+      </section>
+    );
+  }
 
   if (compact) {
     const item = getCompactItem(calendar.items);

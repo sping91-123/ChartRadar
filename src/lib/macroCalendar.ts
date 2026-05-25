@@ -42,6 +42,7 @@ type ForexFactoryEvent = {
 const FOREX_FACTORY_THIS_WEEK = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
 const KST_TIME_ZONE = "Asia/Seoul";
 const RECENT_RELEASE_MS = 24 * 60 * 60 * 1000;
+const PREVIOUS_RELEASE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const JOBLESS_CLAIMS_PATTERN =
   /신규\s*실업수당\s*청구|initial\s+jobless\s+claims|initial\s+claims|jobless\s+claims|unemployment\s+claims|unemployment\s+insurance\s+weekly\s+claims|continuing\s+claims/i;
 
@@ -290,7 +291,7 @@ export async function getMacroCalendarPayload(): Promise<MacroCalendarPayload> {
       .filter((item): item is MacroEventItem => Boolean(item))
       .filter((item) => {
         const time = Date.parse(item.releaseAt);
-        return time >= now || now - time <= RECENT_RELEASE_MS;
+        return time >= now || now - time <= PREVIOUS_RELEASE_RETENTION_MS;
       });
     const enrichments = await getOfficialEnrichments(baseItems);
     const items = normalizeMacroEvents(baseItems, enrichments, now);

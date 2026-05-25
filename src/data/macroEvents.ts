@@ -48,6 +48,28 @@ export const macroCalendarSourceNote =
 
 export const macroItems: MacroEventItem[] = [
   {
+    label: "Initial Jobless Claims",
+    releaseAt: "2026-05-21T12:30:00.000Z",
+    dateKst: "05.21 21:30",
+    state: "released",
+    importance: 3,
+    eventType: "numeric_release",
+    status: "official_check_needed",
+    statusLabel: "공식 발표 확인 필요",
+    actual: "공식 발표 확인 필요",
+    forecast: "확인 예정",
+    previous: "확인 예정",
+    summary: "미국 고용 둔화 여부를 매주 확인하는 신규 실업수당 청구 지표입니다.",
+    marketImpact:
+      "청구 건수가 예상보다 크게 늘면 경기 둔화 우려가 커질 수 있고, 예상보다 낮으면 고용 견조 해석이 강화될 수 있습니다.",
+    source: "DOL",
+    sourceType: "official_page",
+    sourceUrl: "https://oui.doleta.gov/unemploy/claims.asp",
+    officialUrl: "https://oui.doleta.gov/unemploy/claims.asp",
+    isOfficial: true,
+    isNumericEvent: true
+  },
+  {
     label: "New Home Sales",
     releaseAt: "2026-05-28T14:00:00.000Z",
     dateKst: "05.28 23:00",
