@@ -1946,3 +1946,10 @@ The health endpoint now reports a launch readiness score and structured blocking
 - `preferenceSkippedTokenCount`는 이벤트가 품질과 권한을 통과했지만 토큰의 `markets` 또는 `rule_ids` 선호와 맞지 않아 제외된 토큰 수다.
 - `duplicateSkippedTokenCount`는 같은 `eventKey`가 이미 `push_alert_events`에 기록되어 중복 발송 방지에 걸린 토큰 수다.
 - 운영 로그와 dry-run 응답에 낮은 점수 샘플, 토큰 선호 skip 샘플, 중복 skip 샘플, 상위 후보 샘플을 추가한다. 샘플에는 symbol, market, timeframe, score, quality, alertKind, threshold, skippedReason만 포함하고 token, user_id, email은 포함하지 않는다.
+
+## 2026-05-25 푸시 알림 탭 이동 처리.
+
+- 현재 앱 푸시 수신은 성공하지만 탭 이동은 `/alerts` 고정 리스너가 알림 화면에서만 등록되는 구조라 앱 시작 직후 또는 다른 화면에서는 안정적으로 처리되지 않을 수 있다.
+- 이번 수정은 앱 전역에서 리스너를 등록하고, FCM data payload의 `targetPath`를 기준으로 내부 경로만 이동시키는 최소 변경으로 제한한다.
+- `targetPath`는 `/`로 시작하는 상대 경로만 허용하고 `//`, 역슬래시, `http://`, `https://`, `javascript:` 같은 외부 또는 스킴 값은 `/alerts`로 fallback한다.
+- 푸시 threshold, 자동 발송 조건, 로그인/결제 로직은 변경하지 않는다.

@@ -2176,3 +2176,11 @@
 - [x] token preference skip 샘플과 duplicate skip 샘플을 토큰/사용자 식별자 없이 추가한다.
 - [x] top candidate 샘플에 wouldSend와 skippedReason을 포함한다.
 - [x] dry-run에서 샘플 진단이 토큰/개인정보 없이 표시되는지 확인한다.
+
+## 2026-05-25 푸시 알림 탭 이동 처리.
+
+- [x] Android 앱 전역 초기화에서 `pushNotificationActionPerformed` 리스너가 항상 등록되는지 확인한다.
+- [x] 푸시 payload의 `targetPath`를 내부 경로만 허용하도록 검증한다.
+- [x] 테스트 푸시와 자동 푸시에 알림 종류별 `targetPath`를 추가한다.
+- [x] foreground/background 알림 탭 fallback을 `/alerts`로 유지한다.
+- [x] build, mobile smoke, all smoke, ops smoke, tsc, diff check로 검증한다.

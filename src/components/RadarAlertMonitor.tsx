@@ -2,7 +2,7 @@
 // 앱이 켜져 있는 동안 시장별 레이더 감시 조건을 주기적으로 다시 확인한다.
 import { useCallback, useEffect, useRef } from "react";
 import { chartTimeframes, type Candle, type ChartTimeframe, type TradingMode } from "@/lib/marketAnalysis";
-import { isAndroidNativeApp } from "@/lib/appPush";
+import { isAndroidNativeApp, registerAppPushListeners } from "@/lib/appPush";
 import type { ScoutSetup } from "@/lib/setupScout";
 import { analyzeTechnicalRadar } from "@/lib/technicalRadar";
 import { withSupabaseAuth } from "@/lib/authFetch";
@@ -214,6 +214,7 @@ export function RadarAlertMonitor() {
   }, [runMarketCheck]);
 
   useEffect(() => {
+    void registerAppPushListeners();
     void runCheck("auto");
     timerRef.current = setInterval(() => {
       void runCheck("auto");

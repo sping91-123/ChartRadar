@@ -220,6 +220,18 @@ function isCryptoMajor(symbol: string) {
   return cryptoMajorSymbols.has(symbol) || cryptoMajorSymbols.has(compactSymbol(symbol));
 }
 
+function cryptoSetupTargetPath(symbol?: string) {
+  return symbol && !isCryptoMajor(symbol) ? "/alts" : "/crypto";
+}
+
+function stockSetupTargetPath(symbol?: string) {
+  return symbol && !stockIndexSymbols.has(symbol) ? "/global/assets" : "/global";
+}
+
+function setupTargetPath(market: SetupAlertMarket, symbol?: string) {
+  return market === "crypto" ? cryptoSetupTargetPath(symbol) : stockSetupTargetPath(symbol);
+}
+
 function asArray<T>(value: T[] | null | undefined): T[] {
   return Array.isArray(value) ? value : [];
 }
@@ -448,6 +460,7 @@ function setupToEvent(
       market,
       alert_kind: market === "stocks" ? "global" : "market_scout",
       target: market === "stocks" ? "/alerts?market=global" : "/alerts?market=crypto",
+      targetPath: setupTargetPath(market, setup.symbol),
       symbol: setup.symbol,
       timeframe: setup.timeframe,
       side,
@@ -489,6 +502,7 @@ function matchedSetupToEvent(
       market,
       alert_kind: "watchlist",
       target: market === "stocks" ? "/alerts?market=global" : "/alerts?market=crypto",
+      targetPath: setupTargetPath(market, setup.symbol),
       symbol: setup.symbol,
       timeframe: setup.timeframe,
       side: setup.side,
@@ -655,6 +669,7 @@ async function scanLiquidationEvent(): Promise<PushAlertEvent | null> {
       market: "crypto",
       alert_kind: "liquidation",
       target: "/crypto",
+      targetPath: "/crypto",
       pressure: String(pressure)
     },
     system: true
@@ -680,7 +695,8 @@ async function scanNewsEvent(origin: string, market: SetupAlertMarket): Promise<
       type: "macro-news",
       market,
       alert_kind: "macro",
-      target: market === "stocks" ? "/news?market=global" : "/news?market=crypto"
+      target: market === "stocks" ? "/news?market=global" : "/news?market=crypto",
+      targetPath: market === "stocks" ? "/news?market=global" : "/news?market=crypto"
     },
     system: true
   };
@@ -721,6 +737,7 @@ async function scanMacroCalendarEvent(origin: string): Promise<PushAlertEvent | 
       alert_kind: "macro",
       signal: "시장 이벤트 리마인더",
       target: "/news?market=global",
+      targetPath: "/news?market=global",
       eventLabel: nextEvent.label,
       releaseAt: nextEvent.releaseAt
     },
@@ -755,6 +772,7 @@ function buildRiskOffEvent(setups: ScoutSetup[]): PushAlertEvent | null {
       alert_kind: "global",
       signal: "리스크오프 조합",
       target: "/alerts?market=global",
+      targetPath: "/global",
       symbol: weakIndex.symbol,
       companion: companion.symbol,
       timeframe: weakIndex.timeframe,
@@ -795,6 +813,7 @@ function buildSemiconductorLeadershipEvent(setups: ScoutSetup[]): PushAlertEvent
       alert_kind: "global",
       signal: strengthened ? "반도체 주도력 강화" : "반도체 주도력 약화",
       target: "/alerts?market=global",
+      targetPath: "/global/assets",
       symbol: semiconductor.symbol,
       companion: index.symbol,
       timeframe: semiconductor.timeframe,

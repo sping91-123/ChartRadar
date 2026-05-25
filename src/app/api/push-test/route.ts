@@ -33,6 +33,7 @@ async function recordPushTestEvent(userId: string, message: ReturnType<typeof ge
         type: "push_test",
         kind: message.kind,
         target: message.target,
+        targetPath: "/alerts",
         sent
       }
     }
@@ -76,7 +77,8 @@ export async function POST(request: Request) {
       data: {
         type: "push_test",
         kind: message.kind,
-        target: message.target
+        target: message.target,
+        targetPath: "/alerts"
       }
     });
   } catch (error) {
