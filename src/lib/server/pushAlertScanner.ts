@@ -5,7 +5,6 @@ import type { RadarAlertRuleId } from "@/lib/radarAlerts";
 import { findSetupAlertMatches, type SetupAlertMarket, type SetupAlertPreset } from "@/lib/setupAlertPresets";
 import { scanAllSetups, type ScoutSetup } from "@/lib/setupScout";
 import { sendFcmMessage } from "@/lib/server/firebaseMessaging";
-import { fetchLiquidationPressureReport } from "@/lib/server/liquidationPressureSource";
 import { alreadySent, duplicateBucket, eventBucket, recordSentEvent } from "@/lib/server/push/duplicateGuard";
 import {
   asArray,
@@ -16,8 +15,10 @@ import {
 } from "@/lib/server/push/eligibility";
 import { ruleAllowed, userPlan } from "@/lib/server/push/entitlements";
 import { tokenWants } from "@/lib/server/push/preferences";
+import { scanLiquidationEvent } from "@/lib/server/push/scanners/liquidationScanner";
+import { scanMacroCalendarEvent, scanNewsEvent } from "@/lib/server/push/scanners/macroScanner";
+import { scanOptionalEventSource } from "@/lib/server/push/sourceResults";
 import type {
-  OptionalEventSourceResult,
   PushAlertEvent,
   PushAlertPresetRow,
   PushDuplicateSkippedSample,
@@ -429,102 +430,6 @@ async function scanStockSetups(symbolsAndTimeframes: Array<{ symbol: string; tim
   return settled.flatMap((result) => (result.status === "fulfilled" && result.value ? [result.value] : []));
 }
 
-async function scanLiquidationEvent(): Promise<PushAlertEvent | null> {
-  const report = await fetchLiquidationPressureReport("BTCUSDT", "15m");
-  if (report.grade !== "heated" && report.grade !== "extreme") return null;
-
-  const pressure = Math.max(report.upsideShortPressure ?? 0, report.downsideLongPressure ?? 0);
-  return {
-    market: "crypto",
-    ruleId: "liquidation-pressure",
-    alertKind: "liquidation",
-    eventKey: `liquidation-pressure:crypto:${report.symbol ?? "BTCUSDT"}:${report.grade}:${eventBucket(30)}`,
-    title: "Chart Radar 청산 압력 확대 감지",
-    body: `BTC 청산 압력이 ${report.grade === "extreme" ? "매우 높음" : "높음"} 구간입니다. 변동성 확대 가능성이 있어 리스크 확인이 필요합니다.`,
-    data: {
-      type: "liquidation-pressure",
-      market: "crypto",
-      alert_kind: "liquidation",
-      alertKind: "liquidation",
-      target: "/crypto",
-      targetPath: "/crypto",
-      pressure: String(pressure)
-    },
-    system: true
-  };
-}
-
-async function scanNewsEvent(origin: string, market: SetupAlertMarket): Promise<PushAlertEvent | null> {
-  const response = await fetch(`${origin}/api/radar-news?market=${market}`, { cache: "no-store" });
-  if (!response.ok) return null;
-  const payload = (await response.json()) as { briefing?: { headline?: string; keyIssues?: Array<{ title?: string }> } };
-  const headline = payload.briefing?.headline;
-  const firstIssue = payload.briefing?.keyIssues?.[0]?.title;
-  if (!headline && !firstIssue) return null;
-
-  return {
-    market,
-    ruleId: "macro-news",
-    alertKind: "macro",
-    eventKey: `macro-news:${market}:${firstIssue ?? headline}:${eventBucket(180)}`,
-    title: market === "stocks" ? "Chart Radar 시장 이벤트 리마인더" : "Chart Radar 코인 뉴스",
-    body: firstIssue ?? headline ?? "주요 뉴스 브리핑이 갱신되었습니다.",
-    data: {
-      type: "macro-news",
-      market,
-      alert_kind: "macro",
-      alertKind: "macro",
-      target: market === "stocks" ? "/news?market=global" : "/news?market=crypto",
-      targetPath: market === "stocks" ? "/news?market=global" : "/news?market=crypto"
-    },
-    system: true
-  };
-}
-
-async function scanMacroCalendarEvent(origin: string): Promise<PushAlertEvent | null> {
-  const response = await fetch(`${origin}/api/macro-calendar`, { cache: "no-store" });
-  if (!response.ok) return null;
-  const payload = (await response.json()) as {
-    items?: Array<{
-      label?: string;
-      releaseAt?: string;
-      dateKst?: string;
-      importance?: number;
-      state?: string;
-    }>;
-  };
-  const now = Date.now();
-  const upcoming = (payload.items ?? [])
-    .filter((item) => {
-      const releaseTime = Date.parse(item.releaseAt ?? "");
-      return item.importance === 3 && releaseTime > now && releaseTime - now <= 24 * 60 * 60 * 1000;
-    })
-    .sort((a, b) => Date.parse(a.releaseAt ?? "") - Date.parse(b.releaseAt ?? ""));
-  const nextEvent = upcoming[0];
-  if (!nextEvent?.label || !nextEvent.releaseAt) return null;
-
-  return {
-    market: "stocks",
-    ruleId: "macro-news",
-    alertKind: "macro",
-    eventKey: `macro-event-reminder:stocks:${nextEvent.label}:${nextEvent.releaseAt}:${eventBucket(360)}`,
-    title: "Chart Radar 시장 이벤트 리마인더",
-    body: `${nextEvent.dateKst ?? "곧"} ${nextEvent.label} 예정입니다. 발표 전후 변동성 확대 가능성을 확인하세요.`,
-    data: {
-      type: "macro-news",
-      market: "stocks",
-      alert_kind: "macro",
-      alertKind: "macro",
-      signal: "시장 이벤트 리마인더",
-      target: "/news?market=global",
-      targetPath: "/news?market=global",
-      eventLabel: nextEvent.label,
-      releaseAt: nextEvent.releaseAt
-    },
-    system: true
-  };
-}
-
 function buildRiskOffEvent(setups: ScoutSetup[]): PushAlertEvent | null {
   const weakIndex = setups
     .filter((setup) => stockIndexSymbols.has(setup.symbol) && setup.plan.side === "short" && setup.score >= 75)
@@ -607,24 +512,6 @@ function buildSemiconductorLeadershipEvent(setups: ScoutSetup[]): PushAlertEvent
     system: true,
     isMarketScout: true
   };
-}
-
-async function scanOptionalEventSource(label: string, scan: () => Promise<PushAlertEvent | null>): Promise<OptionalEventSourceResult> {
-  try {
-    return {
-      label,
-      event: await scan(),
-      warning: null
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[push-cron] optional event source failed: ${label}`, error);
-    return {
-      label,
-      event: null,
-      warning: `${label}: ${message.slice(0, 180)}`
-    };
-  }
 }
 
 async function sendEventToUser(userId: string, tokens: PushTokenRow[], event: PushAlertEvent) {

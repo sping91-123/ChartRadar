@@ -1,5 +1,13 @@
 # 작업 체크리스트
 
+## 2026-05-25 pushAlertScanner 구조 분리 3단계.
+
+- [x] optional source 함수와 source result wrapper 위치를 실제 코드 기준으로 확인한다.
+- [x] 청산압력 scanner를 동작 변경 없이 별도 파일로 이동한다.
+- [x] 뉴스/매크로 scanner를 동작 변경 없이 별도 파일로 이동한다.
+- [x] sources.succeeded/skipped/failed와 optional warning 의미가 유지되는지 dry-run으로 확인한다.
+- [x] 빌드, 스모크, 타입 체크, diff check로 검증한다.
+
 ## 2026-05-25 pushAlertScanner 구조 분리 2단계.
 
 - [x] 권한 판정, 알림 선호, 중복 방지 helper 위치를 실제 코드 기준으로 확인한다.

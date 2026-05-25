@@ -1,5 +1,13 @@
 # 작업 맥락 메모
 
+## 2026-05-25 pushAlertScanner 구조 분리 3단계.
+
+- 이번 작업은 optional event source 분리만 대상으로 하며 자동 푸시 조건, threshold, eventKey, DB write, FCM 발송, 권한/선호/중복 방지 결과는 변경하지 않는다.
+- 청산압력은 `fetchLiquidationPressureReport` 기반 heated/extreme 조건과 current skipped 동작을 유지한다.
+- 뉴스/매크로는 기존 self-call 경로와 `macro-news`/`macro-event-reminder` eventKey 의미를 유지한다.
+- optional source 실패는 warning으로만 남기고 전체 cron을 죽이지 않는 기존 wrapper 정책을 유지한다.
+- dry-run diagnostics는 200 응답, `dryRun=true`, `sent=0`, `failed=0`, `lookupErrorCount=0`, `scannerErrorCount=0`, warning 0건, raw token/user_id/email/secret 미노출을 확인했다.
+
 ## 2026-05-25 pushAlertScanner 구조 분리 2단계.
 
 - 이번 작업은 `pushAlertScanner.ts`의 동작 변경 없는 구조 분리만 대상으로 한다.
