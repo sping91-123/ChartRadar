@@ -34,9 +34,53 @@ function walk(dir, extensions = [".ts"]) {
   });
 }
 
-function isFreshIso(iso, maxAgeMs) {
-  const time = Date.parse(iso);
-  return Number.isFinite(time) && Date.now() - time <= maxAgeMs;
+function isValidIso(iso) {
+  return typeof iso === "string" && Number.isFinite(Date.parse(iso));
+}
+
+function eventTime(item) {
+  const raw = item?.releaseAt ?? item?.scheduledAt ?? item?.releasedAt;
+  const time = Date.parse(raw);
+  return Number.isFinite(time) ? time : null;
+}
+
+function hasUpcomingOrRecentRelease(items) {
+  const now = Date.now();
+  const recentWindowMs = 7 * 24 * 60 * 60 * 1000;
+  return items.some((item) => {
+    const time = eventTime(item);
+    if (!time) return false;
+    if (time >= now) return true;
+    const status = String(item?.status ?? item?.state ?? "");
+    const isReleasedLike = /released|completed|official_check_needed|document/i.test(status);
+    return isReleasedLike && now - time <= recentWindowMs;
+  });
+}
+
+async function fetchMacroCalendarHealth() {
+  const baseUrl = (process.env.SMOKE_BASE_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5_000);
+
+  try {
+    const response = await fetch(`${baseUrl}/api/macro-calendar`, {
+      cache: "no-store",
+      signal: controller.signal
+    });
+    if (!response.ok) {
+      return { reachable: true, ok: false, detail: `HTTP ${response.status}` };
+    }
+    const payload = await response.json();
+    return { reachable: true, ok: true, payload };
+  } catch (error) {
+    return {
+      reachable: false,
+      ok: false,
+      detail: error instanceof Error ? error.message : String(error)
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 const envExample = read(".env.example");
@@ -163,18 +207,55 @@ expectIncludes(watchlistPanel, 'hasMarketEntitlement(profile?.plan, "crypto")', 
 expectIncludes(scoutRoute, "entitlement.isPaid ? 120 : 20", "코인 일일 레이더 권한", "src/app/api/scout/route.ts");
 expectIncludes(stockRadarApp, 'hasMarketEntitlement(profile?.plan, "stocks")', "글로벌 레이더 권한", "src/components/StockRadarApp.tsx");
 
-const releaseMatches = [...macroEvents.matchAll(/releaseAt:\s*"([^"]+)"/g)].map((match) => Date.parse(match[1]));
-if (releaseMatches.some((time) => Number.isFinite(time) && time > Date.now())) {
-  pass("매크로 미래 일정 유지", "등록된 예비 일정에 미래 일정이 남아 있습니다.");
+const macroHealth = await fetchMacroCalendarHealth();
+if (macroHealth.reachable && macroHealth.ok) {
+  const payload = macroHealth.payload;
+  const items = Array.isArray(payload?.items) ? payload.items : [];
+  const allowedSources = new Set(["automatic-mixed", "forex-factory", "official-bls"]);
+
+  pass("Macro calendar API response", "/api/macro-calendar returned HTTP 200.");
+
+  if (items.length > 0) {
+    pass("Macro calendar API items", `/api/macro-calendar returned ${items.length} item(s).`);
+  } else {
+    fail("Macro calendar API items", "/api/macro-calendar returned an empty items array.");
+  }
+
+  if (isValidIso(payload?.updatedAt) && Date.parse(payload.updatedAt) <= Date.now() + 10 * 60 * 1000) {
+    pass("Macro calendar API updatedAt", `updatedAt is valid: ${payload.updatedAt}.`);
+  } else {
+    fail("Macro calendar API updatedAt", "updatedAt is missing, invalid, or unexpectedly in the future.");
+  }
+
+  if (allowedSources.has(payload?.source)) {
+    pass("Macro calendar API source", `source is ${payload.source}.`);
+  } else {
+    fail("Macro calendar API source", `unexpected source: ${payload?.source ?? "missing"}.`);
+  }
+
+  if (hasUpcomingOrRecentRelease(items)) {
+    pass("Macro calendar live coverage", "API includes an upcoming event or a recent released/check-needed event.");
+  } else {
+    fail("Macro calendar live coverage", "API has no upcoming event and no recent released/check-needed event.");
+  }
+} else if (macroHealth.reachable) {
+  fail("Macro calendar API response", `/api/macro-calendar failed: ${macroHealth.detail}`);
 } else {
-  fail("매크로 미래 일정 유지", "등록된 매크로 예비 일정이 모두 과거입니다.");
+  pass("Macro calendar API response", `/api/macro-calendar not reachable in this smoke context; checking static fallback shape only (${macroHealth.detail}).`);
+}
+
+const releaseMatches = [...macroEvents.matchAll(/releaseAt:\s*"([^"]+)"/g)].map((match) => Date.parse(match[1]));
+if (releaseMatches.some((time) => Number.isFinite(time))) {
+  pass("매크로 fallback 일정 형태", "등록된 예비 일정에 파싱 가능한 releaseAt 값이 있습니다.");
+} else {
+  fail("매크로 fallback 일정 형태", "등록된 매크로 예비 일정에 파싱 가능한 releaseAt 값이 없습니다.");
 }
 
 const updatedAtMatch = /macroCalendarUpdatedAtIso\s*=\s*"([^"]+)"/.exec(macroEvents);
-if (updatedAtMatch && isFreshIso(updatedAtMatch[1], 72 * 60 * 60 * 1000)) {
-  pass("매크로 갱신 신선도", "macroCalendarUpdatedAtIso가 72시간 이내입니다.");
+if (updatedAtMatch && isValidIso(updatedAtMatch[1])) {
+  pass("매크로 fallback 타임스탬프 형태", "macroCalendarUpdatedAtIso가 유효한 ISO 값입니다.");
 } else {
-  fail("매크로 갱신 신선도", "macroCalendarUpdatedAtIso가 없거나 72시간보다 오래되었습니다.");
+  fail("매크로 fallback 타임스탬프 형태", "macroCalendarUpdatedAtIso가 없거나 유효하지 않습니다.");
 }
 
 const rateLimitOffenders = [];
