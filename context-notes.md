@@ -1,5 +1,13 @@
 # 작업 맥락 메모
 
+## 2026-05-25 저널 화면 디자인 시스템 2차 적용.
+
+- 이번 작업은 `/journal` 화면의 UI 구조와 시각 톤만 정리했다.
+- `appendJournalEntry`, `loadJournalEntries`, remote journal, Supabase auth 흐름은 변경하지 않았다.
+- 복기 화면은 `AppSurface`, `PanelCard`, `SectionHeader`, `StatusPill`, `DataRow`, `MetricRow`, `ActionButton` 기반으로 정리했다.
+- 340px/360px 모바일 폭에서 가로 overflow가 없고, 라이트/다크 모드 모두 `ui-*` surface 토큰이 적용되는 것을 확인했다.
+- 검증은 build, smoke:mobile, smoke:all, smoke:ops, tsc, diff check를 통과했다.
+
 ## 2026-05-25 알림 화면 디자인 시스템 2차 적용.
 
 - 이번 작업은 `/alerts` 화면 UI 정리만 대상으로 하며, 앱 푸시 권한 요청, 토큰 저장, 자동 푸시 조건, threshold, push-cron, diagnostics 로직은 변경하지 않습니다.

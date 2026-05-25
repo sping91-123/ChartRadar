@@ -1,5 +1,13 @@
 # 작업 체크리스트
 
+## 2026-05-25 저널 화면 디자인 시스템 2차 적용.
+
+- [x] `/journal`, `/journal?market=crypto`, `/journal?market=global` 현재 구조와 모바일 폭을 확인했다.
+- [x] 저장/불러오기/Supabase 로직은 변경하지 않고 `/journal` UI 구조만 정리했다.
+- [x] `DesignPrimitives` 기반으로 hero, 요약, 복기 대기, 입력 폼, 피드백, 히스토리 영역을 재구성했다.
+- [x] 340px/360px 모바일 폭, 라이트/다크 모드, 가로 overflow를 확인했다.
+- [x] build, mobile/all/ops smoke, tsc, diff check로 검증했다.
+
 ## 2026-05-25 알림 화면 디자인 시스템 2차 적용.
 
 - [x] `RadarAlertCenter` 사용자 화면을 DesignPrimitives 기반으로 정리한다.

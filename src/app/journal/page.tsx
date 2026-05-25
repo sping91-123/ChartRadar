@@ -12,7 +12,6 @@ import {
   ListChecks,
   Loader2,
   Plus,
-  Radar,
   ShieldCheck,
   Target,
   Trash2
@@ -20,6 +19,15 @@ import {
 import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
 import { RadarTopNav } from "@/components/RadarTopNav";
+import {
+  ActionButton,
+  AppSurface,
+  DataRow,
+  MetricRow,
+  PanelCard,
+  SectionHeader,
+  StatusPill
+} from "@/components/ui/DesignPrimitives";
 import {
   appendJournalEntry,
   loadJournalEntries,
@@ -225,21 +233,21 @@ function SourceBadge({ entry }: { entry: JournalEntry }) {
 
   return (
     <div className="flex min-w-0 max-w-full flex-wrap gap-1.5 sm:gap-2">
-      <span className="max-w-full whitespace-normal break-keep rounded-md border border-accent-blue/20 bg-accent-blue/10 px-2 py-1 text-[11px] font-bold leading-snug text-accent-blue">
+      <StatusPill tone={entry.bias === "숏" ? "short" : entry.bias === "롱" ? "long" : "watch"} className="max-w-full whitespace-normal break-keep leading-snug">
         {entry.bias || "방향 미기록"}
-      </span>
-      <span className="max-w-full whitespace-normal break-keep rounded-md border border-slate-200/80 bg-white/70 px-2 py-1 text-[11px] font-bold leading-snug text-slate-600 dark:border-white/10 dark:bg-black/20 dark:text-slate-300">
+      </StatusPill>
+      <StatusPill tone="info" className="max-w-full whitespace-normal break-keep leading-snug">
         {sourceLabel}
-      </span>
+      </StatusPill>
       {entry.symbol ? (
-        <span className="max-w-full whitespace-normal break-keep rounded-md border border-slate-200/80 bg-white/70 px-2 py-1 text-[11px] font-bold leading-snug text-slate-600 dark:border-white/10 dark:bg-black/20 dark:text-slate-300">
+        <StatusPill tone="info" className="max-w-full whitespace-normal break-keep leading-snug">
           {entry.symbol}
-        </span>
+        </StatusPill>
       ) : null}
       {entry.timeframe ? (
-        <span className="max-w-full whitespace-normal break-keep rounded-md border border-slate-200/80 bg-white/70 px-2 py-1 text-[11px] font-bold leading-snug text-slate-600 dark:border-white/10 dark:bg-black/20 dark:text-slate-300">
+        <StatusPill tone="info" className="max-w-full whitespace-normal break-keep leading-snug">
           {entry.timeframe}
-        </span>
+        </StatusPill>
       ) : null}
     </div>
   );
@@ -256,7 +264,7 @@ function OutcomeButtons({
 
   return (
     <div className="mt-3">
-      <p className="mb-1.5 text-[11px] font-bold text-slate-500">결과 입력</p>
+      <p className="mb-1.5 text-ui-label font-semibold text-ui-subtle">결과 입력</p>
       <div className="flex min-w-0 max-w-full flex-wrap gap-1.5">
         {buttons.map((outcome) => {
           const active = entry.outcome === outcome;
@@ -265,14 +273,14 @@ function OutcomeButtons({
               key={outcome}
               type="button"
               onClick={() => onOutcome(entry.id, outcome)}
-              className={`min-h-9 min-w-0 max-w-full flex-1 basis-[calc(50%-0.1875rem)] whitespace-normal break-keep rounded-md border px-2 py-1.5 text-xs font-bold leading-snug transition sm:flex-none sm:basis-auto sm:px-3 ${outcomeClass(outcome)} ${active ? "ring-1 ring-white/30" : ""}`}
+              className={`min-h-9 min-w-0 max-w-full flex-1 basis-[calc(50%-0.1875rem)] whitespace-normal break-keep rounded-ui-sm border px-2 py-1.5 text-xs font-semibold leading-snug transition sm:flex-none sm:basis-auto sm:px-3 ${outcomeClass(outcome)} ${active ? "ring-1 ring-ui-brand/30" : ""}`}
             >
               {outcomeLabel(outcome)}
             </button>
           );
         })}
       </div>
-      {entry.outcomeAt ? <p className="mt-2 text-[11px] text-slate-500">기록 시간 {formatDateTime(entry.outcomeAt)}</p> : null}
+      {entry.outcomeAt ? <p className="mt-2 text-ui-label text-ui-subtle">기록 시간 {formatDateTime(entry.outcomeAt)}</p> : null}
     </div>
   );
 }
@@ -294,16 +302,16 @@ function ChipGroup({
 }) {
   const activeClass =
     tone === "green"
-      ? "border-signal-success bg-signal-success text-slate-950"
+      ? "border-emerald-400/40 bg-emerald-400/14 text-ui-long"
       : tone === "red"
-        ? "border-signal-danger bg-signal-danger text-white"
-        : "border-accent-blue bg-accent-blue text-slate-950";
+        ? "border-rose-400/40 bg-rose-400/14 text-ui-short"
+        : "border-ui-brand bg-ui-brand text-slate-950";
 
   return (
-    <div className="min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/15">
+    <div className="min-w-0 max-w-full overflow-hidden rounded-ui border border-ui-line bg-ui-inset p-3">
       <div className="mb-2 flex min-w-0 flex-wrap items-center justify-between gap-2">
-        <p className="min-w-0 text-xs font-black text-slate-700 dark:text-slate-200">{label}</p>
-        {helper ? <span className="min-w-0 text-[11px] text-slate-500">{helper}</span> : null}
+        <p className="min-w-0 text-ui-label font-semibold text-ui-subtle">{label}</p>
+        {helper ? <span className="min-w-0 text-ui-label text-ui-muted">{helper}</span> : null}
       </div>
       <div className="flex min-w-0 max-w-full flex-wrap gap-1.5 sm:gap-2">
         {options.map((item) => {
@@ -313,8 +321,8 @@ function ChipGroup({
               key={item}
               type="button"
               onClick={() => onToggle(item)}
-              className={`min-h-9 min-w-0 max-w-full flex-1 basis-[calc(50%-0.1875rem)] whitespace-normal break-keep rounded-md border px-2 py-2 text-[13px] font-bold leading-snug transition sm:min-h-10 sm:flex-none sm:basis-auto sm:px-3 sm:text-sm ${
-                active ? activeClass : "border-slate-200 bg-white/80 text-slate-700 hover:border-accent-blue/50 hover:text-slate-950 dark:border-surface-line dark:bg-surface-cardSoft dark:text-slate-300 dark:hover:text-white"
+              className={`min-h-9 min-w-0 max-w-full flex-1 basis-[calc(50%-0.1875rem)] whitespace-normal break-keep rounded-ui-sm border px-2 py-2 text-[13px] font-semibold leading-snug transition sm:min-h-10 sm:flex-none sm:basis-auto sm:px-3 sm:text-sm ${
+                active ? activeClass : "border-ui-line bg-ui-panel text-ui-muted hover:border-ui-lineStrong hover:bg-ui-elevated hover:text-ui-text"
               }`}
             >
               {item}
@@ -536,96 +544,84 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
         <Header market={market} />
         <RadarTopNav market={market} />
 
-        <section className="enterprise-panel overflow-hidden p-0">
-          <div className="relative border-b border-slate-200/80 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.16),transparent_36%),linear-gradient(135deg,rgba(255,255,255,0.96),rgba(241,245,249,0.94))] p-5 dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.22),transparent_36%),linear-gradient(135deg,rgba(15,23,42,0.96),rgba(2,6,23,0.98))] sm:p-7">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-3xl">
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-accent-blue/25 bg-accent-blue/10 px-3 py-1 text-xs font-black text-accent-blue">
-                  <Radar size={14} aria-hidden />
-                  복기 레이더
+        <AppSurface tone="panel" padding="none" className="overflow-hidden">
+          <div className="border-b border-ui-line p-4 sm:p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div className="min-w-0 max-w-3xl">
+                <div className="mb-2 flex min-w-0 flex-wrap items-center gap-2">
+                  <StatusPill tone="info" icon={ClipboardCheck}>오늘의 복기</StatusPill>
+                  <StatusPill tone={market === "stocks" ? "watch" : "info"}>{marketLabel}</StatusPill>
                 </div>
-                <h1 className="text-2xl font-black tracking-tight text-slate-950 dark:text-white sm:text-4xl">오늘의 판단을 다음 매매의 기준으로 바꿉니다.</h1>
-                <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300 sm:text-base">{marketHeroLine}</p>
-                <p className="mt-2 text-xs font-semibold text-slate-500">좋은 매매보다 지킨 매매를 먼저 기록해보세요.</p>
+                <h1 className="text-xl font-semibold tracking-tight text-ui-text sm:text-2xl">오늘의 판단을 다음 매매의 기준으로 바꿉니다.</h1>
+                <p className="mt-2 max-w-2xl text-ui-body text-ui-muted [word-break:keep-all]">{marketHeroLine}</p>
+                <p className="mt-1 text-ui-label font-semibold text-ui-subtle">좋은 매매보다 지킨 매매를 먼저 기록해보세요.</p>
               </div>
-              <div className="grid grid-cols-3 gap-2 rounded-xl border border-slate-200/80 bg-white/70 p-2 text-center dark:border-white/10 dark:bg-black/20">
+              <AppSurface tone="inset" padding="sm" className="grid min-w-0 grid-cols-3 gap-1.5 text-center">
                 {["차트 분석", "근거 저장", "결과 복기"].map((item) => (
-                  <div key={item} className="rounded-lg border border-slate-200/80 bg-white/80 px-3 py-2 dark:border-white/10 dark:bg-white/[0.03]">
-                    <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400">{item}</p>
+                  <div key={item} className="min-w-0 rounded-ui-sm px-2 py-1.5">
+                    <p className="truncate text-ui-label font-semibold text-ui-subtle">{item}</p>
                   </div>
                 ))}
-              </div>
+              </AppSurface>
             </div>
           </div>
 
-          <div className="grid gap-5 p-4 sm:p-5">
-            <section className="rounded-xl border border-accent-blue/20 bg-accent-blue/10 p-4">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <ClipboardCheck size={18} className="text-accent-blue" aria-hidden />
-                    <h2 className="text-lg font-black text-slate-950 dark:text-white">오늘의 복기 요약</h2>
+          <div className="grid gap-4 p-3 sm:p-5">
+            <PanelCard>
+              <SectionHeader
+                eyebrow="Journal"
+                title="오늘의 복기"
+                description={
+                  summary.total
+                    ? "저장된 복기에서 원칙 준수, 반복 실수, 다음 체크포인트를 정리했습니다."
+                    : "아직 복기 데이터가 없습니다. 첫 복기를 남기면 반복 실수와 원칙 준수율을 정리해드립니다."
+                }
+                action={
+                  <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+                    <ActionButton
+                      onClick={() => document.getElementById("pending-radar")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                      className="w-full whitespace-normal break-keep sm:w-auto"
+                    >
+                      저장한 레이더로 복기하기
+                    </ActionButton>
+                    <ActionButton tone="primary" onClick={scrollToForm} className="w-full whitespace-normal break-keep sm:w-auto">
+                      직접 기록하기
+                    </ActionButton>
                   </div>
-                  <p className="mt-1 text-sm leading-6 text-slate-400">
-                    {summary.total
-                      ? "저장된 복기에서 원칙 준수와 반복 실수를 정리했습니다."
-                      : "아직 복기 데이터가 없습니다. 첫 복기를 남기면 반복 실수와 원칙 준수율을 정리해드립니다."}
-                  </p>
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={() => document.getElementById("pending-radar")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                    className="min-h-11 rounded-md border border-accent-blue/40 bg-white/70 px-4 text-sm font-extrabold text-accent-blue hover:bg-accent-blue/10 dark:bg-black/20"
-                  >
-                    저장한 레이더로 복기하기
-                  </button>
-                  <button
-                    type="button"
-                    onClick={scrollToForm}
-                    className="min-h-11 rounded-md bg-accent-blue px-4 text-sm font-extrabold text-slate-950 hover:bg-sky-300"
-                  >
-                    직접 기록하기
-                  </button>
-                </div>
-              </div>
+                }
+              />
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
-                  <p className="text-[11px] font-black text-slate-500">이번 주 복기 수</p>
-                  <p className="mt-2 text-2xl font-black text-slate-950 dark:text-white">{summary.total ? `${summary.weekCount}건` : "대기 중"}</p>
-                  <p className="mt-1 text-xs text-slate-500">{summary.total ? "최근 7일 기준입니다." : "복기 1건 이상 저장 시 표시됩니다."}</p>
-                </div>
-                <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
-                  <p className="text-[11px] font-black text-slate-500">원칙 준수율</p>
-                  <p className="mt-2 text-2xl font-black text-slate-950 dark:text-white">{summary.complianceRate === null ? "대기 중" : `${summary.complianceRate}%`}</p>
-                  <p className="mt-1 text-xs text-slate-500">{summary.complianceRate === null ? "지킨 기준과 깨진 기준 저장 후 표시됩니다." : "기록된 기준 기반입니다."}</p>
-                </div>
-                <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
-                  <p className="text-[11px] font-black text-slate-500">반복 실수</p>
-                  <p className="mt-2 text-lg font-black text-slate-950 dark:text-white">{summary.repeatedMistake || "대기 중"}</p>
-                  <p className="mt-1 text-xs text-slate-500">{summary.repeatedMistake ? "가장 자주 나온 깨진 기준입니다." : "깨진 기준 저장 후 표시됩니다."}</p>
-                </div>
-                <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
-                  <p className="text-[11px] font-black text-slate-500">다음 매매 전 체크포인트</p>
-                  <p className="mt-2 text-sm font-bold leading-6 text-slate-950 dark:text-white">{summary.checkpoint}</p>
-                </div>
+              <div className="mt-4 rounded-ui border border-ui-line bg-ui-inset px-3">
+                <MetricRow
+                  label="이번 주 복기 수"
+                  value={summary.total ? `${summary.weekCount}건` : "대기 중"}
+                  detail={summary.total ? "최근 7일 기준입니다." : "복기 1건 이상 저장 시 표시됩니다."}
+                />
+                <MetricRow
+                  label="원칙 준수율"
+                  value={summary.complianceRate === null ? "대기 중" : `${summary.complianceRate}%`}
+                  detail={summary.complianceRate === null ? "지킨 기준과 깨진 기준 저장 후 표시됩니다." : "기록된 기준 기반입니다."}
+                />
+                <MetricRow
+                  label="반복 실수"
+                  value={summary.repeatedMistake || "대기 중"}
+                  detail={summary.repeatedMistake ? "가장 자주 나온 깨진 기준입니다." : "깨진 기준 저장 후 표시됩니다."}
+                />
+                <MetricRow label="다음 매매 전 체크" value="확인" detail={summary.checkpoint} />
               </div>
-            </section>
+            </PanelCard>
 
-            <section id="pending-radar" className="scroll-mt-4 scroll-mb-56 rounded-xl border border-slate-200/80 bg-white/80 p-4 dark:border-white/10 dark:bg-surface-cardSoft">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Target size={18} className="text-accent-blue" aria-hidden />
-                    <h2 className="text-lg font-black text-slate-950 dark:text-white">복기 대기 중인 레이더</h2>
-                  </div>
-                  <p className="mt-1 text-sm leading-6 text-slate-400">분석 화면에서 저장한 레이더를 결과 확인과 복기로 이어갑니다.</p>
-                </div>
-                <span className="rounded-md border border-slate-200/80 bg-white/70 px-2 py-1 text-xs font-bold text-slate-600 dark:border-white/10 dark:bg-black/20 dark:text-slate-400">
-                  {pendingRadarEntries.length ? `${pendingRadarEntries.length}건 대기` : "대기 없음"}
-                </span>
-              </div>
+            <section id="pending-radar" className="scroll-mt-4 scroll-mb-56">
+            <PanelCard>
+              <SectionHeader
+                title="복기 대기"
+                description="분석 화면에서 저장한 레이더를 결과 확인과 복기로 이어갑니다."
+                action={
+                  <StatusPill tone={pendingRadarEntries.length ? "risk" : "info"} icon={Target}>
+                    {pendingRadarEntries.length ? `${pendingRadarEntries.length}건 대기` : "대기 없음"}
+                  </StatusPill>
+                }
+              />
 
               {pendingRadarEntries.length ? (
                 <div className="mt-4 grid gap-3 lg:grid-cols-2">
@@ -635,79 +631,64 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                         ? `무효화 기준 ${entry.scoutSnapshot.invalidation.toLocaleString()} 확인`
                         : entry.verdict || "저장 당시 근거와 결과를 확인하세요.";
                     return (
-                      <article key={entry.id} className="rounded-xl border border-accent-blue/20 bg-white/75 p-4 dark:border-accent-blue/15 dark:bg-black/20">
+                      <AppSurface as="article" key={entry.id} tone="inset" padding="md">
                         <SourceBadge entry={entry} />
-                        <div className="mt-3 grid gap-2 text-sm">
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="text-slate-500">종목/시장</span>
-                            <span className="font-bold text-slate-950 dark:text-white">{entry.symbol || marketLabel}</span>
-                          </div>
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="text-slate-500">저장 당시 방향성</span>
-                            <span className="font-bold text-slate-950 dark:text-white">{entry.bias || "관망"}</span>
-                          </div>
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="text-slate-500">저장 시간</span>
-                            <span className="font-bold text-slate-950 dark:text-white">{formatDateTime(entry.createdAt)}</span>
-                          </div>
-                          <div className="rounded-md border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
-                            <p className="text-[11px] font-black text-slate-500">체크포인트</p>
-                            <p className="mt-1 text-sm font-semibold leading-6 text-slate-700 dark:text-slate-200">{checkpoint}</p>
-                          </div>
+                        <div className="mt-3 rounded-ui border border-ui-line bg-ui-panel px-3">
+                          <DataRow label="종목/시장" value={entry.symbol || marketLabel} />
+                          <DataRow label="저장 당시 방향성" value={entry.bias || "관망"} />
+                          <DataRow label="저장 시간" value={formatDateTime(entry.createdAt)} />
+                          <DataRow label="체크포인트" value="확인" detail={checkpoint} />
                         </div>
                         <OutcomeButtons entry={entry} onOutcome={recordOutcome} />
-                        <button
-                          type="button"
+                        <ActionButton
                           onClick={() => startFromRadar(entry)}
-                          className="mt-3 min-h-10 w-full rounded-md border border-accent-blue/40 bg-accent-blue/10 px-3 text-sm font-extrabold text-accent-blue hover:bg-accent-blue/15"
+                          className="mt-3 w-full whitespace-normal break-keep"
                         >
                           결과 입력 후 복기 작성
-                        </button>
-                      </article>
+                        </ActionButton>
+                      </AppSurface>
                     );
                   })}
                 </div>
               ) : (
-                <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white/70 p-5 dark:border-white/15 dark:bg-black/20">
-                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200">아직 복기할 저장 레이더가 없습니다.</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                <AppSurface tone="inset" padding="md" className="mt-4">
+                  <p className="text-sm font-semibold text-ui-text">아직 복기할 저장 레이더가 없습니다.</p>
+                  <p className="mt-2 text-ui-body text-ui-muted">
                     분석 화면에서 레이더를 저장하면 이곳에서 결과를 확인할 수 있습니다. 저장된 근거가 생기면 복기 대기 카드로 이어집니다.
                   </p>
-                </div>
+                </AppSurface>
               )}
+            </PanelCard>
             </section>
 
-            <section id="quick-journal-form" className="scroll-mt-4 scroll-mb-64 min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200/80 bg-white/80 p-3 dark:border-white/10 dark:bg-surface-cardSoft sm:p-4">
-              <div className="flex items-start gap-3">
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
-                  <ListChecks size={20} aria-hidden />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-slate-950 dark:text-white">빠른 복기 입력</h2>
-                  <p className="mt-1 text-sm leading-6 text-slate-400">긴 글 대신 칩을 눌러 30초 안에 진입 근거, 지킨 기준, 깨진 기준을 남깁니다.</p>
-                </div>
-              </div>
+            <section id="quick-journal-form" className="scroll-mt-4 scroll-mb-64 min-w-0 max-w-full overflow-hidden">
+            <PanelCard className="overflow-hidden">
+              <SectionHeader
+                title="기록할 내용"
+                description="필수 항목을 먼저 채우고, 기준은 칩으로 빠르게 남깁니다."
+                action={<StatusPill tone="info" icon={ListChecks}>30초 복기</StatusPill>}
+              />
 
               <div className="mt-5 grid min-w-0 gap-4">
                 <div className="grid min-w-0 gap-3 lg:grid-cols-2">
-                  <label className="grid min-w-0 gap-2 text-xs font-black text-slate-700 dark:text-slate-300" htmlFor="journal-title">
+                  <label className="grid min-w-0 gap-2 text-ui-label font-semibold text-ui-subtle" htmlFor="journal-title">
                     복기 제목
                     <input
                       id="journal-title"
                       value={title}
                       onChange={(event) => setTitle(event.target.value)}
                       placeholder={market === "stocks" ? "예: NVDA 지지 반응 복기" : "예: BTC 눌림목 관찰 복기"}
-                      className="min-h-11 min-w-0 max-w-full rounded-md border border-slate-200 bg-white/80 px-3 text-[15px] font-semibold text-slate-950 outline-none placeholder:text-slate-400 focus:border-accent-blue dark:border-surface-line dark:bg-black/20 dark:text-white dark:placeholder:text-slate-600 sm:min-h-12 sm:px-4 sm:text-base"
+                      className="min-h-11 min-w-0 max-w-full rounded-ui-sm border border-ui-line bg-ui-panel px-3 text-[15px] font-semibold text-ui-text outline-none placeholder:text-ui-subtle focus:border-ui-brand sm:min-h-12 sm:px-4 sm:text-base"
                     />
                   </label>
-                  <label className="grid min-w-0 gap-2 text-xs font-black text-slate-700 dark:text-slate-300" htmlFor="journal-symbol">
+                  <label className="grid min-w-0 gap-2 text-ui-label font-semibold text-ui-subtle" htmlFor="journal-symbol">
                     시장/종목
                     <input
                       id="journal-symbol"
                       value={symbol}
                       onChange={(event) => setSymbol(event.target.value)}
                       placeholder={market === "stocks" ? "예: SPY, NVDA, QQQ" : "예: BTC, ETH, SOL"}
-                      className="min-h-11 min-w-0 max-w-full rounded-md border border-slate-200 bg-white/80 px-3 text-[15px] font-semibold text-slate-950 outline-none placeholder:text-slate-400 focus:border-accent-blue dark:border-surface-line dark:bg-black/20 dark:text-white dark:placeholder:text-slate-600 sm:min-h-12 sm:px-4 sm:text-base"
+                      className="min-h-11 min-w-0 max-w-full rounded-ui-sm border border-ui-line bg-ui-panel px-3 text-[15px] font-semibold text-ui-text outline-none placeholder:text-ui-subtle focus:border-ui-brand sm:min-h-12 sm:px-4 sm:text-base"
                     />
                   </label>
                 </div>
@@ -715,18 +696,18 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                 <div className="grid min-w-0 gap-3 lg:grid-cols-3">
                   <ChipGroup label="방향" options={directions} selected={[direction]} onToggle={(item) => setDirection(item as DirectionType)} />
                   <ChipGroup label="결과" options={resultOptions} selected={[result]} onToggle={(item) => setResult(item as TradeResult)} tone="green" />
-                  <div className="min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/15">
-                    <p className="mb-2 text-xs font-black text-slate-700 dark:text-slate-200">손익 결과</p>
+                  <div className="min-w-0 max-w-full overflow-hidden rounded-ui border border-ui-line bg-ui-inset p-3">
+                    <p className="mb-2 text-ui-label font-semibold text-ui-subtle">손익 결과</p>
                     <div className="flex min-w-0 max-w-full flex-wrap gap-1.5 sm:gap-2">
                       {rResultOptions.map((item) => (
                         <button
                           key={item}
                           type="button"
                           onClick={() => setRResult(item)}
-                          className={`min-h-9 min-w-0 max-w-full flex-1 basis-[calc(50%-0.1875rem)] whitespace-normal break-keep rounded-md border px-2 py-2 text-[13px] font-bold leading-snug transition sm:min-h-10 sm:flex-none sm:basis-auto sm:px-3 sm:text-sm ${
+                          className={`min-h-9 min-w-0 max-w-full flex-1 basis-[calc(50%-0.1875rem)] whitespace-normal break-keep rounded-ui-sm border px-2 py-2 text-[13px] font-semibold leading-snug transition sm:min-h-10 sm:flex-none sm:basis-auto sm:px-3 sm:text-sm ${
                             rResult === item
-                              ? "border-accent-blue bg-accent-blue text-slate-950"
-                              : "border-slate-200 bg-white/80 text-slate-700 hover:border-accent-blue/50 hover:text-slate-950 dark:border-surface-line dark:bg-surface-cardSoft dark:text-slate-300 dark:hover:text-white"
+                              ? "border-ui-brand bg-ui-brand text-slate-950"
+                              : "border-ui-line bg-ui-panel text-ui-muted hover:border-ui-lineStrong hover:bg-ui-elevated hover:text-ui-text"
                           }`}
                         >
                           {profitResultLabel(item)}
@@ -738,7 +719,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                         value={customRResult}
                         onChange={(event) => setCustomRResult(event.target.value)}
                         placeholder="예: 소폭 수익 / 약손실"
-                        className="mt-2 min-h-10 w-full min-w-0 max-w-full rounded-md border border-slate-200 bg-white/80 px-3 text-sm font-semibold text-slate-950 outline-none placeholder:text-slate-400 focus:border-accent-blue dark:border-surface-line dark:bg-black/20 dark:text-white dark:placeholder:text-slate-600"
+                        className="mt-2 min-h-10 w-full min-w-0 max-w-full rounded-ui-sm border border-ui-line bg-ui-panel px-3 text-sm font-semibold text-ui-text outline-none placeholder:text-ui-subtle focus:border-ui-brand"
                       />
                     ) : null}
                   </div>
@@ -768,18 +749,18 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                   tone="red"
                 />
 
-                <label className="grid min-w-0 gap-2 text-xs font-black text-slate-700 dark:text-slate-300" htmlFor="journal-next-fix">
+                <label className="grid min-w-0 gap-2 text-ui-label font-semibold text-ui-subtle" htmlFor="journal-next-fix">
                   다음에 고칠 점 한 줄
                   <input
                     id="journal-next-fix"
                     value={nextFix}
                     onChange={(event) => setNextFix(event.target.value)}
                     placeholder="예: 다음 매매 전 손절 기준을 먼저 적고 확인하기"
-                    className="min-h-11 min-w-0 max-w-full rounded-md border border-slate-200 bg-white/80 px-3 text-[15px] font-semibold text-slate-950 outline-none placeholder:text-slate-400 focus:border-accent-blue dark:border-surface-line dark:bg-black/20 dark:text-white dark:placeholder:text-slate-600 sm:min-h-12 sm:px-4 sm:text-base"
+                    className="min-h-11 min-w-0 max-w-full rounded-ui-sm border border-ui-line bg-ui-panel px-3 text-[15px] font-semibold text-ui-text outline-none placeholder:text-ui-subtle focus:border-ui-brand sm:min-h-12 sm:px-4 sm:text-base"
                   />
                 </label>
 
-                <label className="grid min-w-0 gap-2 text-xs font-black text-slate-700 dark:text-slate-300" htmlFor="journal-memo">
+                <label className="grid min-w-0 gap-2 text-ui-label font-semibold text-ui-subtle" htmlFor="journal-memo">
                   선택 메모
                   <textarea
                     id="journal-memo"
@@ -787,213 +768,185 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                     onChange={(event) => setMemo(event.target.value)}
                     placeholder="차트 상황이나 감정 상태를 짧게 남겨도 좋습니다."
                     rows={3}
-                    className="w-full min-w-0 max-w-full resize-none rounded-md border border-slate-200 bg-white/80 px-3 py-3 text-[15px] leading-7 text-slate-950 outline-none placeholder:text-slate-400 focus:border-accent-blue dark:border-surface-line dark:bg-black/20 dark:text-white dark:placeholder:text-slate-600 sm:px-4 sm:text-base"
+                    className="w-full min-w-0 max-w-full resize-none rounded-ui-sm border border-ui-line bg-ui-panel px-3 py-3 text-[15px] leading-7 text-ui-text outline-none placeholder:text-ui-subtle focus:border-ui-brand sm:px-4 sm:text-base"
                   />
                 </label>
 
-                <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
-                  <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                <AppSurface tone="inset" padding="md">
+                  <p className="text-xs font-semibold text-ui-muted">
                     {isSubmitReady
                       ? "필수 항목이 준비되었습니다. 저장하면 이번 복기 요약과 다음 체크포인트를 바로 보여드립니다."
                       : "복기 제목, 시장/종목, 다음 체크포인트를 채우면 저장할 수 있습니다. 진입 근거와 지킨 기준은 칩으로 빠르게 더해보세요."}
                   </p>
-                </div>
+                </AppSurface>
 
-                <button
-                  type="button"
+                <ActionButton
+                  tone="primary"
                   onClick={addEntry}
                   disabled={!isSubmitReady}
-                  className="inline-flex min-h-12 w-full max-w-full items-center justify-center gap-2 whitespace-normal break-keep rounded-md bg-accent-blue px-3 text-center text-[13px] font-extrabold leading-snug text-slate-950 transition hover:bg-sky-300 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 dark:disabled:bg-slate-700 dark:disabled:text-slate-400 sm:w-auto sm:px-4 sm:text-sm"
+                  className="min-h-12 w-full max-w-full whitespace-normal break-keep px-3 text-center text-[13px] leading-snug sm:w-auto sm:px-4 sm:text-sm"
                 >
                   <Plus size={18} aria-hidden />
-                  복기 저장하고 요약 보기
-                </button>
+                  기록 저장
+                </ActionButton>
               </div>
+            </PanelCard>
             </section>
 
             {lastFeedback ? (
-              <section className="rounded-xl border border-signal-success/25 bg-signal-success/10 p-4">
-                <div className="flex items-start gap-3">
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-signal-success/30 bg-signal-success/15 text-signal-success">
-                    <ShieldCheck size={20} aria-hidden />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-black text-slate-950 dark:text-white">이번 복기 요약</h2>
-                    <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-300">{lastFeedback.message}</p>
-                  </div>
+              <PanelCard>
+                <SectionHeader
+                  title="이번 복기 요약"
+                  description={lastFeedback.message}
+                  action={<StatusPill tone="long" icon={ShieldCheck}>기록 저장됨</StatusPill>}
+                />
+                <div className="mt-4 rounded-ui border border-ui-line bg-ui-inset px-3">
+                  <DataRow label="원칙 준수 상태" value={lastFeedback.principleStatus} />
+                  <DataRow label="주요 실수" value={lastFeedback.mistake} />
+                  <DataRow label="잘한 점" value={lastFeedback.wellDone} />
+                  <DataRow label="다음 매매 전 체크포인트" value="확인" detail={lastFeedback.checkpoint} />
                 </div>
-                <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-                  <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
-                    <p className="text-[11px] font-black text-slate-500">원칙 준수 상태</p>
-                    <p className="mt-2 text-sm font-bold text-slate-950 dark:text-white">{lastFeedback.principleStatus}</p>
-                  </div>
-                  <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
-                    <p className="text-[11px] font-black text-slate-500">주요 실수</p>
-                    <p className="mt-2 text-sm font-bold text-slate-950 dark:text-white">{lastFeedback.mistake}</p>
-                  </div>
-                  <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
-                    <p className="text-[11px] font-black text-slate-500">잘한 점</p>
-                    <p className="mt-2 text-sm font-bold text-slate-950 dark:text-white">{lastFeedback.wellDone}</p>
-                  </div>
-                  <div className="rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
-                    <p className="text-[11px] font-black text-slate-500">다음 매매 전 체크포인트</p>
-                    <p className="mt-2 text-sm font-bold leading-6 text-slate-950 dark:text-white">{lastFeedback.checkpoint}</p>
-                  </div>
-                </div>
-              </section>
+              </PanelCard>
             ) : null}
 
-            <section className="scroll-mb-56 rounded-xl border border-slate-200/80 bg-white/80 p-4 dark:border-white/10 dark:bg-surface-cardSoft">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <History size={18} className="text-accent-blue" aria-hidden />
-                    <h2 className="text-lg font-black text-slate-950 dark:text-white">복기 히스토리</h2>
-                  </div>
-                  <p className="mt-1 text-sm leading-6 text-slate-400">결과보다 원칙, 리스크 관리, 다음 체크포인트가 한눈에 보이도록 정리합니다.</p>
-                </div>
-                <div className="flex min-w-0 max-w-full flex-wrap gap-1.5 sm:gap-2">
+            <PanelCard className="scroll-mb-56">
+              <SectionHeader
+                title="복기 히스토리"
+                description="결과보다 원칙, 리스크 관리, 다음 체크포인트가 한눈에 보이도록 정리합니다."
+                action={<StatusPill tone="info" icon={History}>{filteredEntries.length}건</StatusPill>}
+              />
+              <div className="mt-3 flex min-w-0 max-w-full flex-wrap gap-1.5 sm:gap-2">
                   {historyFilters.map((filter) => (
-                    <button
+                    <ActionButton
                       key={filter}
-                      type="button"
+                      tone={activeFilter === filter ? "primary" : "secondary"}
                       onClick={() => setActiveFilter(filter)}
-                      className={`min-h-9 min-w-0 max-w-full flex-1 basis-[calc(50%-0.1875rem)] whitespace-normal break-keep rounded-md border px-2 py-2 text-[13px] font-bold leading-snug sm:min-h-10 sm:flex-none sm:basis-auto sm:px-3 sm:text-sm ${
-                        activeFilter === filter
-                          ? "border-accent-blue bg-accent-blue text-slate-950"
-                          : "border-slate-200 bg-white/70 text-slate-700 hover:border-accent-blue/50 hover:text-slate-950 dark:border-surface-line dark:bg-black/20 dark:text-slate-300 dark:hover:text-white"
-                      }`}
+                      className="min-h-9 min-w-0 max-w-full flex-1 basis-[calc(50%-0.1875rem)] whitespace-normal break-keep px-2 py-2 text-[13px] leading-snug sm:min-h-10 sm:flex-none sm:basis-auto sm:px-3 sm:text-sm"
                     >
                       {filter}
-                    </button>
+                    </ActionButton>
                   ))}
-                </div>
               </div>
 
               <div className="mt-4 space-y-3">
                 {isLoadingRemote ? (
-                  <div className="flex items-center gap-2 rounded-md border border-slate-200/80 bg-white/70 p-4 text-sm text-slate-700 dark:border-white/10 dark:bg-black/20 dark:text-slate-300">
+                  <AppSurface tone="inset" padding="md" className="flex items-center gap-2 text-ui-body text-ui-muted">
                     <Loader2 className="animate-spin text-accent-blue" size={17} aria-hidden />
                     복기 기록을 불러오는 중입니다.
-                  </div>
+                  </AppSurface>
                 ) : filteredEntries.length ? (
                   filteredEntries.map((entry) => {
                     const parsed = parseEntryMeta(entry);
                     const expanded = expandedEntryId === entry.id;
                     return (
-                      <article key={entry.id} className="min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200/80 bg-white/75 p-3 dark:border-surface-line dark:bg-black/20 sm:p-4">
+                      <AppSurface as="article" key={entry.id} tone="inset" padding="md" className="min-w-0 max-w-full overflow-hidden">
                         <div className="flex min-w-0 items-start justify-between gap-3">
                           <div className="min-w-0">
                             <SourceBadge entry={entry} />
-                            <h3 className="mt-2 min-w-0 break-keep text-base font-black leading-snug text-slate-950 dark:text-white">{entry.title}</h3>
+                            <h3 className="mt-2 min-w-0 break-keep text-base font-semibold leading-snug text-ui-text">{entry.title}</h3>
                             <div className="mt-2 flex min-w-0 max-w-full flex-wrap gap-1.5 sm:gap-2">
-                              <span className="max-w-full whitespace-normal break-keep rounded-md border border-slate-200/80 bg-white/70 px-2 py-1 text-xs font-bold leading-snug text-slate-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300">
+                              <StatusPill tone="info" className="max-w-full whitespace-normal break-keep leading-snug">
                                 {parsed.symbol}
-                              </span>
-                              <span className="max-w-full whitespace-normal break-keep rounded-md border border-slate-200/80 bg-white/70 px-2 py-1 text-xs font-bold leading-snug text-slate-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300">
+                              </StatusPill>
+                              <StatusPill tone={entry.bias === "숏" ? "short" : entry.bias === "롱" ? "long" : "watch"} className="max-w-full whitespace-normal break-keep leading-snug">
                                 방향 {entry.bias || "미기록"}
-                              </span>
+                              </StatusPill>
                               <span className={`max-w-full whitespace-normal break-keep rounded-md border px-2 py-1 text-xs font-bold leading-snug ${outcomeClass(entry.outcome)}`}>
                                 결과 {parsed.result}
                               </span>
-                              <span className="max-w-full whitespace-normal break-keep rounded-md border border-slate-200/80 bg-white/70 px-2 py-1 text-xs font-bold leading-snug text-slate-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300">
+                              <StatusPill tone="info" className="max-w-full whitespace-normal break-keep leading-snug">
                                 손익 {profitResultLabel(parsed.rResult)}
-                              </span>
-                              <span className="max-w-full whitespace-normal break-keep rounded-md border border-slate-200/80 bg-white/70 px-2 py-1 text-xs font-bold leading-snug text-slate-700 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-300">
+                              </StatusPill>
+                              <StatusPill tone="info" className="max-w-full whitespace-normal break-keep leading-snug">
                                 <Clock3 className="mr-1 inline" size={12} aria-hidden />
                                 {formatDateTime(entry.createdAt)}
-                              </span>
+                              </StatusPill>
                             </div>
                           </div>
-                          <button
-                            type="button"
+                          <ActionButton
+                            tone="danger"
                             onClick={() => removeEntry(entry.id)}
-                            className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-surface-line text-slate-400 hover:border-signal-danger/50 hover:text-signal-danger"
+                            className="h-9 w-9 shrink-0 p-0"
                             aria-label="복기 삭제"
                           >
                             <Trash2 size={16} aria-hidden />
-                          </button>
+                          </ActionButton>
                         </div>
 
-                        <div className="mt-3 grid gap-2 md:grid-cols-3">
-                          <div className="rounded-md border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
-                            <p className="text-[11px] font-black text-slate-500">실수 태그</p>
-                            <p className="mt-1 text-sm font-bold text-slate-950 dark:text-white">{parsed.brokenReal.length ? parsed.brokenReal.join(", ") : "없음"}</p>
-                          </div>
-                          <div className="rounded-md border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
-                            <p className="text-[11px] font-black text-slate-500">원칙 준수 상태</p>
-                            <p className="mt-1 flex items-center gap-1 text-sm font-bold text-slate-950 dark:text-white">
-                              {parsed.brokenReal.length ? <AlertTriangle size={14} className="text-signal-danger" aria-hidden /> : <CheckCircle2 size={14} className="text-signal-success" aria-hidden />}
-                              {parsed.principleStatus}
-                            </p>
-                          </div>
-                          <div className="rounded-md border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
-                            <p className="text-[11px] font-black text-slate-500">다음 매매 전 체크</p>
-                            <p className="mt-1 text-sm font-bold leading-6 text-slate-950 dark:text-white">{parsed.nextCheckpoint}</p>
-                          </div>
+                        <div className="mt-3 rounded-ui border border-ui-line bg-ui-panel px-3">
+                          <DataRow label="실수 태그" value={parsed.brokenReal.length ? parsed.brokenReal.join(", ") : "없음"} />
+                          <DataRow
+                            label="원칙 준수 상태"
+                            value={
+                              <span className="inline-flex items-center gap-1">
+                                {parsed.brokenReal.length ? <AlertTriangle size={14} className="text-signal-danger" aria-hidden /> : <CheckCircle2 size={14} className="text-signal-success" aria-hidden />}
+                                {parsed.principleStatus}
+                              </span>
+                            }
+                          />
+                          <DataRow label="다음 매매 전 체크" value="확인" detail={parsed.nextCheckpoint} />
                         </div>
 
                         {(entry.source === "scout" || entry.source === "chart") ? <OutcomeButtons entry={entry} onOutcome={recordOutcome} /> : null}
 
-                        <button
-                          type="button"
+                        <ActionButton
                           onClick={() => setExpandedEntryId(expanded ? null : entry.id)}
-                          className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-md border border-slate-200/80 bg-white/70 px-3 text-sm font-bold text-slate-700 hover:border-accent-blue/50 hover:text-slate-950 dark:border-white/10 dark:bg-black/20 dark:text-slate-300 dark:hover:text-white"
+                          className="mt-3 min-h-10"
                         >
                           자세히 보기
                           {expanded ? <ChevronUp size={16} aria-hidden /> : <ChevronDown size={16} aria-hidden />}
-                        </button>
+                        </ActionButton>
 
                         {expanded ? (
-                          <div className="mt-3 rounded-md border border-slate-200/80 bg-white/70 p-3 dark:border-white/10 dark:bg-black/20">
-                            <div className="grid gap-3 text-sm leading-6 text-slate-700 dark:text-slate-300">
+                          <AppSurface tone="panel" padding="md" className="mt-3">
+                            <div className="grid gap-3 text-sm leading-6 text-ui-muted">
                               <p>
-                                <span className="font-black text-slate-950 dark:text-slate-100">진입 근거.</span>{" "}
+                                <span className="font-semibold text-ui-text">진입 근거.</span>{" "}
                                 {parsed.entryReasons.length ? parsed.entryReasons.join(", ") : "기록 대기"}
                               </p>
                               <p>
-                                <span className="font-black text-slate-950 dark:text-slate-100">지킨 기준.</span>{" "}
+                                <span className="font-semibold text-ui-text">지킨 기준.</span>{" "}
                                 {parsed.keptPrinciples.length ? parsed.keptPrinciples.join(", ") : "기록 대기"}
                               </p>
                               <p>
-                                <span className="font-black text-slate-950 dark:text-slate-100">깨진 기준.</span>{" "}
+                                <span className="font-semibold text-ui-text">깨진 기준.</span>{" "}
                                 {parsed.brokenPrinciples.length ? parsed.brokenPrinciples.join(", ") : "기록 대기"}
                               </p>
                               <p>
-                                <span className="font-black text-slate-950 dark:text-slate-100">손익 결과.</span> {profitResultLabel(parsed.rResult)}
+                                <span className="font-semibold text-ui-text">손익 결과.</span> {profitResultLabel(parsed.rResult)}
                               </p>
                               {parsed.memo ? (
                                 <p>
-                                  <span className="font-black text-slate-950 dark:text-slate-100">선택 메모.</span> {parsed.memo}
+                                  <span className="font-semibold text-ui-text">선택 메모.</span> {parsed.memo}
                                 </p>
                               ) : entry.note && !isStructuredJournalNote(entry.note) ? (
                                 <p className="whitespace-pre-wrap">{entry.note}</p>
                               ) : null}
                             </div>
-                          </div>
+                          </AppSurface>
                         ) : null}
-                      </article>
+                      </AppSurface>
                     );
                   })
                 ) : (
-                  <div className="rounded-xl border border-dashed border-slate-300 bg-white/70 p-5 dark:border-white/15 dark:bg-black/20">
-                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">아직 저장된 복기가 없습니다.</p>
-                    <p className="mt-2 text-sm leading-6 text-slate-500">
+                  <AppSurface tone="inset" padding="md">
+                    <p className="text-sm font-semibold text-ui-text">아직 저장된 복기가 없습니다.</p>
+                    <p className="mt-2 text-ui-body text-ui-muted">
                       첫 복기는 짧아도 됩니다. 진입 이유와 깨진 원칙만 남겨도 다음 판단이 선명해집니다.
                     </p>
-                    <button
-                      type="button"
+                    <ActionButton
+                      tone="primary"
                       onClick={scrollToForm}
-                      className="mt-4 min-h-10 rounded-md bg-accent-blue px-4 text-sm font-extrabold text-slate-950 hover:bg-sky-300"
+                      className="mt-4 min-h-10"
                     >
                       첫 복기 남기기
-                    </button>
-                  </div>
+                    </ActionButton>
+                  </AppSurface>
                 )}
               </div>
-            </section>
+            </PanelCard>
           </div>
-        </section>
+        </AppSurface>
         <AppFooter />
       </div>
     </main>
