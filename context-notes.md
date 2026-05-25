@@ -1,5 +1,12 @@
 # 작업 맥락 메모
 
+## 2026-05-26 푸시 크론 운영 로그 샘플 가독성 보강.
+
+- Vercel 로그에 `preferenceSkippedSamples`가 남지만 `console.info`에 객체를 직접 넘겨 nested sample이 `[Object]`로 접힌다.
+- 현재 로그만으로도 `finalSendAttemptCount=0`, `sendTargetTokenCount=0`, `preferenceSkippedTokenCount=18`이므로 발송 직전 병목은 preference filter다.
+- 다음 확인 포인트는 샘플 내부의 `skippedBy`, `marketAllowed`, `ruleAllowed`이며, 이를 운영 로그에서 바로 볼 수 있어야 한다.
+- `scan summary`를 JSON 문자열로 남기면 Vercel 로그에서 nested samples를 펼쳐 볼 수 있고, 로컬 dry-run에서 민감정보 노출 없이 `skippedBy=market`, `ruleAllowed=true` 샘플이 확인됐다.
+
 ## 2026-05-26 운영 푸시 선호 필터 진단 보강.
 
 - 로컬 main과 origin/main은 `029f69c`로 일치했고, 로컬 코드에는 시스템 알림의 `rule_ids` 우회 로직이 포함되어 있다.

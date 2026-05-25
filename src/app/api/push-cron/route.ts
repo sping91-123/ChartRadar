@@ -13,6 +13,21 @@ function isAuthorized(request: Request) {
   return request.headers.get("authorization") === `Bearer ${secret}`;
 }
 
+function scanSummaryLog(result: Awaited<ReturnType<typeof runPushAlertScan>>, scannedAt: string, dryRun: boolean) {
+  return {
+    scannedAt,
+    dryRun,
+    users: result.users,
+    events: result.events,
+    sent: result.sent,
+    skipped: result.skipped,
+    failed: result.failed,
+    sources: result.sources,
+    diagnostics: result.diagnostics,
+    warningCount: result.warnings?.length ?? 0
+  };
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const dryRun =
@@ -32,18 +47,7 @@ export async function GET(request: Request) {
   const origin = url.origin;
   const result = await runPushAlertScan({ origin, dryRun });
   const scannedAt = new Date().toISOString();
-  console.info("[push-cron] scan summary", {
-    scannedAt,
-    dryRun,
-    users: result.users,
-    events: result.events,
-    sent: result.sent,
-    skipped: result.skipped,
-    failed: result.failed,
-    sources: result.sources,
-    diagnostics: result.diagnostics,
-    warningCount: result.warnings?.length ?? 0
-  });
+  console.info("[push-cron] scan summary", JSON.stringify(scanSummaryLog(result, scannedAt, dryRun)));
   return NextResponse.json({
     ok: true,
     dryRun,
