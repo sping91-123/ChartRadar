@@ -1,0 +1,179 @@
+name: Codex Task
+description: Codex가 한 번에 하나의 작업을 처리하기 위한 작업 이슈입니다.
+title: "[Codex] "
+labels:
+  - codex
+  - task
+body:
+  - type: markdown
+    attributes:
+      value: |
+        이 템플릿은 `@codex` 작업 요청용입니다.
+        한 Issue에는 한 작업만 적고, main 직접 push 대신 브랜치와 PR 흐름을 사용합니다.
+
+  - type: input
+    id: task_title
+    attributes:
+      label: 작업 제목
+      description: 처리할 작업을 한 문장으로 적어주세요.
+      placeholder: 예. Health API 공개 범위 점검
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 담당 영역
+      description: 가장 가까운 담당 영역을 선택해주세요.
+      options:
+        - 개발 메인
+        - 알림 시스템
+        - 인증 / 계정 / 사용자 데이터
+        - 뉴스 / 매크로 레이더
+        - 코인 레이더 /crypto
+        - 글로벌 레이더 /global
+        - UI 디자인 시스템 / 브랜드 리뉴얼
+        - 결제 / Pro
+        - Android / 모바일 앱
+        - 기타
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 우선순위
+      options:
+        - P0
+        - P1
+        - P2
+        - P3
+        - P4
+    validations:
+      required: true
+
+  - type: dropdown
+    id: intelligence
+    attributes:
+      label: 인텔리전스 수준
+      options:
+        - 낮음
+        - 낮음~중간
+        - 중간
+        - 중간~높음
+        - 높음
+        - xhigh
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: 목표
+      description: 사용자가 체감해야 하는 결과와 성공 기준을 적어주세요.
+      placeholder: |
+        목표.
+        - 무엇을 해결해야 하는지.
+        - 완료 기준은 무엇인지.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: 수정 범위
+      description: 수정해도 되는 파일, 화면, API, 문서 범위를 적어주세요.
+      placeholder: |
+        수정 가능.
+        - src/...
+        - docs/...
+    validations:
+      required: true
+
+  - type: textarea
+    id: do_not_touch
+    attributes:
+      label: 건드리지 말 것
+      description: 이번 작업에서 제외할 영역을 구체적으로 적어주세요.
+      placeholder: |
+        금지.
+        - 로그인/Auth 구조 변경 금지.
+        - 결제 정책 변경 금지.
+        - Android versionCode 변경 금지.
+        - 비밀값 파일 커밋 금지.
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: 검증 명령
+      description: 작업 후 실행해야 하는 명령을 적어주세요.
+      value: |
+        - git diff --check
+        - cmd /c npx tsc --noEmit
+        - npm.cmd run build
+        - npm.cmd run smoke:mobile
+        - npm.cmd run smoke:all
+        - 필요 시 npm.cmd run smoke:ops
+    validations:
+      required: true
+
+  - type: textarea
+    id: report_format
+    attributes:
+      label: 완료 보고 형식
+      value: |
+        - 수정 파일.
+        - 변경 내용.
+        - 실행한 검증 명령.
+        - 검증 결과.
+        - 남은 한계 또는 리스크.
+        - PR 링크.
+    validations:
+      required: true
+
+  - type: textarea
+    id: push_pr_policy
+    attributes:
+      label: push/PR 정책
+      value: |
+        - main 직접 push 금지.
+        - 작업 브랜치 생성.
+        - 커밋 후 PR 생성.
+        - PR 설명에 수정 파일, 검증 결과, 남은 리스크 포함.
+        - 대표 확인 전 merge 금지.
+    validations:
+      required: true
+
+  - type: textarea
+    id: secrets_policy
+    attributes:
+      label: 비밀값 금지
+      value: |
+        아래 파일과 값은 절대 커밋하지 않습니다.
+        - .env.local
+        - .env*.local
+        - android/app/google-services.json
+        - Firebase service account JSON
+        - Firebase private key
+        - SUPABASE_SERVICE_ROLE_KEY
+        - SUPABASE_ACCESS_TOKEN
+        - CRON_SECRET
+        - RevenueCat secret key
+        - Google OAuth client secret
+        - Android keystore, keystore password, key password
+    validations:
+      required: true
+
+  - type: textarea
+    id: codex_request
+    attributes:
+      label: Codex 요청문
+      description: Issue 작성 후 여기에 @codex에게 요청할 문장을 적어두면 그대로 사용할 수 있습니다.
+      value: |
+        @codex 이 Issue의 범위 안에서 작업해주세요.
+        main에 직접 push하지 말고 브랜치를 만들어 PR로 올려주세요.
+        비밀값 파일은 커밋하지 말고, 검증 결과와 남은 리스크를 PR에 기록해주세요.
+    validations:
+      required: true

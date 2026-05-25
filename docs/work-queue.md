@@ -84,6 +84,17 @@ git ls-files | Select-String -Pattern '(^|/)(\.env|\.env\.local|google-services\
 
 작업을 시작하면 해당 항목을 `IN_PROGRESS`로 바꾸고, 완료 커밋 후 `DONE`으로 바꾼다. 단, 상태 변경 자체도 같은 작업 커밋에 포함한다.
 
+## GitHub Issue 전환 규칙
+
+장기적으로 실제 작업 실행은 GitHub Issue와 PR 흐름을 우선한다. 이 문서는 전체 백로그와 우선순위 관리용으로 유지한다.
+
+- 실행할 작업은 `.github/ISSUE_TEMPLATE/codex-task.yml`로 Issue를 만든다.
+- Issue에는 `@codex` 작업 요청을 남긴다.
+- Codex는 main에 직접 push하지 않고 브랜치와 PR로 작업한다.
+- Issue가 생성된 work queue 항목은 완료 결과에 Issue 번호를 기록한다.
+- PR이 merge되면 해당 항목을 `DONE`으로 바꾸고 PR 번호 또는 merge commit을 기록한다.
+- 자세한 흐름은 `docs/codex-workflow.md`를 따른다.
+
 ## 현재 작업 큐
 
 | 우선순위 | 상태 | 작업 | 담당방 | 인텔리전스 | 목표 | 완료 기준 | 완료 결과 |
