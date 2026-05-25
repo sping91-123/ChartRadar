@@ -60,6 +60,8 @@ interface AdminPushDiagnostics {
     duplicateSkippedTokenCount: number;
     sendTargetTokenCount: number;
     subscriptionCount: number;
+    lookupErrorCount?: number;
+    scannerErrorCount?: number;
   };
   candidateEvents: Array<{
     signalType: string;
@@ -878,6 +880,9 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
                     <p className="font-bold text-slate-500">최근 24시간 기록</p>
                     <p className="mt-1 font-black text-white">
                       기록 {pushDiagnostics.last24h.loggedEventCount}개 · 발송 합계 {pushDiagnostics.last24h.sentCount}개 · dry-run 실패 {pushDiagnostics.last24h.failureCount}개
+                    </p>
+                    <p className="mt-1 text-[11px] font-bold text-slate-500">
+                      조회 오류 {pushDiagnostics.diagnostics.lookupErrorCount ?? 0}개 · 스캐너 오류 {pushDiagnostics.diagnostics.scannerErrorCount ?? 0}개
                     </p>
                   </div>
                   <div className="rounded-md border border-white/10 bg-black/25 p-3">

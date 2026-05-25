@@ -2148,3 +2148,13 @@
 - [x] Vercel Dashboard Cron Jobs 확인 절차와 Logs 필터 기준을 문서화한다.
 - [x] Hobby 플랜의 cron 주기 제한과 현재 `*/5` schedule 위험을 확인한다.
 - [x] build, ops smoke, all smoke로 검증한다.
+
+## 2026-05-25 push-cron undefined find 오류 수정.
+
+- [x] `pushAlertScanner.ts`의 `.find()` 호출부를 확인한다.
+- [x] stock setup의 빈 `analysis`에서 `timeframeAnalyses.find()`가 호출될 수 있는 지점을 확인한다.
+- [x] 배열형 조회 결과와 setup 후보 배열을 빈 배열 fallback으로 방어한다.
+- [x] 유저별 스캔 오류가 전체 cron을 500으로 죽이지 않도록 user loop를 보호한다.
+- [x] 진단값에 `lookupErrorCount`, `scannerErrorCount`를 추가한다.
+- [x] 로컬 `/api/push-cron?dryRun=1&diagnostics=1`이 실제 발송 없이 200 응답을 내는지 확인한다.
+- [x] build, mobile smoke, all smoke, ops smoke, tsc, diff check로 검증한다.

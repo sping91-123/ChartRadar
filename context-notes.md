@@ -1919,3 +1919,13 @@ The health endpoint now reports a launch readiness score and structured blocking
 - `/api/push-cron?dryRun=1`과 `?diagnostics=1`은 `CRON_SECRET` 인증 후 `runPushAlertScan({ dryRun: true })`를 실행한다. dry-run 분기에서는 `sendEventToUser`, `sendFcmMessage`, `recordSentEvent`를 호출하지 않는다.
 - Vercel 공식 문서 기준 Hobby 플랜은 Cron Jobs가 하루 1회까지만 허용된다. 현재 `*/5` 자동 푸시와 `*/10` 매크로 sync는 Pro 이상 전제가 필요하다.
 - 대표 확인 경로는 Vercel Dashboard → ChartRadar Project → Settings → Cron Jobs → `/api/push-cron` → View Logs다. 일반 Logs에서는 `requestPath:/api/push-cron` 필터와 `vercel-cron/1.0` user agent를 확인한다.
+
+## 2026-05-25 push-cron undefined find 오류 수정.
+
+- Vercel Cron은 실제 실행 중이었고 실패 원인은 등록 문제가 아니라 scanner 런타임 오류였다.
+- 가장 직접적인 `.find()` 위험 지점은 `setupEvidenceLabels`의 `setup.analysis.timeframeAnalyses.find()`다. 글로벌 stock setup은 `buildStockSetup`에서 `analysis: {}` 형태로 만들어져 `timeframeAnalyses`가 없을 수 있다.
+- `setupEvidenceLabels`, `ruleAllowed`, `topPushSetups`에 배열 fallback을 추가해 undefined 배열에서 `.find()`나 spread가 호출되지 않게 했다.
+- Supabase REST 조회 결과가 null/undefined인 경우 빈 배열로 처리하고, 조회 실패는 `lookupErrorCount`와 warnings에 남긴다.
+- crypto/stock setup scanner 실패는 빈 후보 배열로 계속 진행하고 `scannerErrorCount`와 warnings에 남긴다.
+- 유저별 preset/권한/중복 처리 중 예외가 나도 전체 cron을 죽이지 않고 해당 유저만 skip하며 토큰 원문, user_id, 이메일은 로그에 남기지 않는다.
+- 로컬 dev route에서 `/api/push-cron?dryRun=1&diagnostics=1`은 200을 반환했고 `lookupErrorCount=0`, `scannerErrorCount=0`이었다. dry-run이라 실제 FCM 발송은 하지 않았다.

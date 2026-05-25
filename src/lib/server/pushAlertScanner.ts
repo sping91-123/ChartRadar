@@ -117,6 +117,8 @@ interface PushScanDiagnostics {
   duplicateSkippedTokenCount: number;
   sendTargetTokenCount: number;
   skippedLowScoreCount: number;
+  lookupErrorCount: number;
+  scannerErrorCount: number;
 }
 
 function emptyDiagnostics(overrides: Partial<PushScanDiagnostics> = {}): PushScanDiagnostics {
@@ -139,6 +141,8 @@ function emptyDiagnostics(overrides: Partial<PushScanDiagnostics> = {}): PushSca
     duplicateSkippedTokenCount: 0,
     sendTargetTokenCount: 0,
     skippedLowScoreCount: 0,
+    lookupErrorCount: 0,
+    scannerErrorCount: 0,
     ...overrides
   };
 }
@@ -167,6 +171,15 @@ function compactSymbol(symbol: string) {
 
 function isCryptoMajor(symbol: string) {
   return cryptoMajorSymbols.has(symbol) || cryptoMajorSymbols.has(compactSymbol(symbol));
+}
+
+function asArray<T>(value: T[] | null | undefined): T[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function safeErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.slice(0, 180);
 }
 
 function sideLabel(side: "long" | "short", market: SetupAlertMarket) {
@@ -255,7 +268,8 @@ function userPlan(
 function ruleAllowed(event: PushAlertEvent, plan: BillingEntitlementPlan) {
   if (event.system) return true;
   const ruleId = event.ruleId;
-  const rule = radarAlertRules.find((item) => item.id === ruleId);
+  const rules = asArray(radarAlertRules);
+  const rule = rules.find((item) => item.id === ruleId);
   if (!rule) return false;
   if (rule.tier === "free") return true;
   if (rule.category === "stocks") return hasMarketEntitlement(plan, "stocks");
@@ -287,7 +301,8 @@ function presetFromRow(row: PushAlertPresetRow): SetupAlertPreset {
 }
 
 function setupEvidenceLabels(setup: ScoutSetup) {
-  const active = setup.analysis.timeframeAnalyses.find((analysis) => analysis.timeframe === setup.timeframe);
+  const timeframeAnalyses = asArray(setup.analysis?.timeframeAnalyses);
+  const active = timeframeAnalyses.find((analysis) => analysis.timeframe === setup.timeframe);
   const direction = setup.plan.side === "long" ? "bullish" : "bearish";
   const labels: string[] = [];
   const hasVolume = active ? active.condition.volumeState === "high" || (active.condition.volumeRatio ?? 0) >= 1.5 : false;
@@ -441,10 +456,10 @@ function setupQualityRank(setup: ScoutSetup) {
   return 1;
 }
 
-function topPushSetups(setups: ScoutSetup[], limit: number) {
+function topPushSetups(setups: ScoutSetup[] | null | undefined, limit: number) {
   const picked: ScoutSetup[] = [];
   const usedSymbols = new Set<string>();
-  const ranked = [...setups].sort((a, b) => {
+  const ranked = [...asArray(setups)].sort((a, b) => {
     const scoreDiff = b.score - a.score;
     if (scoreDiff !== 0) return scoreDiff;
     const qualityDiff = setupQualityRank(b) - setupQualityRank(a);
@@ -874,11 +889,37 @@ export async function runPushAlertScan(context: ScanContext) {
   const dryRun = context.dryRun === true;
   const diagnosticsLimit = Math.max(0, Math.min(context.diagnosticsLimit ?? 40, 100));
   const eventDiagnostics: PushEventDiagnostic[] = [];
+  const warnings: string[] = [];
+  let lookupErrorCount = 0;
+  let scannerErrorCount = 0;
   const pushDiagnostic = (diagnostic: PushEventDiagnostic) => {
     if (eventDiagnostics.length < diagnosticsLimit) eventDiagnostics.push(diagnostic);
   };
+  const readRows = async <T>(label: string, path: string) => {
+    try {
+      return asArray(await supabaseAdminRest<T[] | null>(path));
+    } catch (error) {
+      lookupErrorCount += 1;
+      const message = safeErrorMessage(error);
+      console.warn("[push-cron] lookup failed", { label, message });
+      warnings.push(`${label}: ${message}`);
+      return [];
+    }
+  };
+  const scanRows = async <T>(label: string, scan: () => Promise<T[]>) => {
+    try {
+      return asArray(await scan());
+    } catch (error) {
+      scannerErrorCount += 1;
+      const message = safeErrorMessage(error);
+      console.warn("[push-cron] scanner source failed", { label, message });
+      warnings.push(`${label}: ${message}`);
+      return [];
+    }
+  };
 
-  const tokens = await supabaseAdminRest<PushTokenRow[]>(
+  const tokens = await readRows<PushTokenRow>(
+    "push_tokens",
     "push_tokens?select=id,user_id,token,markets,rule_ids&enabled=eq.true&platform=eq.android&provider=eq.fcm&limit=500"
   );
   if (tokens.length === 0) {
@@ -893,17 +934,18 @@ export async function runPushAlertScan(context: ScanContext) {
         skipped: [],
         failed: []
       },
-      warnings: [],
-      diagnostics: emptyDiagnostics(),
+      warnings,
+      diagnostics: emptyDiagnostics({ lookupErrorCount, scannerErrorCount }),
       eventDiagnostics
     };
   }
 
   const userIds = Array.from(new Set(tokens.map((token) => token.user_id)));
-  const profiles = await supabaseAdminRest<PushProfileRow[]>(`profiles?select=*&id=in.(${userIds.join(",")})`);
+  const profiles = await readRows<PushProfileRow>("profiles", `profiles?select=*&id=in.(${userIds.join(",")})`);
   const profileMap = new Map(profiles.map((profile) => [profile.id, profile]));
   const now = encodeURIComponent(new Date().toISOString());
-  const subscriptionRows = await supabaseAdminRest<PushSubscriptionRow[]>(
+  const subscriptionRows = await readRows<PushSubscriptionRow>(
+    "subscriptions",
     `subscriptions?select=*&user_id=in.(${userIds.join(",")})&status=in.(active,trialing)&current_period_end=gt.${now}&order=current_period_end.desc&limit=1000`
   );
   const subscriptionsByUser = new Map<string, PushSubscriptionRow[]>();
@@ -912,24 +954,29 @@ export async function runPushAlertScan(context: ScanContext) {
     rows.push(subscription);
     subscriptionsByUser.set(subscription.user_id, rows);
   }
-  const presetRows = await supabaseAdminRest<PushAlertPresetRow[]>(
+  const presetRows = await readRows<PushAlertPresetRow>(
+    "push_alert_presets",
     `push_alert_presets?select=user_id,market,preset_id,symbol,mode,timeframe,side,quality,score,headline,saved_at&enabled=eq.true&user_id=in.(${userIds.join(",")})&limit=1000`
   );
 
-  const cryptoSetups = await scanCryptoSetups();
-  const stockPresetSetups = await scanStockSetups(
-    presetRows.filter((preset) => preset.market === "stocks").map((preset) => ({ symbol: preset.symbol, timeframe: preset.timeframe }))
+  const cryptoSetups = await scanRows("crypto-setups", scanCryptoSetups);
+  const stockPresetSetups = await scanRows("stock-preset-setups", () =>
+    scanStockSetups(presetRows.filter((preset) => preset.market === "stocks").map((preset) => ({ symbol: preset.symbol, timeframe: preset.timeframe })))
   );
-  const stockMomentumSetups = await scanStockSetups(stockMomentumSymbols.map((symbol) => ({ symbol, timeframe: "1d" })));
+  const stockMomentumSetups = await scanRows("stock-momentum-setups", () =>
+    scanStockSetups(stockMomentumSymbols.map((symbol) => ({ symbol, timeframe: "1d" })))
+  );
   const optionalEventSources = await Promise.all([
     scanOptionalEventSource("liquidation-pressure", () => scanLiquidationEvent(context.origin)),
     scanOptionalEventSource("radar-news-crypto", () => scanNewsEvent(context.origin, "crypto")),
     scanOptionalEventSource("radar-news-stocks", () => scanNewsEvent(context.origin, "stocks")),
     scanOptionalEventSource("macro-calendar-stocks", () => scanMacroCalendarEvent(context.origin))
   ]);
-  const warnings = optionalEventSources
-    .map((source) => source.warning)
-    .filter((warning): warning is string => Boolean(warning));
+  warnings.push(
+    ...optionalEventSources
+      .map((source) => source.warning)
+      .filter((warning): warning is string => Boolean(warning))
+  );
   const globalCompositeEvents = [buildRiskOffEvent(stockMomentumSetups), buildSemiconductorLeadershipEvent(stockMomentumSetups)];
   const cryptoMarketScoutEvents = topPushSetups(cryptoSetups, 8).map((setup, index) =>
     setupToEvent(setup, "radar-grade", "crypto", "radar-grade", index + 1)
@@ -956,62 +1003,70 @@ export async function runPushAlertScan(context: ScanContext) {
 
   for (const userId of userIds) {
     const userTokens = tokens.filter((token) => token.user_id === userId);
-    const plan = userPlan(profileMap, subscriptionsByUser, userId);
-    const userPresets = presetRows.filter((preset) => preset.user_id === userId);
-    const cryptoPresetMatches = findSetupAlertMatches(
-      userPresets.filter((preset) => preset.market === "crypto").map(presetFromRow),
-      cryptoSetups,
-      "crypto"
-    ).map((match) => matchedSetupToEvent(match.setup, "watchlist-surge", "crypto", "preset"));
-    const stockPresetMatches = findSetupAlertMatches(
-      userPresets.filter((preset) => preset.market === "stocks").map(presetFromRow),
-      stockPresetSetups,
-      "stocks"
-    ).map((match) => matchedSetupToEvent(match.setup, "stock-momentum", "stocks", "preset"));
+    try {
+      const plan = userPlan(profileMap, subscriptionsByUser, userId);
+      const userPresets = presetRows.filter((preset) => preset.user_id === userId);
+      const cryptoPresetMatches = findSetupAlertMatches(
+        userPresets.filter((preset) => preset.market === "crypto").map(presetFromRow),
+        cryptoSetups,
+        "crypto"
+      ).map((match) => matchedSetupToEvent(match.setup, "watchlist-surge", "crypto", "preset"));
+      const stockPresetMatches = findSetupAlertMatches(
+        userPresets.filter((preset) => preset.market === "stocks").map(presetFromRow),
+        stockPresetSetups,
+        "stocks"
+      ).map((match) => matchedSetupToEvent(match.setup, "stock-momentum", "stocks", "preset"));
 
-    const userGenericEvents = genericEvents.map((event) => personalizeEventForUser(event, userPresets));
-    const allUserEvents = [...userGenericEvents, ...cryptoPresetMatches, ...stockPresetMatches];
-    const qualityCheckedEvents = allUserEvents.filter((event) => {
-      const allowed = passesSetupPushQuality(event);
-      if (!allowed) skippedLowScoreCount += 1;
-      if (!allowed) pushDiagnostic(eventDiagnostic(event, "low_score"));
-      return allowed;
-    });
-    const userEvents = qualityCheckedEvents.filter((event) => {
-      const allowed = ruleAllowed(event, plan);
-      if (!allowed) pushDiagnostic(eventDiagnostic(event, "entitlement"));
-      return allowed;
-    });
-    entitlementBlockedEventCount += qualityCheckedEvents.length - userEvents.length;
-    events += userEvents.length;
+      const userGenericEvents = genericEvents.map((event) => personalizeEventForUser(event, userPresets));
+      const allUserEvents = [...userGenericEvents, ...cryptoPresetMatches, ...stockPresetMatches];
+      const qualityCheckedEvents = allUserEvents.filter((event) => {
+        const allowed = passesSetupPushQuality(event);
+        if (!allowed) skippedLowScoreCount += 1;
+        if (!allowed) pushDiagnostic(eventDiagnostic(event, "low_score"));
+        return allowed;
+      });
+      const userEvents = qualityCheckedEvents.filter((event) => {
+        const allowed = ruleAllowed(event, plan);
+        if (!allowed) pushDiagnostic(eventDiagnostic(event, "entitlement"));
+        return allowed;
+      });
+      entitlementBlockedEventCount += qualityCheckedEvents.length - userEvents.length;
+      events += userEvents.length;
 
-    for (const event of userEvents) {
-      if (dryRun) {
-        const targetTokens = userTokens.filter((token) => tokenWants(token, event.market, event.ruleId));
-        preferenceSkippedTokenCount += Math.max(0, userTokens.length - targetTokens.length);
-        if (targetTokens.length === 0) {
-          pushDiagnostic(eventDiagnostic(event, "token_preferences"));
-          continue;
-        }
-        if (await alreadySent(userId, event.eventKey)) {
-          skipped += targetTokens.length;
-          duplicateSkippedTokenCount += targetTokens.length;
+      for (const event of userEvents) {
+        if (dryRun) {
+          const targetTokens = userTokens.filter((token) => tokenWants(token, event.market, event.ruleId));
+          preferenceSkippedTokenCount += Math.max(0, userTokens.length - targetTokens.length);
+          if (targetTokens.length === 0) {
+            pushDiagnostic(eventDiagnostic(event, "token_preferences"));
+            continue;
+          }
+          if (await alreadySent(userId, event.eventKey)) {
+            skipped += targetTokens.length;
+            duplicateSkippedTokenCount += targetTokens.length;
+            sendTargetTokenCount += targetTokens.length;
+            pushDiagnostic(eventDiagnostic(event, "duplicate", targetTokens.length));
+            continue;
+          }
           sendTargetTokenCount += targetTokens.length;
-          pushDiagnostic(eventDiagnostic(event, "duplicate", targetTokens.length));
+          pushDiagnostic(eventDiagnostic(event, "dry_run", targetTokens.length));
           continue;
         }
-        sendTargetTokenCount += targetTokens.length;
-        pushDiagnostic(eventDiagnostic(event, "dry_run", targetTokens.length));
-        continue;
-      }
 
-      const result = await sendEventToUser(userId, userTokens, event);
-      sent += result.sent;
-      skipped += result.skipped;
-      failed += result.failed;
-      preferenceSkippedTokenCount += result.preferenceSkipped;
-      duplicateSkippedTokenCount += result.duplicateSkipped;
-      sendTargetTokenCount += result.targetTokens;
+        const result = await sendEventToUser(userId, userTokens, event);
+        sent += result.sent;
+        skipped += result.skipped;
+        failed += result.failed;
+        preferenceSkippedTokenCount += result.preferenceSkipped;
+        duplicateSkippedTokenCount += result.duplicateSkipped;
+        sendTargetTokenCount += result.targetTokens;
+      }
+    } catch (error) {
+      scannerErrorCount += 1;
+      failed += userTokens.length;
+      const message = safeErrorMessage(error);
+      console.warn("[push-cron] user scan skipped", { message });
+      warnings.push(`user-scan: ${message}`);
     }
   }
 
@@ -1045,7 +1100,9 @@ export async function runPushAlertScan(context: ScanContext) {
       preferenceSkippedTokenCount,
       duplicateSkippedTokenCount,
       sendTargetTokenCount,
-      skippedLowScoreCount
+      skippedLowScoreCount,
+      lookupErrorCount,
+      scannerErrorCount
     }),
     eventDiagnostics
   };
