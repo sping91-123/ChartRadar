@@ -2184,3 +2184,11 @@
 - [x] 테스트 푸시와 자동 푸시에 알림 종류별 `targetPath`를 추가한다.
 - [x] foreground/background 알림 탭 fallback을 `/alerts`로 유지한다.
 - [x] build, mobile smoke, all smoke, ops smoke, tsc, diff check로 검증한다.
+
+## 2026-05-25 Android 푸시 알림 탭 실행 수정.
+
+- [x] FCM payload의 Android `click_action` 값과 AndroidManifest intent-filter 연결 여부를 확인한다.
+- [x] MainActivity가 `OPEN_ALERTS` action intent를 받을 수 있게 manifest를 보강한다.
+- [x] `pushNotificationActionPerformed`에서 targetPath 로그와 내부 이동을 유지한다.
+- [x] 테스트 푸시와 자동 푸시의 `targetPath` 문자열 포함 여부를 재확인한다.
+- [x] build, mobile smoke, all smoke, ops smoke, tsc, diff check, Android debug build로 검증한다.

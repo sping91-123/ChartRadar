@@ -524,6 +524,8 @@ export async function registerAppPushListeners() {
   });
 
   await PushNotifications.addListener("pushNotificationActionPerformed", (event) => {
-    if (typeof window !== "undefined") window.location.assign(pushActionTargetPath(event as PushNotificationActionEvent));
+    const targetPath = pushActionTargetPath(event as PushNotificationActionEvent);
+    console.info("[app-push] notification action performed", { targetPath });
+    if (typeof window !== "undefined") window.location.assign(targetPath);
   });
 }

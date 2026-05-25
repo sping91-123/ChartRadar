@@ -1953,3 +1953,10 @@ The health endpoint now reports a launch readiness score and structured blocking
 - 이번 수정은 앱 전역에서 리스너를 등록하고, FCM data payload의 `targetPath`를 기준으로 내부 경로만 이동시키는 최소 변경으로 제한한다.
 - `targetPath`는 `/`로 시작하는 상대 경로만 허용하고 `//`, 역슬래시, `http://`, `https://`, `javascript:` 같은 외부 또는 스킴 값은 `/alerts`로 fallback한다.
 - 푸시 threshold, 자동 발송 조건, 로그인/결제 로직은 변경하지 않는다.
+
+## 2026-05-25 Android 푸시 알림 탭 실행 수정.
+
+- FCM 발송 payload는 `notification`과 `data`를 함께 보내고 Android notification에 `click_action: "OPEN_ALERTS"`를 넣고 있었다.
+- AndroidManifest의 MainActivity에는 `MAIN`/`LAUNCHER` intent-filter만 있어, Android가 `OPEN_ALERTS` click action을 앱 Activity로 해석하지 못할 수 있었다.
+- 앱이 아예 열리지 않는 증상은 JS router나 `targetPath` 문제가 아니라 Android notification click intent와 Activity intent-filter 불일치 가능성이 가장 높다.
+- MainActivity에 `OPEN_ALERTS` + `DEFAULT` intent-filter를 추가해 알림 탭이 앱을 열 수 있게 하고, 열린 뒤에는 기존 `targetPath` 내부 경로 검증 규칙으로 이동한다.
