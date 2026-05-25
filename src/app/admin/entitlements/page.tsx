@@ -274,28 +274,24 @@ export default function AdminEntitlementsPage() {
 
                 <fieldset className="grid gap-2">
                   <legend className="text-sm font-bold text-slate-300">변경할 권한</legend>
-                  <div className="grid gap-2 sm:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-2">
                     {planOptions.map((option) => (
-                      <label
+                      <button
                         key={option.id}
-                        className={`cursor-pointer rounded-xl border p-4 transition ${
+                        type="button"
+                        role="radio"
+                        aria-checked={planId === option.id}
+                        onClick={() => setPlanId(option.id)}
+                        className={`min-w-0 rounded-xl border p-3 text-left transition sm:p-4 ${
                           planId === option.id ? "border-amber-300/45 bg-amber-300/10" : "border-surface-line bg-surface-cardSoft hover:border-cyan-300/35"
                         }`}
                       >
-                        <input
-                          type="radio"
-                          name="planId"
-                          value={option.id}
-                          checked={planId === option.id}
-                          onChange={(event) => setPlanId(event.target.value)}
-                          className="sr-only"
-                        />
-                        <span className="flex items-center gap-2 text-sm font-black text-white">
+                        <span className="flex min-w-0 items-center gap-2 text-sm font-black text-white">
                           {option.id === "free" ? <ShieldCheck size={15} aria-hidden /> : <Crown size={15} aria-hidden />}
-                          {option.label}
+                          <span className="min-w-0 truncate">{option.label}</span>
                         </span>
                         <span className="mt-1 block text-xs leading-5 text-slate-400">{option.description}</span>
-                      </label>
+                      </button>
                     ))}
                   </div>
                 </fieldset>
