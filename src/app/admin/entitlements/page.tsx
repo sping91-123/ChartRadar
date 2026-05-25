@@ -142,15 +142,15 @@ export default function AdminEntitlementsPage() {
   }
 
   return (
-    <main className="min-h-screen px-4 pb-10">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
+    <main className="min-h-screen max-w-full overflow-x-hidden px-3 pb-10 sm:px-4">
+      <div className="mx-auto flex w-full max-w-3xl min-w-0 flex-col gap-5">
         <Header />
         <Link href="/account" className="inline-flex w-fit items-center gap-2 text-sm font-bold text-slate-400 hover:text-white">
           <ArrowLeft size={16} aria-hidden />
           회원정보관리로 돌아가기
         </Link>
 
-        <section className="enterprise-panel p-5">
+        <section className="enterprise-panel min-w-0 overflow-hidden p-4 sm:p-5">
           <div className="flex items-start gap-3">
             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-amber-300/25 bg-amber-300/10 text-amber-200">
               <UserPlus size={20} aria-hidden />
@@ -182,24 +182,24 @@ export default function AdminEntitlementsPage() {
               현재 계정은 관리자 권한이 없어 테스터 Pro 권한을 부여할 수 없습니다.
             </div>
           ) : (
-            <div className="mt-6 grid gap-5">
-              <section className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
+            <div className="mt-6 grid min-w-0 gap-5">
+              <section className="min-w-0 overflow-hidden rounded-xl border border-surface-line bg-surface-cardSoft p-3 sm:p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                  <label className="grid flex-1 gap-2 text-sm font-bold text-slate-300">
+                  <label className="grid min-w-0 flex-1 gap-2 text-sm font-bold text-slate-300">
                     가입 회원 검색
                     <input
                       type="search"
                       value={memberQuery}
                       onChange={(event) => setMemberQuery(event.target.value)}
                       placeholder="이메일 또는 이름으로 검색"
-                      className="min-h-11 rounded-xl border border-surface-line bg-slate-950 px-4 text-base font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/55"
+                      className="min-h-11 w-full min-w-0 rounded-xl border border-surface-line bg-slate-950 px-4 text-base font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/55"
                     />
                   </label>
                   <button
                     type="button"
                     onClick={() => void loadMembers(memberQuery)}
                     disabled={isLoadingMembers}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-cyan-300/35 bg-cyan-300/10 px-4 py-2 text-sm font-black text-cyan-100 transition hover:border-cyan-300/55 disabled:cursor-wait disabled:opacity-70"
+                    className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/35 bg-cyan-300/10 px-4 py-2 text-sm font-black text-cyan-100 transition hover:border-cyan-300/55 disabled:cursor-wait disabled:opacity-70 sm:w-auto"
                   >
                     {isLoadingMembers ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Search size={16} aria-hidden />}
                     회원 불러오기
@@ -208,7 +208,7 @@ export default function AdminEntitlementsPage() {
 
                 {memberError ? <p className="mt-3 rounded-xl border border-rose-300/25 bg-rose-300/10 p-3 text-sm font-bold text-rose-100">{memberError}</p> : null}
 
-                <div className="mt-4 grid max-h-[28rem] gap-2 overflow-y-auto pr-1">
+                <div className="mt-4 grid max-h-[28rem] min-w-0 gap-2 overflow-y-auto pr-1">
                   {isLoadingMembers && members.length === 0 ? (
                     <p className="rounded-xl border border-surface-line bg-slate-950/50 p-4 text-sm font-bold text-slate-400">회원 목록을 불러오고 있습니다.</p>
                   ) : members.length > 0 ? (
@@ -224,11 +224,11 @@ export default function AdminEntitlementsPage() {
                             setSelectedMemberId(member.id);
                             setEmail(member.email ?? "");
                           }}
-                          className={`rounded-xl border p-4 text-left transition ${
+                          className={`w-full min-w-0 overflow-hidden rounded-xl border p-3 text-left transition sm:p-4 ${
                             selected ? "border-amber-300/55 bg-amber-300/10" : "border-surface-line bg-slate-950/45 hover:border-cyan-300/35"
                           }`}
                         >
-                          <span className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <span className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                             <span className="min-w-0 flex-1">
                               <span className="block break-all text-sm font-black leading-5 text-white">{member.email ?? "이메일 없음"}</span>
                               {member.displayName ? <span className="mt-1 block truncate text-xs text-slate-400">{member.displayName}</span> : null}
@@ -237,9 +237,9 @@ export default function AdminEntitlementsPage() {
                               {member.activePlan ?? member.profilePlan ?? "free"}
                             </span>
                           </span>
-                          <span className="mt-3 grid gap-1 text-xs leading-5 text-slate-500 sm:grid-cols-2">
-                            <span>가입일 {formatDate(member.createdAt)}</span>
-                            <span>권한 만료 {formatDate(member.activeUntil)}</span>
+                          <span className="mt-3 grid min-w-0 gap-1 text-xs leading-5 text-slate-500 sm:grid-cols-2">
+                            <span className="min-w-0 break-words">가입일 {formatDate(member.createdAt)}</span>
+                            <span className="min-w-0 break-words">권한 만료 {formatDate(member.activeUntil)}</span>
                           </span>
                         </button>
                       );
@@ -252,8 +252,8 @@ export default function AdminEntitlementsPage() {
                 </div>
               </section>
 
-              <form onSubmit={handleSubmit} className="grid gap-4">
-              <label className="grid gap-2 text-sm font-bold text-slate-300">
+              <form onSubmit={handleSubmit} className="grid min-w-0 gap-4">
+              <label className="grid min-w-0 gap-2 text-sm font-bold text-slate-300">
                 선택한 테스터 이메일
                 <input
                   type="email"
@@ -263,7 +263,7 @@ export default function AdminEntitlementsPage() {
                     setEmail(event.target.value);
                   }}
                   placeholder="tester@example.com"
-                  className="min-h-12 rounded-xl border border-surface-line bg-slate-950 px-4 text-base font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/55"
+                  className="min-h-12 w-full min-w-0 rounded-xl border border-surface-line bg-slate-950 px-4 text-base font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/55"
                   required={!selectedMemberId}
                 />
               </label>
