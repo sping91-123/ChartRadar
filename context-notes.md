@@ -1,5 +1,13 @@
 # 작업 맥락 메모
 
+## 2026-05-26 시스템 자동 푸시 선호 필터 보정.
+
+- 운영 로그의 `sendTargetTokenCount=0`은 품질 gate 이후 후보는 있었지만 토큰 선호 필터에서 모두 제외된 상태였다.
+- dry-run 샘플상 글로벌 후보는 `marketAllowed=false`, `ruleAllowed=true`로 남아 있어 시장 설정 때문에 제외되고 있었다.
+- 시스템 알림은 `event.system === true`이고 watchlist가 아니면 `rule_ids` 선호를 우회하되, `markets` 선호는 계속 존중한다.
+- watchlist/저장조건 알림은 기존처럼 저장 조건과 규칙 선호 필터를 따른다.
+- 수정 후 dry-run은 `sendTargetTokenCount=3`, `finalSendAttemptCount=3`, warning 0건, raw token/user_id/email/secret 미노출을 확인했다.
+
 ## 2026-05-25 pushAlertScanner 구조 분리 3단계.
 
 - 이번 작업은 optional event source 분리만 대상으로 하며 자동 푸시 조건, threshold, eventKey, DB write, FCM 발송, 권한/선호/중복 방지 결과는 변경하지 않는다.

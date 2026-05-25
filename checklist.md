@@ -1,5 +1,13 @@
 # 작업 체크리스트
 
+## 2026-05-26 시스템 자동 푸시 선호 필터 보정.
+
+- [x] `push_tokens.markets`와 `rule_ids` 저장·필터 구조를 확인한다.
+- [x] 시스템 알림과 watchlist 알림의 선호 필터 차이를 명확히 한다.
+- [x] 시스템 알림이 `rule_ids` 때문에 막히지 않도록 최소 수정한다.
+- [x] dry-run에서 `sendTargetTokenCount`, `preferenceSkippedSamples`, 민감정보 노출 여부를 확인한다.
+- [x] 빌드, 스모크, 타입 체크, diff check로 검증한다.
+
 ## 2026-05-25 pushAlertScanner 구조 분리 3단계.
 
 - [x] optional source 함수와 source result wrapper 위치를 실제 코드 기준으로 확인한다.

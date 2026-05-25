@@ -14,7 +14,7 @@ import {
   passesSetupPushQuality
 } from "@/lib/server/push/eligibility";
 import { ruleAllowed, userPlan } from "@/lib/server/push/entitlements";
-import { tokenWants } from "@/lib/server/push/preferences";
+import { tokenPreferenceDecision, tokenWants } from "@/lib/server/push/preferences";
 import { scanLiquidationEvent } from "@/lib/server/push/scanners/liquidationScanner";
 import { scanMacroCalendarEvent, scanNewsEvent } from "@/lib/server/push/scanners/macroScanner";
 import { scanOptionalEventSource } from "@/lib/server/push/sourceResults";
@@ -515,7 +515,7 @@ function buildSemiconductorLeadershipEvent(setups: ScoutSetup[]): PushAlertEvent
 }
 
 async function sendEventToUser(userId: string, tokens: PushTokenRow[], event: PushAlertEvent) {
-  const targetTokens = tokens.filter((token) => tokenWants(token, event.market, event.ruleId));
+  const targetTokens = tokens.filter((token) => tokenWants(token, event));
   const preferenceSkipped = Math.max(0, tokens.length - targetTokens.length);
   if (targetTokens.length === 0) {
     return { sent: 0, skipped: 0, failed: 0, preferenceSkipped, duplicateSkipped: 0, targetTokens: 0 };
@@ -788,15 +788,20 @@ export async function runPushAlertScan(context: ScanContext) {
 
       for (const event of userEvents) {
         if (dryRun) {
-          const targetTokens = userTokens.filter((token) => tokenWants(token, event.market, event.ruleId));
+          const preferenceDecisions = userTokens.map((token) => tokenPreferenceDecision(token, event));
+          const targetTokens = userTokens.filter((_, index) => preferenceDecisions[index]?.allowed === true);
           preferenceSkippedTokenCount += Math.max(0, userTokens.length - targetTokens.length);
           if (targetTokens.length === 0) {
+            const firstDecision = preferenceDecisions[0];
             pushDiagnostic(eventDiagnostic(event, "token_preferences"));
             pushSample(preferenceSkippedSamples, {
               market: event.market,
               alertKind: event.alertKind,
               ruleId: event.ruleId,
-              reason: "token_preferences"
+              reason: "token_preferences",
+              skippedBy: firstDecision?.skippedBy ?? undefined,
+              marketAllowed: firstDecision?.marketOk,
+              ruleAllowed: firstDecision?.ruleOk
             });
             continue;
           }

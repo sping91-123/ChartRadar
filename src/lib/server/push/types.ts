@@ -152,6 +152,9 @@ export interface PushPreferenceSkippedSample {
   alertKind: PushAlertEvent["alertKind"];
   ruleId: RadarAlertRuleId;
   reason: "token_preferences";
+  skippedBy?: "market" | "rule" | "market_and_rule";
+  marketAllowed?: boolean;
+  ruleAllowed?: boolean;
 }
 
 export interface PushDuplicateSkippedSample {
