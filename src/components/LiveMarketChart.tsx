@@ -53,6 +53,7 @@ import { LiquidationPressurePanel } from "@/components/LiquidationPressurePanel"
 import { CryptoChartPanel } from "@/components/crypto/CryptoChartPanel";
 import { CryptoControlBar } from "@/components/crypto/CryptoControlBar";
 import { CryptoChartLoadingOverlay, CryptoErrorState } from "@/components/crypto/CryptoFallbackState";
+import { CryptoSummarySection } from "@/components/crypto/CryptoSummarySection";
 import { hasMarketEntitlement } from "@/lib/billing";
 import { recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
@@ -2075,7 +2076,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           ) : null}
         </div>
       ) : analysis && visibleRadarInsight ? (
-        <div className="mt-4 space-y-4">
+        <CryptoSummarySection>
           <RadarInsightPanel
             insight={visibleRadarInsight}
             isPro={hasCoinPro}
@@ -2169,7 +2170,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               </div>
             </div>
           ) : null}
-        </div>
+        </CryptoSummarySection>
       ) : (
         <div className="mt-4 min-h-56 animate-pulse rounded-lg border border-surface-line bg-surface-cardSoft p-4">
           <p className="text-xs font-semibold text-slate-500">{symbolLabel(symbol)} · {activeTimeframe} 레이더 결론</p>
