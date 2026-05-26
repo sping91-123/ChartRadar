@@ -52,6 +52,17 @@ import { CryptoChartPanel } from "@/components/crypto/CryptoChartPanel";
 import { CryptoControlBar } from "@/components/crypto/CryptoControlBar";
 import { CryptoChartLoadingOverlay, CryptoErrorState } from "@/components/crypto/CryptoFallbackState";
 import {
+  buildMarketCacheKey,
+  fetchCryptoSymbolList,
+  legacyStorageKeys,
+  readLocalStorageWithLegacy,
+  readMarketBriefingResponse,
+  readMarketCache,
+  storageKey,
+  writeLocalStorage,
+  writeMarketCache
+} from "@/components/crypto/dataHelpers";
+import {
   CryptoAiBriefingGateNotice,
   CryptoAltAnalysisGateBanner,
   CryptoAltAnalysisLimitNotice,
@@ -73,15 +84,12 @@ import {
   cryptoDefaultChartHeightClass,
   cryptoMajorChartHeightClass,
   defaultOverlaySettings,
-  legacyChannelStoragePrefix,
   legacyOverlaySettingsStorageKeys,
-  legacyPreviousBrandStoragePrefix,
   majorSymbols,
   overlayPresets,
   overlaySettingsStorageKey,
   radarProfileOptions,
   showPineParityTools,
-  storagePrefix,
   structureSensitivityOptions,
   symbols,
   timeframeScoreLimit
@@ -112,7 +120,6 @@ import type {
   AltAnalysisGate,
   AltAnalysisUsageSnapshot,
   MarketBriefingState,
-  MarketCachePayload,
   OverlaySettings,
   ParityRow,
   RadarProfile,
@@ -221,39 +228,6 @@ function registerAltAnalysisSymbol(symbol: string, isPaid: boolean): AltAnalysis
   };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function isValidMarketCachePayload(value: unknown): value is MarketCachePayload {
-  if (!isRecord(value)) return false;
-  if (!Array.isArray(value.candles) || !isRecord(value.analysis)) return false;
-
-  const timeframeAnalyses = value.analysis.timeframeAnalyses;
-  return (
-    Array.isArray(timeframeAnalyses) &&
-    timeframeAnalyses.length > 0 &&
-    timeframeAnalyses.every((item) => isRecord(item) && isRecord(item.condition))
-  );
-}
-
-function readMarketCache(cacheKey: string): MarketCachePayload | null {
-  if (typeof window === "undefined") return null;
-
-  const cached = window.localStorage.getItem(cacheKey);
-  if (!cached) return null;
-
-  try {
-    const parsed = JSON.parse(cached) as unknown;
-    if (isValidMarketCachePayload(parsed)) return parsed;
-  } catch {
-    // fall through and clear the broken cache below
-  }
-
-  window.localStorage.removeItem(cacheKey);
-  return null;
-}
-
 function BriefingKeyword({ children, tone }: { children: string; tone: "long" | "short" | "warn" | "neutral" }) {
   const className =
     tone === "long"
@@ -336,33 +310,6 @@ function toKstTime(utcSec: number): Time {
 function candleTimeAt(candles: Candle[], index: number): Time | null {
   if (index < 0 || index >= candles.length) return null;
   return toKstTime(candles[index].time);
-}
-
-function storageKey(name: string) {
-  return `${storagePrefix}.${name}`;
-}
-
-function legacyStorageKeys(name: string) {
-  return [`${legacyPreviousBrandStoragePrefix}.${name}`, `${legacyChannelStoragePrefix}.${name}`];
-}
-
-function readLocalStorageWithLegacy(primaryKey: string, legacyKeys: string[]) {
-  const current = window.localStorage.getItem(primaryKey);
-  if (current !== null) return current;
-
-  const legacyKey = legacyKeys.find((key) => window.localStorage.getItem(key) !== null);
-  const legacy = legacyKey ? window.localStorage.getItem(legacyKey) : null;
-  if (legacy !== null) {
-    window.localStorage.setItem(primaryKey, legacy);
-    legacyKeys.forEach((key) => window.localStorage.removeItem(key));
-  }
-
-  return legacy;
-}
-
-function writeLocalStorage(primaryKey: string, legacyKeys: string[], value: string) {
-  window.localStorage.setItem(primaryKey, value);
-  legacyKeys.forEach((key) => window.localStorage.removeItem(key));
 }
 
 function readOverlaySettings(): OverlaySettings {
@@ -791,7 +738,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
     : "BTC와 ETH의 구조, 추세, 변동성, 시장 브리핑을 한 화면에서 확인합니다.";
 
   const visibleAltAnalysisGate = hasMounted ? altAnalysisGate : initialAltAnalysisGate(false);
-  const cacheKey = `${storagePrefix}.marketCache.${symbol}.${activeTimeframe}.${analysisMode}.${msbMode}.${structureSensitivity}`;
+  const cacheKey = buildMarketCacheKey({ symbol, activeTimeframe, analysisMode, msbMode, structureSensitivity });
 
   const selectSymbol = useCallback((nextSymbol: string, options: { userSelected?: boolean } = {}) => {
     if (altOnly && options.userSelected) {
@@ -817,10 +764,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
     let cancelled = false;
     async function loadCryptoSymbols() {
       try {
-        const response = await fetch("/api/crypto-symbols", { cache: "no-store" });
-        if (!response.ok) return;
-        const data = (await response.json()) as { symbols?: Array<{ symbol: string }> };
-        const nextSymbols = (data.symbols ?? []).map((item) => item.symbol);
+        const nextSymbols = await fetchCryptoSymbolList();
         if (!cancelled && nextSymbols.length) setDynamicSymbols(nextSymbols);
       } catch {
         // 기본 10개 코인 선택으로 대체한다.
@@ -953,13 +897,10 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
       setAnalysis(nextAnalysis);
       setIsUsingCachedData(false);
 
-      if (typeof window !== "undefined") {
-        const payload: MarketCachePayload = {
-          analysis: nextAnalysis,
-          candles: activeCandles
-        };
-        window.localStorage.setItem(cacheKey, JSON.stringify(payload));
-      }
+      writeMarketCache(cacheKey, {
+        analysis: nextAnalysis,
+        candles: activeCandles
+      });
       if (altOnly && pendingUserSelectedAltSymbolRef.current === symbol) {
         setAltAnalysisGate(registerAltAnalysisSymbol(symbol, hasCoinPro));
         pendingUserSelectedAltSymbolRef.current = null;
@@ -1218,16 +1159,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           body: JSON.stringify(marketBriefingInput)
         })
       );
-      const payload = (await response.json().catch(() => ({}))) as {
-        briefing?: string;
-        model?: string;
-        cached?: boolean;
-        error?: string;
-      };
-
-      if (!response.ok || !payload.briefing) {
-        throw new Error(payload.error ?? "AI 종합 피드백을 생성하지 못했습니다.");
-      }
+      const payload = await readMarketBriefingResponse(response);
 
       setMarketBriefing({
         status: "ready",
