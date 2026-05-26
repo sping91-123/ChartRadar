@@ -21,6 +21,11 @@ export type MacroCalendarSource = "forex-factory" | "official-bls" | "automatic-
 export type MacroCalendarPayload = {
   updatedAt: string;
   updatedAtLabel: string;
+  fetchedAt?: string;
+  serverTime?: string;
+  sourceName?: string;
+  sourceUpdatedAt?: string;
+  cacheMode?: "live-fetch" | "memory-cache" | "stored-cache" | "fallback";
   source: MacroCalendarSource;
   sourceLabel: string;
   sourceNote: string;
@@ -28,6 +33,20 @@ export type MacroCalendarPayload = {
   nextRefreshMs: number;
   items: MacroEventItem[];
   warning?: string;
+  debug?: {
+    fetchedAt: string;
+    serverTime: string;
+    cacheMode: string;
+    sourceName: string;
+    sourceUpdatedAt?: string;
+    events: Array<{
+      label: string;
+      releaseAt: string;
+      status?: string;
+      hasActual: boolean;
+      actualValue?: string;
+    }>;
+  };
 };
 
 type ForexFactoryEvent = {
@@ -44,6 +63,7 @@ const FOREX_FACTORY_THIS_WEEK = "https://nfs.faireconomy.media/ff_calendar_thisw
 const KST_TIME_ZONE = "Asia/Seoul";
 const RECENT_RELEASE_MS = 24 * 60 * 60 * 1000;
 const PREVIOUS_RELEASE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+const PENDING_ACTUAL_REFRESH_WINDOW_MS = 6 * 60 * 60 * 1000;
 const JOBLESS_CLAIMS_PATTERN =
   /신규\s*실업수당\s*청구|initial\s+jobless\s+claims|initial\s+claims|jobless\s+claims|unemployment\s+claims|unemployment\s+insurance\s+weekly\s+claims|continuing\s+claims/i;
 
@@ -157,6 +177,60 @@ function eventState(releaseAt: string): MacroEventItem["state"] {
   return time <= Date.now() ? "released" : "upcoming";
 }
 
+function isNumericMacroEvent(item: MacroEventItem) {
+  if (item.isDocumentEvent || item.eventType === "document_release" || item.eventType === "meeting_event" || item.eventType === "speech_event") return false;
+  if (item.isNumericEvent === true || item.eventType === "numeric_release") return true;
+  return IMPORTANT_USD_EVENTS.some((pattern) => pattern.test(item.label));
+}
+
+function actualValueForItem(item: MacroEventItem) {
+  return item.actualValue ?? item.actual;
+}
+
+export function hasPendingActualRefreshWindow(payload: MacroCalendarPayload, now = Date.now()) {
+  return payload.items.some((item) => {
+    if (!isNumericMacroEvent(item) || hasConfirmedActualValue(actualValueForItem(item))) return false;
+    const releaseTime = Date.parse(item.releaseAt);
+    return Number.isFinite(releaseTime) && releaseTime <= now && now - releaseTime <= PENDING_ACTUAL_REFRESH_WINDOW_MS;
+  });
+}
+
+export function withMacroCalendarDebug(
+  payload: MacroCalendarPayload,
+  cacheMode: NonNullable<MacroCalendarPayload["cacheMode"]>,
+  serverTime = new Date().toISOString()
+): MacroCalendarPayload {
+  const fetchedAt = payload.fetchedAt ?? payload.updatedAt ?? serverTime;
+  const sourceName = payload.sourceName ?? payload.sourceLabel ?? payload.source;
+  const events = payload.items.slice(0, 12).map((item) => {
+    const actualValue = actualValueForItem(item);
+    return {
+      label: item.label,
+      releaseAt: item.releaseAt,
+      status: item.status,
+      hasActual: hasConfirmedActualValue(actualValue),
+      actualValue
+    };
+  });
+
+  return {
+    ...payload,
+    fetchedAt,
+    serverTime,
+    sourceName,
+    sourceUpdatedAt: payload.sourceUpdatedAt ?? payload.updatedAt,
+    cacheMode,
+    debug: {
+      fetchedAt,
+      serverTime,
+      cacheMode,
+      sourceName,
+      sourceUpdatedAt: payload.sourceUpdatedAt ?? payload.updatedAt,
+      events
+    }
+  };
+}
+
 function eventSummary(title: string) {
   if (/cpi/i.test(title)) return "미국 소비자물가 발표입니다. 예상보다 높으면 금리 부담이 커지고, 예상보다 낮으면 위험자산 반등 명분이 생길 수 있습니다.";
   if (/ppi/i.test(title)) return "미국 생산자물가 발표입니다. 기업 비용 압력과 향후 소비자물가 흐름을 가늠하는 자료입니다.";
@@ -217,9 +291,9 @@ function normalizeRecentReleasedFallback(item: MacroEventItem): MacroEventItem {
 
   return {
     ...item,
-    state: "released",
-    status: hasActual ? "released" : isDocumentEvent ? "official_check_needed" : "official_check_needed",
-    statusLabel: hasActual ? "결과 공개" : isDocumentEvent ? "공식 문서 확인 필요" : "공식 발표 확인 필요",
+    state: hasActual ? "released" : "watch",
+    status: hasActual ? "actual_available" : isDocumentEvent ? "official_check_needed" : "released_pending_actual",
+    statusLabel: hasActual ? "실제값 확인" : isDocumentEvent ? "공식 문서 확인 필요" : "발표값 수집 지연",
     actual: hasActual ? item.actual : undefined,
     actualValue: hasActual ? item.actualValue : undefined
   };
@@ -310,11 +384,17 @@ async function getOfficialEnrichments(items: MacroEventItem[]) {
 
 export function getFallbackPayload(warning: string): MacroCalendarPayload {
   const updatedAt = macroCalendarUpdatedAtIso || new Date().toISOString();
+  const fetchedAt = new Date().toISOString();
   const items = sortItems(normalizeMacroEvents(macroItems.map((item) => ({ ...item, state: eventState(item.releaseAt) }))));
 
   return {
     updatedAt,
     updatedAtLabel: macroCalendarUpdatedAt,
+    fetchedAt,
+    serverTime: fetchedAt,
+    sourceName: "operator_fallback",
+    sourceUpdatedAt: updatedAt,
+    cacheMode: "fallback",
     source: "automatic-mixed",
     sourceLabel: "예비 일정 + 자동 재시도",
     sourceNote: macroCalendarSourceNote,
@@ -325,9 +405,9 @@ export function getFallbackPayload(warning: string): MacroCalendarPayload {
   };
 }
 
-export async function getMacroCalendarPayload(): Promise<MacroCalendarPayload> {
+export async function getMacroCalendarPayload(options: { bypassCache?: boolean } = {}): Promise<MacroCalendarPayload> {
   const now = Date.now();
-  if (cachedPayload && cachedPayload.expiresAt > now) return cachedPayload.payload;
+  if (!options.bypassCache && cachedPayload && cachedPayload.expiresAt > now) return withMacroCalendarDebug(cachedPayload.payload, "memory-cache");
 
   try {
     const events = await fetchForexFactoryEvents();
@@ -347,6 +427,11 @@ export async function getMacroCalendarPayload(): Promise<MacroCalendarPayload> {
     const payload: MacroCalendarPayload = {
       updatedAt,
       updatedAtLabel: `${formatKstDateTime(updatedAt)} 자동 갱신`,
+      fetchedAt: updatedAt,
+      serverTime: updatedAt,
+      sourceName: enrichments.length ? "official_and_public_macro_sources" : "forex_factory_calendar",
+      sourceUpdatedAt: updatedAt,
+      cacheMode: "live-fetch",
       source: enrichments.length ? "automatic-mixed" : "forex-factory",
       sourceLabel: enrichments.length ? "공개 캘린더 + 공식 발표 확인" : "공개 경제 캘린더",
       sourceNote: "일정은 공개 캘린더로 자동 확인하고, 숫자형 지표는 가능한 공식 통계로 보강합니다. 문서형 이벤트는 실제값 대신 공식 문서 공개 상태로 표시합니다.",
@@ -357,7 +442,7 @@ export async function getMacroCalendarPayload(): Promise<MacroCalendarPayload> {
     };
 
     cachedPayload = { payload, expiresAt: now + payload.nextRefreshMs };
-    return payload;
+    return withMacroCalendarDebug(payload, "live-fetch");
   } catch (error) {
     const fallback = getFallbackPayload(error instanceof Error ? error.message : "매크로 자동 갱신 실패");
     const enrichments = await getOfficialEnrichments(fallback.items).catch(() => [] as MacroSourceEnrichment[]);
@@ -365,11 +450,12 @@ export async function getMacroCalendarPayload(): Promise<MacroCalendarPayload> {
     const payload = {
       ...fallback,
       sourceLabel: enrichments.length ? "예비 일정 + 공식 발표 확인" : fallback.sourceLabel,
+      cacheMode: "fallback" as const,
       nextRefreshMs: getRefreshMs(items),
       items
     };
     cachedPayload = { payload, expiresAt: now + payload.nextRefreshMs };
-    return payload;
+    return withMacroCalendarDebug(payload, "fallback");
   }
 }
 

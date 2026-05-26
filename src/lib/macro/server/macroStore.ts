@@ -41,7 +41,7 @@ function rowSource(row: MacroEventRow): MacroEventItem["source"] {
 
 function legacyState(row: MacroEventRow): MacroEventItem["state"] {
   if (row.status === "scheduled" || row.status === "imminent" || row.status === "in_progress") return "upcoming";
-  if (row.status === "checking" || row.status === "official_check_needed" || row.status === "delayed" || row.status === "stale") return "watch";
+  if (row.status === "released_pending_actual" || row.status === "checking" || row.status === "official_check_needed" || row.status === "delayed" || row.status === "stale") return "watch";
   return "released";
 }
 
@@ -145,6 +145,11 @@ export async function readStoredMacroCalendarPayload(): Promise<MacroCalendarPay
   return {
     updatedAt,
     updatedAtLabel: "저장된 공식 확인 결과",
+    fetchedAt: new Date().toISOString(),
+    serverTime: new Date().toISOString(),
+    sourceName: "stored_macro_events",
+    sourceUpdatedAt: updatedAt,
+    cacheMode: "stored-cache",
     source: "automatic-mixed",
     sourceLabel: "공식 소스 동기화 캐시",
     sourceNote: "공식 소스 동기화 결과를 우선 표시합니다. 일부 실제값은 공식 발표 확인 중으로 남을 수 있습니다.",

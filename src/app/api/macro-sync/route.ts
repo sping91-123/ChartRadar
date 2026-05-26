@@ -4,6 +4,13 @@ import { runMacroSync } from "@/lib/macro/macroSync";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+const noStoreHeaders = {
+  "Cache-Control": "no-store, no-cache, max-age=0, must-revalidate",
+  Pragma: "no-cache",
+  Expires: "0"
+};
 
 function isAuthorized(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -13,12 +20,15 @@ function isAuthorized(request: Request) {
 
 export async function GET(request: Request) {
   if (!isAuthorized(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: noStoreHeaders });
   }
 
   const result = await runMacroSync();
-  return NextResponse.json({
-    ok: true,
-    ...result
-  });
+  return NextResponse.json(
+    {
+      ok: true,
+      ...result
+    },
+    { headers: noStoreHeaders }
+  );
 }

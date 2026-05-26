@@ -10,6 +10,13 @@ import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestE
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+const noStoreHeaders = {
+  "Cache-Control": "no-store, no-cache, max-age=0, must-revalidate",
+  Pragma: "no-cache",
+  Expires: "0"
+};
 
 type MarketMode = "Risk-On" | "Neutral" | "Risk-Off";
 type PressureTone = "supportive" | "burden" | "mixed";
@@ -639,7 +646,7 @@ function sortEventItems<T extends { releaseAt: string; importance: number }>(ite
 
 async function buildEventRisk(): Promise<EventRiskPayload> {
   try {
-    const payload = await getMacroCalendarPayload();
+    const payload = await getMacroCalendarPayload({ bypassCache: true });
     const now = Date.now();
     const items = sortEventItems(
       payload.items
@@ -836,7 +843,7 @@ export async function GET(request: Request) {
   if (!limit.allowed) {
     return NextResponse.json(
       { error: "글로벌 시장 흐름 요청이 잠시 많습니다. 잠시 후 다시 확인해 주세요." },
-      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
+      { status: 429, headers: { ...noStoreHeaders, "Retry-After": String(limit.retryAfter) } }
     );
   }
 
@@ -855,7 +862,7 @@ export async function GET(request: Request) {
   if (items.length === 0) {
     return NextResponse.json(
       { error: "글로벌 시장 흐름 데이터를 잠시 확인하지 못했습니다. 잠시 뒤 다시 확인해 주세요." },
-      { status: 503 }
+      { status: 503, headers: noStoreHeaders }
     );
   }
 
@@ -911,5 +918,5 @@ export async function GET(request: Request) {
     items
   };
 
-  return NextResponse.json(entitlement.isPaid ? responsePayload : shapeBasicPayload(responsePayload));
+  return NextResponse.json(entitlement.isPaid ? responsePayload : shapeBasicPayload(responsePayload), { headers: noStoreHeaders });
 }

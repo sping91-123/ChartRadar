@@ -44,6 +44,13 @@ function eventTime(item) {
   return Number.isFinite(time) ? time : null;
 }
 
+const emptyActualValues = new Set(["", "발표 전", "결과 확인 중", "결과 확인중", "공식 발표 확인 중", "공식값 확인 중", "미정", "-", "확인 예정"]);
+
+function hasActualValue(item) {
+  const raw = item?.actualValue ?? item?.actual;
+  return typeof raw === "string" && !emptyActualValues.has(raw.trim());
+}
+
 function hasUpcomingOrRecentRelease(items) {
   const now = Date.now();
   const recentWindowMs = 7 * 24 * 60 * 60 * 1000;
@@ -52,7 +59,7 @@ function hasUpcomingOrRecentRelease(items) {
     if (!time) return false;
     if (time >= now) return true;
     const status = String(item?.status ?? item?.state ?? "");
-    const isReleasedLike = /released|completed|official_check_needed|document/i.test(status);
+    const isReleasedLike = /released|actual_available|completed|official_check_needed|document/i.test(status);
     return isReleasedLike && now - time <= recentWindowMs;
   });
 }
@@ -71,7 +78,7 @@ async function fetchMacroCalendarHealth() {
       return { reachable: true, ok: false, detail: `HTTP ${response.status}` };
     }
     const payload = await response.json();
-    return { reachable: true, ok: true, payload };
+    return { reachable: true, ok: true, payload, cacheControl: response.headers.get("cache-control") ?? "" };
   } catch (error) {
     return {
       reachable: false,
@@ -136,9 +143,13 @@ expectIncludes(healthRoute, "macroAutomaticRefresh", "매크로 자동화 헬스
 expectIncludes(scoutRoute, "stale: true", "스캐너 stale 캐시 fallback", "src/app/api/scout/route.ts");
 expectIncludes(macroCalendarRoute, "getMacroCalendarPayload", "매크로 API payload 연결", "src/app/api/macro-calendar/route.ts");
 expectIncludes(macroCalendarRoute, "readStoredMacroCalendarPayload", "매크로 저장 캐시 우선 조회", "src/app/api/macro-calendar/route.ts");
+expectIncludes(macroCalendarRoute, "no-store, no-cache, max-age=0, must-revalidate", "매크로 API no-store 헤더", "src/app/api/macro-calendar/route.ts");
+expectIncludes(macroCalendarRoute, "hasPendingActualRefreshWindow", "발표 직후 actual 강제 갱신", "src/app/api/macro-calendar/route.ts");
 expectIncludes(macroSyncRoute, "CRON_SECRET", "매크로 동기화 크론 인증", "src/app/api/macro-sync/route.ts");
 expectIncludes(macroStatus, "document_release", "매크로 문서형 이벤트 상태", "src/lib/macro/macroStatus.ts");
 expectIncludes(macroStatus, "unresolvedNumericReleaseStatus", "숫자형 지표 발표 후 상태 전환", "src/lib/macro/macroStatus.ts");
+expectIncludes(macroStatus, "released_pending_actual", "발표 후 actual 대기 상태", "src/lib/macro/macroStatus.ts");
+expectIncludes(macroStatus, "actual_available", "actual 확인 완료 상태", "src/lib/macro/macroStatus.ts");
 expectIncludes(blsAdapter, "fetchBlsOfficialActuals", "BLS 공식 실제값 fetch", "src/lib/macro/sourceAdapters/bls.ts");
 expectIncludes(dolAdapter, "fetchDolOfficialEnrichments", "DOL 신규 실업수당 공식값 fetch", "src/lib/macro/sourceAdapters/dol.ts");
 expectIncludes(dolAdapter, "unemployment\\s+insurance\\s+weekly\\s+claims", "DOL 신규 실업수당 제목 매칭", "src/lib/macro/sourceAdapters/dol.ts");
@@ -225,6 +236,39 @@ if (macroHealth.reachable && macroHealth.ok) {
     pass("Macro calendar API updatedAt", `updatedAt is valid: ${payload.updatedAt}.`);
   } else {
     fail("Macro calendar API updatedAt", "updatedAt is missing, invalid, or unexpectedly in the future.");
+  }
+
+  if (/no-store/i.test(macroHealth.cacheControl)) {
+    pass("Macro calendar API Cache-Control", `Cache-Control is ${macroHealth.cacheControl}.`);
+  } else {
+    fail("Macro calendar API Cache-Control", `Cache-Control must include no-store, got ${macroHealth.cacheControl || "missing"}.`);
+  }
+
+  if (isValidIso(payload?.fetchedAt) && Math.abs(Date.now() - Date.parse(payload.fetchedAt)) <= 10 * 60 * 1000) {
+    pass("Macro calendar API fetchedAt freshness", `fetchedAt is recent: ${payload.fetchedAt}.`);
+  } else {
+    fail("Macro calendar API fetchedAt freshness", "fetchedAt is missing, invalid, or older than 10 minutes.");
+  }
+
+  const now = Date.now();
+  const pastNumericWithoutActual = items.filter((item) => {
+    const time = eventTime(item);
+    if (!time || time > now) return false;
+    const isDocument = item?.isDocumentEvent || /document|meeting|speech/i.test(String(item?.eventType ?? ""));
+    return !isDocument && !hasActualValue(item);
+  });
+  const actualItems = items.filter(hasActualValue);
+
+  if (pastNumericWithoutActual.every((item) => item.status === "released_pending_actual")) {
+    pass("Macro calendar pending actual status", "Past numeric events without actual use released_pending_actual.");
+  } else {
+    fail("Macro calendar pending actual status", "Past numeric events without actual must use released_pending_actual.");
+  }
+
+  if (actualItems.every((item) => item.status === "actual_available")) {
+    pass("Macro calendar actual status", "Events with actual values use actual_available when present.");
+  } else {
+    fail("Macro calendar actual status", "Events with actual values must use actual_available.");
   }
 
   if (allowedSources.has(payload?.source)) {

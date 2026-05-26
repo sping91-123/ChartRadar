@@ -6,6 +6,8 @@ export type MacroEventStatus =
   | "imminent"
   | "in_progress"
   | "checking"
+  | "released_pending_actual"
+  | "actual_available"
   | "released"
   | "document_released"
   | "meeting_completed"

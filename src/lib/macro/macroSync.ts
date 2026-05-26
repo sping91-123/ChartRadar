@@ -4,7 +4,7 @@ import { writeMacroSyncRun, writeStoredMacroCalendarPayload } from "@/lib/macro/
 
 export async function runMacroSync() {
   const startedAt = new Date().toISOString();
-  const payload = await getMacroCalendarPayload();
+  const payload = await getMacroCalendarPayload({ bypassCache: true });
   const storeResult = await writeStoredMacroCalendarPayload(payload).catch((error) => ({
     stored: false,
     updatedCount: 0,

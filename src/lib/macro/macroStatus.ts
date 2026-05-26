@@ -24,7 +24,7 @@ export function classifyMacroEvent(title: string): MacroEventType {
     return "meeting_event";
   }
   if (
-    /cpi|ppi|payroll|non-farm|nonfarm|nfp|unemployment rate|average hourly earnings|gdp|pce|retail sales|durable goods|jobless|claims|initial claims|initial jobless claims|unemployment insurance weekly claims|신규\s*실업수당\s*청구|pmi|ism|jolts/i.test(
+    /cpi|ppi|payroll|non-farm|nonfarm|nfp|unemployment rate|average hourly earnings|gdp|pce|retail sales|durable goods|home sales|new home sales|existing home sales|consumer confidence|consumer sentiment|jobless|claims|initial claims|initial jobless claims|unemployment insurance weekly claims|신규\s*실업수당\s*청구|pmi|ism|jolts/i.test(
       normalizedTitle
     )
   ) {
@@ -95,16 +95,16 @@ function unresolvedAfterReleaseStatus(elapsedMs: number, labelPrefix: "결과" |
 function unresolvedNumericReleaseStatus(elapsedMs: number): MacroStatusDecision {
   if (elapsedMs <= 30 * MINUTE_MS) {
     return {
-      status: "checking",
-      statusLabel: "결과 확인중",
+      status: "released_pending_actual",
+      statusLabel: "발표값 확인 중",
       nextRefreshMs: 60 * 1000
     };
   }
 
   return {
-    status: "official_check_needed",
-    statusLabel: "공식 발표 확인 필요",
-    nextRefreshMs: elapsedMs <= 3 * HOUR_MS ? 5 * MINUTE_MS : 30 * MINUTE_MS,
+    status: "released_pending_actual",
+    statusLabel: "발표값 수집 지연",
+    nextRefreshMs: elapsedMs <= 3 * HOUR_MS ? 60 * 1000 : 5 * MINUTE_MS,
     staleReason: "발표 시간이 지났지만 공식 실제값이 아직 확인되지 않았습니다."
   };
 }
@@ -134,8 +134,8 @@ export function resolveMacroStatus(input: {
 
   if (input.eventType === "numeric_release" && hasConfirmedActualValue(input.actualValue)) {
     return {
-      status: "released",
-      statusLabel: "결과 공개",
+      status: "actual_available",
+      statusLabel: "실제값 확인",
       nextRefreshMs: 6 * HOUR_MS,
       releasedAt: effectiveReleasedAt ?? input.scheduledAt
     };
@@ -204,6 +204,6 @@ export function resolveMacroStatus(input: {
 
 export function legacyStateFromStatus(status: MacroEventStatus): "upcoming" | "released" | "watch" {
   if (status === "scheduled" || status === "imminent" || status === "in_progress") return "upcoming";
-  if (status === "checking" || status === "official_check_needed" || status === "delayed" || status === "stale") return "watch";
+  if (status === "released_pending_actual" || status === "checking" || status === "official_check_needed" || status === "delayed" || status === "stale") return "watch";
   return "released";
 }

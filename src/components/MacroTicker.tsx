@@ -31,7 +31,8 @@ const fallbackCalendar = getMacroCalendarFallbackPayload();
 function hasActualValue(item: MacroEventItem) {
   if (item.isDocumentEvent || item.eventType === "document_release" || item.eventType === "meeting_event" || item.eventType === "speech_event") return false;
   if (item.isNumericEvent === false) return false;
-  return Boolean(item.actual && !EMPTY_ACTUAL_VALUES.has(item.actual.trim()));
+  const actual = item.actualValue ?? item.actual;
+  return Boolean(actual && !EMPTY_ACTUAL_VALUES.has(actual.trim()));
 }
 
 function hasReleaseTimePassed(item: MacroEventItem) {
@@ -95,8 +96,8 @@ function displayActual(item: MacroEventItem) {
   if (item.isDocumentEvent || item.eventType === "document_release" || item.eventType === "meeting_event" || item.eventType === "speech_event") {
     return item.statusLabel ?? (hasReleaseTimePassed(item) ? "공식 자료 확인 필요" : "예정");
   }
-  if (hasActualValue(item)) return macroValueText(item.actual);
-  if (hasReleaseTimePassed(item)) return item.statusLabel ?? (minutesSinceRelease(item) >= 30 ? "공식 발표 확인 필요" : "공식 발표 확인 중");
+  if (hasActualValue(item)) return macroValueText(item.actualValue ?? item.actual);
+  if (hasReleaseTimePassed(item)) return item.statusLabel ?? (minutesSinceRelease(item) >= 30 ? "발표값 수집 지연" : "발표값 확인 중");
   return "발표 전";
 }
 
@@ -119,10 +120,10 @@ function stateLabel(item: MacroEventItem) {
 }
 
 function stateClass(item: MacroEventItem) {
-  if (item.status === "released" || item.status === "document_released" || item.status === "meeting_completed" || item.state === "released") {
+  if (item.status === "actual_available" || item.status === "released" || item.status === "document_released" || item.status === "meeting_completed" || item.state === "released") {
     return "border-signal-success/25 bg-signal-success/10 text-signal-success";
   }
-  if (item.status === "checking" || item.status === "official_check_needed" || item.status === "delayed" || item.status === "stale" || item.state === "watch") {
+  if (item.status === "released_pending_actual" || item.status === "checking" || item.status === "official_check_needed" || item.status === "delayed" || item.status === "stale" || item.state === "watch") {
     return "border-signal-warning/25 bg-signal-warning/10 text-signal-warning";
   }
   if (isRecentlyReleased(item)) return "border-signal-success/25 bg-signal-success/10 text-signal-success";
@@ -130,8 +131,8 @@ function stateClass(item: MacroEventItem) {
 }
 
 function compactStateClass(item: MacroEventItem) {
-  if (item.status === "released" || item.status === "document_released" || item.status === "meeting_completed") return "text-signal-success";
-  if (item.status === "checking" || item.status === "official_check_needed" || item.status === "delayed" || item.status === "stale") return "text-signal-warning";
+  if (item.status === "actual_available" || item.status === "released" || item.status === "document_released" || item.status === "meeting_completed") return "text-signal-success";
+  if (item.status === "released_pending_actual" || item.status === "checking" || item.status === "official_check_needed" || item.status === "delayed" || item.status === "stale") return "text-signal-warning";
   if (isRecentlyReleased(item) || item.state === "released") return "text-signal-success";
   if (item.state === "watch") return "text-signal-warning";
   return "text-accent-blue";
@@ -245,7 +246,8 @@ function ValuePill({ label, value, tone = "default" }: { label: string; value?: 
 }
 
 function newsStatusTone(item: MacroEventItem): "long" | "watch" | "risk" | "info" {
-  if (item.status === "released" || item.status === "document_released" || item.status === "meeting_completed" || hasActualValue(item)) return "long";
+  if (item.status === "actual_available" || item.status === "released" || item.status === "document_released" || item.status === "meeting_completed" || hasActualValue(item)) return "long";
+  if (item.status === "released_pending_actual") return "watch";
   if (item.status === "official_check_needed" || item.status === "delayed" || item.status === "stale") return "risk";
   if (hasReleaseTimePassed(item)) return minutesSinceRelease(item) >= 30 ? "risk" : "watch";
   return "info";
@@ -354,14 +356,19 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
+    const scheduleNextLoad = (delayMs: number) => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(loadCalendar, delayMs);
+    };
+
     const loadCalendar = async () => {
       try {
-        const response = await fetch(`/api/macro-calendar?market=${market}`, { cache: "no-store" });
+        const response = await fetch(`/api/macro-calendar?market=${market}&ts=${Date.now()}`, { cache: "no-store" });
         if (response.ok) {
           const payload = (await response.json()) as MacroCalendarPayload;
           if (!cancelled) {
             setCalendar(payload);
-            timer = setTimeout(loadCalendar, Math.max(60_000, Math.min(payload.nextRefreshMs ?? 600_000, 10 * 60_000)));
+            scheduleNextLoad(Math.max(30_000, Math.min(payload.nextRefreshMs ?? 600_000, 10 * 60_000)));
             return;
           }
         }
@@ -369,12 +376,20 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
         // 네트워크가 잠시 막혀도 현재 캘린더를 유지하고 다시 시도합니다.
       }
 
-      if (!cancelled) timer = setTimeout(loadCalendar, 3 * 60_000);
+      if (!cancelled) scheduleNextLoad(3 * 60_000);
+    };
+
+    const handleFocusRefresh = () => {
+      if (document.visibilityState === "visible") void loadCalendar();
     };
 
     loadCalendar();
+    window.addEventListener("focus", handleFocusRefresh);
+    document.addEventListener("visibilitychange", handleFocusRefresh);
     return () => {
       cancelled = true;
+      window.removeEventListener("focus", handleFocusRefresh);
+      document.removeEventListener("visibilitychange", handleFocusRefresh);
       if (timer) clearTimeout(timer);
     };
   }, [market]);

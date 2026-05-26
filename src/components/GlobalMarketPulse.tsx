@@ -506,10 +506,10 @@ export function GlobalMarketPulse() {
   const isPaid = hasMarketEntitlement(profile?.plan, "stocks");
   const [state, setState] = useState<PulseState>({ status: "loading" });
 
-  async function load() {
-    setState({ status: "loading" });
+  async function load(silent = false) {
+    if (!silent) setState({ status: "loading" });
     try {
-      const response = await fetch("/api/stocks/market-board", await withSupabaseAuth({ cache: "no-store" }));
+      const response = await fetch(`/api/stocks/market-board?ts=${Date.now()}`, await withSupabaseAuth({ cache: "no-store" }));
       const data = (await response.json().catch(() => ({}))) as Partial<DashboardPayload> & { error?: string };
       if (!response.ok) throw new Error(data.error ?? "글로벌 시장 흐름을 잠시 확인하지 못했습니다.");
       if (!data.marketMode || !Array.isArray(data.corePressures)) throw new Error("글로벌 시장 흐름 데이터가 아직 준비되지 않았습니다.");
@@ -521,6 +521,19 @@ export function GlobalMarketPulse() {
 
   useEffect(() => {
     void load();
+    const refresh = () => void load(true);
+    const interval = window.setInterval(refresh, 60_000);
+    const handleFocusRefresh = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    window.addEventListener("focus", handleFocusRefresh);
+    document.addEventListener("visibilitychange", handleFocusRefresh);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", handleFocusRefresh);
+      document.removeEventListener("visibilitychange", handleFocusRefresh);
+    };
   }, []);
 
   const payload = state.status === "ready" ? state.payload : null;
