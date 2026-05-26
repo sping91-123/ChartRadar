@@ -51,6 +51,7 @@ import { RadarInsightPanel, type RadarInsightSummaryMetric } from "@/components/
 import { TechnicalRadarPanel } from "@/components/TechnicalRadarPanel";
 import { LiquidationPressurePanel } from "@/components/LiquidationPressurePanel";
 import { CryptoChartPanel } from "@/components/crypto/CryptoChartPanel";
+import { CryptoControlBar } from "@/components/crypto/CryptoControlBar";
 import { CryptoChartLoadingOverlay, CryptoErrorState } from "@/components/crypto/CryptoFallbackState";
 import { hasMarketEntitlement } from "@/lib/billing";
 import { recordUsageEvent } from "@/lib/usageMeter";
@@ -3414,43 +3415,14 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           ) : null}
         </div>
       </div>
-      <div className="fixed inset-x-3 bottom-3 z-40 mx-auto max-w-5xl rounded-lg border border-surface-line bg-slate-950/92 p-2 shadow-2xl shadow-black/40 backdrop-blur">
-        <div className="mx-auto max-w-5xl">
-          <div className="grid grid-cols-5 gap-2">
-            {modeTimeframes.map((timeframe) => (
-              <button
-                key={timeframe}
-                type="button"
-                onClick={() => setActiveTimeframe(timeframe)}
-                className={`min-h-10 rounded-md border px-2 text-sm font-black transition ${
-                  activeTimeframe === timeframe
-                    ? "border-accent-blue bg-accent-blue text-slate-950"
-                    : "border-surface-line bg-surface-cardSoft text-slate-300 hover:border-accent-blue/60"
-                }`}
-              >
-                {timeframe}
-              </button>
-            ))}
-          </div>
-          <div className="mt-2 grid grid-cols-3 gap-1.5">
-            {radarProfileOptions.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => setRadarProfile(item.key)}
-                className={`min-h-9 rounded-md border px-2 text-xs font-black transition ${
-                  radarProfile === item.key
-                    ? "border-white/20 bg-white text-slate-950"
-                    : "border-white/10 bg-white/[0.04] text-slate-300 hover:border-white/25"
-                }`}
-                title={item.description}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      <CryptoControlBar
+        timeframes={modeTimeframes}
+        activeTimeframe={activeTimeframe}
+        onTimeframeChange={setActiveTimeframe}
+        modes={radarProfileOptions}
+        activeMode={radarProfile}
+        onModeChange={setRadarProfile}
+      />
     </section>
   );
 }
