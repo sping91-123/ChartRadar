@@ -29,3 +29,8 @@
 - `npm.cmd run build`
 - `npm.cmd run smoke:mobile`
 - `npm.cmd run smoke:all`
+
+## 진행 메모
+
+- 2026-05-26: `docs/live-market-chart-refactor-plan.md`에 분리 설계 문서 작성 완료. 실제 리팩토링은 미진행이며, 단계별 구현 예정.
+- 2026-05-26: 작업 기준 route는 `/crypto`이며 `/majors`는 호환/redirect로만 취급한다는 기준을 문서에 명시.
