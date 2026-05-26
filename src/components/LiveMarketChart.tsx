@@ -37,7 +37,6 @@ import {
   type ChartTimeframe,
   type DirectionState,
   type MarketAnalysis,
-  type ReasonTone,
   type TimeframeAnalysis,
   type TradingMode
 } from "@/lib/marketAnalysis";
@@ -57,51 +56,61 @@ import { recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { getChartThemeOptions, observeChartThemeChange } from "@/lib/chartTheme";
 import { marketAnalysisToRadarInsight, visibleRadarInsightForPlan, type RadarInsight } from "@/lib/radarInsight";
-
-const symbols = [
-  "BTCUSDT.P",
-  "ETHUSDT.P",
-  "XRPUSDT.P",
-  "SOLUSDT.P",
-  "DOGEUSDT.P",
-  "ADAUSDT.P",
-  "LINKUSDT.P",
-  "AVAXUSDT.P",
-  "SUIUSDT.P",
-  "LTCUSDT.P"
-];
-const majorSymbols = symbols.slice(0, 2);
-const altSymbols = symbols.slice(2);
-const altAnalysisFreeLimit = 3;
-const timeframeScoreLimit = 6.25;
-const storagePrefix = "chartRadar";
-const altAnalysisUsageStorageKey = `${storagePrefix}.altAnalysisUsage.v1`;
-const legacyPreviousBrandStoragePrefix = "position" + "guard";
-const legacyChannelStoragePrefix = "co" + "ters";
-const overlaySettingsStorageKey = `${storagePrefix}.overlaySettings.v1`;
-const legacyOverlaySettingsStorageKeys = [
-  `${legacyPreviousBrandStoragePrefix}.overlaySettings.v1`,
-  `${legacyChannelStoragePrefix}.overlaySettings.v1`
-];
-const showPineParityTools = process.env.NEXT_PUBLIC_SHOW_PINE_PARITY_TOOLS === "1";
-
-interface MarketCachePayload {
-  analysis: MarketAnalysis;
-  candles: Candle[];
-}
-
-interface AltAnalysisUsageSnapshot {
-  dateKey: string;
-  symbols: string[];
-}
-
-interface AltAnalysisGate {
-  allowed: boolean;
-  used: number;
-  limit: number;
-  remaining: number;
-  symbols: string[];
-}
+import {
+  MAJOR_STRENGTH_HELP,
+  altAnalysisFreeLimit,
+  altAnalysisUsageStorageKey,
+  altSymbols,
+  cryptoDefaultChartHeightClass,
+  cryptoMajorChartHeightClass,
+  defaultOverlaySettings,
+  legacyChannelStoragePrefix,
+  legacyOverlaySettingsStorageKeys,
+  legacyPreviousBrandStoragePrefix,
+  majorSymbols,
+  overlayPresets,
+  overlaySettingsStorageKey,
+  radarProfileOptions,
+  showPineParityTools,
+  storagePrefix,
+  structureSensitivityOptions,
+  symbols,
+  timeframeScoreLimit
+} from "@/components/crypto/constants";
+import {
+  aiConditionLabel,
+  aiStateLabel,
+  barsAgoLabel,
+  biasClasses,
+  biasLabel,
+  conditionLabel,
+  conditionTone,
+  directionBadge,
+  eventDirectionLabel,
+  formatIndicatorValue,
+  formatPrice,
+  formatPriceRange,
+  formatUpdatedAt,
+  killzoneLabel,
+  planQualityClasses,
+  readinessClasses,
+  readinessLabel,
+  reasonClasses,
+  stateLabel,
+  symbolLabel
+} from "@/components/crypto/displayHelpers";
+import type {
+  AltAnalysisGate,
+  AltAnalysisUsageSnapshot,
+  MarketBriefingState,
+  MarketCachePayload,
+  OverlaySettings,
+  ParityRow,
+  RadarProfile,
+  RadarPulseItem,
+  RadarPulseTone,
+  StructureSensitivity
+} from "@/components/crypto/types";
 
 function localDateKey(date = new Date()) {
   const year = date.getFullYear();
@@ -236,140 +245,6 @@ function readMarketCache(cacheKey: string): MarketCachePayload | null {
   return null;
 }
 
-interface OverlaySettings {
-  ema200: boolean;
-  poc: boolean;
-  orderBlocks: boolean;
-  fvgs: boolean;
-  ote: boolean;
-  msb: boolean;
-  choch: boolean;
-  sweep: boolean;
-  cisd: boolean;
-}
-
-// 기본은 캔들만 보이게 둔다. 구조 판독은 차트 아래 카드에서 분리해 보여준다.
-const defaultOverlaySettings: OverlaySettings = {
-  ema200: false,
-  poc: false,
-  orderBlocks: false,
-  fvgs: false,
-  ote: false,
-  msb: false,
-  choch: false,
-  sweep: false,
-  cisd: false
-};
-
-const overlayPresets = {
-  all: {
-    ema200: true,
-    poc: true,
-    orderBlocks: true,
-    fvgs: true,
-    ote: true,
-    msb: true,
-    choch: true,
-    sweep: true,
-    cisd: true
-  } satisfies OverlaySettings,
-  structure: {
-    ema200: true,
-    poc: true,
-    orderBlocks: false,
-    fvgs: false,
-    ote: false,
-    msb: true,
-    choch: true,
-    sweep: true,
-    cisd: true
-  } satisfies OverlaySettings,
-  zones: {
-    ema200: false,
-    poc: true,
-    orderBlocks: true,
-    fvgs: true,
-    ote: true,
-    msb: false,
-    choch: false,
-    sweep: false,
-    cisd: false
-  } satisfies OverlaySettings,
-  minimal: {
-    ema200: false,
-    poc: false,
-    orderBlocks: false,
-    fvgs: false,
-    ote: false,
-    msb: false,
-    choch: false,
-    sweep: false,
-    cisd: false
-  } satisfies OverlaySettings
-};
-
-interface ParityRow {
-  label: string;
-  web: string;
-  pine: string;
-  matched: boolean;
-  result: string;
-  importance: "core" | "major" | "minor";
-}
-
-type MarketBriefingState =
-  | { status: "idle" }
-  | { status: "loading" }
-  | { status: "ready"; text: string; model: string; cached: boolean }
-  | { status: "error"; message: string };
-
-type RadarProfile = "combined" | "ict" | "technical";
-type StructureSensitivity = 5 | 7 | 9;
-
-const radarProfileOptions: Array<{
-  key: RadarProfile;
-  label: string;
-  description: string;
-}> = [
-  { key: "combined", label: "종합", description: "구조와 지표를 함께 요약" },
-  { key: "ict", label: "ICT 구조", description: "MSB, CHoCH, OB, FVG 중심" },
-  { key: "technical", label: "기술지표", description: "RSI, MACD, 거래량 중심" }
-];
-
-const structureSensitivityOptions: Array<{
-  value: StructureSensitivity;
-  label: string;
-  description: string;
-  analysisMode: "confirmed" | "aggressive";
-  msbMode: "close" | "wick";
-  detail: string;
-}> = [
-  {
-    value: 5,
-    label: "빠른 변화 감지",
-    description: "짧은 흐름을 더 빨리 잡습니다.",
-    analysisMode: "aggressive",
-    msbMode: "wick",
-    detail: "빠른 반응, 감지 범위 넓음, 변동성 민감"
-  },
-  {
-    value: 7,
-    label: "균형 감지",
-    description: "기본값으로 쓰기 좋습니다.",
-    analysisMode: "confirmed",
-    msbMode: "wick",
-    detail: "균형 반응, 기본 기준, 노이즈 완화"
-  },
-  {
-    value: 9,
-    label: "큰 구조 위주",
-    description: "큰 추세 전환을 봅니다.",
-    analysisMode: "confirmed",
-    msbMode: "close",
-    detail: "큰 흐름 중심, 신호 적음, 확인 우선"
-  }
-];
-
 function BriefingKeyword({ children, tone }: { children: string; tone: "long" | "short" | "warn" | "neutral" }) {
   const className =
     tone === "long"
@@ -442,22 +317,6 @@ function HighlightedBriefing({ text }: { text: string }) {
   );
 }
 
-function formatPrice(value: number) {
-  return new Intl.NumberFormat("ko-KR", {
-    maximumFractionDigits: value > 100 ? 2 : 5
-  }).format(value);
-}
-
-function symbolLabel(symbol: string) {
-  return symbol.replace("USDT.P", "");
-}
-
-function biasLabel(bias?: MarketAnalysis["bias"]) {
-  if (bias === "long") return "롱 우세";
-  if (bias === "short") return "숏 우세";
-  return "횡보 관찰";
-}
-
 /** lightweight-charts v5는 timeZone 옵션 미지원 → UTC 타임스탬프에 KST 오프셋 직접 가산 */
 const KST_OFFSET_SEC = 9 * 3600; // +9h
 
@@ -468,16 +327,6 @@ function toKstTime(utcSec: number): Time {
 function candleTimeAt(candles: Candle[], index: number): Time | null {
   if (index < 0 || index >= candles.length) return null;
   return toKstTime(candles[index].time);
-}
-
-function formatUpdatedAt(value?: string) {
-  if (!value) return "-";
-  return new Intl.DateTimeFormat("ko-KR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false
-  }).format(new Date(value));
 }
 
 function storageKey(name: string) {
@@ -518,65 +367,6 @@ function readOverlaySettings(): OverlaySettings {
   } catch {
     return defaultOverlaySettings;
   }
-}
-
-function stateLabel(value: string) {
-  if (value === "bullish") return "상승";
-  if (value === "bearish") return "하락";
-  if (value === "neutral") return "횡보";
-  if (value === "above") return "위";
-  if (value === "below") return "아래";
-  if (value === "near") return "근처";
-  if (value === "long") return "롱";
-  if (value === "short") return "숏";
-  if (value === "premium") return "프리미엄";
-  if (value === "discount") return "디스카운트";
-  if (value === "equilibrium") return "중간";
-  if (value === "none") return "없음";
-  return "데이터 부족";
-}
-
-function killzoneLabel(value?: string) {
-  if (value === "asia") return "아시아";
-  if (value === "london") return "런던";
-  if (value === "newyork") return "뉴욕";
-  return "바깥";
-}
-
-function biasClasses(bias?: string) {
-  if (bias === "long") return "border-signal-success/25 bg-signal-success/10 text-signal-success";
-  if (bias === "short") return "border-signal-danger/25 bg-signal-danger/10 text-signal-danger";
-  return "border-signal-warning/25 bg-signal-warning/10 text-signal-warning";
-}
-
-function biasAccentLine(bias?: string) {
-  if (bias === "long") return "from-signal-success/80 via-signal-success/30 to-transparent";
-  if (bias === "short") return "from-signal-danger/80 via-signal-danger/30 to-transparent";
-  return "from-signal-warning/80 via-signal-warning/30 to-transparent";
-}
-
-function directionBadge(direction: DirectionState) {
-  if (direction === "bullish") return "border-signal-success/30 bg-signal-success/10 text-signal-success";
-  if (direction === "bearish") return "border-signal-danger/30 bg-signal-danger/10 text-signal-danger";
-  return "border-white/10 bg-black/20 text-slate-300";
-}
-
-function reasonClasses(tone: ReasonTone) {
-  if (tone === "bullish") return "border-signal-success/30 bg-signal-success/10 text-signal-success";
-  if (tone === "bearish") return "border-signal-danger/30 bg-signal-danger/10 text-signal-danger";
-  return "border-white/10 bg-black/25 text-slate-200";
-}
-
-function readinessClasses(readiness?: MarketAnalysis["readiness"]) {
-  if (readiness === "high") return "border-signal-success/30 bg-signal-success/10 text-signal-success";
-  if (readiness === "medium") return "border-signal-warning/30 bg-signal-warning/10 text-signal-warning";
-  return "border-white/10 bg-black/20 text-slate-300";
-}
-
-function readinessLabel(readiness?: MarketAnalysis["readiness"]) {
-  if (readiness === "high") return "신뢰 높음";
-  if (readiness === "medium") return "신뢰 보통";
-  return "신뢰 낮음";
 }
 
 function userFacingRiskPercent(analysis: MarketAnalysis | null) {
@@ -660,15 +450,6 @@ function beginnerToneFromDecision(decision: RadarDecision | null): BeginnerGuide
   if (decision.action === "enter") return "success";
   if (decision.action === "avoid") return "danger";
   return "warning";
-}
-
-type RadarPulseTone = "long" | "short" | "warn" | "neutral";
-
-interface RadarPulseItem {
-  label: string;
-  title: string;
-  text: string;
-  tone: RadarPulseTone;
 }
 
 function buildRadarPulse(analysis: MarketAnalysis, active?: TimeframeAnalysis): RadarPulseItem[] {
@@ -797,12 +578,6 @@ function buildMajorScreenGuideSteps(isPro: boolean): BeginnerGuideStep[] {
   ];
 }
 
-const MAJOR_STRENGTH_HELP = [
-  "판단 강도는 현재 레이더가 한쪽 방향으로 얼마나 뚜렷하게 기울었는지를 나타냅니다.",
-  "높을수록 조건이 더 선명하지만, 진입을 보장하지는 않습니다.",
-  "낮을수록 신호가 약하거나 관망 성격이 강합니다."
-];
-
 function compactSummaryText(value: string | undefined, maxLength = 46) {
   if (!value) return "확인 필요";
   return value.length > maxLength ? `${value.slice(0, maxLength).trim()}…` : value;
@@ -843,120 +618,6 @@ function radarPulseClasses(tone: RadarPulseTone) {
   if (tone === "short") return "border-signal-danger/20 bg-black/20 text-signal-danger";
   if (tone === "warn") return "border-signal-warning/20 bg-black/20 text-signal-warning";
   return "border-white/10 bg-black/20 text-slate-200";
-}
-
-function formatIndicatorValue(value: number | null, digits = 2, suffix = "") {
-  if (value === null || !Number.isFinite(value)) return "-";
-  return `${value.toLocaleString("ko-KR", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits
-  })}${suffix}`;
-}
-
-function conditionLabel(value: string) {
-  if (value === "trendUp") return "상승 추세";
-  if (value === "trendDown") return "하락 추세";
-  if (value === "range") return "횡보";
-  if (value === "compression") return "변동성 압축";
-  if (value === "expansion") return "변동성 확장";
-  if (value === "mixed") return "혼조";
-  if (value === "bullish") return "상승 우세";
-  if (value === "bearish") return "하락 우세";
-  if (value === "flat") return "기울기 약함";
-  if (value === "breakoutUp") return "상단 돌파";
-  if (value === "breakoutDown") return "하단 이탈";
-  if (value === "overbought") return "과열권";
-  if (value === "oversold") return "침체권";
-  if (value === "rising") return "상승 모멘텀";
-  if (value === "falling") return "하락 모멘텀";
-  if (value === "expanded") return "변동성 확대";
-  if (value === "compressed") return "변동성 축소";
-  if (value === "high") return "거래량 증가";
-  if (value === "low") return "거래량 둔화";
-  if (value === "upper") return "상단권";
-  if (value === "middle") return "중단권";
-  if (value === "lower") return "하단권";
-  if (value === "outsideUpper") return "상단 이탈";
-  if (value === "outsideLower") return "하단 이탈";
-  if (value === "normal") return "보통";
-  return "데이터 부족";
-}
-
-function conditionTone(value: string) {
-  if (value === "bullish" || value === "trendUp" || value === "breakoutUp") {
-    return "border-signal-success/25 bg-signal-success/10 text-signal-success";
-  }
-  if (value === "bearish" || value === "trendDown" || value === "breakoutDown") {
-    return "border-signal-warning/25 bg-signal-warning/10 text-signal-warning";
-  }
-  if (value === "compression" || value === "expansion") {
-    return "border-accent-blue/25 bg-accent-blue/10 text-accent-blue";
-  }
-  if (value === "rising" || value === "lower" || value === "outsideLower") {
-    return "border-signal-success/25 bg-signal-success/10 text-signal-success";
-  }
-  if (value === "falling" || value === "overbought" || value === "expanded" || value === "upper" || value === "outsideUpper") {
-    return "border-signal-warning/25 bg-signal-warning/10 text-signal-warning";
-  }
-  if (value === "oversold" || value === "low" || value === "compressed" || value === "high") {
-    return "border-accent-blue/25 bg-accent-blue/10 text-accent-blue";
-  }
-  return "border-white/10 bg-black/20 text-slate-300";
-}
-
-function aiStateLabel(value?: string | null) {
-  if (value === "bullish") return "상승";
-  if (value === "bearish") return "하락";
-  if (value === "neutral") return "횡보";
-  if (value === "above") return "위";
-  if (value === "below") return "아래";
-  if (value === "near") return "근처";
-  if (value === "long") return "롱";
-  if (value === "short") return "숏";
-  if (value === "premium") return "프리미엄";
-  if (value === "discount") return "디스카운트";
-  if (value === "equilibrium") return "중간";
-  if (value === "none") return "없음";
-  return "데이터 부족";
-}
-
-function aiConditionLabel(value?: string | null) {
-  if (value === "trendUp") return "상승 추세";
-  if (value === "trendDown") return "하락 추세";
-  if (value === "range") return "횡보";
-  if (value === "compression") return "변동성 압축";
-  if (value === "expansion") return "변동성 확장";
-  if (value === "mixed") return "혼조";
-  if (value === "bullish") return "상승 우세";
-  if (value === "bearish") return "하락 우세";
-  if (value === "flat") return "기울기 약함";
-  if (value === "breakoutUp") return "상단 돌파";
-  if (value === "breakoutDown") return "하단 이탈";
-  if (value === "overbought") return "과열권";
-  if (value === "oversold") return "침체권";
-  if (value === "rising") return "상승 모멘텀";
-  if (value === "falling") return "하락 모멘텀";
-  if (value === "expanded") return "변동성 확대";
-  if (value === "compressed") return "변동성 축소";
-  if (value === "high") return "거래량 증가";
-  if (value === "low") return "거래량 약화";
-  if (value === "upper") return "상단권";
-  if (value === "middle") return "중단권";
-  if (value === "lower") return "하단권";
-  if (value === "outsideUpper") return "상단 이탈";
-  if (value === "outsideLower") return "하단 이탈";
-  if (value === "normal") return "보통";
-  return "데이터 부족";
-}
-
-function formatPriceRange(low: number, high: number) {
-  return `${formatPrice(low)} - ${formatPrice(high)}`;
-}
-
-function planQualityClasses(quality?: string) {
-  if (quality === "A") return "border-signal-success/30 bg-signal-success/10 text-signal-success";
-  if (quality === "B") return "border-accent-blue/30 bg-accent-blue/10 text-accent-blue";
-  return "border-signal-warning/30 bg-signal-warning/10 text-signal-warning";
 }
 
 function compareNumber(webValue: number | null, pineValue: number | null | undefined, tolerancePct = 0.0005) {
@@ -1017,30 +678,6 @@ function SignalMetric({
       {isActive ? <p className="mt-1 text-[11px] font-bold opacity-80">현재가 내부</p> : null}
     </div>
   );
-}
-
-const timeframeMinutes: Record<ChartTimeframe, number> = {
-  "5m": 5,
-  "15m": 15,
-  "1h": 60,
-  "4h": 240,
-  "1d": 1440
-};
-
-function barsAgoLabel(age: number, timeframe: ChartTimeframe = "15m") {
-  if (age <= 0) return "방금";
-  const minutes = age * timeframeMinutes[timeframe];
-  if (minutes < 60) return `${minutes}분 전`;
-  if (minutes < 1440) {
-    const hours = minutes / 60;
-    return Number.isInteger(hours) ? `${hours}시간 전` : `${hours.toFixed(1)}시간 전`;
-  }
-  const days = minutes / 1440;
-  return Number.isInteger(days) ? `${days}일 전` : `${days.toFixed(1)}일 전`;
-}
-
-function eventDirectionLabel(direction: "bullish" | "bearish") {
-  return direction === "bullish" ? "상승" : "하락";
 }
 
 function parityHint(row: ParityRow) {
@@ -2689,7 +2326,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             </div>
           ) : null}
           <div className="relative">
-            <div ref={chartRef} className={isMajorScreen ? "h-[260px] w-full sm:h-[520px]" : "h-[420px] w-full sm:h-[520px]"} />
+            <div ref={chartRef} className={isMajorScreen ? cryptoMajorChartHeightClass : cryptoDefaultChartHeightClass} />
             {isLoading && !analysis ? (
               <div className="absolute inset-0 flex items-center justify-center bg-surface-cardSoft/85 backdrop-blur-sm">
                 <div className="rounded-md border border-white/10 bg-black/30 px-4 py-3 text-sm font-semibold text-slate-200">
