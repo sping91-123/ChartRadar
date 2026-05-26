@@ -16,7 +16,6 @@ import {
 } from "lightweight-charts";
 import {
   Activity,
-  AlertTriangle,
   BarChart3,
   Bot,
   Bug,
@@ -51,6 +50,8 @@ import { BeginnerActionGuide, type BeginnerGuideStep, type BeginnerGuideTone } f
 import { RadarInsightPanel, type RadarInsightSummaryMetric } from "@/components/RadarInsightPanel";
 import { TechnicalRadarPanel } from "@/components/TechnicalRadarPanel";
 import { LiquidationPressurePanel } from "@/components/LiquidationPressurePanel";
+import { CryptoChartPanel } from "@/components/crypto/CryptoChartPanel";
+import { CryptoChartLoadingOverlay, CryptoErrorState } from "@/components/crypto/CryptoFallbackState";
 import { hasMarketEntitlement } from "@/lib/billing";
 import { recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
@@ -2325,16 +2326,9 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 .join(", ")}
             </div>
           ) : null}
-          <div className="relative">
-            <div ref={chartRef} className={isMajorScreen ? cryptoMajorChartHeightClass : cryptoDefaultChartHeightClass} />
-            {isLoading && !analysis ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-surface-cardSoft/85 backdrop-blur-sm">
-                <div className="rounded-md border border-white/10 bg-black/30 px-4 py-3 text-sm font-semibold text-slate-200">
-                  <span className="radar-scan-line inline-flex rounded-md px-1">레이더가 차트 구조를 감지하는 중입니다.</span>
-                </div>
-              </div>
-            ) : null}
-          </div>
+          <CryptoChartPanel ref={chartRef} chartClassName={isMajorScreen ? cryptoMajorChartHeightClass : cryptoDefaultChartHeightClass}>
+            {isLoading && !analysis ? <CryptoChartLoadingOverlay /> : null}
+          </CryptoChartPanel>
           {activeAnalysis && !isBasicAltView && radarProfile !== "technical" ? (
             <div className="border-t border-surface-line bg-black/20 px-4 py-3">
               <div className="flex flex-wrap gap-2 text-[11px] font-semibold text-slate-300">
@@ -2354,12 +2348,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         </div>
 
         <div className="space-y-4">
-          {error ? (
-            <div className="flex items-start gap-2 rounded-md border border-signal-danger/30 bg-signal-danger/10 p-3 text-sm leading-6 text-signal-danger">
-              <AlertTriangle className="mt-0.5 shrink-0" size={16} aria-hidden />
-              {error}
-            </div>
-          ) : null}
+          {error ? <CryptoErrorState message={error} /> : null}
 
           <div className={`rounded-lg border p-4 ${isBasicAltView ? altAnalysisFilterClass(altFilterLabel) : isMajorScreen ? "border-surface-line bg-surface-cardSoft text-slate-200" : biasClasses(analysis?.bias)}`}>
             <div className="flex items-start justify-between gap-3">
