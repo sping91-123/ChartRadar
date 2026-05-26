@@ -60,6 +60,9 @@ function emptyDiagnostics(overrides: Partial<PushScanDiagnostics> = {}): PushSca
     cooldownSkippedCount: 0,
     symbolCooldownSkippedCount: 0,
     marketScoutLimitSkippedCount: 0,
+    globalBatchSkippedCount: 0,
+    globalMomentumLimitSkippedCount: 0,
+    globalAssetLimitSkippedCount: 0,
     sendTargetTokenCount: 0,
     skippedLowScoreCount: 0,
     lookupErrorCount: 0,
@@ -84,6 +87,8 @@ const setupSymbolCooldownMinutes = 120;
 const cryptoAltMarketScoutGlobalCooldownMinutes = 60;
 const maxCryptoAltMarketScoutEventsPerScan = 1;
 const maxCryptoMajorMarketScoutEventsPerScan = 2;
+const maxGlobalMomentumEventsPerScan = 1;
+const maxGlobalAssetEventsPerScan = 1;
 
 interface CooldownDecision {
   blocked: boolean;
@@ -752,6 +757,106 @@ function limitCryptoMarketScoutEvents(events: PushAlertEvent[]) {
   return { events: limited, skipped };
 }
 
+function compactSymbolList(symbols: string[]) {
+  const uniqueSymbols = Array.from(new Set(symbols));
+  const visibleSymbols = uniqueSymbols.slice(0, 3).join("·");
+  return uniqueSymbols.length > 3 ? `${visibleSymbols} 등` : visibleSymbols;
+}
+
+function bestQuality(events: PushAlertEvent[]) {
+  if (events.some((event) => event.quality === "A")) return "A";
+  if (events.some((event) => event.quality === "B")) return "B";
+  if (events.some((event) => event.quality === "C")) return "C";
+  return undefined;
+}
+
+function mergeEvidenceLabels(events: PushAlertEvent[]) {
+  return Array.from(new Set(events.flatMap((event) => event.evidenceLabels ?? [])));
+}
+
+function bestMarketScoutRank(events: PushAlertEvent[]) {
+  const ranks = events.map((event) => event.marketScoutRank).filter((rank): rank is number => typeof rank === "number" && Number.isFinite(rank));
+  return ranks.length > 0 ? Math.min(...ranks) : undefined;
+}
+
+function buildGlobalMomentumBatch(events: PushAlertEvent[]): PushAlertEvent | null {
+  if (events.length === 0) return null;
+  const [first] = events;
+  const symbols = events.map((event) => event.symbol).filter((symbol): symbol is string => Boolean(symbol));
+  const side = first.data.side === "short" ? "short" : "long";
+  const symbolLabel = compactSymbolList(symbols);
+  const score = Math.max(...events.map((event) => event.score ?? 0));
+  return {
+    ...first,
+    alertKind: "global_momentum",
+    eventKey: `stock-momentum:stocks:global_momentum:${side}:${eventBucket(15)}`,
+    title: "글로벌 레이더 후보",
+    body: `${symbolLabel} 주요 자산이 ${side === "short" ? "약한" : "강한"} 흐름으로 감지됐습니다. 앱에서 확인해 주세요.`,
+    data: {
+      ...first.data,
+      symbol: symbols[0] ?? first.symbol ?? "",
+      symbols: symbols.join(","),
+      targetPath: "/global",
+      signal: "global_momentum_batch"
+    },
+    score,
+    quality: bestQuality(events),
+    symbol: symbols[0] ?? first.symbol,
+    evidenceLabels: mergeEvidenceLabels(events),
+    marketScoutRank: bestMarketScoutRank(events)
+  };
+}
+
+function buildGlobalAssetBatch(events: PushAlertEvent[]): PushAlertEvent | null {
+  if (events.length === 0) return null;
+  const [first] = events;
+  const symbols = events.map((event) => event.symbol).filter((symbol): symbol is string => Boolean(symbol));
+  const volatilityEvents = events.filter((event) => event.symbol && volatilitySymbols.has(event.symbol));
+  const selectedEvents = volatilityEvents.length > 0 ? volatilityEvents : events;
+  const selectedSymbols = selectedEvents.map((event) => event.symbol).filter((symbol): symbol is string => Boolean(symbol));
+  const symbolLabel = compactSymbolList(selectedSymbols.length > 0 ? selectedSymbols : symbols);
+  const score = Math.max(...selectedEvents.map((event) => event.score ?? 0));
+  const isVolatilityBatch = volatilityEvents.length > 0;
+  return {
+    ...selectedEvents[0],
+    alertKind: "global_asset",
+    eventKey: `stock-momentum:stocks:global_asset:${selectedSymbols.join("-") || "assets"}:${eventBucket(15)}`,
+    title: isVolatilityBatch ? "글로벌 리스크 후보" : "글로벌 자산 후보",
+    body: isVolatilityBatch
+      ? `${symbolLabel} 관련 자산이 강한 움직임으로 감지됐습니다. 변동성 리스크를 확인해 주세요.`
+      : `${symbolLabel} 글로벌 자산 흐름이 감지됐습니다. 앱에서 확인해 주세요.`,
+    data: {
+      ...selectedEvents[0].data,
+      symbol: selectedSymbols[0] ?? selectedEvents[0].symbol ?? "",
+      symbols: selectedSymbols.join(","),
+      targetPath: "/global/assets",
+      signal: isVolatilityBatch ? "global_risk_batch" : "global_asset_batch"
+    },
+    score,
+    quality: bestQuality(selectedEvents),
+    symbol: selectedSymbols[0] ?? selectedEvents[0].symbol,
+    evidenceLabels: mergeEvidenceLabels(selectedEvents),
+    marketScoutRank: bestMarketScoutRank(selectedEvents)
+  };
+}
+
+function limitGlobalMarketScoutEvents(events: PushAlertEvent[]) {
+  const momentumEvents = events.filter((event) => event.alertKind === "global_momentum");
+  const assetEvents = events.filter((event) => event.alertKind === "global_asset");
+  const otherEvents = events.filter((event) => event.alertKind !== "global_momentum" && event.alertKind !== "global_asset");
+  const batchedMomentum = buildGlobalMomentumBatch(momentumEvents);
+  const batchedAsset = buildGlobalAssetBatch(assetEvents);
+  const limited = [batchedMomentum, batchedAsset, ...otherEvents].filter((event): event is PushAlertEvent => event !== null);
+  const globalMomentumLimitSkippedCount = Math.max(0, momentumEvents.length - maxGlobalMomentumEventsPerScan);
+  const globalAssetLimitSkippedCount = Math.max(0, assetEvents.length - maxGlobalAssetEventsPerScan);
+  return {
+    events: limited,
+    globalBatchSkippedCount: globalMomentumLimitSkippedCount + globalAssetLimitSkippedCount,
+    globalMomentumLimitSkippedCount,
+    globalAssetLimitSkippedCount
+  };
+}
+
 export async function runPushAlertScan(context: ScanContext) {
   const dryRun = context.dryRun === true;
   const diagnosticsLimit = Math.max(0, Math.min(context.diagnosticsLimit ?? 40, 100));
@@ -850,9 +955,11 @@ export async function runPushAlertScan(context: ScanContext) {
   );
   const limitedCryptoMarketScoutEvents = limitCryptoMarketScoutEvents(rawCryptoMarketScoutEvents);
   const cryptoMarketScoutEvents = limitedCryptoMarketScoutEvents.events;
-  const stockMarketScoutEvents = topPushSetups(stockMomentumSetups, 6).map((setup, index) =>
+  const rawStockMarketScoutEvents = topPushSetups(stockMomentumSetups, 6).map((setup, index) =>
     setupToEvent(setup, "stock-momentum", "stocks", "stock-momentum", index + 1)
   );
+  const limitedStockMarketScoutEvents = limitGlobalMarketScoutEvents(rawStockMarketScoutEvents);
+  const stockMarketScoutEvents = limitedStockMarketScoutEvents.events;
   const genericEvents = [
     ...cryptoMarketScoutEvents,
     ...stockMarketScoutEvents,
@@ -870,6 +977,9 @@ export async function runPushAlertScan(context: ScanContext) {
   let cooldownSkippedCount = 0;
   let symbolCooldownSkippedCount = 0;
   let marketScoutLimitSkippedCount = limitedCryptoMarketScoutEvents.skipped;
+  let globalBatchSkippedCount = limitedStockMarketScoutEvents.globalBatchSkippedCount;
+  let globalMomentumLimitSkippedCount = limitedStockMarketScoutEvents.globalMomentumLimitSkippedCount;
+  let globalAssetLimitSkippedCount = limitedStockMarketScoutEvents.globalAssetLimitSkippedCount;
   let sendTargetTokenCount = 0;
   let skippedLowScoreCount = 0;
   let candidateEventCount = 0;
@@ -1035,6 +1145,9 @@ export async function runPushAlertScan(context: ScanContext) {
       cooldownSkippedCount,
       symbolCooldownSkippedCount,
       marketScoutLimitSkippedCount,
+      globalBatchSkippedCount,
+      globalMomentumLimitSkippedCount,
+      globalAssetLimitSkippedCount,
       sendTargetTokenCount,
       skippedLowScoreCount,
       lookupErrorCount,

@@ -128,6 +128,9 @@ export interface PushScanDiagnostics {
   cooldownSkippedCount: number;
   symbolCooldownSkippedCount: number;
   marketScoutLimitSkippedCount: number;
+  globalBatchSkippedCount: number;
+  globalMomentumLimitSkippedCount: number;
+  globalAssetLimitSkippedCount: number;
   sendTargetTokenCount: number;
   skippedLowScoreCount: number;
   lookupErrorCount: number;

@@ -1,5 +1,13 @@
 # 작업 맥락 메모
 
+## 2026-05-26 글로벌 자동 푸시 배치 제한.
+
+- 글로벌 알림 설정이 반영된 뒤 QQQ/SPY/NQ=F/ES=F/^VIX/VIXY가 각각 `wouldSend=true`가 되면서 한 scan에서 6건 발송될 수 있었다.
+- 글로벌 `stock-momentum` 후보는 개별 자산별 알림보다 사용자당 요약 알림이 적합하다.
+- `global_momentum`은 QQQ/SPY/NQ=F/ES=F 계열을 요약 1건으로 묶고 `/global`로 이동한다.
+- `global_asset`은 ^VIX/VIXY 같은 변동성 후보를 우선 요약 1건으로 묶고 `/global/assets`로 이동한다.
+- `stocks/global` alias, token market preference, threshold, targetPath 보안 정책은 유지한다.
+
 ## 2026-05-26 자동 푸시 노이즈 억제.
 
 - 기존 setup 계열 `eventKey`는 15분 bucket을 사용해 같은 심볼과 방향도 15분마다 새 이벤트로 발송될 수 있었다.
