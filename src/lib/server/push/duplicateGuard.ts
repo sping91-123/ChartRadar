@@ -2,6 +2,14 @@
 import { supabaseAdminRest } from "@/lib/server/supabaseAdmin";
 import type { PushAlertEvent } from "@/lib/server/push/types";
 
+export interface RecentPushAlertEventRow {
+  event_key: string;
+  market: string;
+  rule_id: string;
+  payload: Record<string, unknown> | null;
+  created_at: string;
+}
+
 export function eventBucket(minutes: number) {
   return Math.floor(Date.now() / (minutes * 60 * 1000));
 }
@@ -16,6 +24,12 @@ export async function alreadySent(userId: string, eventKey: string) {
     `push_alert_events?select=id&user_id=eq.${encodeURIComponent(userId)}&event_key=eq.${encodeURIComponent(eventKey)}&limit=1`
   );
   return rows.length > 0;
+}
+
+export async function recentSentEvents(userId: string, sinceIso: string) {
+  return supabaseAdminRest<RecentPushAlertEventRow[]>(
+    `push_alert_events?select=event_key,market,rule_id,payload,created_at&user_id=eq.${encodeURIComponent(userId)}&created_at=gte.${encodeURIComponent(sinceIso)}&order=created_at.desc&limit=100`
+  );
 }
 
 export async function recordSentEvent(userId: string, event: PushAlertEvent, sentCount: number) {

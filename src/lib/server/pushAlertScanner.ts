@@ -5,7 +5,7 @@ import type { RadarAlertRuleId } from "@/lib/radarAlerts";
 import { findSetupAlertMatches, type SetupAlertMarket, type SetupAlertPreset } from "@/lib/setupAlertPresets";
 import { scanAllSetups, type ScoutSetup } from "@/lib/setupScout";
 import { sendFcmMessage } from "@/lib/server/firebaseMessaging";
-import { alreadySent, duplicateBucket, eventBucket, recordSentEvent } from "@/lib/server/push/duplicateGuard";
+import { alreadySent, duplicateBucket, eventBucket, recentSentEvents, recordSentEvent, type RecentPushAlertEventRow } from "@/lib/server/push/duplicateGuard";
 import {
   asArray,
   compactPushSymbol as compactSymbol,
@@ -57,6 +57,9 @@ function emptyDiagnostics(overrides: Partial<PushScanDiagnostics> = {}): PushSca
     entitlementBlockedEventCount: 0,
     preferenceSkippedTokenCount: 0,
     duplicateSkippedTokenCount: 0,
+    cooldownSkippedCount: 0,
+    symbolCooldownSkippedCount: 0,
+    marketScoutLimitSkippedCount: 0,
     sendTargetTokenCount: 0,
     skippedLowScoreCount: 0,
     lookupErrorCount: 0,
@@ -75,6 +78,18 @@ const stockIndexSymbols = new Set(["QQQ", "SPY", "NQ=F", "ES=F"]);
 const volatilitySymbols = new Set(["^VIX", "VIXY"]);
 const semiconductorSymbols = new Set(["SMH", "SOXX", "NVDA", "AMD"]);
 const riskOffAssetSymbols = new Set(["UUP", "GLD", "TLT"]);
+const maxRecentEventLookbackHours = 6;
+const cryptoAltMarketScoutCooldownMinutes = 360;
+const setupSymbolCooldownMinutes = 120;
+const cryptoAltMarketScoutGlobalCooldownMinutes = 60;
+const maxCryptoAltMarketScoutEventsPerScan = 1;
+const maxCryptoMajorMarketScoutEventsPerScan = 2;
+
+interface CooldownDecision {
+  blocked: boolean;
+  reason: "symbol_cooldown" | "market_scout_limit" | null;
+  minutes: number;
+}
 
 function cryptoSetupTargetPath(symbol?: string) {
   return symbol && !isCryptoMajor(symbol) ? "/alts" : "/crypto";
@@ -119,11 +134,11 @@ function stockSignalLabel(symbol: string) {
 
 function stockSignalTitle(symbol: string, side: "long" | "short") {
   if (volatilitySymbols.has(symbol)) {
-    return side === "long" ? "Chart Radar 변동성 리스크 증가" : "Chart Radar 변동성 완화";
+    return side === "long" ? "변동성 리스크 확대" : "변동성 완화";
   }
-  if (semiconductorSymbols.has(symbol)) return "Chart Radar 반도체 주도력 변화";
-  if (riskOffAssetSymbols.has(symbol)) return "Chart Radar 방어 자산 변화";
-  return "Chart Radar 글로벌 모멘텀 전환";
+  if (semiconductorSymbols.has(symbol)) return "반도체 주도력 변화";
+  if (riskOffAssetSymbols.has(symbol)) return "방어 자산 변화";
+  return "글로벌 레이더 후보";
 }
 
 function stockSignalBody(setup: ScoutSetup) {
@@ -224,20 +239,19 @@ function setupEvidenceLabels(setup: ScoutSetup) {
 }
 
 function setupMarketScoutTitle(setup: ScoutSetup, market: SetupAlertMarket, ruleId: RadarAlertRuleId) {
-  if (market === "stocks" && ruleId === "stock-momentum") return stockSignalTitle(setup.symbol, setup.plan.side);
-  if (market === "stocks") return "Chart Radar 글로벌 레이더 후보 감지";
-  return isCryptoMajor(setup.symbol) ? "Chart Radar 레이더 후보 감지" : "Chart Radar 알트 시장 레이더 후보 감지";
+  if (market === "stocks") return "글로벌 레이더 후보";
+  return isCryptoMajor(setup.symbol) ? `${compactSymbol(setup.symbol)} 레이더 후보` : "알트 레이더 후보";
 }
 
 function setupMarketScoutBody(setup: ScoutSetup, market: SetupAlertMarket, ruleId: RadarAlertRuleId) {
-  if (market === "stocks" && ruleId === "stock-momentum") return stockSignalBody(setup);
+  const symbol = compactSymbol(setup.symbol);
   if (market === "stocks") {
-    return `${stockSignalLabel(setup.symbol)} ${setup.timeframe} 시장 레이더 후보로 감지되었습니다. 앱에서 점수와 근거를 확인해 주세요.`;
+    return `${stockSignalLabel(setup.symbol)}가 글로벌 후보에 잡혔습니다. 앱에서 점수와 근거를 확인해 주세요.`;
   }
   if (isCryptoMajor(setup.symbol)) {
-    return `${compactSymbol(setup.symbol)} ${setup.timeframe} 레이더 후보로 감지되었습니다. 앱에서 점수와 근거를 확인해 주세요.`;
+    return `${symbol}가 레이더 후보에 잡혔습니다. 점수와 조건을 확인해 주세요.`;
   }
-  return `${compactSymbol(setup.symbol)}가 알트 시장 레이더 후보에 잡혔습니다. 앱에서 거래량·변동성·구조 근거를 확인해 주세요.`;
+  return `${symbol}가 시장 스캔 후보에 잡혔습니다. 앱에서 근거를 확인해 주세요.`;
 }
 
 function setupToEvent(
@@ -596,8 +610,8 @@ function personalizeEventForUser(event: PushAlertEvent, userPresets: PushAlertPr
   if (event.market === "crypto" && event.symbol && !isCryptoMajor(event.symbol)) {
     const symbol = compactSymbol(event.symbol);
     const body = isWatchedSymbol
-      ? `${symbol}가 알트 시장 레이더 후보에 잡혔습니다. 저장 여부와 별개로 시장 전체 스캔 기준을 통과했습니다. 앱에서 거래량·변동성·구조 근거를 확인해 주세요.`
-      : `관심코인은 아니지만, ${symbol}가 알트 시장 스캔에서 강한 후보로 감지되었습니다. 앱에서 거래량·변동성·구조 근거를 확인해 주세요.`;
+      ? `${symbol}가 알트 시장 후보에 잡혔습니다. 저장 여부와 근거를 확인해 주세요.`
+      : `${symbol}가 시장 스캔 후보에 잡혔습니다. 앱에서 근거를 확인해 주세요.`;
     return {
       ...event,
       body,
@@ -635,6 +649,107 @@ function pushPreferenceSkippedSample(
     ruleAllowed: firstDecision?.ruleOk,
     tokenMarkets: Array.from(new Set(tokens.flatMap((token) => token.markets ?? []))).slice(0, 8)
   });
+}
+
+function recentPayloadValue(row: RecentPushAlertEventRow, key: string) {
+  const value = row.payload?.[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+function recentAlertKind(row: RecentPushAlertEventRow) {
+  return recentPayloadValue(row, "alert_kind") ?? recentPayloadValue(row, "alertKind") ?? row.rule_id;
+}
+
+function recentSymbol(row: RecentPushAlertEventRow) {
+  return recentPayloadValue(row, "symbol");
+}
+
+function recentEventAgeMinutes(row: RecentPushAlertEventRow) {
+  const createdAt = new Date(row.created_at).getTime();
+  if (!Number.isFinite(createdAt)) return Number.POSITIVE_INFINITY;
+  return Math.max(0, (Date.now() - createdAt) / 60000);
+}
+
+function isCryptoAltMarketScoutEvent(event: Pick<PushAlertEvent, "market" | "alertKind" | "symbol">) {
+  return event.market === "crypto" && event.alertKind === "market_scout" && Boolean(event.symbol) && !isCryptoMajor(event.symbol ?? "");
+}
+
+function recentRowMatchesEventSymbol(row: RecentPushAlertEventRow, event: PushAlertEvent) {
+  if (row.market !== event.market) return false;
+  if (recentAlertKind(row) !== event.alertKind) return false;
+  if (!event.symbol) return false;
+  return recentSymbol(row) === event.symbol;
+}
+
+function recentRowIsCryptoAltMarketScout(row: RecentPushAlertEventRow) {
+  const symbol = recentSymbol(row);
+  return row.market === "crypto" && recentAlertKind(row) === "market_scout" && Boolean(symbol) && !isCryptoMajor(symbol ?? "");
+}
+
+function cooldownMinutesForEvent(event: PushAlertEvent) {
+  if (event.ruleId === "liquidation-pressure") return 0;
+  if (isCryptoAltMarketScoutEvent(event)) return cryptoAltMarketScoutCooldownMinutes;
+  if (event.score !== undefined) return setupSymbolCooldownMinutes;
+  return 0;
+}
+
+function cooldownDecisionForEvent(recentRows: RecentPushAlertEventRow[], event: PushAlertEvent): CooldownDecision {
+  const symbolCooldownMinutes = cooldownMinutesForEvent(event);
+  if (symbolCooldownMinutes > 0) {
+    const hasRecentSymbolEvent = recentRows.some((row) => recentRowMatchesEventSymbol(row, event) && recentEventAgeMinutes(row) < symbolCooldownMinutes);
+    if (hasRecentSymbolEvent) {
+      return { blocked: true, reason: "symbol_cooldown", minutes: symbolCooldownMinutes };
+    }
+  }
+
+  if (isCryptoAltMarketScoutEvent(event)) {
+    const hasRecentAltMarketScout = recentRows.some(
+      (row) => recentRowIsCryptoAltMarketScout(row) && recentEventAgeMinutes(row) < cryptoAltMarketScoutGlobalCooldownMinutes
+    );
+    if (hasRecentAltMarketScout) {
+      return { blocked: true, reason: "market_scout_limit", minutes: cryptoAltMarketScoutGlobalCooldownMinutes };
+    }
+  }
+
+  return { blocked: false, reason: null, minutes: 0 };
+}
+
+function eventToRecentRow(event: PushAlertEvent): RecentPushAlertEventRow {
+  return {
+    event_key: event.eventKey,
+    market: event.market,
+    rule_id: event.ruleId,
+    payload: event.data,
+    created_at: new Date().toISOString()
+  };
+}
+
+function limitCryptoMarketScoutEvents(events: PushAlertEvent[]) {
+  const limited: PushAlertEvent[] = [];
+  let majorCount = 0;
+  let altCount = 0;
+  let skipped = 0;
+
+  for (const event of events) {
+    if (!isCryptoAltMarketScoutEvent(event)) {
+      if (event.symbol && isCryptoMajor(event.symbol) && majorCount >= maxCryptoMajorMarketScoutEventsPerScan) {
+        skipped += 1;
+        continue;
+      }
+      if (event.symbol && isCryptoMajor(event.symbol)) majorCount += 1;
+      limited.push(event);
+      continue;
+    }
+
+    if (altCount >= maxCryptoAltMarketScoutEventsPerScan) {
+      skipped += 1;
+      continue;
+    }
+    altCount += 1;
+    limited.push(event);
+  }
+
+  return { events: limited, skipped };
 }
 
 export async function runPushAlertScan(context: ScanContext) {
@@ -730,9 +845,11 @@ export async function runPushAlertScan(context: ScanContext) {
       .filter((warning): warning is string => Boolean(warning))
   );
   const globalCompositeEvents = [buildRiskOffEvent(stockMomentumSetups), buildSemiconductorLeadershipEvent(stockMomentumSetups)];
-  const cryptoMarketScoutEvents = topPushSetups(cryptoSetups, 8).map((setup, index) =>
+  const rawCryptoMarketScoutEvents = topPushSetups(cryptoSetups, 8).map((setup, index) =>
     setupToEvent(setup, "radar-grade", "crypto", "radar-grade", index + 1)
   );
+  const limitedCryptoMarketScoutEvents = limitCryptoMarketScoutEvents(rawCryptoMarketScoutEvents);
+  const cryptoMarketScoutEvents = limitedCryptoMarketScoutEvents.events;
   const stockMarketScoutEvents = topPushSetups(stockMomentumSetups, 6).map((setup, index) =>
     setupToEvent(setup, "stock-momentum", "stocks", "stock-momentum", index + 1)
   );
@@ -750,6 +867,9 @@ export async function runPushAlertScan(context: ScanContext) {
   let entitlementBlockedEventCount = 0;
   let preferenceSkippedTokenCount = 0;
   let duplicateSkippedTokenCount = 0;
+  let cooldownSkippedCount = 0;
+  let symbolCooldownSkippedCount = 0;
+  let marketScoutLimitSkippedCount = limitedCryptoMarketScoutEvents.skipped;
   let sendTargetTokenCount = 0;
   let skippedLowScoreCount = 0;
   let candidateEventCount = 0;
@@ -764,6 +884,9 @@ export async function runPushAlertScan(context: ScanContext) {
   for (const userId of userIds) {
     const userTokens = tokens.filter((token) => token.user_id === userId);
     try {
+      const recentSinceIso = new Date(Date.now() - maxRecentEventLookbackHours * 60 * 60000).toISOString();
+      const recentRows = await recentSentEvents(userId, recentSinceIso);
+      const recentRowsForUser = [...recentRows];
       const plan = userPlan(profileMap, subscriptionsByUser, userId);
       const userPresets = presetRows.filter((preset) => preset.user_id === userId);
       const cryptoPresetMatches = findSetupAlertMatches(
@@ -807,11 +930,22 @@ export async function runPushAlertScan(context: ScanContext) {
       for (const event of userEvents) {
         const preferenceDecisions = userTokens.map((token) => tokenPreferenceDecision(token, event));
         const targetTokens = userTokens.filter((_, index) => preferenceDecisions[index]?.allowed === true);
+        const cooldownDecision: CooldownDecision =
+          targetTokens.length > 0 ? cooldownDecisionForEvent(recentRowsForUser, event) : { blocked: false, reason: null, minutes: 0 };
         if (dryRun) {
           preferenceSkippedTokenCount += Math.max(0, userTokens.length - targetTokens.length);
           if (targetTokens.length === 0) {
             pushDiagnostic(eventDiagnostic(event, "token_preferences"));
             pushPreferenceSkippedSample(preferenceSkippedSamples, event, userTokens, preferenceDecisions[0]);
+            continue;
+          }
+          if (cooldownDecision.blocked) {
+            skipped += targetTokens.length;
+            cooldownSkippedCount += targetTokens.length;
+            if (cooldownDecision.reason === "symbol_cooldown") symbolCooldownSkippedCount += targetTokens.length;
+            if (cooldownDecision.reason === "market_scout_limit") marketScoutLimitSkippedCount += targetTokens.length;
+            sendTargetTokenCount += targetTokens.length;
+            pushDiagnostic(eventDiagnostic(event, cooldownDecision.reason === "market_scout_limit" ? "rate_limit" : "cooldown", targetTokens.length));
             continue;
           }
           if (await alreadySent(userId, event.eventKey)) {
@@ -831,6 +965,17 @@ export async function runPushAlertScan(context: ScanContext) {
           sendTargetTokenCount += targetTokens.length;
           finalSendAttemptCount += targetTokens.length;
           pushDiagnostic(eventDiagnostic(event, "dry_run", targetTokens.length));
+          recentRowsForUser.unshift(eventToRecentRow(event));
+          continue;
+        }
+
+        if (targetTokens.length > 0 && cooldownDecision.blocked) {
+          skipped += targetTokens.length;
+          cooldownSkippedCount += targetTokens.length;
+          if (cooldownDecision.reason === "symbol_cooldown") symbolCooldownSkippedCount += targetTokens.length;
+          if (cooldownDecision.reason === "market_scout_limit") marketScoutLimitSkippedCount += targetTokens.length;
+          sendTargetTokenCount += targetTokens.length;
+          pushDiagnostic(eventDiagnostic(event, cooldownDecision.reason === "market_scout_limit" ? "rate_limit" : "cooldown", targetTokens.length));
           continue;
         }
 
@@ -843,6 +988,7 @@ export async function runPushAlertScan(context: ScanContext) {
         duplicateSkippedTokenCount += result.duplicateSkipped;
         sendTargetTokenCount += result.targetTokens;
         finalSendAttemptCount += result.sent + result.failed;
+        if (result.sent > 0) recentRowsForUser.unshift(eventToRecentRow(event));
       }
     } catch (error) {
       scannerErrorCount += 1;
@@ -886,6 +1032,9 @@ export async function runPushAlertScan(context: ScanContext) {
       entitlementBlockedEventCount,
       preferenceSkippedTokenCount,
       duplicateSkippedTokenCount,
+      cooldownSkippedCount,
+      symbolCooldownSkippedCount,
+      marketScoutLimitSkippedCount,
       sendTargetTokenCount,
       skippedLowScoreCount,
       lookupErrorCount,

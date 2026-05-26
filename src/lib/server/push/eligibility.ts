@@ -31,7 +31,7 @@ export function eventQualityThreshold(event: PushAlertEvent) {
     return event.ruleId === "liquidation-pressure" ? "grade=heated|extreme" : "event-specific";
   }
   if (event.market === "crypto" && event.symbol && !isCryptoMajorPushSymbol(event.symbol) && event.isMarketScout) {
-    return `score>=${cryptoAltMarketScoutScoreThreshold} or A>=${minimumSetupPushScore}, evidence>=${cryptoAltMarketScoutMinimumEvidenceCount}`;
+    return `score>=${cryptoAltMarketScoutScoreThreshold} or A>=${minimumSetupPushScore}, evidence>=${cryptoAltMarketScoutMinimumEvidenceCount}, timeframe>=15m`;
   }
   if (event.market === "crypto" && event.symbol && !isCryptoMajorPushSymbol(event.symbol)) {
     return `score>=${cryptoAltPushScoreThreshold} or A>=${minimumSetupPushScore}`;
@@ -47,6 +47,7 @@ function setupSignalPassesPushQuality(event: PushAlertEvent) {
   const symbol = event.symbol;
   if (score < minimumSetupPushScore) return false;
   if (market === "crypto" && symbol && !isCryptoMajorPushSymbol(symbol) && event.isMarketScout) {
+    if (event.data.timeframe === "5m") return false;
     const evidenceCount = event.evidenceLabels?.length ?? 0;
     if (evidenceCount < cryptoAltMarketScoutMinimumEvidenceCount) return false;
     return score >= cryptoAltMarketScoutScoreThreshold || quality === "A";

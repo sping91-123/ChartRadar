@@ -93,7 +93,7 @@ export interface PushEventDiagnostic {
   reason: string;
   eventKey: string;
   wouldSend: boolean;
-  skippedReason: "low_score" | "entitlement" | "token_preferences" | "duplicate" | "dry_run" | null;
+  skippedReason: "low_score" | "entitlement" | "token_preferences" | "duplicate" | "cooldown" | "rate_limit" | "dry_run" | null;
   targetTokenCount: number;
   system: boolean;
   isWatchlist: boolean;
@@ -125,6 +125,9 @@ export interface PushScanDiagnostics {
   entitlementBlockedEventCount: number;
   preferenceSkippedTokenCount: number;
   duplicateSkippedTokenCount: number;
+  cooldownSkippedCount: number;
+  symbolCooldownSkippedCount: number;
+  marketScoutLimitSkippedCount: number;
   sendTargetTokenCount: number;
   skippedLowScoreCount: number;
   lookupErrorCount: number;
