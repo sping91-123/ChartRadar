@@ -440,3 +440,36 @@ Coin Radar UX 재구성은 Pro gating을 약화시키면 안 된다.
 - `/spot`, `/home`, `/macro` 신규 route 없음.
 - Global Radar 진입 제거 없음.
 - 결제, 인증, 푸시, Android, Supabase, production 변경 없음.
+
+## 시장 선택 화면 외곽 박스 제거 결과
+
+구현 커밋: `14e08f0 Remove market selection outer panel`
+
+### 변경 결과
+
+- `src/components/HomeEntryGate.tsx`의 `MarketSelector`에서 큰 외곽 `section.enterprise-panel` wrapper를 제거했다.
+- 기존 `enterprise-panel`, 외곽 border, rounded panel, 큰 padding, overflow hidden 구조를 걷어내고, 단순한 full-width section wrapper로 바꿨다.
+- Coin Radar와 Global Radar 선택 `Link` 카드는 유지했다.
+- Coin Radar 진입 href `/crypto`와 Global Radar 진입 href `/global`은 유지했다.
+- route, 마지막 사용 시장 기억, 하단 탭, 신규 route는 구현하지 않았다.
+
+### 확인 결과
+
+- 340px 시장 선택 화면에서 가로 overflow 없음.
+- 360px 시장 선택 화면에서 가로 overflow 없음.
+- 시장 선택 화면에서 `section.enterprise-panel`이 더 이상 존재하지 않음을 확인했다.
+- Coin Radar `/crypto` 진입 확인.
+- Global Radar `/global` 진입 확인.
+
+### 검증 결과
+
+- `git diff --check` 통과.
+- `cmd /c npx tsc --noEmit` 통과.
+- `npm.cmd run build` 통과.
+- `npm.cmd run smoke:mobile` 통과.
+- `npm.cmd run smoke:all` 통과.
+
+### 남은 후보
+
+- 마지막 사용 시장 기억은 이번 run에서 구현하지 않았으며, 별도 구현 run 후보로 남긴다.
+- Coin Radar 홈 MVP skeleton, 현물 레이더 API adapter, 하단 탭 구조 구현은 별도 active run에서 다룬다.
