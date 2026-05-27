@@ -6,10 +6,10 @@ import { findSetupAlertMatches, type SetupAlertMarket, type SetupAlertPreset } f
 import { scanAllSetups, type ScoutSetup } from "@/lib/setupScout";
 import { sendFcmMessage } from "@/lib/server/firebaseMessaging";
 import { alreadySent, duplicateBucket, eventBucket, recentSentEvents, recordSentEvent, type RecentPushAlertEventRow } from "@/lib/server/push/duplicateGuard";
+import { emptyDiagnostics, eventDiagnostic, eventDiagnosticSample, pushPreferenceSkippedSample, pushSample } from "@/lib/server/push/diagnostics";
 import {
   asArray,
   compactPushSymbol as compactSymbol,
-  eventQualityThreshold,
   isCryptoMajorPushSymbol as isCryptoMajor,
   passesSetupPushQuality
 } from "@/lib/server/push/eligibility";
@@ -26,7 +26,6 @@ import type {
   PushEventDiagnosticSample,
   PushPreferenceSkippedSample,
   PushProfileRow,
-  PushScanDiagnostics,
   PushSubscriptionRow,
   PushTokenRow,
   ScanContext
@@ -34,46 +33,6 @@ import type {
 import { supabaseAdminRest } from "@/lib/server/supabaseAdmin";
 import { fetchStockCandles } from "@/lib/stockMarket";
 import { analyzeTechnicalRadar } from "@/lib/technicalRadar";
-
-function emptyDiagnostics(overrides: Partial<PushScanDiagnostics> = {}): PushScanDiagnostics {
-  return {
-    tokenCount: 0,
-    userCount: 0,
-    profileCount: 0,
-    subscriptionCount: 0,
-    presetCount: 0,
-    cryptoPresetCount: 0,
-    stockPresetCount: 0,
-    cryptoSetupCount: 0,
-    stockPresetSetupCount: 0,
-    stockMomentumSetupCount: 0,
-    optionalEventCount: 0,
-    genericEventCount: 0,
-    candidateEventCount: 0,
-    qualityPassedEventCount: 0,
-    deliveryEligibleEventCount: 0,
-    finalSendAttemptCount: 0,
-    eligibleEventCount: 0,
-    entitlementBlockedEventCount: 0,
-    preferenceSkippedTokenCount: 0,
-    duplicateSkippedTokenCount: 0,
-    cooldownSkippedCount: 0,
-    symbolCooldownSkippedCount: 0,
-    marketScoutLimitSkippedCount: 0,
-    globalBatchSkippedCount: 0,
-    globalMomentumLimitSkippedCount: 0,
-    globalAssetLimitSkippedCount: 0,
-    sendTargetTokenCount: 0,
-    skippedLowScoreCount: 0,
-    lookupErrorCount: 0,
-    scannerErrorCount: 0,
-    skippedLowScoreSamples: [],
-    preferenceSkippedSamples: [],
-    duplicateSkippedSamples: [],
-    topCandidateSamples: [],
-    ...overrides
-  };
-}
 
 const cryptoModes: TradingMode[] = ["scalp", "swing"];
 const stockMomentumSymbols = ["QQQ", "SPY", "NQ=F", "ES=F", "^VIX", "VIXY", "SMH", "SOXX", "NVDA", "AMD", "UUP", "GLD", "TLT"];
@@ -181,28 +140,6 @@ function stockQuality(score: number): ScoutSetup["plan"]["quality"] {
   if (score >= 78) return "A";
   if (score >= 62) return "B";
   return "C";
-}
-
-function eventTimeframe(event: PushAlertEvent) {
-  return event.data.timeframe;
-}
-
-function eventDiagnosticSample(event: PushAlertEvent, skippedReason: PushEventDiagnostic["skippedReason"], wouldSend?: boolean): PushEventDiagnosticSample {
-  return {
-    symbol: event.symbol ?? null,
-    market: event.market,
-    timeframe: eventTimeframe(event) ?? null,
-    score: event.score ?? null,
-    quality: event.quality ?? null,
-    alertKind: event.alertKind,
-    skippedReason,
-    threshold: eventQualityThreshold(event),
-    ...(wouldSend === undefined ? {} : { wouldSend })
-  };
-}
-
-function pushSample<T>(samples: T[], sample: T, limit = 8) {
-  if (samples.length < limit) samples.push(sample);
 }
 
 function presetFromRow(row: PushAlertPresetRow): SetupAlertPreset {
@@ -566,38 +503,6 @@ async function sendEventToUser(userId: string, tokens: PushTokenRow[], event: Pu
   return { sent, skipped: 0, failed, preferenceSkipped, duplicateSkipped: 0, targetTokens: targetTokens.length };
 }
 
-function eventDiagnostic(
-  event: PushAlertEvent,
-  skippedReason: PushEventDiagnostic["skippedReason"],
-  targetTokenCount = 0
-): PushEventDiagnostic {
-  return {
-    signalType: event.data.type ?? event.ruleId,
-    ruleId: event.ruleId,
-    market: event.market,
-    symbol: event.symbol,
-    timeframe: eventTimeframe(event),
-    score: event.score,
-    quality: event.quality,
-    alertKind: event.alertKind,
-    alertTitle: event.title,
-    alertBody: event.body,
-    title: event.title,
-    reason: event.body,
-    eventKey: event.eventKey,
-    wouldSend: skippedReason === null || skippedReason === "dry_run",
-    skippedReason,
-    targetTokenCount,
-    system: event.system === true,
-    isWatchlist: event.isWatchlist === true,
-    isMarketScout: event.isMarketScout === true,
-    isWatchedSymbol: event.isWatchedSymbol === true,
-    evidenceLabels: event.evidenceLabels ?? [],
-    marketScoutRank: event.marketScoutRank,
-    threshold: eventQualityThreshold(event)
-  };
-}
-
 function personalizeEventForUser(event: PushAlertEvent, userPresets: PushAlertPresetRow[]): PushAlertEvent {
   const watchedSymbols = new Set(userPresets.map((preset) => preset.symbol));
   const isWatchedSymbol = event.symbol ? watchedSymbols.has(event.symbol) : event.isWatchlist === true;
@@ -636,24 +541,6 @@ function personalizeEventForUser(event: PushAlertEvent, userPresets: PushAlertPr
       is_watched_symbol: String(isWatchedSymbol)
     }
   };
-}
-
-function pushPreferenceSkippedSample(
-  samples: PushPreferenceSkippedSample[],
-  event: PushAlertEvent,
-  tokens: PushTokenRow[],
-  firstDecision: ReturnType<typeof tokenPreferenceDecision> | undefined
-) {
-  pushSample(samples, {
-    market: event.market,
-    alertKind: event.alertKind,
-    ruleId: event.ruleId,
-    reason: "token_preferences",
-    skippedBy: firstDecision?.skippedBy ?? undefined,
-    marketAllowed: firstDecision?.marketOk,
-    ruleAllowed: firstDecision?.ruleOk,
-    tokenMarkets: Array.from(new Set(tokens.flatMap((token) => token.markets ?? []))).slice(0, 8)
-  });
 }
 
 function recentPayloadValue(row: RecentPushAlertEventRow, key: string) {
