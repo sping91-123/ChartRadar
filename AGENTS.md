@@ -1,173 +1,165 @@
-# AGENTS.md
+# ChartRadar Agent Guide
 
-Behavioral guidelines for Codex and other coding agents. Merge with project-specific instructions as needed.
+이 문서는 ChartRadar 저장소에서 Codex와 하위 작업 에이전트가 항상 먼저 참고해야 하는 저장소 운영 지침입니다.
 
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+## 프로젝트 정체성
 
-## Codex Notes
+- ChartRadar는 StarOn Labs의 코인/글로벌 시장 판단 보조 앱이다.
+- 사용자는 제품 오너이며 최종 의사결정자다.
+- 앱의 핵심 가치는 사용자가 차트를 오래 보지 않아도 방향, 리스크, 관망/추적 조건을 빠르게 정리하게 돕는 것이다.
+- 투자 권유, 수익 보장, 진입 지시처럼 보이는 문구를 피한다.
+- 표현은 매수/매도 지시가 아니라 판단 보조, 추적 조건, 리스크, 무효화 기준, 확인 조건 중심으로 작성한다.
 
-Codex reads `AGENTS.md` before doing work. Put this file at the project root for repository-wide guidance, or in a nested directory for narrower rules.
+## 기준 저장소
 
-Keep this file short and concrete. Codex combines global and project instructions, and large instruction files can crowd out useful task context.
+- 기본 로컬 경로는 `X:\Chart-Radar`이다.
+- 예전 `C:\Users\USER\...` 경로는 legacy path로 본다.
+- 작업 전 반드시 현재 repo path와 Git 루트를 확인한다.
+- 기본 브랜치는 `main`이다.
+- 운영 URL은 `https://chartradar.kr`이다.
+- 앱 구조는 Next.js 웹앱을 Capacitor Android WebView로 감싼 하이브리드 앱이다.
 
-## 1. Think Before Coding
+## 기준 Route
 
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
+- `/`: 시장 선택과 앱 진입.
+- `/crypto`: BTC/ETH 중심 코인 레이더.
+- `/alts`: 알트코인 레이더.
+- `/global`: 글로벌 시장흐름 대시보드.
+- `/global/assets`: 글로벌 자산 레이더.
+- `/news`: 뉴스/이벤트 레이더.
+- `/alerts`: 알림 설정/상태.
+- `/journal`: 복기/저널.
+- `/learn`: 지표 안내.
+- `/login`: 로그인.
+- `/pro`: Pro 요금제와 구독.
+- `/terms`, `/privacy`, `/refund`, `/account/delete`: 정책과 계정 안내.
+- `/admin/entitlements`: 관리자 권한/구독 보정.
+- `/majors`는 `/crypto` 호환 또는 redirect로만 취급한다.
+- `/stocks`, `/calculator`, `/diagnosis`, `/report`, `/settings`, `/pro/apply`는 현재 주력 route가 아니다.
 
-Before implementing:
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
+## 작업 운영 원칙
 
-## 2. Simplicity First
+- 한 번에 하나의 작업만 처리한다.
+- 작업 전 `git status --short --branch`와 `git rev-list --left-right --count HEAD...origin/main`을 확인한다.
+- local `main`과 `origin/main`이 불일치하면 새 작업을 시작하지 말고 보고한다.
+- 작업트리가 dirty이면 기존 변경의 정체를 먼저 확인하고, 무관하거나 충돌 가능성이 있으면 중단한다.
+- 기존 사용자 변경이나 미커밋 파일을 되돌리지 않는다.
+- 검증 통과 후 하나의 논리 단위로 커밋한다.
+- 대표의 명시 승인 전에는 `git push`를 실행하지 않는다.
+- 대표의 명시 승인 없이 deploy, Play Console 업로드, AAB 제출, production DB migration을 실행하지 않는다.
+- 비밀값, `.env` 실제 파일, `google-services.json`, keystore는 출력하거나 커밋하지 않는다.
+- 앱 기능 작업과 문서 작업은 한 커밋에 섞지 않는다.
 
-**Minimum code that solves the problem. Nothing speculative.**
+## 고위험 영역
 
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
+아래는 항상 고위험으로 취급한다. 필요한 경우 계획을 먼저 제시하고 최소 변경으로 진행한다.
 
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+- RevenueCat.
+- `src/lib/billing.ts`.
+- planId / productId / entitlement.
+- Supabase / RLS / production DB migration.
+- Google 로그인 / OAuth / 세션.
+- Android / Capacitor / AAB / Play Console.
+- FCM / push token / push-cron.
+- `.env`, Firebase key, keystore, `android/app/google-services.json`.
+- 계정 삭제, 로그아웃, 세션 복구, 관리자 권한 보정.
 
-## 3. Surgical Changes
+## Basic/Pro 원칙
 
-**Touch only what you must. Clean up only your own mess.**
+- Basic은 방향성 요약, 핵심 흐름, 제한된 판단 중심으로 노출한다.
+- Pro는 세부 조건, 리스크, 무효화 기준, 추적 조건, 다음 행동 기준, 업데이트 시각을 보여준다.
+- Pro gating은 BM 핵심이므로 함부로 약화하지 않는다.
+- UI에서 숨기는 것만으로 민감 정보가 보호된다고 판단하지 않는다. 가능하면 데이터 전달 전 제한한다.
+- 결제 유도 문구는 과장되거나 투자 수익을 보장하는 느낌이면 안 된다.
+- 권장 표현은 판단 보조, 추적 조건, 확인 필요, 관망 우위, 리스크 확대다.
 
-When editing existing code:
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it - don't delete it.
+## 결제와 구독 주의사항
 
-When your changes create orphans:
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
+- 결제와 구독 권한은 고위험 영역이다.
+- RevenueCat productId, entitlement, basePlanId, planId 매핑을 임의 변경하지 않는다.
+- `bundle_yearly`는 legacy internal plan id이며, 사용자 노출 상품은 All Market Pro 6개월 구독이다.
+- 사용자 화면과 Google Play 상품에는 연간/690,000원 문구가 노출되면 안 된다.
+- 결제 API, `src/lib/billing.ts`, app store sync, RevenueCat key 관련 변경은 `npm.cmd run smoke:billing`을 포함한다.
+- production 결제 환경변수나 secret 값을 출력하지 않는다.
 
-The test: Every changed line should trace directly to the user's request.
+## 인증과 Supabase 주의사항
 
-## 4. Goal-Driven Execution
+- Supabase service role key, access token, refresh token, private key는 절대 커밋하거나 출력하지 않는다.
+- Google Identity Services, Firebase, Supabase Google Provider, OAuth consent screen은 같은 ChartRadar 프로젝트 기준으로 맞아야 한다.
+- refresh token 저장 정책은 보안 영향이 있으므로 문서와 코드 변경을 분리해서 검토한다.
+- admin API는 비로그인 401, 비관리자 403 원칙을 지킨다.
 
-**Define success criteria. Loop until verified.**
+## Android와 Play Console 주의사항
 
-Transform tasks into verifiable goals:
-- "Add validation" -> "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" -> "Write a test that reproduces it, then make it pass"
-- "Refactor X" -> "Ensure tests pass before and after"
+- Android 앱은 `https://chartradar.kr`을 여는 Capacitor WebView 구조다.
+- `android/app/google-services.json`은 로컬에는 필요할 수 있지만 Git에는 포함하면 안 된다.
+- `versionCode`는 Play Console 업로드 전 기존 업로드보다 높아야 한다.
+- AndroidManifest, Firebase, FCM, Google Sign-In 변경은 기존 설치 앱에 자동 반영되지 않는다. 새 APK/AAB 빌드와 Play Console 업로드가 필요하다.
+- 자동 AAB 업로드, Play Console 제출, production release는 대표의 명시 지시 없이는 하지 않는다.
+- `npm.cmd run app:android:release`는 최종 제출 준비 단계에서만 실행한다.
 
-For multi-step tasks, state a brief plan:
-```txt
-1. [Step] -> verify: [check]
-2. [Step] -> verify: [check]
-3. [Step] -> verify: [check]
-```
+## 자동화 운영
 
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+- `docs/work-queue.md`는 작업 우선순위와 상태를 관리하는 상위 인덱스다.
+- `docs/work-items/`는 세부 작업 문서 위치다.
+- 대표가 `AUTO NEXT`라고 하면 `AGENTS.md`, `docs/work-queue.md`, `docs/work-items/`를 읽고 다음 작업 1개만 선택한다.
+- `AUTO NEXT`는 선택 이유, 위험도, 수정 범위, 검증 명령을 먼저 정리한 뒤 진행한다.
+- 필요한 경우 `tools/dev-agent/profiles/`의 역할 프로필을 참고한다.
+- 작업 템플릿은 `tools/dev-agent/task-template.md`를 사용한다.
+- 결과 보고는 `tools/dev-agent/report-template.md`를 사용한다.
+- subagent는 조사, 위험 검토, 테스트 계획, 리뷰에만 사용한다.
+- 병렬 수정은 금지한다. 실제 코드 수정은 하나의 main 작업 흐름에서만 한다.
 
-## 5. Workspace Evidence Before Edits
+## 검증 명령
 
-**Inspect the actual files you will touch. Don't rely on memory or stale summaries.**
+작업 성격에 맞게 `package.json` 기준 실제 존재하는 명령을 사용한다. 기본 후보는 아래와 같다.
 
-Before changing code:
-- Use `rg` or project tools to find the relevant implementation.
-- Read the exact files and nearby call sites before editing them.
-- Treat open editor tabs, filenames, READMEs, and prior conversation summaries as hints, not proof.
-- If local code disagrees with your assumption, trust the code and update the plan.
+- 문서만 수정한 경우.
+  - `git diff --check`.
+  - `git status --short --branch`.
+- 일반 앱 코드 수정.
+  - `git diff --check`.
+  - `cmd /c npx tsc --noEmit`.
+  - `npm.cmd run build`.
+  - `npm.cmd run smoke:mobile`.
+  - `npm.cmd run smoke:all`.
+- 운영/크론/푸시/매크로 변경.
+  - `npm.cmd run smoke:ops`.
+  - 가능하면 `/api/push-cron?dryRun=1&diagnostics=1` 로컬 확인.
+  - dryRun에서 실제 발송, DB write, 민감정보 노출이 없는지 확인.
+- 결제 변경.
+  - `npm.cmd run smoke:billing`.
+  - RevenueCat, Toss, Supabase entitlement 경로를 함께 확인.
+- Android 변경.
+  - `npm.cmd run app:sync`.
+  - `npm.cmd run app:android:debug`.
+  - release AAB는 대표 지시가 있을 때만 생성한다.
 
-This is not a new "small change" rule. It exists to prevent confident edits based on imagined code.
+## 완료 보고 형식
 
-## 6. Respect The Worktree
+작업 완료 시 반드시 아래를 보고한다.
 
-**Assume uncommitted changes belong to the user unless you made them.**
+- 선택한 작업.
+- 선택 이유.
+- 수정 파일.
+- 변경 내용.
+- 건드리지 않은 고위험 영역.
+- 검증 결과.
+- 커밋 해시 또는 미커밋 상태.
+- `git status --short --branch`.
+- push 여부. 대표 승인 전에는 하지 않음.
+- 다음 추천 작업.
 
-When the worktree is dirty:
-- Do not revert, overwrite, or reformat unrelated changes.
-- If user changes touch the same files, read them and adapt.
-- If unrelated files are dirty, ignore them.
-- Never run destructive git commands unless the user explicitly asked for them.
+## 중단 조건
 
-## 7. No Closing Colons (Korean Output)
+아래 상황에서는 작업을 중단하고 보고한다.
 
-**End Korean sentences with a period, not a colon.**
-
-When the user writes in Korean, your output is also Korean:
-- Don't end Korean sentences with `:` even if the next line is a list or example.
-- LLMs trained on English docs leak the colon habit into Korean. Catch it.
-- The test: every Korean sentence terminator should be `.`, `?`, or `!`, not `:`.
-- Colons are fine inside code, key-value pairs, timestamps, or labels. Not as Korean sentence enders.
-
-## 8. File Header Comments in Korean
-
-**First line of every new source file: a one-line Korean comment stating its role.**
-
-When creating a new source file:
-- TypeScript/JavaScript: `// 사용자 인증 상태를 관리하는 Context Provider`
-- Python: `# KIS API 호출을 비동기로 래핑하는 클라이언트`
-- SQL: `-- 일별 집계 결과를 저장하는 머티리얼라이즈드 뷰`
-- Place it directly under required directives (`'use client'`, `'use server'`, shebang).
-- Skip config files (`*.config.ts`, `package.json`, lockfiles, generated files).
-
-Why: agents read files selectively, not whole codebases. A one-line Korean header gives instant context so the next session can navigate without re-reading everything.
-
-## 9. Plan + Checklist + Context Notes
-
-**Before any non-trivial task, produce three artifacts. Don't start coding without them.**
-
-- **Plan** - what we're building and why.
-- **Checklist** (`checklist.md`) - concrete tasks as checkboxes. Tick as you go.
-- **Context Notes** (`context-notes.md`) - decisions made during the work and the reasoning behind them. Append continuously.
-
-If the user gives only a plan and asks you to start coding, stop and ask: "Should I create the checklist and context notes first?" The next session needs the notes to pick up without re-deriving every decision.
-
-## 10. Run Tests Before Marking Complete
-
-**If you touched code, run the relevant tests before saying "done".**
-
-- `npm test`, `pytest`, `cargo test`, or whatever the project uses - run the smallest relevant check first, then broader checks when risk is high.
-- If tests pass, report the exact command.
-- If tests fail, read the actual error, fix it, and re-run.
-- If no test setup exists, verify the project builds or typechecks.
-- If you cannot run verification, say exactly why.
-
-This is the step coding agents skip most often. Treat it as non-negotiable.
-
-## 11. Verification Evidence In The Final Reply
-
-**Report what you actually verified, not what you intended to verify.**
-
-Final responses should include:
-- The command or check that ran, such as `npm test` or `npx tsc --noEmit`.
-- The result, such as "passed", "failed with X", or "not run because Y".
-- Any remaining risk the user should know about.
-
-Do not write "done", "fixed", or "works" unless that claim is backed by a concrete check.
-
-## 12. Semantic Commits
-
-**Commit when one logical change is complete. Don't wait for the user to ask.**
-
-- The test: "Can I describe this commit in one sentence?" If yes, commit. If no, the changes are still mixed - split them.
-- Good: "auth 미들웨어 추가". Bad: "auth 추가하고 UI도 고치고 버그도 수정" (split into 3).
-- Don't accumulate unrelated edits and lose the ability to roll back individually.
-- Don't commit just to commit - meaningful units only.
-- If the environment or user workflow does not allow commits, keep changes uncommitted and clearly summarize them.
-
-Note: For solo prototypes or throwaway scripts, group commits loosely if it slows you down. The point is reversibility, not ceremony.
-
-## 13. Read Errors, Don't Guess
-
-**Read the actual error/log line. Don't pattern-match from memory.**
-
-When something fails:
-- Read the full error message and stack trace.
-- Check the actual log output, not what you assume it should say.
-- Don't apply a "common fix" before confirming the cause.
-- If unclear, add a print/log to verify state - then fix.
-
-This is the step coding agents skip most often after "run tests". They guess from error keywords and apply the most recent pattern. That's how a one-line bug becomes a three-file refactor.
-
----
-
-**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, verification is reported with exact checks, and clarifying questions come before implementation rather than after mistakes.
+- 작업트리가 dirty이고 기존 변경의 정체가 불명확함.
+- local과 `origin/main`이 불일치함.
+- 고위험 영역 수정이 필요하지만 대표의 범위 승인이나 계획 확인이 없음.
+- production DB migration 필요.
+- Android release/AAB 생성 필요.
+- 비밀값 파일 또는 민감값 추적 감지.
+- 검증 실패 원인이 불명확함.
+- 여러 작업이 충돌 가능함.
+- 요청 범위 밖의 앱 코드 수정이 필요함.

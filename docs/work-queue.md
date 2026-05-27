@@ -4,6 +4,8 @@
 
 ## 작업 처리 원칙
 
+- 저장소 운영 지침은 루트 `AGENTS.md`를 우선한다.
+- 대표가 `AUTO NEXT`라고 하면 `AGENTS.md`, 이 문서, `docs/work-items/`를 읽고 다음 작업 1개만 선택한다.
 - 한 번에 하나의 `TODO`만 처리한다.
 - 상태가 `TODO`인 항목 중 우선순위가 가장 높은 것만 처리한다.
 - 작업 전 `git status --short --branch`를 확인한다.
@@ -17,7 +19,7 @@
 
 - 저장소: `https://github.com/sping91-123/ChartRadar`
 - 기본 브랜치: `main`
-- 로컬 기준 경로: `C:\Users\USER\Desktop\바탕화면 정리_2026-05-06\작업 폴더\COTERS\Chart-Radar`
+- 로컬 기준 경로: `X:\Chart-Radar`
 - 운영 URL: `https://chartradar.kr`
 - Android package: `com.staronlabs.chartradar`
 - 작업 전 현재 폴더가 위 저장소와 연결되어 있는지 확인한다.
