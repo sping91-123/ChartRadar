@@ -102,8 +102,16 @@
 
 - `docs/work-queue.md`는 작업 우선순위와 상태를 관리하는 상위 인덱스다.
 - `docs/work-items/`는 세부 작업 문서 위치다.
-- 대표가 `AUTO NEXT`라고 하면 `AGENTS.md`, `docs/work-queue.md`, `docs/work-items/`를 읽고 다음 작업 1개만 선택한다.
+- `docs/automation-runs/active-run.md`는 대표가 지정한 특정 문제 묶음을 순서대로 처리하는 active run 문서다.
+- 대표가 `AUTO NEXT`라고 하면 먼저 `docs/automation-runs/active-run.md`가 있는지 확인한다.
+- active run에 `TODO`가 있으면 `docs/work-items/`에서 임의 선택하지 말고 active run의 다음 `TODO` 1개만 처리한다.
+- active run이 비어 있거나 모든 작업이 `DONE`이면 그때만 `docs/work-items/`에서 다음 후보를 제안한다.
+- 대표가 `AUTO PLAN ONLY`라고 하면 active run의 다음 `TODO`에 대한 계획만 보고하고 수정하지 않는다.
+- 대표가 `AUTO RUN ACTIVE PLAN`이라고 하면 active run의 `TODO`를 순서대로 처리하되, 한 턴에는 하나의 작업만 처리한다.
 - `AUTO NEXT`는 선택 이유, 위험도, 수정 범위, 검증 명령을 먼저 정리한 뒤 진행한다.
+- active run 또는 work item 완료 시 해당 항목 상태를 `DONE`으로 갱신할지 보고한다. 같은 커밋에 포함해도 되는 문서 갱신인지 판단한다.
+- 고위험 작업은 실행 전 멈추고 대표 승인을 요청한다.
+- push는 대표 승인 전 금지한다.
 - 필요한 경우 `tools/dev-agent/profiles/`의 역할 프로필을 참고한다.
 - 작업 템플릿은 `tools/dev-agent/task-template.md`를 사용한다.
 - 결과 보고는 `tools/dev-agent/report-template.md`를 사용한다.

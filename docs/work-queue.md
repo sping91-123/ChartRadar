@@ -5,6 +5,7 @@
 ## 작업 처리 원칙
 
 - 저장소 운영 지침은 루트 `AGENTS.md`를 우선한다.
+- 특정 문제 묶음 자동 처리는 `docs/automation-runs/active-run.md`를 기준으로 한다.
 - 대표가 `AUTO NEXT`라고 하면 `AGENTS.md`, 이 문서, `docs/work-items/`를 읽고 다음 작업 1개만 선택한다.
 - 한 번에 하나의 `TODO`만 처리한다.
 - 상태가 `TODO`인 항목 중 우선순위가 가장 높은 것만 처리한다.
