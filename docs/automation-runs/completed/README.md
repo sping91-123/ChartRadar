@@ -9,3 +9,4 @@
 ## Runs
 
 - `post-refactor-stability-run.md`: refactor 이후 안정화 정리 run. 완료 후 `coin-radar-ux-redesign-run`으로 전환.
+- `coin-radar-ux-redesign-run.md`: Coin Radar UX 재설계 문서 run. 완료 후 `coin-radar-market-selection-ui-run`으로 전환.
