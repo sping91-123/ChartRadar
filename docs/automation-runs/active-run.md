@@ -41,7 +41,7 @@
 
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TODO | 시장 선택 화면 현재 구조 조사 | 홈 랜딩 / 시장 선택 화면 | LOW | 현재 시장 선택 화면 파일과 컴포넌트 구조를 확인하고, 어떤 wrapper/card가 큰 외곽 테두리 박스를 만드는지 조사한다. | 코드 수정 금지. | `git diff --check` |
+| 1 | DONE | 시장 선택 화면 현재 구조 조사 | 홈 랜딩 / 시장 선택 화면 | LOW | 현재 시장 선택 화면 파일과 컴포넌트 구조를 확인하고, 어떤 wrapper/card가 큰 외곽 테두리 박스를 만드는지 조사한다. | 코드 수정 금지. | `git diff --check` |
 | 2 | TODO | 큰 외곽 박스 제거 | 홈 랜딩 / 시장 선택 화면 | MEDIUM | 시장 선택 화면에서 큰 외곽 wrapper/border/card를 제거하거나 약화한다. Coin Radar와 Global Radar 선택 카드는 유지하되, 전체 화면을 더 넓게 쓰는 구조로 조정한다. | route 변경 금지. 마지막 사용 시장 기억 구현 금지. Global Radar 진입 제거 금지. 결제/인증/푸시/Android 변경 금지. | `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`, `cmd /c npx tsc --noEmit`, `git diff --check`, 340px/360px 시장 선택 화면 확인, Coin Radar / Global Radar 진입 확인 |
 | 3 | TODO | 구현 결과 문서 정리 | 문서 / UX | LOW | `docs/coin-radar-ux-redesign-plan.md` 또는 관련 work item에 구현 결과와 남은 과제를 기록한다. 마지막 사용 시장 기억은 다음 구현 후보로 유지한다. | 앱 코드 수정 금지. | `git diff --check` |
 

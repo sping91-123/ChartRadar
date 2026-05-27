@@ -401,3 +401,42 @@ Coin Radar UX 재구성은 Pro gating을 약화시키면 안 된다.
 - Coin Radar/Global Radar 선택 영역 간격과 우선순위 조정.
 - 모바일 340px/360px overflow 확인.
 - 코드 변경은 이 별도 구현 run에서만 진행한다.
+
+## 시장 선택 화면 현재 구조 조사
+
+현재 시장 선택 화면은 `src/app/page.tsx`에서 `HomeEntryGate`를 렌더링하고, 실제 시장 선택 UI는 `src/components/HomeEntryGate.tsx`의 `MarketSelector`가 담당한다.
+
+### 렌더링 흐름
+
+- `src/app/page.tsx`: 첫 진입 페이지이며 `<HomeEntryGate />`만 렌더링한다.
+- `HomeEntryGate`: 스플래시, 로그인 선택, Basic 둘러보기 상태를 처리한 뒤 `MarketSelector`를 렌더링한다.
+- `MarketSelector`: Coin Radar와 Global Radar 선택 화면을 구성한다.
+- `marketEntries`: Coin Radar는 `/crypto`, Global Radar는 `/global`로 연결한다.
+
+### 큰 외곽 박스를 만드는 구조
+
+- `MarketSelector`의 최상위 `main`은 전체 viewport를 grid로 중앙 정렬한다.
+- 그 안의 `section`이 `enterprise-panel`, `max-w-5xl`, `rounded-2xl`, `p-3 sm:p-6 lg:p-10`, `overflow-hidden`을 가진다.
+- 이 `section`이 화면 전체를 감싸는 큰 외곽 패널처럼 보이는 핵심 wrapper다.
+- 모바일에서는 `w-[calc(100vw-1.5rem)]`와 `-translate-y-[6dvh]`가 적용되어 첫 화면 안에 패널을 압축해 넣는다.
+
+### 중첩 카드 느낌을 만드는 구조
+
+- `section.enterprise-panel` 내부에 Coin Radar와 Global Radar 선택 `Link` 카드 2개가 있다.
+- 각 `Link`는 `rounded-2xl`, `border border-white/10`, `bg-white/[0.035]`, hover shadow를 가진다.
+- 결과적으로 "큰 외곽 enterprise-panel + 내부 선택 카드 2개"의 중첩 카드 구조가 된다.
+- 개별 선택 카드는 유지 대상이며, 다음 구현에서는 큰 외곽 wrapper만 제거하거나 약화하는 것이 범위에 맞다.
+
+### 다음 구현에서 건드릴 후보
+
+- `MarketSelector`의 `section.enterprise-panel`을 제거하거나 배경/테두리/패딩을 약화한다.
+- `main`의 중앙 정렬과 viewport 높이 정책은 유지하되, 모바일 공간을 더 넓게 쓰도록 내부 wrapper를 단순화한다.
+- Coin Radar와 Global Radar `Link` 카드, href(`/crypto`, `/global`), 문구, 진입 동선은 유지한다.
+
+### 다음 구현에서 건드리지 않을 것
+
+- route 변경 없음.
+- 마지막 사용 시장 기억 구현 없음.
+- `/spot`, `/home`, `/macro` 신규 route 없음.
+- Global Radar 진입 제거 없음.
+- 결제, 인증, 푸시, Android, Supabase, production 변경 없음.
