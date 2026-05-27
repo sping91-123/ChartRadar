@@ -34,7 +34,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | DONE | StockRadarApp 리팩토링 1단계 | `/Global` | MEDIUM | `src/components/StockRadarApp.tsx`에서 타입/상수/표시 helper만 `src/components/global/` 아래로 분리한다. | 차트 로직, API fetch, lightweight-charts useEffect, 모바일 하단 패널, Basic/Pro gating 변경 금지. | `git diff --check`, `cmd /c npx tsc --noEmit`, `npm.cmd run build`, `npm.cmd run smoke:mobile`, `npm.cmd run smoke:all`, `/global/assets` 340px/360px 확인 |
 | 2 | DONE | LiveMarketChart 리팩토링 진행 상태 문서 정리 | `/crypto` | LOW | 이미 완료된 `/crypto` 리팩토링 단계들을 `docs/work-items/P2-live-market-chart-refactor.md`에 반영한다. | 앱 코드 수정 금지. | `git diff --check` |
-| 3 | TODO | pushAlertScanner 구조 분리 진행 상태 문서 정리 | 알림 시스템 | LOW | 최근 진행한 target helper, diagnostics helper 등 분리 상태를 work item 문서에 정확히 반영한다. | 앱 코드 수정 금지. | `git diff --check` |
+| 3 | DONE | pushAlertScanner 구조 분리 진행 상태 문서 정리 | 알림 시스템 | LOW | 최근 진행한 target helper, diagnostics helper 등 분리 상태를 work item 문서에 정확히 반영한다. | 앱 코드 수정 금지. | `git diff --check` |
 | 4 | TODO | Play Store AAB 재생성 준비 체크리스트 보강 | Play Console / 출시 대응 | MEDIUM | AndroidManifest `OPEN_ALERTS`, 푸시 탭 이동, versionCode 증가, signed AAB 생성, Play 비공개 테스트 업로드 전 체크리스트를 문서로 정리한다. | versionCode 변경 금지, AAB 생성 금지, Play Console 업로드 금지. | `git diff --check` |
 
 ## 상태 값

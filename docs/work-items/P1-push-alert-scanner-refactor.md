@@ -1,6 +1,6 @@
 # P1 pushAlertScanner 구조 분리
 
-- 상태: `TODO`
+- 상태: `IN_PROGRESS`
 - 담당방: 알림 시스템
 - 인텔리전스: 높음
 - 우선순위: P1
@@ -21,7 +21,9 @@
 - 2단계 일부 완료: entitlement, preference, duplicate guard helper를 분리했습니다. 관련 커밋: `aa06cae`, `b6cfb91`, `029f69c`.
 - 3단계 일부 완료: optional source scanner를 `src/lib/server/push/scanners/` 아래로 분리했습니다. 관련 커밋: `7f1168a`.
 - diagnostics helper 분리 완료: `emptyDiagnostics`, `eventDiagnosticSample`, `pushSample`, `eventDiagnostic`, `pushPreferenceSkippedSample`을 `src/lib/server/push/diagnostics.ts`로 분리했습니다. 관련 커밋: `19b116d`.
-- 다음 작은 후보: target path helper 또는 event builder helper를 동작 변경 없이 분리합니다. 발송, DB 기록, 중복 방지, 권한 판정, threshold 정책은 변경하지 않습니다.
+- target helper 분리 완료: `cryptoSetupTargetPath`, `stockSetupTargetPath`, `setupTargetPath`, `stockSetupAlertKind`, `stockIndexSymbols`를 `src/lib/server/push/targets.ts`로 분리했습니다. 관련 커밋: `1bedd46`.
+- 현재 `src/lib/server/push/` 아래에는 `types`, `thresholds`, `eligibility`, `entitlements`, `preferences`, `duplicateGuard`, `sourceResults`, `diagnostics`, `targets`, `scanners/`가 분리되어 있습니다.
+- 다음 작은 후보: event builder helper를 동작 변경 없이 분리합니다. 발송, `push_alert_events` DB 기록, 중복 방지 event key, 권한 판정, threshold 정책은 변경하지 않습니다.
 
 ## 검증 기준
 
