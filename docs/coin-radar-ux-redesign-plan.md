@@ -89,6 +89,72 @@ Global Radar는 삭제하지 않는다.
 | 매크로 | 코인 판단에 필요한 외부 변수 요약 | `/macro` 또는 `/news?market=crypto` | 공포탐욕, 도미넌스, 김프, 환율, 펀딩비, 주요 이벤트 |
 | 복기 | 저장, 판단 기록, 저널 | `/journal?market=crypto` | 저장한 판단과 조건 복기 |
 
+## Coin Radar 하단 탭 라우팅 설계
+
+하단 탭은 Coin Radar 내부 이동을 빠르게 만드는 모바일 내비게이션이다. 첫 구현에서는 기존 route를 최대한 보존하고, 새 route는 skeleton 또는 redirect 후보로만 다룬다.
+
+### 권장 탭 구조
+
+| 탭 | 권장 route | 초기 연결 방식 | 비고 |
+| --- | --- | --- | --- |
+| 홈 | `/crypto` | 기존 Coin Radar 기준 route 유지 | Coin Radar 홈 MVP가 준비되기 전까지 기존 BTC/ETH 레이더를 유지 |
+| 현물 | `/spot` | 신규 route 후보 | 업비트/빗썸 KRW 현물 레이더 전용 |
+| 선물 | `/crypto` 내부 segment 또는 `/alts` | 초기에는 `/crypto`와 `/alts` 기존 route 연결 | 메이저/알트 구분을 탭 내부에서 명확히 함 |
+| 매크로 | `/macro` 또는 `/news?market=crypto` | 초기에는 `/news?market=crypto` 재사용 | 코인 판단용 압축 매크로만 표시 |
+| 복기 | `/journal?market=crypto` | 기존 route 재사용 | 저장/복기/저널 흐름 유지 |
+
+### 단계별 route 전략
+
+1. 0단계: 기존 route 보존.
+   - `/crypto`는 Coin Radar 기준 route다.
+   - `/alts`는 알트 레이더로 유지한다.
+   - `/news?market=crypto`, `/journal?market=crypto`, `/alerts?market=crypto`를 그대로 사용한다.
+2. 1단계: 하단 탭 UI만 기존 route에 연결.
+   - 홈은 `/crypto`.
+   - 선물 메이저는 `/crypto`, 선물 알트는 `/alts`.
+   - 매크로는 `/news?market=crypto`.
+   - 복기는 `/journal?market=crypto`.
+3. 2단계: 신규 route 후보 검증.
+   - 현물 `/spot` skeleton을 별도 구현 run에서 검토한다.
+   - 매크로 `/macro`는 기존 뉴스/이벤트 구조와 중복을 줄일 수 있을 때만 검토한다.
+   - `/home`은 `/crypto`와 역할이 겹치므로 첫 구현 후보로는 낮은 우선순위다.
+4. 3단계: route 정리.
+   - 사용자 반응과 구현 안정성을 본 뒤 `/crypto`를 홈으로 유지할지, 선물 메이저로 좁힐지 결정한다.
+
+### `/crypto`와 `/majors` 원칙
+
+- `/crypto`는 실제 Coin Radar 기준 route다.
+- `/majors`는 `/crypto` 호환/redirect로만 유지한다.
+- 새 하단 탭에서 `/majors`를 직접 노출하지 않는다.
+- 기존 push targetPath가 `/crypto`를 가리키는 경우 당장 바꾸지 않는다.
+
+### 푸시 targetPath 연결
+
+| 알림 유형 | 초기 targetPath | 향후 후보 |
+| --- | --- | --- |
+| BTC/ETH 메이저 알림 | `/crypto` | `/crypto` 홈 또는 선물 메이저 segment |
+| 알트 알림 | `/alts` | 선물 탭의 알트 segment |
+| 현물 후보 알림 | 없음 또는 `/spot` 후보 | `/spot` |
+| 코인 뉴스/이벤트 | `/news?market=crypto` | `/macro` 또는 매크로 탭 |
+| 복기/저널 | `/journal?market=crypto` | 복기 탭 |
+
+targetPath 변경은 FCM, push-cron, Android intent, 설치본 푸시 탭 이동에 영향을 줄 수 있으므로 설계 run에서는 변경하지 않는다.
+
+### 하단 탭과 Pro/BM
+
+- 홈 Basic은 빠른 판단 보조를 제공하되 세부 조건은 Pro에서 확장한다.
+- 현물 탭 Basic은 제한된 후보와 요약만 보여주고, Pro는 상세 조건과 필터를 확장한다.
+- 선물 탭은 기존 Coin Pro gating을 약화시키지 않는다.
+- 매크로 탭은 Coin Radar 판단용 압축 신호만 제공하고, Global Radar의 독립 가치를 침범하지 않는다.
+- 복기 탭은 저장/복기 가치를 강화하되 투자 성과 보장 문구를 쓰지 않는다.
+
+### 구현 전 결정할 것
+
+- `/crypto`를 계속 Coin Radar 홈으로 유지할지, 선물 메이저 중심 화면으로 좁힐지.
+- `/spot` 신규 route를 바로 만들지, 기존 `/crypto` 내부 탭으로 먼저 실험할지.
+- `/macro` 신규 route가 필요한지, `/news?market=crypto` 재구성으로 충분한지.
+- 하단 탭이 전체 앱 공통인지, Coin Radar 내부에서만 보이는지.
+
 ## 홈 MVP 구조
 
 홈은 가장 먼저 정리할 화면이다. 목적은 "지금 시장을 봐도 되는지, 기다려야 하는지"를 빠르게 알려주는 것이다.
@@ -283,5 +349,4 @@ Coin Radar UX 재구성은 Pro gating을 약화시키면 안 된다.
 
 ## 다음 설계 작업
 
-1. Coin Radar 하단 탭 라우팅 설계.
-2. 구현 1단계 후보 선정.
+1. 구현 1단계 후보 선정.
