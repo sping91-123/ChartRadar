@@ -18,6 +18,7 @@ import { tokenPreferenceDecision, tokenWants } from "@/lib/server/push/preferenc
 import { scanLiquidationEvent } from "@/lib/server/push/scanners/liquidationScanner";
 import { scanMacroCalendarEvent, scanNewsEvent } from "@/lib/server/push/scanners/macroScanner";
 import { scanOptionalEventSource } from "@/lib/server/push/sourceResults";
+import { setupTargetPath, stockIndexSymbols, stockSetupAlertKind } from "@/lib/server/push/targets";
 import type {
   PushAlertEvent,
   PushAlertPresetRow,
@@ -36,7 +37,6 @@ import { analyzeTechnicalRadar } from "@/lib/technicalRadar";
 
 const cryptoModes: TradingMode[] = ["scalp", "swing"];
 const stockMomentumSymbols = ["QQQ", "SPY", "NQ=F", "ES=F", "^VIX", "VIXY", "SMH", "SOXX", "NVDA", "AMD", "UUP", "GLD", "TLT"];
-const stockIndexSymbols = new Set(["QQQ", "SPY", "NQ=F", "ES=F"]);
 const volatilitySymbols = new Set(["^VIX", "VIXY"]);
 const semiconductorSymbols = new Set(["SMH", "SOXX", "NVDA", "AMD"]);
 const riskOffAssetSymbols = new Set(["UUP", "GLD", "TLT"]);
@@ -53,22 +53,6 @@ interface CooldownDecision {
   blocked: boolean;
   reason: "symbol_cooldown" | "market_scout_limit" | null;
   minutes: number;
-}
-
-function cryptoSetupTargetPath(symbol?: string) {
-  return symbol && !isCryptoMajor(symbol) ? "/alts" : "/crypto";
-}
-
-function stockSetupTargetPath(symbol?: string) {
-  return symbol && !stockIndexSymbols.has(symbol) ? "/global/assets" : "/global";
-}
-
-function setupTargetPath(market: SetupAlertMarket, symbol?: string) {
-  return market === "crypto" ? cryptoSetupTargetPath(symbol) : stockSetupTargetPath(symbol);
-}
-
-function stockSetupAlertKind(symbol: string): PushAlertEvent["alertKind"] {
-  return stockIndexSymbols.has(symbol) ? "global_momentum" : "global_asset";
 }
 
 function safeErrorMessage(error: unknown) {
