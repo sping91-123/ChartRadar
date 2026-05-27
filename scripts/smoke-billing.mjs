@@ -43,6 +43,7 @@ const files = {
   watchlist: read("src/lib/watchlist.ts"),
   watchlistPanel: read("src/components/WatchlistPanel.tsx"),
   stockRadarApp: read("src/components/StockRadarApp.tsx"),
+  stockRadarConfig: read("src/components/global/stockRadarConfig.ts"),
   launchChecklist: read("LAUNCH_CHECKLIST.md"),
   paymentGuide: read("docs/payment-launch.md"),
   appStoreGuide: read("docs/app-store-release.md"),
@@ -408,7 +409,7 @@ if (files.stockRadarApp.includes("getWatchlistLimit(profile?.plan ?? \"free\")")
   fail("글로벌 관심종목 플랜 연동", "StockRadarApp에서 로그인 플랜 기준 한도를 찾지 못했습니다.");
 }
 
-if (files.stockRadarApp.includes("globalWatchlistMaxItems = 150") && !files.stockRadarApp.includes("slice(0, 30)")) {
+if ((files.stockRadarApp.includes("globalWatchlistMaxItems = 150") || files.stockRadarConfig.includes("globalWatchlistMaxItems = 150")) && !files.stockRadarApp.includes("slice(0, 30)") && !files.stockRadarConfig.includes("slice(0, 30)")) {
   pass("글로벌 관심종목 하드코딩 한도 제거", "글로벌 관심종목 저장 한도가 30개로 고정되지 않습니다.");
 } else {
   fail("글로벌 관심종목 하드코딩 한도 제거", "StockRadarApp에 30개 고정 저장 한도가 남아 있습니다.");
