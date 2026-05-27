@@ -42,7 +42,7 @@
 
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TODO | Coin Radar UX 구조 문서화 | 제품 구조 / Coin Radar | LOW | `docs/coin-radar-ux-redesign-plan.md`를 생성해 Global Radar 독립 유지 원칙, Coin Radar 내부 하단 탭 후보, 홈 MVP, 현물 레이더 MVP, 선물 탭 내부 구조, Coin Radar 안의 매크로 역할, 기존 route 영향, 푸시 `targetPath` 영향, Pro/BM 영향을 정리한다. | 앱 코드 수정 금지. | `git diff --check` |
+| 1 | DONE | Coin Radar UX 구조 문서화 | 제품 구조 / Coin Radar | LOW | `docs/coin-radar-ux-redesign-plan.md`를 생성해 Global Radar 독립 유지 원칙, Coin Radar 내부 하단 탭 후보, 홈 MVP, 현물 레이더 MVP, 선물 탭 내부 구조, Coin Radar 안의 매크로 역할, 기존 route 영향, 푸시 `targetPath` 영향, Pro/BM 영향을 정리한다. | 앱 코드 수정 금지. | `git diff --check` |
 | 2 | TODO | 시장 선택 화면 단순화 설계 | 홈 랜딩 / 시장선택화면 | LOW | 시장 선택 화면의 큰 외곽 테두리 박스 제거, 마지막 사용 시장 기억, 기본 시작 화면 설정 방식을 문서화한다. | 코드 수정 금지. | `git diff --check` |
 | 3 | TODO | Coin Radar 홈 MVP 설계 | Coin Radar | MEDIUM | 홈에서 대표 코인 선택, 방향성, 점수, 리스크, 다음 확인 조건, BTC 기준 시장 체력, 공포탐욕, BTC RSI, BTC 스토캐스틱, BTC 트렌드, 도미넌스, 롱숏비율, 김프, BTC/ETH/XRP 펀딩비, 환율을 어떻게 보여줄지 설계한다. | 코드 수정 금지. RSI/스토캐스틱/트렌드는 선택 코인이 아니라 BTC 기준으로 정리한다. | `git diff --check` |
 | 4 | TODO | 현물 레이더 데이터/UX 조사 | Coin Spot / 현물 | MEDIUM | 업비트/빗썸 KRW 현물 레이더 MVP에 필요한 public API, 현재가, 캔들, 거래대금, 상승률, 과열/눌림/관심 후보 기준, 투자 추천처럼 보이지 않는 문구 원칙을 문서화한다. | 코드 구현 금지. 주문/계정 연동 금지. | `git diff --check` |
