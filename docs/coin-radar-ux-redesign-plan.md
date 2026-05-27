@@ -347,6 +347,57 @@ Coin Radar UX 재구성은 Pro gating을 약화시키면 안 된다.
 - Global Pro는 Global Radar 독립 가치를 유지한다.
 - All Market Pro는 Coin Radar와 Global Radar를 함께 쓰는 사용자에게 자연스럽게 설명한다.
 
-## 다음 설계 작업
+## 구현 1단계 후보 선정
 
-1. 구현 1단계 후보 선정.
+설계 run 이후 첫 실제 구현은 작고 되돌리기 쉬운 작업부터 시작한다. route 신설, API adapter, push targetPath 변경은 영향 범위가 커서 첫 단계로 두지 않는다.
+
+### 후보 비교
+
+| 후보 | 장점 | 리스크 | 1단계 적합도 |
+| --- | --- | --- | --- |
+| 시장 선택 화면 큰 외곽 박스 제거 | 앱 구조 변경 없이 첫 인상과 공간감을 개선할 수 있음 | 시각 회귀만 확인하면 됨 | 높음 |
+| 마지막 사용 시장 기억 | 반복 진입성이 좋아짐 | localStorage, redirect, 기본 시작 정책 결정 필요 | 중간 |
+| Coin Radar 홈 MVP skeleton | 제품 방향을 가장 직접적으로 보여줌 | `/crypto` 역할 변경과 기존 BTC/ETH 레이더 충돌 가능 | 중간 |
+| 현물 레이더 API adapter 설계 | 현물 레이더 기반 마련 | public API rate limit, 서버 route, 데이터 정규화 필요 | 낮음 |
+
+### 선정 후보
+
+첫 구현 후보는 "시장 선택 화면 큰 외곽 박스 제거"다.
+
+선정 이유:
+
+- 앱 코드 영향이 시장 선택 화면 UI에 제한된다.
+- route, FCM, push-cron, Android intent, 결제, Supabase, Pro gating에 닿지 않는다.
+- Global Radar 독립 진입 동선을 유지한 채 Coin Radar/Global Radar를 더 가볍게 보여줄 수 있다.
+- 구현 후 모바일 340px/360px와 데스크톱 첫 화면만 확인하면 회귀 범위를 좁힐 수 있다.
+
+### 구현 범위 초안
+
+- 시장 선택 화면에서 화면 전체를 감싸는 큰 외곽 테두리 또는 중첩 카드 느낌을 줄인다.
+- Coin Radar와 Global Radar 선택 영역은 유지한다.
+- Global Radar 설명을 코인 보조 매크로처럼 축소하지 않는다.
+- Pro, Learn, 정책 링크는 주 동선보다 낮은 우선순위로 둔다.
+- route 이동, 마지막 사용 시장 저장, `/spot`, `/macro` 신규 route는 포함하지 않는다.
+
+### 검증 후보
+
+- `git diff --check`
+- `cmd /c npx tsc --noEmit`
+- `npm.cmd run build`
+- `npm.cmd run smoke:mobile`
+- `npm.cmd run smoke:all`
+- 시장 선택 화면 340px/360px 모바일 확인
+- Coin Radar와 Global Radar 진입 링크 확인
+
+### 다음 active run 제안
+
+설계 run이 완료되면 별도 구현 active run을 생성한다.
+
+추천 run 이름: `coin-radar-market-selection-ui-run`
+
+첫 작업 후보:
+
+- 시장 선택 화면 큰 외곽 박스 제거.
+- Coin Radar/Global Radar 선택 영역 간격과 우선순위 조정.
+- 모바일 340px/360px overflow 확인.
+- 코드 변경은 이 별도 구현 run에서만 진행한다.

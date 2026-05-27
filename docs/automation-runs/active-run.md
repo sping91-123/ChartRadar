@@ -47,7 +47,7 @@
 | 3 | DONE | Coin Radar 홈 MVP 설계 | Coin Radar | MEDIUM | 홈에서 대표 코인 선택, 방향성, 점수, 리스크, 다음 확인 조건, BTC 기준 시장 체력, 공포탐욕, BTC RSI, BTC 스토캐스틱, BTC 트렌드, 도미넌스, 롱숏비율, 김프, BTC/ETH/XRP 펀딩비, 환율을 어떻게 보여줄지 설계한다. | 코드 수정 금지. RSI/스토캐스틱/트렌드는 선택 코인이 아니라 BTC 기준으로 정리한다. | `git diff --check` |
 | 4 | DONE | 현물 레이더 데이터/UX 조사 | Coin Spot / 현물 | MEDIUM | 업비트/빗썸 KRW 현물 레이더 MVP에 필요한 public API, 현재가, 캔들, 거래대금, 상승률, 과열/눌림/관심 후보 기준, 투자 추천처럼 보이지 않는 문구 원칙을 문서화한다. | 코드 구현 금지. 주문/계정 연동 금지. | `git diff --check` |
 | 5 | DONE | Coin Radar 하단 탭 라우팅 설계 | 모바일 내비게이션 | MEDIUM | 홈/현물/선물/매크로/복기 구조를 route와 연결한다. 후보는 홈 `/home` 또는 `/`, 현물 `/spot`, 선물 `/crypto` 내부 메이저/알트, 매크로 `/macro` 또는 `/news?market=crypto`, 복기 `/journal?market=crypto`다. | 코드 수정 금지. | `git diff --check` |
-| 6 | TODO | 구현 1단계 후보 선정 | 전략실 메인 | LOW | 위 설계 문서들을 바탕으로 첫 실제 구현 작업 1개를 선정한다. 후보는 시장 선택 화면 큰 외곽 박스 제거, 마지막 사용 시장 기억, Coin Radar 홈 MVP skeleton, 현물 레이더 API adapter 설계다. | 코드 수정 금지. | `git diff --check` |
+| 6 | DONE | 구현 1단계 후보 선정 | 전략실 메인 | LOW | 위 설계 문서들을 바탕으로 첫 실제 구현 작업 1개를 선정한다. 후보는 시장 선택 화면 큰 외곽 박스 제거, 마지막 사용 시장 기억, Coin Radar 홈 MVP skeleton, 현물 레이더 API adapter 설계다. | 코드 수정 금지. | `git diff --check` |
 
 ## Status Values
 
