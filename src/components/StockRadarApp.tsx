@@ -73,9 +73,9 @@ function GlobalAssetChecklist({ selectedInfo }: { selectedInfo: StockSymbolInfo 
   ];
 
   return (
-    <div className="mt-3 grid gap-2 md:grid-cols-3">
+    <div className="mt-3 grid divide-y divide-white/10 md:grid-cols-3 md:divide-x md:divide-y-0">
       {items.map(({ icon: Icon, title, body }) => (
-        <article key={title} className="rounded-lg border border-white/10 bg-black/20 p-3">
+        <article key={title} className="px-3 py-3">
           <div className="flex items-center gap-2">
             <Icon className="text-cyan-300" size={15} aria-hidden />
             <p className="text-xs font-black text-white">{title}</p>
@@ -119,14 +119,14 @@ function GlobalPlaybook({
 
   return (
     <div className="mt-5 grid gap-3 lg:grid-cols-4">
-      <article className={`rounded-lg border p-4 ${toneBadgeClass(sessionState?.tone ?? "neutral")}`}>
+      <article className="border-t border-white/10 py-4 first:border-t-0">
         <Clock3 size={20} aria-hidden />
         <p className="mt-3 text-xs font-black opacity-80">미국장 구간</p>
         <h3 className="mt-2 text-base font-black text-white">{sessionState?.title ?? "미국장 시간 확인 중"}</h3>
         <p className="mt-2 text-xs leading-5 text-slate-300">{sessionState?.detail ?? "현재 한국 시간 기준 미국장 구간을 확인하고 있습니다."}</p>
       </article>
 
-      <article className={`rounded-lg border p-4 ${toneBadgeClass(tone)}`}>
+      <article className="border-t border-white/10 py-4 first:border-t-0">
         <Compass size={20} aria-hidden />
         <p className="mt-3 text-xs font-black opacity-80">먼저 볼 것</p>
         <h3 className="mt-2 text-base font-black text-white">{focus}</h3>
@@ -135,14 +135,14 @@ function GlobalPlaybook({
         </p>
       </article>
 
-      <article className="rounded-lg border border-white/10 bg-black/20 p-4">
+      <article className="border-t border-white/10 py-4 first:border-t-0">
         <Target className="text-cyan-300" size={20} aria-hidden />
         <p className="mt-3 text-xs font-black text-slate-400">기준선</p>
         <h3 className="mt-2 text-base font-black text-white">기준선 행동</h3>
         <p className="mt-2 text-xs leading-5 text-slate-300">{basis}</p>
       </article>
 
-      <article className="rounded-lg border border-white/10 bg-black/20 p-4">
+      <article className="border-t border-white/10 py-4 first:border-t-0">
         <Shield className="text-cyan-300" size={20} aria-hidden />
         <p className="mt-3 text-xs font-black text-slate-400">위험 메모</p>
         <h3 className="mt-2 text-base font-black text-white">위험도 {riskScore === null ? "확인 중" : `${Math.round(riskScore)}%`}</h3>
@@ -240,7 +240,7 @@ function StockSnapshot({
 
   return (
     <div className="grid gap-3 lg:grid-cols-4">
-      <div className={`rounded-lg border p-4 lg:col-span-2 ${toneBadgeClass(tone)}`}>
+      <div className="border-y border-white/10 py-4 lg:col-span-2">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.2em] opacity-80">세부 근거 요약</p>
@@ -252,22 +252,22 @@ function StockSnapshot({
           상단 판단에 사용된 상승, 하락, 횡보 근거 수와 가까운 가격 기준선을 분리해 확인합니다.
         </p>
         <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-md bg-black/20 p-2">
+          <div className="border-t border-white/10 px-2 py-2 first:border-t-0 sm:border-l sm:border-t-0 sm:first:border-l-0">
             <p className="text-lg font-black text-emerald-300">{report?.bullishCount ?? "-"}</p>
             <p className="text-[11px] font-bold text-slate-300">상승 근거</p>
           </div>
-          <div className="rounded-md bg-black/20 p-2">
+          <div className="border-t border-white/10 px-2 py-2 first:border-t-0 sm:border-l sm:border-t-0 sm:first:border-l-0">
             <p className="text-lg font-black text-rose-300">{report?.bearishCount ?? "-"}</p>
             <p className="text-[11px] font-bold text-slate-300">하락 근거</p>
           </div>
-          <div className="rounded-md bg-black/20 p-2">
+          <div className="border-t border-white/10 px-2 py-2 first:border-t-0 sm:border-l sm:border-t-0 sm:first:border-l-0">
             <p className="text-lg font-black text-slate-200">{report?.neutralCount ?? "-"}</p>
             <p className="text-[11px] font-bold text-slate-300">횡보 근거</p>
           </div>
         </div>
       </div>
 
-      <div className="rounded-lg border border-surface-line bg-black/20 p-4">
+      <div className="border-y border-white/10 py-4">
         <Activity className="text-cyan-300" size={20} aria-hidden />
         <p className="mt-3 text-xs font-bold text-slate-400">현재가와 변동</p>
         <p className="mt-1 text-2xl font-black text-white">{latest ? formatPrice(latest.close) : "미확인"}</p>
@@ -276,7 +276,7 @@ function StockSnapshot({
         </p>
       </div>
 
-      <div className="rounded-lg border border-surface-line bg-black/20 p-4">
+      <div className="border-y border-white/10 py-4">
         <Shield className="text-cyan-300" size={20} aria-hidden />
         <p className="mt-3 text-xs font-bold text-slate-400">가까운 기준선</p>
         <p className="mt-1 text-sm font-black text-emerald-200">지지 {formatPrice(support)}</p>
@@ -284,7 +284,7 @@ function StockSnapshot({
       </div>
 
       {report && report.fearGreed.score >= 75 ? (
-        <div className="rounded-lg border border-amber-300/25 bg-amber-500/10 p-4 lg:col-span-4">
+        <div className="border-y border-amber-300/25 py-4 lg:col-span-4">
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 shrink-0 text-amber-300" size={18} aria-hidden />
             <p className="text-sm leading-6 text-amber-100">
@@ -333,7 +333,7 @@ function IctStatusCard({
   tone?: DirectionState;
 }) {
   return (
-    <article className={`rounded-lg border p-3 ${directionClass(tone)}`}>
+    <article className="border-t border-white/10 py-3 first:border-t-0">
       <p className="text-[11px] font-black uppercase tracking-[0.16em] opacity-75">{title}</p>
       <h4 className="mt-2 text-base font-black text-white">{value}</h4>
       <p className="mt-2 text-xs leading-5 text-slate-300">{detail}</p>
@@ -351,7 +351,7 @@ function GlobalIctPanel({ analysis, timeframe, candlesLength }: { analysis: Time
   const latestDisplacement = analysis.latestDisplacement;
 
   return (
-    <section className="rounded-lg border border-surface-line bg-black/20 p-4">
+    <section className="border-y border-surface-line py-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.18em] text-accent-blue">ICT Radar</p>
@@ -474,7 +474,7 @@ function GlobalRadarControlDock({
             className={`min-h-10 rounded-md border px-2 text-xs font-black transition ${
               timeframe === item
                 ? "border-accent-blue bg-accent-blue text-slate-950"
-                : "border-white/10 bg-white/[0.04] text-slate-300 hover:border-accent-blue/60"
+                : "border-transparent bg-transparent text-slate-300 hover:border-accent-blue/60 hover:bg-white/[0.03]"
             }`}
           >
             {item}
@@ -490,7 +490,7 @@ function GlobalRadarControlDock({
             className={`min-h-9 rounded-md border px-2 text-xs font-black transition ${
               radarMode === item.value
                 ? "border-white/20 bg-white text-slate-950"
-                : "border-white/10 bg-white/[0.04] text-slate-300 hover:border-white/25"
+                : "border-transparent bg-transparent text-slate-300 hover:border-white/25 hover:bg-white/[0.03]"
             }`}
             title={item.caption}
           >
@@ -504,13 +504,13 @@ function GlobalRadarControlDock({
   return (
     <>
       <div
-        className={`fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 mx-auto rounded-lg border border-surface-line bg-slate-950/94 p-2 shadow-2xl shadow-black/50 backdrop-blur sm:hidden ${showMobileDock ? "block" : "hidden"}`}
+        className={`fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 mx-auto rounded-lg border border-surface-line bg-slate-950/88 p-2 shadow-xl shadow-black/30 backdrop-blur sm:hidden ${showMobileDock ? "block" : "hidden"}`}
         aria-label="글로벌 자산레이더 모바일 조작 패널"
       >
         {renderContent()}
       </div>
       <div
-        className="sticky top-3 z-20 mx-auto hidden max-w-5xl rounded-lg border border-surface-line bg-slate-950/92 p-2 shadow-2xl shadow-black/40 backdrop-blur sm:block"
+        className="sticky top-3 z-20 mx-auto hidden max-w-5xl border-y border-surface-line bg-slate-950/72 py-2 backdrop-blur sm:block"
         aria-label="글로벌 자산레이더 조작 패널"
       >
         {renderContent()}
@@ -721,11 +721,11 @@ export function StockRadarApp() {
   return (
     <section
       id="asset-radar"
-      className="scroll-mt-24 rounded-lg border border-surface-line bg-surface-card p-4 pb-40 shadow-glow sm:p-5 sm:pb-36"
+      className="scroll-mt-24 border-y border-surface-line py-5 pb-40 sm:py-6 sm:pb-36"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-accent-blue/30 bg-accent-blue/15 text-accent-blue">
+          <div className="grid h-10 w-10 shrink-0 place-items-center text-accent-blue">
             <BarChart3 size={21} aria-hidden />
           </div>
           <div>
@@ -740,14 +740,14 @@ export function StockRadarApp() {
         <button
           type="button"
           onClick={() => load()}
-          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-accent-blue/30 bg-accent-blue/10 px-3 text-xs font-black text-accent-blue transition hover:bg-accent-blue hover:text-slate-950"
+          className="inline-flex min-h-10 items-center justify-center gap-2 border-b border-accent-blue/40 bg-transparent px-1 text-xs font-black text-accent-blue transition hover:border-accent-blue hover:text-cyan-200"
         >
           <RefreshCw size={14} aria-hidden />
           새로고침
         </button>
       </div>
 
-      <div className="mt-5 rounded-lg border border-accent-blue/20 bg-accent-blue/[0.06] p-3 sm:p-4">
+      <div className="mt-5 border-y border-accent-blue/20 py-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <p className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.18em] text-accent-blue">
@@ -785,7 +785,7 @@ export function StockRadarApp() {
               className={`min-h-11 shrink-0 rounded-md border px-3 text-left transition ${
                 symbol === item.symbol
                   ? "border-accent-blue bg-accent-blue text-slate-950"
-                  : "border-surface-line bg-surface-cardSoft text-slate-200 hover:border-accent-blue/60"
+                  : "border-transparent bg-transparent text-slate-200 hover:border-accent-blue/60 hover:bg-white/[0.03]"
               }`}
             >
               <span className="block text-sm font-black">{item.symbol}</span>
@@ -798,7 +798,7 @@ export function StockRadarApp() {
 
         <GlobalAssetChecklist selectedInfo={selectedInfo} />
 
-        <div className="mt-3 rounded-lg border border-white/10 bg-black/20 p-3">
+        <div className="mt-4 border-y border-white/10 py-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-black text-white">관심 글로벌 종목</p>
@@ -833,7 +833,7 @@ export function StockRadarApp() {
                 className={`min-h-10 shrink-0 rounded-md border px-3 text-left transition ${
                   symbol === item.symbol
                     ? "border-emerald-300 bg-emerald-300 text-slate-950"
-                    : "border-white/10 bg-surface-cardSoft text-slate-200 hover:border-emerald-300/60"
+                    : "border-transparent bg-transparent text-slate-200 hover:border-emerald-300/60 hover:bg-white/[0.03]"
                 }`}
               >
                 <span className="block text-xs font-black">{item.symbol}</span>
@@ -854,7 +854,7 @@ export function StockRadarApp() {
               className={`min-h-8 rounded-md border px-2.5 text-[11px] font-black transition ${
                 selectedGroup === group
                   ? "border-white/20 bg-white text-slate-950"
-                  : "border-white/10 bg-black/20 text-slate-300 hover:border-accent-blue/60"
+                  : "border-transparent bg-transparent text-slate-300 hover:border-accent-blue/60 hover:bg-white/[0.03]"
               }`}
             >
               {group === "all" ? "전체" : groupLabels[group]}
@@ -871,7 +871,7 @@ export function StockRadarApp() {
               className={`min-h-12 rounded-md border px-2.5 text-left transition ${
                 symbol === item.symbol
                   ? "border-accent-blue bg-accent-blue/90 text-slate-950"
-                  : "border-white/10 bg-black/20 text-slate-200 hover:border-accent-blue/60"
+                  : "border-transparent bg-transparent text-slate-200 hover:border-accent-blue/60 hover:bg-white/[0.03]"
               }`}
             >
               <span className="block text-sm font-black">{item.symbol}</span>
@@ -882,7 +882,7 @@ export function StockRadarApp() {
           ))}
         </div>
         {visibleUniverse.length === 0 ? (
-          <p className="mt-3 rounded-md border border-white/10 bg-black/20 p-3 text-xs font-bold text-slate-500">
+          <p className="mt-3 border-y border-white/10 py-3 text-xs font-bold text-slate-500">
             검색 결과가 없습니다. 종목명이나 심볼을 조금 짧게 입력해 보세요.
           </p>
         ) : null}
@@ -897,7 +897,7 @@ export function StockRadarApp() {
         </div>
       ) : null}
 
-      <div className="mt-5 rounded-lg border border-surface-line bg-black/20 p-4">
+      <div className="mt-5 border-y border-surface-line py-4">
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-bold text-slate-500">선택 종목</p>
@@ -915,7 +915,7 @@ export function StockRadarApp() {
           ) : null}
         </div>
 
-        <div className="relative min-h-[320px] overflow-hidden rounded-md border border-white/10 bg-white/[0.02] sm:min-h-[360px]">
+        <div className="relative min-h-[320px] overflow-hidden border-y border-white/10 bg-transparent sm:min-h-[360px]">
           <div ref={chartRef} className="h-[320px] w-full sm:h-[360px]" />
           {state.status === "loading" ? (
             <div className="absolute inset-0 grid place-items-center bg-slate-950/70 text-sm text-slate-300 backdrop-blur-sm">

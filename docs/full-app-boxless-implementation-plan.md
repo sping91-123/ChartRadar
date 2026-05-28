@@ -209,3 +209,27 @@ Unchanged areas:
 Next recommended page group:
 
 - `/global/assets`, because it is the next Global Radar surface and contains chart/control wrappers that still need a careful visual pass.
+
+### `/global/assets` asset radar pilot
+
+Status: implemented on `codex/journal-boxless-form-list-pilot`.
+
+Applied changes:
+
+- Converted the `/global/assets` intro from a rounded card to a divider section.
+- Converted the main `StockRadarApp` surface from a card/shadow shell to a report-style full-width chart area.
+- Weakened the asset selection, featured assets, saved assets, group filters, and universe buttons toward flat list/button rows.
+- Converted checklist, playbook, technical snapshot, ICT, and chart wrappers toward divider/report presentation.
+- Reduced the desktop control dock from a floating card to a divider bar while keeping the mobile fixed control dock as the one intentional bottom panel.
+
+Unchanged areas:
+
+- Chart rendering and `lightweight-charts` setup.
+- Global asset API fetch and candle data shape.
+- Timeframe and radar mode controls.
+- Watchlist storage and Pro/Basic gating.
+- Billing, auth, Supabase, Android, FCM, and production-related code.
+
+Next recommended page group:
+
+- `/crypto` body redesign first pass, with extra care because a previous broad flatten attempt was backed up and rejected.

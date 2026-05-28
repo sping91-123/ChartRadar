@@ -12,7 +12,7 @@ export default function GlobalAssetsPage() {
         <Header market="stocks" />
         <RadarTopNav market="stocks" />
         <MacroTicker compact market="stocks" />
-        <section className="rounded-2xl border border-surface-line bg-surface-card/75 p-4 sm:p-5">
+        <section className="border-y border-surface-line py-5 sm:py-6">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-accent-blue">Global Asset Radar</p>
           <h1 className="mt-1 text-2xl font-black text-white">글로벌 자산레이더</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400 [word-break:keep-all]">
