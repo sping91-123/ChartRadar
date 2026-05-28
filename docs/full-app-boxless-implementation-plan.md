@@ -185,3 +185,27 @@ Unchanged areas:
 Next recommended page group:
 
 - `/global` body report/list pilot, because it is the next high-impact dashboard-style screen and must preserve Global Radar as an independent product mode.
+
+### `/global` body report/list pilot
+
+Status: implemented on `codex/journal-boxless-form-list-pilot`.
+
+Applied changes:
+
+- Weakened the compact global macro ticker from a card-like strip to a divider row.
+- Converted the Global Radar outer `enterprise-panel` shell to a full-width report section.
+- Converted the main market conclusion, core pressure rows, thermometer, focus assets, relationship checks, and detail sections toward divider/list/report flow.
+- Removed repeated nested rounded card wrappers from mini items, fallback checklist items, event rows, sector rows, leader rows, and news pressure rows.
+- Kept CTA, Pro upsell, warning, and status badges bounded where they function as touch targets or critical notices.
+
+Unchanged areas:
+
+- `/global` route behavior.
+- Global Radar independent product positioning.
+- `/api/stocks/market-board` fetch behavior.
+- Pro/Basic gating logic.
+- Billing, auth, Supabase, Android, FCM, and production-related code.
+
+Next recommended page group:
+
+- `/global/assets`, because it is the next Global Radar surface and contains chart/control wrappers that still need a careful visual pass.
