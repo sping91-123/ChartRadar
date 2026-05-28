@@ -55,7 +55,7 @@
 
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TODO | Header/Nav/AppShell 구조 조사 | App shell audit | LOW | Header, RadarTopNav, AppSurface 기반 shell, route wrapper에서 박스 느낌을 만드는 요소를 조사한다. | 코드 수정 금지. | `git diff --check` |
+| 1 | DONE | Header/Nav/AppShell 구조 조사 | App shell audit | LOW | Header, RadarTopNav, AppSurface 기반 shell, route wrapper에서 박스 느낌을 만드는 요소를 조사했다. 결과는 `docs/app-shell-boxless-audit.md`에 기록했다. | 코드 수정 금지. | `git diff --check` |
 | 2 | TODO | App shell boxless 기준 문서화 | Design system docs | LOW | Header/Nav가 언제 border/background를 쓰고 언제 divider만 쓰는지 문서화한다. Coin Radar와 Global Radar 독립성을 유지하면서 공통 shell을 가볍게 만드는 기준을 정리한다. | 코드 수정 금지. | `git diff --check` |
 | 3 | TODO | Header/Nav boxless pilot 적용 | App shell implementation | HIGH | Header와 RadarTopNav의 큰 박스/카드 느낌을 줄인다. 알림, 설정, 플랜 버튼은 유지한다. route, auth, plan, notification logic은 변경하지 않는다. | route 변경 금지. 로그인/인증 변경 금지. 결제/plan logic 변경 금지. 알림 로직 변경 금지. `/crypto`, `/global` 본문 대규모 수정 금지. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:all`; `git diff --check`; `/crypto` 360px screenshot; `/global` 360px screenshot; `/news` 360px screenshot; desktop screenshot |
 | 4 | TODO | pilot 결과 문서화 | Docs / UX | LOW | Header/Nav pilot 결과와 남은 문제를 문서화하고 다음 적용 후보를 정리한다. | 앱 코드 수정 금지. | `git diff --check` |
