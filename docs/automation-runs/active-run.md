@@ -2,36 +2,33 @@
 
 ## Run Title
 
-- `boxless-journal-pilot-run`
+- `full-app-boxless-implementation-run`
 
 ## Purpose
 
-- `/journal` 화면을 다음 boxless pilot 대상으로 삼는다.
-- 저장/복기 화면의 과한 `AppSurface`, `PanelCard`, form wrapper, card 구조를 줄인다.
-- 입력, 기록, 리스트 흐름을 더 앱다운 full-screen form/list 구조로 정리한다.
+- ChartRadar의 모든 주요 화면을 카드/박스/패널 중심 구조에서 벗어나 full-screen app flow로 전환한다.
+- 경계는 큰 박스가 아니라 여백, 타이포그래피, divider, list/report 흐름으로 만든다.
+- 이미 완료된 `/news`, 공통 Header/Nav, `/alerts` pilot을 기준으로 나머지 화면에 순차 적용한다.
 
 ## Background
 
-- `/news` boxless pilot, 공통 Header/Nav boxless pilot, `/alerts` boxless list pilot은 완료됐다.
-- `/journal`은 입력 폼, 저장 상태, 기록 리스트가 함께 있어 form wrapper와 card 중첩이 강할 가능성이 높다.
-- 저장/복기 데이터는 사용자 기록과 연결되므로 실제 구현 task는 HIGH risk로 취급한다.
+- 대표는 `/journal`만이 아니라 Coin Radar, Global Radar, 시장 선택, 자산, 일정/뉴스, 복기, 설정/알림, Pro까지 전 화면을 boxless 방향으로 전환하기로 결정했다.
+- 기존 `boxless-journal-pilot-run`은 범위가 너무 좁으므로 이 full-app implementation run으로 대체한다.
+- 진행 연속성은 채팅방이 아니라 이 active-run, completed 기록, PR, 검증 스크린샷에 저장한다.
 
-## Scope
+## Already Completed Pilots
 
-- 대상 route: `/journal`.
-- 조사 대상 후보:
-  - `src/app/journal/page.tsx`
-  - journal 관련 components.
-  - `AppSurface`, `PanelCard`, `bg-ui-panel`, `bg-ui-inset`, `border`, `rounded`, `shadow` 사용 지점.
-- 실제 UI 변경은 task 2에서만 제한적으로 진행한다.
-- task 2는 디자인 변경만 허용하며 저장/복기 데이터 로직은 변경하지 않는다.
+- `/news` boxless pilot.
+- 공통 Header/Nav/AppShell boxless pilot.
+- `/alerts` boxless list pilot, PR #1 merged.
 
 ## Product Principles
 
-- `/journal?market=crypto`와 `/journal?market=global`의 시장 구분을 유지한다.
-- Journal은 판단 복기와 기록 도구이며, 투자 수익 보장이나 매매 지시처럼 보이는 문구를 추가하지 않는다.
-- 입력과 기록 흐름은 가볍게 만들되 저장 안정성을 우선한다.
-- boxless 방향은 데이터 보존과 복기 기능 안정성보다 우선하지 않는다.
+- Coin Radar와 Global Radar는 동등한 상위 시장 모드로 유지한다.
+- Global Radar는 해외주식/해외선물 사용자용 독립 레이더이며, 코인 보조 매크로로 격하하지 않는다.
+- 투자 권유처럼 보이는 문구를 추가하지 않는다.
+- 결제, 인증, Supabase, Android, FCM, production 로직은 디자인 작업과 섞지 않는다.
+- UI 구현 작업은 PR 기반을 기본값으로 한다.
 
 ## Start Conditions
 
@@ -43,52 +40,38 @@
 
 - 작업트리가 dirty이고 기존 변경 정체가 불명확함.
 - local과 `origin/main`이 불일치함.
-- 저장 로직, Supabase, 인증/session, journal API, data shape 변경이 필요해짐.
-- 결제, Android, FCM, production 관련 변경이 필요해짐.
+- 저장/복기, 결제, 인증/session, Supabase, Android, FCM, production 로직 변경이 필요해짐.
 - route 변경이 필요해짐.
-- task 2에서 스크린샷 확인 없이 push가 필요해짐.
+- UI 작업에서 스크린샷 확인 없이 push/merge가 필요해짐.
 - Global Radar 독립성이 약화될 가능성이 있음.
 
 ## Task List
 
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TODO | `/journal` 현재 박스 구조 조사 | Journal UI audit | LOW | `/journal` route와 관련 컴포넌트에서 `AppSurface`, `PanelCard`, `bg-ui-panel`, `bg-ui-inset`, `border`, `rounded`, `shadow` 사용 구조를 조사한다. | 코드 수정 금지. | `git diff --check` |
+| 1 | DONE | Full app implementation map 정리 | App-wide design ops | LOW | 전 화면 boxless 구현 순서와 page groups를 `docs/full-app-boxless-implementation-plan.md`에 정리했다. `/journal` audit도 `docs/journal-boxless-pilot-audit.md`에 기록했다. | 앱 코드 수정 금지. | `git diff --check` |
 | 2 | TODO | `/journal` boxless form/list pilot 적용 | Journal UI implementation | HIGH | `/journal` 화면의 과한 카드/패널을 줄이고, 입력 폼과 복기 리스트를 full-screen form/list 흐름으로 정리한다. | 저장 로직 변경 금지. Supabase 변경 금지. 인증/session 변경 금지. journal API/data shape 변경 금지. 결제/Android/FCM 변경 금지. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:all`; `git diff --check`; `/journal` 360px screenshot; `/journal` desktop screenshot |
-| 3 | TODO | pilot 결과 문서화 | Docs / UX | LOW | `/journal` pilot 결과, 남은 문제, 다음 적용 후보를 문서화한다. | 앱 코드 수정 금지. | `git diff --check` |
+| 3 | TODO | `/global` 본문 report/list pilot 적용 | Global Radar UI | HIGH | Global Radar 본문 대시보드의 큰 panel/card 중첩을 report/list 흐름으로 정리한다. | Global Radar 독립성 훼손 금지. API/fetch/chart logic 변경 금지. 결제/인증/Supabase 변경 금지. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:all`; `git diff --check`; `/global` 360px screenshot; `/global` desktop screenshot |
+| 4 | TODO | `/global/assets` 자산 레이더 boxless pilot 적용 | Global Assets UI | HIGH | 자산 카드/차트 wrapper를 줄이고 리스트/차트 중심 화면으로 정리한다. | chart rendering/data fetch 변경 금지. 모바일 dock이 content를 가리지 않게 확인. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:all`; `git diff --check`; `/global/assets` 340px/360px/desktop screenshots |
+| 5 | TODO | `/crypto` 본문 redesign run 준비 및 1차 적용 | Coin Radar UI | HIGH | Coin Radar 본문을 큰 카드 묶음이 아닌 report-style 판단 화면으로 전환한다. 범위가 크면 별도 PR로 분리한다. | 판단 로직, chart rendering, API fetch, Basic/Pro gating 변경 금지. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:all`; `git diff --check`; `/crypto` 360px/desktop screenshots; BTC/ETH/timeframe/mode checks |
+| 6 | TODO | `/alts` boxless 적용 | Alt Radar UI | MEDIUM | 알트코인 레이더의 list/report 흐름을 강화하고 card grid 중첩을 줄인다. | scanner/data/gating 변경 금지. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:all`; `git diff --check`; `/alts` 360px/desktop screenshots |
+| 7 | TODO | `/pro` boxless pricing review | Pro / Billing UI | HIGH | Pro 화면의 과한 wrapper를 줄이되 가격/플랜 비교와 CTA의 명확성은 유지한다. | billing.ts, RevenueCat, productId, planId, entitlement, 결제 API 변경 금지. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:billing`; `git diff --check`; `/pro` 360px/desktop screenshots |
+| 8 | TODO | `/learn`, account/settings/support surfaces 정리 | Learn / Account UI | MEDIUM | 학습/계정/정책/설정성 화면에서 불필요한 card wrapper를 줄인다. | auth/account deletion policy 변경 금지. route 변경 금지. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `git diff --check`; touched routes screenshots |
+| 9 | TODO | 시장 선택과 공통 footer/fallback 최종 정리 | Entry / Common Shell | MEDIUM | 시장 선택, footer, empty/loading/fallback surfaces를 앱다운 full-screen 흐름으로 정리한다. | route 변경 금지. 마지막 사용 시장 구현 금지 unless 별도 승인. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:mobile`; `git diff --check`; `/` 360px/desktop screenshots |
+| 10 | TODO | 전체 route boxless QA 및 잔여 박스 목록 정리 | Final QA | LOW | 모든 주요 route를 스크린샷/검색 기준으로 점검하고 남은 허용 박스와 제거 후보를 기록한다. | 앱 코드 수정 금지. | `git diff --check`; route screenshot inventory |
 
-## Push Policy
+## Push / PR Policy
 
-- task 2의 실제 UI 변경은 자동 push 금지.
-- `/journal` 스크린샷 확인 전 push 금지.
-- task 1과 task 3 같은 문서-only 작업은 대표가 safe push를 허용한 경우에만 자동 push할 수 있다.
-- push 전 Git 상태, ahead/behind, 최신 커밋, 비밀값 추적 여부를 확인한다.
+- 실제 UI 구현 작업은 branch/PR 기반으로 진행한다.
+- UI/디자인 작업은 스크린샷 확인 전 push/merge 금지.
+- docs-only 작업만 대표가 safe push를 허용한 경우 main push 가능.
+- 결제, 인증, Supabase, Android, FCM, production 관련 변경은 자동 push 금지.
 
-## Screenshot Policy
+## Completion Criteria
 
-Task 2 완료 후 반드시 확인한다:
+이 run은 다음이 모두 끝나야 완료로 볼 수 있다:
 
-- `/journal` 360px mobile screenshot.
-- `/journal` desktop screenshot.
-- horizontal overflow 없음.
-- 입력 폼과 복기 리스트가 과한 card wrapper보다 form/list 중심으로 보이는지.
-- 저장/복기 데이터 로직, 인증/session, Supabase 경로를 변경하지 않았는지.
-- crypto/global market scope가 유지되는지.
-
-## Completion Report Format
-
-- 선택한 active run 작업.
-- 선택 이유.
-- 수정 파일.
-- 변경 내용.
-- `/journal` 외 화면 수정 여부.
-- 저장/복기 데이터 로직 변경 여부.
-- 인증/session/Supabase 변경 여부.
-- Global Radar 독립성 유지 여부.
-- 검증 결과.
-- 스크린샷 경로(task 2의 경우).
-- active run 상태 갱신 여부.
-- 커밋 해시 또는 미커밋 상태.
-- `git status --short --branch`.
-- push 여부.
-- 다음 추천 작업.
+- 시장 선택, `/crypto`, `/alts`, `/global`, `/global/assets`, `/news`, `/alerts`, `/journal`, `/learn`, `/pro`, account/settings/support성 화면이 boxless 원칙에 맞게 검토 또는 적용됨.
+- 각 UI 구현 PR마다 모바일/desktop 스크린샷 검수 완료.
+- 남아 있는 박스는 결제/인증/위험/폼/모달/critical/touch target 등 명확한 이유가 있는 경우로 제한됨.
+- 앱 기능, 데이터, 결제, 인증, Supabase, Android, FCM 로직 변경이 디자인 작업에 섞이지 않음.
