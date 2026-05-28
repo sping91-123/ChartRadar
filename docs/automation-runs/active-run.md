@@ -55,7 +55,7 @@
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | DONE | `/alerts` 현재 박스 구조 조사 | Alerts UI audit | LOW | `/alerts`, `RadarAlertCenter`, `UsageMeterPanel` 등에서 `AppSurface`, `PanelCard`, `bg-ui-inset`, `border`, `rounded`, `shadow` 사용 구조를 조사했다. 결과는 `docs/alerts-boxless-pilot-audit.md`에 기록했다. | 코드 수정 금지. | `git diff --check` |
-| 2 | TODO | `/alerts` boxless list pilot 적용 | Alerts UI implementation | HIGH | 알림 설정 화면의 과한 카드/패널을 줄이고 list/row/divider 중심으로 정리한다. | push token 로직 변경 금지. FCM 변경 금지. push-cron 변경 금지. 알림 permission 로직 변경 금지. Supabase 변경 금지. 결제/인증/Android 변경 금지. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:all`; `npm.cmd run smoke:ops`; `git diff --check`; `/alerts` 360px screenshot; `/alerts` desktop screenshot |
+| 2 | DONE | `/alerts` boxless list pilot 적용 | Alerts UI implementation | HIGH | 알림 설정 화면의 과한 카드/패널을 줄이고 list/row/divider 중심으로 정리했다. `RadarAlertCenter`의 최상위 surface, 저장 조건, monitor metric, 알림 조건 반복 row를 boxless list/report 구조로 전환했다. | push token 로직 변경 금지. FCM 변경 금지. push-cron 변경 금지. 알림 permission 로직 변경 금지. Supabase 변경 금지. 결제/인증/Android 변경 금지. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:all`; `npm.cmd run smoke:ops`; `git diff --check`; `/alerts` 360px screenshot; `/alerts` desktop screenshot |
 | 3 | TODO | pilot 결과 문서화 | Docs / UX | LOW | `/alerts` pilot 결과, 남은 문제, 다음 적용 후보를 문서화한다. | 앱 코드 수정 금지. | `git diff --check` |
 
 ## Push Policy
