@@ -283,3 +283,26 @@ Unchanged areas:
 Next recommended page group:
 
 - `/pro`, because it is high business impact and should reduce wrapper weight while keeping plan comparison clarity and billing mappings untouched.
+
+### `/pro` pricing surface review
+
+Status: implemented on `codex/journal-boxless-form-list-pilot`.
+
+Applied changes:
+
+- Converted the Pro intro and account status/difference panels to `report` surfaces.
+- Converted plan limit summaries to `list` surfaces.
+- Converted pricing plan shells to `report` surfaces while keeping the checkout CTA and plan identity clear.
+- Converted subscription trust notes to a report surface.
+
+Unchanged areas:
+
+- Billing plan definitions and `src/lib/billing.ts`.
+- RevenueCat, productId, planId, entitlement, checkout, confirm, and native purchase logic.
+- Auth/session behavior.
+- `/pro` route behavior and all checkout button handlers.
+- Android, FCM, Supabase, and production-related code.
+
+Next recommended page group:
+
+- `/learn`, account, settings, and support/policy surfaces, because they are lower-risk content screens and can continue the same report/list migration.
