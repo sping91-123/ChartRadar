@@ -354,3 +354,18 @@ Unchanged areas:
 Next recommended page group:
 
 - Final route QA and residual box inventory.
+
+### Final route QA
+
+Status: completed on `codex/journal-boxless-form-list-pilot`.
+
+QA summary:
+
+- Checked the main entry, Coin Radar, Alts, Global Radar, Global Assets, News, Alerts, Journal, Learn, Pro, Account, Login, Terms, Privacy, and Refund routes at 360px.
+- Checked the main entry, `/crypto`, `/global`, and `/pro` at desktop width.
+- No horizontal overflow was detected in the final screenshot inventory.
+- Remaining boxes are limited to intentional controls, critical notices, login/payment actions, chart/control affordances, and destructive/auth/payment flows.
+
+Final QA record:
+
+- `docs/full-app-boxless-final-qa.md`.

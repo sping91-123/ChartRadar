@@ -58,7 +58,13 @@
 | 7 | DONE | `/pro` boxless pricing review | Pro / Billing UI | HIGH | Pro intro, current/difference, plan limits, trust notes wrapper를 report/list variant로 약화하고 가격/CTA는 유지했다. | billing.ts, RevenueCat, productId, planId, entitlement, 결제 API 변경 금지. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:billing`; `git diff --check`; `/pro` 360px/desktop screenshots |
 | 8 | DONE | `/learn`, account/settings/support surfaces 정리 | Learn / Account UI | MEDIUM | 학습/계정/정책/로그인/공통 footer 화면에서 불필요한 card wrapper를 줄이고 divider/list 흐름으로 정리했다. | auth/account deletion policy 변경 금지. route 변경 금지. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `git diff --check`; touched routes screenshots |
 | 9 | DONE | 시장 선택과 공통 footer/fallback 최종 정리 | Entry / Common Shell | MEDIUM | 시장 선택, 로그인 유도, footer, auth callback, not-found, checkout result fallback surfaces를 full-screen divider/list 흐름으로 정리했다. | route 변경 금지. 마지막 사용 시장 구현 금지 unless 별도 승인. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:mobile`; `git diff --check`; `/` 360px/desktop screenshots |
-| 10 | TODO | 전체 route boxless QA 및 잔여 박스 목록 정리 | Final QA | LOW | 모든 주요 route를 스크린샷/검색 기준으로 점검하고 남은 허용 박스와 제거 후보를 기록한다. | 앱 코드 수정 금지. | `git diff --check`; route screenshot inventory |
+| 10 | DONE | 전체 route boxless QA 및 잔여 박스 목록 정리 | Final QA | LOW | 모든 주요 route를 스크린샷/검색 기준으로 점검하고 남은 허용 박스와 제거 후보를 기록했다. | 앱 코드 수정 금지. | `git diff --check`; route screenshot inventory |
+
+## Run Status
+
+- Status: DONE.
+- Completed record: `docs/automation-runs/completed/full-app-boxless-implementation-run.md`.
+- Final QA record: `docs/full-app-boxless-final-qa.md`.
 
 ## Push / PR Policy
 
