@@ -36,7 +36,7 @@ function BrandMark({ size = "default" }: { size?: "default" | "large" }) {
   const imageSize = size === "large" ? 80 : 56;
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl bg-slate-950 shadow-[0_0_34px_rgba(34,211,238,0.18)] ${frameSize}`}>
+    <div className={`relative overflow-hidden rounded-xl bg-slate-950/70 ${frameSize}`}>
       <Image
         src="/brand/chart-radar-mark.png"
         alt=""
@@ -126,7 +126,7 @@ function SplashScreen() {
 function LoginPrompt({ onBrowseBasic }: { onBrowseBasic: () => void }) {
   return (
     <main className="grid min-h-screen place-items-center overflow-hidden px-3 py-6 sm:px-6 sm:py-8">
-      <section className="enterprise-panel w-[calc(100vw-1.5rem)] max-w-md rounded-2xl p-4 text-center sm:w-full sm:p-8">
+      <section className="w-[calc(100vw-1.5rem)] max-w-md border-y border-white/10 py-5 text-center sm:w-full sm:py-8">
         <div className="flex flex-col items-center gap-5">
           <p className="max-w-full text-center text-sm font-semibold leading-6 text-slate-300">
             로그인하면 관심 종목, 알림, 복기 페이지 등을

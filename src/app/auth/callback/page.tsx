@@ -36,8 +36,8 @@ export default function AuthCallbackPage() {
 
   return (
     <main className="grid min-h-screen place-items-center px-4">
-      <section className="w-full max-w-md rounded-lg border border-surface-line bg-surface-card p-5 text-center shadow-glow">
-        <div className="mx-auto grid h-12 w-12 place-items-center rounded-lg border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
+      <section className="w-full max-w-md border-y border-surface-line py-5 text-center">
+        <div className="mx-auto grid h-12 w-12 place-items-center text-accent-blue">
           {isDone ? <CheckCircle2 size={24} aria-hidden /> : <Loader2 className="animate-spin" size={24} aria-hidden />}
         </div>
         <h1 className="mt-5 text-xl font-black text-white">Chart Radar 로그인</h1>

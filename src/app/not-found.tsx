@@ -4,7 +4,7 @@ import Link from "next/link";
 export default function NotFound() {
   return (
     <main className="grid min-h-screen place-items-center px-4">
-      <section className="w-full max-w-md rounded-2xl border border-surface-line bg-surface-card p-6 text-center shadow-glow">
+      <section className="w-full max-w-md border-y border-surface-line py-6 text-center">
         <h1 className="text-2xl font-black text-white">찾는 페이지가 없습니다.</h1>
         <p className="mt-3 text-sm leading-6 text-slate-400">
           링크가 바뀌었거나 잘못 입력되었을 수 있습니다. 코인 레이더나 글로벌 레이더로 다시 이동해 주세요.

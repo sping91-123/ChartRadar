@@ -330,3 +330,27 @@ Unchanged areas:
 Next recommended page group:
 
 - Market selection, common footer/fallback, and empty/loading surfaces final pass.
+
+### Market selection and common fallback surfaces
+
+Status: implemented on `codex/journal-boxless-form-list-pilot`.
+
+Applied changes:
+
+- Weakened the market entry brand mark from a glowing boxed tile to a quieter logo frame.
+- Converted the unauthenticated home login prompt from an `enterprise-panel` card to a divider-based entry section.
+- Converted the common footer to a border-divider legal note instead of a card.
+- Converted not-found and auth callback fallback shells to divider sections.
+- Converted checkout success/fail result shells and explanatory triplets from card grids to divider/list sections while keeping primary actions bounded.
+
+Unchanged areas:
+
+- `/`, `/crypto`, `/global`, `/login`, auth callback, checkout success/fail route behavior.
+- Last-used-market behavior was not implemented.
+- Google/Kakao login button behavior and auth session handling.
+- Checkout confirmation logic, billing APIs, plan/product/entitlement mappings.
+- Android, FCM, Supabase, and production-related code.
+
+Next recommended page group:
+
+- Final route QA and residual box inventory.
