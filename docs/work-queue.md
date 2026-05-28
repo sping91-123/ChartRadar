@@ -6,6 +6,8 @@
 
 - 저장소 운영 지침은 루트 `AGENTS.md`를 우선한다.
 - 특정 문제 묶음 자동 처리는 `docs/automation-runs/active-run.md`를 기준으로 한다.
+- 전략실 메인방은 방향 결정과 active run 관리에 사용하고, 실행방은 하나의 active run을 끝낼 때까지 사용한다.
+- 연속성은 채팅방 기억이 아니라 저장소 문서, GitHub Issue, branch, PR에 저장한다.
 - 대표가 `AUTO NEXT`라고 하면 `AGENTS.md`, 이 문서, `docs/work-items/`를 읽고 다음 작업 1개만 선택한다.
 - 한 번에 하나의 `TODO`만 처리한다.
 - 상태가 `TODO`인 항목 중 우선순위가 가장 높은 것만 처리한다.
@@ -92,6 +94,10 @@ git ls-files | Select-String -Pattern '(^|/)(\.env|\.env\.local|google-services\
 - 실행할 작업은 `.github/ISSUE_TEMPLATE/codex-task.yml`로 Issue를 만든다.
 - Issue에는 `@codex` 작업 요청을 남긴다.
 - Codex는 main에 직접 push하지 않고 브랜치와 PR로 작업한다.
+- 구현 작업은 가능하면 active run에서 선정한 뒤 branch/PR 단위로 진행한다.
+- main 직접 push는 문서-only 또는 명확히 안전한 낮은 위험 작업으로 제한한다.
+- UI/디자인 작업은 스크린샷 확인 전 push 또는 merge하지 않는다.
+- 결제, 인증, Supabase, Android, FCM, production 관련 작업은 PR 기반과 대표 승인을 필수로 한다.
 - Issue가 생성된 work queue 항목은 완료 결과에 Issue 번호를 기록한다.
 - PR이 merge되면 해당 항목을 `DONE`으로 바꾸고 PR 번호 또는 merge commit을 기록한다.
 - 자세한 흐름은 `docs/codex-workflow.md`를 따른다.

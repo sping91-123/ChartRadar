@@ -8,6 +8,22 @@
 - Codex는 한 Issue에서 한 작업만 처리합니다.
 - `main` 직접 push를 줄이고 브랜치와 PR 기반 검토 흐름으로 전환합니다.
 - 검증 결과, 남은 리스크, 변경 파일을 PR에 남깁니다.
+- ChatGPT와 Codex 사이의 반복 복붙을 줄이고, 연속성을 저장소 문서와 GitHub 상태에 저장합니다.
+
+## 방 운영 구조
+
+- 전략실 메인방: 제품 방향 결정, active run 생성, 우선순위 조정, PR 결과 검수에 사용합니다.
+- active-run 실행방: 하나의 active run을 끝낼 때까지 사용합니다. 작업마다 새 방을 만들지 않습니다.
+- 고위험 전용방: 결제, 인증, Supabase, Android release, FCM, production migration처럼 대표 승인과 별도 검토가 필요한 작업에 사용합니다.
+- 새 방으로 이동해야 할 때는 `AGENTS.md`, `docs/automation-runs/active-run.md`, completed 기록, GitHub Issue, PR을 먼저 읽고 이어갑니다.
+
+## Source of Truth
+
+- 채팅방 기억은 보조 정보입니다.
+- 저장소 운영 기준은 `AGENTS.md`를 우선합니다.
+- 특정 작업 묶음은 `docs/automation-runs/active-run.md`와 completed 기록을 우선합니다.
+- 실제 구현 이력, 리뷰, 검증 결과는 GitHub Issue와 PR을 우선합니다.
+- `docs/work-queue.md`는 큰 백로그와 우선순위 관리용으로 유지합니다.
 
 ## 기본 흐름
 
@@ -22,6 +38,14 @@
 9. 필요하면 ChatGPT에게 PR 리뷰를 요청합니다.
 10. 대표 확인 후 PR을 merge합니다.
 11. merge 후 Vercel Production 배포와 운영 health를 확인합니다.
+
+## active run과 PR의 관계
+
+- active run은 지금 처리할 작업 묶음과 순서를 정합니다.
+- 조사, 정책 문서, 낮은 위험 문서 정리는 active run 안에서 직접 커밋할 수 있습니다.
+- 앱 코드 구현, UI/디자인 변경, 고위험 작업은 active run에서 후보를 정한 뒤 branch/PR로 실행합니다.
+- 하나의 active-run 실행방은 해당 run이 끝날 때까지 유지합니다.
+- active run 완료 후에는 결과를 completed 기록으로 보존하고, 실제 구현 PR 번호나 merge commit을 남깁니다.
 
 ## docs/work-queue.md와 GitHub Issue의 관계
 
@@ -64,6 +88,21 @@ Codex는 Issue 작업 시 아래 규칙을 지킵니다.
   - `npm.cmd run smoke:routes`
 - 문서만 수정한 경우 build/smoke는 생략할 수 있지만 `git status`와 `git diff`는 확인합니다.
 - 결과 보고에는 수정 파일, 검증 결과, 남은 한계 또는 리스크를 포함합니다.
+
+## 자동 push 정책
+
+- docs-only 또는 안전한 낮은 위험 작업은 대표가 해당 턴에서 safe push를 허용했거나 명시적으로 push를 요청한 경우에만 push할 수 있습니다.
+- UI/디자인 작업은 스크린샷 확인 전 push 또는 merge하지 않습니다.
+- 고위험 작업은 PR 기반으로 진행하고 대표 승인 전 merge하지 않습니다.
+- 결제, 인증, Supabase, Android, FCM, production DB migration 관련 변경은 자동 push하지 않습니다.
+- main 직접 push는 예외로 취급하고, 구현 작업은 branch/PR을 기본값으로 둡니다.
+
+## MCP의 위치
+
+- MCP는 Codex가 GitHub, 브라우저, 문서, 외부 서비스에 접근하기 위한 연결 계층입니다.
+- 현재 운영 자동화의 중심은 MCP 자체가 아니라 GitHub Issue, branch, PR, 저장소 문서입니다.
+- MCP 기반 자체 오케스트레이터는 장기 과제로 분리합니다.
+- 단기 운영은 active run으로 작업 묶음을 정하고, 구현은 PR로 검수하는 흐름을 우선합니다.
 
 ## 브랜치와 PR 기준
 

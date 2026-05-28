@@ -118,6 +118,31 @@
 - subagent는 조사, 위험 검토, 테스트 계획, 리뷰에만 사용한다.
 - 병렬 수정은 금지한다. 실제 코드 수정은 하나의 main 작업 흐름에서만 한다.
 
+## 방 운영과 연속성 기준
+
+- 전략실 메인방은 제품 방향 결정, active run 등록, 우선순위 조정, 결과 검수에 사용한다.
+- active-run 실행방은 하나의 active run을 끝낼 때까지 유지한다. 작업마다 새 방을 만들지 않는다.
+- 고위험 전용방은 결제, 인증, Supabase, Android release, FCM, production migration처럼 별도 검토가 필요한 작업에 사용한다.
+- 작업 연속성의 source of truth는 채팅방 기억이 아니라 `AGENTS.md`, `docs/automation-runs/active-run.md`, completed 기록, GitHub Issue, PR이다.
+- 채팅방이 길어지거나 느려지면 새 방에서 이어가되, 반드시 저장소 문서와 GitHub 상태를 먼저 읽고 이어간다.
+
+## PR 기반 작업 흐름
+
+- 구현 작업은 가능하면 `main` 직접 작업이 아니라 branch/PR 단위로 진행한다.
+- active run에서 구현 작업을 선정한 뒤 GitHub Issue 또는 명확한 작업 문서를 기준으로 브랜치를 만든다.
+- 브랜치 이름은 `codex/` prefix를 사용하고 작업 목적이 보이도록 짧게 작성한다.
+- 작업 후 검증을 실행하고, PR 본문에 변경 파일, 검증 결과, 남은 리스크, 스크린샷 또는 화면 확인 결과를 남긴다.
+- UI/디자인 작업은 스크린샷 확인 전 merge 또는 push하지 않는다.
+- 고위험 작업은 PR 기반으로 진행하고 대표 승인 전 merge하지 않는다.
+- 문서만 수정하는 낮은 위험 작업은 대표가 해당 턴에서 safe push를 허용했거나 명시적으로 push를 요청한 경우에만 `main` push가 가능하다.
+- 결제, 인증, Supabase, Android, FCM, production 관련 변경은 자동 push 금지다.
+
+## MCP와 외부 도구 위치
+
+- MCP는 Codex가 GitHub, 브라우저, 문서, 외부 시스템에 접근하기 위한 연결 계층이다.
+- 현재 작업 자동화의 중심은 MCP 자체 오케스트레이터가 아니라 저장소 문서, GitHub Issue, branch, PR이다.
+- MCP 기반 자체 오케스트레이터는 장기 과제로 분리하고, 단기 운영은 active run과 PR 흐름을 우선한다.
+
 ## 검증 명령
 
 작업 성격에 맞게 `package.json` 기준 실제 존재하는 명령을 사용한다. 기본 후보는 아래와 같다.
