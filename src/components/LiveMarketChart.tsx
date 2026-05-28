@@ -2317,7 +2317,14 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           {analysis && activeAnalysis && ((isMajorScreen && !hasCoinPro) || isBasicAltView) ? (
             <CryptoAiBriefingGateNotice isBasicAltView={isBasicAltView} />
           ) : analysis && activeAnalysis ? (
-            <div id="ai-briefing" className="scroll-mt-24 rounded-lg border border-accent-blue/25 bg-surface-cardSoft p-4">
+            <div
+              id="ai-briefing"
+              className={
+                isMajorScreen
+                  ? "scroll-mt-24 border-y border-ui-line py-4"
+                  : "scroll-mt-24 rounded-lg border border-accent-blue/25 bg-surface-cardSoft p-4"
+              }
+            >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest text-accent-blue">AI 레이더 브리핑</p>
@@ -2361,7 +2368,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 </div>
               ) : null}
 
-              <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-4">
+              <div className={isMajorScreen ? "mt-4 border-t border-ui-line pt-4" : "mt-4 rounded-lg border border-white/10 bg-black/20 p-4"}>
                 {marketBriefing.status === "idle" ? (
                   <p className="text-sm leading-6 text-slate-400">
                     버튼을 누르면 현재 차트와 레이더 값을 한 번에 읽어 핵심 방향, 위험 요인, 다음 확인 구간을 정리합니다.
@@ -2377,7 +2384,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                             {analysis.bias === "long" ? "롱 우세" : analysis.bias === "short" ? "숏 우세" : "횡보 관찰"}
                           </p>
                         </div>
-                        <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2">
+                        <div className={isMajorScreen ? "border-t border-white/10 py-2" : "rounded-md border border-white/10 bg-black/20 px-3 py-2"}>
                           <p className="text-[11px] font-bold text-slate-400">종합 점수</p>
                           <p className="mt-1 text-base font-black text-white">
                             {analysis.biasScore}
@@ -2404,7 +2411,14 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           ) : null}
 
           {analysis && activeAnalysis && activeAnalysis.condition && !isBasicAltView && radarProfile === "ict" ? (
-            <div id="ict-radar" className="scroll-mt-24 rounded-lg border border-surface-line bg-surface-cardSoft p-4">
+            <div
+              id="ict-radar"
+              className={
+                isMajorScreen
+                  ? "scroll-mt-24 border-y border-ui-line py-4"
+                  : "scroll-mt-24 rounded-lg border border-surface-line bg-surface-cardSoft p-4"
+              }
+            >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest text-accent-blue">ICT 구조 기준</p>
@@ -2413,7 +2427,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                     이 화면은 기술지표를 섞지 않고 MSB, CHoCH, OB, FVG, Sweep, CISD, PD, POC만 따로 봅니다.
                   </p>
                 </div>
-                <span className="inline-flex w-fit rounded-md border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-bold text-slate-300">
+                <span className={isMajorScreen ? "inline-flex w-fit border-b border-white/10 px-0 py-1.5 text-xs font-bold text-slate-300" : "inline-flex w-fit rounded-md border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-bold text-slate-300"}>
                   {activeTimeframe} 기준
                 </span>
               </div>
@@ -2472,11 +2486,11 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               </div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+                <div className={isMajorScreen ? "border-t border-ui-line py-3" : "rounded-lg border border-white/10 bg-black/20 p-4"}>
                   <h4 className="text-base font-black text-white">핵심 해석</h4>
                   <p className="mt-2 text-sm leading-6 text-slate-300">{analysis.summaryLine}</p>
                 </div>
-                <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+                <div className={isMajorScreen ? "border-t border-ui-line py-3" : "rounded-lg border border-white/10 bg-black/20 p-4"}>
                   <h4 className="text-base font-black text-white">구조 감지 기준</h4>
                   <p className="mt-2 text-sm leading-6 text-slate-300">
                     현재는 {structureSensitivityLabel(structureSensitivity)} 기준입니다. 빠른 변화와 큰 구조 중 무엇을 더 중요하게 볼지 정합니다.
@@ -2489,19 +2503,26 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           {analysis && !isBasicAltView && radarProfile === "technical" ? <TechnicalRadarPanel candles={candles} timeframe={activeTimeframe} /> : null}
 
           {analysis && activeAnalysis && activeAnalysis.condition && !isBasicAltView && radarProfile === "combined" ? (
-            <div id="radar-dashboard" className="scroll-mt-24 rounded-lg border border-surface-line bg-surface-cardSoft p-4">
+            <div
+              id="radar-dashboard"
+              className={
+                isMajorScreen
+                  ? "scroll-mt-24 border-y border-ui-line py-4"
+                  : "scroll-mt-24 rounded-lg border border-surface-line bg-surface-cardSoft p-4"
+              }
+            >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest text-accent-blue">판독 체계</p>
                   <h3 className="mt-1 text-lg font-black text-white">구조와 지표를 함께 확인합니다.</h3>
                 </div>
-                <span className="inline-flex w-fit rounded-md border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-bold text-slate-300">
+                <span className={isMajorScreen ? "inline-flex w-fit border-b border-white/10 px-0 py-1.5 text-xs font-bold text-slate-300" : "inline-flex w-fit rounded-md border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-bold text-slate-300"}>
                   {activeTimeframe} 기준
                 </span>
               </div>
 
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                <div className="rounded-lg border border-accent-blue/20 bg-black/20 p-4">
+                <div className={isMajorScreen ? "border-t border-ui-line py-3" : "rounded-lg border border-accent-blue/20 bg-black/20 p-4"}>
                   <p className="text-xs font-bold text-accent-blue">상단 판단의 구조 근거</p>
                   <h4 className="mt-1 text-base font-black text-white">ICT 구조 근거</h4>
                   <div className="mt-3 grid grid-cols-2 gap-2">
@@ -2558,7 +2579,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+                <div className={isMajorScreen ? "border-t border-ui-line py-3" : "rounded-lg border border-white/10 bg-black/20 p-4"}>
                   <p className="text-xs font-bold text-slate-400">추세 환경 지표</p>
                   <h4 className="mt-1 text-base font-black text-white">기술지표 참고값</h4>
                   <div className="mt-3 grid grid-cols-2 gap-2">
@@ -2628,11 +2649,11 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           ) : null}
 
           {analysis && canShowDetailedAnalysis && radarProfile !== "technical" ? (
-            <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
+            <div className={isMajorScreen ? "border-y border-ui-line py-4" : "rounded-lg border border-surface-line bg-surface-cardSoft p-4"}>
               <h3 className="text-sm font-bold text-white">지금 볼 구간</h3>
               <div className="mt-3 space-y-2">
                 {analysis.checkpoints.map((item) => (
-                  <p key={item} className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-200">
+                  <p key={item} className={isMajorScreen ? "border-t border-white/10 py-2 text-sm leading-6 text-slate-200 first:border-t-0" : "rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-200"}>
                     {item}
                   </p>
                 ))}
@@ -2642,13 +2663,19 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
 
           {analysis && canShowDetailedAnalysis && radarProfile !== "technical" ? (
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
+              <div className={isMajorScreen ? "border-y border-ui-line py-4" : "rounded-lg border border-surface-line bg-surface-cardSoft p-4"}>
                 <h3 className="text-sm font-bold text-white">현재 위치 판단</h3>
-                <p className="mt-3 rounded-md border border-white/10 bg-black/20 px-3 py-3 text-sm font-semibold text-slate-100">
+                <p
+                  className={
+                    isMajorScreen
+                      ? "mt-3 border-t border-white/10 py-3 text-sm font-semibold text-slate-100"
+                      : "mt-3 rounded-md border border-white/10 bg-black/20 px-3 py-3 text-sm font-semibold text-slate-100"
+                  }
+                >
                   {analysis.currentLocationLabel}
                 </p>
               </div>
-              <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
+              <div className={isMajorScreen ? "border-y border-ui-line py-4" : "rounded-lg border border-surface-line bg-surface-cardSoft p-4"}>
                 <h3 className="text-sm font-bold text-white">현재 결론</h3>
                 <p className="mt-3 text-sm leading-6 text-slate-300">
                   지금은 {analysis.verdict} 쪽입니다. 다만 실제 판단은 현재 위치, 무효 기준, 포지션 크기를 같이 확인해야 합니다.
@@ -2658,7 +2685,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           ) : null}
 
           {analysis?.proPlan && canShowDetailedAnalysis && radarProfile !== "technical" ? (
-            <div className="rounded-lg border border-accent-blue/30 bg-accent-blue/10 p-4">
+            <div className={isMajorScreen ? "border-y border-accent-blue/25 py-4" : "rounded-lg border border-accent-blue/30 bg-accent-blue/10 p-4"}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-xs font-semibold text-accent-blue">분석 시나리오</p>
@@ -2680,7 +2707,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               </div>
               <div className="mt-3 space-y-2">
                 {analysis.proPlan.cautions.slice(0, 3).map((item) => (
-                  <p key={item} className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs leading-5 text-slate-300">
+                  <p key={item} className={isMajorScreen ? "border-t border-white/10 py-2 text-xs leading-5 text-slate-300 first:border-t-0" : "rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs leading-5 text-slate-300"}>
                     {item}
                   </p>
                 ))}

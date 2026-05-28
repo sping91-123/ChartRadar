@@ -233,3 +233,29 @@ Unchanged areas:
 Next recommended page group:
 
 - `/crypto` body redesign first pass, with extra care because a previous broad flatten attempt was backed up and rejected.
+
+### `/crypto` body redesign first pass
+
+Status: implemented on `codex/journal-boxless-form-list-pilot`.
+
+Applied changes:
+
+- Kept the existing flattened top judgment, symbol tabs, chart shell, and fixed bottom controls.
+- Converted the Coin Radar AI briefing shell from a rounded card to a divider/report section on the major coin screen.
+- Converted ICT and combined detail sections toward report/divider sections for `/crypto`.
+- Weakened detailed readout, current location, current conclusion, and Pro scenario sections on the major coin screen.
+- Preserved bounded buttons, critical notices, loading modal, Pro locks, and chart touch targets.
+
+Unchanged areas:
+
+- `/crypto` route behavior and `/majors` compatibility.
+- BTC/ETH switching.
+- Timeframe and radar mode switching.
+- Chart rendering and `lightweight-charts` setup.
+- Radar judgment logic, `visibleRadarInsightForPlan`, API fetch, and data shape.
+- Basic/Pro gating.
+- Billing, auth, Supabase, Android, FCM, and production-related code.
+
+Next recommended page group:
+
+- `/alts`, because it shares parts of `LiveMarketChart` but needs a separate check for scanner/data/gating behavior and alt-specific list/card presentation.
