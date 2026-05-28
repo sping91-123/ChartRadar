@@ -243,7 +243,7 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
       </div>
       <Link
         href={alertHref}
-        className="relative grid min-h-9 min-w-9 place-items-center rounded-lg border border-surface-line bg-surface-cardSoft text-slate-300 transition hover:border-cyan-300/45 hover:text-white"
+        className="relative grid min-h-9 min-w-9 place-items-center rounded-full border border-transparent bg-transparent text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
         aria-label="알림 설정"
         title="알림 설정"
       >
@@ -257,7 +257,7 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
       <button
         type="button"
         onClick={() => setIsSettingsOpen(true)}
-        className="grid min-h-9 min-w-9 place-items-center rounded-lg border border-surface-line bg-surface-cardSoft text-slate-300 transition hover:border-cyan-300/45 hover:text-white"
+        className="grid min-h-9 min-w-9 place-items-center rounded-full border border-transparent bg-transparent text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
         aria-label="설정 열기"
         title="설정"
       >

@@ -4,7 +4,6 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { CalendarClock, Coins, Crown, History, Newspaper, Radar, TrendingUp } from "lucide-react";
-import { AppSurface } from "@/components/ui/DesignPrimitives";
 
 type MarketScope = "crypto" | "stocks" | "all";
 
@@ -49,13 +48,14 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
   const navItems = market === "all" ? allNavItems : market === "stocks" ? stockNavItems : cryptoNavItems;
   const isGlobalNav = market === "stocks";
   const isCryptoNav = market === "crypto";
+  const isFixedGridNav = isGlobalNav || isCryptoNav;
 
   const navContent = (
       <div
         className={
-          isGlobalNav || isCryptoNav
-            ? "grid grid-cols-4 gap-1.5"
-            : "flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid"
+          isFixedGridNav
+            ? "grid gap-1"
+            : "flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid"
         }
         style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
       >
@@ -68,21 +68,13 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
             <Link
               key={label}
               href={href}
-              className={`group flex min-h-11 min-w-0 items-center justify-center gap-1 px-1 text-center text-[10.5px] font-black tracking-tight transition sm:min-h-12 sm:gap-1.5 sm:px-3 sm:text-xs ${
-                isCryptoNav ? "rounded-none border-b-2" : "rounded-lg"
+              className={`group flex min-h-10 min-w-0 items-center justify-center gap-1 border-b-2 px-1 text-center text-[10.5px] font-black tracking-tight transition sm:min-h-11 sm:gap-1.5 sm:px-3 sm:text-xs ${
+                isFixedGridNav ? "w-full" : "shrink-0 md:shrink"
               } ${
-                isGlobalNav || isCryptoNav ? "w-full" : "shrink-0 md:shrink"
-              } ${
-                isCryptoNav
-                  ? active
-                    ? "border-ui-brand bg-transparent text-ui-text"
-                    : "border-transparent bg-transparent text-ui-muted hover:text-ui-text"
-                  : active
-                    ? "bg-ui-active text-ui-activeText ring-1 ring-inset ring-ui-lineStrong"
-                    : "text-ui-muted hover:bg-ui-inset hover:text-ui-text"
+                active ? "border-ui-brand bg-transparent text-ui-text" : "border-transparent bg-transparent text-ui-muted hover:text-ui-text"
               }`}
             >
-              <Icon size={14} aria-hidden className={`shrink-0 ${active ? "text-ui-activeText" : "text-ui-subtle transition group-hover:text-ui-muted"}`} />
+              <Icon size={14} aria-hidden className={`shrink-0 ${active ? "text-ui-brand" : "text-ui-subtle transition group-hover:text-ui-muted"}`} />
               <span className="whitespace-nowrap">{label}</span>
             </Link>
           );
@@ -90,24 +82,16 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
       </div>
   );
 
-  if (isCryptoNav) {
-    return (
-      <nav className="sticky top-2 z-30 overflow-hidden border-y border-ui-line bg-transparent py-2 backdrop-blur-xl">
-        {navContent}
-      </nav>
-    );
-  }
-
   return (
-    <AppSurface as="nav" tone="panel" padding="sm" className="sticky top-2 z-30 overflow-hidden backdrop-blur-xl">
+    <nav className="sticky top-0 z-30 overflow-hidden border-b border-ui-line bg-transparent py-1.5 backdrop-blur-sm">
       {navContent}
-    </AppSurface>
+    </nav>
   );
 }
 
 export function RadarTopNav({ market }: { market?: MarketScope } = {}) {
   return (
-    <Suspense fallback={<div className="h-[52px] rounded-ui border border-ui-line bg-ui-panel" />}>
+    <Suspense fallback={<div className="h-12 border-b border-ui-line bg-transparent" />}>
       <RadarTopNavContent market={market} />
     </Suspense>
   );

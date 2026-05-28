@@ -15,10 +15,10 @@ export function Header({ market }: { market?: HeaderMarket } = {}) {
         : "차트 흐름과 시장 변화를 빠르게 확인하세요.";
 
   return (
-    <header className="relative z-50 pt-3 sm:pt-5">
-      <AppSurface as="div" tone="panel" padding="none" className="flex items-center justify-between gap-2 px-2.5 py-2.5 backdrop-blur sm:gap-4 sm:px-4 sm:py-3">
+    <header className="relative z-50 pt-2 sm:pt-4">
+      <AppSurface as="div" tone="panel" variant="flat" padding="none" radius="none" className="flex items-center justify-between gap-2 border-b border-ui-line px-1 py-2 sm:gap-4 sm:px-0 sm:py-3">
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3" aria-label="Chart Radar 홈으로 이동">
-          <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-ui border border-ui-lineStrong bg-ui-inset sm:h-11 sm:w-11">
+          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-ui-sm sm:h-9 sm:w-9">
             <Image
               src="/brand/chart-radar-mark.png"
               alt=""

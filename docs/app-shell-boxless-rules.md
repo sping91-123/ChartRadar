@@ -186,3 +186,23 @@ If the implementation looks too broad, split task 3 into two commits or two acti
 2. RadarTopNav-only shell pilot.
 
 Header-only should be preferred first because it appears on the widest set of routes and is the clearest current shell box source.
+
+## Pilot Application Notes
+
+Task 3 applied the first shared shell pilot:
+
+- `Header` moved from the default card surface to a flat divider-only surface.
+- Header logo treatment was reduced from a bordered inset box to a smaller rounded mark.
+- Header alert and settings buttons kept their routes and click logic, but their visual treatment moved from boxed soft-card buttons to transparent circular icon buttons.
+- `RadarTopNav` now uses one underline/nav-row model for crypto, global, and all-market modes.
+- The global/all-market nav no longer uses the card `AppSurface`, active ring, or pill-like card state.
+- The Suspense fallback was changed from a boxed panel skeleton to a divider-style row skeleton.
+
+The pilot intentionally did not change:
+
+- route behavior
+- auth/session behavior
+- plan or billing logic
+- notification logic
+- `/crypto`, `/global`, or `/news` body content
+- bottom tabs or new routes
