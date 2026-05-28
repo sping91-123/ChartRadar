@@ -177,7 +177,7 @@ function CompactRadarInsightPanel({
   ];
 
   return (
-    <AppSurface tone="elevated" padding="md" className={`overflow-hidden ${className}`}>
+    <section className={`overflow-hidden border-y border-ui-line py-4 ${className}`}>
       <SectionHeader
         eyebrow="오늘 먼저 볼 판단"
         title={insight.symbol}
@@ -188,7 +188,7 @@ function CompactRadarInsightPanel({
         <div className="min-w-0">
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
             {compactStatusItems.map((item) => (
-              <div key={item.label} className="min-w-0 rounded-ui-sm border border-ui-line bg-ui-inset px-2.5 py-2 sm:inline-flex sm:items-center sm:gap-2 sm:bg-transparent">
+              <div key={item.label} className="min-w-0 border-t border-ui-line py-2 first:border-t-0 sm:inline-flex sm:items-center sm:gap-2 sm:border-t-0 sm:py-0">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ui-subtle">{item.label}</p>
                 <div className="mt-1 sm:mt-0">
                   <StatusPill tone={item.tone} className="whitespace-nowrap">{item.value}</StatusPill>
@@ -199,7 +199,7 @@ function CompactRadarInsightPanel({
           <p className="mt-3 hidden max-w-3xl text-sm leading-6 text-ui-muted [word-break:keep-all] sm:block">{compactLine(insight.summary, 128)}</p>
         </div>
 
-        <PanelCard className="bg-ui-inset shadow-none">
+        <div className="border-t border-ui-line pt-3 lg:border-t-0 lg:pt-0">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2">
               <Gauge size={16} className="text-ui-brand" aria-hidden />
@@ -224,23 +224,23 @@ function CompactRadarInsightPanel({
             <MetricRow label="현재가" value={priceLabel ?? "-"} />
             <MetricRow label="데이터" value={dataStatusLabel ?? "-"} />
           </div>
-        </PanelCard>
+        </div>
       </div>
 
       {summaryMetrics.length ? (
         <div className="mt-4 grid gap-2 sm:grid-cols-3">
           {summaryMetrics.slice(0, 3).map((metric) => (
-            <PanelCard key={metric.label} className="bg-ui-inset p-3 shadow-none">
+            <div key={metric.label} className="border-t border-ui-line pt-3">
               <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{metric.label}</p>
               <p className="mt-2 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{compactLine(metric.value, 44)}</p>
               {metric.detail ? <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{metric.detail}</p> : null}
-            </PanelCard>
+            </div>
           ))}
         </div>
       ) : null}
 
       <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <PanelCard className="bg-ui-inset shadow-none">
+        <div className="border-t border-ui-line pt-3">
           <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">핵심 근거</p>
           <ul className="mt-2 divide-y divide-ui-line">
             {keyReasons.map((item) => (
@@ -249,8 +249,8 @@ function CompactRadarInsightPanel({
               </li>
             ))}
           </ul>
-        </PanelCard>
-        <PanelCard className="bg-ui-inset shadow-none">
+        </div>
+        <div className="border-t border-ui-line pt-3">
           <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">다음 확인</p>
           <ul className="mt-2 divide-y divide-ui-line">
             {nextChecks.length ? (
@@ -263,9 +263,9 @@ function CompactRadarInsightPanel({
               <li className="py-2 text-sm font-semibold leading-5 text-ui-text">확인 필요</li>
             )}
           </ul>
-        </PanelCard>
+        </div>
       </div>
-    </AppSurface>
+    </section>
   );
 }
 

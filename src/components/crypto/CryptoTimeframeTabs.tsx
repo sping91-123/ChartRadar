@@ -9,16 +9,16 @@ interface CryptoTimeframeTabsProps {
 
 export function CryptoTimeframeTabs({ timeframes, activeTimeframe, onChange }: CryptoTimeframeTabsProps) {
   return (
-    <div className="grid grid-cols-5 gap-2">
+    <div className="grid grid-cols-5 gap-1">
       {timeframes.map((timeframe) => (
         <button
           key={timeframe}
           type="button"
           onClick={() => onChange(timeframe)}
-          className={`min-h-10 rounded-md border px-2 text-sm font-black transition ${
+          className={`min-h-10 border-b-2 px-2 text-sm font-black transition ${
             activeTimeframe === timeframe
-              ? "border-accent-blue bg-accent-blue text-slate-950"
-              : "border-surface-line bg-surface-cardSoft text-slate-300 hover:border-accent-blue/60"
+              ? "border-accent-blue bg-transparent text-accent-blue"
+              : "border-transparent bg-transparent text-slate-400 hover:text-slate-200"
           }`}
         >
           {timeframe}

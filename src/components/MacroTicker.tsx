@@ -443,6 +443,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
 
   if (compact) {
     const item = getCompactItem(calendar.items);
+    const isCryptoCompact = market === "crypto";
     if (!item) {
       return (
         <div className="rounded-md border border-white/10 bg-black/20 px-3 py-3 text-xs font-bold leading-5 text-slate-500 [word-break:keep-all]">
@@ -458,10 +459,16 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
     return (
       <Link
         href={market === "stocks" ? "/news?market=global" : "/news?market=crypto"}
-        className="group flex min-h-10 items-center gap-2 rounded-md border border-accent-blue/15 bg-surface-card/78 px-2.5 py-2 shadow-[0_10px_34px_rgba(0,0,0,0.18)] transition hover:border-accent-blue/35 hover:bg-surface-card"
+        className={
+          isCryptoCompact
+            ? "group flex min-h-10 items-center gap-2 border-y border-white/10 bg-transparent px-1 py-2 transition hover:bg-white/[0.025]"
+            : "group flex min-h-10 items-center gap-2 rounded-md border border-accent-blue/15 bg-surface-card/78 px-2.5 py-2 shadow-[0_10px_34px_rgba(0,0,0,0.18)] transition hover:border-accent-blue/35 hover:bg-surface-card"
+        }
       >
         <div
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded border px-2 py-1 text-[11px] font-black ${
+          className={`inline-flex shrink-0 items-center gap-1.5 px-2 py-1 text-[11px] font-black ${
+            isCryptoCompact ? "rounded-none border-b" : "rounded border"
+          } ${
             isTodayCheck
               ? "border-signal-warning/25 bg-signal-warning/10 text-signal-warning"
               : "border-accent-blue/20 bg-accent-blue/10 text-accent-blue"

@@ -50,8 +50,7 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
   const isGlobalNav = market === "stocks";
   const isCryptoNav = market === "crypto";
 
-  return (
-    <AppSurface as="nav" tone="panel" padding="sm" className="sticky top-2 z-30 overflow-hidden backdrop-blur-xl">
+  const navContent = (
       <div
         className={
           isGlobalNav || isCryptoNav
@@ -69,12 +68,18 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
             <Link
               key={label}
               href={href}
-              className={`group flex min-h-11 min-w-0 items-center justify-center gap-1 rounded-lg px-1 text-center text-[10.5px] font-black tracking-tight transition sm:min-h-12 sm:gap-1.5 sm:px-3 sm:text-xs ${
+              className={`group flex min-h-11 min-w-0 items-center justify-center gap-1 px-1 text-center text-[10.5px] font-black tracking-tight transition sm:min-h-12 sm:gap-1.5 sm:px-3 sm:text-xs ${
+                isCryptoNav ? "rounded-none border-b-2" : "rounded-lg"
+              } ${
                 isGlobalNav || isCryptoNav ? "w-full" : "shrink-0 md:shrink"
               } ${
-                active
-                  ? "bg-ui-active text-ui-activeText ring-1 ring-inset ring-ui-lineStrong"
-                  : "text-ui-muted hover:bg-ui-inset hover:text-ui-text"
+                isCryptoNav
+                  ? active
+                    ? "border-ui-brand bg-transparent text-ui-text"
+                    : "border-transparent bg-transparent text-ui-muted hover:text-ui-text"
+                  : active
+                    ? "bg-ui-active text-ui-activeText ring-1 ring-inset ring-ui-lineStrong"
+                    : "text-ui-muted hover:bg-ui-inset hover:text-ui-text"
               }`}
             >
               <Icon size={14} aria-hidden className={`shrink-0 ${active ? "text-ui-activeText" : "text-ui-subtle transition group-hover:text-ui-muted"}`} />
@@ -83,6 +88,19 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
           );
         })}
       </div>
+  );
+
+  if (isCryptoNav) {
+    return (
+      <nav className="sticky top-2 z-30 overflow-hidden border-y border-ui-line bg-transparent py-2 backdrop-blur-xl">
+        {navContent}
+      </nav>
+    );
+  }
+
+  return (
+    <AppSurface as="nav" tone="panel" padding="sm" className="sticky top-2 z-30 overflow-hidden backdrop-blur-xl">
+      {navContent}
     </AppSurface>
   );
 }

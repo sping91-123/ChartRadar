@@ -494,3 +494,27 @@ Coin Radar UX 재구성은 Pro gating을 약화시키면 안 된다.
 - `/spot`, `/home`, `/macro` 신규 route 없음.
 - Global Radar 진입 제거 없음.
 - 결제, 인증, Supabase, Android, FCM, production 변경 없음.
+
+## /crypto 본 화면 평면화 결과
+
+구현 커밋: `Flatten crypto radar screen panels`
+
+### 변경 결과
+
+- `/crypto` 본문 큰 외곽 패널을 제거하고 화면 폭을 더 넓게 쓰도록 조정했다.
+- 상단 코인 탭은 두꺼운 박스 버튼 대신 active 밑줄 중심의 얇은 탭으로 바꿨다.
+- crypto 상단 내비게이션과 macro ticker compact UI는 카드형 배경, shadow, rounded 느낌을 줄이고 divider 중심으로 약화했다.
+- Radar Insight summary variant는 중첩 PanelCard 대신 divider 기반 리포트형 섹션으로 바꿨다.
+- 차트 wrapper와 판단 근거 요약은 `/crypto`에서 rounded card/border/background를 줄이고, thin divider와 typography 중심으로 정리했다.
+- 하단 timeframe/mode control은 fixed 위치와 기능은 유지하되 큰 floating panel 느낌을 줄였다.
+
+### 유지한 범위
+
+- `/crypto` route 유지.
+- `/majors` 호환/redirect 변경 없음.
+- BTC/ETH 전환 유지.
+- 5m/15m/1h/4h/1d 전환 유지.
+- 종합/ICT 구조/기술지표 전환 유지.
+- Basic/Pro gating 및 판단 로직 변경 없음.
+- chart rendering, API fetch 변경 없음.
+- `/global` 화면 변경 없음.

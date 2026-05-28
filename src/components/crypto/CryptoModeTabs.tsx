@@ -15,16 +15,16 @@ interface CryptoModeTabsProps {
 
 export function CryptoModeTabs({ options, activeMode, onChange }: CryptoModeTabsProps) {
   return (
-    <div className="mt-2 grid grid-cols-3 gap-1.5">
+    <div className="mt-2 grid grid-cols-3 gap-1">
       {options.map((item) => (
         <button
           key={item.key}
           type="button"
           onClick={() => onChange(item.key)}
-          className={`min-h-9 rounded-md border px-2 text-xs font-black transition ${
+          className={`min-h-9 border-b-2 px-2 text-xs font-black transition ${
             activeMode === item.key
-              ? "border-white/20 bg-white text-slate-950"
-              : "border-white/10 bg-white/[0.04] text-slate-300 hover:border-white/25"
+              ? "border-white bg-transparent text-white"
+              : "border-transparent bg-transparent text-slate-400 hover:text-slate-200"
           }`}
           title={item.description}
         >
