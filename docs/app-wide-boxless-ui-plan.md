@@ -503,6 +503,19 @@ Candidate D: Flatten selected `/alerts` status sections.
 - Useful because alerts are box-heavy.
 - Must avoid push, FCM, entitlement, and threshold logic.
 
+## `/alerts` Boxless List Pilot
+
+The first `/alerts` implementation pass applies the boxless rules only to the route-specific alert center.
+
+- Scope: `src/components/RadarAlertCenter.tsx`.
+- Top-level alert center uses a flat surface instead of a card surface.
+- Push status, saved conditions, and alert rule groups use report/list surfaces.
+- Saved-condition monitor metrics are shown as divider rows instead of nested metric cards.
+- Rule rows keep the toggle touch target and enabled/disabled state, but no longer render as repeated nested cards.
+- Recent matches and saved conditions use divider-based rows instead of card grids.
+- Admin diagnostics and test push tools remain visually bounded for safety and are not part of the first pass.
+- Push token, FCM, push-cron, permission, Supabase, billing, auth, Android, and route logic are unchanged.
+
 ## Recommended Next Step
 
 Design the `AppSurface` and `PanelCard` variant API before implementation.

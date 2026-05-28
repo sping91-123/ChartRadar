@@ -41,6 +41,8 @@ import {
 } from "@/lib/appPush";
 
 const baseStorageKey = "chartRadar.alertRules.v1";
+const alertRowClassName =
+  "max-[420px]:flex-col max-[420px]:gap-1 max-[420px]:[&>div:last-child]:shrink max-[420px]:[&>div:last-child]:text-left";
 
 type PermissionState = "unsupported" | "default" | "granted" | "denied";
 type AlertMarket = "crypto" | "stocks";
@@ -316,7 +318,7 @@ function RuleCard({
   onToggle: (ruleId: RadarAlertRuleId) => void;
 }) {
   return (
-    <PanelCard className={enabled ? "border-ui-brand/35 bg-ui-inset shadow-none" : "bg-ui-inset shadow-none"}>
+    <div className={`py-4 first:pt-0 last:pb-0 ${enabled ? "" : "opacity-80"}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -342,10 +344,10 @@ function RuleCard({
         </button>
       </div>
       <div className="mt-3">
-        <DataRow label="조건" value="감시 중" detail={rule.trigger} />
-        <DataRow label="확인 주기" value={rule.cadence} />
+        <DataRow className={alertRowClassName} label="조건" value="감시 중" detail={rule.trigger} />
+        <DataRow className={alertRowClassName} label="확인 주기" value={rule.cadence} />
       </div>
-    </PanelCard>
+    </div>
   );
 }
 
@@ -646,7 +648,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
   }
 
   return (
-    <AppSurface padding="lg" className="space-y-4">
+    <AppSurface variant="flat" padding="lg" className="space-y-6">
       <SectionHeader
         eyebrow={copy.eyebrow}
         title={copy.title}
@@ -661,7 +663,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
         }
       />
 
-      <PanelCard className="bg-ui-inset shadow-none">
+      <PanelCard variant="report" className="shadow-none">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -704,15 +706,16 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
         </div>
 
         <div className="mt-4">
-          <DataRow label="앱 푸시 연결" value={<StatusPill tone={isAndroidAppPush ? appPushConnectionTone(appPushState) : "info"}>{isAndroidAppPush ? appPushConnectionLabel(appPushState) : "앱에서 사용 가능"}</StatusPill>} />
-          <DataRow label="알림 권한" value={<StatusPill tone={permissionTone(permission, appPushState, isAndroidAppPush)}>{permissionSummaryLabel(permission, appPushState, isAndroidAppPush)}</StatusPill>} />
-          <DataRow label="마지막 연결" value={isAndroidAppPush ? formatAppPushUpdatedAt(appPushState.updatedAt) : "앱에서 확인"} />
+          <DataRow className={alertRowClassName} label="앱 푸시 연결" value={<StatusPill tone={isAndroidAppPush ? appPushConnectionTone(appPushState) : "info"}>{isAndroidAppPush ? appPushConnectionLabel(appPushState) : "앱에서 사용 가능"}</StatusPill>} />
+          <DataRow className={alertRowClassName} label="알림 권한" value={<StatusPill tone={permissionTone(permission, appPushState, isAndroidAppPush)}>{permissionSummaryLabel(permission, appPushState, isAndroidAppPush)}</StatusPill>} />
+          <DataRow className={alertRowClassName} label="마지막 연결" value={isAndroidAppPush ? formatAppPushUpdatedAt(appPushState.updatedAt) : "앱에서 확인"} />
         </div>
 
         {isAndroidAppPush ? (
           <div className="mt-3">
-            <DataRow label="현재 수신 시장" value={formatPushMarkets(appPushState.markets)} />
+            <DataRow className={alertRowClassName} label="현재 수신 시장" value={formatPushMarkets(appPushState.markets)} />
             <DataRow
+              className={alertRowClassName}
               label={`${marketDisplayName(market)} 알림`}
               value={<StatusPill tone={isCurrentMarketPushEnabled ? "long" : "info"}>{isCurrentMarketPushEnabled ? "켜짐" : "꺼짐"}</StatusPill>}
               detail={`${marketDisplayName(otherMarket)} 알림은 ${marketDisplayName(otherMarket)} 알림 화면에서 별도로 켤 수 있습니다.`}
@@ -759,7 +762,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
         </PanelCard>
       ) : null}
 
-      <PanelCard>
+      <PanelCard variant="report" className="shadow-none">
         <SectionHeader
           title="저장 조건"
           description="관심 있는 자산과 조건을 모아두고 다시 맞아떨어지는 순간을 확인합니다."
@@ -778,35 +781,30 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
         </div>
 
         {monitorStatus ? (
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <PanelCard className="bg-ui-inset p-3 shadow-none">
-              <MetricRow label="마지막 확인" value={formatCheckedAt(monitorStatus.checkedAt)} />
-            </PanelCard>
-            <PanelCard className="bg-ui-inset p-3 shadow-none">
-              <MetricRow label="확인 범위" value={`조건 ${monitorStatus.presetCount}개 · 후보 ${monitorStatus.setupCount}개`} />
-            </PanelCard>
-            <PanelCard className="bg-ui-inset p-3 shadow-none">
-              <MetricRow
-                label={monitorReasonLabel(monitorStatus.reason)}
-                value={<StatusPill tone={monitorStatus.matchCount > 0 ? "long" : "info"}>일치 {monitorStatus.matchCount}개</StatusPill>}
-              />
-            </PanelCard>
+          <div className="mt-4 border-y border-ui-line">
+            <MetricRow className={alertRowClassName} label="마지막 확인" value={formatCheckedAt(monitorStatus.checkedAt)} />
+            <MetricRow className={alertRowClassName} label="확인 범위" value={`조건 ${monitorStatus.presetCount}개 · 후보 ${monitorStatus.setupCount}개`} />
+            <MetricRow
+              className={alertRowClassName}
+              label={monitorReasonLabel(monitorStatus.reason)}
+              value={<StatusPill tone={monitorStatus.matchCount > 0 ? "long" : "info"}>일치 {monitorStatus.matchCount}개</StatusPill>}
+            />
           </div>
         ) : (
-          <AppSurface tone="inset" padding="sm" className="mt-4 text-xs leading-5 text-ui-muted shadow-none">
+          <AppSurface variant="report" tone="inset" padding="sm" className="mt-4 text-xs leading-5 text-ui-muted shadow-none">
             알림 화면을 열면 저장한 조건을 다시 확인하고 마지막 확인 상태를 표시합니다.
           </AppSurface>
         )}
 
         {visibleSetupMatches.length > 0 ? (
-          <AppSurface tone="inset" padding="sm" className="mt-4 border-emerald-400/24 bg-emerald-400/10 shadow-none">
+          <AppSurface variant="report" tone="inset" padding="sm" className="mt-4 border-emerald-400/24 shadow-none">
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs font-semibold text-ui-long">최근 일치 감지</p>
               <span className="text-ui-label font-semibold text-ui-muted">{formatSavedAt(visibleSetupMatches[0].matchedAt)}</span>
             </div>
-            <div className="mt-2 grid gap-2 md:grid-cols-2">
+            <div className="mt-2 divide-y divide-ui-line">
               {visibleSetupMatches.slice(0, compact ? 1 : 2).map((match) => (
-                <article key={match.id} className="rounded-ui-sm border border-ui-line bg-ui-panel p-3">
+                <article key={match.id} className="py-3 first:pt-0 last:pb-0">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="text-sm font-semibold text-ui-text">{compactSymbol(match.setup.symbol)}</span>
                     <StatusPill tone="info" className="min-h-0 px-1.5 py-0.5 text-[10px]">{match.setup.timeframe}</StatusPill>
@@ -821,15 +819,15 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             </div>
           </AppSurface>
         ) : (
-          <AppSurface tone="inset" padding="sm" className="mt-4 text-xs leading-5 text-ui-muted shadow-none">
+          <AppSurface variant="report" tone="inset" padding="sm" className="mt-4 text-xs leading-5 text-ui-muted shadow-none">
             저장 조건이 현재 레이더 결과와 다시 맞아떨어지면 최근 일치 감지로 표시합니다.
           </AppSurface>
         )}
 
         {setupPresets.length > 0 ? (
-          <div className="mt-4 grid gap-2 md:grid-cols-2">
+          <div className="mt-4 divide-y divide-ui-line border-y border-ui-line">
             {setupPresets.slice(0, compact ? 2 : 6).map((preset) => (
-              <article key={preset.id} className="rounded-ui-sm border border-ui-line bg-ui-inset p-3">
+              <article key={preset.id} className="py-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
@@ -851,13 +849,13 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             ))}
           </div>
         ) : (
-          <AppSurface tone="inset" padding="sm" className="mt-4 text-xs leading-5 text-ui-muted shadow-none">
+          <AppSurface variant="report" tone="inset" padding="sm" className="mt-4 text-xs leading-5 text-ui-muted shadow-none">
             아직 저장한 감시 조건이 없습니다. 레이더 감지 카드에서 감시 저장을 누르면 여기에 모입니다.
           </AppSurface>
         )}
       </PanelCard>
 
-      <PanelCard>
+      <PanelCard variant="report" className="shadow-none">
         <SectionHeader
           title="알림 조건"
           description={summary.headline}
@@ -868,7 +866,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             </div>
           }
         />
-        <div className={`mt-4 grid gap-3 ${compact ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
+        <div className="mt-4 divide-y divide-ui-line border-y border-ui-line">
           {visibleRules.map((rule) => (
             <RuleCard key={rule.id} rule={rule} enabled={enabledRuleIds.includes(rule.id)} onToggle={toggleRule} />
           ))}
