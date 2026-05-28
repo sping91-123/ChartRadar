@@ -206,3 +206,46 @@ The pilot intentionally did not change:
 - notification logic
 - `/crypto`, `/global`, or `/news` body content
 - bottom tabs or new routes
+
+## Pilot Result Summary
+
+The `boxless-app-shell-run` pilot is complete.
+
+Applied scope:
+
+- `/crypto` 360px mobile
+- `/global` 360px mobile
+- `/news` 360px mobile
+- `/crypto` desktop
+
+Improved areas:
+
+- The shared Header no longer reads as a large floating card before content.
+- Header/Nav hierarchy is now closer to a native app bar plus nav row.
+- Crypto, Global, and all-market nav states share the same underline-based pattern.
+- The top shell uses less vertical and visual weight, so the first content block appears sooner.
+- Alert and settings entry points stayed visible.
+- Plan/status visibility followed the existing responsive behavior.
+
+Screenshot review:
+
+- `/crypto` 360px: Header and nav are flatter, no horizontal overflow.
+- `/global` 360px: Global Radar keeps independent nav labels and entry flow, no horizontal overflow.
+- `/news` 360px: News pilot content and new shell direction work together, no horizontal overflow.
+- Desktop: Header, plan/status, alert, settings, and nav remain visible without boxed shell framing.
+
+Remaining issues:
+
+- Content surfaces below the shell are still mixed: some routes remain card-heavy.
+- `/global` body still has strong panel/card treatment in the main radar sections.
+- `/crypto` body still has chart, insight, and fixed control areas that need a separate redesign run.
+- `/alerts` and `/journal` still rely heavily on `PanelCard`, inset surfaces, and form boxes.
+- Market selection screen is already flatter than before, but still needs a dedicated final pass.
+
+Recommended next candidates:
+
+1. Market selection screen final boxless pass.
+2. `/alerts` list-centered pilot.
+3. `/journal` form/list surface simplification.
+4. `/global` body report-style redesign.
+5. `/crypto` body redesign as a separate larger run.
