@@ -761,6 +761,13 @@ Foundation result:
 - Screens should not visually change until a route explicitly opts into a new variant.
 - Next recommended pilot is a bounded `/news` section or market selection screen, not the full `/crypto` screen.
 
+News pilot result:
+
+- First bounded visual pilot is `/news`.
+- The first pass applies `report`, `list`, and `flat` variants to the route macro wrapper and `RadarNewsPanel` surfaces only.
+- `MacroTicker` internals and `RadarDigestPanel` remain out of scope until the first pilot is visually reviewed.
+- `/news?market=crypto` and `/news?market=global` remain required verification targets.
+
 ## Planning Run Completion
 
 `full-app-boxless-redesign-run` is complete at the planning level.

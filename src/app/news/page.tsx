@@ -17,7 +17,7 @@ export default function NewsPage({ searchParams }: { searchParams?: { market?: s
         <RadarNewsPanel
           market={market}
           afterBriefing={
-            <PanelCard className="space-y-3 shadow-none">
+            <PanelCard variant="report" className="space-y-3 shadow-none">
               <SectionHeader
                 eyebrow="매크로 일정"
                 title={market === "stocks" ? "이번 주 주요 이벤트" : "이번 주 주요 매크로 일정"}

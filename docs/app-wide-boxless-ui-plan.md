@@ -364,6 +364,13 @@ Next pilot recommendation:
 - Market selection is the next possible pilot if the goal is first-screen impact.
 - Do not use `/crypto` as the first broad visual migration.
 
+News pilot implementation note:
+
+- `/news` route macro schedule wrapper now uses `PanelCard variant="report"`.
+- `RadarNewsPanel` intro, market radar summary, briefing rows, source references, and bottom note now use `report`, `list`, or `flat` variants where safe.
+- `MacroTicker` internals and `RadarDigestPanel` were intentionally left unchanged in the first pass.
+- API fetch, news payload shape, market query handling, and routing were not changed.
+
 ## Route Priority
 
 ### Priority 1: Information-reading screens

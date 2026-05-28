@@ -418,7 +418,7 @@ function MarketRadarCard({
   );
 
   return (
-    <PanelCard className="space-y-4">
+    <PanelCard variant="report" className="space-y-4">
       <SectionHeader
         eyebrow={copy.radarTitle}
         title={moodStyle.risk}
@@ -437,7 +437,7 @@ function MarketRadarCard({
         <MetricRow label="업데이트" value={reportTimeLabel(updatedAt)} />
       </div>
 
-      <AppSurface tone="inset" padding="sm" className="shadow-none">
+      <AppSurface tone="inset" variant="flat" padding="none" className="border-t border-ui-line pt-3">
         <div className="flex items-start gap-2">
           <ListChecks size={15} className="mt-0.5 shrink-0 text-ui-brand" aria-hidden />
           <div className="min-w-0">
@@ -452,7 +452,7 @@ function MarketRadarCard({
 
 function EmptyBriefingCard({ copy }: { copy: (typeof marketCopy)[RadarNewsMarket] }) {
   return (
-    <PanelCard>
+    <PanelCard variant="report">
       <div className="flex items-start gap-3">
         <div className="grid h-9 w-9 shrink-0 place-items-center rounded-ui-sm border border-ui-line bg-ui-inset text-ui-brand">
           <Clock3 size={18} aria-hidden />
@@ -484,7 +484,7 @@ function BriefingDetail({
   const relatedItems = sourceReferenceItems(card.relatedItems);
 
   return (
-    <AppSurface tone="inset" padding="md" className="mt-3 space-y-4 shadow-none">
+    <AppSurface tone="inset" variant="flat" padding="none" className="mt-3 space-y-4 border-t border-ui-line pt-3">
       <section>
         <div className="flex items-center gap-2">
           <Sparkles size={15} className="text-ui-brand" aria-hidden />
@@ -517,7 +517,7 @@ function BriefingDetail({
                 href={item.link}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-start justify-between gap-3 rounded-ui-sm border border-ui-line bg-ui-panel p-2 text-xs leading-5 text-ui-muted transition hover:border-ui-lineStrong hover:text-ui-text"
+                className="flex items-start justify-between gap-3 border-t border-ui-line py-2 text-xs leading-5 text-ui-muted transition first:border-t-0 first:pt-0 hover:text-ui-text"
               >
                 <span className="[word-break:keep-all]">{sourceReferenceTitle(item)}</span>
                 <ExternalLink size={12} className="mt-1 shrink-0 text-ui-brand" aria-hidden />
@@ -588,7 +588,7 @@ function BriefingCardView({
   const Icon = style.icon;
 
   return (
-    <PanelCard className="space-y-3 shadow-none">
+    <PanelCard variant="report" className="space-y-3 shadow-none">
       <div className="flex flex-wrap items-center gap-2">
         <StatusPill tone={directionTone(card.tone)} icon={Icon}>
           {style.label}
@@ -624,14 +624,14 @@ function SourceReferenceList({ items }: { items: RadarNewsItem[] }) {
 
   if (!references.length) {
     return (
-      <AppSurface tone="inset" padding="sm" className="text-xs font-semibold text-ui-muted shadow-none">
+      <AppSurface tone="inset" variant="flat" padding="none" className="text-xs font-semibold text-ui-muted">
         확인된 원문 링크 없음
       </AppSurface>
     );
   }
 
   return (
-    <AppSurface as="details" tone="panel" padding="md" className="shadow-none">
+    <AppSurface as="details" tone="panel" variant="list" padding="md" className="border-y border-ui-line">
       <summary className="cursor-pointer text-sm font-semibold text-ui-text">참고 뉴스 원문 보기</summary>
       <div className="mt-3 grid gap-2">
         {references.slice(0, 12).map((item) => {
@@ -725,7 +725,7 @@ export function RadarNewsPanel({ market = "crypto", afterBriefing }: { market?: 
 
   return (
     <section className="space-y-5">
-      <PanelCard>
+      <PanelCard variant="report">
         <SectionHeader
           eyebrow={copy.eyebrow}
           title={copy.title}
@@ -790,7 +790,7 @@ export function RadarNewsPanel({ market = "crypto", afterBriefing }: { market?: 
 
       {afterBriefing}
 
-      <PanelCard className="shadow-none">
+      <PanelCard variant="report" className="shadow-none">
         <div className="flex items-start gap-2">
           <ShieldAlert size={15} className="mt-0.5 shrink-0 text-ui-brand" aria-hidden />
           <div className="min-w-0">
