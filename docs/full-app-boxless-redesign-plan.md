@@ -768,6 +768,21 @@ News pilot result:
 - `MacroTicker` internals and `RadarDigestPanel` remain out of scope until the first pilot is visually reviewed.
 - `/news?market=crypto` and `/news?market=global` remain required verification targets.
 
+News pilot retrospective:
+
+- Outcome: successful as a first bounded proof of the boxless direction.
+- Confirmed benefit: the news page can move from stacked cards toward report/list flow without route, API, or data shape changes.
+- Preserved behavior: `/news`, `/news?market=crypto`, and `/news?market=global` remain in place.
+- Preserved product principle: Global Radar news remains an independent global market context, not a crypto macro helper.
+- Remaining issue: the shared app shell, header, and top navigation still create visible box boundaries and should not be solved inside the `/news` pilot.
+- Do not proceed directly to full `/crypto` redesign. The next implementation should either refine shared app-shell/header/nav standards or apply the same variants to another low-risk feed/list screen.
+
+Recommended next implementation options:
+
+1. `boxless-app-shell-run`: reduce `Header` and `RadarTopNav` boxed treatment across routes while preserving navigation behavior.
+2. `boxless-market-selection-run`: apply the full-screen entry pattern to `/` without route changes.
+3. `boxless-alerts-list-pilot-run`: convert selected `/alerts` status/preset sections to setting rows without touching FCM or threshold logic.
+
 ## Planning Run Completion
 
 `full-app-boxless-redesign-run` is complete at the planning level.

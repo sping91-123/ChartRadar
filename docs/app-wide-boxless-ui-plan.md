@@ -371,6 +371,15 @@ News pilot implementation note:
 - `MacroTicker` internals and `RadarDigestPanel` were intentionally left unchanged in the first pass.
 - API fetch, news payload shape, market query handling, and routing were not changed.
 
+News pilot result:
+
+- The first `/news` pass confirmed that the new variants can reduce nested card weight without changing data flow.
+- `report` works well for page-level sections where the content should read like a market report.
+- `list` works well for source/reference rows where the old boxed link style made the section feel crowded.
+- `flat` is useful for small helper states inside a section, but critical errors and loading states should stay visibly bounded.
+- The remaining visual issue is outside the pilot scope: the global `Header` and `RadarTopNav` still carry a boxed app-shell feel and should be handled in a separate app-shell run.
+- Next suitable candidates are a small market selection pass or a dedicated app shell/header/nav cleanup run. Avoid broad `/crypto` redesign until the app-shell pattern is stable.
+
 ## Route Priority
 
 ### Priority 1: Information-reading screens
