@@ -557,7 +557,13 @@ function SetupCard({
   }
 
   return (
-    <article className={`rounded-lg border p-4 [word-break:keep-all] transition ${modeCardClass}`}>
+    <article
+      className={
+        isAltFilterMode
+          ? "border-t border-ui-line py-4 [word-break:keep-all] transition first:border-t-0"
+          : `rounded-lg border p-4 [word-break:keep-all] transition ${modeCardClass}`
+      }
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold text-slate-500">{isAltFilterMode ? "ALT FILTER" : "TOP"} {rank}</p>
@@ -590,12 +596,12 @@ function SetupCard({
       </div>
 
       {isAltFilterMode ? (
-        <div className="mt-3 grid grid-cols-2 gap-2 text-center">
-          <div className="rounded border border-white/10 bg-black/30 px-2 py-2">
+        <div className="mt-3 grid grid-cols-2 divide-x divide-white/10 border-y border-white/10 text-center">
+          <div className="px-2 py-2">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">현재가</p>
             <p className="mt-1 text-xs font-bold text-white">{formatPriceWithSymbol(setup.currentPrice)}</p>
           </div>
-          <div className={`rounded border px-2 py-2 ${altMeta?.className ?? "border-white/10 bg-black/20 text-slate-300"}`}>
+          <div className="px-2 py-2 text-slate-300">
             <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">분류</p>
             <p className="mt-1 text-xs font-black">{altMeta?.label ?? "리스크 점검"}</p>
           </div>
@@ -603,7 +609,7 @@ function SetupCard({
       ) : null}
 
       {isAltFilterMode && !shouldShowProDetails ? (
-        <div className="mt-3 rounded-md border border-white/10 bg-black/20 px-3 py-2">
+        <div className="mt-3 border-t border-white/10 pt-3">
           <p className="text-[11px] font-bold text-slate-400">요약 리스크</p>
           <p className="mt-1 text-sm font-black text-white">{altSummaryRisk}</p>
           <p className="mt-1 text-[11px] leading-5 text-slate-500">
@@ -797,7 +803,7 @@ function ScanSummary({
     );
 
     return (
-      <div className="mb-3 rounded-lg border border-accent-blue/25 bg-accent-blue/10 px-4 py-3">
+      <div className="mb-3 border-y border-accent-blue/25 py-3">
         <p className="text-sm font-black text-accent-blue">
           오늘의 알트 필터 · 추적 후보 {summary.candidate}개 · 관망 {summary.watch}개 · 고위험 {summary.danger}개
         </p>
@@ -978,10 +984,10 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
   const canShowAltProDetails = !isAltFilterMode || isPaid;
 
   return (
-    <section className="rounded-lg border border-accent-blue/25 bg-surface-card p-4 shadow-glow sm:p-5">
+    <section className={excludeMajor ? "border-y border-ui-line py-5 sm:py-6" : "rounded-lg border border-accent-blue/25 bg-surface-card p-4 shadow-glow sm:p-5"}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-accent-blue/30 bg-accent-blue/15 text-accent-blue">
+          <div className={excludeMajor ? "grid h-10 w-10 shrink-0 place-items-center text-accent-blue" : "grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-accent-blue/30 bg-accent-blue/15 text-accent-blue"}>
             <Radar size={21} aria-hidden />
           </div>
           <div>
@@ -1010,7 +1016,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-start gap-3 sm:justify-end">
-          <div className="inline-flex overflow-hidden rounded-md border border-surface-line bg-black/30 p-1">
+          <div className={excludeMajor ? "inline-flex overflow-hidden border-b border-ui-line" : "inline-flex overflow-hidden rounded-md border border-surface-line bg-black/30 p-1"}>
           {(["guard", "radar"] as ScoutRiskProfile[]).map((profile) => (
             <button
               key={profile}
@@ -1019,19 +1025,19 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
                 setRiskProfile(profile);
                 setState({ status: "idle" });
               }}
-              className={`inline-flex min-h-9 items-center rounded-md border px-3 text-xs font-black transition ${
+              className={`inline-flex min-h-9 items-center border-b-2 px-3 text-xs font-black transition ${
                 riskProfile === profile
                   ? profile === "radar"
-                    ? "border-signal-danger bg-signal-danger text-white"
-                    : "border-accent-blue bg-accent-blue text-slate-950"
-                  : "border-transparent text-slate-300 hover:bg-surface-cardSoft hover:text-white"
+                    ? "border-signal-danger bg-transparent text-signal-danger"
+                    : "border-accent-blue bg-transparent text-accent-blue"
+                  : "border-transparent text-slate-300 hover:text-white"
               }`}
             >
               {profile === "guard" ? "보수적 분석" : "확장 감지"}
             </button>
           ))}
           </div>
-          <span className="rounded-md border border-surface-line bg-surface-cardSoft px-3 py-2 text-xs font-bold text-slate-400">
+          <span className={excludeMajor ? "border-b border-ui-line px-0 py-2 text-xs font-bold text-slate-400" : "rounded-md border border-surface-line bg-surface-cardSoft px-3 py-2 text-xs font-bold text-slate-400"}>
             전체 TF 점수순
           </span>
           {cacheLabel ? <span className="text-xs text-slate-500">{cacheLabel} 레이더</span> : null}
@@ -1039,7 +1045,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
             type="button"
             onClick={() => runScan(true)}
             disabled={state.status === "loading"}
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-surface-line bg-surface-cardSoft px-3 text-xs font-bold text-slate-200 hover:border-accent-blue/50 hover:text-white disabled:opacity-50"
+            className={excludeMajor ? "inline-flex min-h-9 items-center gap-1.5 border-b border-ui-line px-0 text-xs font-bold text-slate-200 hover:text-white disabled:opacity-50" : "inline-flex min-h-9 items-center gap-1.5 rounded-md border border-surface-line bg-surface-cardSoft px-3 text-xs font-bold text-slate-200 hover:border-accent-blue/50 hover:text-white disabled:opacity-50"}
           >
             <RefreshCw size={13} className={state.status === "loading" ? "animate-spin" : ""} aria-hidden />
             다시 돌리기
@@ -1049,7 +1055,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
 
       <div className="mt-4">
         {state.status === "loading" ? (
-          <div className="flex items-center justify-center gap-2 rounded-lg border border-surface-line bg-surface-cardSoft p-8 text-sm text-slate-400">
+          <div className={excludeMajor ? "flex items-center justify-center gap-2 border-y border-ui-line py-8 text-sm text-slate-400" : "flex items-center justify-center gap-2 rounded-lg border border-surface-line bg-surface-cardSoft p-8 text-sm text-slate-400"}>
             <Loader2 size={18} className="animate-spin" aria-hidden />
             레이더가 시장 구조를 훑는 중...
           </div>
@@ -1070,7 +1076,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
           ) : (
             <>
               <ScanSummary setups={visibleSetups} riskProfile={riskProfile} excludeMajor={excludeMajor} />
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className={isAltFilterMode ? "divide-y divide-ui-line" : "grid gap-3 sm:grid-cols-3"}>
                 {visibleSetups.map((setup, idx) => (
                   <SetupCard
                     key={`${setup.symbol}-${setup.mode}-${setup.timeframe}`}

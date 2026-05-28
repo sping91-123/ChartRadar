@@ -44,13 +44,7 @@ export function CryptoAltAnalysisGateBanner({
   used
 }: CryptoAltAnalysisGateBannerProps) {
   return (
-    <div
-      className={`mt-3 rounded-lg border p-3 ${
-        allowed
-          ? "border-cyan-300/20 bg-cyan-300/10"
-          : "border-amber-300/35 bg-amber-300/10"
-      }`}
-    >
+    <div className={`mt-3 border-y py-3 ${allowed ? "border-cyan-300/20" : "border-amber-300/35"}`}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className={`text-xs font-black ${allowed ? "text-cyan-200" : "text-amber-200"}`}>
@@ -77,7 +71,7 @@ export function CryptoAltAnalysisLimitNotice({
   getSymbolLabel
 }: CryptoAltAnalysisLimitNoticeProps) {
   return (
-    <div className="mt-4 rounded-lg border border-amber-300/30 bg-amber-300/10 p-4">
+    <div className="mt-4 border-y border-amber-300/30 py-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-black text-amber-200">오늘 무료 알트 분석 완료</p>
@@ -122,7 +116,7 @@ export function CryptoDetailScopeNotice({ hasCoinPro }: { hasCoinPro: boolean })
 
 export function CryptoBasicAltDetailLock() {
   return (
-    <div className="mt-3 rounded-md border border-cyan-300/25 bg-cyan-300/10 px-3 py-3">
+    <div className="mt-3 border-t border-cyan-300/25 pt-3">
       <p className="text-xs font-black text-cyan-100">Coin Pro 상세 판단 보조</p>
       <p className="mt-1 text-sm leading-6 text-slate-300 [word-break:keep-all]">
         Basic에서는 방향 요약만 제공합니다. 무효화 기준, 구체 가격 레벨, AI 브리핑, 세부 리스크는 Coin Pro에서 확인할 수 있습니다.
@@ -133,7 +127,7 @@ export function CryptoBasicAltDetailLock() {
 
 export function CryptoAiBriefingGateNotice({ isBasicAltView }: { isBasicAltView: boolean }) {
   return (
-    <div className="rounded-lg border border-cyan-300/20 bg-cyan-300/10 p-4">
+    <div className="border-y border-cyan-300/20 py-4">
       <p className="text-xs font-black text-cyan-100">Pro 판단 보조</p>
       <h3 className="mt-1 text-lg font-black text-white">
         {isBasicAltView ? "AI 알트 브리핑은 Coin Pro에서 상세 근거로 열립니다." : "AI 레이더 브리핑은 Pro에서 상세 근거로 열립니다."}

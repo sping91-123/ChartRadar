@@ -167,7 +167,7 @@ function WatchlistSetupCard({ setup, canShowProDetails }: { setup: ScoutSetup; c
         : "text-slate-400 border-slate-600/40 bg-slate-600/10";
 
   return (
-    <article className="rounded-lg border border-surface-line bg-surface-cardSoft p-3.5 transition hover:border-accent-blue/40">
+    <article className="border-t border-ui-line py-3.5 transition first:border-t-0">
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <h4 className="text-sm font-black text-white">{sym}</h4>
@@ -184,26 +184,26 @@ function WatchlistSetupCard({ setup, canShowProDetails }: { setup: ScoutSetup; c
         </span>
       </div>
 
-      <div className={`mt-2.5 grid gap-1.5 text-center ${canShowProDetails ? "grid-cols-3" : "grid-cols-2"}`}>
-        <div className="rounded border border-white/10 bg-black/30 px-1 py-1.5">
+      <div className={`mt-2.5 grid divide-x divide-white/10 border-y border-white/10 text-center ${canShowProDetails ? "grid-cols-3" : "grid-cols-2"}`}>
+        <div className="px-1 py-1.5">
           <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">현재가</p>
           <p className="mt-0.5 text-[11px] font-bold text-white">{formatPrice(setup.currentPrice)}</p>
         </div>
         {canShowProDetails ? (
           <>
-            <div className="rounded border border-accent-blue/20 bg-accent-blue/5 px-1 py-1.5">
+            <div className="px-1 py-1.5">
               <p className="text-[9px] font-bold uppercase tracking-wider text-accent-blue">관찰 구간</p>
               <p className="mt-0.5 text-[10px] font-bold text-white">
                 {formatPrice(setup.plan.entryLow)}~{formatPrice(setup.plan.entryHigh)}
               </p>
             </div>
-            <div className="rounded border border-signal-danger/20 bg-signal-danger/10 px-1 py-1.5">
+            <div className="px-1 py-1.5">
               <p className="text-[9px] font-bold uppercase tracking-wider text-signal-danger">무효화</p>
               <p className="mt-0.5 text-[11px] font-bold text-white">{formatPrice(setup.plan.invalidation)}</p>
             </div>
           </>
         ) : (
-          <div className="rounded border border-white/10 bg-black/20 px-1 py-1.5">
+          <div className="px-1 py-1.5">
             <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">요약 리스크</p>
             <p className="mt-0.5 text-[11px] font-bold text-white">{summaryRisk}</p>
           </div>
@@ -466,10 +466,10 @@ export function WatchlistPanel() {
         />
       )}
 
-      <section className="rounded-lg border border-surface-line bg-surface-card p-4 sm:p-5">
+      <section className="border-y border-ui-line py-5 sm:py-6">
         <div className="flex flex-col gap-3 min-[420px]:flex-row min-[420px]:items-start min-[420px]:justify-between">
           <div className="flex min-w-0 items-start gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
+            <div className="grid h-10 w-10 shrink-0 place-items-center text-accent-blue">
               <Radar size={20} aria-hidden />
             </div>
             <div className="min-w-0">
@@ -484,7 +484,7 @@ export function WatchlistPanel() {
               <button
                 type="button"
                 onClick={() => runScan(watchlist)}
-                className="inline-flex min-h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border border-surface-line bg-surface-cardSoft px-2.5 text-[11px] font-bold text-slate-200 hover:border-accent-blue/50 hover:text-white disabled:opacity-50"
+                className="inline-flex min-h-8 shrink-0 items-center gap-1.5 whitespace-nowrap border-b border-ui-line px-0 text-[11px] font-bold text-slate-200 hover:text-white disabled:opacity-50"
               >
                 <RefreshCw size={12} className="shrink-0" aria-hidden />
                 다시 돌리기
@@ -527,7 +527,7 @@ export function WatchlistPanel() {
         {/* 레이더 결과 영역 */}
         <div className="mt-4">
           {isEmpty ? (
-            <div className="rounded-lg border border-dashed border-surface-line p-6 text-center">
+            <div className="border-y border-dashed border-surface-line py-6 text-center">
               <Bookmark className="mx-auto text-slate-600" size={24} aria-hidden />
               <p className="mt-2 text-sm font-bold text-slate-400">관심 코인을 추가해보세요.</p>
               <p className="mt-1 text-xs leading-5 text-slate-600">
@@ -543,7 +543,7 @@ export function WatchlistPanel() {
               </button>
             </div>
           ) : scanState.status === "loading" ? (
-            <div className="flex items-center justify-center gap-2 rounded-lg border border-surface-line bg-surface-cardSoft p-6 text-sm text-slate-400">
+            <div className="flex items-center justify-center gap-2 border-y border-ui-line py-6 text-sm text-slate-400">
               <Loader2 size={16} className="animate-spin" aria-hidden />
               관심 코인 레이더 작동 중...
             </div>
@@ -553,7 +553,7 @@ export function WatchlistPanel() {
             </div>
           ) : scanState.status === "ready" ? (
             scanState.setups.length === 0 ? (
-              <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-5 text-center">
+              <div className="border-y border-ui-line py-5 text-center">
                 <p className="text-sm font-bold text-slate-300">현재 강하게 감지된 구조가 없습니다.</p>
                 <p className="mt-1 text-xs leading-5 text-slate-500">
                   관심 코인의 구조가 명확하지 않거나 관망 구간입니다.
@@ -561,7 +561,7 @@ export function WatchlistPanel() {
               </div>
             ) : (
               <>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="divide-y divide-ui-line">
                   {scanState.setups.map((setup) => (
                     <WatchlistSetupCard
                       key={`${setup.symbol}-${setup.timeframe}`}

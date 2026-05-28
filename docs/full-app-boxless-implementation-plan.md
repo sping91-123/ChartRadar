@@ -259,3 +259,27 @@ Unchanged areas:
 Next recommended page group:
 
 - `/alts`, because it shares parts of `LiveMarketChart` but needs a separate check for scanner/data/gating behavior and alt-specific list/card presentation.
+
+### `/alts` boxless pilot
+
+Status: implemented on `codex/journal-boxless-form-list-pilot`.
+
+Applied changes:
+
+- Converted the alt opportunity/risk filter outer shell from a card panel to a report section.
+- Converted repeated alt setup candidates from card grid presentation to divider/list rows on the alt filter page.
+- Converted the watchlist radar shell and repeated watchlist result cards toward divider/list rows.
+- Flattened the alt-only `LiveMarketChart` outer shell, symbol selector, structure sensitivity controls, chart wrapper, and basic risk summary.
+- Kept Pro CTA, modal, destructive/remove controls, and critical/error states bounded where clear touch targets or warnings are needed.
+
+Unchanged areas:
+
+- Setup scout scanner and API behavior.
+- Watchlist add/remove storage behavior.
+- Alt analysis free usage gating and Coin Pro gating.
+- `/alts` route behavior.
+- Billing, auth, Supabase, Android, FCM, and production-related code.
+
+Next recommended page group:
+
+- `/pro`, because it is high business impact and should reduce wrapper weight while keeping plan comparison clarity and billing mappings untouched.
