@@ -308,7 +308,7 @@ function ChipGroup({
         : "border-ui-brand bg-ui-brand text-slate-950";
 
   return (
-    <div className="min-w-0 max-w-full overflow-hidden rounded-ui border border-ui-line bg-ui-inset p-3">
+    <div className="min-w-0 max-w-full overflow-hidden border-t border-ui-line pt-3">
       <div className="mb-2 flex min-w-0 flex-wrap items-center justify-between gap-2">
         <p className="min-w-0 text-ui-label font-semibold text-ui-subtle">{label}</p>
         {helper ? <span className="min-w-0 text-ui-label text-ui-muted">{helper}</span> : null}
@@ -322,7 +322,7 @@ function ChipGroup({
               type="button"
               onClick={() => onToggle(item)}
               className={`min-h-9 min-w-0 max-w-full flex-1 basis-[calc(50%-0.1875rem)] whitespace-normal break-keep rounded-ui-sm border px-2 py-2 text-[13px] font-semibold leading-snug transition sm:min-h-10 sm:flex-none sm:basis-auto sm:px-3 sm:text-sm ${
-                active ? activeClass : "border-ui-line bg-ui-panel text-ui-muted hover:border-ui-lineStrong hover:bg-ui-elevated hover:text-ui-text"
+                active ? activeClass : "border-transparent bg-transparent text-ui-muted hover:border-ui-lineStrong hover:bg-ui-inset hover:text-ui-text"
               }`}
             >
               {item}
@@ -544,19 +544,19 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
         <Header market={market} />
         <RadarTopNav market={market} />
 
-        <AppSurface tone="panel" padding="none" className="overflow-hidden">
-          <div className="border-b border-ui-line p-4 sm:p-5">
+        <AppSurface tone="panel" variant="flat" padding="none" radius="none" className="overflow-hidden">
+          <div className="border-b border-ui-line px-1 py-5 sm:px-0 sm:py-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div className="min-w-0 max-w-3xl">
                 <div className="mb-2 flex min-w-0 flex-wrap items-center gap-2">
                   <StatusPill tone="info" icon={ClipboardCheck}>오늘의 복기</StatusPill>
                   <StatusPill tone={market === "stocks" ? "watch" : "info"}>{marketLabel}</StatusPill>
                 </div>
-                <h1 className="text-xl font-semibold tracking-tight text-ui-text sm:text-2xl">오늘의 판단을 다음 매매의 기준으로 바꿉니다.</h1>
-                <p className="mt-2 max-w-2xl text-ui-body text-ui-muted [word-break:keep-all]">{marketHeroLine}</p>
-                <p className="mt-1 text-ui-label font-semibold text-ui-subtle">좋은 매매보다 지킨 매매를 먼저 기록해보세요.</p>
+                <h1 className="max-w-full text-xl font-semibold leading-tight tracking-tight text-ui-text [overflow-wrap:anywhere] sm:text-2xl">오늘의 판단을 다음 매매의 기준으로 바꿉니다.</h1>
+                <p className="mt-2 max-w-2xl text-ui-body text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]">{marketHeroLine}</p>
+                <p className="mt-1 text-ui-label font-semibold text-ui-subtle [overflow-wrap:anywhere]">좋은 매매보다 지킨 매매를 먼저 기록해보세요.</p>
               </div>
-              <AppSurface tone="inset" padding="sm" className="grid min-w-0 grid-cols-3 gap-1.5 text-center">
+              <AppSurface tone="inset" variant="flat" padding="none" radius="none" className="grid min-w-0 grid-cols-3 gap-1.5 border-y border-ui-line py-2 text-center lg:w-80">
                 {["차트 분석", "근거 저장", "결과 복기"].map((item) => (
                   <div key={item} className="min-w-0 rounded-ui-sm px-2 py-1.5">
                     <p className="truncate text-ui-label font-semibold text-ui-subtle">{item}</p>
@@ -566,8 +566,8 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
             </div>
           </div>
 
-          <div className="grid gap-4 p-3 sm:p-5">
-            <PanelCard>
+          <div className="grid gap-6 py-4">
+            <PanelCard variant="report" padding="lg">
               <SectionHeader
                 eyebrow="Journal"
                 title="오늘의 복기"
@@ -591,7 +591,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                 }
               />
 
-              <div className="mt-4 rounded-ui border border-ui-line bg-ui-inset px-3">
+              <div className="mt-4">
                 <MetricRow
                   label="이번 주 복기 수"
                   value={summary.total ? `${summary.weekCount}건` : "대기 중"}
@@ -612,7 +612,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
             </PanelCard>
 
             <section id="pending-radar" className="scroll-mt-4 scroll-mb-56">
-            <PanelCard>
+            <PanelCard variant="report" padding="lg">
               <SectionHeader
                 title="복기 대기"
                 description="분석 화면에서 저장한 레이더를 결과 확인과 복기로 이어갑니다."
@@ -624,16 +624,16 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
               />
 
               {pendingRadarEntries.length ? (
-                <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                <div className="mt-4 divide-y divide-ui-line lg:grid lg:grid-cols-2 lg:divide-x lg:divide-y-0">
                   {pendingRadarEntries.map((entry) => {
                     const checkpoint =
                       entry.scoutSnapshot
                         ? `무효화 기준 ${entry.scoutSnapshot.invalidation.toLocaleString()} 확인`
                         : entry.verdict || "저장 당시 근거와 결과를 확인하세요.";
                     return (
-                      <AppSurface as="article" key={entry.id} tone="inset" padding="md">
+                      <AppSurface as="article" key={entry.id} tone="inset" variant="flat" padding="none" radius="none" className="py-4 lg:px-4 lg:first:pl-0 lg:last:pr-0">
                         <SourceBadge entry={entry} />
-                        <div className="mt-3 rounded-ui border border-ui-line bg-ui-panel px-3">
+                        <div className="mt-3">
                           <DataRow label="종목/시장" value={entry.symbol || marketLabel} />
                           <DataRow label="저장 당시 방향성" value={entry.bias || "관망"} />
                           <DataRow label="저장 시간" value={formatDateTime(entry.createdAt)} />
@@ -651,7 +651,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                   })}
                 </div>
               ) : (
-                <AppSurface tone="inset" padding="md" className="mt-4">
+                <AppSurface tone="inset" variant="report" padding="md" className="mt-4">
                   <p className="text-sm font-semibold text-ui-text">아직 복기할 저장 레이더가 없습니다.</p>
                   <p className="mt-2 text-ui-body text-ui-muted">
                     분석 화면에서 레이더를 저장하면 이곳에서 결과를 확인할 수 있습니다. 저장된 근거가 생기면 복기 대기 카드로 이어집니다.
@@ -662,7 +662,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
             </section>
 
             <section id="quick-journal-form" className="scroll-mt-4 scroll-mb-64 min-w-0 max-w-full overflow-hidden">
-            <PanelCard className="overflow-hidden">
+            <PanelCard variant="report" padding="lg" className="overflow-hidden">
               <SectionHeader
                 title="기록할 내용"
                 description="필수 항목을 먼저 채우고, 기준은 칩으로 빠르게 남깁니다."
@@ -696,7 +696,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                 <div className="grid min-w-0 gap-3 lg:grid-cols-3">
                   <ChipGroup label="방향" options={directions} selected={[direction]} onToggle={(item) => setDirection(item as DirectionType)} />
                   <ChipGroup label="결과" options={resultOptions} selected={[result]} onToggle={(item) => setResult(item as TradeResult)} tone="green" />
-                  <div className="min-w-0 max-w-full overflow-hidden rounded-ui border border-ui-line bg-ui-inset p-3">
+                  <div className="min-w-0 max-w-full overflow-hidden border-t border-ui-line pt-3">
                     <p className="mb-2 text-ui-label font-semibold text-ui-subtle">손익 결과</p>
                     <div className="flex min-w-0 max-w-full flex-wrap gap-1.5 sm:gap-2">
                       {rResultOptions.map((item) => (
@@ -707,7 +707,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                           className={`min-h-9 min-w-0 max-w-full flex-1 basis-[calc(50%-0.1875rem)] whitespace-normal break-keep rounded-ui-sm border px-2 py-2 text-[13px] font-semibold leading-snug transition sm:min-h-10 sm:flex-none sm:basis-auto sm:px-3 sm:text-sm ${
                             rResult === item
                               ? "border-ui-brand bg-ui-brand text-slate-950"
-                              : "border-ui-line bg-ui-panel text-ui-muted hover:border-ui-lineStrong hover:bg-ui-elevated hover:text-ui-text"
+                              : "border-transparent bg-transparent text-ui-muted hover:border-ui-lineStrong hover:bg-ui-inset hover:text-ui-text"
                           }`}
                         >
                           {profitResultLabel(item)}
@@ -772,7 +772,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                   />
                 </label>
 
-                <AppSurface tone="inset" padding="md">
+                <AppSurface tone="inset" variant="report" padding="md">
                   <p className="text-xs font-semibold text-ui-muted">
                     {isSubmitReady
                       ? "필수 항목이 준비되었습니다. 저장하면 이번 복기 요약과 다음 체크포인트를 바로 보여드립니다."
@@ -794,13 +794,13 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
             </section>
 
             {lastFeedback ? (
-              <PanelCard>
+              <PanelCard variant="report" padding="lg">
                 <SectionHeader
                   title="이번 복기 요약"
                   description={lastFeedback.message}
                   action={<StatusPill tone="long" icon={ShieldCheck}>기록 저장됨</StatusPill>}
                 />
-                <div className="mt-4 rounded-ui border border-ui-line bg-ui-inset px-3">
+                <div className="mt-4">
                   <DataRow label="원칙 준수 상태" value={lastFeedback.principleStatus} />
                   <DataRow label="주요 실수" value={lastFeedback.mistake} />
                   <DataRow label="잘한 점" value={lastFeedback.wellDone} />
@@ -809,7 +809,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
               </PanelCard>
             ) : null}
 
-            <PanelCard className="scroll-mb-56">
+            <PanelCard variant="report" padding="lg" className="scroll-mb-56">
               <SectionHeader
                 title="복기 히스토리"
                 description="결과보다 원칙, 리스크 관리, 다음 체크포인트가 한눈에 보이도록 정리합니다."
@@ -828,9 +828,9 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                   ))}
               </div>
 
-              <div className="mt-4 space-y-3">
+              <div className="mt-4 divide-y divide-ui-line">
                 {isLoadingRemote ? (
-                  <AppSurface tone="inset" padding="md" className="flex items-center gap-2 text-ui-body text-ui-muted">
+                  <AppSurface tone="inset" variant="report" padding="md" className="flex items-center gap-2 text-ui-body text-ui-muted">
                     <Loader2 className="animate-spin text-accent-blue" size={17} aria-hidden />
                     복기 기록을 불러오는 중입니다.
                   </AppSurface>
@@ -839,7 +839,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                     const parsed = parseEntryMeta(entry);
                     const expanded = expandedEntryId === entry.id;
                     return (
-                      <AppSurface as="article" key={entry.id} tone="inset" padding="md" className="min-w-0 max-w-full overflow-hidden">
+                      <AppSurface as="article" key={entry.id} tone="inset" variant="flat" padding="none" radius="none" className="min-w-0 max-w-full overflow-hidden py-4">
                         <div className="flex min-w-0 items-start justify-between gap-3">
                           <div className="min-w-0">
                             <SourceBadge entry={entry} />
@@ -873,7 +873,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                           </ActionButton>
                         </div>
 
-                        <div className="mt-3 rounded-ui border border-ui-line bg-ui-panel px-3">
+                        <div className="mt-3">
                           <DataRow label="실수 태그" value={parsed.brokenReal.length ? parsed.brokenReal.join(", ") : "없음"} />
                           <DataRow
                             label="원칙 준수 상태"
@@ -898,7 +898,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                         </ActionButton>
 
                         {expanded ? (
-                          <AppSurface tone="panel" padding="md" className="mt-3">
+                          <AppSurface tone="panel" variant="report" padding="md" className="mt-3">
                             <div className="grid gap-3 text-sm leading-6 text-ui-muted">
                               <p>
                                 <span className="font-semibold text-ui-text">진입 근거.</span>{" "}
@@ -929,7 +929,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                     );
                   })
                 ) : (
-                  <AppSurface tone="inset" padding="md">
+                  <AppSurface tone="inset" variant="report" padding="md">
                     <p className="text-sm font-semibold text-ui-text">아직 저장된 복기가 없습니다.</p>
                     <p className="mt-2 text-ui-body text-ui-muted">
                       첫 복기는 짧아도 됩니다. 진입 이유와 깨진 원칙만 남겨도 다음 판단이 선명해집니다.

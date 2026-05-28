@@ -158,3 +158,30 @@ Start with `/journal` because:
 - It is the active run's first unimplemented surface after alerts.
 - It is form/list heavy, so it tests whether boxless rules work beyond read-only report screens.
 - It is high risk due to persistence, so implementation should be PR-based and visually reviewed.
+
+## Implementation Notes
+
+### `/journal` boxless pilot
+
+Status: implemented on `codex/journal-boxless-form-list-pilot`.
+
+Applied changes:
+
+- Converted the route-level journal surface from a card-like panel to a flat app flow.
+- Converted summary, pending radar, quick form, feedback, and history sections to `report` surfaces.
+- Removed nested rounded inset wrappers from metrics, saved radar rows, feedback rows, and history detail rows.
+- Changed repeated journal entries from card stack presentation to divider/list rows.
+- Kept input, textarea, selected chips, destructive delete, and primary save actions bounded as intentional touch targets.
+
+Unchanged areas:
+
+- Journal save/load behavior.
+- Remote journal Supabase sync.
+- Auth/session behavior.
+- Journal note parsing and data shape.
+- `/journal?market=crypto` and `/journal?market=global` route behavior.
+- Billing, Android, FCM, and production-related code.
+
+Next recommended page group:
+
+- `/global` body report/list pilot, because it is the next high-impact dashboard-style screen and must preserve Global Radar as an independent product mode.
