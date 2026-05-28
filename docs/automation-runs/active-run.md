@@ -56,7 +56,7 @@
 
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TODO | `/news` 현재 박스 구조 조사 | News UI audit | LOW | `/news`, `RadarNewsPanel`, `RadarDigestPanel`, 필요 시 `MacroTicker`에서 `AppSurface`, `PanelCard`, `rounded`, `border`, `shadow` 사용 구조를 조사한다. | 코드 수정 금지. | `git diff --check` |
+| 1 | DONE | `/news` 현재 박스 구조 조사 | News UI audit | LOW | `/news`, `RadarNewsPanel`, `RadarDigestPanel`, 필요 시 `MacroTicker`에서 `AppSurface`, `PanelCard`, `rounded`, `border`, `shadow` 사용 구조를 조사한다. | 코드 수정 금지. | `git diff --check` |
 | 2 | TODO | `/news` boxless pilot 적용 | News UI implementation | MEDIUM | `/news` 화면의 일부 또는 주요 섹션에 `variant="report"` 또는 `variant="list"`를 제한 적용하고, 중첩 `PanelCard`를 줄이며 뉴스 리스트를 row/list 중심으로 정리한다. | `/crypto`, `/global`, `/alerts`, `/journal`, `/pro` 수정 금지. API fetch 변경 금지. news data shape 변경 금지. routing 변경 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:all`; `git diff --check`; `/news` 360px screenshot; `/news` desktop screenshot; `/news?market=crypto` 확인; `/news?market=global` 확인 |
 | 3 | TODO | pilot 결과 문서화 | Docs / UX | LOW | `docs/app-wide-boxless-ui-plan.md` 또는 `docs/full-app-boxless-redesign-plan.md`에 `/news` pilot 결과, 장점/문제/다음 적용 후보를 기록한다. | 앱 코드 수정 금지. | `git diff --check` |
 
