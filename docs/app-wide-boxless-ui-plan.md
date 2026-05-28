@@ -10,6 +10,12 @@ Status: Superseded by `full-app-boxless-redesign-run`.
 
 This document remains as a reference for surface and primitive design. The current product direction is broader: remove the AI-made SaaS dashboard feeling across the full app and redesign ChartRadar as a full-screen consumer-style mobile app.
 
+First implementation direction from the superseding run:
+
+- Start with a backward-compatible `DesignPrimitives` foundation.
+- Do not visually migrate `/crypto` or the full app first.
+- Use the new primitive variants in a later bounded pilot after screenshot review.
+
 ## Purpose
 
 ChartRadar should read more like a fast market report than a stack of nested cards. This plan defines when to keep boxed surfaces and when to reduce card, border, shadow, and nested panel treatment across the app.

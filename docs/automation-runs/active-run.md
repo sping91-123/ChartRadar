@@ -27,6 +27,12 @@
 - Coin Radar와 Global Radar는 동등한 상위 시장 모드로 유지한다.
 - Global Radar를 코인 보조 매크로로 격하하지 않는다.
 
+## Run Status
+
+- Planning complete.
+- Completed date: 2026-05-28.
+- Next recommended run: `boxless-design-primitives-foundation-run`.
+
 ## Core Design Principles
 
 - 하단 고정 패널 또는 필수 컨트롤 외에는 큰 박스/카드/패널을 기본 사용하지 않는다.
@@ -62,8 +68,8 @@
 | 1 | DONE | 전체 앱 boxless redesign 방향 문서화 | 제품 디자인 / 전략 | LOW | `docs/full-app-boxless-redesign-plan.md`를 기준으로 전 화면 boxless redesign 원칙, 예외, 참고 앱 방향, 금지 범위를 정리한다. | 앱 코드 수정 금지. | `git diff --check` |
 | 2 | DONE | 화면별 카드/패널 제거 우선순위 재정리 | 제품 디자인 / 화면 구조 | LOW | 시장 선택, `/crypto`, `/alts`, `/global`, `/global/assets`, `/news`, `/alerts`, `/journal`, `/learn`, `/pro`, 설정/계정 흐름별 적용 순서를 정한다. | 앱 코드 수정 금지. | `git diff --check` |
 | 3 | DONE | 공통 AppShell / BottomNav / Section / ListRow 디자인 기준 설계 | 공통 UI 구조 | MEDIUM | 박스 없는 앱 구조를 위한 공통 shell, 하단 네비게이션/컨트롤, 섹션, 리스트 row, metric row 기준을 문서화한다. 실제 구현은 하지 않는다. | 앱 코드 수정 금지. | `git diff --check` |
-| 4 | TODO | 첫 구현 화면 선정 | 전략실 메인 / 구현 준비 | LOW | 첫 실제 구현 후보를 하나만 선정한다. 후보는 시장 선택, 뉴스/일정, 알림, Coin Radar summary, Global Radar summary 중 하나다. | 앱 코드 수정 금지. | `git diff --check` |
-| 5 | TODO | 첫 구현 범위 확정 | 전략실 메인 / 구현 준비 | LOW | 첫 구현 작업의 수정 파일, 금지 범위, 검증 명령, 스크린샷 기준, push 정책을 확정한다. | 앱 코드 수정 금지. | `git diff --check` |
+| 4 | DONE | 첫 구현 화면 선정 | 전략실 메인 / 구현 준비 | LOW | 첫 실제 구현 후보를 하나만 선정한다. 후보는 시장 선택, 뉴스/일정, 알림, Coin Radar summary, Global Radar summary 중 하나다. | 앱 코드 수정 금지. | `git diff --check` |
+| 5 | DONE | 첫 구현 범위 확정 | 전략실 메인 / 구현 준비 | LOW | 첫 구현 작업의 수정 파일, 금지 범위, 검증 명령, 스크린샷 기준, push 정책을 확정한다. | 앱 코드 수정 금지. | `git diff --check` |
 
 ## Status Values
 

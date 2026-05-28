@@ -645,3 +645,116 @@ Still pending:
 - Task 5: Confirm the first implementation scope.
 
 Implementation remains forbidden until the next active-run step explicitly selects and scopes the first code task.
+
+## First Implementation Candidate Review
+
+The first implementation must prove the new direction without redesigning the full app in one pass.
+
+| Candidate | Effect | Risk | Impact range | Verification difficulty | Screenshot review | Extensibility | Decision |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Add `flat` / `report` / `list` support to common design primitives | Creates reusable foundation for the whole app and reduces one-off class churn | MEDIUM | Shared UI primitive only if defaults remain backward-compatible | Medium: build and smoke tests plus no-call-site-change check | Not required if no call sites change; required for first visual application | High | Selected as first implementation |
+| Apply boxless principles to market selection | Very visible first-screen improvement | LOW-MEDIUM | `/` and entry flow | Low: visual and route entry checks | Required at 340px/360px and desktop | Medium | Good second step after foundation |
+| Use `/news` as boxless pilot | Natural feed/list surface and easier to evaluate visually | MEDIUM | `/news` only, possible shared panel usage | Medium: route visual checks and market filter checks | Required | High | Good first visual pilot after foundation |
+| Convert `/alerts` to list-first settings layout | Strong product fit for settings-style rows | MEDIUM-HIGH | `/alerts`, alert state UI, possible push-adjacent UX | Medium-high because alert status must remain clear | Required | Medium | Later pilot; avoid touching FCM/push logic |
+| Redesign full `/crypto` screen | Large product impact | HIGH | Core Coin Radar, chart, controls, Basic/Pro gating, shared alts components | High | Required across mobile and desktop | High but risky | Not first; must be separate large run |
+
+## First Implementation Decision
+
+First implementation priority:
+
+- Add common boxless surface foundation to `DesignPrimitives` with backward-compatible defaults.
+
+Why this is first:
+
+- It supports the full-app redesign rather than one isolated screen.
+- It can be implemented without changing any route, data logic, or business logic.
+- It is easy to revert because it should be contained to the common primitive file and optional tests/docs.
+- It avoids repeating custom Tailwind class rewrites in every screen.
+- It gives later screens a consistent vocabulary: `card`, `flat`, `report`, `list`, and explicit critical exceptions.
+- It should not visually change the app until call sites opt into the new variants.
+
+What this first implementation is not:
+
+- It is not the full app redesign.
+- It is not a `/crypto` redesign.
+- It is not a market selection redesign.
+- It is not a route or navigation change.
+- It is not a bottom tab implementation.
+
+## First Implementation Scope
+
+Proposed implementation run name:
+
+- `boxless-design-primitives-foundation-run`
+
+Allowed file candidates:
+
+- `src/components/ui/DesignPrimitives.tsx`
+- A focused test or smoke script only if the repo already has an appropriate pattern.
+- `docs/full-app-boxless-redesign-plan.md` for implementation result notes.
+- `docs/automation-runs/active-run.md` for the next implementation run setup.
+
+Expected code change:
+
+- Add a backward-compatible `variant` prop to `AppSurface`.
+- Optionally add a backward-compatible `variant` prop to `PanelCard`.
+- Keep current default visuals unchanged.
+- Define variants for future use:
+  - `card`: current boxed behavior.
+  - `flat`: no shadow, minimal or no border/background.
+  - `report`: divider-led report section.
+  - `list`: row/list grouping without outer card weight.
+- Keep critical/boxed treatment available for auth, billing, warning, modal, Pro, and destructive states.
+
+Files that must not be touched:
+
+- `src/lib/billing.ts`
+- RevenueCat or payment integration files.
+- Supabase, RLS, auth, session, and Google login files.
+- Android, Capacitor, AAB, Play Console, keystore, and Firebase config files.
+- FCM, push token, push-cron, and notification delivery files.
+- Route files for `/crypto`, `/alts`, `/global`, `/global/assets`, `/news`, `/alerts`, `/journal`, `/learn`, `/pro` during this first foundation step.
+- `src/components/HomeEntryGate.tsx` during this first foundation step.
+
+Validation commands:
+
+- `git diff --check`
+- `cmd /c npx tsc --noEmit`
+- `npm.cmd run build`
+- `npm.cmd run smoke:mobile`
+- `npm.cmd run smoke:all`
+
+Visual verification:
+
+- If no call sites are changed, screenshots are optional but a quick `/`, `/crypto`, `/news`, and `/pro` smoke visual check is recommended.
+- If any call site uses the new variant, screenshots become required before push.
+
+Screenshot targets for the first visual pilot after foundation:
+
+- Mobile 340px or 360px.
+- Desktop.
+- The touched route.
+- One adjacent route if shared components are used.
+
+Push policy:
+
+- The foundation implementation should not auto push unless explicitly approved after build/smoke success.
+- Any visual call-site migration requires screenshot review before push.
+
+## Planning Run Completion
+
+`full-app-boxless-redesign-run` is complete at the planning level.
+
+Completed:
+
+- Full app boxless redesign direction.
+- Screen-by-screen removal priority.
+- Common AppShell / BottomNav / Section / ListRow standards.
+- First implementation candidate selection.
+- First implementation scope definition.
+
+Next required action:
+
+- Create a new implementation active-run for `boxless-design-primitives-foundation-run`.
+
+Do not start implementation inside this planning run.
