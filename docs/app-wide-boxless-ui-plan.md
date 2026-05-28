@@ -175,7 +175,170 @@ Future variant need:
 - `list`: row-based layout with dividers, suitable for repeated items.
 - `critical`: intentionally boxed, for warnings, billing, auth, and destructive actions.
 
-Actual type/API design belongs to the next active-run task.
+## DesignPrimitives Variant API Design
+
+This section defines the intended API shape only. It does not implement the change.
+
+### Current API
+
+Current types:
+
+```ts
+type Tone = "panel" | "elevated" | "inset";
+type Padding = "none" | "sm" | "md" | "lg";
+```
+
+Current behavior:
+
+- `AppSurface` always includes `rounded-ui`.
+- `tone="panel"` always adds border, panel background, and panel shadow.
+- `tone="elevated"` always adds border, elevated background, and elevated shadow.
+- `tone="inset"` always adds border and inset background.
+- `PanelCard` always renders `AppSurface tone="panel" padding="md"`.
+
+Problem:
+
+- `tone` currently mixes semantic emphasis with visual density.
+- There is no first-class way to say "this is still a section, but it should read flat."
+
+### Proposed API
+
+Add a visual `variant` separate from `tone`.
+
+```ts
+type SurfaceTone = "panel" | "elevated" | "inset" | "critical";
+type SurfaceVariant = "card" | "flat" | "report" | "list";
+type SurfacePadding = "none" | "sm" | "md" | "lg";
+type SurfaceRadius = "none" | "sm" | "md";
+
+interface AppSurfaceProps {
+  as?: ElementType;
+  tone?: SurfaceTone;
+  variant?: SurfaceVariant;
+  padding?: SurfacePadding;
+  radius?: SurfaceRadius;
+  className?: string;
+  children: ReactNode;
+}
+```
+
+Default behavior:
+
+- `variant` defaults to `card`.
+- Existing `AppSurface` and `PanelCard` call sites keep their current visual behavior unless explicitly changed.
+- `tone="panel"` remains compatible.
+- `radius` defaults to the existing radius for `variant="card"` and a lighter radius for flat/report/list variants.
+
+### Variant Intent
+
+`card`:
+
+- Current boxed behavior.
+- Keeps border, background, radius, and optional shadow.
+- Best for pricing, forms, critical states, modals, and isolated tools.
+
+`flat`:
+
+- Minimal visual treatment.
+- No shadow.
+- No full border by default.
+- Transparent or near-transparent background.
+- Best for page sections that only need spacing and typography.
+
+`report`:
+
+- Market-report style section.
+- Uses top/bottom divider or a single divider, not full card borders.
+- No shadow.
+- Compact heading and dense content rhythm.
+- Best for `/crypto`, `/news`, `/alerts`, and Global Radar summary blocks.
+
+`list`:
+
+- Row-based surface.
+- No outer card weight.
+- Uses internal row dividers.
+- Best for repeated metrics, news items, alert rows, journal summaries, and asset rows.
+
+### Tone Intent
+
+`tone` should describe semantic emphasis, not box density.
+
+- `panel`: neutral default content.
+- `elevated`: visually emphasized content, still subject to variant rules.
+- `inset`: secondary or subordinate content.
+- `critical`: warning, locked, error, destructive, billing, auth, or permission state.
+
+Rules:
+
+- `critical` can stay visibly boxed even when other sections become flat.
+- `elevated + flat` should be used carefully; it may need only stronger text or divider color, not a box.
+- `inset + list` is suitable for subordinate rows inside a larger report.
+
+### PanelCard Direction
+
+Keep `PanelCard` for backward compatibility, but avoid making it the default new layout primitive.
+
+Potential future type:
+
+```ts
+interface PanelCardProps {
+  variant?: Extract<SurfaceVariant, "card" | "report" | "list">;
+  tone?: SurfaceTone;
+  padding?: SurfacePadding;
+  className?: string;
+  children: ReactNode;
+}
+```
+
+Rules:
+
+- `PanelCard` defaults to `variant="card"` for existing behavior.
+- New report-like UI should prefer `AppSurface variant="report"` or a future `ReportSection`.
+- `PanelCard variant="list"` is allowed only when a migration would otherwise duplicate row divider logic.
+
+### Optional Future Primitives
+
+Consider adding these only if they reduce duplication after one or two route migrations:
+
+```ts
+function ReportSection(props: AppSurfaceProps) {}
+function MetricList(props: AppSurfaceProps) {}
+```
+
+Do not add these before real duplication appears.
+
+### Backward Compatibility
+
+Implementation must preserve current visuals by default:
+
+- No existing call site should visually change when the new props are added.
+- `AppSurface` without `variant` should behave like current `AppSurface`.
+- `PanelCard` without `variant` should behave like current `PanelCard`.
+- Changes should be committed separately from route-level visual migrations.
+
+### Migration Order
+
+1. Add variant support to `AppSurface` and optionally `PanelCard` without changing call sites.
+2. Add focused smoke/build checks.
+3. Apply `variant="report"` to one low-risk route section.
+4. Screenshot-review that route.
+5. Apply to `/crypto` only after the primitive behavior is proven.
+
+### Screens To Avoid Initially
+
+Avoid first migration on:
+
+- `/pro`, because pricing cards should remain clearly boxed.
+- Checkout/account/admin screens, because trust and error states need containment.
+- `/global/assets`, because dense controls and chart layout make visual regression risk higher.
+- Full `/crypto`, because previous broad flattening was not satisfactory.
+
+Better first targets:
+
+- One `/news` digest section.
+- One `/alerts` status summary section.
+- One `/crypto` summary subsection only after representative review.
 
 ## Route Priority
 

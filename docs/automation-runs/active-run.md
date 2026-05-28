@@ -46,7 +46,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | DONE | App-wide box source audit | 디자인 시스템 / 전역 UI 조사 | LOW | 앱 전체에서 박스형 UI를 만드는 주요 원인을 조사한다. 검색 대상은 `AppSurface`, `PanelCard`, `enterprise-panel`, `enterprise-card`, `rounded-2xl`, `rounded-xl`, `border`, `shadow`, `ring`, `bg-ui-panel`, `bg-ui-inset`, `bg-surface-card`이다. 대상 화면은 시장 선택, `/crypto`, `/alts`, `/global`, `/global/assets`, `/news`, `/alerts`, `/journal`, `/learn`, `/pro`이다. | 코드 수정 금지. | `git diff --check` |
 | 2 | DONE | Flat surface design rule 문서화 | 디자인 시스템 / 문서 | LOW | `docs/app-wide-boxless-ui-plan.md`를 생성해 유지해야 할 박스, 제거/약화해야 할 박스, `AppSurface`/`PanelCard` 사용 기준, flat/report/list variant 필요성, route별 적용 우선순위, 스크린샷 검수 기준을 정리한다. | 앱 코드 수정 금지. | `git diff --check` |
-| 3 | TODO | DesignPrimitives variant 설계 | 공통 UI 컴포넌트 | MEDIUM | `AppSurface`, `PanelCard`에 flat/report/list 같은 variant를 추가할지 설계한다. 실제 구현은 하지 않고 타입/API 설계만 문서화한다. | 코드 수정 금지. | `git diff --check` |
+| 3 | DONE | DesignPrimitives variant 설계 | 공통 UI 컴포넌트 | MEDIUM | `AppSurface`, `PanelCard`에 flat/report/list 같은 variant를 추가할지 설계한다. 실제 구현은 하지 않고 타입/API 설계만 문서화한다. | 코드 수정 금지. | `git diff --check` |
 | 4 | TODO | First implementation candidate 선정 | 전략실 메인 / 구현 준비 | LOW | 첫 실제 구현 후보를 선정한다. 후보는 DesignPrimitives flat/report variant 추가, `/crypto` summary 영역만 flat variant 적용, `/news` 또는 `/alerts` 같은 비교적 안전한 화면에 먼저 적용하는 방식이다. | 코드 수정 금지. | `git diff --check` |
 
 ## Status Values
