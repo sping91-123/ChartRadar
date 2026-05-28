@@ -473,3 +473,24 @@ Coin Radar UX 재구성은 Pro gating을 약화시키면 안 된다.
 
 - 마지막 사용 시장 기억은 이번 run에서 구현하지 않았으며, 별도 구현 run 후보로 남긴다.
 - Coin Radar 홈 MVP skeleton, 현물 레이더 API adapter, 하단 탭 구조 구현은 별도 active run에서 다룬다.
+
+## 시장 선택 화면 평면화 추가 결과
+
+구현 커밋: `Flatten market selection screen`
+
+### 변경 결과
+
+- Coin Radar / Global Radar 선택 영역의 개별 카드 느낌을 줄였다.
+- 선택 항목의 두꺼운 border, 강한 background, hover shadow, 중첩 rounded panel, 아이콘 프레임을 제거하거나 약화했다.
+- 선택 UI를 카드 2개가 아니라 얇은 divider로 구분되는 플랫한 선택 행에 가깝게 조정했다.
+- 설명 문구를 짧게 줄여 모바일 첫 화면의 밀도를 낮췄다.
+- `/crypto`, `/global` 진입 링크는 유지했다.
+
+### 유지한 범위
+
+- route 변경 없음.
+- 마지막 사용 시장 기억 구현 없음.
+- 하단 탭 구현 없음.
+- `/spot`, `/home`, `/macro` 신규 route 없음.
+- Global Radar 진입 제거 없음.
+- 결제, 인증, Supabase, Android, FCM, production 변경 없음.

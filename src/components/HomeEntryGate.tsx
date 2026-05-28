@@ -4,7 +4,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Bitcoin, TrendingUp } from "lucide-react";
+import { ArrowRight, Bitcoin, TrendingUp } from "lucide-react";
 import { GoogleLoginButton } from "@/components/GoogleLoginButton";
 import { KakaoLoginButton } from "@/components/KakaoLoginButton";
 import { getSupabaseSession } from "@/lib/supabase";
@@ -17,23 +17,17 @@ const brandLetters = Array.from("Chart Radar");
 const marketEntries = [
   {
     title: "코인 레이더",
-    scope: "비트코인 및 이더리움 · 알트코인",
+    scope: "코인 시장",
     href: "/crypto",
     icon: Bitcoin,
-    iconFrame: "rounded-2xl border-white/10 bg-slate-950/60",
-    iconRing: "rounded-full border-cyan-200/25 bg-cyan-300/10",
-    accent: "text-cyan-200",
-    glow: "from-cyan-300/16"
+    accent: "text-cyan-200"
   },
   {
     title: "글로벌 레이더",
-    scope: "미국주식·ETF·해외선물",
+    scope: "해외주식·선물",
     href: "/global",
     icon: TrendingUp,
-    iconFrame: "rounded-2xl border-white/10 bg-slate-950/60",
-    iconRing: null,
-    accent: "text-emerald-200",
-    glow: "from-emerald-300/16"
+    accent: "text-emerald-200"
   }
 ] as const;
 
@@ -167,7 +161,7 @@ function MarketSelector() {
   return (
     <main className="grid h-[100dvh] max-h-[100dvh] min-h-0 place-items-center overflow-hidden px-3 py-2 sm:px-6 sm:py-6">
       <section className="max-h-full w-full max-w-5xl -translate-y-[6dvh] overflow-visible sm:translate-y-0">
-        <div className="flex min-h-0 flex-col items-center gap-3 sm:gap-6 lg:gap-9">
+        <div className="flex min-h-0 flex-col items-center gap-5 sm:gap-8 lg:gap-10">
           <header className="flex w-full shrink-0 flex-col items-center gap-1.5 text-center sm:gap-4">
             <div className="flex items-center justify-center gap-2 sm:gap-3">
               <BrandMark />
@@ -179,31 +173,23 @@ function MarketSelector() {
             </p>
           </header>
 
-          <div className="grid min-h-0 w-full flex-1 gap-2.5 sm:gap-4 md:grid-cols-2">
-            {marketEntries.map(({ title, scope, href, icon: Icon, iconFrame, iconRing, accent, glow }) => (
+          <div className="w-full max-w-3xl divide-y divide-white/10 border-y border-white/10">
+            {marketEntries.map(({ title, scope, href, icon: Icon, accent }) => (
               <Link
                 key={title}
                 href={href}
-                className="group relative grid min-h-[7.25rem] place-items-center overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-center transition hover:-translate-y-0.5 hover:border-cyan-300/35 hover:bg-white/[0.055] hover:shadow-[0_22px_60px_rgba(0,0,0,0.22)] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:min-h-[12rem] sm:p-6 md:min-h-[16rem]"
+                className="group flex min-h-[5.75rem] items-center justify-between gap-4 px-1 py-4 text-left transition hover:bg-white/[0.025] focus:outline-none focus-visible:bg-white/[0.035] focus-visible:ring-2 focus-visible:ring-cyan-300 sm:min-h-[7rem] sm:px-3 sm:py-5"
               >
-                <div className={`absolute inset-x-0 top-0 h-28 bg-gradient-to-b ${glow} to-transparent`} aria-hidden />
-                <div className="relative flex flex-col items-center gap-2 sm:gap-4">
-                  <div className={`grid h-11 w-11 place-items-center border sm:h-16 sm:w-16 ${iconFrame} ${accent}`}>
-                    {iconRing ? (
-                      <div className={`grid h-7 w-7 place-items-center border sm:h-11 sm:w-11 ${iconRing}`} aria-hidden>
-                        <Icon size={22} aria-hidden className="sm:hidden" />
-                        <Icon size={26} aria-hidden className="hidden sm:block" />
-                      </div>
-                    ) : (
-                      <>
-                        <Icon size={24} aria-hidden className="sm:hidden" />
-                        <Icon size={30} aria-hidden className="hidden sm:block" />
-                      </>
-                    )}
+                <div className="flex min-w-0 items-center gap-4 sm:gap-5">
+                  <div className={`grid h-10 w-10 shrink-0 place-items-center sm:h-12 sm:w-12 ${accent}`}>
+                    <Icon size={25} aria-hidden />
                   </div>
-                  <h2 className="text-xl font-black tracking-tight text-white sm:text-4xl">{title}</h2>
-                  <p className="text-[11px] font-bold leading-tight text-slate-400 sm:text-xs">{scope}</p>
+                  <div className="min-w-0">
+                    <h2 className="text-2xl font-black tracking-tight text-white sm:text-4xl">{title}</h2>
+                    <p className="mt-1 text-xs font-bold leading-tight text-slate-400 sm:text-sm">{scope}</p>
+                  </div>
                 </div>
+                <ArrowRight size={20} aria-hidden className="shrink-0 text-slate-500 transition group-hover:translate-x-1 group-hover:text-cyan-200" />
               </Link>
             ))}
           </div>
