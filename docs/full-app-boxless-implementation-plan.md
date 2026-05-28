@@ -306,3 +306,27 @@ Unchanged areas:
 Next recommended page group:
 
 - `/learn`, account, settings, and support/policy surfaces, because they are lower-risk content screens and can continue the same report/list migration.
+
+### `/learn`, account, and support/policy surfaces
+
+Status: implemented on `codex/journal-boxless-form-list-pilot`.
+
+Applied changes:
+
+- Converted the Learn Center outer shell to a report surface and changed guide categories from card blocks to divider-based rows.
+- Converted nested learn glossary items from inset cards to border/list sections.
+- Converted account overview, signed-in summary, logged-out guide, and delete guide wrappers toward divider sections.
+- Converted terms, privacy, refund, account deletion, login, and common footer shells from card panels to full-width divider sections.
+- Preserved bounded buttons, login provider buttons, destructive-account-delete confirmation, admin link, and warning notices as intentional touch targets or critical notices.
+
+Unchanged areas:
+
+- Auth/session behavior.
+- Account sign-out and account deletion guidance flow.
+- Login return handling and provider button behavior.
+- Legal/policy copy and route behavior.
+- Billing, Supabase, Android, FCM, and production-related code.
+
+Next recommended page group:
+
+- Market selection, common footer/fallback, and empty/loading surfaces final pass.

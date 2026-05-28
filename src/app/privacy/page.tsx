@@ -67,9 +67,9 @@ export default function PrivacyPage() {
           홈으로 돌아가기
         </Link>
 
-        <section className="enterprise-panel p-5">
+        <section className="border-y border-surface-line py-5">
           <div className="flex items-start gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
+            <div className="grid h-10 w-10 shrink-0 place-items-center text-accent-blue">
               <LockKeyhole size={20} aria-hidden />
             </div>
             <div>
@@ -78,9 +78,9 @@ export default function PrivacyPage() {
             </div>
           </div>
 
-          <div className="mt-6 grid gap-4">
+          <div className="mt-6 divide-y divide-surface-line border-y border-surface-line">
             {sections.map((section) => (
-              <section key={section.title} className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
+              <section key={section.title} className="py-4">
                 <h2 className="text-base font-bold text-white">{section.title}</h2>
                 <ul className="mt-3 grid gap-2 text-sm leading-6 text-slate-400">
                   {section.items.map((item) => (
@@ -98,7 +98,7 @@ export default function PrivacyPage() {
         <section className="grid gap-4 md:grid-cols-2">
           <Link
             href="/account/delete"
-            className="rounded-xl border border-signal-success/25 bg-signal-success/10 p-4 text-sm leading-6 text-slate-300 hover:border-signal-success/45"
+            className="border-y border-signal-success/25 py-4 text-sm leading-6 text-slate-300 hover:border-signal-success/45"
           >
             <div className="flex items-start gap-3">
               <ShieldCheck className="mt-0.5 shrink-0 text-signal-success" size={18} aria-hidden />
@@ -108,7 +108,7 @@ export default function PrivacyPage() {
               </div>
             </div>
           </Link>
-          <section className="rounded-xl border border-accent-blue/20 bg-accent-blue/10 p-4 text-sm leading-6 text-slate-300">
+          <section className="border-y border-accent-blue/20 py-4 text-sm leading-6 text-slate-300">
             <div className="flex items-start gap-3">
               <ShieldCheck className="mt-0.5 shrink-0 text-accent-blue" size={18} aria-hidden />
               <p>

@@ -43,9 +43,9 @@ export default function RefundPage() {
           Pro 상품으로 돌아가기
         </Link>
 
-        <section className="enterprise-panel p-5">
+        <section className="border-y border-surface-line py-5">
           <div className="flex items-start gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
+            <div className="grid h-10 w-10 shrink-0 place-items-center text-accent-blue">
               <ShieldCheck size={20} aria-hidden />
             </div>
             <div>
@@ -54,9 +54,9 @@ export default function RefundPage() {
             </div>
           </div>
 
-          <div className="mt-6 grid gap-4">
+          <div className="mt-6 divide-y divide-surface-line border-y border-surface-line">
             {refundSections.map(({ icon: Icon, title, body }) => (
-              <section key={title} className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
+              <section key={title} className="py-4">
                 <div className="flex items-start gap-3">
                   <Icon className="mt-0.5 shrink-0 text-accent-blue" size={18} aria-hidden />
                   <div>
@@ -69,7 +69,7 @@ export default function RefundPage() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-amber-300/25 bg-amber-300/10 p-4 text-sm leading-6 text-amber-100">
+        <section className="border-y border-amber-300/25 py-4 text-sm leading-6 text-amber-100">
           <p className="font-black text-amber-200">문의 전 확인해 주세요.</p>
           <p className="mt-2 [word-break:keep-all]">
             환불 가능 여부는 결제 수단, 스토어 정책, 서비스 사용 이력, 법령상 제한에 따라 달라질 수 있습니다.

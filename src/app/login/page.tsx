@@ -46,7 +46,7 @@ export default function LoginPage() {
           Chart Radar로 돌아가기
         </Link>
 
-        <section className="enterprise-panel p-5">
+        <section className="border-y border-surface-line py-5">
           <p className="text-center text-sm font-semibold leading-6 text-slate-300">
             로그인하면 관심 종목, 알림, 복기 페이지 등을
             <br />

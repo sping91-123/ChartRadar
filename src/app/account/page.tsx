@@ -30,7 +30,7 @@ function providerLabel(provider?: string | null) {
 
 function AccountInfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
+    <div className="border-t border-surface-line py-3 first:border-t-0">
       <p className="text-xs font-bold text-slate-500">{label}</p>
       <p className="mt-1 break-words text-sm font-black text-white">{value}</p>
     </div>
@@ -70,9 +70,9 @@ export default function AccountPage() {
           홈으로 돌아가기
         </Link>
 
-        <section className="enterprise-panel p-5">
+        <section className="border-y border-surface-line py-5">
           <div className="flex items-start gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-cyan-300/25 bg-cyan-300/10 text-cyan-200">
+            <div className="grid h-10 w-10 shrink-0 place-items-center text-cyan-200">
               <UserCircle size={21} aria-hidden />
             </div>
             <div>
@@ -85,12 +85,12 @@ export default function AccountPage() {
 
           <div className="mt-6 grid gap-4">
             {isLoading ? (
-              <section className="rounded-xl border border-surface-line bg-surface-cardSoft p-4 text-sm font-bold text-slate-300">
+              <section className="border-y border-surface-line py-4 text-sm font-bold text-slate-300">
                 계정 상태를 확인하고 있습니다.
               </section>
             ) : user ? (
               <>
-                <section className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 p-4">
+                <section className="border-y border-cyan-300/20 py-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-cyan-200">로그인됨</p>
@@ -108,7 +108,7 @@ export default function AccountPage() {
                   </div>
                 </section>
 
-                <section className="grid gap-3 sm:grid-cols-2">
+                <section className="grid gap-x-6 border-y border-surface-line sm:grid-cols-2">
                   <AccountInfoRow label="로그인 상태" value="로그인 상태입니다." />
                   <AccountInfoRow label="이메일" value={email ?? "이메일 정보 없음"} />
                   <AccountInfoRow label="계정 유형" value={providerLabel(provider)} />
@@ -117,7 +117,7 @@ export default function AccountPage() {
                   {lastSignInAt ? <AccountInfoRow label="마지막 로그인" value={lastSignInAt} /> : null}
                 </section>
                 {isAdmin ? (
-                  <section className="rounded-xl border border-amber-300/25 bg-amber-300/10 p-4">
+                  <section className="border-y border-amber-300/25 bg-amber-300/10 py-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="text-sm font-black text-white">운영자 도구</p>
@@ -135,7 +135,7 @@ export default function AccountPage() {
                 ) : null}
               </>
             ) : (
-              <section className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
+              <section className="border-y border-surface-line py-4">
                 <div className="flex items-start gap-3">
                   <LogIn className="mt-0.5 shrink-0 text-cyan-300" size={18} aria-hidden />
                   <div>
@@ -157,9 +157,9 @@ export default function AccountPage() {
           </div>
         </section>
 
-        <section className="enterprise-panel p-5">
+        <section className="border-y border-surface-line py-5">
           <div className="flex items-start gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-rose-300/25 bg-rose-300/10 text-rose-200">
+            <div className="grid h-10 w-10 shrink-0 place-items-center text-rose-200">
               <Trash2 size={20} aria-hidden />
             </div>
             <div>
@@ -171,7 +171,7 @@ export default function AccountPage() {
           </div>
 
           <div className="mt-5 grid gap-4">
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-surface-line bg-surface-cardSoft p-4 text-sm leading-6 text-slate-300">
+            <label className="flex cursor-pointer items-start gap-3 border-y border-surface-line py-4 text-sm leading-6 text-slate-300">
               <input
                 type="checkbox"
                 checked={confirmedDeleteGuide}
@@ -202,7 +202,7 @@ export default function AccountPage() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-signal-success/25 bg-signal-success/10 p-4 text-sm leading-6 text-slate-300">
+        <section className="border-y border-signal-success/25 py-4 text-sm leading-6 text-slate-300">
           <div className="flex items-start gap-3">
             <Crown className="mt-0.5 shrink-0 text-signal-success" size={18} aria-hidden />
             <p>Pro 권한은 현재 계정 세션과 Supabase 프로필 기준으로 표시됩니다. 결제 로직이나 구독 동기화 로직은 이 화면에서 변경하지 않습니다.</p>

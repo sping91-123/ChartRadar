@@ -4,7 +4,7 @@ import { ShieldAlert } from "lucide-react";
 
 export function AppFooter() {
   return (
-    <footer className="rounded-lg border border-surface-line bg-surface-card p-4 text-xs leading-6 text-slate-500">
+    <footer className="border-y border-surface-line py-4 text-xs leading-6 text-slate-500">
       <div className="flex items-start gap-3">
         <ShieldAlert className="mt-0.5 shrink-0 text-accent-blue" size={16} aria-hidden />
         <div className="space-y-2">

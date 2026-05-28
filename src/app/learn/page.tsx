@@ -304,7 +304,7 @@ export default function LearnPage() {
           홈으로 돌아가기
         </ActionButton>
 
-        <AppSurface tone="panel" padding="lg" className="space-y-5">
+        <AppSurface variant="report" tone="panel" padding="lg" className="space-y-5">
           <SectionHeader
             eyebrow="Learn Center"
             title="용어 사전"
@@ -312,11 +312,11 @@ export default function LearnPage() {
             action={<StatusPill tone="info">{guideCategories.length}개 카테고리</StatusPill>}
           />
 
-          <div className="grid gap-2">
+          <div className="divide-y divide-ui-line border-y border-ui-line">
             {guideCategories.map(({ title, summary, icon: Icon, items }, index) => (
-              <details key={title} className="group rounded-ui border border-ui-line bg-ui-elevated">
-                <summary className="flex cursor-pointer list-none items-start gap-3 p-3 marker:hidden sm:p-4 [&::-webkit-details-marker]:hidden">
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-ui-sm border border-ui-line bg-ui-inset text-ui-muted">
+              <details key={title} className="group">
+                <summary className="flex cursor-pointer list-none items-start gap-3 py-4 marker:hidden [&::-webkit-details-marker]:hidden">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center text-ui-muted">
                     <Icon size={18} aria-hidden />
                   </span>
                   <span className="min-w-0 flex-1">
@@ -329,16 +329,16 @@ export default function LearnPage() {
                   <ChevronDown className="mt-1 shrink-0 text-ui-subtle transition group-open:rotate-180" size={17} aria-hidden />
                 </summary>
 
-                <div className="border-t border-ui-line px-3 pb-3 sm:px-4 sm:pb-4">
+                <div className="border-t border-ui-line pb-4">
                   <DataRow
                     label={`카테고리 ${index + 1}`}
                     value="선택 확인"
                     detail="용어를 펼쳐 짧은 정의만 확인하는 구조입니다."
                     className="py-3"
                   />
-                  <div className="rounded-ui-sm border border-ui-line bg-ui-inset">
+                  <div className="divide-y divide-ui-line border-y border-ui-line">
                     {items.map((item) => (
-                      <details key={`${title}-${item.name}`} className="group/item border-t border-ui-line first:border-t-0">
+                      <details key={`${title}-${item.name}`} className="group/item">
                         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-left marker:hidden [&::-webkit-details-marker]:hidden">
                           <span className="min-w-0 text-sm font-semibold text-ui-text [word-break:keep-all]">{item.name}</span>
                           <span className="inline-flex shrink-0 items-center gap-1 text-ui-label font-semibold text-ui-subtle">

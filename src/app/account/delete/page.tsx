@@ -33,9 +33,9 @@ export default function AccountDeletePage() {
           홈으로 돌아가기
         </Link>
 
-        <section className="enterprise-panel p-5">
+        <section className="border-y border-surface-line py-5">
           <div className="flex items-start gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-rose-300/25 bg-rose-300/10 text-rose-200">
+            <div className="grid h-10 w-10 shrink-0 place-items-center text-rose-200">
               <Trash2 size={20} aria-hidden />
             </div>
             <div>
@@ -47,7 +47,7 @@ export default function AccountDeletePage() {
           </div>
 
           <div className="mt-6 grid gap-4">
-            <section className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
+            <section className="border-y border-surface-line py-4">
               <div className="flex items-start gap-3">
                 <Mail className="mt-0.5 shrink-0 text-accent-blue" size={18} aria-hidden />
                 <div>
@@ -60,7 +60,7 @@ export default function AccountDeletePage() {
               </div>
             </section>
 
-            <section className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
+            <section className="border-y border-surface-line py-4">
               <h2 className="text-base font-black text-white">삭제되는 데이터</h2>
               <ul className="mt-3 grid gap-2 text-sm leading-6 text-slate-400">
                 {deleteScope.map((item) => (
@@ -72,7 +72,7 @@ export default function AccountDeletePage() {
               </ul>
             </section>
 
-            <section className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
+            <section className="border-y border-surface-line py-4">
               <h2 className="text-base font-black text-white">일부 보관될 수 있는 데이터</h2>
               <ul className="mt-3 grid gap-2 text-sm leading-6 text-slate-400">
                 {retainedScope.map((item) => (
@@ -86,7 +86,7 @@ export default function AccountDeletePage() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-signal-success/25 bg-signal-success/10 p-4 text-sm leading-6 text-slate-300">
+        <section className="border-y border-signal-success/25 py-4 text-sm leading-6 text-slate-300">
           <div className="flex items-start gap-3">
             <ShieldCheck className="mt-0.5 shrink-0 text-signal-success" size={18} aria-hidden />
             <p>

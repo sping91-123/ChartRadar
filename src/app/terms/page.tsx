@@ -58,9 +58,9 @@ export default function TermsPage() {
           홈으로 돌아가기
         </Link>
 
-        <section className="enterprise-panel p-5">
+        <section className="border-y border-surface-line py-5">
           <div className="flex items-start gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
+            <div className="grid h-10 w-10 shrink-0 place-items-center text-accent-blue">
               <FileText size={20} aria-hidden />
             </div>
             <div>
@@ -69,9 +69,9 @@ export default function TermsPage() {
             </div>
           </div>
 
-          <div className="mt-6 grid gap-4">
+          <div className="mt-6 divide-y divide-surface-line border-y border-surface-line">
             {sections.map((section) => (
-              <section key={section.title} className="rounded-xl border border-surface-line bg-surface-cardSoft p-4">
+              <section key={section.title} className="py-4">
                 <h2 className="text-base font-bold text-white">{section.title}</h2>
                 <p className="mt-2 text-sm leading-7 text-slate-400 [word-break:keep-all]">{section.body}</p>
               </section>
