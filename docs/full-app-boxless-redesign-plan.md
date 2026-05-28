@@ -289,3 +289,359 @@ The next design tasks should define:
 Before code implementation, define screen-by-screen priority and choose the first implementation screen.
 
 The first implementation should prove the design direction on one bounded surface, not the entire app.
+
+## Planning Bundle Standards
+
+This section closes active-run tasks 1, 2, and 3 at the planning level. It is still documentation only. It does not implement UI code, does not change routes, and does not modify `DesignPrimitives`.
+
+## Full App Design Philosophy
+
+ChartRadar should stop looking like an AI-generated SaaS dashboard. The redesign target is a full-screen mobile app pattern used by mature consumer apps.
+
+What changes:
+
+- The page itself becomes the surface.
+- Content flows top to bottom without being trapped in repeated cards.
+- Boundaries come from spacing, typography, divider lines, sticky controls, and list rhythm.
+- Major areas use fewer backgrounds, fewer borders, fewer shadows, and fewer rounded containers.
+- Repeated market data becomes rows, feed items, compact report blocks, or table-like layouts.
+- Bottom navigation or required bottom controls can stay fixed, but the rest of the screen should feel open.
+
+What must disappear:
+
+- `panel > card > card` nesting.
+- Large `enterprise-panel` shells around pages.
+- Repeated `PanelCard` usage for simple spacing.
+- Metric tiles that could be dense rows.
+- Explanatory boxes that could be plain copy under a heading.
+- Heavy translucent bottom docks that cover content.
+
+What stays:
+
+- Clear hierarchy.
+- Tap-safe controls.
+- Active states.
+- Warning and locked states.
+- Forms and pricing comparison where boundaries are necessary.
+
+## Screen Priority Matrix
+
+| Screen | Remove or reduce | Keep boxed | Risk | First applicability | Screenshot checks |
+| --- | --- | --- | --- | --- | --- |
+| Coin Radar (`/crypto`) | Outer report panels, nested insight cards, repeated metric cards, heavy BTC/ETH selector, heavy bottom controls | Chart canvas frame if needed, Pro lock/CTA, critical risk warning | HIGH | Not first full-screen migration; use a bounded summary section only after standards are proven | 340px/360px mobile, desktop, BTC/ETH switch, timeframe switch, mode switch, no horizontal overflow, `/alts` unaffected |
+| Global Radar (`/global`) | `enterprise-panel`, mini cards, market pulse cards, dashboard-style wrappers | Critical macro warning, necessary chart/data frames | MEDIUM | Good second-stage candidate after one simpler route | Mobile and desktop, Global entry preserved, global market sections still scannable |
+| Market selection (`/`) | Outer card, brand frame that competes with choices, nested entry cards | Login/auth state if required | LOW | Strong candidate if it can be done without route changes | 340px/360px first screen, `/crypto` entry, `/global` entry, no overflow |
+| News and schedules (`/news`) | Digest cards, nested event panels, story boxes that can become feed rows | Expanded story detail, critical event notice | LOW | Best first proof candidate because it is feed/list oriented | Mobile feed, market filter, item expansion if present, desktop density |
+| Alerts (`/alerts`) | Preset cards, status cards, repeated setting panels | Permission warning, delivery error, threshold input groups | MEDIUM | Good candidate after News or Market selection | Toggle usability, status clarity, no FCM/push logic change |
+| Journal (`/journal`) | History cards, outer shells, repeated entry panels | Input forms, selected segmented controls, destructive actions | MEDIUM | Later candidate because forms need boundaries | Mobile form fields, entry list, keyboard spacing, no data loss |
+| Settings/account | Large account panels, explanatory cards | Login, account deletion, security warning, destructive confirmations | HIGH | Not first | Auth state, account deletion safety, no session logic change |
+| Pro (`/pro`) | Supporting benefit cards, repeated copy panels | Plan comparison cards, payment status, locked state, CTA block | HIGH | Not first | Pricing clarity, Basic/Pro copy, no product/plan/entitlement change |
+| Learn (`/learn`) | Big education cards, boxed detail shells | Accordion affordance if needed | LOW | Later low-risk cleanup | Mobile accordion readability, no content overlap |
+| Global assets (`/global/assets`) | Main wrapper card, metric cards, selector panels, heavy mobile dock | Chart frame, selected asset controls, critical market state | HIGH | Not first because layout is dense | 340px/360px, desktop chart, dock not covering content |
+
+Priority order for planning:
+
+1. News and schedules.
+2. Market selection.
+3. Alerts.
+4. Global Radar summary.
+5. Coin Radar bounded summary section.
+6. Learn.
+7. Journal.
+8. Global assets.
+9. Pro.
+10. Settings/account.
+
+Reason:
+
+- Start with screens where list/feed structure is natural.
+- Delay screens with payment, auth, dense charts, or previous failed broad flatten attempts.
+
+## Common Component Standards
+
+These are design standards only. They do not create or modify components yet.
+
+### AppShell
+
+Use when:
+
+- Defining the route-level page canvas.
+- Handling safe area, max width, page padding, top spacing, and bottom spacing.
+
+Box usage:
+
+- No large card or panel.
+- No full-page border.
+- No shadow.
+
+Border/background/shadow:
+
+- Background is the app canvas.
+- Dividers only where route context changes.
+- Shadows only for a top/bottom sticky element if needed.
+
+Mobile 340px/360px:
+
+- Avoid horizontal padding that makes content feel squeezed.
+- Reserve enough bottom padding for fixed navigation or controls.
+
+Dark/light:
+
+- Canvas contrast should be subtle.
+- Do not make light mode look like stacked white cards on gray.
+
+### BottomNav
+
+Use when:
+
+- Providing persistent top-level app navigation or required route controls.
+- Keeping mobile navigation reachable.
+
+Box usage:
+
+- Can have a restrained fixed background.
+- Should not look like a large floating card unless it is a native-style bottom sheet.
+
+Border/background/shadow:
+
+- Prefer top divider and slight background.
+- Avoid thick borders, strong blur, and heavy shadow.
+
+Mobile 340px/360px:
+
+- Must not cover primary content.
+- Use safe-area padding.
+- Labels should not wrap awkwardly.
+
+Dark/light:
+
+- Active state must be clear in both modes.
+- Inactive states should be quiet.
+
+### Section
+
+Use when:
+
+- Grouping a screen area such as summary, events, market pulse, or settings group.
+
+Box usage:
+
+- Default no box.
+- Use title, subtitle, spacing, and divider.
+
+Border/background/shadow:
+
+- Prefer `border-t`, `border-b`, or no border.
+- No shadow.
+- No card background by default.
+
+Mobile 340px/360px:
+
+- Section headings should be short.
+- Long helper text should wrap below, not push controls off screen.
+
+Dark/light:
+
+- Divider contrast must remain subtle.
+
+### ListRow
+
+Use when:
+
+- Showing repeated items: news, alerts, journal entries, market rows, assets, schedule items.
+
+Box usage:
+
+- No individual card by default.
+- Row is separated by divider and spacing.
+
+Border/background/shadow:
+
+- Divider between rows.
+- Background only for selected, pressed, or critical state.
+- No shadow.
+
+Mobile 340px/360px:
+
+- Main label and key metric must fit.
+- Secondary metadata can wrap or truncate.
+- Touch area must remain large enough.
+
+Dark/light:
+
+- Selected state must be visible without becoming a card.
+
+### MetricRow
+
+Use when:
+
+- Showing compact market data, score, risk, price, funding, exchange rate, RSI, trend, dominance, or status.
+
+Box usage:
+
+- No card by default.
+- Group metrics in rows or table-like sections.
+
+Border/background/shadow:
+
+- Use divider lines.
+- Use color only for semantic status.
+- No shadow.
+
+Mobile 340px/360px:
+
+- Label left, value right.
+- Avoid three-column layouts unless labels are very short.
+
+Dark/light:
+
+- Status colors must remain readable and not over-saturated.
+
+### DividerGroup
+
+Use when:
+
+- Several related rows need grouping without a card.
+
+Box usage:
+
+- No outer card.
+- Optional top and bottom divider.
+
+Border/background/shadow:
+
+- Divider only.
+- No background unless grouping would be ambiguous.
+
+Mobile 340px/360px:
+
+- Avoid dense rows with too many chips.
+
+Dark/light:
+
+- Dividers should be visible but not dominant.
+
+### ReportBlock
+
+Use when:
+
+- A summary needs narrative structure: market state, next condition, risk, invalidation, confirmation.
+
+Box usage:
+
+- No heavy card.
+- Can use a title, a lead metric, rows, and a bottom divider.
+
+Border/background/shadow:
+
+- No shadow.
+- No full border.
+- Optional subtle background only if the report block is the main screen anchor.
+
+Mobile 340px/360px:
+
+- Lead line first.
+- Details below as rows.
+- Avoid side-by-side cards.
+
+Dark/light:
+
+- Text hierarchy should do more work than background.
+
+### CriticalNotice
+
+Use when:
+
+- Warning, error, locked, permission, destructive action, billing/auth risk, or important limitation must be clear.
+
+Box usage:
+
+- Box allowed.
+- This is an explicit exception.
+
+Border/background/shadow:
+
+- Border and tinted background allowed.
+- Avoid shadow unless modal-like.
+- Do not nest inside another heavy card.
+
+Mobile 340px/360px:
+
+- Keep copy short.
+- CTA must remain visible.
+
+Dark/light:
+
+- Warning and error colors must meet readability expectations.
+
+### ProCtaBlock
+
+Use when:
+
+- Explaining Pro access, locked details, or subscription upgrade path.
+
+Box usage:
+
+- Box allowed when it gates important content.
+- Avoid multiple Pro cards on one screen.
+
+Border/background/shadow:
+
+- Border and subtle background allowed.
+- No exaggerated profit or outcome implication.
+
+Mobile 340px/360px:
+
+- Copy must be concise.
+- CTA must not cover core Basic content.
+
+Dark/light:
+
+- CTA hierarchy must be clear without looking like a warning.
+
+## Box Exceptions
+
+Keep boxes for:
+
+- Payment plan comparison.
+- Login/auth forms.
+- Risk, error, warning, permission, and locked states.
+- Pro lock and CTA areas.
+- Modal/dialog/popover/dropdown shells.
+- Input forms.
+- Selectable trade, coin, market, or asset rows when the click target needs a boundary.
+- Chart frame only when it improves readability.
+
+Rules for exceptions:
+
+- One box is acceptable; nested boxes are not.
+- Boxed exception must have a reason: trust, safety, input clarity, pricing comparison, or touch target.
+- Do not use a box merely for spacing.
+
+## Global Radar Principle
+
+Global Radar remains an independent radar for global stocks and futures users.
+
+It is not a crypto macro supplement. It should receive the same boxless app design standard as Coin Radar while keeping its own market identity.
+
+Global Radar implementation guardrails:
+
+- Do not remove `/global` or `/global/assets` entry points.
+- Do not hide Global Radar behind Coin Radar.
+- Do not rewrite global market logic during visual redesign.
+- Do not weaken global-specific news, schedule, asset, or market pulse context.
+
+## Planning Bundle Completion
+
+Active-run tasks completed by this planning bundle:
+
+- Task 1: Full app boxless redesign direction documented.
+- Task 2: Screen-by-screen card/panel removal priority documented.
+- Task 3: Common AppShell / BottomNav / Section / ListRow design standards documented.
+
+Still pending:
+
+- Task 4: Select the first implementation screen.
+- Task 5: Confirm the first implementation scope.
+
+Implementation remains forbidden until the next active-run step explicitly selects and scopes the first code task.

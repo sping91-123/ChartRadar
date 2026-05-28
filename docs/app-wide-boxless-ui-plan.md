@@ -6,6 +6,10 @@ Active run: `design-system-flat-surfaces-run`
 
 Task: `Flat surface design rule 문서화`
 
+Status: Superseded by `full-app-boxless-redesign-run`.
+
+This document remains as a reference for surface and primitive design. The current product direction is broader: remove the AI-made SaaS dashboard feeling across the full app and redesign ChartRadar as a full-screen consumer-style mobile app.
+
 ## Purpose
 
 ChartRadar should read more like a fast market report than a stack of nested cards. This plan defines when to keep boxed surfaces and when to reduce card, border, shadow, and nested panel treatment across the app.
