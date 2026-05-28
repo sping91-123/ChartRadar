@@ -16,6 +16,13 @@ First implementation direction from the superseding run:
 - Do not visually migrate `/crypto` or the full app first.
 - Use the new primitive variants in a later bounded pilot after screenshot review.
 
+Implementation update:
+
+- `AppSurface` now supports `variant="card" | "flat" | "report" | "list"`.
+- `PanelCard` now accepts compatible `tone`, `variant`, and `padding` props.
+- Default behavior remains `variant="card"`, preserving existing call-site visuals.
+- Existing screens do not opt into the new variants yet.
+
 ## Purpose
 
 ChartRadar should read more like a fast market report than a stack of nested cards. This plan defines when to keep boxed surfaces and when to reduce card, border, shadow, and nested panel treatment across the app.
@@ -211,7 +218,7 @@ Problem:
 - `tone` currently mixes semantic emphasis with visual density.
 - There is no first-class way to say "this is still a section, but it should read flat."
 
-### Proposed API
+### Implemented API
 
 Add a visual `variant` separate from `tone`.
 
@@ -238,6 +245,7 @@ Default behavior:
 - Existing `AppSurface` and `PanelCard` call sites keep their current visual behavior unless explicitly changed.
 - `tone="panel"` remains compatible.
 - `radius` defaults to the existing radius for `variant="card"` and a lighter radius for flat/report/list variants.
+- `flat`, `report`, and `list` are opt-in only.
 
 ### Variant Intent
 
@@ -289,11 +297,11 @@ Rules:
 
 Keep `PanelCard` for backward compatibility, but avoid making it the default new layout primitive.
 
-Potential future type:
+Implemented compatible type direction:
 
 ```ts
 interface PanelCardProps {
-  variant?: Extract<SurfaceVariant, "card" | "report" | "list">;
+  variant?: SurfaceVariant;
   tone?: SurfaceTone;
   padding?: SurfacePadding;
   className?: string;
@@ -349,6 +357,12 @@ Better first targets:
 - One `/news` digest section.
 - One `/alerts` status summary section.
 - One `/crypto` summary subsection only after representative review.
+
+Next pilot recommendation:
+
+- Apply `variant="report"` or `variant="list"` to one bounded `/news` section first.
+- Market selection is the next possible pilot if the goal is first-screen impact.
+- Do not use `/crypto` as the first broad visual migration.
 
 ## Route Priority
 

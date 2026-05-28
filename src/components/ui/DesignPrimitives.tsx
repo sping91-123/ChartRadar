@@ -2,7 +2,9 @@ import Link from "next/link";
 import type { ButtonHTMLAttributes, ElementType, ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 
-type Tone = "panel" | "elevated" | "inset";
+type Tone = "panel" | "elevated" | "inset" | "critical";
+type SurfaceVariant = "card" | "flat" | "report" | "list";
+type SurfaceRadius = "none" | "sm" | "md";
 type Padding = "none" | "sm" | "md" | "lg";
 type StatusTone = "long" | "short" | "watch" | "risk" | "locked" | "info";
 type ButtonTone = "primary" | "secondary" | "ghost" | "danger";
@@ -11,10 +13,31 @@ function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-const surfaceToneClass: Record<Tone, string> = {
-  panel: "border border-ui-line bg-ui-panel text-ui-text shadow-ui-panel",
-  elevated: "border border-ui-line bg-ui-elevated text-ui-text shadow-ui-elevated",
-  inset: "border border-ui-line bg-ui-inset text-ui-text"
+const surfaceVariantClass: Record<SurfaceVariant, Record<Tone, string>> = {
+  card: {
+    panel: "border border-ui-line bg-ui-panel text-ui-text shadow-ui-panel",
+    elevated: "border border-ui-line bg-ui-elevated text-ui-text shadow-ui-elevated",
+    inset: "border border-ui-line bg-ui-inset text-ui-text",
+    critical: "border border-amber-400/28 bg-amber-400/10 text-ui-risk"
+  },
+  flat: {
+    panel: "bg-transparent text-ui-text",
+    elevated: "bg-transparent text-ui-text",
+    inset: "bg-transparent text-ui-muted",
+    critical: "bg-transparent text-ui-risk"
+  },
+  report: {
+    panel: "border-y border-ui-line bg-transparent text-ui-text",
+    elevated: "border-y border-ui-lineStrong bg-transparent text-ui-text",
+    inset: "border-y border-ui-line bg-transparent text-ui-muted",
+    critical: "border-y border-amber-400/28 bg-transparent text-ui-risk"
+  },
+  list: {
+    panel: "divide-y divide-ui-line bg-transparent text-ui-text",
+    elevated: "divide-y divide-ui-lineStrong bg-transparent text-ui-text",
+    inset: "divide-y divide-ui-line bg-transparent text-ui-muted",
+    critical: "divide-y divide-amber-400/24 bg-transparent text-ui-risk"
+  }
 };
 
 const paddingClass: Record<Padding, string> = {
@@ -24,21 +47,53 @@ const paddingClass: Record<Padding, string> = {
   lg: "p-5"
 };
 
+const radiusClass: Record<SurfaceRadius, string> = {
+  none: "",
+  sm: "rounded-ui-sm",
+  md: "rounded-ui"
+};
+
+function defaultRadiusForVariant(variant: SurfaceVariant) {
+  return variant === "card" ? "md" : "none";
+}
+
 interface AppSurfaceProps {
   as?: ElementType;
   tone?: Tone;
+  variant?: SurfaceVariant;
   padding?: Padding;
+  radius?: SurfaceRadius;
   className?: string;
   children: ReactNode;
 }
 
-export function AppSurface({ as: Component = "section", tone = "panel", padding = "md", className, children }: AppSurfaceProps) {
-  return <Component className={cx("rounded-ui", surfaceToneClass[tone], paddingClass[padding], className)}>{children}</Component>;
+export function AppSurface({
+  as: Component = "section",
+  tone = "panel",
+  variant = "card",
+  padding = "md",
+  radius = defaultRadiusForVariant(variant),
+  className,
+  children
+}: AppSurfaceProps) {
+  return <Component className={cx(radiusClass[radius], surfaceVariantClass[variant][tone], paddingClass[padding], className)}>{children}</Component>;
 }
 
-export function PanelCard({ className, children }: { className?: string; children: ReactNode }) {
+export function PanelCard({
+  tone = "panel",
+  variant = "card",
+  padding = "md",
+  className,
+  children
+}: {
+  tone?: Tone;
+  variant?: SurfaceVariant;
+  padding?: Padding;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
-    <AppSurface tone="panel" padding="md" className={cx("min-w-0", className)}>
+    <AppSurface tone={tone} variant={variant} padding={padding} className={cx("min-w-0", className)}>
       {children}
     </AppSurface>
   );

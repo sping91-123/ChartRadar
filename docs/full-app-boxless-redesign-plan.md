@@ -687,6 +687,12 @@ Proposed implementation run name:
 
 - `boxless-design-primitives-foundation-run`
 
+Implementation status:
+
+- Foundation implementation completed in `src/components/ui/DesignPrimitives.tsx`.
+- The implementation is backward-compatible by default.
+- No route call sites were migrated in the foundation step.
+
 Allowed file candidates:
 
 - `src/components/ui/DesignPrimitives.tsx`
@@ -697,7 +703,7 @@ Allowed file candidates:
 Expected code change:
 
 - Add a backward-compatible `variant` prop to `AppSurface`.
-- Optionally add a backward-compatible `variant` prop to `PanelCard`.
+- Add a backward-compatible `variant` prop to `PanelCard`.
 - Keep current default visuals unchanged.
 - Define variants for future use:
   - `card`: current boxed behavior.
@@ -705,6 +711,14 @@ Expected code change:
   - `report`: divider-led report section.
   - `list`: row/list grouping without outer card weight.
 - Keep critical/boxed treatment available for auth, billing, warning, modal, Pro, and destructive states.
+
+Implemented variant behavior:
+
+- `card`: preserves current bordered/background/shadow surface behavior.
+- `flat`: transparent, no border, no shadow.
+- `report`: divider-led section with no full card shadow.
+- `list`: divider group for row-based layouts.
+- `critical` tone is available for explicit warning/locked/error-like emphasis without forcing existing call sites to change.
 
 Files that must not be touched:
 
@@ -740,6 +754,12 @@ Push policy:
 
 - The foundation implementation should not auto push unless explicitly approved after build/smoke success.
 - Any visual call-site migration requires screenshot review before push.
+
+Foundation result:
+
+- No existing call site was changed.
+- Screens should not visually change until a route explicitly opts into a new variant.
+- Next recommended pilot is a bounded `/news` section or market selection screen, not the full `/crypto` screen.
 
 ## Planning Run Completion
 
