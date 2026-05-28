@@ -516,6 +516,43 @@ The first `/alerts` implementation pass applies the boxless rules only to the ro
 - Admin diagnostics and test push tools remain visually bounded for safety and are not part of the first pass.
 - Push token, FCM, push-cron, permission, Supabase, billing, auth, Android, and route logic are unchanged.
 
+### `/alerts` Pilot Result
+
+- PR: #1, merged into `main`.
+- Merge commit: `53684ac`.
+- Implementation commit: `09d1c43`.
+- Result: `/alerts` now reads more like a report/list settings surface instead of nested cards.
+- Improved: top-level alert center, push status, saved conditions, monitor metrics, and alert rules have weaker card framing.
+- Improved: repeated rule cards now behave visually like list rows while keeping toggle touch targets.
+- Screenshots reviewed:
+  - `reports/verification/alerts-boxless-360.png`.
+  - `reports/verification/alerts-boxless-desktop.png`.
+- Verification summary:
+  - `git diff --check`.
+  - `cmd /c npx tsc --noEmit`.
+  - `npm.cmd run build`.
+  - `npm.cmd run smoke:mobile`.
+  - `npm.cmd run smoke:all`.
+  - `npm.cmd run smoke:ops`.
+  - `/alerts?market=crypto` checked at 360px and desktop.
+  - `/alerts?market=global` checked for title, saved conditions, alert rules, enable notification UI, and no horizontal overflow.
+- Preserved:
+  - push token logic.
+  - FCM and push-cron logic.
+  - notification permission flow.
+  - Supabase, billing/auth, Android, and production-related files.
+  - Pro/Basic gating.
+  - admin diagnostics/test push tools.
+- Remaining issues:
+  - Admin diagnostics are still intentionally boxed and should stay separate unless reviewed as an admin-only tool pass.
+  - `UsageMeterPanel` was not changed in this run.
+  - Some pills/buttons remain visually bounded because they carry state or actions.
+- Next boxless candidates:
+  - `/journal` form/list surface simplification.
+  - `/global` body report-style redesign.
+  - `/crypto` body redesign as a larger dedicated run.
+  - `/pro` pricing and CTA review without weakening plan comparison or gating.
+
 ## Recommended Next Step
 
 Design the `AppSurface` and `PanelCard` variant API before implementation.
