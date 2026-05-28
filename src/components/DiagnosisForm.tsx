@@ -102,8 +102,8 @@ export function DiagnosisForm({ values, onChange, onSubmit }: DiagnosisFormProps
   ].filter(Boolean).length;
 
   return (
-    <section className="rounded-lg border border-surface-line bg-surface-card p-4 shadow-glow sm:p-5">
-      <div className="mb-5 flex items-start gap-3 rounded-lg border border-accent-blue/20 bg-accent-blue/10 p-3">
+    <section className="border-y border-surface-line py-4 sm:py-5">
+      <div className="mb-5 flex items-start gap-3 border-y border-accent-blue/20 py-3">
         <AlertTriangle className="mt-0.5 shrink-0 text-accent-blue" size={18} aria-hidden />
         <p className="text-sm leading-6 text-slate-300">
           이 진단은 매매를 더 많이 하게 만드는 도구가 아니라, 지금 자리가 위험한지 먼저 걸러내는 체크표입니다.
@@ -111,11 +111,11 @@ export function DiagnosisForm({ values, onChange, onSubmit }: DiagnosisFormProps
       </div>
 
       <div className="mb-5 grid grid-cols-2 gap-2">
-        <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2">
+        <div className="border-y border-white/10 py-2">
           <p className="text-[11px] font-semibold text-slate-500">입력 진행도</p>
           <p className="mt-1 text-base font-black text-white">{essentialsReady}/4</p>
         </div>
-        <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2">
+        <div className="border-y border-white/10 py-2">
           <p className="text-[11px] font-semibold text-slate-500">현재 방향</p>
           <p className="mt-1 text-base font-black text-white">{values.direction}</p>
         </div>

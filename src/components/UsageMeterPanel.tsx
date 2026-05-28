@@ -31,7 +31,7 @@ function UsageRow({ state, isPaid }: { state: ReturnType<typeof getUsageBucketSt
     : `처음 ${state.freeDailyLimit}회 이후에는 Pro에서 장중 재확인이 열립니다.`;
 
   return (
-    <div className="rounded-xl border border-surface-line bg-surface-cardSoft p-3">
+    <div className="border-t border-surface-line py-3 first:border-t-0">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-black text-white">{state.label}</p>
@@ -131,10 +131,10 @@ export function UsageMeterPanel({
         : "오늘 레이더를 아직 쓰지 않았습니다.";
 
   return (
-    <section className="enterprise-panel p-4 sm:p-5">
+    <section className="border-y border-surface-line py-4 sm:py-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
+          <div className="grid h-10 w-10 shrink-0 place-items-center text-accent-blue">
             <Gauge size={20} aria-hidden />
           </div>
           <div>
@@ -153,13 +153,13 @@ export function UsageMeterPanel({
         </div>
       </div>
 
-      <div className={`mt-4 grid gap-2 ${compact ? "lg:grid-cols-3" : "md:grid-cols-2 lg:grid-cols-3"}`}>
+      <div className={`mt-4 grid gap-x-6 border-y border-surface-line ${compact ? "lg:grid-cols-3" : "md:grid-cols-2 lg:grid-cols-3"}`}>
         {visibleStates.map((state) => (
           <UsageRow key={state.id} state={state} isPaid={isPaid} />
         ))}
       </div>
 
-      <div className="mt-4 flex flex-col gap-2 rounded-xl border border-accent-blue/20 bg-accent-blue/10 p-3 text-xs leading-5 text-accent-blue sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-4 flex flex-col gap-2 border-y border-accent-blue/20 py-3 text-xs leading-5 text-accent-blue sm:flex-row sm:items-center sm:justify-between">
         <span className="flex items-start gap-2">
           <Zap className="mt-0.5 shrink-0" size={14} aria-hidden />
           이 정보는 투자 권유가 아니라 판단 보조용입니다. Basic은 방향 요약만 제공하고, Pro는 상세 조건과 세부 리스크를 함께 확인합니다.

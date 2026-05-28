@@ -98,7 +98,7 @@ function RadarSetupCard({ setup, rank }: { setup: ScoutSetup; rank: number }) {
   const SideIcon = isLong ? ArrowUpRight : ArrowDownRight;
 
   return (
-    <article className="rounded-lg border border-white/10 bg-black/25 p-3 [word-break:keep-all]">
+    <article className="border-y border-white/10 py-3 [word-break:keep-all]">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-[10px] font-black text-slate-500">RADAR {rank}</p>
@@ -184,8 +184,8 @@ export function RadarCommandCenter() {
         : "border-signal-warning/30 bg-signal-warning/10 text-signal-warning";
 
   return (
-    <section className="overflow-hidden rounded-lg border border-accent-blue/25 bg-surface-card shadow-glow">
-      <div className="relative border-b border-surface-line bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.18),transparent_28rem)] p-4 sm:p-5">
+    <section className="overflow-hidden border-y border-accent-blue/25">
+      <div className="relative border-b border-surface-line py-4 sm:py-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <div className="radar-mark-lg h-16 w-16 shrink-0 border border-accent-blue/30" />
@@ -209,21 +209,21 @@ export function RadarCommandCenter() {
         </div>
 
         <div className="mt-4 grid gap-2 sm:grid-cols-4">
-          <div className="rounded-lg border border-white/10 bg-black/25 p-3">
+          <div className="border-y border-white/10 py-3">
             <p className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
               <Activity size={13} aria-hidden />
               강한 감지
             </p>
             <p className="mt-1 text-2xl font-black text-white">{state.status === "ready" ? strongCount : "-"}</p>
           </div>
-          <div className="rounded-lg border border-white/10 bg-black/25 p-3">
+          <div className="border-y border-white/10 py-3">
             <p className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
               <Radar size={13} aria-hidden />
               관찰 대기
             </p>
             <p className="mt-1 text-2xl font-black text-white">{state.status === "ready" ? watchCount : "-"}</p>
           </div>
-          <div className={`rounded-lg border p-3 ${marketTone}`}>
+          <div className={`border-y py-3 ${marketTone}`}>
             <p className="text-[11px] font-bold opacity-80">방향 쏠림</p>
             <p className="mt-1 text-lg font-black">
               {state.status === "ready"
@@ -235,7 +235,7 @@ export function RadarCommandCenter() {
                 : "-"}
             </p>
           </div>
-          <div className="rounded-lg border border-signal-warning/25 bg-signal-warning/10 p-3 text-signal-warning">
+          <div className="border-y border-signal-warning/25 py-3 text-signal-warning">
             <p className="flex items-center gap-1.5 text-[11px] font-bold opacity-80">
               <ShieldAlert size={13} aria-hidden />
               주의
@@ -247,12 +247,12 @@ export function RadarCommandCenter() {
 
       <div className="p-4 sm:p-5">
         {state.status === "loading" ? (
-          <div className="flex min-h-32 items-center justify-center gap-2 rounded-lg border border-surface-line bg-surface-cardSoft text-sm text-slate-400">
+          <div className="flex min-h-32 items-center justify-center gap-2 border-y border-surface-line text-sm text-slate-400">
             <Loader2 size={18} className="animate-spin text-accent-blue" aria-hidden />
             시장 전체 레이더 스캔 중입니다.
           </div>
         ) : state.status === "error" ? (
-          <div className="rounded-lg border border-signal-danger/30 bg-signal-danger/10 p-4 text-sm text-signal-danger">
+          <div className="border-y border-signal-danger/30 py-4 text-sm text-signal-danger">
             {state.message}
           </div>
         ) : state.status === "ready" ? (
@@ -275,7 +275,7 @@ export function RadarCommandCenter() {
                 ["상위 TF 대기", "1h, 4h, 1d MSB와 CHoCH가 다시 같은 쪽으로 정렬되는지 보세요."],
                 ["관심 코인 등록", "자주 보는 알트코인은 관심 코인에 넣어두면 레이더가 따로 훑어줍니다."]
               ].map(([title, text], index) => (
-                <div key={title} className="rounded-lg border border-signal-warning/25 bg-signal-warning/10 p-3">
+                <div key={title} className="border-y border-signal-warning/25 py-3">
                   <p className="text-[11px] font-black text-signal-warning">대기 플랜 {index + 1}</p>
                   <p className="mt-1 text-sm font-black text-white">{title}</p>
                   <p className="mt-2 text-xs leading-5 text-slate-300 [word-break:keep-all]">{text}</p>

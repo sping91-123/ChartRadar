@@ -191,10 +191,10 @@ export function RadarDigestPanel() {
   const activeQuestion = questions[selectedQuestion] ?? questions[0];
 
   return (
-    <section id="market-digest" className="scroll-mt-24 rounded-lg border border-accent-blue/25 bg-surface-card p-4 shadow-glow sm:p-5">
+    <section id="market-digest" className="scroll-mt-24 border-y border-accent-blue/25 py-4 sm:py-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
+          <div className="grid h-10 w-10 shrink-0 place-items-center text-accent-blue">
             <Newspaper size={19} aria-hidden />
           </div>
           <div>
@@ -216,14 +216,14 @@ export function RadarDigestPanel() {
       </div>
 
       {state.status === "loading" ? (
-        <div className="mt-4 flex min-h-32 items-center justify-center gap-2 rounded-lg border border-surface-line bg-surface-cardSoft text-sm text-slate-400">
+        <div className="mt-4 flex min-h-32 items-center justify-center gap-2 border-y border-surface-line text-sm text-slate-400">
           <Loader2 size={16} className="animate-spin text-accent-blue" aria-hidden />
           레이더 노트를 정리하는 중입니다.
         </div>
       ) : null}
 
       {state.status === "error" ? (
-        <div className="mt-4 rounded-lg border border-signal-danger/30 bg-signal-danger/10 p-4 text-sm text-signal-danger">
+        <div className="mt-4 border-y border-signal-danger/30 py-4 text-sm text-signal-danger">
           {state.message}
         </div>
       ) : null}
@@ -231,19 +231,19 @@ export function RadarDigestPanel() {
       {digest && activeQuestion ? (
         <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_1.1fr]">
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-            <div className={`rounded-lg border p-3 ${toneClasses(digest.tone.tone)}`}>
+            <div className={`border-y py-3 ${toneClasses(digest.tone.tone)}`}>
               <p className="text-[11px] font-bold opacity-80">시장 흐름</p>
               <p className="mt-1 text-xl font-black">{digest.tone.label}</p>
               <p className="mt-1 text-xs font-semibold opacity-80">상승 {digest.tone.up} · 하락 {digest.tone.down}</p>
             </div>
-            <div className="rounded-lg border border-white/10 bg-black/25 p-3">
+            <div className="border-y border-white/10 py-3">
               <p className="text-[11px] font-bold text-slate-400">거래대금 1위</p>
               <p className="mt-1 text-xl font-black text-white">{digest.volumeLeader?.name ?? "-"}</p>
               <p className="mt-1 text-xs font-semibold text-slate-400">
                 {digest.volumeLeader ? `${formatVolume(digest.volumeLeader.quoteVolume)} · ${formatPrice(digest.volumeLeader.price)}` : "데이터 대기"}
               </p>
             </div>
-            <div className="rounded-lg border border-white/10 bg-black/25 p-3 sm:col-span-2 lg:col-span-1">
+            <div className="border-y border-white/10 py-3 sm:col-span-2 lg:col-span-1">
               <p className="text-[11px] font-bold text-slate-400">레이더 최상단</p>
               {digest.leader ? (
                 <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -265,7 +265,7 @@ export function RadarDigestPanel() {
             </div>
           </div>
 
-          <div className="rounded-lg border border-white/10 bg-black/25 p-3">
+          <div className="border-y border-white/10 py-3">
             <div className="flex items-start gap-2">
               <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
                 <Brain size={17} aria-hidden />

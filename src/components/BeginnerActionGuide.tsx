@@ -71,7 +71,7 @@ export function BeginnerActionGuide({
 
       <div className="mt-4 grid gap-2 md:grid-cols-3">
         {steps.map((step) => (
-          <article key={step.label} className={`min-h-[128px] rounded-lg border p-3 ${stepToneClass(step.tone)}`}>
+          <article key={step.label} className={`min-h-[128px] border-y py-3 ${stepToneClass(step.tone)}`}>
             <p className="text-[11px] font-black opacity-80">{step.label}</p>
             <h4 className="mt-2 text-sm font-black text-white">{step.title}</h4>
             <p className="mt-2 text-xs font-bold leading-5 text-slate-300 [word-break:keep-all]">{step.body}</p>

@@ -272,7 +272,7 @@ function MacroNewsItem({ item, sectionLabel, subdued = false }: { item: MacroEve
   const previousDisplay = displayPreviousValue(item);
 
   return (
-    <article className={`rounded-ui-sm border border-ui-line bg-ui-inset p-3 ${subdued ? "opacity-95" : ""}`}>
+    <article className={`border-y border-ui-line py-3 ${subdued ? "opacity-95" : ""}`}>
       <div className="flex flex-wrap items-center gap-1.5">
         <StatusPill tone={sectionLabel === "직전 발표" ? "watch" : "info"} className="min-h-6 px-2 text-[10px]">
           {sectionLabel}
@@ -404,14 +404,14 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
           {previousRelease ? (
             <MacroNewsItem item={previousRelease} sectionLabel="직전 발표" />
           ) : (
-            <div className="rounded-ui-sm border border-ui-line bg-ui-inset p-3 text-xs leading-5 text-ui-muted [word-break:keep-all]">
+            <div className="border-y border-ui-line py-3 text-xs leading-5 text-ui-muted [word-break:keep-all]">
               직전 발표는 공식 캘린더에서 확인되는 즉시 이 영역에 유지됩니다.
             </div>
           )}
           {nearestUpcoming ? (
             <MacroNewsItem item={nearestUpcoming} sectionLabel="다음 일정" />
           ) : (
-            <div className="rounded-ui-sm border border-ui-line bg-ui-inset p-3 text-xs leading-5 text-ui-muted [word-break:keep-all]">
+            <div className="border-y border-ui-line py-3 text-xs leading-5 text-ui-muted [word-break:keep-all]">
               다가오는 주요 USD 일정을 확인하는 중입니다.
             </div>
           )}
@@ -446,7 +446,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
     const isCryptoCompact = market === "crypto";
     if (!item) {
       return (
-        <div className="rounded-md border border-white/10 bg-black/20 px-3 py-3 text-xs font-bold leading-5 text-slate-500 [word-break:keep-all]">
+        <div className="border-y border-white/10 py-3 text-xs font-bold leading-5 text-slate-500 [word-break:keep-all]">
           자동 캘린더에서 이번 주 주요 일정을 확인하는 중입니다.
         </div>
       );
@@ -487,8 +487,8 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
   }
 
   return (
-    <section className="overflow-hidden rounded-lg border border-accent-blue/20 bg-surface-card shadow-glow">
-      <div className="flex items-center gap-3 border-b border-white/10 bg-black/20 px-3 py-2">
+    <section className="overflow-hidden border-y border-accent-blue/20">
+      <div className="flex items-center gap-3 border-b border-white/10 py-2">
         <div className="radar-mark grid h-8 w-8 shrink-0 place-items-center border border-accent-blue/30 text-accent-blue">
           <Radio size={15} aria-hidden />
         </div>
@@ -517,12 +517,12 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
           {latestRelease ? (
             <MacroItemCard item={latestRelease} />
           ) : (
-            <p className="rounded-md border border-white/10 bg-black/25 p-3 text-[11px] leading-5 text-slate-500">
+            <p className="border-y border-white/10 py-3 text-[11px] leading-5 text-slate-500">
               최근 24시간 안에 표시할 발표 결과가 없습니다. 다음 발표 일정과 예상치를 먼저 확인하세요.
             </p>
           )}
           {releasedItems.length > 1 ? (
-            <details className="rounded-md border border-white/10 bg-black/20 p-3">
+            <details className="border-y border-white/10 py-3">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-black text-slate-300">
                 최근 발표 더 보기
                 <ChevronDown size={14} aria-hidden />
@@ -544,12 +544,12 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
           {nearestUpcoming ? (
             <MacroItemCard item={nearestUpcoming} />
           ) : (
-            <p className="rounded-md border border-white/10 bg-black/25 p-3 text-[11px] leading-5 text-slate-500">
+            <p className="border-y border-white/10 py-3 text-[11px] leading-5 text-slate-500">
               자동 캘린더에서 다가오는 주요 USD 일정을 확인하는 중입니다.
             </p>
           )}
           {laterUpcomingItems.length > 0 ? (
-            <details className="rounded-md border border-white/10 bg-black/20 p-3">
+            <details className="border-y border-white/10 py-3">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-black text-slate-300">
                 이후 일정 {laterUpcomingItems.length}개 보기
                 <ChevronDown size={14} aria-hidden />

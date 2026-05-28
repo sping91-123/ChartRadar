@@ -65,6 +65,7 @@
 - Status: DONE.
 - Completed record: `docs/automation-runs/completed/full-app-boxless-implementation-run.md`.
 - Final QA record: `docs/full-app-boxless-final-qa.md`.
+- Post-QA follow-up sweep: completed after additional source-pattern audit found remaining read-only radar/admin shells. Details are recorded in `docs/full-app-boxless-final-qa.md`.
 
 ## Push / PR Policy
 

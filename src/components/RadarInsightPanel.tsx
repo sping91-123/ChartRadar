@@ -75,7 +75,7 @@ function InsightList({
   const visibleItems = locked && !showLockedPreviewItems ? [] : locked ? items.slice(0, 1) : items;
 
   return (
-    <div className={`rounded-lg border p-3 ${locked ? "border-white/10 bg-black/10 opacity-85" : "border-white/10 bg-black/20"}`}>
+    <div className={`border-y py-3 ${locked ? "border-white/10 opacity-85" : "border-white/10"}`}>
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-black text-slate-200">{title}</p>
         {locked ? (
@@ -112,7 +112,7 @@ function InsightList({
 
 function LockedValue({ label }: { label: string }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-black/10 p-3">
+    <div className="border-y border-white/10 py-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-black text-slate-200">{label}</p>
         <Lock size={14} className="text-cyan-200" aria-hidden />
@@ -299,7 +299,7 @@ export function RadarInsightPanel({
   const strengthHelpText = strengthHelp?.join(" ");
 
   return (
-    <section className={`relative overflow-hidden rounded-xl border border-surface-line bg-surface-cardSoft p-4 shadow-[0_18px_56px_rgba(0,0,0,0.22)] ${className}`}>
+    <section className={`relative overflow-hidden border-y border-surface-line py-4 ${className}`}>
       <div className={`absolute inset-x-0 top-0 h-1 ${strengthClass(insight.finalView)}`} aria-hidden />
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
@@ -328,7 +328,7 @@ export function RadarInsightPanel({
           <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-400 [word-break:keep-all]">{insight.summary}</p>
         </div>
 
-        <div className="w-full shrink-0 rounded-lg border border-white/10 bg-black/20 p-3 lg:w-64">
+        <div className="w-full shrink-0 border-y border-white/10 py-3 lg:w-64">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Gauge size={16} className="text-cyan-200" aria-hidden />
@@ -350,7 +350,7 @@ export function RadarInsightPanel({
           </div>
           <p className="mt-2 text-xs font-bold text-slate-400">{insight.strength} / 100</p>
           {strengthHelp?.length ? (
-            <ul className="mt-3 space-y-1.5 rounded-md border border-cyan-300/15 bg-cyan-300/5 p-3">
+            <ul className="mt-3 space-y-1.5 border-y border-cyan-300/15 py-3">
               {strengthHelp.map((item) => (
                 <li key={item} className="text-[11px] font-bold leading-5 text-slate-300 [word-break:keep-all]">
                   {item}
@@ -386,7 +386,7 @@ export function RadarInsightPanel({
 
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         {isPro ? (
-          <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+          <div className="border-y border-white/10 py-3">
             <p className="text-xs font-black text-slate-200">다음 확인 기준</p>
             <p className="mt-2 text-xs font-bold leading-5 text-slate-300 [word-break:keep-all]">{insight.nextAction}</p>
           </div>
@@ -394,7 +394,7 @@ export function RadarInsightPanel({
           <LockedValue label="다음 확인 기준" />
         )}
         {isPro ? (
-          <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+          <div className="border-y border-white/10 py-3">
             <p className="text-xs font-black text-slate-200">업데이트 시각</p>
             <p className="mt-2 text-xs font-bold leading-5 text-slate-300">{formatUpdatedAt(insight.updatedAt)}</p>
           </div>

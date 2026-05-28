@@ -14,7 +14,7 @@ export function TabMenu() {
   const pathname = usePathname();
 
   return (
-    <nav className="rounded-lg border border-surface-line bg-surface-card p-2">
+    <nav className="border-y border-surface-line py-2">
       <div className="grid grid-cols-3 gap-2">
         {pageLinks.map(({ href, label, icon: Icon }) => {
           const hrefPath = href.split("?")[0];

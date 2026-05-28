@@ -69,6 +69,17 @@ Across the run, the implementation reduced:
 - Inset metric cards that were better represented as rows.
 - Policy, learn, footer, and fallback card shells.
 
+## Post-QA Follow-Up Sweep
+
+After the first final QA, an additional source-pattern sweep found remaining read-only card shells in shared radar components and admin-only surfaces. The follow-up pass further weakened:
+
+- Admin entitlement page read-only member, plan, status, and info shells.
+- Shared radar/report components used by `/crypto`, `/alts`, `/global`, `/news`, and `/alerts`.
+- Coin radar detailed readout, AI briefing, ICT, combined, setup scout, watchlist, daily brief, market board, digest, technical, liquidation, and insight surfaces.
+- Alert center saved-condition, monitor, rule-list, and admin diagnostics display shells.
+
+The remaining border/background usages are limited to explicit touch targets, inputs, modal/popover boundaries, Pro/permission/critical notices, bottom fixed controls, and admin operational tools.
+
 ## Preserved Behavior
 
 The run intentionally preserved:

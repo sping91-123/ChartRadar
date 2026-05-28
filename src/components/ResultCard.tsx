@@ -39,7 +39,7 @@ function verdictTone(verdict: Verdict) {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-surface-line bg-surface-cardSoft p-3">
+    <div className="border-t border-surface-line py-3 first:border-t-0">
       <p className="text-xs font-semibold text-slate-500">{label}</p>
       <p className="mt-1 break-words text-base font-bold text-white">{value}</p>
     </div>
@@ -49,7 +49,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 export function ResultCard({ result }: ResultCardProps) {
   if (!result) {
     return (
-      <section className="rounded-lg border border-surface-line bg-surface-card p-5">
+      <section className="border-y border-surface-line py-5">
         <div className="flex items-center gap-3 text-slate-300">
           <Gauge className="text-accent-blue" size={20} aria-hidden />
           <div>
@@ -67,7 +67,7 @@ export function ResultCard({ result }: ResultCardProps) {
   const Icon = tone.icon;
 
   return (
-    <section className={`rounded-lg border ${tone.border} ${tone.bg} p-5`}>
+    <section className={`border-y ${tone.border} py-5`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <Icon className={`mt-1 shrink-0 ${tone.text}`} size={24} aria-hidden />
@@ -76,7 +76,7 @@ export function ResultCard({ result }: ResultCardProps) {
             <h2 className={`mt-1 text-3xl font-black ${tone.text}`}>{result.verdict}</h2>
           </div>
         </div>
-        <div className="shrink-0 rounded-md border border-white/10 bg-black/20 px-3 py-2 text-right">
+        <div className="shrink-0 border-l border-white/10 pl-3 text-right">
           <p className="text-xs font-semibold text-slate-400">위험도</p>
           <p className="text-2xl font-black text-white">{result.riskScore}%</p>
         </div>
@@ -103,10 +103,10 @@ export function ResultCard({ result }: ResultCardProps) {
         )}
       </div>
 
-      <div className="mt-5 rounded-md border border-white/10 bg-black/20 p-4">
+      <div className="mt-5 border-y border-white/10 py-4">
         <h3 className="text-sm font-bold text-white">포지션 계산</h3>
         {result.positionSizing ? (
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="mt-3 grid gap-x-6 border-y border-white/10 sm:grid-cols-2">
             <Metric label="허용 손실 금액" value={formatCurrency(result.positionSizing.allowedLossAmount)} />
             <Metric label="적정 포지션 명목가" value={formatCurrency(result.positionSizing.positionNotional)} />
             <Metric label="필요 증거금" value={formatCurrency(result.positionSizing.requiredMargin)} />
@@ -121,13 +121,13 @@ export function ResultCard({ result }: ResultCardProps) {
         )}
       </div>
 
-      <div className="mt-4 rounded-md border border-white/10 bg-black/20 p-4">
+      <div className="mt-4 border-y border-white/10 py-4">
         <h3 className="text-sm font-bold text-white">레버리지 체크</h3>
         <p className="mt-2 text-sm leading-6 text-slate-300">{result.leverageWarning}</p>
       </div>
 
       {result.missingRequiredValues ? (
-        <p className="mt-4 rounded-md border border-signal-warning/30 bg-signal-warning/10 p-3 text-sm leading-6 text-signal-warning">
+        <p className="mt-4 border-y border-signal-warning/30 py-3 text-sm leading-6 text-signal-warning">
           일부 필수 값이 비어 있어 진단과 계산값이 보수적으로 반영됐습니다.
         </p>
       ) : null}

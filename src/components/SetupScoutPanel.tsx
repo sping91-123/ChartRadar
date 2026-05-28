@@ -186,7 +186,7 @@ function buildAltBtcInfluence(setup: ScoutSetup) {
 
 function AltProCta({ compact = false }: { compact?: boolean }) {
   return (
-    <div className={`rounded-lg border border-cyan-300/25 bg-cyan-300/10 ${compact ? "p-3" : "p-4"}`}>
+    <div className={`border-y border-cyan-300/25 ${compact ? "py-3" : "py-4"}`}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-black text-cyan-100">Coin Pro 알트 상세 판단</p>
@@ -561,7 +561,7 @@ function SetupCard({
       className={
         isAltFilterMode
           ? "border-t border-ui-line py-4 [word-break:keep-all] transition first:border-t-0"
-          : `rounded-lg border p-4 [word-break:keep-all] transition ${modeCardClass}`
+          : `border-t border-ui-line py-4 [word-break:keep-all] transition first:border-t-0 ${modeCardClass.replace(/bg-[^ ]+/g, "").replace(/border-[^ ]+/g, "")}`
       }
     >
       <div className="flex items-start justify-between gap-3">
@@ -628,7 +628,7 @@ function SetupCard({
         <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-300">{setup.plan.entryLabel}</p>
       ) : null}
       {shouldShowProDetails && setup.status === "watch" && setup.watchReason ? (
-        <p className="mt-3 line-clamp-2 rounded-md border border-signal-warning/25 bg-signal-warning/10 px-3 py-2 text-[11px] leading-5 text-signal-warning">
+        <p className="mt-3 line-clamp-2 border-y border-signal-warning/25 py-2 text-[11px] leading-5 text-signal-warning">
           <span className="font-black">관찰 사유.</span> {setup.watchReason}
           {setup.watchKind === "counter" ? " 반대 방향 구간 감시." : ""}
         </p>
@@ -754,7 +754,7 @@ function EmptyState({
   const marketLabel = excludeMajor ? "알트코인" : "코인";
 
   return (
-    <div className="rounded-lg border border-signal-warning/25 bg-signal-warning/10 p-5">
+    <div className="border-y border-signal-warning/25 py-5">
       <p className="text-sm font-black text-signal-warning">현재 강하게 감지된 {marketLabel}이 없습니다.</p>
       <p className="mt-2 text-xs leading-5 text-slate-300">
         지금은 구조가 애매하거나 관찰 구간에서 너무 멀어진 상태입니다.
@@ -770,9 +770,9 @@ function EmptyState({
         </button>
       ) : null}
       <div className="mt-3 grid gap-2 text-left text-[11px] leading-5 text-slate-400 sm:grid-cols-3">
-        <span className="rounded-md border border-surface-line bg-black/20 px-3 py-2">1. 킬존/세션 재접근 대기</span>
-        <span className="rounded-md border border-surface-line bg-black/20 px-3 py-2">2. MSB·CHoCH 재정렬 대기</span>
-        <span className="rounded-md border border-surface-line bg-black/20 px-3 py-2">3. OB/FVG/OTE 근처 재접근 대기</span>
+        <span className="border-t border-surface-line py-2 sm:border-t-0">1. 킬존/세션 재접근 대기</span>
+        <span className="border-t border-surface-line py-2 sm:border-t-0">2. MSB·CHoCH 재정렬 대기</span>
+        <span className="border-t border-surface-line py-2 sm:border-t-0">3. OB/FVG/OTE 근처 재접근 대기</span>
       </div>
     </div>
   );
@@ -816,11 +816,7 @@ function ScanSummary({
 
   if (entryCount > 0 || activeCount > 0) {
     return (
-      <div
-        className={`mb-3 rounded-lg border px-4 py-3 ${
-          isRadar ? "border-signal-danger/25 bg-signal-danger/10" : "border-accent-blue/25 bg-accent-blue/10"
-        }`}
-      >
+      <div className={`mb-3 border-y py-3 ${isRadar ? "border-signal-danger/25" : "border-accent-blue/25"}`}>
         <p className={`text-sm font-black ${isRadar ? "text-signal-danger" : "text-accent-blue"}`}>
           전체 TF 점수순 · {isRadar ? "확장 감지" : "보수적 분석"} · 강한 감지 {entryCount + activeCount}개 · 관찰 {watchCount}개
         </p>
@@ -834,11 +830,7 @@ function ScanSummary({
   }
 
   return (
-    <div
-      className={`mb-3 rounded-lg border px-4 py-3 ${
-        isRadar ? "border-signal-danger/25 bg-signal-danger/10" : "border-accent-blue/25 bg-accent-blue/10"
-      }`}
-    >
+    <div className={`mb-3 border-y py-3 ${isRadar ? "border-signal-danger/25" : "border-accent-blue/25"}`}>
       <p className={`text-sm font-black ${isRadar ? "text-signal-danger" : "text-accent-blue"}`}>
         {isRadar ? "확장 감지" : "보수적 분석"} · 강한 감지 없음 · 관찰 {watchCount}개
       </p>
@@ -984,10 +976,10 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
   const canShowAltProDetails = !isAltFilterMode || isPaid;
 
   return (
-    <section className={excludeMajor ? "border-y border-ui-line py-5 sm:py-6" : "rounded-lg border border-accent-blue/25 bg-surface-card p-4 shadow-glow sm:p-5"}>
+    <section className="border-y border-ui-line py-5 sm:py-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className={excludeMajor ? "grid h-10 w-10 shrink-0 place-items-center text-accent-blue" : "grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-accent-blue/30 bg-accent-blue/15 text-accent-blue"}>
+          <div className="grid h-10 w-10 shrink-0 place-items-center text-accent-blue">
             <Radar size={21} aria-hidden />
           </div>
           <div>
@@ -1006,7 +998,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
               <span className="whitespace-nowrap rounded-md border border-signal-warning/25 bg-signal-warning/10 px-2 py-1 text-signal-warning">
                 {excludeMajor ? "리스크 우선 필터" : "확인 순서 정리"}
               </span>
-              <span className="whitespace-nowrap rounded-md border border-surface-line bg-black/20 px-2 py-1">
+              <span className="whitespace-nowrap border-b border-surface-line px-0 py-1">
                 {excludeMajor ? "추적 후보 / 관망 / 고위험" : "관찰 구간 표시"}
               </span>
               <span className="whitespace-nowrap rounded-md border border-orange-400/20 bg-orange-400/10 px-2 py-1 text-orange-200">
@@ -1016,7 +1008,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-start gap-3 sm:justify-end">
-          <div className={excludeMajor ? "inline-flex overflow-hidden border-b border-ui-line" : "inline-flex overflow-hidden rounded-md border border-surface-line bg-black/30 p-1"}>
+          <div className="inline-flex overflow-hidden border-b border-ui-line">
           {(["guard", "radar"] as ScoutRiskProfile[]).map((profile) => (
             <button
               key={profile}
@@ -1037,7 +1029,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
             </button>
           ))}
           </div>
-          <span className={excludeMajor ? "border-b border-ui-line px-0 py-2 text-xs font-bold text-slate-400" : "rounded-md border border-surface-line bg-surface-cardSoft px-3 py-2 text-xs font-bold text-slate-400"}>
+          <span className="border-b border-ui-line px-0 py-2 text-xs font-bold text-slate-400">
             전체 TF 점수순
           </span>
           {cacheLabel ? <span className="text-xs text-slate-500">{cacheLabel} 레이더</span> : null}
@@ -1045,7 +1037,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
             type="button"
             onClick={() => runScan(true)}
             disabled={state.status === "loading"}
-            className={excludeMajor ? "inline-flex min-h-9 items-center gap-1.5 border-b border-ui-line px-0 text-xs font-bold text-slate-200 hover:text-white disabled:opacity-50" : "inline-flex min-h-9 items-center gap-1.5 rounded-md border border-surface-line bg-surface-cardSoft px-3 text-xs font-bold text-slate-200 hover:border-accent-blue/50 hover:text-white disabled:opacity-50"}
+            className="inline-flex min-h-9 items-center gap-1.5 border-b border-ui-line px-0 text-xs font-bold text-slate-200 hover:text-white disabled:opacity-50"
           >
             <RefreshCw size={13} className={state.status === "loading" ? "animate-spin" : ""} aria-hidden />
             다시 돌리기
@@ -1055,12 +1047,12 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
 
       <div className="mt-4">
         {state.status === "loading" ? (
-          <div className={excludeMajor ? "flex items-center justify-center gap-2 border-y border-ui-line py-8 text-sm text-slate-400" : "flex items-center justify-center gap-2 rounded-lg border border-surface-line bg-surface-cardSoft p-8 text-sm text-slate-400"}>
+          <div className="flex items-center justify-center gap-2 border-y border-ui-line py-8 text-sm text-slate-400">
             <Loader2 size={18} className="animate-spin" aria-hidden />
             레이더가 시장 구조를 훑는 중...
           </div>
         ) : state.status === "error" ? (
-          <div className="rounded-lg border border-signal-danger/30 bg-signal-danger/10 p-4 text-sm text-signal-danger">
+          <div className="border-y border-signal-danger/30 py-4 text-sm text-signal-danger">
             {state.message}
           </div>
         ) : state.status === "ready" ? (

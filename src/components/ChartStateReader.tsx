@@ -129,7 +129,7 @@ function buildReasons(payload: AppStatePayload) {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-surface-line bg-surface-cardSoft p-3">
+    <div className="border-t border-surface-line py-3 first:border-t-0">
       <p className="text-xs font-semibold text-slate-500">{label}</p>
       <p className="mt-1 text-sm font-bold text-white">{value}</p>
     </div>
@@ -144,10 +144,10 @@ export function ChartStateReader() {
   const reasons = payload ? buildReasons(payload) : [];
 
   return (
-    <section className="rounded-lg border border-surface-line bg-surface-card p-4 shadow-glow sm:p-5">
+    <section className="border-y border-surface-line py-4 sm:py-5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
+          <div className="grid h-10 w-10 shrink-0 place-items-center text-accent-blue">
             <BarChart3 size={21} aria-hidden />
           </div>
           <div>
@@ -187,7 +187,7 @@ export function ChartStateReader() {
           ) : null}
         </label>
 
-        <div className={`rounded-lg border ${meta.border} ${meta.bg} p-4`}>
+        <div className={`border-y ${meta.border} py-4`}>
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold text-slate-400">판독 결과</p>

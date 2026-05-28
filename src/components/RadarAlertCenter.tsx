@@ -754,7 +754,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
       ) : null}
 
       {isAndroidAppPush && !isAuthLoading && !session ? (
-        <PanelCard className="flex flex-col gap-3 bg-ui-inset shadow-none sm:flex-row sm:items-center sm:justify-between">
+        <PanelCard variant="report" className="flex flex-col gap-3 shadow-none sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm leading-6 text-ui-muted">로그인 후 앱 푸시 알림을 계정에 연결할 수 있습니다.</p>
           <ActionButton href={loginHref} tone="primary" className="min-h-10 w-full px-4 text-sm sm:w-auto">
             로그인하기
@@ -882,7 +882,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             action={<StatusPill tone="risk">관리자</StatusPill>}
           />
 
-          <PanelCard className="bg-ui-panel shadow-none">
+          <PanelCard variant="report" className="shadow-none">
             <SectionHeader
               title="테스트 알림"
               description="현재 로그인한 내 계정과 이 기기 연결로만 테스트 알림을 보냅니다."
@@ -914,7 +914,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             ) : null}
           </PanelCard>
 
-          <details className="rounded-ui border border-ui-line bg-ui-panel p-4">
+          <details className="border-y border-ui-line py-4">
             <summary className="cursor-pointer text-sm font-semibold text-ui-text">자동 알림 진단</summary>
             <p className="mt-2 text-xs leading-5 text-ui-muted">
               실제 발송 없이 후보와 제외 사유를 확인합니다. 기기 식별값, 이메일, 사용자 ID는 표시하지 않습니다.
@@ -936,32 +936,32 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             {pushDiagnostics ? (
               <div className="mt-3 space-y-3">
                 <div className="grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4">
-                  <PanelCard className="bg-ui-inset p-3 shadow-none">
+                  <PanelCard variant="list" className="p-3 shadow-none">
                     <MetricRow label="진단 시각" value={formatAbsoluteTime(pushDiagnostics.scannedAt)} />
                   </PanelCard>
-                  <PanelCard className="bg-ui-inset p-3 shadow-none">
+                  <PanelCard variant="list" className="p-3 shadow-none">
                     <MetricRow label="연결 기기" value={`${pushDiagnostics.diagnostics.tokenCount}개`} />
                   </PanelCard>
-                  <PanelCard className="bg-ui-inset p-3 shadow-none">
+                  <PanelCard variant="list" className="p-3 shadow-none">
                     <MetricRow label="발송 후보" value={`${pushDiagnostics.diagnostics.eligibleEventCount}개`} />
                   </PanelCard>
-                  <PanelCard className="bg-ui-inset p-3 shadow-none">
+                  <PanelCard variant="list" className="p-3 shadow-none">
                     <MetricRow label="발송 대상" value={`${pushDiagnostics.diagnostics.sendTargetTokenCount}개`} />
                   </PanelCard>
-                  <PanelCard className="bg-ui-inset p-3 shadow-none">
+                  <PanelCard variant="list" className="p-3 shadow-none">
                     <MetricRow label="저장 조건" value={`${pushDiagnostics.diagnostics.presetCount}개`} />
                   </PanelCard>
-                  <PanelCard className="bg-ui-inset p-3 shadow-none">
+                  <PanelCard variant="list" className="p-3 shadow-none">
                     <MetricRow label="자동 후보" value={`${pushDiagnostics.diagnostics.genericEventCount}개`} />
                   </PanelCard>
-                  <PanelCard className="bg-ui-inset p-3 shadow-none">
+                  <PanelCard variant="list" className="p-3 shadow-none">
                     <MetricRow label="낮은 점수 제외" value={`${pushDiagnostics.diagnostics.skippedLowScoreCount}개`} />
                   </PanelCard>
-                  <PanelCard className="bg-ui-inset p-3 shadow-none">
+                  <PanelCard variant="list" className="p-3 shadow-none">
                     <MetricRow label="중복 제외" value={`${pushDiagnostics.diagnostics.duplicateSkippedTokenCount}개`} />
                   </PanelCard>
                 </div>
-                <AppSurface tone="inset" padding="sm" className="text-xs leading-5 text-ui-muted shadow-none">
+                <AppSurface variant="report" tone="inset" padding="sm" className="text-xs leading-5 text-ui-muted shadow-none">
                   <p className="font-semibold text-ui-text">
                     최근 24시간 기록 {pushDiagnostics.last24h.loggedEventCount}개 · 발송 합계 {pushDiagnostics.last24h.sentCount}개 · 진단 실패 {pushDiagnostics.last24h.failureCount}개
                   </p>
@@ -974,11 +974,11 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
                     {pushDiagnostics.diagnostics.finalSendAttemptCount ?? 0}개
                   </p>
                 </AppSurface>
-                <PanelCard className="bg-ui-inset shadow-none">
+                <PanelCard variant="report" className="shadow-none">
                   <p className="text-xs font-semibold text-ui-text">최근 후보 이벤트</p>
                   <div className="mt-2 space-y-2">
                     {pushDiagnostics.candidateEvents.slice(0, 5).map((event, index) => (
-                      <article key={`${event.signalType}-${event.symbol ?? "market"}-${index}`} className="rounded-ui-sm border border-ui-line bg-ui-panel p-2 text-[11px] leading-4 text-ui-muted">
+                      <article key={`${event.signalType}-${event.symbol ?? "market"}-${index}`} className="border-t border-ui-line py-2 text-[11px] leading-4 text-ui-muted first:border-t-0">
                         <p className="font-semibold text-ui-text">{event.alertTitle}</p>
                         <p>
                           {event.market} · {event.symbol ?? "시장"} · {event.score ?? "-"}점 · {event.alertKind} · {event.wouldSend ? "발송 가능" : event.skippedReason ?? "제외"}

@@ -160,7 +160,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
 
   if (state.status === "loading") {
     return (
-      <section className="rounded-lg border border-accent-blue/20 bg-surface-cardSoft p-4">
+      <section className="border-y border-accent-blue/20 py-4">
         <div className="flex items-center gap-3">
           <div className="radar-mark h-12 w-12 border border-accent-blue/30" />
           <div>
@@ -175,7 +175,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
 
   if (state.status === "error") {
     return (
-      <section className="rounded-lg border border-signal-warning/25 bg-signal-warning/10 p-4 text-signal-warning">
+      <section className="border-y border-signal-warning/25 py-4 text-signal-warning">
         <div className="flex items-start gap-3">
           <AlertTriangle size={18} aria-hidden />
           <div>
@@ -194,7 +194,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
   const dataStatusLabel = state.isRefreshing ? "갱신 중" : state.stale ? "최근 저장값" : state.cached ? "캐시" : "실시간";
 
   return (
-    <section className="rounded-lg border border-accent-blue/20 bg-surface-cardSoft p-4 shadow-glow">
+    <section className="border-y border-accent-blue/20 py-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-3">
           <div className="radar-mark h-14 w-14 shrink-0 border border-accent-blue/30" />
@@ -218,7 +218,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
         </div>
       </div>
 
-      <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-4">
+      <div className="mt-4 border-y border-white/10 py-4">
         <div className="flex items-center justify-between gap-3 text-xs font-bold">
           <span className="text-signal-success">위쪽 숏 청산 {report.upsideShortPressure}점</span>
           <span className="text-signal-danger">아래쪽 롱 청산 {report.downsideLongPressure}점</span>
@@ -244,7 +244,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
       </div>
 
       <div className="mt-3 grid gap-3 lg:grid-cols-[0.95fr_1.05fr]">
-        <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+        <div className="border-y border-white/10 py-4">
           <div className="flex items-center justify-between gap-2">
             <h4 className="text-sm font-black text-white">글로벌 롱/숏 비율</h4>
             <TooltipLine>Binance 기준 롱과 숏 포지션 비율입니다. 한쪽으로 몰릴수록 반대 방향 변동성도 같이 커질 수 있습니다.</TooltipLine>
@@ -270,7 +270,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
           </div>
         </div>
 
-        <div className="rounded-lg border border-white/10 bg-black/20 p-4">
+        <div className="border-y border-white/10 py-4">
           <div className="flex items-center justify-between gap-2">
             <h4 className="text-sm font-black text-white">체결 쏠림</h4>
             <TooltipLine>최근 시장가 매수와 시장가 매도 중 어느 쪽 체결이 더 강했는지 보는 값입니다. 한쪽으로 치우치면 단기 변동성이 커질 수 있습니다.</TooltipLine>

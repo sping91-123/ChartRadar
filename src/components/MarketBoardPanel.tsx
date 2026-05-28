@@ -60,7 +60,7 @@ function BoardRow({ item, rank }: { item: MarketBoardItem; rank: number }) {
   const Icon = isUp ? ArrowUpRight : ArrowDownRight;
 
   return (
-    <div className="grid grid-cols-[34px_1fr_auto] items-center gap-3 rounded-lg border border-white/10 bg-black/25 px-3 py-2.5">
+    <div className="grid grid-cols-[34px_1fr_auto] items-center gap-3 border-t border-ui-line py-3 first:border-t-0">
       <span className="text-xs font-black text-slate-500">#{rank}</span>
       <div className="min-w-0">
         <div className="flex items-center gap-2">
@@ -115,10 +115,10 @@ export function MarketBoardPanel() {
   }, [state, tab]);
 
   return (
-    <section id="market-board" className="scroll-mt-24 rounded-lg border border-surface-line bg-surface-card p-4 shadow-glow sm:p-5">
+    <section id="market-board" className="scroll-mt-24 border-y border-surface-line py-4 sm:py-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-accent-blue/25 bg-accent-blue/10 text-accent-blue">
+          <div className="grid h-10 w-10 shrink-0 place-items-center text-accent-blue">
             <BarChart3 size={19} aria-hidden />
           </div>
           <div>
@@ -158,12 +158,12 @@ export function MarketBoardPanel() {
 
       <div className="mt-4">
         {state.status === "loading" ? (
-          <div className="flex min-h-36 items-center justify-center gap-2 rounded-lg border border-surface-line bg-surface-cardSoft text-sm text-slate-400">
+          <div className="flex min-h-36 items-center justify-center gap-2 border-y border-surface-line text-sm text-slate-400">
             <Loader2 size={16} className="animate-spin text-accent-blue" aria-hidden />
             시장 보드를 불러오는 중입니다.
           </div>
         ) : state.status === "error" ? (
-          <div className="rounded-lg border border-signal-danger/30 bg-signal-danger/10 p-4 text-sm text-signal-danger">
+          <div className="border-y border-signal-danger/30 py-4 text-sm text-signal-danger">
             {state.message}
           </div>
         ) : (

@@ -122,7 +122,7 @@ function watchlistJudgmentLabel(setup: ScoutSetup, meta: WatchlistFilterMeta) {
 
 function WatchlistProCta() {
   return (
-    <div className="mt-3 rounded-lg border border-cyan-300/25 bg-cyan-300/10 p-4">
+    <div className="mt-3 border-y border-cyan-300/25 py-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-black text-cyan-100">Coin Pro 관심 코인 상세 판단</p>
@@ -336,7 +336,7 @@ function AddCoinModal({
             );
           })}
           {filteredPool.length === 0 ? (
-            <p className="col-span-3 rounded-lg border border-white/10 bg-black/20 px-3 py-4 text-center text-xs leading-5 text-slate-500">
+            <p className="col-span-3 border-y border-white/10 py-4 text-center text-xs leading-5 text-slate-500">
               검색 결과가 없습니다. 심볼을 다시 확인해 주세요.
             </p>
           ) : null}
@@ -548,7 +548,7 @@ export function WatchlistPanel() {
               관심 코인 레이더 작동 중...
             </div>
           ) : scanState.status === "error" ? (
-            <div className="rounded-lg border border-signal-danger/30 bg-signal-danger/10 p-4 text-sm text-signal-danger">
+            <div className="border-y border-signal-danger/30 py-4 text-sm text-signal-danger">
               {scanState.message}
             </div>
           ) : scanState.status === "ready" ? (

@@ -141,7 +141,7 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
   }, [state]);
 
   return (
-    <section className="enterprise-panel p-5">
+    <section className="border-y border-surface-line py-5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-black tracking-[0.2em] text-accent-blue">{scopeLabel(scope).toUpperCase()} RADAR</p>
@@ -158,21 +158,21 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
       </div>
 
       {state.status === "loading" ? (
-        <div className="mt-5 flex min-h-32 items-center justify-center rounded-xl border border-surface-line bg-white/50 text-sm font-bold text-slate-500 dark:bg-black/20">
+        <div className="mt-5 flex min-h-32 items-center justify-center border-y border-surface-line text-sm font-bold text-slate-500">
           <Loader2 className="mr-2 animate-spin" size={18} aria-hidden />
           시장 흐름을 확인하고 있습니다.
         </div>
       ) : null}
 
       {state.status === "error" ? (
-        <div className="mt-5 rounded-xl border border-signal-warning/30 bg-signal-warning/10 p-4 text-sm font-bold text-signal-warning">
+        <div className="mt-5 border-y border-signal-warning/30 py-4 text-sm font-bold text-signal-warning">
           {state.message}
         </div>
       ) : null}
 
       {state.status === "ready" && summary ? (
         <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1.2fr]">
-          <div className="rounded-xl border border-surface-line bg-white/60 p-4 dark:bg-black/20">
+          <div className="border-y border-surface-line py-4">
             <div className={`inline-flex rounded-full border px-3 py-1 text-sm font-black ${toneClass(summary.tone.tone)}`}>
               {summary.tone.label}
             </div>
@@ -183,7 +183,7 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
             <p className="mt-3 text-xs font-bold text-slate-500">{formatCachedAt(state.cachedAt)}</p>
           </div>
 
-          <div className="rounded-xl border border-surface-line bg-white/60 p-4 dark:bg-black/20">
+          <div className="border-y border-surface-line py-4">
             <div className="flex items-center gap-2">
               <Radar size={17} className="text-accent-blue" aria-hidden />
               <h3 className="text-base font-black text-slate-950 dark:text-white">TOP 감지 후보</h3>
@@ -196,7 +196,7 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
                     <Link
                       key={`${setup.symbol}-${setup.timeframe}`}
                       href={scope === "alts" ? "/alts" : "/crypto"}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/5 p-3 transition hover:border-accent-blue/40 dark:bg-black/20"
+                      className="flex items-center justify-between gap-3 border-t border-surface-line py-3 transition hover:text-accent-blue first:border-t-0"
                     >
                       <div>
                         <p className="font-black text-slate-950 dark:text-white">
@@ -212,7 +212,7 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
                   );
                 })
               ) : (
-                <p className="rounded-lg border border-white/10 bg-black/5 p-3 text-sm text-slate-500 dark:bg-black/20">
+                <p className="border-y border-surface-line py-3 text-sm text-slate-500">
                   지금은 무리해서 후보를 찾기보다 BTC/ETH 방향과 뉴스 흐름을 먼저 확인하는 편이 좋습니다.
                 </p>
               )}

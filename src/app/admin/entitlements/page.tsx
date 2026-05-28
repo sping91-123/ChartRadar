@@ -154,9 +154,9 @@ export default function AdminEntitlementsPage() {
           회원정보관리로 돌아가기
         </Link>
 
-        <section className="enterprise-panel min-w-0 overflow-visible p-3 sm:p-5">
+        <section className="min-w-0 overflow-visible border-y border-surface-line py-4 sm:py-5">
           <div className="flex items-start gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-amber-300/25 bg-amber-300/10 text-amber-200">
+            <div className="grid h-10 w-10 shrink-0 place-items-center text-amber-200">
               <UserPlus size={20} aria-hidden />
             </div>
             <div>
@@ -168,11 +168,11 @@ export default function AdminEntitlementsPage() {
           </div>
 
           {isLoading ? (
-            <div className="mt-6 rounded-xl border border-surface-line bg-surface-cardSoft p-4 text-sm font-bold text-slate-300">
+            <div className="mt-6 border-y border-surface-line py-4 text-sm font-bold text-slate-300">
               관리자 권한을 확인하고 있습니다.
             </div>
           ) : !user ? (
-            <div className="mt-6 rounded-xl border border-surface-line bg-surface-cardSoft p-4 text-sm leading-6 text-slate-300">
+            <div className="mt-6 border-y border-surface-line py-4 text-sm leading-6 text-slate-300">
               먼저 관리자 계정으로 로그인해 주세요.
               <Link
                 href="/login?returnTo=%2Fadmin%2Fentitlements"
@@ -182,12 +182,12 @@ export default function AdminEntitlementsPage() {
               </Link>
             </div>
           ) : !isAdmin && memberError ? (
-            <div className="mt-6 rounded-xl border border-rose-300/25 bg-rose-300/10 p-4 text-sm leading-6 text-rose-100">
+            <div className="mt-6 border-y border-rose-300/25 py-4 text-sm leading-6 text-rose-100">
               현재 계정은 관리자 권한이 없어 테스터 권한을 변경할 수 없습니다.
             </div>
           ) : (
             <div className="mt-6 grid min-w-0 gap-5">
-              <section className="min-w-0 overflow-hidden rounded-xl border border-surface-line bg-surface-cardSoft p-3 sm:p-4">
+              <section className="min-w-0 overflow-hidden border-y border-surface-line py-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                   <label className="grid min-w-0 flex-1 gap-2 text-sm font-bold text-slate-300">
                     가입 회원 검색
@@ -210,11 +210,11 @@ export default function AdminEntitlementsPage() {
                   </button>
                 </div>
 
-                {memberError ? <p className="mt-3 rounded-xl border border-rose-300/25 bg-rose-300/10 p-3 text-sm font-bold text-rose-100">{memberError}</p> : null}
+                {memberError ? <p className="mt-3 border-y border-rose-300/25 py-3 text-sm font-bold text-rose-100">{memberError}</p> : null}
 
                 <div className="mt-4 grid max-h-[28rem] min-w-0 gap-2 overflow-y-auto pr-1">
                   {isLoadingMembers && members.length === 0 ? (
-                    <p className="rounded-xl border border-surface-line bg-slate-950/50 p-4 text-sm font-bold text-slate-400">회원 목록을 불러오고 있습니다.</p>
+                    <p className="border-y border-surface-line py-4 text-sm font-bold text-slate-400">회원 목록을 불러오고 있습니다.</p>
                   ) : members.length > 0 ? (
                     members.map((member) => {
                       const selected = selectedMemberId ? selectedMemberId === member.id : email.toLowerCase() === (member.email ?? "").toLowerCase();
@@ -228,8 +228,8 @@ export default function AdminEntitlementsPage() {
                             setSelectedMemberId(member.id);
                             setEmail(member.email ?? "");
                           }}
-                          className={`w-full min-w-0 overflow-hidden rounded-xl border p-3 text-left transition sm:p-4 ${
-                            selected ? "border-amber-300/55 bg-amber-300/10" : "border-surface-line bg-slate-950/45 hover:border-cyan-300/35"
+                          className={`w-full min-w-0 overflow-hidden border-y py-3 text-left transition sm:py-4 ${
+                            selected ? "border-amber-300/55" : "border-surface-line hover:border-cyan-300/35"
                           }`}
                         >
                           <span className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -249,7 +249,7 @@ export default function AdminEntitlementsPage() {
                       );
                     })
                   ) : (
-                    <p className="rounded-xl border border-surface-line bg-slate-950/50 p-4 text-sm font-bold text-slate-400">
+                    <p className="border-y border-surface-line py-4 text-sm font-bold text-slate-400">
                       표시할 가입 회원이 없습니다. 테스터가 먼저 한 번 로그인해야 목록에 나타납니다.
                     </p>
                   )}
@@ -282,8 +282,8 @@ export default function AdminEntitlementsPage() {
                         role="radio"
                         aria-checked={planId === option.id}
                         onClick={() => setPlanId(option.id)}
-                        className={`min-w-0 rounded-xl border p-2.5 text-left transition sm:p-4 ${
-                          planId === option.id ? "border-amber-300/45 bg-amber-300/10" : "border-surface-line bg-surface-cardSoft hover:border-cyan-300/35"
+                        className={`min-w-0 border-y py-2.5 text-left transition sm:py-4 ${
+                          planId === option.id ? "border-amber-300/45" : "border-surface-line hover:border-cyan-300/35"
                         }`}
                       >
                         <span className="flex min-w-0 items-center gap-2 text-sm font-black text-white">
@@ -309,13 +309,13 @@ export default function AdminEntitlementsPage() {
                     />
                   </label>
                 ) : (
-                  <p className="rounded-xl border border-surface-line bg-surface-cardSoft p-3 text-xs font-bold leading-5 text-slate-300 sm:text-sm sm:leading-6">
+                  <p className="border-y border-surface-line py-3 text-xs font-bold leading-5 text-slate-300 sm:text-sm sm:leading-6">
                     Basic은 기본 플랜이라 유지기간을 설정하지 않습니다. 선택한 계정의 수동 Pro 권한을 제거합니다.
                   </p>
                 )}
 
-                {error ? <p className="rounded-xl border border-rose-300/25 bg-rose-300/10 p-3 text-sm font-bold text-rose-100">{error}</p> : null}
-                {message ? <p className="rounded-xl border border-signal-success/25 bg-signal-success/10 p-3 text-sm font-bold text-signal-success">{message}</p> : null}
+                {error ? <p className="border-y border-rose-300/25 py-3 text-sm font-bold text-rose-100">{error}</p> : null}
+                {message ? <p className="border-y border-signal-success/25 py-3 text-sm font-bold text-signal-success">{message}</p> : null}
 
                 <button
                   type="submit"
@@ -330,7 +330,7 @@ export default function AdminEntitlementsPage() {
           )}
         </section>
 
-        <section className="rounded-xl border border-cyan-300/20 bg-cyan-300/10 p-4 text-sm leading-6 text-slate-300">
+        <section className="border-y border-cyan-300/20 py-4 text-sm leading-6 text-slate-300">
           이 화면은 결제 상품을 새로 만드는 기능이 아닙니다. 가입된 테스터 계정의 수동 권한만 운영 목적으로 변경합니다.
         </section>
 

@@ -8,7 +8,7 @@ interface AdviceCardProps {
 
 export function AdviceCard({ result }: AdviceCardProps) {
   return (
-    <section className="rounded-lg border border-surface-line bg-surface-card p-5">
+    <section className="border-y border-surface-line py-5">
       <div className="flex items-center gap-3">
         <MessageSquareWarning className="text-accent-blue" size={20} aria-hidden />
         <h2 className="text-lg font-bold text-white">리스크 코멘트</h2>

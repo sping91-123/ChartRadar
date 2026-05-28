@@ -1797,7 +1797,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           ? "scroll-mt-24 pb-28 text-ui-text sm:pb-28"
           : altOnly
             ? "scroll-mt-24 border-y border-ui-line py-5 pb-32 text-ui-text sm:py-6 sm:pb-32"
-          : "scroll-mt-24 rounded-lg border border-surface-line bg-surface-card p-4 pb-28 shadow-glow sm:p-5 sm:pb-28"
+          : "scroll-mt-24 border-y border-ui-line py-5 pb-28 sm:py-6 sm:pb-28"
       }
     >
       <div className="flex flex-col gap-4">
@@ -1809,7 +1809,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 ? "grid h-10 w-10 shrink-0 place-items-center text-ui-brand"
                 : altOnly
                   ? "grid h-10 w-10 shrink-0 place-items-center text-accent-blue"
-                : "grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-accent-blue/25 bg-accent-blue/10 text-accent-blue"
+                : "grid h-10 w-10 shrink-0 place-items-center text-accent-blue"
               }
             >
               <BarChart3 size={21} aria-hidden />
@@ -1866,10 +1866,10 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   ? `min-h-10 whitespace-nowrap border-b-2 px-2 text-sm font-black transition ${
                       symbol === item ? "border-accent-blue bg-transparent text-accent-blue" : "border-transparent bg-transparent text-slate-400 hover:text-slate-200"
                     }`
-                : `min-h-10 whitespace-nowrap rounded-md border px-3 text-sm font-black transition ${
+                : `min-h-10 whitespace-nowrap border-b-2 px-3 text-sm font-black transition ${
                     symbol === item
-                      ? "border-accent-blue bg-accent-blue text-slate-950"
-                      : "border-surface-line bg-surface-cardSoft text-slate-300 hover:border-accent-blue/60"
+                      ? "border-accent-blue bg-transparent text-accent-blue"
+                      : "border-transparent bg-transparent text-slate-400 hover:text-slate-200"
                   }`
             }
           >
@@ -1885,10 +1885,10 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 return !value;
               });
             }}
-            className={`min-h-10 whitespace-nowrap rounded-md border px-3 text-sm font-black transition ${
+            className={`min-h-10 whitespace-nowrap border-b-2 px-3 text-sm font-black transition ${
               isOtherSymbolActive || showOtherSymbols
-                ? "border-accent-blue bg-accent-blue text-slate-950"
-                : "border-surface-line bg-surface-cardSoft text-slate-300 hover:border-accent-blue/60"
+                ? "border-accent-blue bg-transparent text-accent-blue"
+                : "border-transparent bg-transparent text-slate-400 hover:text-slate-200"
             }`}
           >
             {isOtherSymbolActive ? symbolLabel(symbol) : "그 외"}
@@ -1938,7 +1938,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
       ) : null}
 
       {!isMajorScreen ? (
-        <div className={altOnly ? "mt-3 border-y border-ui-line py-3" : "mt-3 rounded-lg border border-surface-line bg-surface-cardSoft p-3"}>
+        <div className="mt-3 border-y border-ui-line py-3">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-black text-white">구조 감지 기준</p>
@@ -1992,7 +1992,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             dataStatusLabel={isMajorScreen ? `${isUsingCachedData ? "최근 저장본" : "실시간 확인"} · ${formatUpdatedAt(analysis.updatedAt)}` : undefined}
             summaryMetrics={isMajorScreen ? buildMajorSummaryMetrics(analysis, activeAnalysis, visibleRadarInsight) : undefined}
           />
-          <div className={isMajorScreen || altOnly ? "border-t border-ui-line pt-4" : "rounded-xl border border-surface-line bg-surface-cardSoft p-4"}>
+          <div className="border-t border-ui-line pt-4">
             <BeginnerActionGuide
               title={isMajorScreen ? "화면은 이 순서로 읽습니다" : "지금은 이 순서로 보면 됩니다"}
               summary={
@@ -2078,7 +2078,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           ) : null}
         </CryptoSummarySection>
       ) : (
-        <div className={altOnly ? "mt-4 min-h-56 animate-pulse border-y border-ui-line py-4" : "mt-4 min-h-56 animate-pulse rounded-lg border border-surface-line bg-surface-cardSoft p-4"}>
+        <div className="mt-4 min-h-56 animate-pulse border-y border-ui-line py-4">
           <p className="text-xs font-semibold text-slate-500">{symbolLabel(symbol)} · {activeTimeframe} 레이더 결론</p>
           <div className="mt-4 h-8 w-40 rounded bg-white/10" />
           <div className="mt-4 h-4 w-full max-w-lg rounded bg-white/10" />
@@ -2104,8 +2104,8 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
       ) : null}
 
       {showAdvancedControls && canShowDetailedAnalysis ? (
-        <div className="mt-3 rounded-lg border border-surface-line bg-surface-cardSoft p-3">
-          <div className="rounded-md border border-white/10 bg-black/20 p-3">
+        <div className="mt-3 border-y border-ui-line py-3">
+          <div className="border-y border-white/10 py-3">
             <p className="text-xs font-semibold text-slate-400">차트 표시 설정</p>
             <p className="mt-1 text-[11px] leading-5 text-slate-500">
               차트 위에 표시할 보조 표시만 고릅니다. 최종 판독은 위의 구조 감지 기준을 따릅니다.
@@ -2191,33 +2191,33 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
       ) : null}
 
       <div className="mt-4 grid gap-4">
-        <div className={isMajorScreen || altOnly ? "overflow-hidden border-y border-ui-line bg-transparent" : "overflow-hidden rounded-lg border border-surface-line bg-surface-cardSoft"}>
+        <div className="overflow-hidden border-y border-ui-line bg-transparent">
           <div className="flex items-center justify-between border-b border-surface-line px-4 py-3">
             <div>
               <p className="text-xs font-semibold text-slate-500">현재가</p>
               <p className="text-lg font-black text-white">{analysis ? formatPrice(analysis.price) : "-"}</p>
             </div>
             {analysis ? (
-              <span className={`px-3 py-1.5 text-sm font-black ${isMajorScreen ? "border-b border-white/10 text-slate-300" : `rounded-md border ${biasClasses(analysis.bias)}`}`}>
+              <span className={`px-0 py-1.5 text-sm font-black ${isMajorScreen ? "border-b border-white/10 text-slate-300" : `border-b ${biasClasses(analysis.bias)}`}`}>
                 {isMajorScreen ? "판단 근거 차트" : analysis.verdict}
               </span>
             ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2 border-b border-surface-line px-4 py-2 text-xs text-slate-400">
-            <span className={isMajorScreen ? "px-0 py-1" : "rounded-md border border-white/10 bg-black/20 px-2 py-1"}>
+            <span className="px-0 py-1">
               {isUsingCachedData ? "최근 저장본" : "실시간 판독"}
             </span>
-            <span className={isMajorScreen ? "px-0 py-1" : "rounded-md border border-white/10 bg-black/20 px-2 py-1"}>
+            <span className="px-0 py-1">
               자동 새로고침 30초
             </span>
             {analysis?.updatedAt ? (
-              <span className={isMajorScreen ? "px-0 py-1" : "rounded-md border border-white/10 bg-black/20 px-2 py-1"}>
+              <span className="px-0 py-1">
                 갱신 {formatUpdatedAt(analysis.updatedAt)}
               </span>
             ) : null}
           </div>
           {activeAnalysis && hasAnyOverlay ? (
-            <div className={isMajorScreen ? "border-b border-surface-line px-4 py-2 text-xs leading-5 text-slate-400" : "border-b border-surface-line bg-black/20 px-4 py-2 text-xs leading-5 text-slate-400"}>
+            <div className="border-b border-surface-line px-4 py-2 text-xs leading-5 text-slate-400">
               표시 중:{" "}
               {[
                 overlaySettings.ema200 ? "EMA200" : null,
@@ -2258,7 +2258,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         <div className="space-y-4">
           {error ? <CryptoErrorState message={error} /> : null}
 
-          <div className={isMajorScreen || altOnly ? "border-t border-ui-line pt-4 text-slate-200" : `rounded-lg border p-4 ${isBasicAltView ? altAnalysisFilterClass(altFilterLabel) : biasClasses(analysis?.bias)}`}>
+          <div className={`border-t border-ui-line pt-4 text-slate-200 ${isMajorScreen || altOnly ? "" : isBasicAltView ? altAnalysisFilterClass(altFilterLabel).replace(/bg-[^ ]+/g, "").replace(/border-[^ ]+/g, "") : biasClasses(analysis?.bias).replace(/bg-[^ ]+/g, "").replace(/border-[^ ]+/g, "")}`}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold opacity-80">{isBasicAltView ? "알트 리스크 요약" : isMajorScreen ? "상단 판단의 근거 요약" : "레이더 판독"}</p>
@@ -2332,7 +2332,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               className={
                 isMajorScreen
                   ? "scroll-mt-24 border-y border-ui-line py-4"
-                  : "scroll-mt-24 rounded-lg border border-accent-blue/25 bg-surface-cardSoft p-4"
+                  : "scroll-mt-24 border-y border-accent-blue/25 py-4"
               }
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -2378,7 +2378,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 </div>
               ) : null}
 
-              <div className={isMajorScreen ? "mt-4 border-t border-ui-line pt-4" : "mt-4 rounded-lg border border-white/10 bg-black/20 p-4"}>
+              <div className="mt-4 border-t border-ui-line pt-4">
                 {marketBriefing.status === "idle" ? (
                   <p className="text-sm leading-6 text-slate-400">
                     버튼을 누르면 현재 차트와 레이더 값을 한 번에 읽어 핵심 방향, 위험 요인, 다음 확인 구간을 정리합니다.
@@ -2388,20 +2388,20 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   <>
                     {!isMajorScreen ? (
                       <div className="mb-4 grid gap-2 sm:grid-cols-3">
-                        <div className={`rounded-md border px-3 py-2 ${biasClasses(analysis.bias)}`}>
+                          <div className={`border-t px-0 py-2 ${biasClasses(analysis.bias)}`}>
                           <p className="text-[11px] font-bold opacity-80">방향 결론</p>
                           <p className="mt-1 text-base font-black">
                             {analysis.bias === "long" ? "롱 우세" : analysis.bias === "short" ? "숏 우세" : "횡보 관찰"}
                           </p>
                         </div>
-                        <div className={isMajorScreen ? "border-t border-white/10 py-2" : "rounded-md border border-white/10 bg-black/20 px-3 py-2"}>
+                        <div className="border-t border-white/10 py-2">
                           <p className="text-[11px] font-bold text-slate-400">종합 점수</p>
                           <p className="mt-1 text-base font-black text-white">
                             {analysis.biasScore}
                             {combinedScoreLimit ? ` / -${combinedScoreLimit}~+${combinedScoreLimit}` : ""}
                           </p>
                         </div>
-                        <div className={`rounded-md border px-3 py-2 ${readinessClasses(analysis.readiness)}`}>
+                        <div className={`border-t px-0 py-2 ${readinessClasses(analysis.readiness)}`}>
                           <p className="text-[11px] font-bold opacity-80">데이터 신뢰도</p>
                           <p className="mt-1 text-base font-black">{readinessLabel(analysis.readiness)}</p>
                         </div>
@@ -2426,7 +2426,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               className={
                 isMajorScreen
                   ? "scroll-mt-24 border-y border-ui-line py-4"
-                  : "scroll-mt-24 rounded-lg border border-surface-line bg-surface-cardSoft p-4"
+                  : "scroll-mt-24 border-y border-ui-line py-4"
               }
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -2437,7 +2437,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                     이 화면은 기술지표를 섞지 않고 MSB, CHoCH, OB, FVG, Sweep, CISD, PD, POC만 따로 봅니다.
                   </p>
                 </div>
-                <span className={isMajorScreen ? "inline-flex w-fit border-b border-white/10 px-0 py-1.5 text-xs font-bold text-slate-300" : "inline-flex w-fit rounded-md border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-bold text-slate-300"}>
+                <span className="inline-flex w-fit border-b border-white/10 px-0 py-1.5 text-xs font-bold text-slate-300">
                   {activeTimeframe} 기준
                 </span>
               </div>
@@ -2496,11 +2496,11 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               </div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div className={isMajorScreen ? "border-t border-ui-line py-3" : "rounded-lg border border-white/10 bg-black/20 p-4"}>
+                <div className="border-t border-ui-line py-3">
                   <h4 className="text-base font-black text-white">핵심 해석</h4>
                   <p className="mt-2 text-sm leading-6 text-slate-300">{analysis.summaryLine}</p>
                 </div>
-                <div className={isMajorScreen ? "border-t border-ui-line py-3" : "rounded-lg border border-white/10 bg-black/20 p-4"}>
+                <div className="border-t border-ui-line py-3">
                   <h4 className="text-base font-black text-white">구조 감지 기준</h4>
                   <p className="mt-2 text-sm leading-6 text-slate-300">
                     현재는 {structureSensitivityLabel(structureSensitivity)} 기준입니다. 빠른 변화와 큰 구조 중 무엇을 더 중요하게 볼지 정합니다.
@@ -2518,7 +2518,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               className={
                 isMajorScreen
                   ? "scroll-mt-24 border-y border-ui-line py-4"
-                  : "scroll-mt-24 rounded-lg border border-surface-line bg-surface-cardSoft p-4"
+                  : "scroll-mt-24 border-y border-ui-line py-4"
               }
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -2526,13 +2526,13 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   <p className="text-xs font-bold uppercase tracking-widest text-accent-blue">판독 체계</p>
                   <h3 className="mt-1 text-lg font-black text-white">구조와 지표를 함께 확인합니다.</h3>
                 </div>
-                <span className={isMajorScreen ? "inline-flex w-fit border-b border-white/10 px-0 py-1.5 text-xs font-bold text-slate-300" : "inline-flex w-fit rounded-md border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-bold text-slate-300"}>
+                <span className="inline-flex w-fit border-b border-white/10 px-0 py-1.5 text-xs font-bold text-slate-300">
                   {activeTimeframe} 기준
                 </span>
               </div>
 
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                <div className={isMajorScreen ? "border-t border-ui-line py-3" : "rounded-lg border border-accent-blue/20 bg-black/20 p-4"}>
+                <div className="border-t border-ui-line py-3">
                   <p className="text-xs font-bold text-accent-blue">상단 판단의 구조 근거</p>
                   <h4 className="mt-1 text-base font-black text-white">ICT 구조 근거</h4>
                   <div className="mt-3 grid grid-cols-2 gap-2">
@@ -2589,7 +2589,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   </div>
                 </div>
 
-                <div className={isMajorScreen ? "border-t border-ui-line py-3" : "rounded-lg border border-white/10 bg-black/20 p-4"}>
+                <div className="border-t border-ui-line py-3">
                   <p className="text-xs font-bold text-slate-400">추세 환경 지표</p>
                   <h4 className="mt-1 text-base font-black text-white">기술지표 참고값</h4>
                   <div className="mt-3 grid grid-cols-2 gap-2">
@@ -2659,11 +2659,11 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           ) : null}
 
           {analysis && canShowDetailedAnalysis && radarProfile !== "technical" ? (
-            <div className={isMajorScreen ? "border-y border-ui-line py-4" : "rounded-lg border border-surface-line bg-surface-cardSoft p-4"}>
+            <div className="border-y border-ui-line py-4">
               <h3 className="text-sm font-bold text-white">지금 볼 구간</h3>
               <div className="mt-3 space-y-2">
                 {analysis.checkpoints.map((item) => (
-                  <p key={item} className={isMajorScreen ? "border-t border-white/10 py-2 text-sm leading-6 text-slate-200 first:border-t-0" : "rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-200"}>
+                  <p key={item} className="border-t border-white/10 py-2 text-sm leading-6 text-slate-200 first:border-t-0">
                     {item}
                   </p>
                 ))}
@@ -2673,19 +2673,19 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
 
           {analysis && canShowDetailedAnalysis && radarProfile !== "technical" ? (
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className={isMajorScreen ? "border-y border-ui-line py-4" : "rounded-lg border border-surface-line bg-surface-cardSoft p-4"}>
+              <div className="border-y border-ui-line py-4">
                 <h3 className="text-sm font-bold text-white">현재 위치 판단</h3>
                 <p
                   className={
                     isMajorScreen
                       ? "mt-3 border-t border-white/10 py-3 text-sm font-semibold text-slate-100"
-                      : "mt-3 rounded-md border border-white/10 bg-black/20 px-3 py-3 text-sm font-semibold text-slate-100"
+                      : "mt-3 border-t border-white/10 py-3 text-sm font-semibold text-slate-100"
                   }
                 >
                   {analysis.currentLocationLabel}
                 </p>
               </div>
-              <div className={isMajorScreen ? "border-y border-ui-line py-4" : "rounded-lg border border-surface-line bg-surface-cardSoft p-4"}>
+              <div className="border-y border-ui-line py-4">
                 <h3 className="text-sm font-bold text-white">현재 결론</h3>
                 <p className="mt-3 text-sm leading-6 text-slate-300">
                   지금은 {analysis.verdict} 쪽입니다. 다만 실제 판단은 현재 위치, 무효 기준, 포지션 크기를 같이 확인해야 합니다.
@@ -2695,7 +2695,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           ) : null}
 
           {analysis?.proPlan && canShowDetailedAnalysis && radarProfile !== "technical" ? (
-            <div className={isMajorScreen ? "border-y border-accent-blue/25 py-4" : "rounded-lg border border-accent-blue/30 bg-accent-blue/10 p-4"}>
+            <div className="border-y border-accent-blue/25 py-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-xs font-semibold text-accent-blue">분석 시나리오</p>
@@ -2717,14 +2717,14 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               </div>
               <div className="mt-3 space-y-2">
                 {analysis.proPlan.cautions.slice(0, 3).map((item) => (
-                  <p key={item} className={isMajorScreen ? "border-t border-white/10 py-2 text-xs leading-5 text-slate-300 first:border-t-0" : "rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs leading-5 text-slate-300"}>
+                  <p key={item} className="border-t border-white/10 py-2 text-xs leading-5 text-slate-300 first:border-t-0">
                     {item}
                   </p>
                 ))}
               </div>
             </div>
           ) : analysis && canShowDetailedAnalysis && radarProfile !== "technical" ? (
-            <div className="rounded-lg border border-signal-warning/25 bg-signal-warning/10 p-4">
+            <div className="border-y border-signal-warning/25 py-4">
               <p className="text-sm font-bold text-signal-warning">분석 시나리오 대기</p>
               <p className="mt-2 text-sm leading-6 text-slate-300">
                 지금은 방향 우세가 충분히 또렷하지 않아 관찰 구간과 무효 기준을 계산하지 않았습니다. 이 상태에서 억지로 자리를 만들지 않는 것이 더 좋은 판독입니다.
@@ -2749,20 +2749,20 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           {showDetailedReadout && canShowDetailedAnalysis && radarProfile !== "technical" ? (
             <>
           {analysis ? (
-            <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
+            <div className="border-y border-ui-line py-4">
               <h3 className="text-sm font-bold text-white">타임프레임 구조</h3>
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
                 {analysis.timeframeAnalyses.map((item) => (
-                  <div key={item.timeframe} className="rounded-md border border-surface-line bg-black/20 px-3 py-2 text-center">
+                  <div key={item.timeframe} className="border-t border-ui-line py-2 text-center first:border-t-0">
                     <p className="text-[11px] font-semibold text-slate-400">{item.timeframe}</p>
                     <div className="mt-2 space-y-2">
-                      <div className={`rounded-md border px-2 py-1 text-xs font-bold ${directionBadge(item.msb)}`}>
+                      <div className={`border-t px-0 py-1 text-xs font-bold ${directionBadge(item.msb)}`}>
                         MSB {stateLabel(item.msb)}
                       </div>
-                      <div className={`rounded-md border px-2 py-1 text-xs font-bold ${directionBadge(item.choch)}`}>
+                      <div className={`border-t px-0 py-1 text-xs font-bold ${directionBadge(item.choch)}`}>
                         CHoCH {stateLabel(item.choch)}
                       </div>
-                      <div className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] font-semibold text-slate-300">
+                      <div className="border-t border-white/10 py-1 text-[11px] font-semibold text-slate-300">
                         점수 {item.score} / -{timeframeScoreLimit}~+{timeframeScoreLimit}
                       </div>
                       <p className="text-[11px] leading-5 text-slate-500">{timeframeSignalSummary(item)}</p>
@@ -2775,31 +2775,31 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
 
           {activeAnalysis ? (
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
+              <div className="border-y border-ui-line py-4">
                 <h3 className="text-sm font-bold text-white">현재 TF 이벤트</h3>
                 <div className="mt-3 space-y-2">
                   {activeAnalysis.latestMsbEvent ? (
-                    <p className="rounded-md border border-emerald-500/20 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-200">
+                    <p className="border-t border-emerald-500/20 py-2 text-sm leading-6 text-slate-200 first:border-t-0">
                       MSB {eventDirectionLabel(activeAnalysis.latestMsbEvent.direction)} / {barsAgoLabel(Math.max(0, candles.length - 1 - activeAnalysis.latestMsbEvent.index), activeTimeframe)} / {formatPrice(activeAnalysis.latestMsbEvent.level)}
                     </p>
                   ) : null}
                   {activeAnalysis.latestChochEvent ? (
-                    <p className="rounded-md border border-rose-500/20 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-200">
+                    <p className="border-t border-rose-500/20 py-2 text-sm leading-6 text-slate-200 first:border-t-0">
                       CHoCH {eventDirectionLabel(activeAnalysis.latestChochEvent.direction)} / {barsAgoLabel(Math.max(0, candles.length - 1 - activeAnalysis.latestChochEvent.index), activeTimeframe)} / {formatPrice(activeAnalysis.latestChochEvent.level)}
                     </p>
                   ) : null}
                   {activeAnalysis.latestSweep ? (
-                    <p className="rounded-md border border-amber-500/20 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-200">
+                    <p className="border-t border-amber-500/20 py-2 text-sm leading-6 text-slate-200 first:border-t-0">
                       Sweep {eventDirectionLabel(activeAnalysis.latestSweep.direction)} / {barsAgoLabel(activeAnalysis.latestSweep.age, activeTimeframe)} / {formatPrice(activeAnalysis.latestSweep.level)}
                     </p>
                   ) : null}
                   {activeAnalysis.latestCisd ? (
-                    <p className="rounded-md border border-orange-500/20 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-200">
+                    <p className="border-t border-orange-500/20 py-2 text-sm leading-6 text-slate-200 first:border-t-0">
                       CISD {eventDirectionLabel(activeAnalysis.latestCisd.direction)} / {barsAgoLabel(activeAnalysis.latestCisd.age, activeTimeframe)} / {formatPrice(activeAnalysis.latestCisd.level)}
                     </p>
                   ) : null}
                   {activeAnalysis.latestDisplacement ? (
-                    <p className={`rounded-md border px-3 py-2 text-sm leading-6 ${directionBadge(activeAnalysis.latestDisplacement.direction)}`}>
+                    <p className={`border-t py-2 text-sm leading-6 first:border-t-0 ${directionBadge(activeAnalysis.latestDisplacement.direction)}`}>
                       Displacement {eventDirectionLabel(activeAnalysis.latestDisplacement.direction)} / {barsAgoLabel(activeAnalysis.latestDisplacement.age, activeTimeframe)} / 강도 {activeAnalysis.latestDisplacement.strength}점
                     </p>
                   ) : null}
@@ -2808,58 +2808,58 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   !activeAnalysis.latestSweep &&
                   !activeAnalysis.latestCisd &&
                   !activeAnalysis.latestDisplacement ? (
-                    <p className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-400">
+                    <p className="border-y border-white/10 py-2 text-sm leading-6 text-slate-400">
                       최근 이벤트가 충분히 누적되지 않았습니다.
                     </p>
                   ) : null}
                 </div>
               </div>
 
-              <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
+              <div className="border-y border-ui-line py-4">
                 <h3 className="text-sm font-bold text-white">현재 TF 주요 구간</h3>
                 <div className="mt-3 space-y-2">
                   {activeAnalysis.latestOb ? (
-                    <p className={`rounded-md border px-3 py-2 text-sm leading-6 ${directionBadge(activeAnalysis.latestOb.direction)}`}>
+                    <p className={`border-t py-2 text-sm leading-6 first:border-t-0 ${directionBadge(activeAnalysis.latestOb.direction)}`}>
                       OB {eventDirectionLabel(activeAnalysis.latestOb.direction)} / {formatPriceRange(activeAnalysis.latestOb.bottom, activeAnalysis.latestOb.top)}
                     </p>
                   ) : null}
                   {activeAnalysis.latestBb ? (
-                    <p className="rounded-md border border-violet-500/20 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-200">
+                    <p className="border-t border-violet-500/20 py-2 text-sm leading-6 text-slate-200 first:border-t-0">
                       BB {eventDirectionLabel(activeAnalysis.latestBb.direction)} / {formatPriceRange(activeAnalysis.latestBb.bottom, activeAnalysis.latestBb.top)}
                     </p>
                   ) : null}
                   {activeAnalysis.latestFvg ? (
-                    <p className={`rounded-md border px-3 py-2 text-sm leading-6 ${directionBadge(activeAnalysis.latestFvg.direction)}`}>
+                    <p className={`border-t py-2 text-sm leading-6 first:border-t-0 ${directionBadge(activeAnalysis.latestFvg.direction)}`}>
                       {activeAnalysis.latestFvg.state === "ifvg" ? "iFVG" : "FVG"} {eventDirectionLabel(activeAnalysis.latestFvg.direction)} / {formatPriceRange(activeAnalysis.latestFvg.bottom, activeAnalysis.latestFvg.top)}
                     </p>
                   ) : null}
                   {activeAnalysis.volumeProfile ? (
-                    <p className="rounded-md border border-amber-500/20 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-200">
+                    <p className="border-t border-amber-500/20 py-2 text-sm leading-6 text-slate-200 first:border-t-0">
                       POC {stateLabel(activeAnalysis.volumeProfile.position)} / {formatPrice(activeAnalysis.volumeProfile.poc)} · VA{" "}
                       {formatPriceRange(activeAnalysis.volumeProfile.val, activeAnalysis.volumeProfile.vah)}
                     </p>
                   ) : null}
                   {activeAnalysis.buySideLiquidity ? (
-                    <p className="rounded-md border border-sky-500/20 bg-sky-500/10 px-3 py-2 text-sm leading-6 text-sky-200">
+                    <p className="border-t border-sky-500/20 py-2 text-sm leading-6 text-sky-200 first:border-t-0">
                       Buy-side liquidity / {formatPrice(activeAnalysis.buySideLiquidity.level)} / {barsAgoLabel(activeAnalysis.buySideLiquidity.age, activeTimeframe)}
                     </p>
                   ) : null}
                   {activeAnalysis.sellSideLiquidity ? (
-                    <p className="rounded-md border border-sky-500/20 bg-sky-500/10 px-3 py-2 text-sm leading-6 text-sky-200">
+                    <p className="border-t border-sky-500/20 py-2 text-sm leading-6 text-sky-200 first:border-t-0">
                       Sell-side liquidity / {formatPrice(activeAnalysis.sellSideLiquidity.level)} / {barsAgoLabel(activeAnalysis.sellSideLiquidity.age, activeTimeframe)}
                     </p>
                   ) : null}
                   {activeDealingRange.equilibrium ? (
-                    <p className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-200">
+                    <p className="border-t border-white/10 py-2 text-sm leading-6 text-slate-200 first:border-t-0">
                       Dealing range / {stateLabel(activeDealingRange.position)} / EQ {formatPrice(activeDealingRange.equilibrium)}
                     </p>
                   ) : null}
                   {activeAnalysis.oteLevels ? (
                     <>
-                      <p className="rounded-md border border-teal-500/20 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-200">
+                      <p className="border-t border-teal-500/20 py-2 text-sm leading-6 text-slate-200 first:border-t-0">
                         OTE 롱 / {formatPriceRange(activeAnalysis.oteLevels.longLow, activeAnalysis.oteLevels.longHigh)}
                       </p>
-                      <p className="rounded-md border border-purple-500/20 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-200">
+                      <p className="border-t border-purple-500/20 py-2 text-sm leading-6 text-slate-200 first:border-t-0">
                         OTE 숏 / {formatPriceRange(activeAnalysis.oteLevels.shortLow, activeAnalysis.oteLevels.shortHigh)}
                       </p>
                     </>
@@ -2872,7 +2872,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   !activeAnalysis.buySideLiquidity &&
                   !activeAnalysis.sellSideLiquidity &&
                   !activeDealingRange.equilibrium ? (
-                    <p className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-400">
+                    <p className="border-y border-white/10 py-2 text-sm leading-6 text-slate-400">
                       아직 표시할 주요 구간이 부족합니다.
                     </p>
                   ) : null}
@@ -2883,7 +2883,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
 
           {analysis ? (
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
+              <div className="border-y border-ui-line py-4">
                 <h3 className="text-sm font-bold text-white">{analysis.longScenario.title}</h3>
                 <p className="mt-3 text-sm leading-6 text-slate-300">{analysis.longScenario.summary}</p>
                 <div className="mt-3 space-y-2">
@@ -2891,20 +2891,20 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                     analysis.longScenario.blockers.map((item) => (
                       <p
                         key={item}
-                        className="rounded-md border border-signal-warning/20 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-300"
+                        className="border-t border-signal-warning/20 py-2 text-sm leading-6 text-slate-300 first:border-t-0"
                       >
                         {item}
                       </p>
                     ))
                   ) : (
-                    <p className="rounded-md border border-signal-success/20 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-300">
+                    <p className="border-y border-signal-success/20 py-2 text-sm leading-6 text-slate-300">
                       현재 기준으로 눈에 띄는 롱 반대 요소는 크지 않습니다.
                     </p>
                   )}
                 </div>
               </div>
 
-              <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
+              <div className="border-y border-ui-line py-4">
                 <h3 className="text-sm font-bold text-white">{analysis.shortScenario.title}</h3>
                 <p className="mt-3 text-sm leading-6 text-slate-300">{analysis.shortScenario.summary}</p>
                 <div className="mt-3 space-y-2">
@@ -2912,13 +2912,13 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                     analysis.shortScenario.blockers.map((item) => (
                       <p
                         key={item}
-                        className="rounded-md border border-signal-warning/20 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-300"
+                        className="border-t border-signal-warning/20 py-2 text-sm leading-6 text-slate-300 first:border-t-0"
                       >
                         {item}
                       </p>
                     ))
                   ) : (
-                    <p className="rounded-md border border-signal-success/20 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-300">
+                    <p className="border-y border-signal-success/20 py-2 text-sm leading-6 text-slate-300">
                       현재 기준으로 눈에 띄는 숏 반대 요소는 크지 않습니다.
                     </p>
                   )}
@@ -2929,27 +2929,27 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
 
           {analysis ? (
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-lg border border-emerald-500/20 bg-surface-cardSoft p-4">
+              <div className="border-y border-emerald-500/20 py-4">
                 <h3 className="text-sm font-bold text-emerald-300">추적 후보</h3>
                 <div className="mt-3 space-y-2">
                   {analysis.opportunityFlags.length > 0 ? (
                     analysis.opportunityFlags.map((item) => (
                       <p
                         key={item}
-                        className="rounded-md border border-emerald-500/15 bg-emerald-500/5 px-3 py-2 text-sm leading-6 text-slate-200"
+                        className="border-t border-emerald-500/15 py-2 text-sm leading-6 text-slate-200 first:border-t-0"
                       >
                         {item}
                       </p>
                     ))
                   ) : (
-                    <p className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm leading-6 text-slate-300">
+                    <p className="border-y border-white/10 py-2 text-sm leading-6 text-slate-300">
                       아직 강한 우세 신호가 겹쳐 보이지 않습니다. 구조 정렬과 구간 반응을 더 확인하세요.
                     </p>
                   )}
                 </div>
               </div>
 
-              <div className="rounded-lg border border-amber-500/20 bg-surface-cardSoft p-4">
+              <div className="border-y border-amber-500/20 py-4">
                 <h3 className="text-sm font-bold text-amber-300">위험 신호</h3>
                 <div className="mt-3 space-y-2">
                   {analysis.riskFlags.length > 0 ? (
@@ -3051,15 +3051,15 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           ) : null}
 
           {analysis ? (
-            <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
+            <div className="border-y border-ui-line py-4">
               <h3 className="text-sm font-bold text-white">MTF FVG / iFVG 맵</h3>
               <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {mtfFvgMap.map((item) => (
-                  <div key={item.timeframe} className="rounded-md border border-surface-line bg-black/20 px-3 py-3">
+                  <div key={item.timeframe} className="border-t border-ui-line py-3 first:border-t-0">
                     <p className="text-xs font-semibold text-slate-400">{item.timeframe}</p>
                     {item.latestFvg ? (
                       <div className="mt-2 space-y-2">
-                        <div className={`rounded-md border px-2 py-1 text-xs font-bold ${directionBadge(item.latestFvg.direction)}`}>
+                        <div className={`border-t py-1 text-xs font-bold ${directionBadge(item.latestFvg.direction)}`}>
                           {item.latestFvg.state === "ifvg" ? "iFVG" : "FVG"} / {stateLabel(item.latestFvg.direction)}
                         </div>
                         <p className="text-xs text-slate-300">
@@ -3080,7 +3080,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           ) : null}
 
           {analysis ? (
-            <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
+            <div className="border-y border-ui-line py-4">
               <h3 className="text-sm font-bold text-white">분석 기준</h3>
               <div className="mt-3 grid grid-cols-2 gap-3">
                 <MiniMetric label="구조 감지" value={structureSensitivityLabel(structureSensitivity)} />
@@ -3101,7 +3101,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           ) : null}
 
           {showPineParityTools && showAdvancedControls && activeAnalysis ? (
-            <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
+            <div className="border-y border-ui-line py-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <Bug size={16} className="text-accent-blue" aria-hidden />
@@ -3140,7 +3140,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                     <MiniMetric label="hiPts 수" value={String(activeAnalysis.debug.hiCount)} />
                     <MiniMetric label="loPts 수" value={String(activeAnalysis.debug.loCount)} />
                   </div>
-                  <div className="mt-4 rounded-lg border border-accent-blue/20 bg-black/20 p-3">
+                  <div className="mt-4 border-y border-accent-blue/20 py-3">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <h4 className="text-sm font-bold text-white">Pine 스냅샷 일치율</h4>
@@ -3253,7 +3253,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           ) : null}
 
           {analysis && canShowDetailedAnalysis ? (
-            <div className="rounded-lg border border-surface-line bg-surface-cardSoft p-4">
+            <div className="border-y border-ui-line py-4">
               <h3 className="text-sm font-bold text-white">{isMajorScreen || altOnly ? "판단 근거 상세" : "판독 근거"}</h3>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-md border border-signal-success/20 bg-signal-success/5 p-3">
