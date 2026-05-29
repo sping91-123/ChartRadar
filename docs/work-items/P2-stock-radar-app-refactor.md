@@ -34,3 +34,4 @@
 - 2026-05-29: 글로벌 초보자 가이드 렌더링과 step 생성 로직을 `src/components/global/GlobalBeginnerGuide.tsx`로 분리했다. session timer와 데이터 계산은 변경하지 않았다.
 - 2026-05-29: 기술지표 근거/현재가/기준선 스냅샷을 `src/components/global/GlobalStockSnapshot.tsx`로 분리했다. technical report 계산과 차트 데이터는 변경하지 않았다.
 - 2026-05-29: 글로벌 ICT 상세 패널과 관련 표시 helper를 `src/components/global/GlobalIctPanel.tsx`로 분리했다. analyzeTimeframe 호출과 차트 데이터는 변경하지 않았다.
+- 2026-05-29: 글로벌 자산레이더 timeframe/mode 조작 패널을 `src/components/global/GlobalRadarControlDock.tsx`로 분리했다. 고정 하단 패널 동작과 mode/timeframe 상태 변경은 유지했다.
