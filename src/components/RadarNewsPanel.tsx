@@ -588,7 +588,7 @@ function BriefingCardView({
   const Icon = style.icon;
 
   return (
-    <PanelCard variant="report" className="space-y-3 shadow-none">
+    <PanelCard variant="flat" padding="none" className="space-y-3 border-t border-ui-line py-5">
       <div className="flex flex-wrap items-center gap-2">
         <StatusPill tone={directionTone(card.tone)} icon={Icon}>
           {style.label}
@@ -790,7 +790,7 @@ export function RadarNewsPanel({ market = "crypto", afterBriefing }: { market?: 
 
       {afterBriefing}
 
-      <PanelCard variant="report" className="shadow-none">
+      <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
         <div className="flex items-start gap-2">
           <ShieldAlert size={15} className="mt-0.5 shrink-0 text-ui-brand" aria-hidden />
           <div className="min-w-0">
