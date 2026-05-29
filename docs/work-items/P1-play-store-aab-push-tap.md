@@ -1,11 +1,11 @@
 # P1 Play Store용 AAB 재생성 및 푸시 탭 이동 반영
 
-- 상태: `TODO`
+- 상태: `BLOCKED`
 - 담당방: Play Console / 출시 대응
 - 인텔리전스: 중간
 - 우선순위: P1
 - 진행 시점: 스토어 업로드 시점에 진행
-- 준비 상태: 체크리스트 보강 완료. 실제 AAB 생성과 업로드는 대표 승인 후 별도 진행
+- 준비 상태: 최신 signed AAB 생성과 로컬 검증 완료. Play Console 업로드와 설치본 확인은 콘솔 접근/대표 실행 단계로 남아 있음.
 
 ## 목표
 
@@ -18,6 +18,11 @@ AndroidManifest `OPEN_ALERTS` 변경, 최신 푸시 탭 라우팅, 최신 웹 UI
 - 스토어 테스터에게 반영하려면 versionCode 증가 후 signed AAB를 다시 생성해야 합니다.
 - 현재 AndroidManifest에는 `OPEN_ALERTS` intent action이 포함되어 있습니다.
 - 현재 Android 설정 기준은 `applicationId=com.staronlabs.chartradar`, `versionCode=6`, `versionName=1.0.3`입니다.
+- 2026-05-29 기준 최신 signed AAB는 `android/app/build/outputs/bundle/release/app-release.aab`에 생성되어 있습니다.
+- 최신 AAB SHA256은 `585985A252F71F097CF8A38946FAD71E942CC18B3672515E68EF250E46F9B92F`입니다.
+- 최신 AAB 내부 `server.url`은 `https://chartradar.kr`, `cleartext=false`로 확인했습니다.
+- `jarsigner -verify` 결과 `jar verified.`를 확인했습니다.
+- Play Console 관리 화면은 현재 Codex Chrome 세션에서 접근되지 않아 업로드는 진행하지 못했습니다.
 
 ## 대표 승인 전 금지
 
@@ -42,11 +47,11 @@ AndroidManifest `OPEN_ALERTS` 변경, 최신 푸시 탭 라우팅, 최신 웹 UI
 
 ## 완료 기준
 
-- 대표 승인 후 `versionCode` 증가.
-- `npm.cmd run app:sync`로 최신 웹 빌드와 Capacitor 설정 반영.
-- signed AAB 생성.
-- AAB 내부 `server.url=https://chartradar.kr` 확인.
-- Play Console 비공개 테스트 트랙 업로드.
+- 대표 승인 후 `versionCode` 증가. 현재 빌드는 `versionCode=6`, `versionName=1.0.3`.
+- `npm.cmd run app:sync`로 최신 웹 빌드와 Capacitor 설정 반영. 2026-05-29 완료.
+- signed AAB 생성. 2026-05-29 완료.
+- AAB 내부 `server.url=https://chartradar.kr` 확인. 2026-05-29 완료.
+- Play Console 비공개 테스트 트랙 업로드. 남음.
 - Play Store 설치본에서 푸시 탭 시 앱 열림 및 `targetPath` 이동 확인.
 - Play Store 설치본에서 Pro 화면, Google 로그인, FCM 토큰 저장, 알림 탭 이동이 기존 기준대로 동작하는지 확인.
 
