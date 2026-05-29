@@ -10,10 +10,10 @@ const config: Config = {
     extend: {
       colors: {
         surface: {
-          base: "#090d12",
-          card: "#10151c",
-          cardSoft: "#141a22",
-          line: "#2b3440"
+          base: "#0b0b0f",
+          card: "#111113",
+          cardSoft: "#17171a",
+          line: "#2f3137"
         },
         ui: {
           canvas: "var(--cr-color-canvas)",
@@ -35,8 +35,8 @@ const config: Config = {
           locked: "var(--cr-color-locked)"
         },
         accent: {
-          blue: "#60a5fa",
-          blueDeep: "#2563eb"
+          blue: "#4f7cff",
+          blueDeep: "#315fdc"
         },
         signal: {
           danger: "#f43f5e",

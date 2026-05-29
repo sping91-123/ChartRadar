@@ -1,5 +1,4 @@
 // 전체 화면 상단에서 Chart Radar 브랜드와 계정 상태를 보여주는 헤더입니다.
-import Image from "next/image";
 import Link from "next/link";
 import { HeaderActions } from "@/components/HeaderActions";
 import { AppSurface } from "@/components/ui/DesignPrimitives";
@@ -18,16 +17,8 @@ export function Header({ market }: { market?: HeaderMarket } = {}) {
     <header className="relative z-50 pt-2 sm:pt-4">
       <AppSurface as="div" tone="panel" variant="flat" padding="none" radius="none" className="flex items-center justify-between gap-2 border-b border-ui-line px-1 py-2 sm:gap-4 sm:px-0 sm:py-3">
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3" aria-label="Chart Radar 홈으로 이동">
-          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-ui-sm sm:h-9 sm:w-9">
-            <Image
-              src="/brand/chart-radar-mark.png"
-              alt=""
-              width={44}
-              height={44}
-              priority
-              className="h-full w-full object-cover"
-              draggable={false}
-            />
+          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-ui-sm border border-ui-line bg-ui-panel text-sm font-semibold text-ui-brand sm:h-9 sm:w-9">
+            C
           </div>
           <div className="min-w-0">
             <h1 className="whitespace-nowrap text-[15px] font-semibold leading-tight tracking-tight text-ui-text min-[360px]:text-base sm:text-xl">

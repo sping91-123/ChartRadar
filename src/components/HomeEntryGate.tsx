@@ -1,7 +1,6 @@
 "use client";
 // 홈 첫 진입에서 짧은 스플래시와 로그인 선택 흐름을 제공합니다.
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowRight, Bitcoin, TrendingUp } from "lucide-react";
@@ -33,35 +32,18 @@ const marketEntries = [
 
 function BrandMark({ size = "default" }: { size?: "default" | "large" }) {
   const frameSize = size === "large" ? "h-20 w-20" : "h-12 w-12 sm:h-14 sm:w-14";
-  const imageSize = size === "large" ? 80 : 56;
 
   return (
-    <div className={`relative overflow-hidden rounded-xl bg-slate-950/70 ${frameSize}`}>
-      <Image
-        src="/brand/chart-radar-mark.png"
-        alt=""
-        width={imageSize}
-        height={imageSize}
-        priority
-        className="h-full w-full object-cover"
-        draggable={false}
-      />
+    <div className={`grid shrink-0 place-items-center rounded-xl border border-ui-line bg-ui-panel text-2xl font-semibold text-ui-brand ${frameSize}`}>
+      C
     </div>
   );
 }
 
 function SplashBrandMark() {
   return (
-    <div className="relative h-32 w-32 sm:h-36 sm:w-36" aria-hidden>
-      <Image
-        src="/brand/chart-radar-icon.png"
-        alt=""
-        width={144}
-        height={144}
-        priority
-        className="h-full w-full object-cover opacity-95"
-        draggable={false}
-      />
+    <div className="grid h-24 w-24 place-items-center rounded-2xl border border-ui-line bg-ui-panel text-4xl font-semibold text-ui-brand sm:h-28 sm:w-28" aria-hidden>
+      C
     </div>
   );
 }
