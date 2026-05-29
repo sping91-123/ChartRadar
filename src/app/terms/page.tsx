@@ -79,7 +79,7 @@ export default function TermsPage() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-signal-warning/25 bg-signal-warning/10 p-4 text-sm leading-6 text-signal-warning">
+        <section className="border-t border-signal-warning/25 pt-4 text-sm leading-6 text-signal-warning">
           <div className="flex items-start gap-3">
             <ShieldAlert className="mt-0.5 shrink-0" size={18} aria-hidden />
             <p>
