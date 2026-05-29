@@ -1,5 +1,5 @@
 "use client";
-// 시장별 주요 페이지로 이동하는 상단 레이더 내비게이션입니다.
+
 import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -19,14 +19,14 @@ const cryptoNavItems: NavItem[] = [
   { label: "홈", icon: Home, href: "/coin", match: ["/coin"] },
   { label: "현물", icon: Coins, href: "/spot", match: ["/spot"] },
   { label: "선물", icon: Radar, href: "/crypto", match: ["/crypto", "/alts"] },
-  { label: "매크로", icon: Newspaper, href: "/news?market=crypto", match: ["/news"], market: "crypto" },
+  { label: "매크로", icon: Newspaper, href: "/news?market=crypto#macro-calendar", match: ["/news"], market: "crypto" },
   { label: "복기", icon: History, href: "/journal?market=crypto", match: ["/journal"], market: "crypto" }
 ];
 
 const stockNavItems: NavItem[] = [
   { label: "시장", icon: TrendingUp, href: "/global", match: ["/stocks", "/global"] },
   { label: "자산", icon: Radar, href: "/global/assets", match: ["/global/assets"] },
-  { label: "일정", icon: CalendarClock, href: "/news?market=global", match: ["/news"], market: "global" },
+  { label: "일정", icon: CalendarClock, href: "/news?market=global#macro-calendar", match: ["/news"], market: "global" },
   { label: "복기", icon: History, href: "/journal?market=global", match: ["/journal"], market: "global" }
 ];
 
@@ -52,39 +52,39 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
   const isFixedGridNav = isGlobalNav || isCryptoNav;
 
   const navContent = (
-      <div
-        className={
-          isFixedGridNav
-            ? "grid gap-1"
-            : "flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid"
-        }
-        style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
-      >
-        {navItems.map(({ label, icon: Icon, href, match, market: itemMarket }) => {
-          const isMarketRoute = pathname === "/news" || pathname === "/alerts" || pathname === "/journal";
-          const routeMatches = match.some((path) => path === pathname) && (!itemMarket || marketParam === itemMarket || !isMarketRoute);
-          const active = routeMatches;
+    <div
+      className={
+        isFixedGridNav
+          ? "grid gap-0.5"
+          : "flex gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid"
+      }
+      style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
+    >
+      {navItems.map(({ label, icon: Icon, href, match, market: itemMarket }) => {
+        const isMarketRoute = pathname === "/news" || pathname === "/alerts" || pathname === "/journal";
+        const routeMatches = match.some((path) => path === pathname) && (!itemMarket || marketParam === itemMarket || !isMarketRoute);
+        const active = routeMatches;
 
-          return (
-            <Link
-              key={label}
-              href={href}
-              className={`group flex min-h-10 min-w-0 items-center justify-center gap-1 border-b-2 px-1 text-center text-[10.5px] font-black tracking-tight transition sm:min-h-11 sm:gap-1.5 sm:px-3 sm:text-xs ${
-                isFixedGridNav ? "w-full" : "shrink-0 md:shrink"
-              } ${
-                active ? "border-ui-brand bg-transparent text-ui-text" : "border-transparent bg-transparent text-ui-muted hover:text-ui-text"
-              }`}
-            >
-              <Icon size={14} aria-hidden className={`shrink-0 ${active ? "text-ui-brand" : "text-ui-subtle transition group-hover:text-ui-muted"}`} />
-              <span className="whitespace-nowrap">{label}</span>
-            </Link>
-          );
-        })}
-      </div>
+        return (
+          <Link
+            key={label}
+            href={href}
+            className={`group flex min-h-9 min-w-0 items-center justify-center gap-1 border-b-2 px-1 text-center text-[10.5px] font-black tracking-tight transition sm:min-h-10 sm:gap-1.5 sm:px-2 sm:text-xs ${
+              isFixedGridNav ? "w-full" : "shrink-0 md:shrink"
+            } ${
+              active ? "border-ui-brand bg-transparent text-ui-text" : "border-transparent bg-transparent text-ui-muted hover:text-ui-text"
+            }`}
+          >
+            <Icon size={14} aria-hidden className={`shrink-0 ${active ? "text-ui-brand" : "text-ui-subtle transition group-hover:text-ui-muted"}`} />
+            <span className="whitespace-nowrap">{label}</span>
+          </Link>
+        );
+      })}
+    </div>
   );
 
   return (
-    <nav className="radar-bottom-nav fixed inset-x-0 bottom-0 z-40 overflow-hidden border-t border-ui-line px-2 py-1.5">
+    <nav className="radar-bottom-nav fixed inset-x-0 bottom-0 z-40 overflow-hidden border-t border-ui-line px-2 py-1">
       {navContent}
     </nav>
   );
@@ -92,7 +92,7 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
 
 export function RadarTopNav({ market }: { market?: MarketScope } = {}) {
   return (
-    <Suspense fallback={<div className="radar-bottom-nav fixed inset-x-0 bottom-0 z-40 h-14 border-t border-ui-line" />}>
+    <Suspense fallback={<div className="radar-bottom-nav fixed inset-x-0 bottom-0 z-40 h-12 border-t border-ui-line" />}>
       <RadarTopNavContent market={market} />
     </Suspense>
   );
