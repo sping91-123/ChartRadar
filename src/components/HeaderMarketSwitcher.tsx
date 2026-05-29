@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Bitcoin, ChevronDown, Globe2, Loader2 } from "lucide-react";
+import { Bitcoin, ChevronDown, Loader2, TrendingUp } from "lucide-react";
 import { savePreferredMarket, type PreferredMarket } from "@/lib/marketPreference";
 
 type HeaderMarket = "crypto" | "stocks";
@@ -25,7 +25,7 @@ function marketFromHeader(market?: HeaderMarket): PreferredMarket | null {
 
 function MarketIcon({ market }: { market?: HeaderMarket }) {
   if (market === "crypto") return <Bitcoin size={16} aria-hidden />;
-  if (market === "stocks") return <Globe2 size={16} aria-hidden />;
+  if (market === "stocks") return <TrendingUp size={16} aria-hidden />;
   return <span className="text-xs font-semibold">C</span>;
 }
 

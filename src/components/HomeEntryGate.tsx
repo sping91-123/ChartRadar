@@ -134,8 +134,16 @@ export function HomeEntryGate() {
     setBasicBrowse(true);
   };
 
-  if (isLoading && (skipSplashAfterAuth || hasStoredSession)) {
-    return <MarketSelector />;
+  if (!preferredMarketLoaded) {
+    return null;
+  }
+
+  if (preferredMarket && (isLoading || user || basicBrowse || hasStoredSession || skipSplashAfterAuth)) {
+    return null;
+  }
+
+  if (isLoading) {
+    return null;
   }
 
   if (!user && !basicBrowse) {

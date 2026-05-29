@@ -2,6 +2,7 @@
 import type { Metadata, Viewport } from "next";
 import { AuthHashRescue } from "@/components/AuthHashRescue";
 import { RadarAlertMonitor } from "@/components/RadarAlertMonitor";
+import { SystemBarsThemeSync } from "@/components/SystemBarsThemeSync";
 import { getSiteUrlWithLocalFallback } from "@/lib/siteUrl";
 import "./globals.css";
 
@@ -70,7 +71,7 @@ export const viewport: Viewport = {
   viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: dark)", color: "#0b0b0f" },
-    { media: "(prefers-color-scheme: light)", color: "#0b0b0f" }
+    { media: "(prefers-color-scheme: light)", color: "#f6f8fb" }
   ]
 };
 
@@ -85,10 +86,11 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var t=localStorage.getItem('chart-radar.theme')||'system';var r=t==='system'?(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):t;document.documentElement.classList.add(r==='light'?'theme-light':'theme-dark');if(t==='system')document.documentElement.classList.add('theme-system');document.documentElement.style.colorScheme=r;}catch(e){document.documentElement.classList.add('theme-dark');}"
+              "try{var t=localStorage.getItem('chart-radar.theme')||'system';var r=t==='system'?(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):t;document.documentElement.classList.add(r==='light'?'theme-light':'theme-dark');if(t==='system')document.documentElement.classList.add('theme-system');document.documentElement.style.colorScheme=r;var c=r==='light'?'#f6f8fb':'#0b0b0f';document.querySelectorAll('meta[name=\"theme-color\"]').forEach(function(m){m.setAttribute('content',c);});}catch(e){document.documentElement.classList.add('theme-dark');}"
           }}
         />
         <AuthHashRescue />
+        <SystemBarsThemeSync />
         <div className="app-shell">
           <div className="app-scroll-root">{children}</div>
         </div>

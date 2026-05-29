@@ -72,6 +72,10 @@ function macroValueText(value?: string) {
     .replace(/\bActual\b/gi, "결과");
 }
 
+function primaryMacroValueText(value?: string) {
+  return macroValueText(value).split(";")[0]?.trim() || "미정";
+}
+
 function displayMacroValue(candidates: Array<string | undefined>, missingLabel: string) {
   for (const candidate of candidates) {
     if (!isEmptyValue(candidate)) return macroValueText(candidate);
@@ -89,7 +93,7 @@ function displayPreviousValue(item: MacroEventItem) {
 
 function displayActual(item: MacroEventItem) {
   if (isDocumentEvent(item)) return hasReleaseTimePassed(item) ? "공식 공개" : "예정";
-  if (hasActualValue(item)) return macroValueText(item.actualValue ?? item.actual);
+  if (hasActualValue(item)) return primaryMacroValueText(item.actualValue ?? item.actual);
   if (hasReleaseTimePassed(item)) return "확인 중";
   return "발표 전";
 }
@@ -221,7 +225,7 @@ function MacroNewsItem({ item, sectionLabel, subdued = false }: { item: MacroEve
   const pendingActual = !hasActualValue(item) && hasReleaseTimePassed(item) && !isDocumentEvent(item);
 
   return (
-    <article className={`border-t border-ui-line py-2.5 first:border-t-0 ${subdued ? "opacity-95" : ""}`}>
+    <article className={`py-2 first:pt-0 ${subdued ? "opacity-95" : ""}`}>
       <div className="flex flex-wrap items-center gap-1.5">
         <StatusPill tone="info" className="min-h-5 px-0 text-[10px]">{sectionLabel}</StatusPill>
         <StatusPill tone={hasReleaseTimePassed(item) ? "watch" : "info"} className="min-h-5 px-0 text-[10px]">{compactStatusLabel(item)}</StatusPill>
@@ -229,7 +233,7 @@ function MacroNewsItem({ item, sectionLabel, subdued = false }: { item: MacroEve
       </div>
       <h4 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{macroLabel(item.label)}</h4>
       <p className="mt-0.5 text-[11px] font-semibold leading-4 text-ui-muted">한국시간 {item.dateKst}</p>
-      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+      <div className="mt-1.5 grid grid-cols-3 gap-x-2 gap-y-1 text-left min-[420px]:flex min-[420px]:flex-wrap min-[420px]:gap-x-3">
         <MacroNewsValue label={hasReleaseTimePassed(item) ? (isDocumentEvent(item) ? "상태" : "결과") : "예상"} value={hasReleaseTimePassed(item) ? displayActual(item) : displayConsensusValue(item)} pending={pendingActual} />
         <MacroNewsValue label="예상" value={displayConsensusValue(item)} pending={displayConsensusValue(item) === "예상 확인 필요"} />
         <MacroNewsValue label="이전" value={displayPreviousValue(item)} pending={displayPreviousValue(item) === "이전 확인 필요"} />
@@ -307,14 +311,14 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
           {previousRelease ? (
             <MacroNewsItem item={previousRelease} sectionLabel="직전 발표" />
           ) : (
-            <div className="border-t border-ui-line py-2.5 text-xs leading-5 text-ui-muted [word-break:keep-all]">
+            <div className="py-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">
               직전 발표는 공식 캘린더에서 확인되는 즉시 이 영역에 표시됩니다.
             </div>
           )}
           {nearestUpcoming ? (
             <MacroNewsItem item={nearestUpcoming} sectionLabel="다음 일정" />
           ) : (
-            <div className="border-t border-ui-line py-2.5 text-xs leading-5 text-ui-muted [word-break:keep-all]">
+            <div className="py-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">
               다가오는 주요 USD 일정을 확인하는 중입니다.
             </div>
           )}
@@ -336,7 +340,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
           </div>
         ) : null}
 
-        <div className="flex items-start gap-2 border-t border-ui-line pt-2 text-[11px] leading-5 text-ui-muted">
+        <div className="flex items-start gap-2 pt-1 text-[11px] leading-5 text-ui-muted">
           <CalendarClock size={13} className="mt-0.5 shrink-0 text-ui-brand" aria-hidden />
           <span className="[word-break:keep-all]">{calendar.sourceNote}</span>
         </div>
@@ -348,7 +352,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
     const item = getCompactItem(calendar.items);
     if (!item) {
       return (
-        <div className="border-y border-white/10 py-2 text-xs font-bold leading-5 text-slate-500 [word-break:keep-all]">
+        <div className="py-2 text-xs font-bold leading-5 text-slate-500 [word-break:keep-all]">
           자동 캘린더에서 이번 주 주요 일정을 확인하는 중입니다.
         </div>
       );
@@ -363,7 +367,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
     return (
       <Link
         href={href}
-        className="group flex min-h-8 items-center gap-2 border-y border-white/10 bg-transparent px-1 py-1.5 transition hover:bg-white/[0.025]"
+        className="group flex min-h-8 items-center gap-2 bg-transparent px-1 py-1 transition hover:bg-white/[0.025]"
       >
         <div className={`inline-flex shrink-0 items-center gap-1.5 py-0.5 text-[11px] font-black ${isReleased ? "text-signal-warning" : "text-accent-blue"}`}>
           <Radio size={12} aria-hidden />
@@ -373,8 +377,11 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
           <p className="truncate text-[11px] font-black text-white">
             {macroLabel(item.label)} · <span className={compactStateClass(item)}>{compactStatusLabel(item)}</span>
           </p>
-          <p className="mt-0.5 truncate text-[11px] font-bold text-slate-500">
-            한국시간 {item.dateKst} · {primaryValueLabel} {primaryValue} · 이전 {displayPreviousValue(item)}
+          <p className="mt-0.5 flex min-w-0 flex-wrap gap-x-2 gap-y-0.5 text-[11px] font-bold text-slate-500">
+            <span>한국시간 {item.dateKst}</span>
+            <span>{primaryValueLabel} {primaryValue}</span>
+            <span>예상 {displayConsensusValue(item)}</span>
+            <span>이전 {displayPreviousValue(item)}</span>
           </p>
         </div>
         <ChevronRight size={14} className="shrink-0 text-slate-600 transition group-hover:text-accent-blue" aria-hidden />
@@ -383,8 +390,8 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
   }
 
   return (
-    <section className="overflow-hidden border-y border-accent-blue/20">
-      <div className="flex items-center gap-2 border-b border-white/10 py-2">
+    <section className="overflow-hidden">
+      <div className="flex items-center gap-2 py-2">
         <div className="grid h-8 w-8 shrink-0 place-items-center text-accent-blue">
           <Radio size={15} aria-hidden />
         </div>
@@ -407,7 +414,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
           ))}
         </div>
       </div>
-      <div className="flex items-center gap-2 border-t border-white/10 px-2 py-2 text-[11px] leading-5 text-slate-500">
+      <div className="flex items-center gap-2 px-2 py-1.5 text-[11px] leading-5 text-slate-500">
         <CalendarClock size={13} className="shrink-0 text-accent-blue" aria-hidden />
         <span className="[word-break:keep-all]">{calendar.sourceNote}</span>
       </div>

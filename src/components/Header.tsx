@@ -20,7 +20,7 @@ export function Header({ market }: { market?: HeaderMarket } = {}) {
         variant="flat"
         padding="none"
         radius="none"
-        className="flex items-center justify-between gap-2 border-b border-ui-line px-1 py-1.5 sm:gap-3 sm:px-0 sm:py-2"
+        className="flex items-center justify-between gap-2 px-1 py-1.5 sm:gap-3 sm:px-0 sm:py-2"
       >
         <HeaderMarketSwitcher market={market} subtitle={subtitle} />
         <HeaderActions market={market} />

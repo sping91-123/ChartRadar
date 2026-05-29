@@ -323,7 +323,7 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
           role="dialog"
           aria-modal="true"
           aria-labelledby="settings-panel-title"
-          className="settings-fullscreen-panel fixed inset-0 z-[100] overflow-y-auto px-3 pb-3 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-5 sm:pb-5 sm:pt-[calc(env(safe-area-inset-top)+1.25rem)]"
+          className="settings-fullscreen-panel settings-slide-panel fixed inset-0 z-[100] overflow-y-auto px-3 pb-3 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-5 sm:pb-5 sm:pt-[calc(env(safe-area-inset-top)+1.25rem)]"
         >
           <div className="mx-auto flex min-h-full w-full max-w-md flex-col">
             <header className="sticky top-0 z-10 -mx-3 flex items-center gap-3 border-b border-white/10 bg-inherit px-3 py-3 sm:-mx-5 sm:px-5">

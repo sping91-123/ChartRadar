@@ -17,6 +17,11 @@ function applyTheme(theme: ThemeMode) {
   document.documentElement.classList.toggle("theme-dark", resolved === "dark");
   document.documentElement.classList.toggle("theme-system", theme === "system");
   document.documentElement.style.colorScheme = resolved;
+  const themeColor = resolved === "light" ? "#f6f8fb" : "#0b0b0f";
+  document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((meta) => {
+    meta.content = themeColor;
+  });
+  window.dispatchEvent(new CustomEvent("chart-radar-theme-change", { detail: { theme, resolved } }));
 }
 
 export function ThemeToggle({ variant = "button" }: { variant?: "button" | "switch" } = {}) {
