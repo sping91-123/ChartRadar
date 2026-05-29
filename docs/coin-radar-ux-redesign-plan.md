@@ -180,6 +180,7 @@ targetPath 변경은 FCM, push-cron, Android intent, 설치본 푸시 탭 이동
 - BTC 기준 시장 체력을 별도 블록으로 둔다.
 - BTC RSI, BTC 스토캐스틱, BTC 트렌드는 선택 코인이 아니라 BTC 기준으로 해석한다.
 - 공포탐욕, 도미넌스, 롱숏비율, 김프, BTC/ETH/XRP 펀딩비, 환율을 보조 신호로 배치한다.
+- 현재 구현은 `/api/coin-market-metrics`에서 BTC 도미넌스, USD/KRW, 업비트 BTC 기준 김프를 public source로 정리하고, 펀딩비와 롱숏비율은 기존 Binance 공개 파생상품 route를 사용한다.
 
 ## Coin Radar 홈 MVP 상세 설계
 

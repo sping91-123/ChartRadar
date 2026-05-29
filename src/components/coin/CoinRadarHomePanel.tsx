@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, RefreshCw, ShieldCheck, TrendingUp } from "lucide-react";
 import { ActionButton, DataRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
+import type { CoinMarketMetricsPayload } from "@/lib/coinMarketMetrics";
 import type { Candle } from "@/lib/marketAnalysis";
 import type { LiquidationPressureReport } from "@/lib/liquidationPressure";
 import { analyzeTechnicalRadar, type IndicatorReading, type TechnicalRadarReport } from "@/lib/technicalRadar";
@@ -20,6 +21,7 @@ interface CoinHomeData {
   board: MarketBoardItem[];
   technical: TechnicalRadarReport | null;
   funding: Partial<Record<"BTC" | "ETH" | "XRP", LiquidationPressureReport>>;
+  marketMetrics: CoinMarketMetricsPayload | null;
   cachedAt: number;
 }
 
@@ -50,9 +52,19 @@ function formatPercent(value: number | null | undefined, digits = 2) {
   return `${value >= 0 ? "+" : ""}${value.toFixed(digits)}%`;
 }
 
+function formatPlainPercent(value: number | null | undefined, digits = 2) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "미확인";
+  return `${value.toFixed(digits)}%`;
+}
+
 function formatRatio(value: number | null | undefined) {
   if (value === null || value === undefined || !Number.isFinite(value)) return "미확인";
   return value.toFixed(2);
+}
+
+function formatKrwRate(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "미확인";
+  return `₩${value.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}`;
 }
 
 function formatCachedAt(ms: number) {
@@ -117,20 +129,23 @@ export function CoinRadarHomePanel() {
     setState({ status: "loading" });
 
     try {
-      const [boardPayload, candlesPayload, ...fundingPayloads] = await Promise.all([
+      const [boardPayload, candlesPayload, marketMetricsPayload, btcFundingPayload, ethFundingPayload, xrpFundingPayload] = await Promise.all([
         jsonOrNull<{ items?: MarketBoardItem[]; cachedAt?: number }>("/api/market-board"),
         jsonOrNull<{ candles?: Candle[] }>("/api/crypto-candles?symbol=BTCUSDT&timeframe=1h&limit=180"),
-        ...fundingSymbols.map((symbol) => jsonOrNull<{ report?: LiquidationPressureReport }>(`/api/liquidation-pressure?symbol=${symbol}USDT&period=1h`))
+        jsonOrNull<CoinMarketMetricsPayload>("/api/coin-market-metrics"),
+        jsonOrNull<{ report?: LiquidationPressureReport }>("/api/liquidation-pressure?symbol=BTCUSDT&period=1h"),
+        jsonOrNull<{ report?: LiquidationPressureReport }>("/api/liquidation-pressure?symbol=ETHUSDT&period=1h"),
+        jsonOrNull<{ report?: LiquidationPressureReport }>("/api/liquidation-pressure?symbol=XRPUSDT&period=1h")
       ]);
 
       const board = boardPayload?.items ?? [];
       const candles = candlesPayload?.candles ?? [];
       const technical = candles.length >= 60 ? analyzeTechnicalRadar(candles) : null;
-      const funding = fundingSymbols.reduce<CoinHomeData["funding"]>((acc, symbol, index) => {
-        const report = fundingPayloads[index]?.report;
-        if (report) acc[symbol] = report;
-        return acc;
-      }, {});
+      const funding: CoinHomeData["funding"] = {
+        BTC: btcFundingPayload?.report,
+        ETH: ethFundingPayload?.report,
+        XRP: xrpFundingPayload?.report
+      };
 
       if (board.length === 0 && !technical) {
         throw new Error("코인 홈 데이터를 확인하지 못했습니다.");
@@ -142,6 +157,7 @@ export function CoinRadarHomePanel() {
           board,
           technical,
           funding,
+          marketMetrics: marketMetricsPayload,
           cachedAt: boardPayload?.cachedAt ?? Date.now()
         }
       });
@@ -160,13 +176,12 @@ export function CoinRadarHomePanel() {
     const fearGreed = report?.fearGreed ?? null;
     const tone = toneForMarket(fearGreed?.score ?? null);
     const btc = boardItem(state.data.board, "BTC");
-    const totalVolume = state.data.board.reduce((sum, item) => sum + (Number.isFinite(item.quoteVolume) ? item.quoteVolume : 0), 0);
-    const btcVolumeShare = btc && totalVolume > 0 ? (btc.quoteVolume / totalVolume) * 100 : null;
     const rsi = findReading(report, "RSI 14");
     const stochastic = findReading(report, "Stochastic");
     const btcFunding = state.data.funding.BTC ?? null;
+    const marketMetrics = state.data.marketMetrics;
 
-    return { report, fearGreed, tone, btc, btcVolumeShare, rsi, stochastic, btcFunding };
+    return { report, fearGreed, tone, btc, rsi, stochastic, btcFunding, marketMetrics };
   }, [state]);
 
   if (state.status === "loading") {
@@ -271,10 +286,10 @@ export function CoinRadarHomePanel() {
           <DataRow label="BTC RSI" value={summary?.rsi?.value ?? "미확인"} detail={summary?.rsi?.description} />
           <DataRow label="BTC 스토캐스틱" value={summary?.stochastic?.value ?? "미확인"} detail={summary?.stochastic?.description} />
           <DataRow label="BTC 트렌드" value={summary?.report?.trendLabel ?? "미확인"} detail={summary?.report?.summary} />
-          <DataRow label="BTC 거래대금 점유" value={summary?.btcVolumeShare === null ? "미확인" : `${summary?.btcVolumeShare.toFixed(1)}%`} detail="현재 보드 종목 내 BTC 거래대금 비중입니다. 정식 도미넌스 API 연결 전 보조값으로 봅니다." />
+          <DataRow label="BTC 도미넌스" value={formatPlainPercent(summary?.marketMetrics?.btcDominancePercent)} detail="CoinGecko global market cap 기준 BTC 비중입니다." />
           <DataRow label="롱숏비율" value={formatRatio(summary?.btcFunding?.globalLongShort.ratio)} detail="BTCUSDT Binance 공개 long/short 비율입니다." />
-          <DataRow label="김프" value="연결 예정" detail="국내 KRW 현물과 USD/KRW 환율 연결 후 표시합니다." />
-          <DataRow label="환율" value="연결 예정" detail="USD/KRW public source 확정 후 원화 해석 보조값으로 연결합니다." />
+          <DataRow label="김프" value={formatPercent(summary?.marketMetrics?.kimchiPremiumPercent)} detail="업비트 BTC/KRW와 Binance BTCUSDT, USD/KRW 환율로 계산한 보조값입니다." />
+          <DataRow label="환율" value={formatKrwRate(summary?.marketMetrics?.usdKrw)} detail="USD/KRW public source 기준입니다. 국내 현물 해석용 보조값으로만 봅니다." />
         </div>
       </PanelCard>
 
