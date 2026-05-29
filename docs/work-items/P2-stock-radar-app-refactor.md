@@ -32,3 +32,4 @@
 - 2026-05-29: 관심 자산 localStorage helper를 `src/components/global/globalWatchlist.ts`로 분리했다. 저장 key, 기본 관심 자산, 최대 개수 제한은 변경하지 않았다.
 - 2026-05-29: 글로벌 자산 checklist/playbook 표시 컴포넌트를 `src/components/global/GlobalAssetPlaybook.tsx`로 분리했다. 가격 계산, 차트, 데이터 fetch, Basic/Pro gating은 변경하지 않았다.
 - 2026-05-29: 글로벌 초보자 가이드 렌더링과 step 생성 로직을 `src/components/global/GlobalBeginnerGuide.tsx`로 분리했다. session timer와 데이터 계산은 변경하지 않았다.
+- 2026-05-29: 기술지표 근거/현재가/기준선 스냅샷을 `src/components/global/GlobalStockSnapshot.tsx`로 분리했다. technical report 계산과 차트 데이터는 변경하지 않았다.
