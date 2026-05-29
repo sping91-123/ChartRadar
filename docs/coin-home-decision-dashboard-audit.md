@@ -302,14 +302,311 @@ Not answered as a priority.
 - User-selected representative coin list.
 - Optional account sync for representative coins after localStorage proves useful.
 
+## Home Decision Model
+
+The Coin Radar home should not behave like a dense information dashboard. Its top section should answer the user's pre-trade context in about 10 seconds. The model below is a decision-support model, not a buy/sell signal.
+
+### Top Decision State
+
+Use one of four states at the top of the home screen:
+
+1. `관망`
+   - Meaning: market conditions are unclear or risk is not compensated by structure.
+   - Typical causes:
+     - BTC trend is flat or weakening.
+     - readiness score is low-to-mid.
+     - macro event risk is close.
+     - derivatives crowding or FX/kimchi premium risk is elevated.
+   - Recommended wording:
+     - "지금은 관망 우위입니다."
+     - "방향 확인 전까지 추적 조건만 정리합니다."
+
+2. `조건 대기`
+   - Meaning: structure is forming, but one or more confirmation conditions are missing.
+   - Typical causes:
+     - BTC trend is improving but not confirmed.
+     - representative coin is moving but overheat risk exists.
+     - market leadership is mixed.
+   - Recommended wording:
+     - "조건 대기 구간입니다."
+     - "BTC 추세 유지와 거래대금 동반 여부를 확인합니다."
+
+3. `추적 가능`
+   - Meaning: market environment is organized enough to watch selected coins actively.
+   - Typical causes:
+     - BTC trend is constructive.
+     - readiness score is high.
+     - risk priority is not severe.
+     - derivatives crowding is not extreme.
+   - Recommended wording:
+     - "추적 가능한 환경입니다."
+     - "확인 조건이 유지되는지 관찰합니다."
+
+4. `리스크 확대`
+   - Meaning: there is a dominant risk that should be seen before coin-specific interpretation.
+   - Typical causes:
+     - BTC trend breaks down.
+     - funding/long-short is crowded.
+     - macro event is imminent.
+     - kimchi premium or FX risk is elevated.
+     - broad alt weakness is visible.
+   - Recommended wording:
+     - "리스크가 먼저 보이는 구간입니다."
+     - "추격보다 변동성 확대 가능성을 먼저 확인합니다."
+
+### Readiness Score
+
+The readiness score is a 0-100 environment score. It is not a buy score, sell score, or expected profit score.
+
+Recommended label:
+
+- `매매 환경 준비도`
+
+Recommended score bands:
+
+- `0-29`: 리스크 우선
+- `30-49`: 관망 우위
+- `50-69`: 조건 대기
+- `70-84`: 추적 가능
+- `85-100`: 추적 가능 but 과열 점검 필수
+
+MVP input groups:
+
+1. BTC trend and structure
+   - BTC trend label.
+   - BTC RSI.
+   - BTC stochastic.
+   - BTC 1h technical summary.
+   - Purpose: decide whether the market backbone is constructive.
+
+2. Market risk
+   - macro event proximity from `MacroTicker` / macro calendar.
+   - BTC trend breakdown.
+   - extreme BTC move.
+   - Purpose: prevent the score from rising only because price already moved.
+
+3. Derivatives crowding
+   - BTC long/short ratio.
+   - BTC/ETH/XRP funding rates.
+   - Purpose: reduce readiness when positioning is too one-sided.
+
+4. Market strength
+   - BTC fear/greed score from the current technical report.
+   - BTC dominance.
+   - BTC 24h change.
+   - Purpose: summarize whether the market has enough strength to monitor.
+
+5. Alt participation
+   - count of market-board alt symbols with positive 24h change.
+   - count of alt symbols above a threshold such as `+2.5%`.
+   - quote-volume concentration among movers.
+   - Purpose: identify whether the move is BTC-only or broader.
+
+MVP scoring approach:
+
+- Start from a neutral base around 50.
+- Add points for constructive BTC trend, healthy momentum, and broad participation.
+- Subtract points for major risk priority, event proximity, derivatives crowding, excessive kimchi premium, and BTC trend deterioration.
+- Cap the final label so a severe top risk can force `리스크 확대` even when raw score is high.
+
+### Direction Model
+
+Direction should describe market pressure, not command action.
+
+Allowed states:
+
+1. `상방 우세`
+   - BTC trend is constructive.
+   - BTC momentum is positive but not extremely overheated.
+   - representative coin direction is aligned.
+
+2. `하방 압력`
+   - BTC trend is weakening or broken.
+   - representative coin change is negative with risk expansion.
+   - broad market participation is weak.
+
+3. `관망`
+   - BTC trend is mixed.
+   - representative coin signal is unclear.
+   - upcoming event or derivatives crowding makes confirmation necessary.
+
+4. `변동성 주의`
+   - event risk, liquidation pressure, funding crowding, or abnormal move dominates.
+   - This state can override directional labels when risk is high.
+
+Do not use direct trade wording such as:
+
+- "매수"
+- "매도"
+- "롱 진입"
+- "숏 진입"
+- "지금 들어가도 됨"
+
+### Market Leadership Model
+
+Use one of four leadership labels:
+
+1. `BTC 우세`
+   - BTC trend is stronger than broad alt participation.
+   - BTC dominance is rising or relatively high.
+   - ETH/BTC or alt participation is not strong enough.
+
+2. `알트 순환`
+   - multiple alt symbols are positive.
+   - high-volume alt movers are visible.
+   - BTC is stable enough to support rotation.
+   - later model can add Upbit/Bithumb spot breadth.
+
+3. `혼조`
+   - BTC and alt signals conflict.
+   - BTC dominance, BTC trend, and alt participation do not agree.
+   - representative coin movement may be individual rather than market-wide.
+
+4. `위험 회피`
+   - BTC trend is weak.
+   - broad alt participation is weak.
+   - risk priority is severe.
+   - macro or derivatives risk is dominant.
+
+MVP criteria available now:
+
+- BTC trend from `analyzeTechnicalRadar`.
+- BTC dominance from `/api/coin-market-metrics`.
+- market-board alt symbol changes from `/api/market-board`.
+- market-board quote volume from `/api/market-board`.
+
+Later criteria:
+
+- ETH/BTC relative strength.
+- broader alt riser ratio.
+- Upbit/Bithumb KRW spot breadth.
+- top alt relative performance vs BTC.
+
+### Risk Priority
+
+The top home section should pick one primary risk first, then show secondary risks in Pro.
+
+Risk priority candidates:
+
+1. `과열`
+   - representative coin move is too extended.
+   - BTC RSI/stochastic is stretched.
+   - readiness score is high but chasing risk is also high.
+
+2. `이벤트 대기`
+   - important macro event is near.
+   - recently released event is still inside the interpretation window.
+   - home should lean toward condition waiting.
+
+3. `펀딩비/롱숏 쏠림`
+   - funding rate is elevated.
+   - BTC long/short ratio is one-sided.
+   - liquidation pressure suggests crowded positioning.
+
+4. `김프`
+   - kimchi premium is elevated or abnormal.
+   - domestic spot interpretation needs extra caution.
+
+5. `환율`
+   - USD/KRW movement creates local market distortion.
+   - this is a context risk, not a coin direction signal.
+
+6. `BTC 추세 이탈`
+   - BTC trend weakens or breaks.
+   - this should override representative coin optimism.
+
+Priority order for MVP:
+
+1. BTC trend breakdown.
+2. imminent high-impact event.
+3. derivatives crowding.
+4. overheat.
+5. kimchi premium / FX.
+
+### Home Copy Principles
+
+The first screen should sound like an analyst checklist, not a trading instruction.
+
+Use:
+
+- "준비도"
+- "추적 조건"
+- "관망 우위"
+- "조건 대기"
+- "리스크 우선"
+- "확인 조건"
+- "무효화 기준"
+
+Avoid:
+
+- "매수 추천"
+- "매도 추천"
+- "롱 진입"
+- "숏 진입"
+- "수익 가능"
+- "기회"
+- "지금 들어가도 됨"
+
+Example home copy:
+
+- "지금은 조건 대기 구간입니다."
+- "BTC 추세 유지와 알트 참여도 개선을 확인합니다."
+- "가장 큰 리스크는 이벤트 대기입니다."
+- "대표 코인은 추적 가능하지만, 과열 구간에서는 확인 조건이 먼저입니다."
+
+### Basic And Pro Split
+
+Basic should keep the home fast and decisive:
+
+- top decision state.
+- readiness score band.
+- representative coin summary.
+- BTC market strength summary.
+- one top risk.
+- one next confirmation condition.
+
+Pro should explain why:
+
+- score component breakdown.
+- invalidation criteria.
+- BTC vs alt leadership details.
+- derivatives crowding details.
+- kimchi premium and FX context.
+- macro event interpretation.
+- alert condition suggestions.
+- representative coin customization details.
+
+Do not weaken Pro gating by moving detailed evidence, invalidation, and alert logic into Basic.
+
+### MVP Versus Later Data
+
+MVP can be built from current data:
+
+- BTC technical report from `/api/crypto-candles`.
+- BTC/ETH/XRP price and 24h change from `/api/market-board`.
+- market-board alt participation and quote volume from `/api/market-board`.
+- BTC dominance, kimchi premium, and USD/KRW from `/api/coin-market-metrics`.
+- BTC long/short ratio and BTC/ETH/XRP funding rates from `/api/liquidation-pressure`.
+- compact macro event state from the existing macro calendar flow.
+
+Later data/API needs:
+
+- ETH/BTC relative strength.
+- broader alt universe breadth.
+- Upbit/Bithumb KRW spot radar.
+- user-selected representative coin persistence.
+- spot/futures mode distinction.
+- account sync for representative coin settings.
+- richer macro risk scoring.
+
 ## Next Work Candidate
 
-Next active-run task should be `홈 decision model 설계`.
+Next active-run task should be `대표 코인 개인화 설계`.
 
 Recommended focus:
 
-1. Define the top state: 관망 / 조건 대기 / 추적 가능 / 리스크 확대.
-2. Define readiness score inputs and weights.
-3. Define market leadership label: BTC 우세 / 알트 순환 / 혼조 / 위험 회피.
-4. Define top risk priority.
-5. Keep all output phrasing as decision support, not trade instruction.
+1. Define default representative coins: BTC, ETH, XRP.
+2. Define how users choose "내 대표 코인".
+3. Define localStorage-first persistence.
+4. Define spot/futures mode distinction.
+5. Keep account sync as a later step.
