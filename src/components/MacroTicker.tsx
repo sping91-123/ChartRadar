@@ -168,12 +168,12 @@ function numericMacroValue(value?: string) {
 }
 
 function cryptoImpactRead(item: MacroEventItem) {
-  if (!hasReleaseTimePassed(item)) return "발표 전이라 방향보다 변동성 대비가 우선입니다.";
-  if (isDocumentEvent(item)) return "문서 공개 후 금리·유동성 문구가 코인시장 변수입니다.";
+  if (!hasReleaseTimePassed(item)) return "발표 전";
+  if (isDocumentEvent(item)) return "확인 필요";
 
   const actual = numericMacroValue(item.actualValue ?? item.actual);
   const expected = numericMacroValue(item.consensusValue ?? item.forecast);
-  if (actual === null || expected === null) return "결과 확인 중이라 가격 반응을 먼저 봅니다.";
+  if (actual === null || expected === null) return "확인 필요";
 
   const lower = item.label.toLowerCase();
   const diff = actual - expected;
@@ -181,24 +181,24 @@ function cryptoImpactRead(item: MacroEventItem) {
   const materiallyLower = diff < -0.001;
 
   if (lower.includes("cpi") || lower.includes("ppi") || lower.includes("pce") || lower.includes("inflation")) {
-    if (materiallyLower) return "예상보다 낮아 코인에는 금리 부담 완화 재료입니다.";
-    if (materiallyHigher) return "예상보다 높아 코인에는 금리 부담 확대 재료입니다.";
-    return "예상 부근이라 코인 영향은 가격 반응 확인이 우선입니다.";
+    if (materiallyLower) return "호재";
+    if (materiallyHigher) return "악재";
+    return "중립";
   }
 
   if (lower.includes("jobless") || lower.includes("claims") || lower.includes("unemployment")) {
-    if (materiallyHigher) return "고용 둔화 신호라 코인에는 단기 혼조 재료입니다.";
-    if (materiallyLower) return "고용 견조 신호라 금리 부담을 다시 볼 구간입니다.";
-    return "예상 부근이라 코인 영향은 제한적으로 봅니다.";
+    if (materiallyHigher) return "중립";
+    if (materiallyLower) return "악재";
+    return "중립";
   }
 
   if (lower.includes("retail") || lower.includes("gdp") || lower.includes("pmi") || lower.includes("durable")) {
-    if (materiallyHigher) return "경기 견조 신호지만 금리 부담도 함께 확인합니다.";
-    if (materiallyLower) return "경기 둔화 신호라 위험자산 심리 확인이 필요합니다.";
-    return "예상 부근이라 코인 영향은 제한적으로 봅니다.";
+    if (materiallyHigher) return "중립";
+    if (materiallyLower) return "악재";
+    return "중립";
   }
 
-  return "발표 직후 BTC 반응과 달러·금리 움직임을 함께 봅니다.";
+  return "확인 필요";
 }
 
 function macroLabel(label: string) {
