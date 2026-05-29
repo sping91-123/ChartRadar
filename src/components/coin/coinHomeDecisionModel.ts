@@ -22,6 +22,8 @@ export interface CoinHomeDecisionSummary {
   topRisk: string;
   nextCondition: string;
   reason: string;
+  scoreLabel: string;
+  scoreDetail: string;
 }
 
 interface BuildCoinHomeDecisionInput {
@@ -97,16 +99,21 @@ function kimchiFxRisk(metrics: CoinMarketMetricsPayload | null) {
 
 function riskLabel({
   weakTrend,
+  constructiveTrend,
+  btcChange,
   overheat,
   derivatives,
   kimchiRisk
 }: {
   weakTrend: boolean;
+  constructiveTrend: boolean;
+  btcChange: number;
   overheat: boolean;
   derivatives: number;
   kimchiRisk: number;
 }) {
-  if (weakTrend) return "BTC 추세 이탈";
+  if (weakTrend && (constructiveTrend || btcChange <= -2.5)) return "BTC 상승 추세 이탈";
+  if (weakTrend) return "BTC 하락 추세 지속";
   if (derivatives >= 20) return "펀딩비/롱숏 쏠림";
   if (overheat) return "과열 확인";
   if (kimchiRisk >= 7) return "김프/환율 영향";
@@ -114,7 +121,8 @@ function riskLabel({
 }
 
 function nextConditionFor(state: CoinHomeDecisionState, leadership: CoinHomeLeadership, topRisk: string) {
-  if (state === "리스크 확대") return `${topRisk}가 완화되는지 먼저 확인합니다.`;
+  if (state === "리스크 확대" && topRisk.includes("BTC")) return "BTC가 하락 압력을 멈추고 1시간 추세를 회복하는지 확인합니다.";
+  if (state === "리스크 확대") return `${topRisk}이 줄어드는지 먼저 확인합니다.`;
   if (leadership === "알트 순환") return "BTC가 무너지지 않는 상태에서 알트 거래대금이 유지되는지 확인합니다.";
   if (leadership === "BTC 우세") return "BTC 추세 유지와 알트 참여 확산 여부를 함께 확인합니다.";
   if (state === "추적 가능") return "준비도와 리스크 조건이 유지되는지 관찰합니다.";
@@ -163,7 +171,7 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
   const marketStrength = (fearGreed - 50) * 0.22 + trendBias(input.technical) + altParticipationBonus;
   const riskPenalty = derivatives + kimchiRisk + (overheat ? 10 : 0) + (weakTrend ? 18 : 0);
   const readinessScore = Math.round(clamp(50 + marketStrength - riskPenalty, 0, 100));
-  const topRisk = riskLabel({ weakTrend, overheat, derivatives, kimchiRisk });
+  const topRisk = riskLabel({ weakTrend, constructiveTrend, btcChange, overheat, derivatives, kimchiRisk });
 
   const leadership = leadershipFor({
     constructiveTrend,
@@ -203,6 +211,8 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
     leadership,
     topRisk,
     nextCondition: nextConditionFor(state, leadership, topRisk),
-    reason
+    reason,
+    scoreLabel: "매매 환경 준비도",
+    scoreDetail: "BTC 추세, 알트 참여, 공포탐욕, 파생 쏠림, 김프/환율 리스크를 합산한 0~100점 기준입니다."
   };
 }

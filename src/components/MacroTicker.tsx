@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CalendarClock, ChevronRight, ExternalLink, Radio } from "lucide-react";
-import { type MacroEventItem, type MacroEventSource } from "@/data/macroEvents";
+import { CalendarClock, ChevronRight, ExternalLink, Radio, RefreshCw } from "lucide-react";
+import { type MacroEventItem } from "@/data/macroEvents";
 import { getMacroCalendarFallbackPayload, type MacroCalendarPayload } from "@/lib/macroCalendar";
-import { StatusPill } from "@/components/ui/DesignPrimitives";
+import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
 
 const RECENT_RELEASE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const PREVIOUS_RELEASE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -149,21 +149,10 @@ function isHighImpactMacro(item: MacroEventItem) {
   );
 }
 
-function importanceLabel(item: MacroEventItem) {
-  if (isHighImpactMacro(item)) return "중요 일정";
-  if (item.importance === 2) return "시장 영향 가능";
-  return "참고 일정";
-}
-
-function sourceLabel(source: MacroEventSource) {
-  if (source === "BLS") return "BLS 공식 통계";
-  if (source === "BEA") return "BEA";
-  if (source === "Fed") return "Fed";
-  if (source === "Census") return "Census";
-  if (source === "DOL") return "DOL";
-  if (source === "NAR") return "NAR";
-  if (source === "ForexFactory") return "공개 캘린더";
-  return "공식 출처";
+function impactLabel(item: MacroEventItem) {
+  if (isHighImpactMacro(item)) return "영향도 높음";
+  if (item.importance === 2) return "영향도 중간";
+  return "영향도 낮음";
 }
 
 function macroLabel(label: string) {
@@ -229,7 +218,7 @@ function MacroNewsItem({ item, sectionLabel, subdued = false }: { item: MacroEve
       <div className="flex flex-wrap items-center gap-1.5">
         <StatusPill tone="info" className="min-h-5 px-0 text-[10px]">{sectionLabel}</StatusPill>
         <StatusPill tone={hasReleaseTimePassed(item) ? "watch" : "info"} className="min-h-5 px-0 text-[10px]">{compactStatusLabel(item)}</StatusPill>
-        <StatusPill tone={isHighImpactMacro(item) ? "risk" : "info"} className="min-h-5 px-0 text-[10px]">{importanceLabel(item)}</StatusPill>
+        <StatusPill tone={isHighImpactMacro(item) ? "risk" : "info"} className="min-h-5 px-0 text-[10px]">{impactLabel(item)}</StatusPill>
       </div>
       <h4 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{macroLabel(item.label)}</h4>
       <p className="mt-0.5 text-[11px] font-semibold leading-4 text-ui-muted">한국시간 {item.dateKst}</p>
@@ -252,9 +241,12 @@ function MacroNewsItem({ item, sectionLabel, subdued = false }: { item: MacroEve
 export function MacroTicker({ compact = false, market = "crypto" }: { compact?: boolean; market?: "crypto" | "stocks" } = {}) {
   const pathname = usePathname();
   const [calendar, setCalendar] = useState<MacroCalendarPayload>(fallbackCalendar);
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const upcomingItems = getUpcomingItems(calendar.items);
   const releasedItems = getRecentReleasedItems(calendar.items);
   const previousReleasedItems = getPreviousReleasedItems(calendar.items);
+  const fullReleasedItems = previousReleasedItems.length ? previousReleasedItems : releasedItems;
   const nearestUpcoming = upcomingItems[0];
   const laterUpcomingItems = upcomingItems.slice(1, 7);
   const isNewsMacroReport = compact && pathname === "/news";
@@ -269,12 +261,14 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
     };
 
     const loadCalendar = async () => {
+      setIsRefreshing(true);
       try {
         const response = await fetch(`/api/macro-calendar?market=${market}&ts=${Date.now()}`, { cache: "no-store" });
         if (response.ok) {
           const payload = (await response.json()) as MacroCalendarPayload;
           if (!cancelled) {
             setCalendar(payload);
+            setIsRefreshing(false);
             scheduleNextLoad(Math.max(30_000, Math.min(payload.nextRefreshMs ?? 600_000, 10 * 60_000)));
             return;
           }
@@ -283,7 +277,10 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
         // Keep the current calendar visible and retry soon.
       }
 
-      if (!cancelled) scheduleNextLoad(3 * 60_000);
+      if (!cancelled) {
+        setIsRefreshing(false);
+        scheduleNextLoad(3 * 60_000);
+      }
     };
 
     const handleFocusRefresh = () => {
@@ -299,7 +296,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
       document.removeEventListener("visibilitychange", handleFocusRefresh);
       if (timer) clearTimeout(timer);
     };
-  }, [market]);
+  }, [market, refreshNonce]);
 
   if (isNewsMacroReport) {
     const previousRelease = previousReleasedItems[0];
@@ -362,27 +359,35 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
     const eventKind = compactEventKind(item);
     const primaryValueLabel = isReleased ? (isDocumentEvent(item) ? "상태" : "결과") : "예상";
     const primaryValue = isReleased ? displayActual(item) : displayConsensusValue(item);
-    const href = market === "stocks" ? "/news?market=global#macro-calendar" : "/news?market=crypto#macro-calendar";
+    const href = market === "stocks" ? "/macro-calendar?market=global" : "/macro-calendar?market=crypto";
 
     return (
-      <Link href={href} className="group flex min-h-8 items-center gap-2 bg-transparent px-1 py-0.5 transition hover:bg-white/[0.025]">
-        <div className={`inline-flex shrink-0 items-center gap-1.5 py-0.5 text-[11px] font-black ${isReleased ? "text-signal-warning" : "text-accent-blue"}`}>
-          <Radio size={12} aria-hidden />
-          {eventKind}
+      <div className="space-y-1.5">
+        <Link href={href} className="group flex min-h-10 items-center gap-2 border-y border-ui-line/70 bg-transparent px-1 py-2 transition hover:bg-white/[0.025]">
+          <div className={`inline-flex shrink-0 items-center gap-1.5 py-0.5 text-[11px] font-black ${isReleased ? "text-signal-warning" : "text-accent-blue"}`}>
+            <Radio size={12} aria-hidden />
+            {eventKind}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[11px] font-black text-white">
+              {macroLabel(item.label)} · <span className={compactStateClass(item)}>{compactStatusLabel(item)}</span>
+            </p>
+            <p className="mt-0.5 flex min-w-0 flex-wrap gap-x-2 gap-y-0.5 text-[11px] font-bold text-slate-500">
+              <span>한국시간 {item.dateKst}</span>
+              <span>{impactLabel(item)}</span>
+              <span>{primaryValueLabel} {primaryValue}</span>
+            </p>
+          </div>
+          <ChevronRight size={14} className="shrink-0 text-slate-600 transition group-hover:text-accent-blue" aria-hidden />
+        </Link>
+        <div className="flex items-center justify-between gap-2 px-1 text-[11px] font-semibold text-ui-muted">
+          <span className="min-w-0 truncate">{calendar.updatedAtLabel}</span>
+          <ActionButton tone="ghost" className="min-h-7 shrink-0 px-0" onClick={() => setRefreshNonce((value) => value + 1)} disabled={isRefreshing}>
+            <RefreshCw size={12} className={isRefreshing ? "animate-spin" : ""} aria-hidden />
+            새로고침
+          </ActionButton>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[11px] font-black text-white">
-            {macroLabel(item.label)} · <span className={compactStateClass(item)}>{compactStatusLabel(item)}</span>
-          </p>
-          <p className="mt-0.5 flex min-w-0 flex-wrap gap-x-2 gap-y-0.5 text-[11px] font-bold text-slate-500">
-            <span>한국시간 {item.dateKst}</span>
-            <span>{primaryValueLabel} {primaryValue}</span>
-            <span>예상 {displayConsensusValue(item)}</span>
-            <span>이전 {displayPreviousValue(item)}</span>
-          </p>
-        </div>
-        <ChevronRight size={14} className="shrink-0 text-slate-600 transition group-hover:text-accent-blue" aria-hidden />
-      </Link>
+      </div>
     );
   }
 
@@ -399,16 +404,24 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
       </div>
       <div className="grid gap-2 p-2 lg:grid-cols-2">
         <div>
-          <p className="text-xs font-black text-white">최근 발표</p>
-          {(releasedItems[0] ? [releasedItems[0]] : []).map((item) => (
-            <MacroNewsItem key={`${item.label}-${item.releaseAt}`} item={item} sectionLabel="최근 발표" />
-          ))}
+          <p className="text-xs font-black text-white">최근/지난 발표</p>
+          {fullReleasedItems.length ? (
+            fullReleasedItems.map((item) => (
+              <MacroNewsItem key={`${item.label}-${item.releaseAt}`} item={item} sectionLabel="발표" />
+            ))
+          ) : (
+            <p className="py-3 text-xs leading-5 text-ui-muted [word-break:keep-all]">공식 캘린더에서 확인되는 발표 내역이 이 영역에 표시됩니다.</p>
+          )}
         </div>
         <div>
           <p className="text-xs font-black text-white">다가오는 일정</p>
-          {(nearestUpcoming ? [nearestUpcoming, ...laterUpcomingItems.slice(0, 3)] : []).map((item) => (
-            <MacroNewsItem key={`${item.label}-${item.releaseAt}`} item={item} sectionLabel="예정" />
-          ))}
+          {nearestUpcoming ? (
+            [nearestUpcoming, ...laterUpcomingItems].map((item) => (
+              <MacroNewsItem key={`${item.label}-${item.releaseAt}`} item={item} sectionLabel="예정" />
+            ))
+          ) : (
+            <p className="py-3 text-xs leading-5 text-ui-muted [word-break:keep-all]">다가오는 주요 USD 일정을 확인하는 중입니다.</p>
+          )}
         </div>
       </div>
       <div className="flex items-center gap-2 px-2 py-1.5 text-[11px] leading-5 text-slate-500">

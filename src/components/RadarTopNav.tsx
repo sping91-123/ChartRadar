@@ -19,14 +19,14 @@ const cryptoNavItems: NavItem[] = [
   { label: "홈", icon: Home, href: "/coin", match: ["/coin"] },
   { label: "현물", icon: Coins, href: "/spot", match: ["/spot"] },
   { label: "선물", icon: Radar, href: "/crypto", match: ["/crypto", "/alts"] },
-  { label: "매크로", icon: Newspaper, href: "/news?market=crypto#macro-calendar", match: ["/news"], market: "crypto" },
+  { label: "매크로", icon: Newspaper, href: "/macro-calendar?market=crypto", match: ["/macro-calendar", "/news"], market: "crypto" },
   { label: "복기", icon: History, href: "/journal?market=crypto", match: ["/journal"], market: "crypto" }
 ];
 
 const stockNavItems: NavItem[] = [
   { label: "시장", icon: TrendingUp, href: "/global", match: ["/stocks", "/global"] },
   { label: "자산", icon: Radar, href: "/global/assets", match: ["/global/assets"] },
-  { label: "일정", icon: CalendarClock, href: "/news?market=global#macro-calendar", match: ["/news"], market: "global" },
+  { label: "일정", icon: CalendarClock, href: "/macro-calendar?market=global", match: ["/macro-calendar", "/news"], market: "global" },
   { label: "복기", icon: History, href: "/journal?market=global", match: ["/journal"], market: "global" }
 ];
 
@@ -61,7 +61,7 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
       style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
     >
       {navItems.map(({ label, icon: Icon, href, match, market: itemMarket }) => {
-        const isMarketRoute = pathname === "/news" || pathname === "/alerts" || pathname === "/journal";
+        const isMarketRoute = pathname === "/news" || pathname === "/macro-calendar" || pathname === "/alerts" || pathname === "/journal";
         const routeMatches = match.some((path) => path === pathname) && (!itemMarket || marketParam === itemMarket || !isMarketRoute);
         const active = routeMatches;
 

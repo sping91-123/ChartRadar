@@ -194,7 +194,7 @@ export function CoinRadarHomePanel() {
   if (state.status === "loading") {
     return (
       <PanelCard variant="report" padding="lg" className="flex min-h-56 items-center justify-center text-sm font-semibold text-ui-muted">
-        Coin Radar 홈을 정리하는 중입니다.
+        코인 시장을 분석하고 있습니다.
       </PanelCard>
     );
   }
@@ -215,17 +215,17 @@ export function CoinRadarHomePanel() {
   return (
     <div className="flex flex-col gap-3">
       <PanelCard variant="flat" padding="none" className="space-y-4 py-2">
-        <SectionHeader
-          eyebrow="오늘의 결론"
-          title="매매 환경 준비도"
-          description="현재 데이터로 관망, 조건 대기, 추적 가능, 리스크 확대 중 어디에 가까운지 먼저 정리합니다."
-          action={
-            <ActionButton tone="ghost" className="px-0" onClick={() => void load()}>
-              <RefreshCw size={14} aria-hidden />
-              {formatCachedAt(state.data.cachedAt)}
-            </ActionButton>
-          }
-        />
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">오늘의 결론</p>
+            <h2 className="text-ui-heading font-semibold tracking-tight text-ui-text">{summary?.decision.state}</h2>
+            <p className="mt-1 max-w-3xl text-ui-body text-ui-muted [word-break:keep-all]">{summary?.decision.reason}</p>
+          </div>
+          <ActionButton tone="ghost" className="px-0" onClick={() => void load()}>
+            <RefreshCw size={14} aria-hidden />
+            {formatCachedAt(state.data.cachedAt)}
+          </ActionButton>
+        </div>
 
         <div className="grid gap-4 py-1 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
           <div className="min-w-0">
@@ -240,12 +240,11 @@ export function CoinRadarHomePanel() {
                 주도 {summary?.decision.leadership}
               </StatusPill>
             </div>
-            <p className="mt-3 text-3xl font-semibold tracking-tight text-ui-text sm:text-4xl">
-              {summary?.decision.readinessScore ?? "-"}점
-            </p>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-ui-muted [word-break:keep-all]">
-              {summary?.decision.reason}
-            </p>
+            <div className="mt-3">
+              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{summary?.decision.scoreLabel}</p>
+              <p className="mt-1 text-3xl font-semibold tracking-tight text-ui-text sm:text-4xl">{summary?.decision.readinessScore ?? "-"}점</p>
+              <p className="mt-1 max-w-3xl text-xs leading-5 text-ui-muted [word-break:keep-all]">{summary?.decision.scoreDetail}</p>
+            </div>
           </div>
 
           <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-1">
@@ -256,44 +255,6 @@ export function CoinRadarHomePanel() {
             <div className="min-w-0">
               <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">다음 확인 조건</p>
               <p className="mt-1 min-w-0 text-sm font-semibold leading-5 text-ui-text [overflow-wrap:anywhere] [word-break:keep-all]">{summary?.decision.nextCondition}</p>
-            </div>
-          </div>
-        </div>
-      </PanelCard>
-
-      <PanelCard variant="flat" padding="none" className="space-y-3 py-2">
-        <SectionHeader
-          eyebrow="Coin Radar Home"
-          title="코인 홈"
-          description="대표 코인과 BTC 기준 시장 체력을 먼저 보고, 세부 차트는 선물·현물 탭에서 확인합니다."
-          action={
-            <ActionButton tone="ghost" className="px-0" onClick={() => void load()}>
-              <RefreshCw size={14} aria-hidden />
-              {formatCachedAt(state.data.cachedAt)}
-            </ActionButton>
-          }
-        />
-
-        <div className="py-2">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <StatusPill tone={summary?.tone.tone ?? "info"}>{summary?.tone.label ?? "확인 대기"}</StatusPill>
-              <p className="mt-2 text-3xl font-semibold tracking-tight text-ui-text">{summary?.report?.trendLabel ?? "BTC 기준 확인 중"}</p>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-ui-muted">
-                RSI, 스토캐스틱, 트렌드는 선택 코인이 아니라 BTC 1시간 기준으로 해석합니다. 코인별 상태는 대표 카드에서 방향과 리스크만 압축합니다.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-4 text-right sm:min-w-56">
-              <div>
-                <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">Fear/Greed</p>
-                <p className="text-xl font-semibold text-ui-text">{summary?.fearGreed ? `${summary.fearGreed.score}` : "-"}</p>
-                <p className="text-xs text-ui-muted">{summary?.fearGreed?.label ?? "데이터 확인 중"}</p>
-              </div>
-              <div>
-                <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">BTC</p>
-                <p className="text-xl font-semibold text-ui-text">{summary?.btc ? `$${formatPrice(summary.btc.price)}` : "-"}</p>
-                <p className="text-xs text-ui-muted">{formatPercent(summary?.btc?.changePercent)}</p>
-              </div>
             </div>
           </div>
         </div>
