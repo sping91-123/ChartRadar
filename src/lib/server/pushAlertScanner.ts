@@ -1,5 +1,5 @@
 // 서버 크론에서 알림 조건을 스캔하고 Android FCM 푸시를 발송한다.
-import { findSetupAlertMatches, type SetupAlertPreset } from "@/lib/setupAlertPresets";
+import { findSetupAlertMatches } from "@/lib/setupAlertPresets";
 import { cooldownDecisionForEvent, eventToRecentRow, type CooldownDecision } from "@/lib/server/push/cooldown";
 import { alreadySent, duplicateBucket, recentSentEvents, type RecentPushAlertEventRow } from "@/lib/server/push/duplicateGuard";
 import { emptyDiagnostics, eventDiagnostic, eventDiagnosticSample, pushPreferenceSkippedSample, pushSample } from "@/lib/server/push/diagnostics";
@@ -21,6 +21,7 @@ import {
 } from "@/lib/server/push/eligibility";
 import { ruleAllowed, userPlan } from "@/lib/server/push/entitlements";
 import { tokenPreferenceDecision } from "@/lib/server/push/preferences";
+import { groupPresetsByUser, presetCountForMarket, presetFromRow, presetsForMarket, presetScanInputsForMarket } from "@/lib/server/push/presets";
 import { scanLiquidationEvent } from "@/lib/server/push/scanners/liquidationScanner";
 import { scanMacroCalendarEvent, scanNewsEvent } from "@/lib/server/push/scanners/macroScanner";
 import { scanCryptoSetups, scanStockSetups, stockMomentumSymbols } from "@/lib/server/push/scanners/setupScanner";
@@ -45,21 +46,6 @@ const maxRecentEventLookbackHours = 6;
 function safeErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   return message.slice(0, 180);
-}
-
-function presetFromRow(row: PushAlertPresetRow): SetupAlertPreset {
-  return {
-    id: row.preset_id,
-    market: row.market,
-    symbol: row.symbol,
-    mode: row.mode ?? undefined,
-    timeframe: row.timeframe,
-    side: row.side,
-    quality: row.quality,
-    score: Number(row.score),
-    headline: row.headline,
-    savedAt: Date.parse(row.saved_at) || Date.now()
-  };
 }
 
 function personalizeEventForUser(event: PushAlertEvent, userPresets: PushAlertPresetRow[]): PushAlertEvent {
@@ -175,10 +161,11 @@ export async function runPushAlertScan(context: ScanContext) {
     "push_alert_presets",
     `push_alert_presets?select=user_id,market,preset_id,symbol,mode,timeframe,side,quality,score,headline,saved_at&enabled=eq.true&user_id=in.(${userIds.join(",")})&limit=1000`
   );
+  const presetsByUser = groupPresetsByUser(presetRows);
 
   const cryptoSetups = await scanRows("crypto-setups", scanCryptoSetups);
   const stockPresetSetups = await scanRows("stock-preset-setups", () =>
-    scanStockSetups(presetRows.filter((preset) => preset.market === "stocks").map((preset) => ({ symbol: preset.symbol, timeframe: preset.timeframe })))
+    scanStockSetups(presetScanInputsForMarket(presetRows, "stocks"))
   );
   const stockMomentumSetups = await scanRows("stock-momentum-setups", () =>
     scanStockSetups(stockMomentumSymbols.map((symbol) => ({ symbol, timeframe: "1d" })))
@@ -243,14 +230,14 @@ export async function runPushAlertScan(context: ScanContext) {
       const recentRows = await recentSentEvents(userId, recentSinceIso);
       const recentRowsForUser = [...recentRows];
       const plan = userPlan(profileMap, subscriptionsByUser, userId);
-      const userPresets = presetRows.filter((preset) => preset.user_id === userId);
+      const userPresets = presetsByUser.get(userId) ?? [];
       const cryptoPresetMatches = findSetupAlertMatches(
-        userPresets.filter((preset) => preset.market === "crypto").map(presetFromRow),
+        presetsForMarket(userPresets, "crypto").map(presetFromRow),
         cryptoSetups,
         "crypto"
       ).map((match) => matchedSetupToEvent(match.setup, "watchlist-surge", "crypto", "preset"));
       const stockPresetMatches = findSetupAlertMatches(
-        userPresets.filter((preset) => preset.market === "stocks").map(presetFromRow),
+        presetsForMarket(userPresets, "stocks").map(presetFromRow),
         stockPresetSetups,
         "stocks"
       ).map((match) => matchedSetupToEvent(match.setup, "stock-momentum", "stocks", "preset"));
@@ -372,8 +359,8 @@ export async function runPushAlertScan(context: ScanContext) {
       profileCount: profiles.length,
       subscriptionCount: subscriptionRows.length,
       presetCount: presetRows.length,
-      cryptoPresetCount: presetRows.filter((preset) => preset.market === "crypto").length,
-      stockPresetCount: presetRows.filter((preset) => preset.market === "stocks").length,
+      cryptoPresetCount: presetCountForMarket(presetRows, "crypto"),
+      stockPresetCount: presetCountForMarket(presetRows, "stocks"),
       cryptoSetupCount: cryptoSetups.length,
       stockPresetSetupCount: stockPresetSetups.length,
       stockMomentumSetupCount: stockMomentumSetups.length,
