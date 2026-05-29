@@ -3,8 +3,7 @@ import { getLiquidCryptoSymbols } from "@/lib/cryptoUniverse";
 import { chartTimeframes, type Candle, type ChartTimeframe, type TradingMode } from "@/lib/marketAnalysis";
 import { findSetupAlertMatches, type SetupAlertPreset } from "@/lib/setupAlertPresets";
 import { scanAllSetups, type ScoutSetup } from "@/lib/setupScout";
-import { sendFcmMessage } from "@/lib/server/firebaseMessaging";
-import { alreadySent, duplicateBucket, recentSentEvents, recordSentEvent, type RecentPushAlertEventRow } from "@/lib/server/push/duplicateGuard";
+import { alreadySent, duplicateBucket, recentSentEvents, type RecentPushAlertEventRow } from "@/lib/server/push/duplicateGuard";
 import { emptyDiagnostics, eventDiagnostic, eventDiagnosticSample, pushPreferenceSkippedSample, pushSample } from "@/lib/server/push/diagnostics";
 import {
   buildRiskOffEvent,
@@ -25,9 +24,10 @@ import {
   passesSetupPushQuality
 } from "@/lib/server/push/eligibility";
 import { ruleAllowed, userPlan } from "@/lib/server/push/entitlements";
-import { tokenPreferenceDecision, tokenWants } from "@/lib/server/push/preferences";
+import { tokenPreferenceDecision } from "@/lib/server/push/preferences";
 import { scanLiquidationEvent } from "@/lib/server/push/scanners/liquidationScanner";
 import { scanMacroCalendarEvent, scanNewsEvent } from "@/lib/server/push/scanners/macroScanner";
+import { sendEventToUser } from "@/lib/server/push/sendPush";
 import { scanOptionalEventSource } from "@/lib/server/push/sourceResults";
 import type {
   PushAlertEvent,
@@ -159,39 +159,6 @@ async function scanStockSetups(symbolsAndTimeframes: Array<{ symbol: string; tim
     })
   );
   return settled.flatMap((result) => (result.status === "fulfilled" && result.value ? [result.value] : []));
-}
-
-async function sendEventToUser(userId: string, tokens: PushTokenRow[], event: PushAlertEvent) {
-  const targetTokens = tokens.filter((token) => tokenWants(token, event));
-  const preferenceSkipped = Math.max(0, tokens.length - targetTokens.length);
-  if (targetTokens.length === 0) {
-    return { sent: 0, skipped: 0, failed: 0, preferenceSkipped, duplicateSkipped: 0, targetTokens: 0 };
-  }
-  if (await alreadySent(userId, event.eventKey)) {
-    return {
-      sent: 0,
-      skipped: targetTokens.length,
-      failed: 0,
-      preferenceSkipped,
-      duplicateSkipped: targetTokens.length,
-      targetTokens: targetTokens.length
-    };
-  }
-
-  const results = await Promise.allSettled(
-    targetTokens.map((token) =>
-      sendFcmMessage({
-        token: token.token,
-        title: event.title,
-        body: event.body,
-        data: event.data
-      })
-    )
-  );
-  const sent = results.filter((result) => result.status === "fulfilled").length;
-  const failed = results.length - sent;
-  if (sent > 0) await recordSentEvent(userId, event, sent);
-  return { sent, skipped: 0, failed, preferenceSkipped, duplicateSkipped: 0, targetTokens: targetTokens.length };
 }
 
 function personalizeEventForUser(event: PushAlertEvent, userPresets: PushAlertPresetRow[]): PushAlertEvent {

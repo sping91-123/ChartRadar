@@ -116,6 +116,7 @@ const appPush = read("src/lib/appPush.ts");
 const pushTokensRoute = read("src/app/api/push-tokens/route.ts");
 const pushCronRoute = read("src/app/api/push-cron/route.ts");
 const pushAlertScanner = read("src/lib/server/pushAlertScanner.ts");
+const pushSendHelper = read("src/lib/server/push/sendPush.ts");
 const pushPlatformGuard = read("supabase/migrations/20260519_android_push_platform_guard.sql");
 const vercelConfig = read("vercel.json");
 const usageMeterPanel = read("src/components/UsageMeterPanel.tsx");
@@ -208,7 +209,7 @@ expectIncludes(pushTokensRoute, 'rawPlatform !== "android"', "Android 외 플랫
 expectIncludes(pushTokensRoute, 'provider: "fcm"', "Android FCM provider 저장", "src/app/api/push-tokens/route.ts");
 expectIncludes(pushCronRoute, "CRON_SECRET", "푸시 크론 인증", "src/app/api/push-cron/route.ts");
 expectIncludes(pushAlertScanner, "runPushAlertScan", "푸시 자동 감시 스캐너", "src/lib/server/pushAlertScanner.ts");
-expectIncludes(pushAlertScanner, "sendFcmMessage", "푸시 자동 FCM 발송", "src/lib/server/pushAlertScanner.ts");
+expectIncludes(pushSendHelper, "sendFcmMessage", "푸시 자동 FCM 발송", "src/lib/server/push/sendPush.ts");
 expectIncludes(pushAlertScanner, "platform=eq.android&provider=eq.fcm", "푸시 크론 Android FCM 대상 제한", "src/lib/server/pushAlertScanner.ts");
 expectIncludes(pushPlatformGuard, "push_tokens_provider_platform_check", "push_tokens platform/provider 제약", "supabase/migrations/20260519_android_push_platform_guard.sql");
 expectIncludes(vercelConfig, '"/api/push-cron"', "Vercel 푸시 크론 경로", "vercel.json");
