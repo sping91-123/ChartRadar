@@ -24,8 +24,9 @@
 - target helper 분리 완료: `cryptoSetupTargetPath`, `stockSetupTargetPath`, `setupTargetPath`, `stockSetupAlertKind`, `stockIndexSymbols`를 `src/lib/server/push/targets.ts`로 분리했습니다. 관련 커밋: `1bedd46`.
 - event builder helper 분리 완료: setup/watchlist event 변환, 글로벌 composite event, market scout limit/batch helper를 `src/lib/server/push/eventBuilders.ts`로 분리했습니다. 관련 커밋은 이 문서 갱신 커밋입니다.
 - FCM 발송 helper 분리 완료: `sendEventToUser`와 FCM 결과 집계를 `src/lib/server/push/sendPush.ts`로 분리했습니다. 관련 커밋은 이 문서 갱신 커밋입니다.
-- 현재 `src/lib/server/push/` 아래에는 `types`, `thresholds`, `eligibility`, `entitlements`, `preferences`, `duplicateGuard`, `sourceResults`, `diagnostics`, `targets`, `eventBuilders`, `sendPush`, `scanners/`가 분리되어 있습니다.
-- 다음 작은 후보: recent event/cooldown helper 또는 scanner orchestration helper를 동작 변경 없이 분리합니다. 발송 정책, `push_alert_events` DB 기록, 중복 방지 event key, 권한 판정, threshold 정책은 변경하지 않습니다.
+- recent event/cooldown helper 분리 완료: cooldown 판정과 dry-run recent row 변환을 `src/lib/server/push/cooldown.ts`로 분리했습니다. 관련 커밋은 이 문서 갱신 커밋입니다.
+- 현재 `src/lib/server/push/` 아래에는 `types`, `thresholds`, `eligibility`, `entitlements`, `preferences`, `duplicateGuard`, `sourceResults`, `diagnostics`, `targets`, `eventBuilders`, `sendPush`, `cooldown`, `scanners/`가 분리되어 있습니다.
+- 다음 작은 후보: scanner orchestration helper 또는 crypto/global scanner 분리를 동작 변경 없이 진행합니다. 발송 정책, `push_alert_events` DB 기록, 중복 방지 event key, 권한 판정, threshold 정책은 변경하지 않습니다.
 
 ## 검증 기준
 
