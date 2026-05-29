@@ -103,7 +103,7 @@ export function CryptoAltAnalysisLimitNotice({
 
 export function CryptoDetailScopeNotice({ hasCoinPro }: { hasCoinPro: boolean }) {
   return (
-    <div className="rounded-md border border-white/10 bg-black/15 p-3 text-sm leading-6 text-slate-100">
+    <div className="border-t border-white/10 py-3 text-sm leading-6 text-slate-100">
       <span className="block text-xs font-semibold text-slate-400">{hasCoinPro ? "근거 상세 범위" : "Basic 공개 범위"}</span>
       <span className="mt-1 block">
         {hasCoinPro
@@ -143,7 +143,7 @@ export function CryptoAiBriefingGateNotice({ isBasicAltView }: { isBasicAltView:
 
 export function CryptoMajorDetailGateNotice() {
   return (
-    <div className="rounded-lg border border-cyan-300/20 bg-cyan-300/10 p-4">
+    <div className="border-y border-cyan-300/20 py-4">
       <p className="text-sm font-bold text-cyan-100">Pro 상세 판단 보조</p>
       <p className="mt-2 text-sm leading-6 text-slate-300 [word-break:keep-all]">
         Basic에서는 방향 요약만 제공합니다. 구체적인 롱/숏 추적 조건, 무효화 기준, 관찰 구간, 다음 레벨, 세부 리스크는 Pro에서 확인할 수 있습니다.

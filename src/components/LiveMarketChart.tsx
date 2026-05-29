@@ -1958,10 +1958,10 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   key={item.value}
                   type="button"
                   onClick={() => applyStructurePreset(item)}
-                  className={`min-h-16 rounded-md border px-3 py-2 text-left transition ${
+                  className={`min-h-16 border-t px-0 py-3 text-left transition ${
                     active
-                      ? "border-accent-blue bg-accent-blue text-slate-950"
-                      : "border-surface-line bg-black/20 text-slate-300 hover:border-accent-blue/60"
+                      ? "border-accent-blue text-accent-blue"
+                      : "border-surface-line text-slate-300 hover:border-accent-blue/60"
                   }`}
                 >
                   <span className="block text-sm font-black">{item.label}</span>
@@ -2286,12 +2286,12 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 {isMajorScreen ? (
                   <CryptoDetailScopeNotice hasCoinPro={hasCoinPro} />
                 ) : isBasicAltView ? (
-                  <div className="rounded-md border border-white/10 bg-black/15 p-3 text-sm leading-6 text-slate-100">
+                  <div className="border-t border-white/10 py-3 text-sm leading-6 text-slate-100">
                     <span className="block text-xs font-semibold text-slate-400">공개 리스크</span>
                     <span className="mt-1 block">{altRiskSignals[0] ?? "리스크 점검"}</span>
                   </div>
                 ) : (
-                  <div className="rounded-md border border-white/10 bg-black/15 p-3 text-sm leading-6 text-slate-100">
+                  <div className="border-t border-white/10 py-3 text-sm leading-6 text-slate-100">
                     <span className="block text-xs font-semibold text-slate-400">행동 가이드</span>
                     <span className="mt-1 block">{analysis.actionGuide}</span>
                   </div>

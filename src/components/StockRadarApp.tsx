@@ -927,7 +927,7 @@ export function StockRadarApp() {
           ) : null}
           {state.status === "error" ? (
             <div className="absolute inset-0 grid place-items-center bg-slate-950/80 p-4 text-center text-sm text-signal-danger">
-              <div className="max-w-sm rounded-md border border-signal-danger/30 bg-signal-danger/10 p-4">
+              <div className="max-w-sm border-y border-signal-danger/30 py-4">
                 <p className="font-black">차트 데이터를 불러오지 못했습니다.</p>
                 <p className="mt-2 text-xs leading-5 text-signal-danger/90">{state.message || "잠시 후 다시 확인해 주세요."}</p>
               </div>

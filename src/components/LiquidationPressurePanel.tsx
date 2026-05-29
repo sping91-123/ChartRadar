@@ -279,7 +279,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
             <Metric label="시장가 매수" value={formatPercent(report.takerFlow.buyPercent, 1)} sub={report.takerFlow.buyVolume === null ? "-" : report.takerFlow.buyVolume.toLocaleString("ko-KR", { maximumFractionDigits: 2 })} />
             <Metric label="시장가 매도" value={formatPercent(report.takerFlow.sellPercent, 1)} sub={report.takerFlow.sellVolume === null ? "-" : report.takerFlow.sellVolume.toLocaleString("ko-KR", { maximumFractionDigits: 2 })} />
           </div>
-          <p className="mt-3 rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs leading-5 text-slate-400 [word-break:keep-all]">
+          <p className="mt-3 border-t border-white/10 pt-3 text-xs leading-5 text-slate-400 [word-break:keep-all]">
             {takerInterpretation(report)}
           </p>
         </div>

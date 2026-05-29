@@ -357,7 +357,7 @@ export default function LearnPage() {
           </div>
         </AppSurface>
 
-        <AppSurface tone="inset" padding="md" className="border-amber-400/28 bg-amber-400/10 text-ui-risk">
+        <AppSurface tone="critical" variant="flat" padding="none" className="border-t border-amber-400/28 pt-4">
           <div className="flex items-start gap-3">
             <ShieldAlert className="mt-0.5 shrink-0" size={18} aria-hidden />
             <p className="text-ui-body leading-6 [word-break:keep-all]">
