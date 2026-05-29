@@ -807,13 +807,233 @@ Why this should be first:
 - It avoids auth/session and Supabase risk.
 - It can later connect naturally to alerts, journal, and Pro gating.
 
+## BTC Versus Alt Market Leadership Model
+
+The home screen should answer whether the current coin market is BTC-led, alt-rotation-led, mixed, or risk-off. This label is market context only. It must not imply that the user should buy BTC, chase alts, or enter a futures position.
+
+### Market Leadership States
+
+1. `BTC 우세`
+   - Meaning: BTC is leading the market while alt participation is weak or selective.
+   - Typical environment:
+     - BTC trend is constructive.
+     - BTC 24h change is stronger than most tracked alts.
+     - BTC dominance is high or rising.
+     - alt riser ratio is low-to-moderate.
+   - Home copy:
+     - "BTC 주도 흐름입니다."
+     - "알트 참여는 아직 제한적입니다."
+   - Avoid:
+     - "비트 매수"
+     - "BTC 진입"
+
+2. `알트 순환`
+   - Meaning: BTC is not breaking down, and alt participation is spreading through volume and price movement.
+   - Typical environment:
+     - BTC trend is stable or constructive.
+     - several major alts show positive change.
+     - alt quote volume is concentrated in movers.
+     - BTC dominance is not aggressively rising.
+   - Home copy:
+     - "알트 참여 확산이 확인됩니다."
+     - "거래대금 동반 여부를 함께 봅니다."
+   - Avoid:
+     - "알트 추격"
+     - "알트 매수 후보"
+
+3. `혼조`
+   - Meaning: BTC and alt signals do not agree, or only a small number of coins are moving.
+   - Typical environment:
+     - BTC trend is flat or conflicting.
+     - alt participation is narrow.
+     - one or two coins move without broad market support.
+     - risk metrics are not severe enough for risk-off.
+   - Home copy:
+     - "주도 흐름이 뚜렷하지 않습니다."
+     - "개별 움직임과 시장 전체 흐름을 분리해서 봅니다."
+
+4. `위험 회피`
+   - Meaning: BTC weakness and alt weakness appear together, or volatility risk dominates the screen.
+   - Typical environment:
+     - BTC trend weakens or breaks.
+     - broad alt participation is negative.
+     - funding/long-short crowding is elevated.
+     - macro event risk or volatility expansion is dominant.
+   - Home copy:
+     - "위험 회피 흐름이 우선입니다."
+     - "대표 코인보다 BTC 추세와 리스크를 먼저 확인합니다."
+
+### MVP Criteria Available Now
+
+The first model can be implemented without a new API by deriving rough labels from current home data.
+
+1. BTC 1h trend
+   - Source: `/api/crypto-candles` and `analyzeTechnicalRadar`.
+   - Use:
+     - constructive trend supports `BTC 우세` or `알트 순환`.
+     - weak or broken trend supports `위험 회피`.
+     - unclear trend supports `혼조`.
+
+2. BTC `changePercent`
+   - Source: `/api/market-board`.
+   - Use:
+     - positive BTC with weak alts suggests `BTC 우세`.
+     - negative BTC with weak alts suggests `위험 회피`.
+     - flat BTC with active alts can support `알트 순환` if risk is contained.
+
+3. ETH, XRP, and tracked alt `changePercent`
+   - Source: `/api/market-board`.
+   - Use:
+     - count positive alt symbols.
+     - count alts above a rough threshold such as `+2.5%`.
+     - compare BTC change with ETH/XRP/SOL/DOGE/BNB and other tracked alts.
+
+4. Rough rising ratio inside market-board
+   - Source: existing market-board symbols.
+   - Use:
+     - `positiveAltCount / trackedAltCount`.
+     - rough participation buckets:
+       - low: fewer than one-third positive.
+       - mixed: one-third to two-thirds positive.
+       - broad: more than two-thirds positive.
+   - Note:
+     - This is not full market breadth. It is an MVP proxy.
+
+5. Quote volume candidates
+   - Source: `quoteVolume` from `/api/market-board`.
+   - Use:
+     - identify whether positive alts also have meaningful volume.
+     - avoid labeling `알트 순환` when only low-volume alts are moving.
+
+6. BTC dominance
+   - Source: `/api/coin-market-metrics`.
+   - Use:
+     - high or rising dominance supports BTC-led interpretation.
+     - dominance level alone should not decide the label.
+   - Limitation:
+     - current API gives point-in-time dominance, not dominance change rate.
+
+7. Fear/greed
+   - Source: current BTC technical report.
+   - Use:
+     - extreme greed increases overheat risk.
+     - low fear/greed with weak trend supports caution.
+   - Limitation:
+     - this is a risk context input, not a leadership input by itself.
+
+8. Funding and long-short crowding
+   - Source: `/api/liquidation-pressure`.
+   - Use:
+     - extreme crowding can force `위험 회피` or reduce confidence in `알트 순환`.
+     - should be shown as risk context rather than direction.
+
+### Suggested MVP Label Logic
+
+This is a design-level outline, not implementation code.
+
+1. Force `위험 회피` when:
+   - BTC trend is weak or broken.
+   - and alt participation is weak.
+   - or derivatives/macro risk is severe.
+
+2. Prefer `BTC 우세` when:
+   - BTC trend is constructive.
+   - BTC 24h change is positive.
+   - alt participation is low or narrow.
+   - BTC dominance context is not alt-friendly.
+
+3. Prefer `알트 순환` when:
+   - BTC trend is stable or constructive.
+   - alt participation is broad enough.
+   - several alts show positive change with quote volume.
+   - derivatives and macro risk are not dominant.
+
+4. Use `혼조` when:
+   - BTC trend and alt participation conflict.
+   - only a few names are moving.
+   - data is incomplete.
+   - no clear force rule applies.
+
+### Later Data Needs
+
+The MVP should stay honest about its limits. More accurate leadership detection will need:
+
+- ETH/BTC relative strength.
+- top 30-50 alt riser ratio.
+- alt quote-volume growth rate, not only absolute quote volume.
+- Upbit/Bithumb KRW spot breadth.
+- BTC dominance change rate.
+- sector/theme strength for alts.
+- separate spot and futures breadth.
+
+### Home UI Integration
+
+The top home block should show market leadership as a compact label:
+
+- `주도: BTC 우세`
+- `주도: 알트 순환`
+- `주도: 혼조`
+- `주도: 위험 회피`
+
+Suggested placement:
+
+- next to the readiness state, or directly under it as a secondary label.
+- keep it above detailed BTC market strength rows.
+- show one Basic reason below the label.
+
+Basic copy examples:
+
+- `BTC 우세`: "BTC가 시장을 이끄는 흐름입니다. 알트 참여는 제한적입니다."
+- `알트 순환`: "BTC가 무너지지 않는 가운데 알트 참여가 확산됩니다."
+- `혼조`: "BTC와 알트 흐름이 엇갈립니다. 확인 조건을 먼저 봅니다."
+- `위험 회피`: "BTC 약세와 변동성 리스크가 먼저 보입니다."
+
+Do not use:
+
+- "BTC 매수"
+- "알트 추격"
+- "지금 알트장 진입"
+- "비트 롱"
+- "알트 추천"
+
+### Basic And Pro Split
+
+Basic:
+
+- market leadership label.
+- one core reason.
+- no detailed breadth table.
+- no alert automation details.
+
+Pro:
+
+- BTC trend, dominance, alt participation, and quote-volume evidence.
+- alt participation details.
+- breadth and volume breakdown.
+- leadership invalidation condition.
+- alert condition suggestions.
+
+Pro value should not be weakened by exposing full breadth evidence and invalidation logic in Basic.
+
+### First Implementation Candidate
+
+Recommended first implementation:
+
+1. Create a small helper from existing home data.
+2. Use `/api/market-board` and current market metrics only.
+3. Generate a rough leadership label and one reason.
+4. Display it in the top home conclusion block.
+5. Do not add a new API.
+6. Do not add Upbit/Bithumb breadth yet.
+7. Keep ETH/BTC relative strength as a later enhancement.
+
 ## Next Work Candidate
 
-Next active-run task should be `BTC장 vs 알트장 판단 기준 설계`.
+Next active-run task should be `첫 구현 후보 선정`.
 
 Recommended focus:
 
-1. Define BTC-led, alt-rotation, mixed, and risk-off labels.
-2. Separate what can be derived from current market-board data.
-3. Mark ETH/BTC and broader breadth as later data needs.
-4. Keep all labels as market context, not trade direction.
+1. Compare the first implementation candidates.
+2. Prefer a small implementation that uses current data.
+3. Avoid route, API, billing, auth, Supabase, Android, and FCM changes.
+4. Keep screenshot review required before UI push/merge.

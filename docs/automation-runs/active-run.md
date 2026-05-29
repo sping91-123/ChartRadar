@@ -51,7 +51,7 @@
 | 1 | DONE | 현재 `/coin` 홈 구조 audit | Coin Home / Audit | LOW | `/coin`, `CoinRadarHomePanel`, 관련 API 사용 구조를 조사하고 현재 홈이 어떤 질문에 답하는지 `docs/coin-home-decision-dashboard-audit.md`에 정리했다. | 코드 수정 금지. route 변경 금지. API 변경 금지. | `git diff --check` |
 | 2 | DONE | 홈 decision model 설계 | Coin Home / Decision Model | MEDIUM | 홈 최상단 판단 모델을 `docs/coin-home-decision-dashboard-audit.md`에 문서화했다. 상태, 준비도 점수, 방향성, 시장 주도, 리스크 우선순위, Basic/Pro 구분, MVP/추후 데이터를 포함한다. | 코드 수정 금지. 투자 권유 문구 금지. RSI/스토캐스틱/트렌드를 선택 코인 기준으로 설계 금지. | `git diff --check` |
 | 3 | DONE | 대표 코인 개인화 설계 | Coin Home / Personalization | MEDIUM | BTC/ETH/XRP 고정 구조를 내 대표 코인 구조로 확장하는 설계를 `docs/coin-home-decision-dashboard-audit.md`에 문서화했다. 기본값, 사용자 선택 후보, 현물/선물 모드, localStorage 우선, 계정 동기화 후순위, Basic/Pro 구분을 포함한다. | 코드 수정 금지. Supabase/계정 동기화 구현 금지. | `git diff --check` |
-| 4 | TODO | BTC장 vs 알트장 판단 기준 설계 | Coin Home / Market Leadership | MEDIUM | BTC trend, BTC dominance, ETH/BTC 상대 강도, 알트 상승 비율, 거래대금 증가 알트 수, 상위 알트 상대 수익률 기준을 문서화한다. | 코드 수정 금지. 신규 데이터 API 구현 금지. 투자 권유 문구 금지. | `git diff --check` |
+| 4 | DONE | BTC장 vs 알트장 판단 기준 설계 | Coin Home / Market Leadership | MEDIUM | BTC 우세, 알트 순환, 혼조, 위험 회피 상태와 현재 데이터 기반 MVP 기준, 추후 데이터, UI 반영 방식, Basic/Pro 구분을 `docs/coin-home-decision-dashboard-audit.md`에 문서화했다. | 코드 수정 금지. 신규 데이터 API 구현 금지. 투자 권유 문구 금지. | `git diff --check` |
 | 5 | TODO | 첫 구현 후보 선정 | Coin Home / Implementation Planning | LOW | 실제 구현 1단계를 선정한다. 후보는 오늘의 결론 블록 개선, 대표 코인 카드 압축, BTC 기준 시장 체력 압축, 시장 주도 라벨 추가다. | 코드 수정 금지. route 변경 금지. 신규 API 추가 금지. | `git diff --check` |
 
 ## Validation Commands
