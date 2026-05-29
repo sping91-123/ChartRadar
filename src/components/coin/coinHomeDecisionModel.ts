@@ -213,7 +213,7 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
     topRisk,
     nextCondition: nextConditionFor(state, leadership, topRisk),
     reason,
-    scoreLabel: "방향 추적 준비도",
-    scoreDetail: "롱/숏 어느 쪽 조건이 더 선명한지 보는 0~100점입니다. 0점은 방향 근거보다 변동성이나 추세 이탈 확인이 우선이라는 뜻입니다."
+    scoreLabel: "상방 추적 여건",
+    scoreDetail: "높을수록 롱 관점의 추세·참여 조건이 좋다는 뜻입니다. 낮은 점수는 숏 점수가 아니라 하방 압력이나 변동성 확인이 우선이라는 뜻입니다."
   };
 }
