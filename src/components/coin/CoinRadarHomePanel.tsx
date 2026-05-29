@@ -23,7 +23,7 @@ interface CoinHomeData {
   technical: TechnicalRadarReport | null;
   funding: Partial<Record<"BTC" | "ETH" | "XRP", LiquidationPressureReport>>;
   marketMetrics: CoinMarketMetricsPayload | null;
-  cachedAt: number;
+  analysisUpdatedAt: number;
 }
 
 type CoinHomeState =
@@ -68,12 +68,14 @@ function formatKrwRate(value: number | null | undefined) {
   return `₩${value.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}`;
 }
 
-function formatCachedAt(ms: number) {
-  const diff = Date.now() - ms;
-  const min = Math.floor(diff / 60000);
-  if (min < 1) return "방금 갱신";
-  if (min < 60) return `${min}분 전 갱신`;
-  return `${Math.floor(min / 60)}시간 전 갱신`;
+function formatAnalysisUpdatedAt(ms: number) {
+  return `분석 갱신 ${new Date(ms).toLocaleString("ko-KR", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  })}`;
 }
 
 function boardItem(board: MarketBoardItem[], symbol: (typeof representativeSymbols)[number]) {
@@ -159,7 +161,7 @@ export function CoinRadarHomePanel() {
           technical,
           funding,
           marketMetrics: marketMetricsPayload,
-          cachedAt: boardPayload?.cachedAt ?? Date.now()
+          analysisUpdatedAt: Date.now()
         }
       });
     } catch (error) {
@@ -212,10 +214,12 @@ export function CoinRadarHomePanel() {
     );
   }
 
+  const decisionLine = `${summary?.decision.state}에 가깝고, ${summary?.decision.direction} 흐름에 ${summary?.decision.leadership}이 보입니다.`;
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2 px-1 text-[11px] font-semibold text-ui-muted">
-        <span className="min-w-0 truncate">{formatCachedAt(state.data.cachedAt)}</span>
+        <span className="min-w-0 truncate">{formatAnalysisUpdatedAt(state.data.analysisUpdatedAt)}</span>
         <ActionButton tone="ghost" className="min-h-7 shrink-0 px-0" onClick={() => void load()}>
           <RefreshCw size={12} aria-hidden />
           새로고침
@@ -233,18 +237,8 @@ export function CoinRadarHomePanel() {
 
         <div className="grid gap-4 py-1 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-              <StatusPill tone={summary?.decision.state === "리스크 확대" ? "risk" : summary?.decision.state === "추적 가능" ? "long" : "watch"}>
-                {summary?.decision.state}
-              </StatusPill>
-              <StatusPill tone={summary?.decision.direction === "하방 압력" ? "short" : summary?.decision.direction === "상방 우세" ? "long" : summary?.decision.direction === "변동성 주의" ? "risk" : "watch"}>
-                방향성 {summary?.decision.direction}
-              </StatusPill>
-              <StatusPill tone={summary?.decision.leadership === "위험 회피" ? "risk" : summary?.decision.leadership === "알트 순환" ? "long" : "info"}>
-                주도 {summary?.decision.leadership}
-              </StatusPill>
-            </div>
-            <div className="mt-3">
+            <p className="text-sm font-semibold leading-6 text-ui-text [word-break:keep-all]">{decisionLine}</p>
+            <div className="mt-2">
               <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{summary?.decision.scoreLabel}</p>
               <p className="mt-1 text-3xl font-semibold tracking-tight text-ui-text sm:text-4xl">{summary?.decision.readinessScore ?? "-"}점</p>
               <p className="mt-1 max-w-3xl text-xs leading-5 text-ui-muted [word-break:keep-all]">{summary?.decision.scoreDetail}</p>
