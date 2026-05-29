@@ -1027,13 +1027,159 @@ Recommended first implementation:
 6. Do not add Upbit/Bithumb breadth yet.
 7. Keep ETH/BTC relative strength as a later enhancement.
 
+## First Implementation Selection
+
+The first implementation should be a small PR, not a full `/coin` home redesign. It should create immediate user value, use current data, avoid high-risk systems, and be easy to screenshot-review and revert.
+
+### Candidate Comparison
+
+| Candidate | Benefit | Risk | Scope | Validation |
+| --- | --- | --- | --- | --- |
+| 1. Improve top `오늘의 결론` block | Highest immediate value. Directly answers whether the user should watch, wait, or treat risk first. | MEDIUM. Copy and visual hierarchy must avoid trade instruction. | `CoinRadarHomePanel` top summary and small helper. | tsc, build, smoke:mobile, smoke:all, `/coin` 360px and desktop screenshots. |
+| 2. Add readiness score/state helper | Strong foundation for decision dashboard. Reusable in later Pro explanations. | MEDIUM. If over-weighted, can look like a buy/sell score. | Pure helper using current data. | unit-style logic review through TypeScript, screenshot label review. |
+| 3. Add `시장 주도` label | Clear answer to BTC장 vs 알트장. Uses existing market-board data. | LOW-MEDIUM. Rough label may be imperfect without ETH/BTC and broader breadth. | Small derived label and one reason. | `/coin` screenshots and data fallback review. |
+| 4. Compress representative coin cards | Improves readability and mobile density. | LOW. Visual-only if logic is untouched. | UI layout only. | screenshots at 360px and desktop. |
+| 5. localStorage representative coin selector | Strong personalization value. | MEDIUM-HIGH. Adds state persistence and UI complexity; Pro gating must be handled carefully. | selector UI, localStorage parser, fallback behavior. | tsc, build, smoke, persistence manual check. |
+| 6. Compress BTC market strength | Makes home faster to scan. | LOW. Risk of hiding useful context if over-compressed. | UI layout and summary rows. | screenshots and content review. |
+| 7. Full `/coin` home rearrangement | Could solve the whole screen direction at once. | HIGH. Too broad for first PR and harder to review/revert. | Multiple sections and visual hierarchy. | broad screenshot and interaction review. |
+
+### Selected First Implementation
+
+Selected priority:
+
+- `오늘의 결론 + 준비도 + 시장 주도 라벨`
+
+This combines candidates 1, 2, and 3 in a narrow way:
+
+1. Add a top conclusion block.
+2. Add a readiness state/score helper using current data.
+3. Add a rough market leadership label using current data.
+4. Keep representative coin personalization for a later run.
+5. Do not add a new API.
+
+### Selection Reason
+
+- It answers the most important first-screen question immediately.
+- It can be built from existing `/coin` data.
+- It does not require route changes.
+- It does not require Supabase, auth, billing, Android, FCM, or production migration.
+- It is easy to review in screenshots.
+- It is easy to revert if the tone or visual result is not right.
+- It improves the home purpose before adding personalization complexity.
+
+### Proposed PR Branch
+
+- `codex/coin-home-decision-summary`
+
+### Proposed Files For The First PR
+
+Expected app files:
+
+- `src/components/coin/CoinRadarHomePanel.tsx`
+
+Possible helper file if needed:
+
+- `src/components/coin/coinHomeDecisionModel.ts`
+
+Expected docs:
+
+- `docs/coin-home-decision-dashboard-audit.md`
+- `docs/automation-runs/active-run.md` or a new implementation active-run.
+
+### Forbidden Scope For The First PR
+
+- No route changes.
+- No new API.
+- No Supabase.
+- No auth/session changes.
+- No billing, RevenueCat, planId, productId, entitlement changes.
+- No Android, Capacitor, AAB, Play Console changes.
+- No FCM or push-cron changes.
+- No production migration.
+- No representative coin localStorage selector in the first PR.
+- No account sync.
+- No Upbit/Bithumb breadth.
+- No ETH/BTC data fetch.
+- No Basic/Pro gating weakening.
+- No buy/sell/long/short instruction wording.
+
+### Screenshot Review Targets
+
+- `/coin` at 360px mobile.
+- `/coin` at desktop width.
+- Optional `/crypto` and `/global` quick check to ensure common shell is unaffected.
+
+Screenshot criteria:
+
+- top conclusion is visible without feeling like another heavy card.
+- no investment instruction wording appears.
+- readiness score is clearly environment readiness, not buy/sell score.
+- market leadership label is compact and understandable.
+- representative coin section remains readable below the top conclusion.
+- no horizontal overflow.
+
+### Verification For The First PR
+
+- `git diff --check`
+- `cmd /c npx tsc --noEmit`
+- `npm.cmd run build`
+- `npm.cmd run smoke:mobile`
+- `npm.cmd run smoke:all`
+- `/coin` 360px screenshot
+- `/coin` desktop screenshot
+
+### Draft PR Instruction
+
+Use this as the next implementation prompt:
+
+```text
+PR MODE - implement coin home decision summary
+
+Branch: codex/coin-home-decision-summary
+
+Goal:
+Implement the first Coin Home decision dashboard step on `/coin`.
+Add a top conclusion area that shows:
+- decision state: 관망 / 조건 대기 / 추적 가능 / 리스크 확대
+- readiness score as "매매 환경 준비도"
+- direction: 상방 우세 / 하방 압력 / 관망 / 변동성 주의
+- market leadership: BTC 우세 / 알트 순환 / 혼조 / 위험 회피
+- one top risk and one next confirmation condition
+
+Constraints:
+- Use only current `/coin` data.
+- No new API.
+- No route changes.
+- No Supabase/auth/billing/Android/FCM changes.
+- Do not implement representative coin selector yet.
+- Do not weaken Basic/Pro gating.
+- Avoid buy/sell/long/short instruction wording.
+
+Expected files:
+- src/components/coin/CoinRadarHomePanel.tsx
+- optional src/components/coin/coinHomeDecisionModel.ts
+- docs/coin-home-decision-dashboard-audit.md
+- docs/automation-runs/active-run.md or a new implementation active-run
+
+Validation:
+- git diff --check
+- cmd /c npx tsc --noEmit
+- npm.cmd run build
+- npm.cmd run smoke:mobile
+- npm.cmd run smoke:all
+- /coin 360px screenshot
+- /coin desktop screenshot
+
+Do not merge to main without screenshot review.
+```
+
 ## Next Work Candidate
 
-Next active-run task should be `첫 구현 후보 선정`.
+This design run is complete. The next step should be a separate implementation active-run or PR using `codex/coin-home-decision-summary`.
 
 Recommended focus:
 
-1. Compare the first implementation candidates.
-2. Prefer a small implementation that uses current data.
-3. Avoid route, API, billing, auth, Supabase, Android, and FCM changes.
-4. Keep screenshot review required before UI push/merge.
+1. Create an implementation active-run for the selected first PR.
+2. Keep the implementation branch-based.
+3. Require screenshots before merge.
+4. Keep representative coin personalization as a later run.
