@@ -663,7 +663,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
         }
       />
 
-      <PanelCard variant="report" className="shadow-none">
+      <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -727,7 +727,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
         ) : null}
 
         {isAndroidAppPush ? (
-          <AppSurface tone="inset" padding="sm" className="mt-3 text-xs leading-5 text-ui-muted shadow-none">
+          <AppSurface tone="inset" variant="flat" padding="none" className="mt-3 border-t border-ui-line pt-3 text-xs leading-5 text-ui-muted">
             <p>
               <span className="font-semibold text-ui-subtle">현재 단계</span> {appPushStageLabel(appPushState.registrationStage)}
               {appPushState.lastFailureStage ? ` · 실패 단계 ${appPushStageLabel(appPushState.lastFailureStage)}` : ""}
@@ -754,7 +754,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
       ) : null}
 
       {isAndroidAppPush && !isAuthLoading && !session ? (
-        <PanelCard variant="report" className="flex flex-col gap-3 shadow-none sm:flex-row sm:items-center sm:justify-between">
+        <PanelCard variant="flat" padding="none" className="flex flex-col gap-3 border-t border-ui-line py-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm leading-6 text-ui-muted">로그인 후 앱 푸시 알림을 계정에 연결할 수 있습니다.</p>
           <ActionButton href={loginHref} tone="primary" className="min-h-10 w-full px-4 text-sm sm:w-auto">
             로그인하기
@@ -762,7 +762,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
         </PanelCard>
       ) : null}
 
-      <PanelCard variant="report" className="shadow-none">
+      <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
         <SectionHeader
           title="저장 조건"
           description="관심 있는 자산과 조건을 모아두고 다시 맞아떨어지는 순간을 확인합니다."
@@ -791,7 +791,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             />
           </div>
         ) : (
-          <AppSurface variant="report" tone="inset" padding="sm" className="mt-4 text-xs leading-5 text-ui-muted shadow-none">
+          <AppSurface variant="flat" tone="inset" padding="none" className="mt-4 border-t border-ui-line pt-3 text-xs leading-5 text-ui-muted">
             알림 화면을 열면 저장한 조건을 다시 확인하고 마지막 확인 상태를 표시합니다.
           </AppSurface>
         )}
@@ -819,7 +819,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             </div>
           </AppSurface>
         ) : (
-          <AppSurface variant="report" tone="inset" padding="sm" className="mt-4 text-xs leading-5 text-ui-muted shadow-none">
+          <AppSurface variant="flat" tone="inset" padding="none" className="mt-4 border-t border-ui-line pt-3 text-xs leading-5 text-ui-muted">
             저장 조건이 현재 레이더 결과와 다시 맞아떨어지면 최근 일치 감지로 표시합니다.
           </AppSurface>
         )}
@@ -849,13 +849,13 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             ))}
           </div>
         ) : (
-          <AppSurface variant="report" tone="inset" padding="sm" className="mt-4 text-xs leading-5 text-ui-muted shadow-none">
+          <AppSurface variant="flat" tone="inset" padding="none" className="mt-4 border-t border-ui-line pt-3 text-xs leading-5 text-ui-muted">
             아직 저장한 감시 조건이 없습니다. 레이더 감지 카드에서 감시 저장을 누르면 여기에 모입니다.
           </AppSurface>
         )}
       </PanelCard>
 
-      <PanelCard variant="report" className="shadow-none">
+      <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
         <SectionHeader
           title="알림 조건"
           description={summary.headline}
