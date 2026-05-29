@@ -39,9 +39,10 @@
 - 2026-05-26: `d802f34`, `d8a533f`, `7911604`에서 코인 레이더 컨트롤, 요약 섹션 shell, 레이더 컨트롤 탭을 단계적으로 분리했다.
 - 2026-05-26: `e3a4480`에서 `CryptoProGate` shell을 분리했다. Basic/Pro gating 정책 자체는 변경하지 않았다.
 - 2026-05-27: `da9ba37`에서 `/crypto` data helper 분리를 진행했다. fetch와 차트 lifecycle의 큰 구조는 아직 `LiveMarketChart.tsx` 중심으로 유지한다.
+- 2026-05-29: 복기 저장 payload 생성 로직을 `src/components/crypto/journalHelpers.ts`로 분리했다. 저장 호출, Supabase session, local fallback 흐름은 변경하지 않았다.
 
 ## 현재 남은 분리 후보
 
 - `LiveMarketChart.tsx`는 아직 약 3,000라인 이상이며 orchestration, fetch/data state, chart lifecycle, 일부 CTA/저널 저장 흐름이 남아 있다.
-- 다음 작은 후보는 chart lifecycle을 건드리지 않는 순수 표시 helper 추가 분리 또는 저널/CTA payload helper 분리다.
+- 다음 작은 후보는 chart lifecycle을 건드리지 않는 순수 표시 helper 추가 분리 또는 CTA helper 분리다.
 - fetch hook 분리, lightweight-charts lifecycle 분리, Basic/Pro gating 정책 변경은 별도 승인 전에는 진행하지 않는다.
