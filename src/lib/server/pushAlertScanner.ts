@@ -13,13 +13,9 @@ import {
   stockSignalLabel,
   topPushSetups
 } from "@/lib/server/push/eventBuilders";
-import {
-  asArray,
-  compactPushSymbol as compactSymbol,
-  isCryptoMajorPushSymbol as isCryptoMajor,
-  passesSetupPushQuality
-} from "@/lib/server/push/eligibility";
+import { asArray, passesSetupPushQuality } from "@/lib/server/push/eligibility";
 import { ruleAllowed, userPlan } from "@/lib/server/push/entitlements";
+import { personalizeEventForUser } from "@/lib/server/push/personalization";
 import { tokenPreferenceDecision } from "@/lib/server/push/preferences";
 import { groupPresetsByUser, presetCountForMarket, presetFromRow, presetsForMarket, presetScanInputsForMarket } from "@/lib/server/push/presets";
 import { scanLiquidationEvent } from "@/lib/server/push/scanners/liquidationScanner";
@@ -46,46 +42,6 @@ const maxRecentEventLookbackHours = 6;
 function safeErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   return message.slice(0, 180);
-}
-
-function personalizeEventForUser(event: PushAlertEvent, userPresets: PushAlertPresetRow[]): PushAlertEvent {
-  const watchedSymbols = new Set(userPresets.map((preset) => preset.symbol));
-  const isWatchedSymbol = event.symbol ? watchedSymbols.has(event.symbol) : event.isWatchlist === true;
-  if (!event.isMarketScout) {
-    return {
-      ...event,
-      isWatchedSymbol,
-      data: {
-        ...event.data,
-        is_watched_symbol: String(isWatchedSymbol)
-      }
-    };
-  }
-
-  if (event.market === "crypto" && event.symbol && !isCryptoMajor(event.symbol)) {
-    const symbol = compactSymbol(event.symbol);
-    const body = isWatchedSymbol
-      ? `${symbol}가 알트 시장 후보에 잡혔습니다. 저장 여부와 근거를 확인해 주세요.`
-      : `${symbol}가 시장 스캔 후보에 잡혔습니다. 앱에서 근거를 확인해 주세요.`;
-    return {
-      ...event,
-      body,
-      isWatchedSymbol,
-      data: {
-        ...event.data,
-        is_watched_symbol: String(isWatchedSymbol)
-      }
-    };
-  }
-
-  return {
-    ...event,
-    isWatchedSymbol,
-    data: {
-      ...event.data,
-      is_watched_symbol: String(isWatchedSymbol)
-    }
-  };
 }
 
 export async function runPushAlertScan(context: ScanContext) {
