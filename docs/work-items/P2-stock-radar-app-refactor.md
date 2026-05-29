@@ -30,3 +30,4 @@
 - 작업 기준 route는 `/global/assets`이며 `/global`은 시장흐름 대시보드로 유지한다.
 - 설계 문서: `docs/stock-radar-app-refactor-plan.md`.
 - 2026-05-29: 관심 자산 localStorage helper를 `src/components/global/globalWatchlist.ts`로 분리했다. 저장 key, 기본 관심 자산, 최대 개수 제한은 변경하지 않았다.
+- 2026-05-29: 글로벌 자산 checklist/playbook 표시 컴포넌트를 `src/components/global/GlobalAssetPlaybook.tsx`로 분리했다. 가격 계산, 차트, 데이터 fetch, Basic/Pro gating은 변경하지 않았다.
