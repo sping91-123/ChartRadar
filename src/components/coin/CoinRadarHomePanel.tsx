@@ -2,7 +2,7 @@
 // Coin Radar 홈에서 대표 코인과 BTC 기준 시장 체력을 빠르게 요약합니다.
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ArrowDownRight, ArrowUpRight, RefreshCw, ShieldCheck, TrendingUp } from "lucide-react";
+import { AlertTriangle, ArrowDownRight, ArrowUpRight, RefreshCw, ShieldCheck, TrendingUp, X } from "lucide-react";
 import { ActionButton, DataRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import type { CoinMarketMetricsPayload } from "@/lib/coinMarketMetrics";
 import type { Candle } from "@/lib/marketAnalysis";
@@ -31,11 +31,21 @@ type CoinHomeState =
   | { status: "ready"; data: CoinHomeData }
   | { status: "error"; message: string };
 
-const representativeSymbols = ["BTC", "ETH", "XRP"] as const;
+const tileSymbols = ["BTC", "ETH", "XRP", "SOL", "DOGE", "BNB"] as const;
 const fundingSymbols = ["BTC", "ETH", "XRP"] as const;
 
+type RepresentativeSymbol = (typeof tileSymbols)[number];
 type ConclusionSegment = { text: string; tone?: "up" | "down" };
 type DirectionTone = "up" | "down";
+
+const tradingViewLogoIds: Record<RepresentativeSymbol, string> = {
+  BTC: "XTVCBTC",
+  ETH: "XTVCETH",
+  XRP: "XTVCXRP",
+  SOL: "XTVCSOL",
+  DOGE: "XTVCDOGE",
+  BNB: "XTVCBNB"
+};
 
 function clamp(value: number, min = 0, max = 100) {
   return Math.min(max, Math.max(min, value));
@@ -80,7 +90,11 @@ function formatAnalysisUpdatedAt(ms: number) {
   return `${month}월 ${day}일 ${hour}:${minute} 갱신`;
 }
 
-function boardItem(board: MarketBoardItem[], symbol: (typeof representativeSymbols)[number]) {
+function symbolLogoUrl(symbol: RepresentativeSymbol) {
+  return `https://s3-symbol-logo.tradingview.com/crypto/${tradingViewLogoIds[symbol]}.svg`;
+}
+
+function boardItem(board: MarketBoardItem[], symbol: RepresentativeSymbol) {
   return board.find((item) => compactSymbol(item.symbol) === symbol) ?? null;
 }
 
@@ -93,6 +107,32 @@ function directionFor(changePercent: number) {
 function scoreFor(changePercent: number, marketScore: number | null) {
   const marketBias = marketScore === null ? 0 : (marketScore - 50) * 0.18;
   return Math.round(clamp(50 + changePercent * 4.5 + marketBias, 8, 92));
+}
+
+function tileToneClass(changePercent: number) {
+  if (changePercent >= 3) return "bg-emerald-500 text-white";
+  if (changePercent >= 2) return "bg-emerald-600 text-white";
+  if (changePercent >= 1) return "bg-emerald-700 text-white";
+  if (changePercent >= 0) return "bg-emerald-950 text-emerald-50";
+  if (changePercent <= -3) return "bg-red-600 text-white";
+  if (changePercent <= -2) return "bg-red-700 text-white";
+  if (changePercent <= -1) return "bg-red-800 text-red-50";
+  return "bg-red-950 text-red-50";
+}
+
+function tileAccentClass(changePercent: number) {
+  if (changePercent >= 0) return changePercent >= 3 ? "text-white" : "text-emerald-100";
+  return changePercent <= -3 ? "text-white" : "text-red-100";
+}
+
+function scoreToneClass(score: number) {
+  if (score >= 80) return "bg-emerald-300 text-emerald-950";
+  if (score >= 70) return "bg-emerald-500 text-white";
+  if (score >= 60) return "bg-emerald-800 text-emerald-50";
+  if (score >= 50) return "bg-slate-600 text-slate-50";
+  if (score >= 40) return "bg-red-900 text-red-50";
+  if (score >= 30) return "bg-red-700 text-white";
+  return "bg-red-500 text-white";
 }
 
 function riskFor(changePercent: number) {
@@ -161,6 +201,50 @@ function HighlightDirectionalText({ text }: { text: string | undefined }) {
   );
 }
 
+function CoinStatusTile({
+  symbol,
+  item,
+  score,
+  primary,
+  emphasis,
+  onClick
+}: {
+  symbol: RepresentativeSymbol;
+  item: MarketBoardItem | null;
+  score: number;
+  primary?: boolean;
+  emphasis?: boolean;
+  onClick: () => void;
+}) {
+  const changePercent = item?.changePercent ?? 0;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`relative flex h-full min-h-0 w-full flex-col items-center justify-center overflow-hidden border-2 border-ui-canvas px-1.5 py-1 text-center transition hover:brightness-110 active:scale-[0.99] ${tileToneClass(
+        changePercent
+      )}`}
+      aria-label={`${symbol} 상세 보기`}
+    >
+      <span className="absolute right-2 top-2 text-[10px] font-black uppercase tracking-[0.08em] text-white/75">
+        {primary ? "클릭 상세" : "상세"}
+      </span>
+      <span className={`block max-w-full truncate font-black tracking-tight ${primary ? "text-4xl sm:text-5xl" : emphasis ? "text-2xl sm:text-3xl" : "text-base sm:text-xl"}`}>
+        {symbol}
+      </span>
+      <span className={`mt-1 max-w-full truncate font-semibold ${primary ? "block text-2xl sm:text-3xl" : "hidden"}`}>
+        {item ? `$${formatPrice(item.price)}` : "-"}
+      </span>
+      <span className={`mt-1 block max-w-full truncate font-black ${primary ? "text-2xl sm:text-3xl" : emphasis ? "text-base sm:text-xl" : "text-sm sm:text-base"} ${tileAccentClass(changePercent)}`}>
+        {formatPercent(item?.changePercent)}
+      </span>
+      <span className={`mt-1 inline-flex max-w-full items-center justify-center truncate px-1.5 py-0.5 font-black ${primary ? "text-2xl sm:text-3xl" : emphasis ? "text-base sm:text-xl" : "text-sm sm:text-base"} ${scoreToneClass(score)}`}>
+        {score}점
+      </span>
+    </button>
+  );
+}
+
 function toneForMarket(score: number | null) {
   if (score === null) return { label: "확인 대기", tone: "info" as const };
   if (score >= 62) return { label: "추적 가능", tone: "long" as const };
@@ -181,6 +265,7 @@ async function jsonOrNull<T>(input: RequestInfo | URL) {
 
 export function CoinRadarHomePanel() {
   const [state, setState] = useState<CoinHomeState>({ status: "loading" });
+  const [selectedSymbol, setSelectedSymbol] = useState<RepresentativeSymbol | null>(null);
 
   async function load() {
     setState({ status: "loading" });
@@ -320,39 +405,102 @@ export function CoinRadarHomePanel() {
       </PanelCard>
 
       <PanelCard variant="flat" padding="none" className="space-y-3 py-2">
-        <SectionHeader eyebrow="Representative Coins" title="대표 코인 상태" description="BTC, ETH, XRP를 기본 대표 코인으로 보고 방향, 점수, 리스크, 다음 확인 조건만 압축합니다." />
-        <div>
-          {representativeSymbols.map((symbol) => {
-            const item = boardItem(state.data.board, symbol);
+        <SectionHeader eyebrow="Representative Coins" title="대표 코인 상태" />
+        <div className="mx-auto w-full max-w-xl overflow-hidden bg-ui-line p-px">
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(5.6rem,34%)] items-stretch gap-px">
+            {(() => {
+              const symbol = tileSymbols[0];
+              const item = boardItem(state.data.board, symbol);
+              const score = scoreFor(item?.changePercent ?? 0, summary?.fearGreed?.score ?? null);
+              return (
+                <div className="aspect-square min-w-0 self-start">
+                  <CoinStatusTile symbol={symbol} item={item} score={score} primary onClick={() => setSelectedSymbol(symbol)} />
+                </div>
+              );
+            })()}
+            <div className="grid min-w-0 grid-rows-2 gap-px self-stretch">
+              {tileSymbols.slice(1, 3).map((symbol) => {
+                const item = boardItem(state.data.board, symbol);
+                const score = scoreFor(item?.changePercent ?? 0, summary?.fearGreed?.score ?? null);
+                return <CoinStatusTile key={symbol} symbol={symbol} item={item} score={score} emphasis onClick={() => setSelectedSymbol(symbol)} />;
+              })}
+            </div>
+          </div>
+          <div className="mt-px grid h-24 grid-cols-[minmax(0,1fr)_minmax(5.6rem,34%)] gap-px sm:h-32">
+            <div className="grid min-w-0 grid-cols-2 gap-px">
+              {tileSymbols.slice(3, 5).map((symbol) => {
+                const item = boardItem(state.data.board, symbol);
+                const score = scoreFor(item?.changePercent ?? 0, summary?.fearGreed?.score ?? null);
+                return <CoinStatusTile key={symbol} symbol={symbol} item={item} score={score} onClick={() => setSelectedSymbol(symbol)} />;
+              })}
+            </div>
+            {(() => {
+              const symbol = tileSymbols[5];
+              const item = boardItem(state.data.board, symbol);
+              const score = scoreFor(item?.changePercent ?? 0, summary?.fearGreed?.score ?? null);
+              return <CoinStatusTile symbol={symbol} item={item} score={score} onClick={() => setSelectedSymbol(symbol)} />;
+            })()}
+          </div>
+        </div>
+      </PanelCard>
+
+      {selectedSymbol ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4" role="dialog" aria-modal="true">
+          {(() => {
+            const item = boardItem(state.data.board, selectedSymbol);
             const direction = directionFor(item?.changePercent ?? 0);
             const Icon = direction.icon;
             const score = scoreFor(item?.changePercent ?? 0, summary?.fearGreed?.score ?? null);
 
             return (
-              <article key={symbol} className="grid gap-3 py-3 sm:grid-cols-[7rem_minmax(0,1fr)_8rem] sm:items-start">
-                <div>
-                  <p className="text-2xl font-semibold tracking-tight text-ui-text">{symbol}</p>
-                  <p className="mt-1 text-xs font-medium text-ui-muted">{item ? `$${formatPrice(item.price)}` : "가격 확인 중"}</p>
+              <div className="relative w-full max-w-sm border border-ui-line bg-ui-panel p-4 text-ui-text shadow-none">
+                <button
+                  type="button"
+                  onClick={() => setSelectedSymbol(null)}
+                  className="absolute left-2 top-2 grid h-7 w-7 place-items-center text-ui-muted transition hover:text-ui-text"
+                  aria-label="상세 카드 닫기"
+                >
+                  <X size={15} aria-hidden />
+                </button>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={symbolLogoUrl(selectedSymbol)}
+                  alt={`${selectedSymbol} symbol`}
+                  className="absolute right-4 top-3 h-10 w-10 rounded-full bg-white/95 p-1"
+                  loading="lazy"
+                />
+                <div className="pl-7 pr-14">
+                  <p className="text-3xl font-semibold tracking-tight">{selectedSymbol}</p>
+                  <p className="mt-1 text-sm font-medium text-ui-muted">{item ? `$${formatPrice(item.price)} · ${formatPercent(item.changePercent)}` : "가격 확인 중"}</p>
                 </div>
-                <div className="min-w-0">
+                <div className="mt-4 flex items-center justify-between gap-3">
                   <StatusPill tone={direction.tone} icon={Icon}>
                     {direction.label}
                   </StatusPill>
-                  <p className="mt-2 text-sm leading-6 text-ui-muted">
-                    <span className="font-semibold text-ui-text">리스크</span> <HighlightDirectionalText text={riskFor(item?.changePercent ?? 0)} /> ·{" "}
-                    <span className="font-semibold text-ui-text">확인</span> <HighlightDirectionalText text={checkFor(item?.changePercent ?? 0)} />
-                  </p>
+                  <div className="text-right">
+                    <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">신호 정렬도</p>
+                    <p className="text-2xl font-semibold">{score}점</p>
+                  </div>
                 </div>
-                <div className="text-left sm:text-right">
-                  <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">신호 정렬도</p>
-                  <p className="text-2xl font-semibold text-ui-text">{score}점</p>
-                  <p className="text-xs text-ui-muted">{formatPercent(item?.changePercent)}</p>
+                <div className="mt-4 space-y-3 text-sm leading-6 text-ui-muted">
+                  <div>
+                    <p className="font-semibold text-ui-text">리스크</p>
+                    <p className="mt-1">
+                      <HighlightDirectionalText text={riskFor(item?.changePercent ?? 0)} />
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-ui-text">확인</p>
+                    <p className="mt-1">
+                      <HighlightDirectionalText text={checkFor(item?.changePercent ?? 0)} />
+                    </p>
+                  </div>
                 </div>
-              </article>
+              </div>
             );
-          })}
+          })()}
         </div>
-      </PanelCard>
+      ) : null}
 
       <PanelCard variant="flat" padding="none" className="space-y-3 py-2">
         <SectionHeader eyebrow="BTC Market Strength" title="BTC 기준 시장 체력" description="선택 코인과 분리해 BTC 기준 과열, 추세, 파생 쏠림을 확인합니다." />

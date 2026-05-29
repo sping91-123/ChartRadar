@@ -16,6 +16,7 @@ const boardSymbols = new Set([
   "XRPUSDT",
   "SOLUSDT",
   "DOGEUSDT",
+  "BNBUSDT",
   "ADAUSDT",
   "LINKUSDT",
   "AVAXUSDT",
