@@ -1173,6 +1173,38 @@ Validation:
 Do not merge to main without screenshot review.
 ```
 
+## Implementation Note: Coin Home Decision Summary
+
+Branch:
+
+- `codex/coin-home-decision-summary`
+
+Implementation scope:
+
+- Added a top `/coin` decision summary using current home data only.
+- Added a local helper for:
+  - decision state.
+  - readiness score.
+  - direction label.
+  - market leadership label.
+  - top risk.
+  - next confirmation condition.
+- Kept existing BTC/ETH/XRP representative coin section.
+- Kept BTC market strength section.
+- Kept funding section.
+
+Unchanged:
+
+- no new API.
+- no route changes.
+- no Supabase/auth/billing/Android/FCM changes.
+- no representative coin selector.
+- no Upbit/Bithumb breadth.
+- no ETH/BTC fetch.
+- no Basic/Pro gating change.
+
+Screenshot review remains required before merge.
+
 ## Next Work Candidate
 
 This design run is complete. The next step should be a separate implementation active-run or PR using `codex/coin-home-decision-summary`.
