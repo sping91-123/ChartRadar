@@ -90,9 +90,9 @@ function PlanCard({
     <AppSurface
       as="article"
       tone={plan.marketScope === "bundle" ? "elevated" : "panel"}
-      variant="report"
-      padding="md"
-      className="flex h-full min-w-0 flex-col shadow-none"
+      variant="flat"
+      padding="none"
+      className="flex h-full min-w-0 flex-col border-t border-ui-line py-5"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -121,7 +121,7 @@ function PlanCard({
         ))}
       </ul>
 
-      <AppSurface tone="inset" variant="list" padding="sm" className="mt-4">
+      <AppSurface tone="inset" variant="list" padding="none" className="mt-4 border-y border-ui-line py-2">
         <MetricRow label="시장" value={<span className="block max-w-[9rem] whitespace-normal break-keep">{plan.limits.markets}</span>} />
         <MetricRow label="레이더" value={<span className="block max-w-[9rem] whitespace-normal break-keep">{plan.limits.radarScans}</span>} />
         <MetricRow label="관심목록" value={<span className="block max-w-[9rem] whitespace-normal break-keep">{plan.limits.watchlist}</span>} />
@@ -236,7 +236,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
 
   return (
     <section className="flex flex-col gap-4 sm:gap-5">
-      <AppSurface tone="panel" variant="report" padding="lg" className="shadow-none">
+      <AppSurface tone="panel" variant="flat" padding="none" className="border-b border-ui-line py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <SectionHeader eyebrow={copy.eyebrow} title={copy.title} description={copy.body} />
           <StatusPill tone={session ? "info" : "locked"} className="self-start">{currentPlanLabel}</StatusPill>
@@ -244,7 +244,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
       </AppSurface>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <PanelCard variant="report" className="shadow-none">
+        <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
           <SectionHeader
             eyebrow="CURRENT PLAN"
             title="현재 이용 상태"
@@ -262,7 +262,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
           ) : null}
         </PanelCard>
 
-        <PanelCard variant="report" className="shadow-none">
+        <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
           <SectionHeader
             eyebrow="PLAN DIFFERENCE"
             title="Basic과 Pro 차이"
@@ -307,7 +307,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
         </ActionButton>
       ) : null}
 
-      <PanelCard variant="report" className="shadow-none">
+      <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
         <div className="flex items-center gap-2">
           <ShieldCheck size={18} className="text-ui-brand" aria-hidden />
           <h3 className="text-ui-title font-semibold text-ui-text">구독 전 확인할 점</h3>
