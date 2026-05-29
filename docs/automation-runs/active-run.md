@@ -2,33 +2,32 @@
 
 ## Run Title
 
-- `full-app-boxless-implementation-run`
+- `coin-home-decision-dashboard-run`
 
 ## Purpose
 
-- ChartRadar의 모든 주요 화면을 카드/박스/패널 중심 구조에서 벗어나 full-screen app flow로 전환한다.
-- 경계는 큰 박스가 아니라 여백, 타이포그래피, divider, list/report 흐름으로 만든다.
-- 이미 완료된 `/news`, 공통 Header/Nav, `/alerts` pilot을 기준으로 나머지 화면에 순차 적용한다.
+- Coin Radar 홈을 정보 대시보드가 아니라 "매매 전 10초 판단 화면"으로 재정의한다.
+- 사용자가 앱을 열었을 때 아래 4가지 질문에 바로 답할 수 있게 홈 구조를 설계한다.
+  - 지금 장을 봐도 되는가?
+  - 내 대표 코인은 추적할 만한가?
+  - 지금은 BTC장이냐, 알트장이냐?
+  - 지금 가장 큰 리스크는 뭔가?
+- 표현은 투자 권유가 아니라 준비도, 추적 조건, 관망, 리스크, 확인 조건 중심으로 정리한다.
 
 ## Background
 
-- 대표는 `/journal`만이 아니라 Coin Radar, Global Radar, 시장 선택, 자산, 일정/뉴스, 복기, 설정/알림, Pro까지 전 화면을 boxless 방향으로 전환하기로 결정했다.
-- 기존 `boxless-journal-pilot-run`은 범위가 너무 좁으므로 이 full-app implementation run으로 대체한다.
-- 진행 연속성은 채팅방이 아니라 이 active-run, completed 기록, PR, 검증 스크린샷에 저장한다.
-
-## Already Completed Pilots
-
-- `/news` boxless pilot.
-- 공통 Header/Nav/AppShell boxless pilot.
-- `/alerts` boxless list pilot, PR #1 merged.
+- 현재 `/coin` 홈은 `Header`, `RadarTopNav`, `MacroTicker`, `CoinRadarHomePanel`로 구성되어 있다.
+- 현재 `CoinRadarHomePanel`은 대표 코인 상태, BTC 기준 시장 체력, 펀딩비를 보여준다.
+- 하지만 사용자가 즉시 "지금 볼 장인지, 관망인지, BTC장인지 알트장인지, 내 대표 코인은 추적할 만한지" 판단하기에는 화면의 결론성이 약하다.
+- 이번 run은 설계 run이며 앱 코드, route, API, 결제, 인증, Supabase, Android, FCM은 변경하지 않는다.
 
 ## Product Principles
 
-- Coin Radar와 Global Radar는 동등한 상위 시장 모드로 유지한다.
-- Global Radar는 해외주식/해외선물 사용자용 독립 레이더이며, 코인 보조 매크로로 격하하지 않는다.
-- 투자 권유처럼 보이는 문구를 추가하지 않는다.
-- 결제, 인증, Supabase, Android, FCM, production 로직은 디자인 작업과 섞지 않는다.
-- UI 구현 작업은 PR 기반을 기본값으로 한다.
+- ChartRadar는 Coin Radar와 Global Radar를 모두 유지한다.
+- 이 run은 Coin Radar 홈에 집중하되 Global Radar를 코인 보조 매크로로 격하하지 않는다.
+- Coin Radar 홈은 매수/매도 지시가 아니라 판단 보조, 준비도, 추적 조건, 관망 조건, 리스크 기준을 보여준다.
+- RSI, 스토캐스틱, 트렌드는 선택 코인이 아니라 BTC 기준 시장 체력 지표로 다룬다.
+- 사용자의 대표 코인은 개인화할 수 있지만 계정 동기화는 후순위로 둔다.
 
 ## Start Conditions
 
@@ -38,47 +37,53 @@
 
 ## Stop Conditions
 
-- 작업트리가 dirty이고 기존 변경 정체가 불명확함.
+- 작업트리가 dirty이고 기존 변경의 정체가 불명확함.
 - local과 `origin/main`이 불일치함.
-- 저장/복기, 결제, 인증/session, Supabase, Android, FCM, production 로직 변경이 필요해짐.
-- route 변경이 필요해짐.
-- UI 작업에서 스크린샷 확인 없이 push/merge가 필요해짐.
-- Global Radar 독립성이 약화될 가능성이 있음.
+- 코드 수정, route 변경, 신규 API 추가가 필요해짐.
+- 결제, 인증, Supabase, Android, FCM, production 로직 변경이 필요해짐.
+- 투자 권유처럼 보이는 문구가 필요해짐.
+- 여러 작업이 충돌 가능함.
 
 ## Task List
 
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | DONE | Full app implementation map 정리 | App-wide design ops | LOW | 전 화면 boxless 구현 순서와 page groups를 `docs/full-app-boxless-implementation-plan.md`에 정리했다. `/journal` audit도 `docs/journal-boxless-pilot-audit.md`에 기록했다. | 앱 코드 수정 금지. | `git diff --check` |
-| 2 | DONE | `/journal` boxless form/list pilot 적용 | Journal UI implementation | HIGH | `/journal` 화면의 outer surface, summary, pending radar, quick form, feedback, history 영역을 `report`/`flat` surface와 divider/list 흐름으로 정리했다. | 저장 로직 변경 금지. Supabase 변경 금지. 인증/session 변경 금지. journal API/data shape 변경 금지. 결제/Android/FCM 변경 금지. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:all`; `git diff --check`; `/journal` 360px screenshot; `/journal` desktop screenshot |
-| 3 | DONE | `/global` 본문 report/list pilot 적용 | Global Radar UI | HIGH | Global Radar 본문과 compact macro ticker의 큰 panel/card 중첩을 divider/report/list 흐름으로 정리했다. | Global Radar 독립성 훼손 금지. API/fetch/chart logic 변경 금지. 결제/인증/Supabase 변경 금지. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:all`; `git diff --check`; `/global` 360px screenshot; `/global` desktop screenshot |
-| 4 | DONE | `/global/assets` 자산 레이더 boxless pilot 적용 | Global Assets UI | HIGH | 자산 선택, 관심 종목, 체크리스트, 차트 wrapper, control dock을 divider/list/chart 중심 화면으로 정리했다. | chart rendering/data fetch 변경 금지. 모바일 dock이 content를 가리지 않게 확인. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:all`; `git diff --check`; `/global/assets` 340px/360px/desktop screenshots |
-| 5 | DONE | `/crypto` 본문 redesign run 준비 및 1차 적용 | Coin Radar UI | HIGH | Coin Radar 본문 AI briefing, ICT, combined, detailed readout, plan sections를 major screen 기준 report/divider 흐름으로 정리했다. | 판단 로직, chart rendering, API fetch, Basic/Pro gating 변경 금지. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:all`; `git diff --check`; `/crypto` 360px/desktop screenshots; BTC/ETH/timeframe/mode checks |
-| 6 | DONE | `/alts` boxless 적용 | Alt Radar UI | MEDIUM | 알트 필터, 관심 코인, 알트 전용 `LiveMarketChart` shell을 list/report 흐름으로 정리했다. | scanner/data/gating 변경 금지. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:all`; `git diff --check`; `/alts` 360px/desktop screenshots |
-| 7 | DONE | `/pro` boxless pricing review | Pro / Billing UI | HIGH | Pro intro, current/difference, plan limits, trust notes wrapper를 report/list variant로 약화하고 가격/CTA는 유지했다. | billing.ts, RevenueCat, productId, planId, entitlement, 결제 API 변경 금지. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:billing`; `git diff --check`; `/pro` 360px/desktop screenshots |
-| 8 | DONE | `/learn`, account/settings/support surfaces 정리 | Learn / Account UI | MEDIUM | 학습/계정/정책/로그인/공통 footer 화면에서 불필요한 card wrapper를 줄이고 divider/list 흐름으로 정리했다. | auth/account deletion policy 변경 금지. route 변경 금지. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `git diff --check`; touched routes screenshots |
-| 9 | DONE | 시장 선택과 공통 footer/fallback 최종 정리 | Entry / Common Shell | MEDIUM | 시장 선택, 로그인 유도, footer, auth callback, not-found, checkout result fallback surfaces를 full-screen divider/list 흐름으로 정리했다. | route 변경 금지. 마지막 사용 시장 구현 금지 unless 별도 승인. 자동 push 금지. | `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:mobile`; `git diff --check`; `/` 360px/desktop screenshots |
-| 10 | DONE | 전체 route boxless QA 및 잔여 박스 목록 정리 | Final QA | LOW | 모든 주요 route를 스크린샷/검색 기준으로 점검하고 남은 허용 박스와 제거 후보를 기록했다. | 앱 코드 수정 금지. | `git diff --check`; route screenshot inventory |
+| 1 | TODO | 현재 `/coin` 홈 구조 audit | Coin Home / Audit | LOW | `/coin`, `CoinRadarHomePanel`, 관련 API 사용 구조를 조사하고 현재 홈이 어떤 질문에 답하는지 정리한다. | 코드 수정 금지. route 변경 금지. API 변경 금지. | `git diff --check` |
+| 2 | TODO | 홈 decision model 설계 | Coin Home / Decision Model | MEDIUM | 홈 최상단 판단 모델을 문서화한다. 상태는 관망 / 조건 대기 / 추적 가능 / 리스크 확대, 준비도 점수, 방향성, 주도, 리스크 기준을 포함한다. | 코드 수정 금지. 투자 권유 문구 금지. RSI/스토캐스틱/트렌드를 선택 코인 기준으로 설계 금지. | `git diff --check` |
+| 3 | TODO | 대표 코인 개인화 설계 | Coin Home / Personalization | MEDIUM | BTC/ETH/XRP 고정 구조를 내 대표 코인 구조로 확장하는 설계를 문서화한다. 기본값, 사용자 선택, 현물/선물 모드, localStorage 우선, 계정 동기화 후순위를 포함한다. | 코드 수정 금지. Supabase/계정 동기화 구현 금지. | `git diff --check` |
+| 4 | TODO | BTC장 vs 알트장 판단 기준 설계 | Coin Home / Market Leadership | MEDIUM | BTC trend, BTC dominance, ETH/BTC 상대 강도, 알트 상승 비율, 거래대금 증가 알트 수, 상위 알트 상대 수익률 기준을 문서화한다. | 코드 수정 금지. 신규 데이터 API 구현 금지. 투자 권유 문구 금지. | `git diff --check` |
+| 5 | TODO | 첫 구현 후보 선정 | Coin Home / Implementation Planning | LOW | 실제 구현 1단계를 선정한다. 후보는 오늘의 결론 블록 개선, 대표 코인 카드 압축, BTC 기준 시장 체력 압축, 시장 주도 라벨 추가다. | 코드 수정 금지. route 변경 금지. 신규 API 추가 금지. | `git diff --check` |
 
-## Run Status
+## Validation Commands
 
-- Status: DONE.
-- Completed record: `docs/automation-runs/completed/full-app-boxless-implementation-run.md`.
-- Final QA record: `docs/full-app-boxless-final-qa.md`.
-- Post-QA follow-up sweep: completed after additional source-pattern audit found remaining read-only radar/admin shells. Details are recorded in `docs/full-app-boxless-final-qa.md`.
+- 설계 문서 작업 기본 검증:
+  - `git diff --check`
+  - 변경 파일 docs 범위 확인
+  - 민감값 패턴 검사
+- 이 run에서는 앱 코드 검증 명령을 기본 요구하지 않는다. 코드 파일을 수정해야 할 상황이면 작업을 중단하고 별도 구현 run으로 분리한다.
 
 ## Push / PR Policy
 
-- 실제 UI 구현 작업은 branch/PR 기반으로 진행한다.
-- UI/디자인 작업은 스크린샷 확인 전 push/merge 금지.
-- docs-only 작업만 대표가 safe push를 허용한 경우 main push 가능.
-- 결제, 인증, Supabase, Android, FCM, production 관련 변경은 자동 push 금지.
+- 이번 run은 설계 run이므로 docs-only 작업만 허용한다.
+- docs-only safe 작업은 대표가 허용한 경우에만 push할 수 있다.
+- 실제 홈 UI 구현은 별도 active-run 또는 PR 기반 작업으로 분리한다.
+- UI/디자인 구현은 스크린샷 확인 전 push/merge 금지다.
+
+## Completion Report Format
+
+- 선택한 작업.
+- 선택 이유.
+- 수정 파일.
+- 설계 내용.
+- 건드리지 않은 고위험 영역.
+- 검증 결과.
+- 커밋 해시.
+- push 여부.
+- 다음 추천 작업.
 
 ## Completion Criteria
 
-이 run은 다음이 모두 끝나야 완료로 볼 수 있다:
-
-- 시장 선택, `/crypto`, `/alts`, `/global`, `/global/assets`, `/news`, `/alerts`, `/journal`, `/learn`, `/pro`, account/settings/support성 화면이 boxless 원칙에 맞게 검토 또는 적용됨.
-- 각 UI 구현 PR마다 모바일/desktop 스크린샷 검수 완료.
-- 남아 있는 박스는 결제/인증/위험/폼/모달/critical/touch target 등 명확한 이유가 있는 경우로 제한됨.
-- 앱 기능, 데이터, 결제, 인증, Supabase, Android, FCM 로직 변경이 디자인 작업에 섞이지 않음.
+- `/coin` 홈이 답해야 할 4가지 질문이 문서화됨.
+- 홈 decision model, 대표 코인 개인화, BTC장 vs 알트장 판단 기준이 문서화됨.
+- 첫 구현 후보 1개가 선정됨.
+- 앱 코드, route, API, 결제, 인증, Supabase, Android, FCM 로직 변경이 없음.
