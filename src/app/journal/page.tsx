@@ -678,7 +678,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                       value={title}
                       onChange={(event) => setTitle(event.target.value)}
                       placeholder={market === "stocks" ? "예: NVDA 지지 반응 복기" : "예: BTC 눌림목 관찰 복기"}
-                      className="min-h-11 min-w-0 max-w-full rounded-ui-sm border border-ui-line bg-ui-panel px-3 text-[15px] font-semibold text-ui-text outline-none placeholder:text-ui-subtle focus:border-ui-brand sm:min-h-12 sm:px-4 sm:text-base"
+                      className="min-h-11 w-full min-w-0 max-w-full border-b border-ui-line bg-transparent px-0 text-[15px] font-semibold text-ui-text outline-none placeholder:text-ui-subtle focus:border-ui-brand sm:min-h-12 sm:text-base"
                     />
                   </label>
                   <label className="grid min-w-0 gap-2 text-ui-label font-semibold text-ui-subtle" htmlFor="journal-symbol">
@@ -688,7 +688,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                       value={symbol}
                       onChange={(event) => setSymbol(event.target.value)}
                       placeholder={market === "stocks" ? "예: SPY, NVDA, QQQ" : "예: BTC, ETH, SOL"}
-                      className="min-h-11 min-w-0 max-w-full rounded-ui-sm border border-ui-line bg-ui-panel px-3 text-[15px] font-semibold text-ui-text outline-none placeholder:text-ui-subtle focus:border-ui-brand sm:min-h-12 sm:px-4 sm:text-base"
+                      className="min-h-11 w-full min-w-0 max-w-full border-b border-ui-line bg-transparent px-0 text-[15px] font-semibold text-ui-text outline-none placeholder:text-ui-subtle focus:border-ui-brand sm:min-h-12 sm:text-base"
                     />
                   </label>
                 </div>
@@ -719,7 +719,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                         value={customRResult}
                         onChange={(event) => setCustomRResult(event.target.value)}
                         placeholder="예: 소폭 수익 / 약손실"
-                        className="mt-2 min-h-10 w-full min-w-0 max-w-full rounded-ui-sm border border-ui-line bg-ui-panel px-3 text-sm font-semibold text-ui-text outline-none placeholder:text-ui-subtle focus:border-ui-brand"
+                        className="mt-2 min-h-10 w-full min-w-0 max-w-full border-b border-ui-line bg-transparent px-0 text-sm font-semibold text-ui-text outline-none placeholder:text-ui-subtle focus:border-ui-brand"
                       />
                     ) : null}
                   </div>
@@ -756,7 +756,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                     value={nextFix}
                     onChange={(event) => setNextFix(event.target.value)}
                     placeholder="예: 다음 매매 전 손절 기준을 먼저 적고 확인하기"
-                    className="min-h-11 min-w-0 max-w-full rounded-ui-sm border border-ui-line bg-ui-panel px-3 text-[15px] font-semibold text-ui-text outline-none placeholder:text-ui-subtle focus:border-ui-brand sm:min-h-12 sm:px-4 sm:text-base"
+                    className="min-h-11 w-full min-w-0 max-w-full border-b border-ui-line bg-transparent px-0 text-[15px] font-semibold text-ui-text outline-none placeholder:text-ui-subtle focus:border-ui-brand sm:min-h-12 sm:text-base"
                   />
                 </label>
 
@@ -768,7 +768,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                     onChange={(event) => setMemo(event.target.value)}
                     placeholder="차트 상황이나 감정 상태를 짧게 남겨도 좋습니다."
                     rows={3}
-                    className="w-full min-w-0 max-w-full resize-none rounded-ui-sm border border-ui-line bg-ui-panel px-3 py-3 text-[15px] leading-7 text-ui-text outline-none placeholder:text-ui-subtle focus:border-ui-brand sm:px-4 sm:text-base"
+                    className="w-full min-w-0 max-w-full resize-none border-b border-ui-line bg-transparent px-0 py-2 text-[15px] leading-7 text-ui-text outline-none placeholder:text-ui-subtle focus:border-ui-brand sm:text-base"
                   />
                 </label>
 
