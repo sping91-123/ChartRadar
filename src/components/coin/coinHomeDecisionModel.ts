@@ -10,7 +10,7 @@ export interface CoinHomeBoardItem {
   quoteVolume: number;
 }
 
-export type CoinHomeDecisionState = "관망" | "조건 대기" | "추적 가능" | "위험 신호 증가";
+export type CoinHomeDecisionState = "관망" | "조건 대기" | "상방 추적 가능" | "하방 압력 우세" | "변동성 경계";
 export type CoinHomeDirection = "상방 우세" | "하방 압력" | "관망" | "변동성 주의";
 export type CoinHomeLeadership = "BTC 우세" | "알트 순환" | "혼조" | "위험 회피";
 
@@ -121,11 +121,11 @@ function riskLabel({
 }
 
 function nextConditionFor(state: CoinHomeDecisionState, leadership: CoinHomeLeadership, topRisk: string) {
-  if (state === "위험 신호 증가" && topRisk.includes("BTC")) return "BTC가 하락 압력을 멈추고 1시간 추세를 회복하는지 확인합니다.";
-  if (state === "위험 신호 증가") return `${topRisk} 관련 위험이 줄어드는지 먼저 확인합니다.`;
+  if (state === "하방 압력 우세") return "숏 관점은 반등 실패와 1시간 하락 추세 유지 여부를 확인합니다.";
+  if (state === "변동성 경계") return `${topRisk}가 완화되는지보다, 롱/숏 기준선이 흔들리지 않는지 먼저 확인합니다.`;
   if (leadership === "알트 순환") return "BTC가 무너지지 않는 상태에서 알트 거래대금이 유지되는지 확인합니다.";
   if (leadership === "BTC 우세") return "BTC 추세 유지와 알트 참여 확산 여부를 함께 확인합니다.";
-  if (state === "추적 가능") return "준비도와 리스크 조건이 유지되는지 관찰합니다.";
+  if (state === "상방 추적 가능") return "롱 관점은 눌림 후 상방 추세 유지와 거래대금 동반 여부를 확인합니다.";
   return "BTC 추세와 주요 이벤트 전후 변동성을 먼저 확인합니다.";
 }
 
@@ -186,11 +186,12 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
   const direction: CoinHomeDirection =
     derivatives >= 24 || overheat ? "변동성 주의" : weakTrend ? "하방 압력" : constructiveTrend ? "상방 우세" : "관망";
 
-  const state: CoinHomeDecisionState =
-    weakTrend || derivatives >= 24 || readinessScore < 30
-      ? "위험 신호 증가"
+  const state: CoinHomeDecisionState = weakTrend
+    ? "하방 압력 우세"
+    : derivatives >= 24 || overheat || readinessScore < 30
+      ? "변동성 경계"
       : readinessScore >= 70 && topRisk === "확인 조건 대기"
-        ? "추적 가능"
+        ? "상방 추적 가능"
         : readinessScore >= 50
           ? "조건 대기"
           : "관망";
@@ -212,7 +213,7 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
     topRisk,
     nextCondition: nextConditionFor(state, leadership, topRisk),
     reason,
-    scoreLabel: "매매 환경 준비도",
-    scoreDetail: "BTC 추세, 알트 참여, 공포탐욕, 파생 쏠림, 김프/환율 리스크를 합산한 0~100점 기준입니다."
+    scoreLabel: "방향 추적 준비도",
+    scoreDetail: "롱/숏 어느 쪽 조건이 더 선명한지 보는 0~100점입니다. 0점은 방향 근거보다 변동성이나 추세 이탈 확인이 우선이라는 뜻입니다."
   };
 }

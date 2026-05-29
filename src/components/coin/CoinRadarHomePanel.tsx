@@ -35,6 +35,7 @@ const representativeSymbols = ["BTC", "ETH", "XRP"] as const;
 const fundingSymbols = ["BTC", "ETH", "XRP"] as const;
 
 type ConclusionSegment = { text: string; tone?: "up" | "down" };
+type DirectionTone = "up" | "down";
 
 function clamp(value: number, min = 0, max = 100) {
   return Math.min(max, Math.max(min, value));
@@ -103,32 +104,26 @@ function riskFor(changePercent: number) {
 }
 
 function checkFor(changePercent: number) {
-  if (changePercent >= 2.5) return "BTC 추세 유지와 거래대금 동반 여부를 확인합니다.";
-  if (changePercent <= -2.5) return "저점 이탈이 멈추는지, 반등 거래량이 붙는지 확인합니다.";
+  if (changePercent >= 2.5) return "상방 추세 유지와 거래대금 동반 여부를 확인합니다.";
+  if (changePercent <= -2.5) return "하방 추세가 이어지는지, 반등 실패 여부를 확인합니다.";
   return "BTC 1시간 추세와 주요 이벤트 전후 변동성을 함께 봅니다.";
 }
 
 function conclusionSegments(decision: CoinHomeDecisionSummary | undefined): ConclusionSegment[] {
   if (!decision) return [{ text: "시장 데이터를 확인하는 중입니다." }];
-  if (decision.state === "위험 신호 증가") {
-    if (decision.direction === "하방 압력") {
-      return [
-        { text: "하방 압력", tone: "down" as const },
-        { text: "이 커져 신규 판단보다 방어적 확인이 우선입니다." }
-      ];
-    }
-    if (decision.direction === "상방 우세") {
-      return [
-        { text: "상승 흐름", tone: "up" as const },
-        { text: "은 있지만 위험 신호가 있어 추격보다 확인이 우선입니다." }
-      ];
-    }
-    return [{ text: "변동성이 커져 신규 판단보다 리스크 확인이 우선입니다." }];
-  }
-  if (decision.state === "추적 가능") {
+  if (decision.state === "하방 압력 우세") {
     return [
-      { text: "상승 조건", tone: "up" as const },
-      { text: "이 유지되면 추적 가능한 구간입니다." }
+      { text: "하방 압력", tone: "down" },
+      { text: "이 우세합니다. 숏 관점은 반등 실패와 추세 유지 확인이 먼저입니다." }
+    ];
+  }
+  if (decision.state === "변동성 경계") {
+    return [{ text: "변동성이 커져 롱/숏 모두 기준선 확인이 우선입니다." }];
+  }
+  if (decision.state === "상방 추적 가능") {
+    return [
+      { text: "상방 조건", tone: "up" },
+      { text: "이 우세합니다. 롱 관점은 눌림 후 추세 유지 확인이 먼저입니다." }
     ];
   }
   if (decision.state === "조건 대기") {
@@ -137,10 +132,33 @@ function conclusionSegments(decision: CoinHomeDecisionSummary | undefined): Conc
   return [{ text: "방향 근거가 부족해 관망이 우선입니다." }];
 }
 
-function conclusionToneClass(tone?: "up" | "down") {
+function conclusionToneClass(tone?: DirectionTone) {
   if (tone === "up") return "text-emerald-400";
   if (tone === "down") return "text-rose-400";
   return "";
+}
+
+function directionalTone(value: string): DirectionTone | null {
+  if (/상승|상방|반등|회복|돌파|롱/.test(value)) return "up";
+  if (/하락|하방|약세|이탈|실패|숏/.test(value)) return "down";
+  return null;
+}
+
+function HighlightDirectionalText({ text }: { text: string | undefined }) {
+  if (!text) return null;
+  const parts = text.split(/(상승|상방|반등|회복|돌파|롱|하락|하방|약세|이탈|실패|숏)/g);
+  return (
+    <>
+      {parts.map((part, index) => {
+        const tone = directionalTone(part);
+        return (
+          <span key={`${part}-${index}`} className={tone ? conclusionToneClass(tone) : undefined}>
+            {part}
+          </span>
+        );
+      })}
+    </>
+  );
 }
 
 function toneForMarket(score: number | null) {
@@ -251,7 +269,7 @@ export function CoinRadarHomePanel() {
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2 px-1 text-[11px] font-semibold text-ui-muted">
         <span className="min-w-0 truncate">{formatAnalysisUpdatedAt(state.data.analysisUpdatedAt)}</span>
         <ActionButton tone="ghost" className="min-h-7 shrink-0 px-0" onClick={() => void load()}>
@@ -260,7 +278,7 @@ export function CoinRadarHomePanel() {
         </ActionButton>
       </div>
 
-      <PanelCard variant="flat" padding="none" className="space-y-4 py-2">
+      <PanelCard variant="flat" padding="none" className="space-y-3 py-2">
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">오늘의 결론</p>
@@ -287,11 +305,15 @@ export function CoinRadarHomePanel() {
           <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-1">
             <div>
               <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">가장 큰 리스크</p>
-              <p className="mt-1 text-base font-semibold text-ui-text">{summary?.decision.topRisk}</p>
+              <p className="mt-1 text-base font-semibold text-ui-text">
+                <HighlightDirectionalText text={summary?.decision.topRisk} />
+              </p>
             </div>
             <div className="min-w-0">
               <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">다음 확인 조건</p>
-              <p className="mt-1 min-w-0 text-sm font-semibold leading-5 text-ui-text [overflow-wrap:anywhere] [word-break:keep-all]">{summary?.decision.nextCondition}</p>
+              <p className="mt-1 min-w-0 text-sm font-semibold leading-5 text-ui-text [overflow-wrap:anywhere] [word-break:keep-all]">
+                <HighlightDirectionalText text={summary?.decision.nextCondition} />
+              </p>
             </div>
           </div>
         </div>
@@ -317,7 +339,8 @@ export function CoinRadarHomePanel() {
                     {direction.label}
                   </StatusPill>
                   <p className="mt-2 text-sm leading-6 text-ui-muted">
-                    <span className="font-semibold text-ui-text">리스크</span> {riskFor(item?.changePercent ?? 0)} · <span className="font-semibold text-ui-text">확인</span> {checkFor(item?.changePercent ?? 0)}
+                    <span className="font-semibold text-ui-text">리스크</span> <HighlightDirectionalText text={riskFor(item?.changePercent ?? 0)} /> ·{" "}
+                    <span className="font-semibold text-ui-text">확인</span> <HighlightDirectionalText text={checkFor(item?.changePercent ?? 0)} />
                   </p>
                 </div>
                 <div className="text-left sm:text-right">
