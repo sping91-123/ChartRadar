@@ -3,22 +3,20 @@ import { AppFooter } from "@/components/AppFooter";
 import { CoinFuturesSwitch } from "@/components/coin/CoinFuturesSwitch";
 import { Header } from "@/components/Header";
 import { LiveMarketChart } from "@/components/LiveMarketChart";
-import { MacroTicker } from "@/components/MacroTicker";
 import { RadarTopNav } from "@/components/RadarTopNav";
 import { SetupScoutPanel } from "@/components/SetupScoutPanel";
 import { WatchlistPanel } from "@/components/WatchlistPanel";
 
 export default function AltsPage() {
   return (
-    <main className="min-h-screen px-3 pb-64 sm:px-5 sm:pb-44 lg:pb-36">
+    <main className="min-h-screen px-3 pb-28 sm:px-5 sm:pb-16">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 sm:gap-4">
         <Header market="crypto" />
         <RadarTopNav />
-        <MacroTicker compact />
         <CoinFuturesSwitch active="alts" />
+        <LiveMarketChart altOnly />
         <SetupScoutPanel excludeMajor />
         <WatchlistPanel />
-        <LiveMarketChart altOnly />
         <AppFooter />
       </div>
     </main>

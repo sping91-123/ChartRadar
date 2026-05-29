@@ -1441,12 +1441,21 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
       id="basic-coins"
       className={
         isMajorScreen
-          ? "scroll-mt-24 pb-28 text-ui-text sm:pb-28"
+          ? "scroll-mt-24 pb-8 text-ui-text"
           : altOnly
-            ? "scroll-mt-24 border-y border-ui-line py-5 pb-32 text-ui-text sm:py-6 sm:pb-32"
-          : "scroll-mt-24 border-y border-ui-line py-5 pb-28 sm:py-6 sm:pb-28"
+            ? "scroll-mt-24 border-y border-ui-line py-5 pb-8 text-ui-text sm:py-6"
+          : "scroll-mt-24 border-y border-ui-line py-5 pb-8 sm:py-6"
       }
     >
+      <CryptoControlBar
+        timeframes={modeTimeframes}
+        activeTimeframe={activeTimeframe}
+        onTimeframeChange={setActiveTimeframe}
+        modes={radarProfileOptions}
+        activeMode={radarProfile}
+        onModeChange={setRadarProfile}
+      />
+
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-3">
@@ -2968,14 +2977,6 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           ) : null}
         </div>
       </div>
-      <CryptoControlBar
-        timeframes={modeTimeframes}
-        activeTimeframe={activeTimeframe}
-        onTimeframeChange={setActiveTimeframe}
-        modes={radarProfileOptions}
-        activeMode={radarProfile}
-        onModeChange={setRadarProfile}
-      />
     </section>
   );
 }
