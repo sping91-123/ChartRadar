@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { CalendarClock, Coins, Crown, History, Newspaper, Radar, TrendingUp } from "lucide-react";
+import { CalendarClock, Coins, Crown, History, Home, Newspaper, Radar, TrendingUp } from "lucide-react";
 
 type MarketScope = "crypto" | "stocks" | "all";
 
@@ -16,9 +16,9 @@ type NavItem = {
 };
 
 const cryptoNavItems: NavItem[] = [
-  { label: "선물", icon: Radar, href: "/crypto", match: ["/crypto"] },
+  { label: "홈", icon: Home, href: "/coin", match: ["/coin"] },
   { label: "현물", icon: Coins, href: "/spot", match: ["/spot"] },
-  { label: "알트", icon: Coins, href: "/alts", match: ["/alts"] },
+  { label: "선물", icon: Radar, href: "/crypto", match: ["/crypto", "/alts"] },
   { label: "매크로", icon: Newspaper, href: "/news?market=crypto", match: ["/news"], market: "crypto" },
   { label: "복기", icon: History, href: "/journal?market=crypto", match: ["/journal"], market: "crypto" }
 ];

@@ -1,19 +1,17 @@
 import { AppFooter } from "@/components/AppFooter";
-import { CoinFuturesSwitch } from "@/components/coin/CoinFuturesSwitch";
+import { CoinRadarHomePanel } from "@/components/coin/CoinRadarHomePanel";
 import { Header } from "@/components/Header";
-import { LiveMarketChart } from "@/components/LiveMarketChart";
 import { MacroTicker } from "@/components/MacroTicker";
 import { RadarTopNav } from "@/components/RadarTopNav";
 
-export function MajorsApp() {
+export default function CoinHomePage() {
   return (
-    <main className="min-h-screen px-3 pb-64 sm:px-5 sm:pb-40 lg:pb-32">
+    <main className="min-h-screen px-3 pb-28 sm:px-5 sm:pb-16">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-5">
         <Header market="crypto" />
-        <RadarTopNav />
+        <RadarTopNav market="crypto" />
         <MacroTicker compact />
-        <CoinFuturesSwitch active="major" />
-        <LiveMarketChart majorOnly />
+        <CoinRadarHomePanel />
         <AppFooter />
       </div>
     </main>

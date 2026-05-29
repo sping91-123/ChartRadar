@@ -21,7 +21,8 @@ Global Radar는 삭제하지 않는다.
 
 ## Coin Radar 기준 route
 
-- 실제 Coin Radar 기준 route는 `/crypto`다.
+- Coin Radar 첫 진입 화면은 `/coin` 홈으로 둔다.
+- 기존 `/crypto`는 BTC/ETH 중심 선물 메이저 레이더로 유지한다.
 - `/majors`는 `/crypto` 호환 또는 redirect로만 본다.
 - 기존 `/alts`는 알트코인 레이더로 유지하되, 향후 Coin Radar 내부 선물 탭의 알트 하위 화면으로 재배치할 수 있다.
 - `/news?market=crypto`, `/alerts?market=crypto`, `/journal?market=crypto`는 Coin Radar 내부 흐름과 연결한다.
@@ -83,7 +84,7 @@ Global Radar는 삭제하지 않는다.
 
 | 탭 | 역할 | 후보 route | MVP 범위 |
 | --- | --- | --- | --- |
-| 홈 | 대표 코인 상태와 시장 체력 요약 | `/crypto` 또는 `/home` | BTC 중심 시장 상태, 대표 코인 카드, 리스크, 다음 확인 조건 |
+| 홈 | 대표 코인 상태와 시장 체력 요약 | `/coin` | BTC 중심 시장 상태, 대표 코인 카드, 리스크, 다음 확인 조건 |
 | 현물 | 국내 KRW 현물 후보 탐색 | `/spot` | 업비트/빗썸 KRW 기준 거래대금, 상승률, 과열/눌림 후보 |
 | 선물 | 기존 BTC/ETH와 알트 선물 레이더 | `/crypto` 내부 또는 `/alts` 연결 | 메이저와 알트 구조 분리, 기존 분석 기능 보존 |
 | 매크로 | 코인 판단에 필요한 외부 변수 요약 | `/macro` 또는 `/news?market=crypto` | 공포탐욕, 도미넌스, 김프, 환율, 펀딩비, 주요 이벤트 |
@@ -97,7 +98,7 @@ Global Radar는 삭제하지 않는다.
 
 | 탭 | 권장 route | 초기 연결 방식 | 비고 |
 | --- | --- | --- | --- |
-| 홈 | `/crypto` | 기존 Coin Radar 기준 route 유지 | Coin Radar 홈 MVP가 준비되기 전까지 기존 BTC/ETH 레이더를 유지 |
+| 홈 | `/coin` | Coin Radar 첫 진입 홈 | 대표 코인과 BTC 기준 시장 체력 요약 |
 | 현물 | `/spot` | 신규 route 후보 | 업비트/빗썸 KRW 현물 레이더 전용 |
 | 선물 | `/crypto` 내부 segment 또는 `/alts` | 초기에는 `/crypto`와 `/alts` 기존 route 연결 | 메이저/알트 구분을 탭 내부에서 명확히 함 |
 | 매크로 | `/macro` 또는 `/news?market=crypto` | 초기에는 `/news?market=crypto` 재사용 | 코인 판단용 압축 매크로만 표시 |
@@ -106,12 +107,13 @@ Global Radar는 삭제하지 않는다.
 ### 단계별 route 전략
 
 1. 0단계: 기존 route 보존.
-   - `/crypto`는 Coin Radar 기준 route다.
+   - `/coin`은 Coin Radar 홈 route다.
+   - `/crypto`는 BTC/ETH 선물 메이저 route다.
    - `/alts`는 알트 레이더로 유지한다.
    - `/news?market=crypto`, `/journal?market=crypto`, `/alerts?market=crypto`를 그대로 사용한다.
 2. 1단계: 하단 탭 UI만 기존 route에 연결.
-   - 홈은 `/crypto`.
-   - 선물 메이저는 `/crypto`, 선물 알트는 `/alts`.
+   - 홈은 `/coin`.
+   - 선물 탭은 `/crypto`로 들어가며 내부에서 메이저 `/crypto`와 알트 `/alts`를 전환한다.
    - 매크로는 `/news?market=crypto`.
    - 복기는 `/journal?market=crypto`.
 3. 2단계: 신규 route 후보 검증.
@@ -123,7 +125,8 @@ Global Radar는 삭제하지 않는다.
 
 ### `/crypto`와 `/majors` 원칙
 
-- `/crypto`는 실제 Coin Radar 기준 route다.
+- `/coin`은 Coin Radar 홈 진입 route다.
+- `/crypto`는 BTC/ETH 선물 메이저 레이더로 유지한다.
 - `/majors`는 `/crypto` 호환/redirect로만 유지한다.
 - 새 하단 탭에서 `/majors`를 직접 노출하지 않는다.
 - 기존 push targetPath가 `/crypto`를 가리키는 경우 당장 바꾸지 않는다.

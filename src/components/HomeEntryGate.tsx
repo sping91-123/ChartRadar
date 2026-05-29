@@ -16,7 +16,7 @@ const marketEntries = [
   {
     title: "코인 레이더",
     scope: "홈 · 현물 · 선물 · 매크로 · 복기",
-    href: "/crypto",
+    href: "/coin",
     icon: Bitcoin,
     accent: "text-blue-300"
   },
