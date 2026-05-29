@@ -1215,3 +1215,101 @@ Recommended focus:
 2. Keep the implementation branch-based.
 3. Require screenshots before merge.
 4. Keep representative coin personalization as a later run.
+
+## Post-Merge QA: Decision Summary Polish
+
+Date:
+
+- 2026-05-29
+
+Run closure:
+
+- PR #2 completed the first `/coin` home decision summary implementation.
+- The current polish run is deferred because the remaining polish work is not required for the current release.
+- No additional app implementation was performed as part of this closure.
+- Backlog retained:
+  - mobile sentence length adjustment.
+  - reduce duplicate feeling between the top decision summary and the existing `Coin Home` section.
+  - clean up desktop right-side spacing.
+  - polish the priority order of readiness, leadership, risk, and next confirmation condition.
+
+Route and screenshots:
+
+- `/coin` 360px: `docs/qa-screenshots/coin-post-merge-qa-360.png`
+- `/coin` desktop: `docs/qa-screenshots/coin-post-merge-qa-desktop.png`
+
+Scope:
+
+- Documentation-only post-merge QA for the current `/coin` decision summary.
+- Checked `CoinRadarHomePanel`, the top `오늘의 결론` block, the existing `코인 홈` section, representative coin state, BTC market strength, and funding sections.
+- No app code, route, API, billing, auth, Supabase, Android, FCM, or production behavior was changed.
+
+### 1. Mobile Text Length And Clipping
+
+- At 360px, there was no horizontal overflow in the captured viewport.
+- The top conclusion copy wraps cleanly, but the block is tall for a first decision area.
+- The sentence "현재 데이터로 관망, 조건 대기, 추적 가능, 리스크 확대 중 어디에 가까운지 먼저 정리합니다." is readable but long for the first screen.
+- The next condition sentence is short enough, but "BTC 추세 이탈가 완화되는지" reads awkwardly and should be corrected in polish.
+- The fixed bottom navigation overlays the lower part of the first viewport in the 360px screenshot. This makes the transition into the existing `코인 홈` block feel visually cramped.
+- Representative coin cards are readable, but the repeated sentence "리스크 방향 확인 대기 · 확인 BTC 1시간 추세와 주요 이벤트 전후 변동성을 함께 봅니다." is long and repeats across BTC, ETH, and XRP.
+- BTC market strength rows remain readable, but the BTC trend description is too long for a compact home scan.
+- Funding descriptions are direction-safe, but each funding row has paragraph-length copy. This is acceptable below the fold, not ideal if the page is meant to be scanned quickly.
+
+### 2. Duplicate Feeling Between `오늘의 결론` And Existing `코인 홈`
+
+- `오늘의 결론` now answers the intended top-level decision question.
+- The following `코인 홈` section still repeats a similar role: it has status labels, a risk tone, and BTC-based summary text.
+- On mobile, the user sees `오늘의 결론` and then immediately another top-summary style block. The hierarchy reads as two conclusions rather than conclusion first, details second.
+- The existing `코인 홈` section should either become a lighter context strip or have its status labels reduced so it does not compete with the new decision summary.
+
+### 3. Desktop Right-Side Space
+
+- The desktop screenshot shows a major right-side layout problem: the main content appears left-weighted while a clipped repeated page area is visible on the far right.
+- The issue is visible around the top conclusion, `코인 홈`, representative coin rows, and bottom navigation.
+- The captured desktop state had no reported horizontal overflow from the document metrics, so this may be caused by an app shell, viewport transform, fixed-width container, or duplicated mobile shell behavior rather than ordinary body overflow.
+- This should be a primary polish investigation before visual approval.
+
+### 4. Priority Of Readiness, Leadership, Risk, And Next Condition
+
+- The top block correctly puts the decision state before detail.
+- Readiness currently shows `0점`, which is clear but visually dominant. If the score is not a trading signal, the surrounding label must keep emphasizing environment readiness.
+- Direction and leadership are compact, but the priority order can be sharper:
+  1. decision state.
+  2. top risk.
+  3. next confirmation condition.
+  4. readiness score.
+  5. direction and leadership labels.
+- In the current visual order, the `0점` score can draw more attention than the actual risk and confirmation condition.
+- `가장 큰 리스크` and `다음 확인 조건` are the strongest decision-support elements and should stay near the top of the block.
+
+### 5. Parts To Keep
+
+- The new `오늘의 결론` block is directionally useful and should remain the first content section.
+- The wording stays in decision-support territory. It does not use buy/sell recommendation copy.
+- The labels `리스크 확대`, `방향성 하방 압력`, and `주도 혼조` are concise.
+- The representative coin section remains useful below the top conclusion because it separates BTC, ETH, and XRP.
+- BTC market strength still provides useful evidence below the first screen.
+- Funding copy correctly frames funding as positioning context, not direction instruction.
+
+### 6. Polish Candidates
+
+- Shorten the top description to one compact sentence.
+- Fix the grammar in "BTC 추세 이탈가 완화되는지".
+- Reduce the visual weight of `0점` or place it after risk and confirmation.
+- Make `가장 큰 리스크` and `다음 확인 조건` the primary two-row checklist in the top block.
+- Convert the existing `코인 홈` section into supporting context instead of a second summary card.
+- Shorten repeated representative coin risk copy and avoid repeating the same sentence across all three cards when the market-level condition is identical.
+- Compress BTC trend copy in the BTC market strength section.
+- Investigate the desktop duplicated/right-side layout before any merge or visual approval.
+- Check whether the fixed bottom navigation should reserve more bottom padding on 360px mobile.
+
+### 7. Forbidden Scope For Polish
+
+- Do not add a new route.
+- Do not add a new API.
+- Do not change billing, RevenueCat, planId, productId, entitlement, or Pro gating.
+- Do not change Supabase, auth, session, admin, Android, Capacitor, FCM, or push-cron behavior.
+- Do not add Upbit/Bithumb breadth, ETH/BTC fetch, or representative coin personalization in this polish step.
+- Do not add account sync or localStorage selector behavior.
+- Do not use buy/sell/long/short entry instruction wording.
+- Do not hide sensitive or Pro-only detail only through UI if the data should be gated before delivery.

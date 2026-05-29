@@ -4,6 +4,27 @@
 
 - `coin-home-decision-polish-run`
 
+## Run State
+
+- Status: `DEFERRED`
+- Decision date: 2026-05-29
+- Reason: PR #2 already completed the first `/coin` home decision summary implementation. The remaining polish items are not required for the current release and are deferred to backlog.
+- Implementation status: `/coin` home decision summary first implementation is complete.
+- Current run handling: closed without additional app implementation.
+
+## Deferred Backlog
+
+- Mobile sentence length adjustment.
+- Reduce duplicate feeling between the top decision summary and the existing `Coin Home` section.
+- Clean up desktop right-side spacing.
+- Polish the priority order of readiness, leadership, risk, and next confirmation condition.
+
+## Closure Notes
+
+- App code changes are intentionally forbidden for this closure.
+- Additional polish should be reopened as a separate backlog item or future active run.
+- High-risk areas remain untouched: billing, auth, Supabase, Android, FCM, push-cron, production migration.
+
 ## Purpose
 
 - PR #2로 반영된 `/coin` 홈 decision summary를 1차 적용 상태에서 끝내지 않고, 모바일/데스크톱 시각 문제와 중복 문구를 정리한다.
@@ -44,9 +65,9 @@
 
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TODO | `/coin` decision summary post-merge QA | Coin Home / QA | LOW | PR #2 반영 후 `/coin` 홈 화면의 모바일/데스크톱 문제를 문서화한다. | 코드 수정 금지. 앱 코드 변경 금지. | `git diff --check` |
-| 2 | TODO | `/coin` decision summary polish 적용 | Coin Home / UI Polish | MEDIUM | 모바일 문장 길이, 상단 결론과 기존 `코인 홈` 섹션 중복감, 데스크톱 공백, 준비도/주도/리스크/다음 확인 조건 우선순위를 정리한다. | 신규 API 금지. route 변경 금지. Supabase/auth/billing/Android/FCM 변경 금지. 대표 코인 선택 UI 구현 금지. Upbit/Bithumb breadth 구현 금지. ETH/BTC 신규 fetch 금지. 매수/매도/롱/숏 지시 문구 금지. main 직접 push 금지. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run lint`; `npm.cmd run build`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:all`; `/coin` 360px screenshot; `/coin` desktop screenshot |
-| 3 | TODO | polish 결과 문서화 | Coin Home / Docs | LOW | `/coin` decision summary polish 결과와 다음 후보를 문서화한다. | 앱 코드 수정 금지. | `git diff --check` |
+| 1 | DONE | `/coin` decision summary post-merge QA | Coin Home / QA | LOW | PR #2 반영 후 `/coin` 홈 화면의 모바일/데스크톱 문제를 문서화한다. | 코드 수정 금지. 앱 코드 변경 금지. | `git diff --check` |
+| 2 | DEFERRED | `/coin` decision summary polish 적용 | Coin Home / UI Polish | MEDIUM | 모바일 문장 길이, 상단 결론과 기존 `코인 홈` 섹션 중복감, 데스크톱 공백, 준비도/주도/리스크/다음 확인 조건 우선순위를 정리한다. | 신규 API 금지. route 변경 금지. Supabase/auth/billing/Android/FCM 변경 금지. 대표 코인 선택 UI 구현 금지. Upbit/Bithumb breadth 구현 금지. ETH/BTC 신규 fetch 금지. 매수/매도/롱/숏 지시 문구 금지. main 직접 push 금지. | Backlog |
+| 3 | DEFERRED | polish 결과 문서화 | Coin Home / Docs | LOW | `/coin` decision summary polish 결과와 다음 후보를 문서화한다. | 앱 코드 수정 금지. | Backlog |
 
 ## Push / PR Policy
 
