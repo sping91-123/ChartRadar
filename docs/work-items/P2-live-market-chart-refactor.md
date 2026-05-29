@@ -1,6 +1,6 @@
 # P2 LiveMarketChart 컴포넌트 분리
 
-- 상태: `IN_PROGRESS`
+- 상태: `DONE`
 - 담당방: 코인 레이더 /crypto
 - 인텔리전스: 높음
 - 우선순위: P2
@@ -47,6 +47,6 @@
 
 ## 현재 남은 분리 후보
 
-- `LiveMarketChart.tsx`는 아직 약 3,000라인 이상이며 orchestration, fetch/data state, chart lifecycle, 일부 CTA/저널 저장 흐름이 남아 있다.
-- 다음 작은 후보는 chart lifecycle을 건드리지 않는 순수 표시 helper 추가 분리 또는 CTA helper 분리다.
-- fetch hook 분리, lightweight-charts lifecycle 분리, Basic/Pro gating 정책 변경은 별도 승인 전에는 진행하지 않는다.
+- `LiveMarketChart.tsx`는 약 2,800라인대로 줄었고, 타입/상수/data helper/chart shell/control shell/summary shell/Pro gate/저널 payload/알트 사용량/브리핑 하이라이트/초보자 안내/차트 보조 helper가 분리되었다.
+- 현재 작업은 안전한 표시 helper와 shell 분리 범위에서 완료 처리한다.
+- fetch hook 분리, lightweight-charts lifecycle 분리, Basic/Pro gating 정책 변경은 별도 고위험 작업으로 새 work item을 만들기 전에는 진행하지 않는다.

@@ -21,3 +21,4 @@
 | P2 | 지표 안내 화면을 카테고리/상세 진입 구조로 개편 | 레이더 판단 엔진 | 중간 | 카테고리 카드와 용어별 아코디언 구조 적용 |
 | P2 | 작업 큐 포맷 개선 | 개발 메인 | 중간 | `docs/work-queue.md`를 인덱스화하고 활성 작업과 완료 이력을 `docs/work-items/`로 분리. 완료 커밋: `Reorganize work queue documentation` |
 | P1 | pushAlertScanner 구조 분리 | 알림 시스템 | 높음 | 타입, threshold, eligibility, entitlement, preference, duplicate guard, optional source, diagnostics, target, event builder, send, cooldown, scanner, preset, personalization, preset event, generic event helper 분리 완료. 최신 완료 커밋: `f847a7f` |
+| P2 | LiveMarketChart 컴포넌트 분리 | 코인 레이더 /crypto | 높음 | 타입/상수/data helper/chart shell/control shell/summary shell/Pro gate/저널 payload/알트 사용량/브리핑 하이라이트/초보자 안내/차트 보조 helper 분리 완료. 최신 완료 커밋: `1295647` |
