@@ -1,6 +1,6 @@
 # P1 pushAlertScanner 구조 분리
 
-- 상태: `IN_PROGRESS`
+- 상태: `DONE`
 - 담당방: 알림 시스템
 - 인텔리전스: 높음
 - 우선순위: P1
@@ -31,7 +31,7 @@
 - preset event helper 분리 완료: 사용자 저장 조건과 스캔 결과를 watchlist/global preset 이벤트로 변환하는 로직을 `src/lib/server/push/presetEvents.ts`로 분리했습니다. 관련 커밋은 이 문서 갱신 커밋입니다.
 - generic event helper 분리 완료: crypto/global market scout, global composite, optional source event 결합과 limit skipped counter 생성을 `src/lib/server/push/genericEvents.ts`로 분리했습니다. 관련 커밋은 이 문서 갱신 커밋입니다.
 - 현재 `src/lib/server/push/` 아래에는 `types`, `thresholds`, `eligibility`, `entitlements`, `preferences`, `duplicateGuard`, `sourceResults`, `diagnostics`, `targets`, `eventBuilders`, `genericEvents`, `sendPush`, `cooldown`, `presets`, `personalization`, `presetEvents`, `scanners/`가 분리되어 있습니다.
-- 다음 작은 후보: user loop/orchestration helper를 동작 변경 없이 진행합니다. 발송 정책, `push_alert_events` DB 기록, 중복 방지 event key, 권한 판정, threshold 정책은 변경하지 않습니다.
+- 완료 판단: `pushAlertScanner.ts`는 데이터 조회, 사용자별 후보 결합, gate 적용, dry-run/실발송 분기, 최종 diagnostics 조립만 담당하는 얇은 오케스트레이터로 남겼습니다. 사용자 루프 자체는 발송 정책, `push_alert_events` DB 기록, 중복 방지 event key, 권한 판정, threshold 정책 순서를 보존하기 위해 더 분리하지 않습니다.
 
 ## 검증 기준
 

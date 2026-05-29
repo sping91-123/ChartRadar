@@ -20,3 +20,4 @@
 | P2 | 글로벌 상단 탭 정렬 균일화 | /Global | 낮음~중간 | 모바일 글로벌 4탭 균등 정렬 적용. `7b14216` |
 | P2 | 지표 안내 화면을 카테고리/상세 진입 구조로 개편 | 레이더 판단 엔진 | 중간 | 카테고리 카드와 용어별 아코디언 구조 적용 |
 | P2 | 작업 큐 포맷 개선 | 개발 메인 | 중간 | `docs/work-queue.md`를 인덱스화하고 활성 작업과 완료 이력을 `docs/work-items/`로 분리. 완료 커밋: `Reorganize work queue documentation` |
+| P1 | pushAlertScanner 구조 분리 | 알림 시스템 | 높음 | 타입, threshold, eligibility, entitlement, preference, duplicate guard, optional source, diagnostics, target, event builder, send, cooldown, scanner, preset, personalization, preset event, generic event helper 분리 완료. 최신 완료 커밋: `f847a7f` |
