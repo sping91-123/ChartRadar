@@ -518,3 +518,39 @@ Coin Radar UX 재구성은 Pro gating을 약화시키면 안 된다.
 - Basic/Pro gating 및 판단 로직 변경 없음.
 - chart rendering, API fetch 변경 없음.
 - `/global` 화면 변경 없음.
+
+## 제품 구조 최신 결정
+
+ChartRadar는 계속 Coin Radar와 Global Radar를 동등한 상위 시장 모드로 유지한다.
+
+### 유지 원칙
+
+- Global Radar를 버리지 않는다.
+- Global Radar를 코인 보조 매크로로 격하하지 않는다.
+- Global Radar는 해외주식/해외선물 사용자용 독립 레이더로 유지한다.
+- 단기 개선 우선순위는 Coin Radar UX와 전체 boxless 디자인 완성이다.
+
+### Coin Radar 내부 구조 후보
+
+Coin Radar는 홈 / 현물 / 선물 / 매크로 / 복기 구조를 기준으로 검토한다.
+
+- 홈: 대표 코인의 방향성, 점수, 리스크, 다음 확인 조건을 즉시 보여준다.
+- 현물: 업비트/빗썸 KRW 현물 시장에서 거래대금 급증, 과열, 눌림, 관심 후보를 판단 보조 문구로 정리한다.
+- 선물: 기존 `/crypto`와 `/alts`를 메이저 BTC/ETH와 알트 구조로 자연스럽게 묶는다.
+- 매크로: 코인 판단 보조용 압축 신호만 제공한다.
+- 복기: 기존 `/journal` 역할을 유지한다.
+
+RSI, 스토캐스틱, 트렌드는 선택 코인이 아니라 BTC 기준 시장 체력 지표로 다룬다.
+
+### Global Radar 강화 방향
+
+Global Radar는 이후 별도 축으로 강화한다.
+
+- 미국장 30초 체크.
+- Risk-On / Neutral / Risk-Off.
+- NQ/ES 방향 압력.
+- 주도 섹터와 주도 종목.
+- VIX, 금리, 달러 리스크.
+- CPI/FOMC 등 이벤트 전후 변동성 경고.
+
+Global Radar는 Coin Radar 내부 매크로와 목적이 다르므로 route, 문구, BM 구조에서 독립성을 유지한다.

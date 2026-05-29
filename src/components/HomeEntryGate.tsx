@@ -11,90 +11,34 @@ import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 const skipSplashAfterAuthKey = "chartRadar.skipSplashAfterAuth.v1";
 const splashDurationMs = 850;
-const brandLetters = Array.from("Chart Radar");
 
 const marketEntries = [
   {
     title: "코인 레이더",
-    scope: "코인 시장",
+    scope: "홈 · 현물 · 선물 · 매크로 · 복기",
     href: "/crypto",
     icon: Bitcoin,
     accent: "text-blue-300"
   },
   {
     title: "글로벌 레이더",
-    scope: "해외주식·선물",
+    scope: "미국장 · 지수선물 · 자산 · 일정",
     href: "/global",
     icon: TrendingUp,
     accent: "text-slate-300"
   }
 ] as const;
 
-function BrandMark({ size = "default" }: { size?: "default" | "large" }) {
-  const frameSize = size === "large" ? "h-20 w-20" : "h-12 w-12 sm:h-14 sm:w-14";
-
-  return (
-    <div className={`grid shrink-0 place-items-center rounded-xl border border-ui-line bg-ui-panel text-2xl font-semibold text-ui-brand ${frameSize}`}>
-      C
-    </div>
-  );
-}
-
-function SplashBrandMark() {
-  return (
-    <div className="grid h-24 w-24 place-items-center rounded-2xl border border-ui-line bg-ui-panel text-4xl font-semibold text-ui-brand sm:h-28 sm:w-28" aria-hidden>
-      C
-    </div>
-  );
-}
-
-function AnimatedBrandText() {
-  const [isRevealed, setIsRevealed] = useState(false);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setIsRevealed(true), 80);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  return (
-    <h1 className="relative inline-block text-3xl font-black tracking-tight text-white sm:text-4xl" aria-label="Chart Radar">
-      <span
-        aria-hidden
-        className="absolute top-0 inline-block transition-all duration-300 ease-out"
-        style={{
-          left: isRevealed ? "0" : "50%",
-          transform: isRevealed ? "translateX(0)" : "translateX(-50%)"
-        }}
-      >
-        C
-      </span>
-      {brandLetters.map((letter, index) => (
-        <span
-          key={`${letter}-${index}`}
-          aria-hidden
-          className="inline-block transition-all duration-300 ease-out"
-          style={{
-            opacity: index === 0 ? 0 : isRevealed ? 1 : 0,
-            transform: index === 0 || isRevealed ? "translateY(0)" : "translateY(0.35rem)",
-            transitionDelay: index === 0 ? "0ms" : `${60 + index * 28}ms`,
-            width: letter === " " ? "0.32em" : undefined
-          }}
-        >
-          {letter}
-        </span>
-      ))}
-    </h1>
-  );
-}
-
 function SplashScreen() {
   return (
-    <main className="grid h-[100dvh] max-h-[100dvh] place-items-center overflow-hidden px-4">
-      <section className="flex -translate-y-[3dvh] flex-col items-center gap-5 text-center">
-        <SplashBrandMark />
-        <div>
-          <p className="mb-2 text-sm font-bold text-slate-300">근거를 포착해, 방향을 더 선명하게</p>
-          <AnimatedBrandText />
+    <main className="grid h-[100dvh] max-h-[100dvh] place-items-center overflow-hidden bg-ui-canvas px-6">
+      <section className="flex -translate-y-[2dvh] flex-col items-center text-center">
+        <h1 className="text-[2rem] font-semibold tracking-tight text-ui-text sm:text-4xl" aria-label="Chart Radar">
+          ChartRadar
+        </h1>
+        <p className="mt-2 text-sm font-medium text-ui-muted">시장 흐름을 정리하는 중</p>
+        <div className="mt-7 h-px w-28 overflow-hidden bg-ui-line" aria-hidden>
+          <span className="splash-progress-line block h-full w-10 bg-ui-brand" />
         </div>
       </section>
     </main>
@@ -141,13 +85,10 @@ function MarketSelector() {
       <section className="max-h-full w-full max-w-5xl -translate-y-[6dvh] overflow-visible sm:translate-y-0">
         <div className="flex min-h-0 flex-col items-center gap-5 sm:gap-8 lg:gap-10">
           <header className="flex w-full shrink-0 flex-col items-center gap-1.5 text-center sm:gap-4">
-            <div className="flex items-center justify-center gap-2 sm:gap-3">
-              <BrandMark />
-              <h1 className="text-xl font-black tracking-tight text-white sm:text-4xl">Chart Radar</h1>
-            </div>
+            <h1 className="text-xl font-semibold tracking-tight text-ui-text sm:text-4xl">ChartRadar</h1>
 
-            <p className="max-w-2xl text-xs font-semibold leading-snug text-slate-200 sm:text-base sm:leading-relaxed">
-              오늘 시장의 방향성과 핵심 대응 포인트를 한눈에 제공합니다.
+            <p className="max-w-2xl text-xs font-medium leading-snug text-ui-muted sm:text-base sm:leading-relaxed">
+              코인과 글로벌 시장을 각각 독립 레이더로 확인합니다.
             </p>
           </header>
 

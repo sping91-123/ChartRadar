@@ -453,6 +453,19 @@ html.theme-light body {
   }
 }
 
+@keyframes splash-progress {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
+.splash-progress-line {
+  animation: splash-progress 1.1s ease-in-out infinite;
+}
+
 .radar-mark {
   position: relative;
   isolation: isolate;
