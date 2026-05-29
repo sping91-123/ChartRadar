@@ -17,7 +17,7 @@ export default function NewsPage({ searchParams }: { searchParams?: { market?: s
           market={market}
           afterBriefing={
             <div id="macro-calendar" className="scroll-mt-16 sm:scroll-mt-20">
-              <PanelCard variant="flat" padding="none" className="space-y-2 border-t border-ui-line py-4">
+              <PanelCard variant="flat" padding="none" className="space-y-2 py-3">
                 <SectionHeader
                   eyebrow="매크로 일정"
                   title={market === "stocks" ? "이번 주 주요 이벤트" : "이번 주 주요 매크로 일정"}

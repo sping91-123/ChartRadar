@@ -365,10 +365,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
     const href = market === "stocks" ? "/news?market=global#macro-calendar" : "/news?market=crypto#macro-calendar";
 
     return (
-      <Link
-        href={href}
-        className="group flex min-h-8 items-center gap-2 bg-transparent px-1 py-1 transition hover:bg-white/[0.025]"
-      >
+      <Link href={href} className="group flex min-h-8 items-center gap-2 bg-transparent px-1 py-0.5 transition hover:bg-white/[0.025]">
         <div className={`inline-flex shrink-0 items-center gap-1.5 py-0.5 text-[11px] font-black ${isReleased ? "text-signal-warning" : "text-accent-blue"}`}>
           <Radio size={12} aria-hidden />
           {eventKind}

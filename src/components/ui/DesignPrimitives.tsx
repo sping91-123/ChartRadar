@@ -15,10 +15,10 @@ function cx(...classes: Array<string | false | null | undefined>) {
 
 const surfaceVariantClass: Record<SurfaceVariant, Record<Tone, string>> = {
   card: {
-    panel: "border-y border-ui-line bg-transparent text-ui-text shadow-none",
-    elevated: "border-y border-ui-lineStrong bg-transparent text-ui-text shadow-none",
-    inset: "border-y border-ui-line bg-transparent text-ui-muted shadow-none",
-    critical: "border-y border-amber-400/28 bg-transparent text-ui-risk shadow-none"
+    panel: "bg-transparent text-ui-text shadow-none",
+    elevated: "bg-transparent text-ui-text shadow-none",
+    inset: "bg-transparent text-ui-muted shadow-none",
+    critical: "bg-transparent text-ui-risk shadow-none"
   },
   flat: {
     panel: "bg-transparent text-ui-text",
@@ -27,16 +27,16 @@ const surfaceVariantClass: Record<SurfaceVariant, Record<Tone, string>> = {
     critical: "bg-transparent text-ui-risk"
   },
   report: {
-    panel: "border-y border-ui-line bg-transparent text-ui-text",
-    elevated: "border-y border-ui-lineStrong bg-transparent text-ui-text",
-    inset: "border-y border-ui-line bg-transparent text-ui-muted",
-    critical: "border-y border-amber-400/28 bg-transparent text-ui-risk"
+    panel: "bg-transparent text-ui-text",
+    elevated: "bg-transparent text-ui-text",
+    inset: "bg-transparent text-ui-muted",
+    critical: "bg-transparent text-ui-risk"
   },
   list: {
-    panel: "divide-y divide-ui-line bg-transparent text-ui-text",
-    elevated: "divide-y divide-ui-lineStrong bg-transparent text-ui-text",
-    inset: "divide-y divide-ui-line bg-transparent text-ui-muted",
-    critical: "divide-y divide-amber-400/24 bg-transparent text-ui-risk"
+    panel: "bg-transparent text-ui-text",
+    elevated: "bg-transparent text-ui-text",
+    inset: "bg-transparent text-ui-muted",
+    critical: "bg-transparent text-ui-risk"
   }
 };
 
@@ -154,7 +154,7 @@ export function DataRow({
   className?: string;
 }) {
   return (
-    <div className={cx("flex min-w-0 items-start justify-between gap-3 border-t border-ui-line py-2.5 first:border-t-0", className)}>
+    <div className={cx("flex min-w-0 items-start justify-between gap-3 py-2.5", className)}>
       <div className="min-w-0">
         <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{label}</p>
         {detail ? <p className="mt-0.5 text-xs leading-5 text-ui-muted [word-break:keep-all]">{detail}</p> : null}

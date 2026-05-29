@@ -69,10 +69,10 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
           <Link
             key={label}
             href={href}
-            className={`group flex min-h-9 min-w-0 items-center justify-center gap-1 border-b-2 px-1 text-center text-[10.5px] font-black tracking-tight transition sm:min-h-10 sm:gap-1.5 sm:px-2 sm:text-xs ${
+            className={`group flex min-h-9 min-w-0 items-center justify-center gap-1 px-1 text-center text-[10.5px] font-black tracking-tight transition sm:min-h-10 sm:gap-1.5 sm:px-2 sm:text-xs ${
               isFixedGridNav ? "w-full" : "shrink-0 md:shrink"
             } ${
-              active ? "border-ui-brand bg-transparent text-ui-text" : "border-transparent bg-transparent text-ui-muted hover:text-ui-text"
+              active ? "bg-transparent text-ui-text" : "bg-transparent text-ui-muted hover:text-ui-text"
             }`}
           >
             <Icon size={14} aria-hidden className={`shrink-0 ${active ? "text-ui-brand" : "text-ui-subtle transition group-hover:text-ui-muted"}`} />
@@ -84,7 +84,7 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
   );
 
   return (
-    <nav className="radar-bottom-nav fixed inset-x-0 bottom-0 z-40 overflow-hidden border-t border-ui-line px-2 py-1">
+    <nav className="radar-bottom-nav fixed inset-x-0 bottom-0 z-40 overflow-hidden px-2 py-1">
       {navContent}
     </nav>
   );
@@ -92,7 +92,7 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
 
 export function RadarTopNav({ market }: { market?: MarketScope } = {}) {
   return (
-    <Suspense fallback={<div className="radar-bottom-nav fixed inset-x-0 bottom-0 z-40 h-12 border-t border-ui-line" />}>
+    <Suspense fallback={<div className="radar-bottom-nav fixed inset-x-0 bottom-0 z-40 h-12" />}>
       <RadarTopNavContent market={market} />
     </Suspense>
   );

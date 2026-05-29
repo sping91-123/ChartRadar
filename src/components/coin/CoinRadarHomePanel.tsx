@@ -295,7 +295,7 @@ export function CoinRadarHomePanel() {
 
       <PanelCard variant="flat" padding="none" className="space-y-3 py-2">
         <SectionHeader eyebrow="Funding" title="대표 코인 펀딩비" description="펀딩비는 포지션 쏠림을 보는 보조 지표이며 방향 지시가 아닙니다." />
-        <div className="divide-y divide-ui-line">
+        <div>
           {fundingSymbols.map((symbol) => {
             const report = state.data.funding[symbol] ?? null;
             return (
