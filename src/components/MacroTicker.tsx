@@ -400,6 +400,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
     const primaryValue = isReleased ? displayActual(item) : displayConsensusValue(item);
     const impactRead = cryptoImpactRead(item);
     const ImpactIcon = impactRead === "호재" ? TrendingUp : impactRead === "악재" ? TrendingDown : impactRead === "중립" ? Minus : null;
+    const impactToneClass = impactRead === "호재" ? "text-emerald-400" : impactRead === "악재" ? "text-rose-400" : "text-slate-400";
     const href = market === "stocks" ? "/macro-calendar?market=global" : "/macro-calendar?market=crypto";
 
     return (
@@ -408,8 +409,9 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
           <div className={`flex w-[4.35rem] shrink-0 flex-col items-center justify-start gap-1 pt-0.5 text-center text-[11px] font-black ${isReleased ? "text-signal-warning" : "text-accent-blue"}`}>
             <span>{eventKind}</span>
             {impactRead && ImpactIcon ? (
-              <span className="inline-flex items-center justify-center text-ui-text" aria-label={impactRead}>
+              <span className={`inline-flex flex-col items-center justify-center gap-0.5 ${impactToneClass}`} aria-label={impactRead}>
                 <ImpactIcon size={14} aria-hidden />
+                <span className="text-[10px] font-black leading-none">{impactRead}</span>
               </span>
             ) : (
               <Radio size={12} aria-hidden />
@@ -426,7 +428,6 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
               <span>{primaryValueLabel} {primaryValue}</span>
               <span>예상 {displayConsensusValue(item)}</span>
               <span>이전 {displayPreviousValue(item)}</span>
-              {impactRead ? <span className="text-ui-text">{impactRead}</span> : null}
             </p>
           </div>
           <ChevronRight size={14} className="shrink-0 text-slate-600 transition group-hover:text-accent-blue" aria-hidden />
