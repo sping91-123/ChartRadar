@@ -2,17 +2,9 @@
 import { cooldownDecisionForEvent, eventToRecentRow, type CooldownDecision } from "@/lib/server/push/cooldown";
 import { alreadySent, duplicateBucket, recentSentEvents, type RecentPushAlertEventRow } from "@/lib/server/push/duplicateGuard";
 import { emptyDiagnostics, eventDiagnostic, eventDiagnosticSample, pushPreferenceSkippedSample, pushSample } from "@/lib/server/push/diagnostics";
-import {
-  buildRiskOffEvent,
-  buildSemiconductorLeadershipEvent,
-  limitCryptoMarketScoutEvents,
-  limitGlobalMarketScoutEvents,
-  setupToEvent,
-  stockSignalLabel,
-  topPushSetups
-} from "@/lib/server/push/eventBuilders";
 import { asArray, passesSetupPushQuality } from "@/lib/server/push/eligibility";
 import { ruleAllowed, userPlan } from "@/lib/server/push/entitlements";
+import { buildGenericPushEvents } from "@/lib/server/push/genericEvents";
 import { personalizeEventForUser } from "@/lib/server/push/personalization";
 import { tokenPreferenceDecision } from "@/lib/server/push/preferences";
 import { buildUserPresetEvents } from "@/lib/server/push/presetEvents";
@@ -136,23 +128,8 @@ export async function runPushAlertScan(context: ScanContext) {
       .map((source) => source.warning)
       .filter((warning): warning is string => Boolean(warning))
   );
-  const globalCompositeEvents = [buildRiskOffEvent(stockMomentumSetups), buildSemiconductorLeadershipEvent(stockMomentumSetups)];
-  const rawCryptoMarketScoutEvents = topPushSetups(cryptoSetups, 8).map((setup, index) =>
-    setupToEvent(setup, "radar-grade", "crypto", "radar-grade", index + 1)
-  );
-  const limitedCryptoMarketScoutEvents = limitCryptoMarketScoutEvents(rawCryptoMarketScoutEvents);
-  const cryptoMarketScoutEvents = limitedCryptoMarketScoutEvents.events;
-  const rawStockMarketScoutEvents = topPushSetups(stockMomentumSetups, 6).map((setup, index) =>
-    setupToEvent(setup, "stock-momentum", "stocks", "stock-momentum", index + 1)
-  );
-  const limitedStockMarketScoutEvents = limitGlobalMarketScoutEvents(rawStockMarketScoutEvents);
-  const stockMarketScoutEvents = limitedStockMarketScoutEvents.events;
-  const genericEvents = [
-    ...cryptoMarketScoutEvents,
-    ...stockMarketScoutEvents,
-    ...globalCompositeEvents,
-    ...optionalEventSources.map((source) => source.event)
-  ].filter((event): event is PushAlertEvent => event !== null);
+  const genericPushEvents = buildGenericPushEvents(cryptoSetups, stockMomentumSetups, optionalEventSources);
+  const genericEvents = genericPushEvents.events;
 
   let sent = 0;
   let skipped = 0;
@@ -163,10 +140,10 @@ export async function runPushAlertScan(context: ScanContext) {
   let duplicateSkippedTokenCount = 0;
   let cooldownSkippedCount = 0;
   let symbolCooldownSkippedCount = 0;
-  let marketScoutLimitSkippedCount = limitedCryptoMarketScoutEvents.skipped;
-  let globalBatchSkippedCount = limitedStockMarketScoutEvents.globalBatchSkippedCount;
-  let globalMomentumLimitSkippedCount = limitedStockMarketScoutEvents.globalMomentumLimitSkippedCount;
-  let globalAssetLimitSkippedCount = limitedStockMarketScoutEvents.globalAssetLimitSkippedCount;
+  let marketScoutLimitSkippedCount = genericPushEvents.marketScoutLimitSkippedCount;
+  let globalBatchSkippedCount = genericPushEvents.globalBatchSkippedCount;
+  let globalMomentumLimitSkippedCount = genericPushEvents.globalMomentumLimitSkippedCount;
+  let globalAssetLimitSkippedCount = genericPushEvents.globalAssetLimitSkippedCount;
   let sendTargetTokenCount = 0;
   let skippedLowScoreCount = 0;
   let candidateEventCount = 0;

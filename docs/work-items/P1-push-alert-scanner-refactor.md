@@ -29,7 +29,8 @@
 - preset helper 분리 완료: preset row 변환, market/user grouping, preset scan input/count helper를 `src/lib/server/push/presets.ts`로 분리했습니다. 관련 커밋은 이 문서 갱신 커밋입니다.
 - personalization helper 분리 완료: 사용자 저장 조건 기반 이벤트 개인화와 알트 market scout 문구 보정을 `src/lib/server/push/personalization.ts`로 분리했습니다. 관련 커밋은 이 문서 갱신 커밋입니다.
 - preset event helper 분리 완료: 사용자 저장 조건과 스캔 결과를 watchlist/global preset 이벤트로 변환하는 로직을 `src/lib/server/push/presetEvents.ts`로 분리했습니다. 관련 커밋은 이 문서 갱신 커밋입니다.
-- 현재 `src/lib/server/push/` 아래에는 `types`, `thresholds`, `eligibility`, `entitlements`, `preferences`, `duplicateGuard`, `sourceResults`, `diagnostics`, `targets`, `eventBuilders`, `sendPush`, `cooldown`, `presets`, `personalization`, `presetEvents`, `scanners/`가 분리되어 있습니다.
+- generic event helper 분리 완료: crypto/global market scout, global composite, optional source event 결합과 limit skipped counter 생성을 `src/lib/server/push/genericEvents.ts`로 분리했습니다. 관련 커밋은 이 문서 갱신 커밋입니다.
+- 현재 `src/lib/server/push/` 아래에는 `types`, `thresholds`, `eligibility`, `entitlements`, `preferences`, `duplicateGuard`, `sourceResults`, `diagnostics`, `targets`, `eventBuilders`, `genericEvents`, `sendPush`, `cooldown`, `presets`, `personalization`, `presetEvents`, `scanners/`가 분리되어 있습니다.
 - 다음 작은 후보: user loop/orchestration helper를 동작 변경 없이 진행합니다. 발송 정책, `push_alert_events` DB 기록, 중복 방지 event key, 권한 판정, threshold 정책은 변경하지 않습니다.
 
 ## 검증 기준
