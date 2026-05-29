@@ -95,7 +95,7 @@ function classifyWatchlistSetup(setup: ScoutSetup): WatchlistFilterMeta {
     return {
       bucket: "danger",
       label: "고위험",
-      className: "border-signal-danger/35 bg-signal-danger/15 text-signal-danger"
+      className: "text-signal-danger"
     };
   }
 
@@ -103,14 +103,14 @@ function classifyWatchlistSetup(setup: ScoutSetup): WatchlistFilterMeta {
     return {
       bucket: "watch",
       label: "관망",
-      className: "border-signal-warning/35 bg-signal-warning/15 text-signal-warning"
+      className: "text-signal-warning"
     };
   }
 
   return {
     bucket: "candidate",
     label: "추적 후보",
-    className: "border-accent-blue/35 bg-accent-blue/15 text-accent-blue"
+    className: "text-accent-blue"
   };
 }
 
@@ -161,10 +161,10 @@ function WatchlistSetupCard({ setup, canShowProDetails }: { setup: ScoutSetup; c
 
   const proximityColor =
     setup.proximity === "ready"
-      ? "text-signal-warning border-signal-warning/40 bg-signal-warning/10"
+      ? "text-signal-warning"
       : setup.proximity === "near"
-        ? "text-accent-blue border-accent-blue/40 bg-accent-blue/10"
-        : "text-slate-400 border-slate-600/40 bg-slate-600/10";
+        ? "text-accent-blue"
+        : "text-slate-400";
 
   return (
     <article className="border-t border-ui-line py-3.5 transition first:border-t-0">
@@ -179,33 +179,33 @@ function WatchlistSetupCard({ setup, canShowProDetails }: { setup: ScoutSetup; c
             {watchlistJudgmentLabel(setup, meta)}
           </span>
         </div>
-        <span className={`inline-flex items-center rounded border px-2 py-0.5 text-[10px] font-black ${meta.className}`}>
+        <span className={`inline-flex items-center text-[10px] font-black ${meta.className}`}>
           {meta.label}
         </span>
       </div>
 
-      <div className={`mt-2.5 grid divide-x divide-white/10 border-y border-white/10 text-center ${canShowProDetails ? "grid-cols-3" : "grid-cols-2"}`}>
-        <div className="px-1 py-1.5">
-          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">현재가</p>
-          <p className="mt-0.5 text-[11px] font-bold text-white">{formatPrice(setup.currentPrice)}</p>
+      <div className={`mt-2.5 grid gap-2 border-y border-white/10 py-2 text-xs ${canShowProDetails ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-bold uppercase tracking-wider text-slate-500">현재가</p>
+          <p className="font-bold text-white">{formatPrice(setup.currentPrice)}</p>
         </div>
         {canShowProDetails ? (
           <>
-            <div className="px-1 py-1.5">
-              <p className="text-[9px] font-bold uppercase tracking-wider text-accent-blue">관찰 구간</p>
-              <p className="mt-0.5 text-[10px] font-bold text-white">
+            <div className="flex items-start justify-between gap-3">
+              <p className="font-bold uppercase tracking-wider text-accent-blue">관찰 구간</p>
+              <p className="text-right font-bold text-white">
                 {formatPrice(setup.plan.entryLow)}~{formatPrice(setup.plan.entryHigh)}
               </p>
             </div>
-            <div className="px-1 py-1.5">
-              <p className="text-[9px] font-bold uppercase tracking-wider text-signal-danger">무효화</p>
-              <p className="mt-0.5 text-[11px] font-bold text-white">{formatPrice(setup.plan.invalidation)}</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-bold uppercase tracking-wider text-signal-danger">무효화</p>
+              <p className="font-bold text-white">{formatPrice(setup.plan.invalidation)}</p>
             </div>
           </>
         ) : (
-          <div className="px-1 py-1.5">
-            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">요약 리스크</p>
-            <p className="mt-0.5 text-[11px] font-bold text-white">{summaryRisk}</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-bold uppercase tracking-wider text-slate-500">요약 리스크</p>
+            <p className="font-bold text-white">{summaryRisk}</p>
           </div>
         )}
       </div>
@@ -217,11 +217,11 @@ function WatchlistSetupCard({ setup, canShowProDetails }: { setup: ScoutSetup; c
             <span className="font-bold text-slate-400">다음 레벨 {formatPrice(setup.plan.target1)}</span>
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            <span className={`rounded border px-2 py-0.5 text-[10px] font-black ${proximityColor}`}>{proximityText}</span>
+            <span className={`text-[10px] font-black ${proximityColor}`}>{proximityText}</span>
             {riskSignals.slice(0, 3).map((item) => (
               <span
                 key={item}
-                className="rounded border border-signal-warning/25 bg-signal-warning/10 px-2 py-0.5 text-[10px] font-bold text-signal-warning"
+                className="text-[10px] font-bold text-signal-warning"
               >
                 {item}
               </span>

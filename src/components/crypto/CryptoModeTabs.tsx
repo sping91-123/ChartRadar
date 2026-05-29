@@ -21,7 +21,7 @@ export function CryptoModeTabs({ options, activeMode, onChange }: CryptoModeTabs
           key={item.key}
           type="button"
           onClick={() => onChange(item.key)}
-          className={`min-h-9 border-b-2 px-2 text-xs font-black transition ${
+          className={`min-h-8 border-b-2 px-2 text-[11px] font-black transition sm:min-h-9 sm:text-xs ${
             activeMode === item.key
               ? "border-white bg-transparent text-white"
               : "border-transparent bg-transparent text-slate-400 hover:text-slate-200"

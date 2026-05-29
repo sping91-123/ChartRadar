@@ -596,14 +596,14 @@ function SetupCard({
       </div>
 
       {isAltFilterMode ? (
-        <div className="mt-3 grid grid-cols-2 divide-x divide-white/10 border-y border-white/10 text-center">
-          <div className="px-2 py-2">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">현재가</p>
-            <p className="mt-1 text-xs font-bold text-white">{formatPriceWithSymbol(setup.currentPrice)}</p>
+        <div className="mt-3 grid gap-2 border-y border-white/10 py-2 text-xs sm:grid-cols-2">
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-bold uppercase tracking-wider text-slate-500">현재가</p>
+            <p className="font-bold text-white">{formatPriceWithSymbol(setup.currentPrice)}</p>
           </div>
-          <div className="px-2 py-2 text-slate-300">
-            <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">분류</p>
-            <p className="mt-1 text-xs font-black">{altMeta?.label ?? "리스크 점검"}</p>
+          <div className="flex items-center justify-between gap-3 text-slate-300">
+            <p className="font-bold uppercase tracking-wider opacity-80">분류</p>
+            <p className="font-black">{altMeta?.label ?? "리스크 점검"}</p>
           </div>
         </div>
       ) : null}
@@ -671,27 +671,27 @@ function SetupCard({
 
       {shouldShowProDetails ? (
         <>
-          <div className="mt-2 grid grid-cols-2 divide-x divide-y divide-white/10 border-y border-white/10 text-center">
+          <div className="mt-2 grid gap-2 border-y border-white/10 py-2 text-xs sm:grid-cols-2">
             {isAltFilterMode ? (
-              <div className="px-2 py-2">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-accent-blue">관찰 구간</p>
-                <p className="mt-1 text-xs font-bold text-white">
+              <div className="flex items-start justify-between gap-3">
+                <p className="font-bold uppercase tracking-wider text-accent-blue">관찰 구간</p>
+                <p className="text-right font-bold text-white">
                   {formatPriceWithSymbol(setup.plan.entryLow)} ~ {formatPriceWithSymbol(setup.plan.entryHigh)}
                 </p>
               </div>
             ) : null}
-            <div className="px-2 py-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-signal-danger">무효 기준</p>
-              <p className="mt-1 text-xs font-bold text-white">{formatPriceWithSymbol(setup.plan.invalidation)}</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-bold uppercase tracking-wider text-signal-danger">무효 기준</p>
+              <p className="font-bold text-white">{formatPriceWithSymbol(setup.plan.invalidation)}</p>
             </div>
-            <div className="px-2 py-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-signal-success">다음 레벨</p>
-              <p className="mt-1 text-xs font-bold text-white">{formatPriceWithSymbol(setup.plan.target1)}</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-bold uppercase tracking-wider text-signal-success">다음 레벨</p>
+              <p className="font-bold text-white">{formatPriceWithSymbol(setup.plan.target1)}</p>
             </div>
             {isAltFilterMode ? (
-              <div className="px-2 py-2">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-signal-success">다음 레벨 2</p>
-                <p className="mt-1 text-xs font-bold text-white">{formatPriceWithSymbol(setup.plan.target2)}</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-bold uppercase tracking-wider text-signal-success">다음 레벨 2</p>
+                <p className="font-bold text-white">{formatPriceWithSymbol(setup.plan.target2)}</p>
               </div>
             ) : null}
           </div>
@@ -1037,7 +1037,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
             type="button"
             onClick={() => runScan(true)}
             disabled={state.status === "loading"}
-            className="inline-flex min-h-9 items-center gap-1.5 border-b border-ui-line px-0 text-xs font-bold text-slate-200 hover:text-white disabled:opacity-50"
+            className="inline-flex min-h-8 items-center gap-1.5 border-b border-ui-line px-0 text-xs font-bold text-slate-200 hover:text-white disabled:opacity-50"
           >
             <RefreshCw size={13} className={state.status === "loading" ? "animate-spin" : ""} aria-hidden />
             다시 돌리기
