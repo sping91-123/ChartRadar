@@ -70,7 +70,7 @@ export const viewport: Viewport = {
   viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: dark)", color: "#0b0b0f" },
-    { media: "(prefers-color-scheme: light)", color: "#f3f7fb" }
+    { media: "(prefers-color-scheme: light)", color: "#0b0b0f" }
   ]
 };
 
@@ -85,7 +85,7 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var t=localStorage.getItem('chart-radar.theme')||'dark';document.documentElement.classList.add(t==='light'?'theme-light':'theme-dark');document.documentElement.style.colorScheme=t;}catch(e){document.documentElement.classList.add('theme-dark');}"
+              "try{var t=localStorage.getItem('chart-radar.theme')||'system';var r=t==='system'?(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):t;document.documentElement.classList.add(r==='light'?'theme-light':'theme-dark');if(t==='system')document.documentElement.classList.add('theme-system');document.documentElement.style.colorScheme=r;}catch(e){document.documentElement.classList.add('theme-dark');}"
           }}
         />
         <AuthHashRescue />

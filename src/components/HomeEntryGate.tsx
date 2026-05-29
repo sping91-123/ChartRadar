@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Bitcoin, TrendingUp } from "lucide-react";
 import { GoogleLoginButton } from "@/components/GoogleLoginButton";
 import { KakaoLoginButton } from "@/components/KakaoLoginButton";
@@ -10,7 +11,8 @@ import { getSupabaseSession } from "@/lib/supabase";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 const skipSplashAfterAuthKey = "chartRadar.skipSplashAfterAuth.v1";
-const splashDurationMs = 850;
+const defaultEntryKey = "chartRadar.defaultEntry.v1";
+type DefaultEntry = "select" | "coin" | "global";
 
 const marketEntries = [
   {
@@ -29,20 +31,9 @@ const marketEntries = [
   }
 ] as const;
 
-function SplashScreen() {
-  return (
-    <main className="grid h-[100dvh] max-h-[100dvh] place-items-center overflow-hidden bg-ui-canvas px-6">
-      <section className="flex -translate-y-[2dvh] flex-col items-center text-center">
-        <h1 className="text-[2rem] font-semibold tracking-tight text-ui-text sm:text-4xl" aria-label="Chart Radar">
-          ChartRadar
-        </h1>
-        <p className="mt-2 text-sm font-medium text-ui-muted">시장 흐름을 정리하는 중</p>
-        <div className="mt-7 h-px w-28 overflow-hidden bg-ui-line" aria-hidden>
-          <span className="splash-progress-line block h-full w-10 bg-ui-brand" />
-        </div>
-      </section>
-    </main>
-  );
+function normalizeDefaultEntry(value: string | null): DefaultEntry {
+  if (value === "coin" || value === "global") return value;
+  return "select";
 }
 
 function LoginPrompt({ onBrowseBasic }: { onBrowseBasic: () => void }) {
@@ -75,10 +66,18 @@ function LoginPrompt({ onBrowseBasic }: { onBrowseBasic: () => void }) {
 }
 
 function MarketSelector() {
+  const [defaultEntry, setDefaultEntry] = useState<DefaultEntry>("select");
+
   useEffect(() => {
     document.documentElement.classList.add("market-selection-lock");
+    setDefaultEntry(normalizeDefaultEntry(window.localStorage.getItem(defaultEntryKey)));
     return () => document.documentElement.classList.remove("market-selection-lock");
   }, []);
+
+  const saveDefaultEntry = (next: DefaultEntry) => {
+    setDefaultEntry(next);
+    window.localStorage.setItem(defaultEntryKey, next);
+  };
 
   return (
     <main className="grid h-[100dvh] max-h-[100dvh] min-h-0 place-items-center overflow-hidden px-3 py-2 sm:px-6 sm:py-6">
@@ -92,14 +91,35 @@ function MarketSelector() {
             </p>
           </header>
 
+          <div className="grid w-full max-w-md grid-cols-3 gap-1 border-y border-ui-line py-1 text-center">
+            {[
+              { value: "select", label: "매번 선택" },
+              { value: "coin", label: "코인 시작" },
+              { value: "global", label: "글로벌 시작" }
+            ].map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                onClick={() => saveDefaultEntry(item.value as DefaultEntry)}
+                className={`min-h-9 border-b-2 px-1 text-xs font-black transition ${
+                  defaultEntry === item.value
+                    ? "border-ui-brand text-ui-text"
+                    : "border-transparent text-ui-muted hover:text-ui-text"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
           <div className="w-full max-w-3xl divide-y divide-white/10 border-y border-white/10">
             {marketEntries.map(({ title, scope, href, icon: Icon, accent }) => (
               <Link
                 key={title}
                 href={href}
-                className="group flex min-h-[5.75rem] items-center justify-between gap-4 px-1 py-4 text-left transition hover:bg-white/[0.025] focus:outline-none focus-visible:bg-white/[0.035] focus-visible:ring-2 focus-visible:ring-ui-brand sm:min-h-[7rem] sm:px-3 sm:py-5"
+                className="group relative flex min-h-[5.75rem] items-center justify-center gap-4 px-1 py-4 text-center transition hover:bg-white/[0.025] focus:outline-none focus-visible:bg-white/[0.035] focus-visible:ring-2 focus-visible:ring-ui-brand sm:min-h-[7rem] sm:px-3 sm:py-5"
               >
-                <div className="flex min-w-0 items-center gap-4 sm:gap-5">
+                <div className="flex min-w-0 flex-col items-center gap-2 sm:gap-3">
                   <div className={`grid h-10 w-10 shrink-0 place-items-center sm:h-12 sm:w-12 ${accent}`}>
                     <Icon size={25} aria-hidden />
                   </div>
@@ -108,7 +128,7 @@ function MarketSelector() {
                     <p className="mt-1 text-xs font-bold leading-tight text-slate-400 sm:text-sm">{scope}</p>
                   </div>
                 </div>
-                <ArrowRight size={20} aria-hidden className="shrink-0 text-slate-500 transition group-hover:translate-x-1 group-hover:text-ui-brand" />
+                <ArrowRight size={19} aria-hidden className="absolute right-2 shrink-0 text-slate-500 transition group-hover:translate-x-1 group-hover:text-ui-brand sm:right-4" />
               </Link>
             ))}
           </div>
@@ -119,33 +139,35 @@ function MarketSelector() {
 }
 
 export function HomeEntryGate() {
+  const router = useRouter();
   const { user, isLoading } = useSupabaseAuth();
   const [skipSplashAfterAuth, setSkipSplashAfterAuth] = useState(false);
-  const [showSplash, setShowSplash] = useState(true);
   const [hasStoredSession, setHasStoredSession] = useState(false);
   const [basicBrowse, setBasicBrowse] = useState(false);
+  const [defaultEntry, setDefaultEntry] = useState<DefaultEntry>("select");
+  const [defaultEntryLoaded, setDefaultEntryLoaded] = useState(false);
 
   useEffect(() => {
     setHasStoredSession(Boolean(getSupabaseSession()));
+    setDefaultEntry(normalizeDefaultEntry(window.localStorage.getItem(defaultEntryKey)));
+    setDefaultEntryLoaded(true);
 
     if (window.sessionStorage.getItem(skipSplashAfterAuthKey) === "true") {
       window.sessionStorage.removeItem(skipSplashAfterAuthKey);
       setSkipSplashAfterAuth(true);
-      setShowSplash(false);
-      return;
     }
-
-    const timer = window.setTimeout(() => setShowSplash(false), splashDurationMs);
-    return () => window.clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (!defaultEntryLoaded || defaultEntry === "select") return;
+    const canEnterApp = Boolean(user || basicBrowse || (isLoading && (skipSplashAfterAuth || hasStoredSession)));
+    if (!canEnterApp) return;
+    router.replace(defaultEntry === "global" ? "/global" : "/coin");
+  }, [basicBrowse, defaultEntry, defaultEntryLoaded, hasStoredSession, isLoading, router, skipSplashAfterAuth, user]);
 
   const startBasicBrowse = () => {
     setBasicBrowse(true);
   };
-
-  if (showSplash) {
-    return <SplashScreen />;
-  }
 
   if (isLoading && (skipSplashAfterAuth || hasStoredSession)) {
     return <MarketSelector />;
@@ -153,6 +175,10 @@ export function HomeEntryGate() {
 
   if (!user && !basicBrowse) {
     return <LoginPrompt onBrowseBasic={startBasicBrowse} />;
+  }
+
+  if (defaultEntryLoaded && defaultEntry !== "select") {
+    return null;
   }
 
   return <MarketSelector />;

@@ -84,7 +84,7 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
   );
 
   return (
-    <nav className="sticky top-0 z-30 overflow-hidden border-b border-ui-line bg-transparent py-1.5">
+    <nav className="radar-bottom-nav fixed inset-x-0 bottom-0 z-40 overflow-hidden border-t border-ui-line px-2 py-1.5">
       {navContent}
     </nav>
   );
@@ -92,7 +92,7 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
 
 export function RadarTopNav({ market }: { market?: MarketScope } = {}) {
   return (
-    <Suspense fallback={<div className="h-12 border-b border-ui-line bg-transparent" />}>
+    <Suspense fallback={<div className="radar-bottom-nav fixed inset-x-0 bottom-0 z-40 h-14 border-t border-ui-line" />}>
       <RadarTopNavContent market={market} />
     </Suspense>
   );

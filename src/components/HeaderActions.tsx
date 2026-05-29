@@ -12,8 +12,8 @@ import {
   HelpCircle,
   LifeBuoy,
   LogIn,
+  Menu,
   ReceiptText,
-  Settings,
   Sparkles,
   UserCircle,
   type LucideIcon
@@ -26,6 +26,9 @@ import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 type HeaderMarket = "crypto" | "stocks";
 type AuthState = ReturnType<typeof useSupabaseAuth>;
+type DefaultEntry = "select" | "coin" | "global";
+
+const defaultEntryKey = "chartRadar.defaultEntry.v1";
 
 function marketAlertHref(market?: HeaderMarket) {
   return market === "stocks" ? "/alerts?market=global" : "/alerts?market=crypto";
@@ -183,15 +186,54 @@ function AccountSettingsSection({
 }
 
 function DisplaySettingsSection() {
+  const [defaultEntry, setDefaultEntry] = useState<DefaultEntry>("select");
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem(defaultEntryKey);
+    setDefaultEntry(saved === "coin" || saved === "global" ? saved : "select");
+  }, []);
+
+  const updateDefaultEntry = (value: DefaultEntry) => {
+    setDefaultEntry(value);
+    window.localStorage.setItem(defaultEntryKey, value);
+  };
+
   return (
     <SettingsSection title="화면 설정">
-      <div className="py-1">
-        <div className="flex items-center justify-between gap-3">
+      <div className="grid gap-4 py-1">
+        <div className="grid gap-2">
           <span className="min-w-0">
             <span className="block text-sm font-black text-white">테마</span>
-            <span className="mt-0.5 block text-xs leading-5 text-slate-400">라이트/다크 모드를 전환합니다.</span>
+            <span className="mt-0.5 block text-xs leading-5 text-slate-400">기기 테마를 기본으로 쓰고, 필요하면 라이트/다크를 고정합니다.</span>
           </span>
           <ThemeToggle variant="switch" />
+        </div>
+        <div className="grid gap-2">
+          <span className="min-w-0">
+            <span className="block text-sm font-black text-white">시작 화면</span>
+            <span className="mt-0.5 block text-xs leading-5 text-slate-400">앱을 열 때 시장 선택 없이 바로 들어갈 화면을 고릅니다.</span>
+          </span>
+          <div className="grid grid-cols-3 gap-1 border-y border-white/10 py-1">
+            {[
+              { value: "select", label: "선택" },
+              { value: "coin", label: "코인" },
+              { value: "global", label: "글로벌" }
+            ].map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                onClick={() => updateDefaultEntry(item.value as DefaultEntry)}
+                className={`min-h-10 border-b-2 px-1 text-xs font-black transition ${
+                  defaultEntry === item.value
+                    ? "border-cyan-300 text-white"
+                    : "border-transparent text-slate-400 hover:text-white"
+                }`}
+                aria-pressed={defaultEntry === item.value}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </SettingsSection>
@@ -228,13 +270,37 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setIsSettingsOpen(false);
+        if (window.history.state?.chartRadarSettingsPanel) {
+          window.history.back();
+        } else {
+          setIsSettingsOpen(false);
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isSettingsOpen]);
+
+  useEffect(() => {
+    if (!isSettingsOpen) return;
+
+    window.history.pushState({ chartRadarSettingsPanel: true }, "", window.location.href);
+    const handlePopState = () => {
+      setIsSettingsOpen(false);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [isSettingsOpen]);
+
+  const closeSettings = () => {
+    if (isSettingsOpen && window.history.state?.chartRadarSettingsPanel) {
+      window.history.back();
+      return;
+    }
+    setIsSettingsOpen(false);
+  };
 
   return (
     <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -261,20 +327,20 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
         aria-label="설정 열기"
         title="설정"
       >
-        <Settings size={16} aria-hidden />
+        <Menu size={18} aria-hidden />
       </button>
       {isSettingsOpen ? createPortal(
         <div
           role="dialog"
           aria-modal="true"
           aria-labelledby="settings-panel-title"
-          className="settings-fullscreen-panel fixed inset-0 z-[100] overflow-y-auto px-3 py-3 sm:px-5 sm:py-5"
+          className="settings-fullscreen-panel fixed inset-0 z-[100] overflow-y-auto px-3 pb-3 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-5 sm:pb-5 sm:pt-[calc(env(safe-area-inset-top)+1.25rem)]"
         >
           <div className="mx-auto flex min-h-full w-full max-w-md flex-col">
-            <header className="sticky top-0 z-10 -mx-3 flex items-center gap-3 border-b border-white/10 bg-inherit px-3 py-2.5 sm:-mx-5 sm:px-5">
+            <header className="sticky top-0 z-10 -mx-3 flex items-center gap-3 border-b border-white/10 bg-inherit px-3 py-3 sm:-mx-5 sm:px-5">
               <button
                 type="button"
-                onClick={() => setIsSettingsOpen(false)}
+                onClick={closeSettings}
                 className="grid min-h-10 min-w-10 place-items-center text-slate-300 transition hover:text-white"
                 aria-label="설정 닫기"
                 title="뒤로"

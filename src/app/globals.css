@@ -152,6 +152,17 @@ button {
   color: #f8fafc;
 }
 
+body:has(.radar-bottom-nav) .app-scroll-root {
+  padding-bottom: calc(4.75rem + env(safe-area-inset-bottom));
+}
+
+.radar-bottom-nav {
+  padding-bottom: calc(0.4rem + env(safe-area-inset-bottom));
+  background: rgba(11, 11, 15, 0.9);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+}
+
 a,
 button {
   touch-action: manipulation;
@@ -299,6 +310,10 @@ html.theme-light body {
 .theme-light .settings-fullscreen-panel {
   background: #f8fafc;
   color: #0f172a;
+}
+
+.theme-light .radar-bottom-nav {
+  background: rgba(246, 248, 251, 0.9);
 }
 
 .theme-light .news-radar-hero {
