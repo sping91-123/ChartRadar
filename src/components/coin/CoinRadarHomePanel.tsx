@@ -8,6 +8,7 @@ import type { CoinMarketMetricsPayload } from "@/lib/coinMarketMetrics";
 import type { Candle } from "@/lib/marketAnalysis";
 import type { LiquidationPressureReport } from "@/lib/liquidationPressure";
 import { analyzeTechnicalRadar, type IndicatorReading, type TechnicalRadarReport } from "@/lib/technicalRadar";
+import { buildCoinHomeDecision } from "@/components/coin/coinHomeDecisionModel";
 
 interface MarketBoardItem {
   symbol: string;
@@ -180,8 +181,14 @@ export function CoinRadarHomePanel() {
     const stochastic = findReading(report, "Stochastic");
     const btcFunding = state.data.funding.BTC ?? null;
     const marketMetrics = state.data.marketMetrics;
+    const decision = buildCoinHomeDecision({
+      board: state.data.board,
+      technical: report,
+      marketMetrics,
+      btcFunding
+    });
 
-    return { report, fearGreed, tone, btc, rsi, stochastic, btcFunding, marketMetrics };
+    return { report, fearGreed, tone, btc, rsi, stochastic, btcFunding, marketMetrics, decision };
   }, [state]);
 
   if (state.status === "loading") {
@@ -207,6 +214,53 @@ export function CoinRadarHomePanel() {
 
   return (
     <div className="flex flex-col gap-3">
+      <PanelCard variant="flat" padding="none" className="space-y-4 py-2">
+        <SectionHeader
+          eyebrow="오늘의 결론"
+          title="매매 환경 준비도"
+          description="현재 데이터로 관망, 조건 대기, 추적 가능, 리스크 확대 중 어디에 가까운지 먼저 정리합니다."
+          action={
+            <ActionButton tone="ghost" className="px-0" onClick={() => void load()}>
+              <RefreshCw size={14} aria-hidden />
+              {formatCachedAt(state.data.cachedAt)}
+            </ActionButton>
+          }
+        />
+
+        <div className="grid gap-4 py-1 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+              <StatusPill tone={summary?.decision.state === "리스크 확대" ? "risk" : summary?.decision.state === "추적 가능" ? "long" : "watch"}>
+                {summary?.decision.state}
+              </StatusPill>
+              <StatusPill tone={summary?.decision.direction === "하방 압력" ? "short" : summary?.decision.direction === "상방 우세" ? "long" : summary?.decision.direction === "변동성 주의" ? "risk" : "watch"}>
+                방향성 {summary?.decision.direction}
+              </StatusPill>
+              <StatusPill tone={summary?.decision.leadership === "위험 회피" ? "risk" : summary?.decision.leadership === "알트 순환" ? "long" : "info"}>
+                주도 {summary?.decision.leadership}
+              </StatusPill>
+            </div>
+            <p className="mt-3 text-3xl font-semibold tracking-tight text-ui-text sm:text-4xl">
+              {summary?.decision.readinessScore ?? "-"}점
+            </p>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-ui-muted [word-break:keep-all]">
+              {summary?.decision.reason}
+            </p>
+          </div>
+
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <div>
+              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">가장 큰 리스크</p>
+              <p className="mt-1 text-base font-semibold text-ui-text">{summary?.decision.topRisk}</p>
+            </div>
+            <div className="min-w-0">
+              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">다음 확인 조건</p>
+              <p className="mt-1 min-w-0 text-sm font-semibold leading-5 text-ui-text [overflow-wrap:anywhere] [word-break:keep-all]">{summary?.decision.nextCondition}</p>
+            </div>
+          </div>
+        </div>
+      </PanelCard>
+
       <PanelCard variant="flat" padding="none" className="space-y-3 py-2">
         <SectionHeader
           eyebrow="Coin Radar Home"
