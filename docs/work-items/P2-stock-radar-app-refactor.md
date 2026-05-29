@@ -1,6 +1,6 @@
 # P2 StockRadarApp 컴포넌트 분리
 
-- 상태: `IN_PROGRESS`
+- 상태: `DONE`
 - 담당방: /Global
 - 인텔리전스: 높음
 - 우선순위: P2
@@ -37,3 +37,4 @@
 - 2026-05-29: 글로벌 자산레이더 timeframe/mode 조작 패널을 `src/components/global/GlobalRadarControlDock.tsx`로 분리했다. 고정 하단 패널 동작과 mode/timeframe 상태 변경은 유지했다.
 - 2026-05-29: 글로벌 자산 차트 표시 shell을 `src/components/global/GlobalAssetChartPanel.tsx`로 분리했다. lightweight-charts 생성, 데이터 주입, resize/theme observer 로직은 변경하지 않았다.
 - 2026-05-29: 글로벌 자산 선택/검색/관심 종목 UI를 `src/components/global/GlobalAssetSelectionPanel.tsx`로 분리했다. 종목 선택 상태, 검색 상태, 관심 종목 저장 helper는 기존 흐름을 유지했다.
+- 2026-05-29: `StockRadarApp`은 데이터 fetch, usage gate, chart lifecycle, 분석 orchestration 중심으로 축소했다. 최신 완료 커밋: `d2ca483`.

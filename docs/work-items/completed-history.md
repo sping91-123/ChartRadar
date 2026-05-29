@@ -22,3 +22,5 @@
 | P2 | 작업 큐 포맷 개선 | 개발 메인 | 중간 | `docs/work-queue.md`를 인덱스화하고 활성 작업과 완료 이력을 `docs/work-items/`로 분리. 완료 커밋: `Reorganize work queue documentation` |
 | P1 | pushAlertScanner 구조 분리 | 알림 시스템 | 높음 | 타입, threshold, eligibility, entitlement, preference, duplicate guard, optional source, diagnostics, target, event builder, send, cooldown, scanner, preset, personalization, preset event, generic event helper 분리 완료. 최신 완료 커밋: `f847a7f` |
 | P2 | LiveMarketChart 컴포넌트 분리 | 코인 레이더 /crypto | 높음 | 타입/상수/data helper/chart shell/control shell/summary shell/Pro gate/저널 payload/알트 사용량/브리핑 하이라이트/초보자 안내/차트 보조 helper 분리 완료. 최신 완료 커밋: `1295647` |
+| P1 | 디자인 시스템 2차 적용 | UI 디자인 시스템 / 브랜드 리뉴얼 | 높음 | full-app boxless 적용, 브랜드/splash 평면화, 전체 주요 route QA 완료. 상세 문서: `P1-design-system-phase2.md` |
+| P2 | StockRadarApp 컴포넌트 분리 | /Global | 높음 | 관심 자산 helper, playbook/checklist, beginner guide, snapshot, ICT panel, control dock, chart shell, asset selection panel 분리 완료. 최신 완료 커밋: `d2ca483` |

@@ -110,14 +110,14 @@ git ls-files | Select-String -Pattern '(^|/)(\.env|\.env\.local|google-services\
 
 ## 현재 우선순위 요약
 
+현재 자동으로 이어서 처리 가능한 `TODO`는 없습니다. 남은 항목은 대표 확인 또는 외부 콘솔 접근이 필요한 `BLOCKED` 작업입니다.
+
 | 우선순위 | 상태 | 작업 | 담당방 | 인텔리전스 | 상세 문서 |
 | --- | --- | --- | --- | --- | --- |
-| P1 | TODO | pushAlertScanner 구조 분리 | 알림 시스템 | 높음 | `docs/work-items/P1-push-alert-scanner-refactor.md` |
-| P1 | TODO | 디자인 시스템 2차 적용 | UI 디자인 시스템 / 브랜드 리뉴얼 | 높음 | `docs/work-items/P1-design-system-phase2.md` |
-| P1 | TODO | Play Store용 AAB 재생성 및 푸시 탭 이동 반영 | Play Console / 출시 대응 | 중간 | `docs/work-items/P1-play-store-aab-push-tap.md` |
 | P1 | BLOCKED | Google 계정 보안 알림에 Google TV 권한처럼 보이는 문제 점검 | 인증 / 계정 / 사용자 데이터 | 높음 | `docs/work-items/P1-google-oauth-project-cleanup.md` |
-| P2 | TODO | LiveMarketChart 컴포넌트 분리 | 코인 레이더 /crypto | 높음 | `docs/work-items/P2-live-market-chart-refactor.md` |
-| P2 | TODO | StockRadarApp 컴포넌트 분리 | /Global | 높음 | `docs/work-items/P2-stock-radar-app-refactor.md` |
+| P1 | BLOCKED | Play Store용 AAB 재생성 및 푸시 탭 이동 반영 | Play Console / 출시 대응 | 중간 | `docs/work-items/P1-play-store-aab-push-tap.md` |
+| P1 | DONE | 디자인 시스템 2차 적용 | UI 디자인 시스템 / 브랜드 리뉴얼 | 높음 | `docs/work-items/P1-design-system-phase2.md` |
+| P2 | DONE | StockRadarApp 컴포넌트 분리 | /Global | 높음 | `docs/work-items/P2-stock-radar-app-refactor.md` |
 | P2 | DONE | 작업 큐 포맷 개선 | 개발 메인 | 중간 | 현재 문서와 `docs/work-items/*` 구조로 재정리. 완료 커밋: `Reorganize work queue documentation` |
 
 ## DONE/BLOCKED 보존 기준
