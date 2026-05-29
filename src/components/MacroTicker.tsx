@@ -373,9 +373,6 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
           </div>
           <ChevronRight size={14} className="shrink-0 text-slate-600 transition group-hover:text-accent-blue" aria-hidden />
         </Link>
-        <div className="flex items-center gap-2 px-1 text-[11px] font-semibold text-ui-muted">
-          <span className="min-w-0 truncate">{calendar.updatedAtLabel}</span>
-        </div>
       </div>
     );
   }

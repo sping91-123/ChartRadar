@@ -11,7 +11,7 @@ export default function CoinHomePage() {
         <Header market="crypto" />
         <RadarTopNav market="crypto" />
         <MacroTicker compact />
-        <div className="mt-2.5 sm:mt-3">
+        <div className="mt-1">
           <CoinRadarHomePanel />
         </div>
         <AppFooter />

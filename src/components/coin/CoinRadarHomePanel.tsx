@@ -69,13 +69,12 @@ function formatKrwRate(value: number | null | undefined) {
 }
 
 function formatAnalysisUpdatedAt(ms: number) {
-  return `분석 갱신 ${new Date(ms).toLocaleString("ko-KR", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  })}`;
+  const date = new Date(ms);
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const hour = date.getHours().toString().padStart(2, "0");
+  const minute = date.getMinutes().toString().padStart(2, "0");
+  return `${month}월 ${day}일 ${hour}:${minute} 갱신`;
 }
 
 function boardItem(board: MarketBoardItem[], symbol: (typeof representativeSymbols)[number]) {
