@@ -504,13 +504,13 @@ function GlobalRadarControlDock({
   return (
     <>
       <div
-        className={`fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 mx-auto border-t border-surface-line bg-slate-950 p-2 shadow-none sm:hidden ${showMobileDock ? "block" : "hidden"}`}
+        className={`fixed inset-x-0 bottom-0 z-40 mx-auto border-t border-surface-line bg-ui-canvas/95 px-3 pb-[calc(0.35rem+env(safe-area-inset-bottom))] pt-1.5 shadow-none sm:hidden ${showMobileDock ? "block" : "hidden"}`}
         aria-label="글로벌 자산레이더 모바일 조작 패널"
       >
         {renderContent()}
       </div>
       <div
-        className="sticky top-3 z-20 mx-auto hidden max-w-5xl border-y border-surface-line bg-slate-950 py-2 sm:block"
+        className="sticky top-3 z-20 mx-auto hidden max-w-5xl border-b border-surface-line bg-ui-canvas/95 py-2 sm:block"
         aria-label="글로벌 자산레이더 조작 패널"
       >
         {renderContent()}
@@ -768,7 +768,7 @@ export function StockRadarApp() {
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="종목 검색"
-              className="h-11 w-full rounded-md border border-surface-line bg-surface-cardSoft pl-9 pr-3 text-sm font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-accent-blue/70"
+              className="h-11 w-full border-b border-surface-line bg-transparent pl-8 pr-0 text-sm font-bold text-white outline-none transition placeholder:text-slate-600 focus:border-accent-blue/70"
             />
           </label>
         </div>
