@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CalendarClock, ChevronRight, ExternalLink, Radio } from "lucide-react";
+import { CalendarClock, ChevronRight, ExternalLink, Minus, Radio, TrendingDown, TrendingUp } from "lucide-react";
 import { type MacroEventItem } from "@/data/macroEvents";
 import { getMacroCalendarFallbackPayload, type MacroCalendarPayload } from "@/lib/macroCalendar";
 import { StatusPill } from "@/components/ui/DesignPrimitives";
@@ -167,13 +167,12 @@ function numericMacroValue(value?: string) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function cryptoImpactRead(item: MacroEventItem) {
-  if (!hasReleaseTimePassed(item)) return "발표 전";
-  if (isDocumentEvent(item)) return "확인 필요";
+function cryptoImpactRead(item: MacroEventItem): "호재" | "악재" | "중립" | null {
+  if (!hasReleaseTimePassed(item) || isDocumentEvent(item)) return null;
 
   const actual = numericMacroValue(item.actualValue ?? item.actual);
   const expected = numericMacroValue(item.consensusValue ?? item.forecast);
-  if (actual === null || expected === null) return "확인 필요";
+  if (actual === null || expected === null) return null;
 
   const lower = item.label.toLowerCase();
   const diff = actual - expected;
@@ -198,7 +197,7 @@ function cryptoImpactRead(item: MacroEventItem) {
     return "중립";
   }
 
-  return "확인 필요";
+  return null;
 }
 
 function macroLabel(label: string) {
@@ -399,12 +398,14 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
     const eventKind = compactEventKind(item);
     const primaryValueLabel = isReleased ? (isDocumentEvent(item) ? "상태" : "결과") : "예상";
     const primaryValue = isReleased ? displayActual(item) : displayConsensusValue(item);
+    const impactRead = cryptoImpactRead(item);
+    const ImpactIcon = impactRead === "호재" ? TrendingUp : impactRead === "악재" ? TrendingDown : impactRead === "중립" ? Minus : null;
     const href = market === "stocks" ? "/macro-calendar?market=global" : "/macro-calendar?market=crypto";
 
     return (
       <div className="space-y-1.5">
         <Link href={href} className="group flex min-h-10 items-start gap-2 border-y border-ui-line/70 bg-transparent px-1 py-2 transition hover:bg-white/[0.025]">
-          <div className={`inline-flex shrink-0 items-center gap-1.5 py-0.5 text-[11px] font-black ${isReleased ? "text-signal-warning" : "text-accent-blue"}`}>
+          <div className={`inline-flex self-stretch shrink-0 items-center gap-1.5 py-0.5 text-[11px] font-black ${isReleased ? "text-signal-warning" : "text-accent-blue"}`}>
             <Radio size={12} aria-hidden />
             {eventKind}
           </div>
@@ -415,8 +416,16 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
             <p className="mt-0.5 truncate text-[11px] font-bold text-slate-500">
               <span>한국시간 {item.dateKst}</span>
             </p>
-            <p className="mt-0.5 min-w-0 text-[11px] font-bold leading-4 text-slate-500 [overflow-wrap:anywhere] [word-break:keep-all]">
-              {primaryValueLabel} {primaryValue} · 예상 {displayConsensusValue(item)} · 이전 {displayPreviousValue(item)} · {cryptoImpactRead(item)}
+            <p className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-bold leading-4 text-slate-500 [overflow-wrap:anywhere] [word-break:keep-all]">
+              <span>{primaryValueLabel} {primaryValue}</span>
+              <span>예상 {displayConsensusValue(item)}</span>
+              <span>이전 {displayPreviousValue(item)}</span>
+              {impactRead && ImpactIcon ? (
+                <span className="inline-flex items-center gap-1 text-ui-text">
+                  <ImpactIcon size={12} aria-hidden />
+                  {impactRead}
+                </span>
+              ) : null}
             </p>
           </div>
           <ChevronRight size={14} className="shrink-0 text-slate-600 transition group-hover:text-accent-blue" aria-hidden />
