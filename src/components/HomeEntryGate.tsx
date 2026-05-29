@@ -15,7 +15,7 @@ const skipSplashAfterAuthKey = "chartRadar.skipSplashAfterAuth.v1";
 const marketEntries = [
   {
     title: "코인 레이더",
-    scope: "홈 · 현물 · 선물 · 매크로 · 복기",
+    scope: "홈 · 현물 · 선물 · 뉴스 · 복기",
     href: "/coin",
     icon: Bitcoin,
     accent: "text-blue-300"

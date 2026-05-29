@@ -2,7 +2,6 @@ import { ArrowLeft } from "lucide-react";
 import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
 import { MacroTicker } from "@/components/MacroTicker";
-import { RadarTopNav } from "@/components/RadarTopNav";
 import { ActionButton, PanelCard, SectionHeader } from "@/components/ui/DesignPrimitives";
 
 export default function MacroCalendarPage({ searchParams }: { searchParams?: { market?: string } }) {
@@ -13,11 +12,9 @@ export default function MacroCalendarPage({ searchParams }: { searchParams?: { m
     <main className="min-h-screen px-3 pb-28 sm:px-5 sm:pb-16">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 sm:gap-4">
         <Header market={market} />
-        <RadarTopNav market={market} />
         <div>
-          <ActionButton href={backHref} tone="ghost" className="px-0">
+          <ActionButton href={backHref} tone="ghost" className="min-h-8 px-0" aria-label="이전 화면으로 이동">
             <ArrowLeft size={14} aria-hidden />
-            뒤로가기
           </ActionButton>
         </div>
         <PanelCard variant="flat" padding="none" className="space-y-3 py-2">

@@ -14,6 +14,7 @@ import { fetchBlsOfficialActuals } from "@/lib/macro/sourceAdapters/bls";
 import { getCensusOfficialEnrichments } from "@/lib/macro/sourceAdapters/census";
 import { fetchDolOfficialEnrichments } from "@/lib/macro/sourceAdapters/dol";
 import { fetchFedOfficialEnrichments } from "@/lib/macro/sourceAdapters/fed";
+import { fetchTradingEconomicsCalendarEnrichments } from "@/lib/macro/sourceAdapters/tradingEconomics";
 import { type MacroSourceEnrichment } from "@/lib/macro/types";
 
 export type MacroCalendarSource = "forex-factory" | "official-bls" | "automatic-mixed";
@@ -367,10 +368,11 @@ function toMacroItem(event: ForexFactoryEvent): MacroEventItem | null {
 }
 
 async function getOfficialEnrichments(items: MacroEventItem[]) {
-  const [blsEnrichments, fedEnrichments, dolEnrichments] = await Promise.all([
+  const [blsEnrichments, fedEnrichments, dolEnrichments, tradingEconomicsEnrichments] = await Promise.all([
     fetchBlsOfficialActuals().catch(() => [] as MacroSourceEnrichment[]),
     fetchFedOfficialEnrichments(items).catch(() => [] as MacroSourceEnrichment[]),
-    fetchDolOfficialEnrichments(items).catch(() => [] as MacroSourceEnrichment[])
+    fetchDolOfficialEnrichments(items).catch(() => [] as MacroSourceEnrichment[]),
+    fetchTradingEconomicsCalendarEnrichments(items).catch(() => [] as MacroSourceEnrichment[])
   ]);
 
   return [
@@ -378,7 +380,8 @@ async function getOfficialEnrichments(items: MacroEventItem[]) {
     ...fedEnrichments,
     ...(await getBeaOfficialEnrichments().catch(() => [] as MacroSourceEnrichment[])),
     ...(await getCensusOfficialEnrichments().catch(() => [] as MacroSourceEnrichment[])),
-    ...dolEnrichments
+    ...dolEnrichments,
+    ...tradingEconomicsEnrichments
   ];
 }
 

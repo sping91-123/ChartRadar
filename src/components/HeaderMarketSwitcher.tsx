@@ -13,7 +13,7 @@ const marketOptions: Array<{
   description: string;
   href: string;
 }> = [
-  { key: "coin", label: "Coin Radar", description: "BTC/ETH, 알트, 코인 매크로", href: "/coin" },
+  { key: "coin", label: "Coin Radar", description: "BTC/ETH, 알트, 코인 뉴스", href: "/coin" },
   { key: "global", label: "Global Radar", description: "미국장, 글로벌 자산, 일정", href: "/global" }
 ];
 

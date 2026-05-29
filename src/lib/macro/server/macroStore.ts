@@ -6,6 +6,7 @@ import { normalizeMacroEvents } from "@/lib/macro/normalizeMacroEvent";
 import { getBeaOfficialEnrichments } from "@/lib/macro/sourceAdapters/bea";
 import { getCensusOfficialEnrichments } from "@/lib/macro/sourceAdapters/census";
 import { fetchDolOfficialEnrichments } from "@/lib/macro/sourceAdapters/dol";
+import { fetchTradingEconomicsCalendarEnrichments } from "@/lib/macro/sourceAdapters/tradingEconomics";
 
 type MacroEventRow = {
   id?: string;
@@ -142,12 +143,13 @@ export async function readStoredMacroCalendarPayload(): Promise<MacroCalendarPay
   if (!updatedAt || Date.now() - Date.parse(updatedAt) > 60 * 60 * 1000) return null;
 
   const baseItems = rows.map(rowToItem);
-  const [beaEnrichments, censusEnrichments, dolEnrichments] = await Promise.all([
+  const [beaEnrichments, censusEnrichments, dolEnrichments, tradingEconomicsEnrichments] = await Promise.all([
     getBeaOfficialEnrichments().catch(() => []),
     getCensusOfficialEnrichments().catch(() => []),
-    fetchDolOfficialEnrichments(baseItems).catch(() => [])
+    fetchDolOfficialEnrichments(baseItems).catch(() => []),
+    fetchTradingEconomicsCalendarEnrichments(baseItems).catch(() => [])
   ]);
-  const items = normalizeMacroEvents(baseItems, [...beaEnrichments, ...censusEnrichments, ...dolEnrichments], Date.now());
+  const items = normalizeMacroEvents(baseItems, [...beaEnrichments, ...censusEnrichments, ...dolEnrichments, ...tradingEconomicsEnrichments], Date.now());
   return {
     updatedAt,
     updatedAtLabel: "저장된 공식 확인 결과",
