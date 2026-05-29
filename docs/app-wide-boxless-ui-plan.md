@@ -553,6 +553,25 @@ The first `/alerts` implementation pass applies the boxless rules only to the ro
   - `/crypto` body redesign as a larger dedicated run.
   - `/pro` pricing and CTA review without weakening plan comparison or gating.
 
+## App-wide Color Simplification Pass
+
+The boxless redesign also needs a less AI-generated color system.
+
+Implementation direction:
+
+- Remove page-level radial, linear, and conic gradients.
+- Remove neon glow, drop-shadow, and animated radar-scan effects from the app shell and brand marks.
+- Use a solid app canvas in dark and light themes.
+- Move the main accent from bright cyan toward a calmer blue.
+- Keep semantic long, short, risk, warning, error, and success colors, but avoid glowing or gradient treatment.
+- Keep boxes and stronger color only for trust, warning, billing, auth, Pro gating, permission, modal, and form exceptions.
+
+This color pass is visual-only:
+
+- No route changes.
+- No data, API, billing, auth, Supabase, Android, FCM, or production behavior changes.
+- Screenshot review is required before push because the change affects all screens.
+
 ## Recommended Next Step
 
 Design the `AppSurface` and `PanelCard` variant API before implementation.

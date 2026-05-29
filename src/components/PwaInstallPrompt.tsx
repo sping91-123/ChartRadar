@@ -100,7 +100,7 @@ export function PwaInstallPrompt() {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-md rounded-lg border border-accent-blue/30 bg-slate-950/95 p-3 text-white shadow-[0_22px_70px_rgba(0,0,0,0.45)] backdrop-blur sm:right-4 sm:left-auto">
+    <div className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-md rounded-lg border border-accent-blue/30 bg-slate-950 p-3 text-white shadow-none sm:right-4 sm:left-auto">
       <div className="flex items-start gap-3">
         <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-accent-blue/30 bg-accent-blue/10 text-accent-blue">
           <Download size={18} aria-hidden />

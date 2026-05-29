@@ -132,9 +132,9 @@ export function TechnicalRadarPanel({
             <HelpTip text="캔들 흐름을 기준으로 과열과 침체 정도를 숫자로 읽는 값입니다. 높으면 추세가 강할 수 있지만 추격 위험도 같이 봐야 합니다." />
           </p>
           <div className="mt-5">
-            <div className="relative h-5 rounded-full bg-[linear-gradient(90deg,#ef4444,#f59e0b,#facc15,#38bdf8,#22c55e)]">
+            <div className="relative h-5 rounded-full border border-surface-line bg-ui-inset">
               <span
-                className="absolute top-1/2 h-8 w-1.5 -translate-y-1/2 rounded-full bg-white shadow-[0_0_18px_rgba(255,255,255,0.85)]"
+                className="absolute top-1/2 h-8 w-1.5 -translate-y-1/2 rounded-full bg-white shadow-none"
                 style={{ left: `calc(${report.fearGreed.score}% - 3px)` }}
               />
             </div>
@@ -219,7 +219,7 @@ export function TechnicalRadarPanel({
           ))}
           {report.fibonacci.positionPercent !== null ? (
             <span
-              className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-accent-blue shadow-[0_0_18px_rgba(56,189,248,0.9)]"
+              className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-accent-blue shadow-none"
               style={{ left: `${report.fibonacci.positionPercent}%` }}
             />
           ) : null}

@@ -284,6 +284,24 @@ The next design tasks should define:
 - Do not weaken Basic/Pro gating.
 - Do not push UI implementation before screenshot review.
 
+## Color Direction
+
+The full-app redesign should also remove the AI-dashboard color style.
+
+Target color behavior:
+
+- Solid app canvas instead of radial, linear, or conic gradients.
+- Calm blue accent instead of neon cyan glow.
+- No glow shadows, drop-shadows, scan-line effects, or masked gradient fades as default decoration.
+- Minimal shadows across panels, fixed bars, modals, and popovers.
+- Semantic colors remain for market state, risk, success, warning, and error, but they should be flat and restrained.
+- Consumer-app feel should come from layout, typography, spacing, list rhythm, and clear actions rather than decorative color effects.
+
+Guardrails:
+
+- Do not use color cleanup to change routes, market logic, Basic/Pro gating, alert delivery, billing, auth, Supabase, Android, FCM, or production behavior.
+- Do not remove necessary warning, permission, locked, pricing, form, or modal boundaries.
+
 ## Recommended Next Step
 
 Before code implementation, define screen-by-screen priority and choose the first implementation screen.

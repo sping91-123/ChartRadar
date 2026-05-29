@@ -3,7 +3,7 @@ import { AlertTriangle } from "lucide-react";
 
 export function CryptoChartLoadingOverlay() {
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-surface-cardSoft/85 backdrop-blur-sm">
+    <div className="absolute inset-0 flex items-center justify-center bg-surface-cardSoft/85">
       <div className="rounded-md border border-white/10 bg-black/30 px-4 py-3 text-sm font-semibold text-slate-200">
         <span className="radar-scan-line inline-flex rounded-md px-1">레이더가 차트 구조를 감지하는 중입니다.</span>
       </div>

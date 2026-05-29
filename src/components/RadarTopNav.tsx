@@ -83,7 +83,7 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
   );
 
   return (
-    <nav className="sticky top-0 z-30 overflow-hidden border-b border-ui-line bg-transparent py-1.5 backdrop-blur-sm">
+    <nav className="sticky top-0 z-30 overflow-hidden border-b border-ui-line bg-transparent py-1.5">
       {navContent}
     </nav>
   );

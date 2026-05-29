@@ -10,10 +10,10 @@ const config: Config = {
     extend: {
       colors: {
         surface: {
-          base: "#050608",
-          card: "#11151c",
-          cardSoft: "#171c25",
-          line: "#283241"
+          base: "#090d12",
+          card: "#10151c",
+          cardSoft: "#141a22",
+          line: "#2b3440"
         },
         ui: {
           canvas: "var(--cr-color-canvas)",
@@ -35,13 +35,13 @@ const config: Config = {
           locked: "var(--cr-color-locked)"
         },
         accent: {
-          blue: "#38bdf8",
-          blueDeep: "#0ea5e9"
+          blue: "#60a5fa",
+          blueDeep: "#2563eb"
         },
         signal: {
-          danger: "#fb4d5f",
-          warning: "#facc15",
-          success: "#34d399"
+          danger: "#f43f5e",
+          warning: "#d97706",
+          success: "#22c55e"
         }
       },
       borderRadius: {
@@ -50,7 +50,7 @@ const config: Config = {
         "ui-lg": "var(--cr-radius-lg)"
       },
       boxShadow: {
-        glow: "0 0 0 1px rgba(56, 189, 248, 0.18), 0 18px 70px rgba(2, 8, 23, 0.55)",
+        glow: "none",
         "ui-panel": "var(--cr-shadow-panel)",
         "ui-elevated": "var(--cr-shadow-elevated)"
       },

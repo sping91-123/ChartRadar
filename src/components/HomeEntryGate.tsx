@@ -20,14 +20,14 @@ const marketEntries = [
     scope: "코인 시장",
     href: "/crypto",
     icon: Bitcoin,
-    accent: "text-cyan-200"
+    accent: "text-blue-300"
   },
   {
     title: "글로벌 레이더",
     scope: "해외주식·선물",
     href: "/global",
     icon: TrendingUp,
-    accent: "text-emerald-200"
+    accent: "text-slate-300"
   }
 ] as const;
 
@@ -59,11 +59,7 @@ function SplashBrandMark() {
         width={144}
         height={144}
         priority
-        className="h-full w-full object-cover opacity-80 mix-blend-screen drop-shadow-[0_0_28px_rgba(34,211,238,0.22)]"
-        style={{
-          WebkitMaskImage: "radial-gradient(circle, black 34%, rgba(0,0,0,0.86) 46%, transparent 70%)",
-          maskImage: "radial-gradient(circle, black 34%, rgba(0,0,0,0.86) 46%, transparent 70%)"
-        }}
+        className="h-full w-full object-cover opacity-95"
         draggable={false}
       />
     </div>
@@ -115,7 +111,7 @@ function SplashScreen() {
       <section className="flex -translate-y-[3dvh] flex-col items-center gap-5 text-center">
         <SplashBrandMark />
         <div>
-          <p className="mb-2 text-sm font-bold text-cyan-200">근거를 포착해, 방향을 더 선명하게</p>
+          <p className="mb-2 text-sm font-bold text-slate-300">근거를 포착해, 방향을 더 선명하게</p>
           <AnimatedBrandText />
         </div>
       </section>
@@ -178,7 +174,7 @@ function MarketSelector() {
               <Link
                 key={title}
                 href={href}
-                className="group flex min-h-[5.75rem] items-center justify-between gap-4 px-1 py-4 text-left transition hover:bg-white/[0.025] focus:outline-none focus-visible:bg-white/[0.035] focus-visible:ring-2 focus-visible:ring-cyan-300 sm:min-h-[7rem] sm:px-3 sm:py-5"
+                className="group flex min-h-[5.75rem] items-center justify-between gap-4 px-1 py-4 text-left transition hover:bg-white/[0.025] focus:outline-none focus-visible:bg-white/[0.035] focus-visible:ring-2 focus-visible:ring-ui-brand sm:min-h-[7rem] sm:px-3 sm:py-5"
               >
                 <div className="flex min-w-0 items-center gap-4 sm:gap-5">
                   <div className={`grid h-10 w-10 shrink-0 place-items-center sm:h-12 sm:w-12 ${accent}`}>
@@ -189,7 +185,7 @@ function MarketSelector() {
                     <p className="mt-1 text-xs font-bold leading-tight text-slate-400 sm:text-sm">{scope}</p>
                   </div>
                 </div>
-                <ArrowRight size={20} aria-hidden className="shrink-0 text-slate-500 transition group-hover:translate-x-1 group-hover:text-cyan-200" />
+                <ArrowRight size={20} aria-hidden className="shrink-0 text-slate-500 transition group-hover:translate-x-1 group-hover:text-ui-brand" />
               </Link>
             ))}
           </div>

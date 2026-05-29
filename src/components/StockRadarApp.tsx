@@ -504,13 +504,13 @@ function GlobalRadarControlDock({
   return (
     <>
       <div
-        className={`fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 mx-auto border-t border-surface-line bg-slate-950/72 p-2 shadow-none backdrop-blur-sm sm:hidden ${showMobileDock ? "block" : "hidden"}`}
+        className={`fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 mx-auto border-t border-surface-line bg-slate-950 p-2 shadow-none sm:hidden ${showMobileDock ? "block" : "hidden"}`}
         aria-label="글로벌 자산레이더 모바일 조작 패널"
       >
         {renderContent()}
       </div>
       <div
-        className="sticky top-3 z-20 mx-auto hidden max-w-5xl border-y border-surface-line bg-slate-950/72 py-2 backdrop-blur sm:block"
+        className="sticky top-3 z-20 mx-auto hidden max-w-5xl border-y border-surface-line bg-slate-950 py-2 sm:block"
         aria-label="글로벌 자산레이더 조작 패널"
       >
         {renderContent()}
@@ -918,7 +918,7 @@ export function StockRadarApp() {
         <div className="relative min-h-[320px] overflow-hidden border-y border-white/10 bg-transparent sm:min-h-[360px]">
           <div ref={chartRef} className="h-[320px] w-full sm:h-[360px]" />
           {state.status === "loading" ? (
-            <div className="absolute inset-0 grid place-items-center bg-slate-950/70 text-sm text-slate-300 backdrop-blur-sm">
+            <div className="absolute inset-0 grid place-items-center bg-slate-950/70 text-sm text-slate-300">
               <span className="inline-flex items-center gap-2">
                 <Loader2 className="animate-spin" size={16} aria-hidden />
                 차트 데이터를 불러오는 중입니다.
@@ -926,7 +926,7 @@ export function StockRadarApp() {
             </div>
           ) : null}
           {state.status === "error" ? (
-            <div className="absolute inset-0 grid place-items-center bg-slate-950/80 p-4 text-center text-sm text-signal-danger backdrop-blur-sm">
+            <div className="absolute inset-0 grid place-items-center bg-slate-950/80 p-4 text-center text-sm text-signal-danger">
               <div className="max-w-sm rounded-md border border-signal-danger/30 bg-signal-danger/10 p-4">
                 <p className="font-black">차트 데이터를 불러오지 못했습니다.</p>
                 <p className="mt-2 text-xs leading-5 text-signal-danger/90">{state.message || "잠시 후 다시 확인해 주세요."}</p>

@@ -1895,7 +1895,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           </button>
         ) : null}
         {!majorOnly && showOtherSymbols ? (
-          <div className="absolute left-0 top-full z-50 mt-2 max-h-[58vh] w-[min(92vw,560px)] overflow-hidden rounded-lg border border-surface-line bg-slate-950 p-2 shadow-[0_18px_50px_rgba(0,0,0,0.55)]">
+          <div className="absolute left-0 top-full z-50 mt-2 max-h-[58vh] w-[min(92vw,560px)] overflow-hidden rounded-lg border border-surface-line bg-slate-950 p-2 shadow-none">
             <input
               value={otherSymbolQuery}
               onChange={(event) => setOtherSymbolQuery(event.target.value)}
@@ -2363,8 +2363,8 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               </div>
 
               {marketBriefing.status === "loading" ? (
-                <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 px-4 backdrop-blur-sm">
-                  <div className="w-full max-w-sm rounded-2xl border border-accent-blue/25 bg-slate-950/95 p-6 text-center shadow-[0_0_90px_rgba(56,189,248,0.22)]">
+                <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 px-4">
+                  <div className="w-full max-w-sm rounded-2xl border border-accent-blue/25 bg-slate-950 p-6 text-center shadow-none">
                     <div className="radar-mark-lg mx-auto h-36 w-36 border border-accent-blue/30" />
                     <p className="mt-5 text-base font-black text-white">AI 레이더 스캔 중</p>
                     <p className="mt-2 text-sm leading-6 text-slate-400">

@@ -58,9 +58,9 @@ export function biasClasses(bias?: string) {
 }
 
 export function biasAccentLine(bias?: string) {
-  if (bias === "long") return "from-signal-success/80 via-signal-success/30 to-transparent";
-  if (bias === "short") return "from-signal-danger/80 via-signal-danger/30 to-transparent";
-  return "from-signal-warning/80 via-signal-warning/30 to-transparent";
+  if (bias === "long") return "bg-signal-success/70";
+  if (bias === "short") return "bg-signal-danger/70";
+  return "bg-signal-warning/70";
 }
 
 export function directionBadge(direction: DirectionState) {

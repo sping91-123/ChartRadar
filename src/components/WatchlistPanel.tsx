@@ -276,9 +276,9 @@ function AddCoinModal({
     <div
       ref={backdropRef}
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
     >
-      <div className="w-full max-w-sm rounded-xl border border-surface-line bg-surface-card p-5 shadow-glow">
+      <div className="w-full max-w-sm rounded-xl border border-surface-line bg-surface-card p-5 shadow-none">
         <div className="flex items-center justify-between">
           <h3 className="text-base font-black text-white">관심 코인 추가</h3>
           <button

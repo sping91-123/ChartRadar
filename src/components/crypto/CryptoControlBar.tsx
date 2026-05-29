@@ -27,7 +27,7 @@ export function CryptoControlBar({
   onModeChange
 }: CryptoControlBarProps) {
   return (
-    <div className="fixed inset-x-2 bottom-2 z-40 mx-auto max-w-5xl border-y border-white/10 bg-slate-950/82 px-1.5 py-2 shadow-none backdrop-blur sm:inset-x-3 sm:px-2">
+    <div className="fixed inset-x-2 bottom-2 z-40 mx-auto max-w-5xl border-y border-white/10 bg-slate-950 px-1.5 py-2 shadow-none sm:inset-x-3 sm:px-2">
       <div className="mx-auto max-w-5xl">
         <CryptoRadarControlTabs
           timeframes={timeframes}
