@@ -41,6 +41,7 @@
 - 2026-05-27: `da9ba37`에서 `/crypto` data helper 분리를 진행했다. fetch와 차트 lifecycle의 큰 구조는 아직 `LiveMarketChart.tsx` 중심으로 유지한다.
 - 2026-05-29: 복기 저장 payload 생성 로직을 `src/components/crypto/journalHelpers.ts`로 분리했다. 저장 호출, Supabase session, local fallback 흐름은 변경하지 않았다.
 - 2026-05-29: 알트 개별 분석 사용량 helper를 `src/components/crypto/altAnalysisUsage.ts`로 분리했다. Basic/Pro 한도, localStorage key, usage event 기록은 변경하지 않았다.
+- 2026-05-29: AI 브리핑 하이라이트 렌더링을 `src/components/crypto/HighlightedBriefing.tsx`로 분리했다. 브리핑 텍스트 정리와 keyword tone 렌더링 결과는 유지했다.
 
 ## 현재 남은 분리 후보
 
