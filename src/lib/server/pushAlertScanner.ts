@@ -1,5 +1,4 @@
 // 서버 크론에서 알림 조건을 스캔하고 Android FCM 푸시를 발송한다.
-import { findSetupAlertMatches } from "@/lib/setupAlertPresets";
 import { cooldownDecisionForEvent, eventToRecentRow, type CooldownDecision } from "@/lib/server/push/cooldown";
 import { alreadySent, duplicateBucket, recentSentEvents, type RecentPushAlertEventRow } from "@/lib/server/push/duplicateGuard";
 import { emptyDiagnostics, eventDiagnostic, eventDiagnosticSample, pushPreferenceSkippedSample, pushSample } from "@/lib/server/push/diagnostics";
@@ -8,7 +7,6 @@ import {
   buildSemiconductorLeadershipEvent,
   limitCryptoMarketScoutEvents,
   limitGlobalMarketScoutEvents,
-  matchedSetupToEvent,
   setupToEvent,
   stockSignalLabel,
   topPushSetups
@@ -17,7 +15,8 @@ import { asArray, passesSetupPushQuality } from "@/lib/server/push/eligibility";
 import { ruleAllowed, userPlan } from "@/lib/server/push/entitlements";
 import { personalizeEventForUser } from "@/lib/server/push/personalization";
 import { tokenPreferenceDecision } from "@/lib/server/push/preferences";
-import { groupPresetsByUser, presetCountForMarket, presetFromRow, presetsForMarket, presetScanInputsForMarket } from "@/lib/server/push/presets";
+import { buildUserPresetEvents } from "@/lib/server/push/presetEvents";
+import { groupPresetsByUser, presetCountForMarket, presetScanInputsForMarket } from "@/lib/server/push/presets";
 import { scanLiquidationEvent } from "@/lib/server/push/scanners/liquidationScanner";
 import { scanMacroCalendarEvent, scanNewsEvent } from "@/lib/server/push/scanners/macroScanner";
 import { scanCryptoSetups, scanStockSetups, stockMomentumSymbols } from "@/lib/server/push/scanners/setupScanner";
@@ -187,19 +186,9 @@ export async function runPushAlertScan(context: ScanContext) {
       const recentRowsForUser = [...recentRows];
       const plan = userPlan(profileMap, subscriptionsByUser, userId);
       const userPresets = presetsByUser.get(userId) ?? [];
-      const cryptoPresetMatches = findSetupAlertMatches(
-        presetsForMarket(userPresets, "crypto").map(presetFromRow),
-        cryptoSetups,
-        "crypto"
-      ).map((match) => matchedSetupToEvent(match.setup, "watchlist-surge", "crypto", "preset"));
-      const stockPresetMatches = findSetupAlertMatches(
-        presetsForMarket(userPresets, "stocks").map(presetFromRow),
-        stockPresetSetups,
-        "stocks"
-      ).map((match) => matchedSetupToEvent(match.setup, "stock-momentum", "stocks", "preset"));
 
       const userGenericEvents = genericEvents.map((event) => personalizeEventForUser(event, userPresets));
-      const allUserEvents = [...userGenericEvents, ...cryptoPresetMatches, ...stockPresetMatches];
+      const allUserEvents = [...userGenericEvents, ...buildUserPresetEvents(userPresets, cryptoSetups, stockPresetSetups)];
       candidateEventCount += allUserEvents.length;
       for (const event of allUserEvents) {
         const skippedReason = passesSetupPushQuality(event) ? null : "low_score";
