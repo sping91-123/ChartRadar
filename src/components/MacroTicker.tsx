@@ -155,6 +155,52 @@ function impactLabel(item: MacroEventItem) {
   return "영향도 낮음";
 }
 
+function isVisibleCompactImpact(item: MacroEventItem) {
+  return isHighImpactMacro(item) || item.importance === 2;
+}
+
+function numericMacroValue(value?: string) {
+  if (isEmptyValue(value)) return null;
+  const match = value?.replace(/,/g, "").match(/-?\d+(\.\d+)?/);
+  if (!match) return null;
+  const parsed = Number(match[0]);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function cryptoImpactRead(item: MacroEventItem) {
+  if (!hasReleaseTimePassed(item)) return "발표 전이라 방향보다 변동성 대비가 우선입니다.";
+  if (isDocumentEvent(item)) return "문서 공개 후 금리·유동성 문구가 코인시장 변수입니다.";
+
+  const actual = numericMacroValue(item.actualValue ?? item.actual);
+  const expected = numericMacroValue(item.consensusValue ?? item.forecast);
+  if (actual === null || expected === null) return "결과 확인 중이라 가격 반응을 먼저 봅니다.";
+
+  const lower = item.label.toLowerCase();
+  const diff = actual - expected;
+  const materiallyHigher = diff > 0.001;
+  const materiallyLower = diff < -0.001;
+
+  if (lower.includes("cpi") || lower.includes("ppi") || lower.includes("pce") || lower.includes("inflation")) {
+    if (materiallyLower) return "예상보다 낮아 코인에는 금리 부담 완화 재료입니다.";
+    if (materiallyHigher) return "예상보다 높아 코인에는 금리 부담 확대 재료입니다.";
+    return "예상 부근이라 코인 영향은 가격 반응 확인이 우선입니다.";
+  }
+
+  if (lower.includes("jobless") || lower.includes("claims") || lower.includes("unemployment")) {
+    if (materiallyHigher) return "고용 둔화 신호라 코인에는 단기 혼조 재료입니다.";
+    if (materiallyLower) return "고용 견조 신호라 금리 부담을 다시 볼 구간입니다.";
+    return "예상 부근이라 코인 영향은 제한적으로 봅니다.";
+  }
+
+  if (lower.includes("retail") || lower.includes("gdp") || lower.includes("pmi") || lower.includes("durable")) {
+    if (materiallyHigher) return "경기 견조 신호지만 금리 부담도 함께 확인합니다.";
+    if (materiallyLower) return "경기 둔화 신호라 위험자산 심리 확인이 필요합니다.";
+    return "예상 부근이라 코인 영향은 제한적으로 봅니다.";
+  }
+
+  return "발표 직후 BTC 반응과 달러·금리 움직임을 함께 봅니다.";
+}
+
 function macroLabel(label: string) {
   const lower = label.toLowerCase();
   if (lower.includes("core cpi")) return "근원 CPI";
@@ -193,9 +239,10 @@ function getPreviousReleasedItems(items: MacroEventItem[]) {
 }
 
 function getCompactItem(items: MacroEventItem[]) {
-  const nearestUpcoming = getUpcomingItems(items)[0];
+  const visibleItems = items.filter(isVisibleCompactImpact);
+  const nearestUpcoming = getUpcomingItems(visibleItems)[0];
   if (nearestUpcoming && isWithinNextDay(nearestUpcoming)) return nearestUpcoming;
-  return getRecentReleasedItems(items)[0] ?? nearestUpcoming ?? items[0];
+  return getRecentReleasedItems(visibleItems)[0] ?? nearestUpcoming ?? visibleItems[0];
 }
 
 function MacroNewsValue({ label, value, pending = false }: { label: string; value?: string; pending?: boolean }) {
@@ -356,19 +403,20 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
 
     return (
       <div className="space-y-1.5">
-        <Link href={href} className="group flex min-h-10 items-center gap-2 border-y border-ui-line/70 bg-transparent px-1 py-2 transition hover:bg-white/[0.025]">
+        <Link href={href} className="group flex min-h-10 items-start gap-2 border-y border-ui-line/70 bg-transparent px-1 py-2 transition hover:bg-white/[0.025]">
           <div className={`inline-flex shrink-0 items-center gap-1.5 py-0.5 text-[11px] font-black ${isReleased ? "text-signal-warning" : "text-accent-blue"}`}>
             <Radio size={12} aria-hidden />
             {eventKind}
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[11px] font-black text-white">
-              {macroLabel(item.label)} · <span className={compactStateClass(item)}>{compactStatusLabel(item)}</span>
+              {macroLabel(item.label)} · <span className={compactStateClass(item)}>{compactStatusLabel(item)}</span> · {impactLabel(item)}
             </p>
-            <p className="mt-0.5 flex min-w-0 flex-wrap gap-x-2 gap-y-0.5 text-[11px] font-bold text-slate-500">
+            <p className="mt-0.5 truncate text-[11px] font-bold text-slate-500">
               <span>한국시간 {item.dateKst}</span>
-              <span>{impactLabel(item)}</span>
-              <span>{primaryValueLabel} {primaryValue}</span>
+            </p>
+            <p className="mt-0.5 min-w-0 text-[11px] font-bold leading-4 text-slate-500 [overflow-wrap:anywhere] [word-break:keep-all]">
+              {primaryValueLabel} {primaryValue} · 예상 {displayConsensusValue(item)} · 이전 {displayPreviousValue(item)} · {cryptoImpactRead(item)}
             </p>
           </div>
           <ChevronRight size={14} className="shrink-0 text-slate-600 transition group-hover:text-accent-blue" aria-hidden />
