@@ -554,3 +554,36 @@ Global Radar는 이후 별도 축으로 강화한다.
 - CPI/FOMC 등 이벤트 전후 변동성 경고.
 
 Global Radar는 Coin Radar 내부 매크로와 목적이 다르므로 route, 문구, BM 구조에서 독립성을 유지한다.
+
+## 현물 레이더 MVP 구현 1차
+
+구현 브랜치: `codex/coin-radar-spot-mvp`
+
+### 적용 범위
+
+- 신규 route 후보였던 `/spot`을 Coin Radar 현물 MVP로 추가한다.
+- Coin Radar 상단 nav에 `현물`을 추가한다.
+- `/crypto`는 선물 메이저 BTC/ETH 진입으로 유지하고, `/alts`는 알트 레이더로 유지한다.
+- `/news?market=crypto`는 매크로/뉴스 역할로 유지한다.
+- `/journal?market=crypto`는 복기 역할로 유지한다.
+
+### 데이터 범위
+
+- 업비트 KRW public ticker.
+- 빗썸 KRW public ticker.
+- 거래소 계정, 주문, API key, 보유 자산 조회는 포함하지 않는다.
+- 첫 pass는 현재가, 등락률, 24시간 거래대금, 고가/저가 위치 기반으로 관찰 후보를 분류한다.
+
+### 표시 원칙
+
+- 금지 문구: 매수 추천, 좋은 코인, 진입 기회.
+- 사용 문구: 관심 후보, 거래대금 집중, 상승률 상위, 과열 주의, 눌림 대기, 하락 압력, 관망, 확인 조건.
+- 각 후보에는 리스크와 다음 확인 조건을 함께 표시한다.
+- 현물 레이더는 판단 보조 화면이며 투자 권유나 주문 기능이 아니다.
+
+### 보존 범위
+
+- Global Radar 독립성 유지.
+- 기존 `/crypto`, `/alts`, `/global`, `/journal`, `/news` route 동작 유지.
+- Basic/Pro gating 변경 없음.
+- 결제, 인증, Supabase, Android, FCM, production 로직 변경 없음.

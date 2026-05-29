@@ -16,9 +16,10 @@ type NavItem = {
 };
 
 const cryptoNavItems: NavItem[] = [
-  { label: "BTC/ETH", icon: Radar, href: "/crypto", match: ["/crypto"] },
-  { label: "알트코인", icon: Coins, href: "/alts", match: ["/alts"] },
-  { label: "뉴스", icon: Newspaper, href: "/news?market=crypto", match: ["/news"], market: "crypto" },
+  { label: "선물", icon: Radar, href: "/crypto", match: ["/crypto"] },
+  { label: "현물", icon: Coins, href: "/spot", match: ["/spot"] },
+  { label: "알트", icon: Coins, href: "/alts", match: ["/alts"] },
+  { label: "매크로", icon: Newspaper, href: "/news?market=crypto", match: ["/news"], market: "crypto" },
   { label: "복기", icon: History, href: "/journal?market=crypto", match: ["/journal"], market: "crypto" }
 ];
 
