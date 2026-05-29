@@ -191,7 +191,7 @@ function cryptoImpactRead(item: MacroEventItem): "호재" | "악재" | "중립" 
     return "중립";
   }
 
-  if (lower.includes("retail") || lower.includes("gdp") || lower.includes("pmi") || lower.includes("durable")) {
+  if (lower.includes("retail") || lower.includes("gdp") || lower.includes("pmi") || lower.includes("durable") || lower.includes("home sales")) {
     if (materiallyHigher) return "중립";
     if (materiallyLower) return "악재";
     return "중립";
@@ -405,9 +405,15 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
     return (
       <div className="space-y-1.5">
         <Link href={href} className="group flex min-h-10 items-start gap-2 border-y border-ui-line/70 bg-transparent px-1 py-2 transition hover:bg-white/[0.025]">
-          <div className={`inline-flex self-stretch shrink-0 items-center gap-1.5 py-0.5 text-[11px] font-black ${isReleased ? "text-signal-warning" : "text-accent-blue"}`}>
-            <Radio size={12} aria-hidden />
-            {eventKind}
+          <div className={`flex w-[4.35rem] shrink-0 flex-col items-center justify-start gap-1 pt-0.5 text-center text-[11px] font-black ${isReleased ? "text-signal-warning" : "text-accent-blue"}`}>
+            <span>{eventKind}</span>
+            {impactRead && ImpactIcon ? (
+              <span className="inline-flex items-center justify-center text-ui-text" aria-label={impactRead}>
+                <ImpactIcon size={14} aria-hidden />
+              </span>
+            ) : (
+              <Radio size={12} aria-hidden />
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[11px] font-black text-white">
@@ -420,12 +426,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
               <span>{primaryValueLabel} {primaryValue}</span>
               <span>예상 {displayConsensusValue(item)}</span>
               <span>이전 {displayPreviousValue(item)}</span>
-              {impactRead && ImpactIcon ? (
-                <span className="inline-flex items-center gap-1 text-ui-text">
-                  <ImpactIcon size={12} aria-hidden />
-                  {impactRead}
-                </span>
-              ) : null}
+              {impactRead ? <span className="text-ui-text">{impactRead}</span> : null}
             </p>
           </div>
           <ChevronRight size={14} className="shrink-0 text-slate-600 transition group-hover:text-accent-blue" aria-hidden />
