@@ -14,13 +14,13 @@ import {
   fallbackUniverse,
   featuredSymbols,
   globalWatchlistMaxItems,
-  globalWatchlistStorageKey,
   groupLabels,
   groupOrder,
   radarModes,
   type GlobalRadarMode,
   type LoadState
 } from "@/components/global/stockRadarConfig";
+import { readGlobalWatchlist, writeGlobalWatchlist } from "@/components/global/globalWatchlist";
 import {
   directionClass,
   directionLabel,
@@ -44,25 +44,6 @@ import { getWatchlistLimit } from "@/lib/watchlist";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import { getChartThemeOptions, observeChartThemeChange } from "@/lib/chartTheme";
 import { technicalRadarReportToRadarInsight, visibleRadarInsightForPlan } from "@/lib/radarInsight";
-
-function readGlobalWatchlist() {
-  if (typeof window === "undefined") return ["SPY", "QQQ", "NVDA"];
-
-  try {
-    const raw = window.localStorage.getItem(globalWatchlistStorageKey);
-    const parsed = raw ? (JSON.parse(raw) as unknown) : null;
-    if (!Array.isArray(parsed)) return ["SPY", "QQQ", "NVDA"];
-    const symbols = parsed.filter((item): item is string => typeof item === "string").slice(0, globalWatchlistMaxItems);
-    return symbols.length ? symbols : ["SPY", "QQQ", "NVDA"];
-  } catch {
-    return ["SPY", "QQQ", "NVDA"];
-  }
-}
-
-function writeGlobalWatchlist(symbols: string[]) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(globalWatchlistStorageKey, JSON.stringify(symbols.slice(0, globalWatchlistMaxItems)));
-}
 
 function GlobalAssetChecklist({ selectedInfo }: { selectedInfo: StockSymbolInfo | null }) {
   const checklist = groupChecklist(selectedInfo?.group);
