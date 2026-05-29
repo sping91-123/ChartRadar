@@ -48,7 +48,7 @@
 
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TODO | 현재 `/coin` 홈 구조 audit | Coin Home / Audit | LOW | `/coin`, `CoinRadarHomePanel`, 관련 API 사용 구조를 조사하고 현재 홈이 어떤 질문에 답하는지 정리한다. | 코드 수정 금지. route 변경 금지. API 변경 금지. | `git diff --check` |
+| 1 | DONE | 현재 `/coin` 홈 구조 audit | Coin Home / Audit | LOW | `/coin`, `CoinRadarHomePanel`, 관련 API 사용 구조를 조사하고 현재 홈이 어떤 질문에 답하는지 `docs/coin-home-decision-dashboard-audit.md`에 정리했다. | 코드 수정 금지. route 변경 금지. API 변경 금지. | `git diff --check` |
 | 2 | TODO | 홈 decision model 설계 | Coin Home / Decision Model | MEDIUM | 홈 최상단 판단 모델을 문서화한다. 상태는 관망 / 조건 대기 / 추적 가능 / 리스크 확대, 준비도 점수, 방향성, 주도, 리스크 기준을 포함한다. | 코드 수정 금지. 투자 권유 문구 금지. RSI/스토캐스틱/트렌드를 선택 코인 기준으로 설계 금지. | `git diff --check` |
 | 3 | TODO | 대표 코인 개인화 설계 | Coin Home / Personalization | MEDIUM | BTC/ETH/XRP 고정 구조를 내 대표 코인 구조로 확장하는 설계를 문서화한다. 기본값, 사용자 선택, 현물/선물 모드, localStorage 우선, 계정 동기화 후순위를 포함한다. | 코드 수정 금지. Supabase/계정 동기화 구현 금지. | `git diff --check` |
 | 4 | TODO | BTC장 vs 알트장 판단 기준 설계 | Coin Home / Market Leadership | MEDIUM | BTC trend, BTC dominance, ETH/BTC 상대 강도, 알트 상승 비율, 거래대금 증가 알트 수, 상위 알트 상대 수익률 기준을 문서화한다. | 코드 수정 금지. 신규 데이터 API 구현 금지. 투자 권유 문구 금지. | `git diff --check` |
