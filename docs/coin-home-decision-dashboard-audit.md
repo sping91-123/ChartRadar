@@ -599,14 +599,221 @@ Later data/API needs:
 - account sync for representative coin settings.
 - richer macro risk scoring.
 
+## Representative Coin Personalization
+
+The current home uses fixed representative coins: BTC, ETH, and XRP. This is useful as a default because it gives every user a working home screen immediately, but it does not yet answer the more personal question: "내가 보는 코인은 지금 추적할 만한가?"
+
+### Limits Of The Current Fixed Structure
+
+- BTC/ETH/XRP are hardcoded as `representativeSymbols`.
+- Funding requests are also fixed to BTC/ETH/XRP.
+- The home cannot reflect a user's preferred coin such as SOL, DOGE, or BNB.
+- The home cannot distinguish whether the user is watching a spot setup or futures setup.
+- The current representative score may highlight a coin the user does not actually care about.
+- The same three coins appear for Basic and Pro users, so personalization is not yet a monetization lever.
+
+### "My Representative Coins" Structure
+
+The home should evolve from "default representative coins" to "my representative coins".
+
+Recommended structure:
+
+1. Default list
+   - BTC
+   - ETH
+   - XRP
+
+2. User-selected list
+   - Basic: fixed default list at first.
+   - Pro: user can select and reorder representative coins.
+   - Future: account sync can restore the list across devices.
+
+3. Display rule
+   - Always show at least one representative coin.
+   - If stored values are invalid, fall back to BTC/ETH/XRP.
+   - If a selected coin cannot load, show an unavailable state and keep the rest of the list usable.
+
+### Default Representative Coin Candidates
+
+Initial default:
+
+- BTC
+- ETH
+- XRP
+
+Reasoning:
+
+- BTC is the market backbone.
+- ETH gives broad risk-on/risk-off context beyond BTC.
+- XRP is a common domestic interest coin for Korean users and already exists in the current home funding requests.
+
+### User Selection Candidates
+
+First selectable candidates:
+
+- BTC
+- ETH
+- XRP
+- SOL
+- DOGE
+- BNB
+
+Later:
+
+- user-entered symbol.
+- exchange-specific KRW spot symbols.
+- frequently watched symbols from saved alerts or journal entries.
+
+Validation principles for user-entered symbols:
+
+- normalize to uppercase.
+- strip `/`, `.P`, and whitespace.
+- allow only known supported symbols in the first implementation.
+- if unsupported, do not save and show a plain "지원 예정" style message.
+- never treat a user-entered symbol as a trading recommendation.
+
+### Spot And Futures Mode
+
+The representative coin can have a mode:
+
+1. Spot mode
+   - Purpose: domestic KRW spot watch context.
+   - Copy direction:
+     - "현물 관심 후보"
+     - "거래대금 확인"
+     - "추격 리스크"
+     - "눌림 대기"
+   - Avoid:
+     - "매수 후보"
+     - "진입 기회"
+
+2. Futures mode
+   - Purpose: BTC/ETH/alt futures structure and derivatives risk context.
+   - Copy direction:
+     - "선물 추적 조건"
+     - "레버리지 주의"
+     - "펀딩비 쏠림"
+     - "청산 압력 확인"
+   - Avoid:
+     - "롱 진입"
+     - "숏 진입"
+
+MVP recommendation:
+
+- Keep the first implementation mode-light.
+- Store a `mode` value but do not overbuild separate data models yet.
+- Use current Binance-based data for futures-style context.
+- Add KRW spot-specific data only in a later spot radar implementation.
+
+### Storage Model
+
+Phase 1: localStorage
+
+- Store representative coin preferences locally.
+- No Supabase or account sync in the first implementation.
+- Suggested conceptual key:
+  - `chart-radar:coin-home:representative-coins`
+- Suggested value shape:
+  - version number.
+  - selected symbols.
+  - mode per symbol or global mode.
+  - updated timestamp.
+
+Fallback policy:
+
+- Missing value: use BTC/ETH/XRP.
+- Malformed JSON: ignore and use BTC/ETH/XRP.
+- Empty list: use BTC/ETH/XRP.
+- Unsupported symbol: drop the invalid symbol.
+- All symbols invalid: use BTC/ETH/XRP.
+- Duplicate symbols: keep first occurrence only.
+
+Phase 2: account sync
+
+- Sync only after the local model proves useful.
+- Treat this as a separate high-risk-adjacent design because it touches auth/session and persistence.
+- Do not mix Supabase sync with the first UI implementation.
+
+### Basic And Pro Split
+
+Basic:
+
+- Shows the default BTC/ETH/XRP representative list.
+- May allow temporary view changes later, but should not weaken Pro value.
+- Shows top-level summary, readiness, and one risk/confirmation condition.
+
+Pro:
+
+- Allows direct representative coin selection.
+- Allows expanded saved count.
+- Allows reordering.
+- Can connect representative coins to alert conditions.
+- Can show detailed rationale, invalidation, and risk breakdown for selected coins.
+
+Suggested Pro boundaries:
+
+- Basic: 3 default coins.
+- Pro: custom representative list and more saved slots.
+- Pro: alert condition suggestions tied to the selected coins.
+- Pro: deeper derivatives/funding explanation.
+
+### Copy Principles
+
+Use:
+
+- "내 대표 코인"
+- "관심 코인"
+- "추적 조건"
+- "확인 조건"
+- "리스크"
+- "관망"
+- "눌림 대기"
+- "거래대금 확인"
+
+Avoid:
+
+- "추천 코인"
+- "매수 후보"
+- "진입 기회"
+- "롱 추천"
+- "숏 추천"
+- "수익 가능"
+
+Example copy:
+
+- "내 대표 코인은 추적 조건을 확인하는 용도입니다."
+- "조건이 맞지 않으면 관망으로 표시합니다."
+- "현물 모드는 거래대금과 과열 여부를 먼저 봅니다."
+- "선물 모드는 펀딩비와 청산 압력을 함께 봅니다."
+
+### First Implementation Candidate
+
+Recommended first implementation:
+
+1. Add localStorage-based representative coin preference.
+2. Keep BTC/ETH/XRP as the default fallback.
+3. Add a small representative coin selector UI.
+4. Limit first selectable symbols to BTC, ETH, XRP, SOL, DOGE, BNB.
+5. Do not add account sync.
+6. Do not add Supabase writes.
+7. Do not add new route.
+8. Do not change billing logic.
+
+Why this should be first:
+
+- It directly improves the home purpose.
+- It is reversible.
+- It can be implemented without production DB migration.
+- It avoids auth/session and Supabase risk.
+- It can later connect naturally to alerts, journal, and Pro gating.
+
 ## Next Work Candidate
 
-Next active-run task should be `대표 코인 개인화 설계`.
+Next active-run task should be `BTC장 vs 알트장 판단 기준 설계`.
 
 Recommended focus:
 
-1. Define default representative coins: BTC, ETH, XRP.
-2. Define how users choose "내 대표 코인".
-3. Define localStorage-first persistence.
-4. Define spot/futures mode distinction.
-5. Keep account sync as a later step.
+1. Define BTC-led, alt-rotation, mixed, and risk-off labels.
+2. Separate what can be derived from current market-board data.
+3. Mark ETH/BTC and broader breadth as later data needs.
+4. Keep all labels as market context, not trade direction.
