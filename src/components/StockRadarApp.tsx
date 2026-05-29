@@ -357,7 +357,7 @@ function GlobalIctPanel({ analysis, timeframe, candlesLength }: { analysis: Time
           <p className="text-xs font-black uppercase tracking-[0.18em] text-accent-blue">ICT Radar</p>
           <h3 className="mt-1 text-xl font-black text-white">{timeframe} 구조 판독</h3>
         </div>
-        <span className={`inline-flex min-h-8 items-center rounded-md border px-3 text-xs font-black ${directionClass(scoreTone)}`}>
+        <span className={`inline-flex min-h-8 items-center text-xs font-black ${directionClass(scoreTone).replace(/bg-[^ ]+/g, "").replace(/border-[^ ]+/g, "")}`}>
           {scoreLabel} · {analysis.score > 0 ? "+" : ""}
           {analysis.score.toFixed(2)}
         </span>
@@ -471,10 +471,10 @@ function GlobalRadarControlDock({
             key={item}
             type="button"
             onClick={() => onTimeframeChange(item)}
-            className={`min-h-10 rounded-md border px-2 text-xs font-black transition ${
+            className={`min-h-10 border-b-2 px-2 text-xs font-black transition ${
               timeframe === item
-                ? "border-accent-blue bg-accent-blue text-slate-950"
-                : "border-transparent bg-transparent text-slate-300 hover:border-accent-blue/60 hover:bg-white/[0.03]"
+                ? "border-accent-blue text-accent-blue"
+                : "border-transparent bg-transparent text-slate-300 hover:text-white"
             }`}
           >
             {item}
@@ -487,10 +487,10 @@ function GlobalRadarControlDock({
             key={item.value}
             type="button"
             onClick={() => onRadarModeChange(item.value)}
-            className={`min-h-9 rounded-md border px-2 text-xs font-black transition ${
+            className={`min-h-9 border-b-2 px-2 text-xs font-black transition ${
               radarMode === item.value
-                ? "border-white/20 bg-white text-slate-950"
-                : "border-transparent bg-transparent text-slate-300 hover:border-white/25 hover:bg-white/[0.03]"
+                ? "border-white text-white"
+                : "border-transparent bg-transparent text-slate-300 hover:text-white"
             }`}
             title={item.caption}
           >
@@ -504,7 +504,7 @@ function GlobalRadarControlDock({
   return (
     <>
       <div
-        className={`fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 mx-auto rounded-lg border border-surface-line bg-slate-950/88 p-2 shadow-xl shadow-black/30 backdrop-blur sm:hidden ${showMobileDock ? "block" : "hidden"}`}
+        className={`fixed inset-x-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-40 mx-auto border-t border-surface-line bg-slate-950/72 p-2 shadow-none backdrop-blur-sm sm:hidden ${showMobileDock ? "block" : "hidden"}`}
         aria-label="글로벌 자산레이더 모바일 조작 패널"
       >
         {renderContent()}
@@ -782,14 +782,14 @@ export function StockRadarApp() {
                 setSymbol(item.symbol);
                 setSearchQuery("");
               }}
-              className={`min-h-11 shrink-0 rounded-md border px-3 text-left transition ${
+              className={`min-h-11 shrink-0 border-b-2 px-1 text-left transition ${
                 symbol === item.symbol
-                  ? "border-accent-blue bg-accent-blue text-slate-950"
-                  : "border-transparent bg-transparent text-slate-200 hover:border-accent-blue/60 hover:bg-white/[0.03]"
+                  ? "border-accent-blue text-accent-blue"
+                  : "border-transparent bg-transparent text-slate-200 hover:text-white"
               }`}
             >
               <span className="block text-sm font-black">{item.symbol}</span>
-              <span className={`block text-[10px] font-bold ${symbol === item.symbol ? "text-slate-800" : "text-slate-500"}`}>
+              <span className={`block text-[10px] font-bold ${symbol === item.symbol ? "text-accent-blue/80" : "text-slate-500"}`}>
                 {groupLabels[item.group]}
               </span>
             </button>
@@ -810,10 +810,10 @@ export function StockRadarApp() {
               type="button"
               onClick={() => toggleSavedSymbol(symbol)}
               disabled={!canSaveSelectedSymbol}
-              className={`inline-flex min-h-9 items-center justify-center gap-1.5 rounded-md border px-3 text-xs font-black transition disabled:cursor-not-allowed disabled:border-slate-500/30 disabled:bg-slate-500/10 disabled:text-slate-500 ${
+              className={`inline-flex min-h-9 items-center justify-center gap-1.5 border-b px-0 text-xs font-black transition disabled:cursor-not-allowed disabled:border-slate-500/30 disabled:text-slate-500 ${
                 isSavedSymbol
-                  ? "border-emerald-300/35 bg-emerald-300/15 text-emerald-200"
-                  : "border-accent-blue/30 bg-accent-blue/10 text-accent-blue hover:bg-accent-blue hover:text-slate-950"
+                  ? "border-emerald-300/35 text-emerald-200"
+                  : "border-accent-blue/30 text-accent-blue hover:text-cyan-100"
               }`}
             >
               {isSavedSymbol ? <BookmarkCheck size={13} aria-hidden /> : <Bookmark size={13} aria-hidden />}
@@ -830,14 +830,14 @@ export function StockRadarApp() {
                   setSymbol(item.symbol);
                   setSearchQuery("");
                 }}
-                className={`min-h-10 shrink-0 rounded-md border px-3 text-left transition ${
+                className={`min-h-10 shrink-0 border-b-2 px-1 text-left transition ${
                   symbol === item.symbol
-                    ? "border-emerald-300 bg-emerald-300 text-slate-950"
-                    : "border-transparent bg-transparent text-slate-200 hover:border-emerald-300/60 hover:bg-white/[0.03]"
+                    ? "border-emerald-300 text-emerald-200"
+                    : "border-transparent bg-transparent text-slate-200 hover:text-white"
                 }`}
               >
                 <span className="block text-xs font-black">{item.symbol}</span>
-                <span className={`block max-w-[110px] truncate text-[10px] font-bold ${symbol === item.symbol ? "text-slate-800" : "text-slate-500"}`}>
+                <span className={`block max-w-[110px] truncate text-[10px] font-bold ${symbol === item.symbol ? "text-emerald-200/80" : "text-slate-500"}`}>
                   {item.name}
                 </span>
               </button>
@@ -851,10 +851,10 @@ export function StockRadarApp() {
               key={group}
               type="button"
               onClick={() => setSelectedGroup(group)}
-              className={`min-h-8 rounded-md border px-2.5 text-[11px] font-black transition ${
+              className={`min-h-8 border-b-2 px-0 text-[11px] font-black transition ${
                 selectedGroup === group
-                  ? "border-white/20 bg-white text-slate-950"
-                  : "border-transparent bg-transparent text-slate-300 hover:border-accent-blue/60 hover:bg-white/[0.03]"
+                  ? "border-white text-white"
+                  : "border-transparent bg-transparent text-slate-300 hover:text-white"
               }`}
             >
               {group === "all" ? "전체" : groupLabels[group]}
@@ -868,14 +868,14 @@ export function StockRadarApp() {
               key={item.symbol}
               type="button"
               onClick={() => setSymbol(item.symbol)}
-              className={`min-h-12 rounded-md border px-2.5 text-left transition ${
+              className={`min-h-12 border-b-2 px-0 text-left transition ${
                 symbol === item.symbol
-                  ? "border-accent-blue bg-accent-blue/90 text-slate-950"
-                  : "border-transparent bg-transparent text-slate-200 hover:border-accent-blue/60 hover:bg-white/[0.03]"
+                  ? "border-accent-blue text-accent-blue"
+                  : "border-transparent bg-transparent text-slate-200 hover:text-white"
               }`}
             >
               <span className="block text-sm font-black">{item.symbol}</span>
-              <span className={`block truncate text-[11px] font-bold ${symbol === item.symbol ? "text-slate-800" : "text-slate-500"}`}>
+              <span className={`block truncate text-[11px] font-bold ${symbol === item.symbol ? "text-accent-blue/80" : "text-slate-500"}`}>
                 {item.name}
               </span>
             </button>

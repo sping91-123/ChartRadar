@@ -15,10 +15,10 @@ function cx(...classes: Array<string | false | null | undefined>) {
 
 const surfaceVariantClass: Record<SurfaceVariant, Record<Tone, string>> = {
   card: {
-    panel: "border border-ui-line bg-ui-panel text-ui-text shadow-ui-panel",
-    elevated: "border border-ui-line bg-ui-elevated text-ui-text shadow-ui-elevated",
-    inset: "border border-ui-line bg-ui-inset text-ui-text",
-    critical: "border border-amber-400/28 bg-amber-400/10 text-ui-risk"
+    panel: "border-y border-ui-line bg-transparent text-ui-text shadow-none",
+    elevated: "border-y border-ui-lineStrong bg-transparent text-ui-text shadow-none",
+    inset: "border-y border-ui-line bg-transparent text-ui-muted shadow-none",
+    critical: "border-y border-amber-400/28 bg-transparent text-ui-risk shadow-none"
   },
   flat: {
     panel: "bg-transparent text-ui-text",
@@ -53,8 +53,8 @@ const radiusClass: Record<SurfaceRadius, string> = {
   md: "rounded-ui"
 };
 
-function defaultRadiusForVariant(variant: SurfaceVariant) {
-  return variant === "card" ? "md" : "none";
+function defaultRadiusForVariant(_variant: SurfaceVariant): SurfaceRadius {
+  return "none";
 }
 
 interface AppSurfaceProps {
@@ -125,17 +125,17 @@ export function SectionHeader({
 }
 
 const statusClass: Record<StatusTone, string> = {
-  long: "border-emerald-400/24 bg-emerald-400/10 text-ui-long",
-  short: "border-rose-400/24 bg-rose-400/10 text-ui-short",
-  watch: "border-slate-400/20 bg-slate-400/10 text-ui-watch",
-  risk: "border-amber-400/28 bg-amber-400/10 text-ui-risk",
-  locked: "border-slate-400/18 bg-slate-400/10 text-ui-locked",
-  info: "border-ui-line bg-ui-inset text-ui-muted"
+  long: "text-ui-long",
+  short: "text-ui-short",
+  watch: "text-ui-watch",
+  risk: "text-ui-risk",
+  locked: "text-ui-locked",
+  info: "text-ui-muted"
 };
 
 export function StatusPill({ tone = "info", icon: Icon, children, className }: { tone?: StatusTone; icon?: LucideIcon; children: ReactNode; className?: string }) {
   return (
-    <span className={cx("inline-flex min-h-7 items-center gap-1.5 rounded-ui-sm border px-2.5 text-ui-label font-semibold", statusClass[tone], className)}>
+    <span className={cx("inline-flex min-h-7 items-center gap-1.5 px-0 text-ui-label font-semibold", statusClass[tone], className)}>
       {Icon ? <Icon size={13} aria-hidden /> : null}
       {children}
     </span>
@@ -167,10 +167,10 @@ export function DataRow({
 export const MetricRow = DataRow;
 
 const buttonClass: Record<ButtonTone, string> = {
-  primary: "border-ui-brand bg-ui-brand text-slate-950 hover:brightness-110",
-  secondary: "border-ui-line bg-ui-panel text-ui-text hover:border-ui-lineStrong hover:bg-ui-elevated",
-  ghost: "border-transparent bg-transparent text-ui-muted hover:bg-ui-inset hover:text-ui-text",
-  danger: "border-rose-400/24 bg-rose-400/10 text-ui-short hover:border-rose-400/40"
+  primary: "bg-ui-brand text-slate-950 hover:brightness-110",
+  secondary: "bg-transparent text-ui-text hover:text-ui-brand",
+  ghost: "bg-transparent text-ui-muted hover:text-ui-text",
+  danger: "bg-transparent text-ui-short hover:text-rose-300"
 };
 
 interface ActionButtonBase {
@@ -184,7 +184,7 @@ type ActionButtonProps = ActionButtonBase & ButtonHTMLAttributes<HTMLButtonEleme
 
 export function ActionButton({ tone = "secondary", className, children, href, type = "button", ...props }: ActionButtonProps) {
   const classes = cx(
-    "inline-flex min-h-9 items-center justify-center gap-2 rounded-ui border px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50",
+    "inline-flex min-h-9 items-center justify-center gap-2 rounded-ui-sm px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50",
     buttonClass[tone],
     className
   );

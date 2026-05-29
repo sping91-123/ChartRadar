@@ -152,11 +152,11 @@ function resultToOutcome(result: TradeResult): OutcomeType | undefined {
 }
 
 function outcomeClass(outcome?: OutcomeType | null) {
-  if (outcome === "win") return "border-signal-success/40 bg-signal-success/15 text-signal-success";
-  if (outcome === "loss") return "border-signal-danger/40 bg-signal-danger/15 text-signal-danger";
-  if (outcome === "breakeven") return "border-slate-500/30 bg-slate-500/10 text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/15 dark:text-slate-300";
-  if (outcome === "missed") return "border-amber-400/40 bg-amber-400/10 text-amber-700 dark:border-amber-400/30 dark:text-amber-200";
-  return "border-accent-blue/25 bg-accent-blue/10 text-accent-blue";
+  if (outcome === "win") return "text-signal-success";
+  if (outcome === "loss") return "text-signal-danger";
+  if (outcome === "breakeven") return "text-slate-600 dark:text-slate-300";
+  if (outcome === "missed") return "text-amber-700 dark:text-amber-200";
+  return "text-accent-blue";
 }
 
 function profitResultLabel(value: string) {
@@ -273,7 +273,7 @@ function OutcomeButtons({
               key={outcome}
               type="button"
               onClick={() => onOutcome(entry.id, outcome)}
-              className={`min-h-9 min-w-0 max-w-full flex-1 basis-[calc(50%-0.1875rem)] whitespace-normal break-keep rounded-ui-sm border px-2 py-1.5 text-xs font-semibold leading-snug transition sm:flex-none sm:basis-auto sm:px-3 ${outcomeClass(outcome)} ${active ? "ring-1 ring-ui-brand/30" : ""}`}
+              className={`min-h-9 min-w-0 max-w-full flex-1 basis-[calc(50%-0.1875rem)] whitespace-normal break-keep border-b-2 px-0 py-1.5 text-xs font-semibold leading-snug transition sm:flex-none sm:basis-auto ${outcomeClass(outcome)} ${active ? "border-ui-brand" : "border-transparent opacity-70 hover:opacity-100"}`}
             >
               {outcomeLabel(outcome)}
             </button>
@@ -302,10 +302,10 @@ function ChipGroup({
 }) {
   const activeClass =
     tone === "green"
-      ? "border-emerald-400/40 bg-emerald-400/14 text-ui-long"
+      ? "border-ui-long text-ui-long"
       : tone === "red"
-        ? "border-rose-400/40 bg-rose-400/14 text-ui-short"
-        : "border-ui-brand bg-ui-brand text-slate-950";
+        ? "border-ui-short text-ui-short"
+        : "border-ui-brand text-ui-brand";
 
   return (
     <div className="min-w-0 max-w-full overflow-hidden border-t border-ui-line pt-3">
@@ -321,8 +321,8 @@ function ChipGroup({
               key={item}
               type="button"
               onClick={() => onToggle(item)}
-              className={`min-h-9 min-w-0 max-w-full flex-1 basis-[calc(50%-0.1875rem)] whitespace-normal break-keep rounded-ui-sm border px-2 py-2 text-[13px] font-semibold leading-snug transition sm:min-h-10 sm:flex-none sm:basis-auto sm:px-3 sm:text-sm ${
-                active ? activeClass : "border-transparent bg-transparent text-ui-muted hover:border-ui-lineStrong hover:bg-ui-inset hover:text-ui-text"
+              className={`min-h-9 min-w-0 max-w-full flex-1 basis-[calc(50%-0.1875rem)] whitespace-normal break-keep border-b-2 px-0 py-2 text-[13px] font-semibold leading-snug transition sm:min-h-10 sm:flex-none sm:basis-auto sm:text-sm ${
+                active ? activeClass : "border-transparent bg-transparent text-ui-muted hover:text-ui-text"
               }`}
             >
               {item}
@@ -704,10 +704,10 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                           key={item}
                           type="button"
                           onClick={() => setRResult(item)}
-                          className={`min-h-9 min-w-0 max-w-full flex-1 basis-[calc(50%-0.1875rem)] whitespace-normal break-keep rounded-ui-sm border px-2 py-2 text-[13px] font-semibold leading-snug transition sm:min-h-10 sm:flex-none sm:basis-auto sm:px-3 sm:text-sm ${
+                          className={`min-h-9 min-w-0 max-w-full flex-1 basis-[calc(50%-0.1875rem)] whitespace-normal break-keep border-b-2 px-0 py-2 text-[13px] font-semibold leading-snug transition sm:min-h-10 sm:flex-none sm:basis-auto sm:text-sm ${
                             rResult === item
-                              ? "border-ui-brand bg-ui-brand text-slate-950"
-                              : "border-transparent bg-transparent text-ui-muted hover:border-ui-lineStrong hover:bg-ui-inset hover:text-ui-text"
+                              ? "border-ui-brand text-ui-brand"
+                              : "border-transparent bg-transparent text-ui-muted hover:text-ui-text"
                           }`}
                         >
                           {profitResultLabel(item)}
@@ -851,7 +851,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                               <StatusPill tone={entry.bias === "숏" ? "short" : entry.bias === "롱" ? "long" : "watch"} className="max-w-full whitespace-normal break-keep leading-snug">
                                 방향 {entry.bias || "미기록"}
                               </StatusPill>
-                              <span className={`max-w-full whitespace-normal break-keep rounded-md border px-2 py-1 text-xs font-bold leading-snug ${outcomeClass(entry.outcome)}`}>
+                              <span className={`max-w-full whitespace-normal break-keep py-1 text-xs font-bold leading-snug ${outcomeClass(entry.outcome)}`}>
                                 결과 {parsed.result}
                               </span>
                               <StatusPill tone="info" className="max-w-full whitespace-normal break-keep leading-snug">

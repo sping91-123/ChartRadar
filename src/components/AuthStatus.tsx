@@ -32,7 +32,7 @@ export function AuthStatus({ variant = "default" }: { variant?: "default" | "com
 
   if (isLoading) {
     return (
-      <span className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold text-slate-300">
+      <span className="inline-flex min-h-9 items-center gap-1.5 px-0 py-1 text-xs font-semibold text-slate-300">
         <Loader2 className="animate-spin" size={13} aria-hidden />
         확인 중
       </span>
@@ -47,7 +47,7 @@ export function AuthStatus({ variant = "default" }: { variant?: "default" | "com
     if (!user) {
       return (
         <span
-          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-2.5 py-1 text-xs font-black text-cyan-100 sm:px-3"
+          className="inline-flex min-h-9 items-center gap-1.5 px-0 py-1 text-xs font-black text-cyan-100"
           title="Basic 상태입니다. 로그인은 설정 메뉴에서 진행할 수 있습니다."
         >
           <UserCircle size={14} aria-hidden />
@@ -58,10 +58,10 @@ export function AuthStatus({ variant = "default" }: { variant?: "default" | "com
 
     return (
       <span
-        className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-black sm:px-3 ${
+        className={`inline-flex min-h-9 items-center gap-1.5 px-0 py-1 text-xs font-black ${
           isPaid
-            ? "border-amber-300/35 bg-amber-300/10 text-amber-100"
-            : "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"
+            ? "text-amber-100"
+            : "text-cyan-100"
         }`}
         title={isPaid ? `${planLabel} 이용 중` : "Basic 이용 중"}
       >
@@ -75,7 +75,7 @@ export function AuthStatus({ variant = "default" }: { variant?: "default" | "com
     return (
       <Link
         href={loginHref}
-        className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold text-slate-200 hover:border-accent-blue/50 hover:text-white"
+        className="inline-flex min-h-9 items-center gap-1.5 px-0 py-1 text-xs font-semibold text-slate-200 hover:text-white"
       >
         <LogIn size={13} aria-hidden />
         로그인
@@ -88,10 +88,10 @@ export function AuthStatus({ variant = "default" }: { variant?: "default" | "com
   return (
     <div className="flex flex-col items-end gap-1 sm:flex-row sm:items-center">
       <span
-        className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-black ${
+        className={`inline-flex items-center gap-1.5 px-0 py-1 text-xs font-black ${
           isPaid
-            ? "border-amber-300/35 bg-amber-300/10 text-amber-200"
-            : "border-cyan-300/35 bg-cyan-300/10 text-cyan-200"
+            ? "text-amber-200"
+            : "text-cyan-200"
         }`}
         title={isPaid ? `${planLabel} 이용 중` : "Basic 이용 중"}
       >
@@ -104,7 +104,7 @@ export function AuthStatus({ variant = "default" }: { variant?: "default" | "com
           signOut();
           window.location.reload();
         }}
-        className="inline-flex items-center gap-1.5 rounded-md border border-signal-success/20 bg-signal-success/10 px-2.5 py-1 text-xs font-semibold text-signal-success hover:border-signal-success/50"
+        className="inline-flex items-center gap-1.5 px-0 py-1 text-xs font-semibold text-signal-success hover:text-emerald-200"
         title={`${name} 로그아웃`}
       >
         <LogOut size={13} aria-hidden />

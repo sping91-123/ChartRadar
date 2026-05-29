@@ -462,12 +462,8 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
         className="group flex min-h-10 items-center gap-2 border-y border-white/10 bg-transparent px-1 py-2 transition hover:bg-white/[0.025]"
       >
         <div
-          className={`inline-flex shrink-0 items-center gap-1.5 px-2 py-1 text-[11px] font-black ${
-            isCryptoCompact ? "rounded-none border-b" : "rounded-none border-b"
-          } ${
-            isTodayCheck
-              ? "border-signal-warning/25 bg-signal-warning/10 text-signal-warning"
-              : "border-accent-blue/20 bg-accent-blue/10 text-accent-blue"
+          className={`inline-flex shrink-0 items-center gap-1.5 py-1 text-[11px] font-black ${
+            isTodayCheck ? "text-signal-warning" : "text-accent-blue"
           }`}
         >
           <Radio size={12} aria-hidden />
@@ -499,10 +495,10 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
           </p>
         </div>
         <div className="ml-auto hidden items-center gap-2 sm:flex">
-          <div className="inline-flex items-center gap-1 rounded border border-signal-warning/25 bg-signal-warning/10 px-2 py-1 text-[11px] font-black text-signal-warning">
+          <div className="inline-flex items-center gap-1 text-[11px] font-black text-signal-warning">
             중요 일정
           </div>
-          <div className="inline-flex items-center gap-1 rounded border border-white/10 bg-white/5 px-2 py-1 text-[11px] font-black text-slate-400">
+          <div className="inline-flex items-center gap-1 text-[11px] font-black text-slate-400">
             참고 일정
           </div>
         </div>

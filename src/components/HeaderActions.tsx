@@ -49,7 +49,7 @@ function SettingsLink({
   description: string;
 }) {
   return (
-    <Link href={href} className="flex items-start gap-3 rounded-lg px-3 py-2.5 text-left transition hover:bg-white/[0.06]">
+    <Link href={href} className="flex items-start gap-3 border-t border-white/10 px-0 py-2.5 text-left transition first:border-t-0 hover:text-white">
       <Icon className="mt-0.5 shrink-0 text-cyan-300" size={16} aria-hidden />
       <span className="min-w-0">
         <span className="block text-sm font-black text-white">{label}</span>
@@ -69,7 +69,7 @@ function SettingsPlaceholder({
   description: string;
 }) {
   return (
-    <button type="button" disabled className="flex w-full cursor-not-allowed items-start gap-3 rounded-lg px-3 py-2.5 text-left opacity-55">
+    <button type="button" disabled className="flex w-full cursor-not-allowed items-start gap-3 border-t border-white/10 px-0 py-2.5 text-left opacity-55">
       <Icon className="mt-0.5 shrink-0 text-cyan-300" size={16} aria-hidden />
       <span className="min-w-0">
         <span className="block text-sm font-black text-white">{label}</span>
@@ -81,7 +81,7 @@ function SettingsPlaceholder({
 
 function SettingsSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-lg px-3 py-2.5">
+    <section className="border-t border-white/10 px-3 py-3 first:border-t-0">
       <p className="mb-2 text-sm font-black text-white">{title}</p>
       {children}
     </section>
@@ -105,12 +105,12 @@ function MyAccountSection({
 }) {
   return (
     <SettingsSection title="나의 계정">
-      <div className="rounded-lg border border-white/10 bg-white/[0.035] p-3">
+      <div className="py-1">
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs font-bold text-slate-400">구독 플랜</span>
           <span
-            className={`inline-flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-black ${
-              isPaid ? "border-amber-300/35 bg-amber-300/10 text-amber-200" : "border-cyan-300/35 bg-cyan-300/10 text-cyan-200"
+            className={`inline-flex shrink-0 items-center gap-1.5 text-xs font-black ${
+              isPaid ? "text-amber-200" : "text-cyan-200"
             }`}
           >
             <Crown size={13} aria-hidden />
@@ -131,7 +131,7 @@ function MyAccountSection({
             </ul>
             <Link
               href={proHref}
-              className="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-cyan-300/35 bg-cyan-300 px-3 py-2 text-xs font-black text-slate-950 transition hover:bg-cyan-200"
+              className="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-2 bg-cyan-300 px-3 py-2 text-xs font-black text-slate-950 transition hover:bg-cyan-200"
             >
               <Sparkles size={14} aria-hidden />
               Pro 업그레이드
@@ -156,7 +156,7 @@ function AccountSettingsSection({
     <SettingsSection title="계정">
       <div className="grid gap-1">
         {isLoading ? (
-          <button type="button" disabled className="flex w-full cursor-not-allowed items-start gap-3 rounded-lg px-3 py-2.5 text-left opacity-55">
+          <button type="button" disabled className="flex w-full cursor-not-allowed items-start gap-3 border-t border-white/10 px-0 py-2.5 text-left opacity-55">
             <UserCircle className="mt-0.5 shrink-0 text-cyan-300" size={16} aria-hidden />
             <span className="min-w-0">
               <span className="block text-sm font-black text-white">회원정보관리</span>
@@ -168,7 +168,7 @@ function AccountSettingsSection({
         ) : (
           <Link
             href={loginHref}
-            className="flex items-start gap-3 rounded-lg border border-cyan-300/30 bg-cyan-300/10 px-3 py-2.5 text-left transition hover:border-cyan-300/55 hover:bg-cyan-300/15"
+            className="flex items-start gap-3 border-t border-cyan-300/25 px-0 py-2.5 text-left transition hover:text-white"
           >
             <LogIn className="mt-0.5 shrink-0 text-cyan-200" size={16} aria-hidden />
             <span className="min-w-0">
@@ -185,7 +185,7 @@ function AccountSettingsSection({
 function DisplaySettingsSection() {
   return (
     <SettingsSection title="화면 설정">
-      <div className="rounded-lg border border-white/10 bg-white/[0.035] p-3">
+      <div className="py-1">
         <div className="flex items-center justify-between gap-3">
           <span className="min-w-0">
             <span className="block text-sm font-black text-white">테마</span>
@@ -275,7 +275,7 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
               <button
                 type="button"
                 onClick={() => setIsSettingsOpen(false)}
-                className="grid min-h-10 min-w-10 place-items-center rounded-lg border border-surface-line bg-surface-cardSoft text-slate-300 transition hover:border-cyan-300/45 hover:text-white"
+                className="grid min-h-10 min-w-10 place-items-center text-slate-300 transition hover:text-white"
                 aria-label="설정 닫기"
                 title="뒤로"
               >

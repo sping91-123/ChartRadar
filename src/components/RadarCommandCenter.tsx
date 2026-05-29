@@ -67,8 +67,8 @@ function uniqueTopSetupsBySymbol(setups: ScoutSetup[], limit: number) {
 
 function sideClasses(side: ScoutSetup["plan"]["side"]) {
   return side === "long"
-    ? "border-signal-success/30 bg-signal-success/10 text-signal-success"
-    : "border-signal-danger/30 bg-signal-danger/10 text-signal-danger";
+    ? "text-signal-success"
+    : "text-signal-danger";
 }
 
 function proximityLabel(setup: ScoutSetup) {
@@ -104,28 +104,28 @@ function RadarSetupCard({ setup, rank }: { setup: ScoutSetup; rank: number }) {
           <p className="text-[10px] font-black text-slate-500">RADAR {rank}</p>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             <h3 className="text-base font-black text-white">{symbolName(setup.symbol)}</h3>
-            <span className="rounded border border-white/10 bg-black/30 px-1.5 py-0.5 text-[10px] font-bold text-slate-300">
+            <span className="text-[10px] font-bold text-slate-300">
               {setup.timeframe}
             </span>
-            <span className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-black ${sideClasses(setup.plan.side)}`}>
+            <span className={`inline-flex items-center gap-1 text-[10px] font-black ${sideClasses(setup.plan.side)}`}>
               <SideIcon size={11} aria-hidden />
               {isLong ? "롱 우세" : "숏 우세"}
             </span>
           </div>
         </div>
-        <span className="whitespace-nowrap rounded border border-accent-blue/30 bg-accent-blue/10 px-2 py-1 text-[11px] font-black text-accent-blue">
+        <span className="whitespace-nowrap text-[11px] font-black text-accent-blue">
           {setup.score}점
         </span>
       </div>
       <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-300">{setup.headline}</p>
       <div className="mt-3 flex flex-wrap gap-1.5 text-[10px] font-bold">
-        <span className="rounded border border-signal-warning/25 bg-signal-warning/10 px-2 py-1 text-signal-warning">
+        <span className="text-signal-warning">
           {proximityLabel(setup)}
         </span>
-        <span className="rounded border border-white/10 bg-black/30 px-2 py-1 text-slate-300">
+        <span className="text-slate-300">
           {setup.plan.quality}급 감지
         </span>
-        <span className="rounded border border-white/10 bg-black/30 px-2 py-1 text-slate-300">
+        <span className="text-slate-300">
           신뢰도 {setup.plan.confidence}%
         </span>
       </div>

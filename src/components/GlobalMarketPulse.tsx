@@ -196,7 +196,7 @@ function modeIcon(mode: MarketMode) {
 function itemToneBadge(item: { pressure?: PressureTone; tone?: PressureTone }) {
   const tone = item.pressure ?? item.tone ?? "mixed";
   return (
-    <span className={`shrink-0 rounded border px-2 py-1 text-[10px] font-black ${toneClass(tone)}`}>
+    <span className={`shrink-0 text-[10px] font-black ${toneClass(tone).replace(/bg-[^ ]+/g, "").replace(/border-[^ ]+/g, "")}`}>
       {toneLabel(tone)}
     </span>
   );
@@ -206,7 +206,7 @@ function ProCta({ compact = false }: { compact?: boolean }) {
   return (
     <Link
       href="/pro?market=stocks"
-      className={`inline-flex items-center justify-center gap-2 rounded-md border border-cyan-300/25 bg-cyan-300/10 text-center font-black leading-4 text-cyan-100 transition hover:border-cyan-300/50 hover:bg-cyan-300/15 ${
+      className={`inline-flex items-center justify-center gap-2 border-b border-cyan-300/40 bg-transparent text-center font-black leading-4 text-cyan-100 transition hover:text-cyan-50 ${
         compact ? "min-h-8 px-2.5 text-[11px]" : "min-h-10 px-3 text-xs"
       }`}
     >

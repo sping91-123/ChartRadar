@@ -146,7 +146,7 @@ function classifyAltSetup(setup: ScoutSetup): AltFilterMeta {
       bucket: "danger",
       label: "고위험",
       description: "추격, 변동성, 유동성 리스크를 먼저 걸러야 하는 구간입니다.",
-      className: "border-signal-danger/35 bg-signal-danger/15 text-signal-danger"
+      className: "text-signal-danger"
     };
   }
 
@@ -155,7 +155,7 @@ function classifyAltSetup(setup: ScoutSetup): AltFilterMeta {
       bucket: "watch",
       label: "관망",
       description: "구조 확인 전까지 추적 대기 성격이 강한 구간입니다.",
-      className: "border-signal-warning/35 bg-signal-warning/15 text-signal-warning"
+      className: "text-signal-warning"
     };
   }
 
@@ -163,7 +163,7 @@ function classifyAltSetup(setup: ScoutSetup): AltFilterMeta {
     bucket: "candidate",
     label: "추적 후보",
     description: "위험 신호를 확인하면서 우선순위에 올려볼 수 있는 후보입니다.",
-    className: "border-accent-blue/35 bg-accent-blue/15 text-accent-blue"
+    className: "text-accent-blue"
   };
 }
 
@@ -209,13 +209,13 @@ function AltProCta({ compact = false }: { compact?: boolean }) {
 function ScoreBadge({ score }: { score: number }) {
   const tone =
     score >= 80
-      ? "border-signal-success/40 bg-signal-success/15 text-signal-success"
+      ? "text-signal-success"
       : score >= 65
-        ? "border-accent-blue/40 bg-accent-blue/15 text-accent-blue"
-        : "border-signal-warning/40 bg-signal-warning/15 text-signal-warning";
+        ? "text-accent-blue"
+        : "text-signal-warning";
 
   return (
-    <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-md border px-2 py-1 text-xs font-black ${tone}`}>
+    <span className={`inline-flex items-center gap-1 whitespace-nowrap text-xs font-black ${tone}`}>
       {score}점
     </span>
   );
@@ -224,7 +224,7 @@ function ScoreBadge({ score }: { score: number }) {
 function StatusBadge({ setup, riskProfile }: { setup: ScoutSetup; riskProfile: ScoutRiskProfile }) {
   if (setup.status === "active") {
     return (
-      <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-orange-400/40 bg-orange-400/15 px-2 py-1 text-[11px] font-black text-orange-300">
+      <span className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-black text-orange-300">
         강한 감지
       </span>
     );
@@ -232,7 +232,7 @@ function StatusBadge({ setup, riskProfile }: { setup: ScoutSetup; riskProfile: S
 
   if (setup.status === "watch" && setup.watchKind === "counter") {
     return (
-      <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-orange-400/40 bg-orange-400/15 px-2 py-1 text-[11px] font-black text-orange-300">
+      <span className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-black text-orange-300">
         반대 구간 감시
       </span>
     );
@@ -241,21 +241,21 @@ function StatusBadge({ setup, riskProfile }: { setup: ScoutSetup; riskProfile: S
   if (setup.status === "watch") {
     if (riskProfile === "radar") {
       return (
-        <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-accent-blue/40 bg-accent-blue/15 px-2 py-1 text-[11px] font-black text-accent-blue">
+        <span className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-black text-accent-blue">
           확장 관찰
         </span>
       );
     }
 
     return (
-      <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-signal-warning/40 bg-signal-warning/15 px-2 py-1 text-[11px] font-black text-signal-warning">
+      <span className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-black text-signal-warning">
         관찰 대기
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-signal-success/40 bg-signal-success/15 px-2 py-1 text-[11px] font-black text-signal-success">
+    <span className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-black text-signal-success">
       레이더 감지
     </span>
   );
@@ -264,7 +264,7 @@ function StatusBadge({ setup, riskProfile }: { setup: ScoutSetup; riskProfile: S
 function ProximityBadge({ setup }: { setup: ScoutSetup }) {
   if (setup.proximity === "ready") {
     return (
-      <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-signal-warning/40 bg-signal-warning/15 px-2 py-1 text-[11px] font-black text-signal-warning">
+      <span className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-black text-signal-warning">
         관찰 구간 내부
       </span>
     );
@@ -273,14 +273,14 @@ function ProximityBadge({ setup }: { setup: ScoutSetup }) {
   if (setup.proximity === "near") {
     const direction = setup.plan.side === "long" ? "내려오면" : "올라오면";
     return (
-      <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-accent-blue/40 bg-accent-blue/10 px-2 py-1 text-[11px] font-black text-accent-blue">
+      <span className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-black text-accent-blue">
         {formatDistance(setup.distancePercent)}% {direction} 관찰 구간
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-slate-600/40 bg-slate-600/10 px-2 py-1 text-[11px] font-bold text-slate-400">
+    <span className="inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-bold text-slate-400">
       대기 · 관찰 구간까지 {formatDistance(setup.distancePercent)}%
     </span>
   );
@@ -366,7 +366,7 @@ function CommentaryLine({ setup }: { setup: ScoutSetup }) {
 
   if (state.status === "loading") {
     return (
-      <div className="mt-3 flex items-center gap-2 rounded-md border border-accent-blue/20 bg-accent-blue/5 px-3 py-2 text-[11px] leading-5 text-slate-400">
+      <div className="mt-3 flex items-center gap-2 border-t border-ui-line pt-2 text-[11px] leading-5 text-slate-400">
         <Loader2 size={12} className="animate-spin text-accent-blue" aria-hidden />
         <span>AI 레이더 코멘트 생성 중...</span>
       </div>
@@ -376,7 +376,7 @@ function CommentaryLine({ setup }: { setup: ScoutSetup }) {
   if (state.status === "error") return null;
 
   return (
-    <div className="mt-3 flex items-start gap-2 rounded-md border border-accent-blue/20 bg-accent-blue/5 px-3 py-2 text-[12px] leading-5 text-slate-200">
+    <div className="mt-3 flex items-start gap-2 border-t border-ui-line pt-2 text-[12px] leading-5 text-slate-200">
       <Bot size={13} className="mt-0.5 shrink-0 text-accent-blue" aria-hidden />
       <p className="font-medium">{state.text}</p>
     </div>
@@ -420,7 +420,7 @@ function EvidenceChips({ setup }: { setup: ScoutSetup }) {
         {evidence.map((item) => (
           <span
             key={item}
-            className="rounded-md border border-signal-success/20 bg-signal-success/10 px-2 py-1 text-[11px] font-bold text-signal-success"
+            className="text-[11px] font-bold text-signal-success"
           >
             {item}
           </span>
@@ -431,7 +431,7 @@ function EvidenceChips({ setup }: { setup: ScoutSetup }) {
           {risks.map((item) => (
             <span
               key={item}
-              className="rounded-md border border-signal-danger/20 bg-signal-danger/10 px-2 py-1 text-[11px] font-bold text-signal-danger"
+              className="text-[11px] font-bold text-signal-danger"
             >
               {item}
             </span>
@@ -569,7 +569,7 @@ function SetupCard({
           <p className="text-xs font-bold text-slate-500">{isAltFilterMode ? "ALT FILTER" : "TOP"} {rank}</p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <h3 className="text-base font-black text-white">{symbol}</h3>
-            <span className="whitespace-nowrap rounded border border-white/10 bg-black/20 px-1.5 py-0.5 text-xs font-bold text-slate-300">
+            <span className="whitespace-nowrap text-xs font-bold text-slate-300">
               {setup.timeframe}
             </span>
             <SideIcon className={sideColor} size={16} aria-hidden />
@@ -577,7 +577,7 @@ function SetupCard({
               {isAltFilterMode && altMeta ? altJudgmentLabel(setup, altMeta) : isLong ? "롱 우세" : "숏 우세"}
             </span>
             {shouldShowProDetails ? (
-              <span className={`whitespace-nowrap rounded border px-1.5 py-0.5 text-xs font-bold ${modeBadgeClass}`}>
+              <span className={`whitespace-nowrap text-xs font-bold ${modeBadgeClass.replace(/bg-[^ ]+/g, "").replace(/border-[^ ]+/g, "")}`}>
                 {setup.plan.quality}급
               </span>
             ) : null}
@@ -585,7 +585,7 @@ function SetupCard({
         </div>
         <div className="flex flex-col items-end gap-1">
           {isAltFilterMode && altMeta ? (
-            <span className={`inline-flex items-center whitespace-nowrap rounded-md border px-2 py-1 text-[11px] font-black ${altMeta.className}`}>
+            <span className={`inline-flex items-center whitespace-nowrap text-[11px] font-black ${altMeta.className.replace(/bg-[^ ]+/g, "").replace(/border-[^ ]+/g, "")}`}>
               {altMeta.label}
             </span>
           ) : (
@@ -636,7 +636,7 @@ function SetupCard({
       {shouldShowProDetails ? <EvidenceChips setup={setup} /> : null}
 
       {shouldShowProDetails && isAltFilterMode ? (
-        <div className="mt-3 rounded-md border border-orange-400/20 bg-orange-400/10 px-3 py-2 text-[11px] leading-5 text-orange-100">
+        <div className="mt-3 border-t border-orange-400/20 pt-2 text-[11px] leading-5 text-orange-100">
           <span className="font-black">BTC 영향.</span> {buildAltBtcInfluence(setup)}
         </div>
       ) : null}
@@ -646,7 +646,7 @@ function SetupCard({
           {altRiskSignals.slice(0, 4).map((item) => (
             <span
               key={item}
-              className="rounded-md border border-signal-warning/25 bg-signal-warning/10 px-2 py-1 text-[11px] font-bold text-signal-warning"
+              className="text-[11px] font-bold text-signal-warning"
             >
               {item}
             </span>
@@ -655,12 +655,12 @@ function SetupCard({
       ) : null}
 
       {!isAltFilterMode ? (
-        <div className="mt-3 grid grid-cols-2 gap-2 text-center">
-          <div className="rounded border border-white/10 bg-black/30 px-2 py-2">
+        <div className="mt-3 grid grid-cols-2 divide-x divide-white/10 border-y border-white/10 text-center">
+          <div className="px-2 py-2">
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">현재가</p>
             <p className="mt-1 text-xs font-bold text-white">{formatPriceWithSymbol(setup.currentPrice)}</p>
           </div>
-          <div className="rounded border border-accent-blue/20 bg-accent-blue/5 px-2 py-2">
+          <div className="px-2 py-2">
             <p className="text-[10px] font-bold uppercase tracking-wider text-accent-blue">관찰 구간</p>
             <p className="mt-1 text-xs font-bold text-white">
               {formatPriceWithSymbol(setup.plan.entryLow)} ~ {formatPriceWithSymbol(setup.plan.entryHigh)}
@@ -671,25 +671,25 @@ function SetupCard({
 
       {shouldShowProDetails ? (
         <>
-          <div className="mt-2 grid grid-cols-2 gap-2 text-center">
+          <div className="mt-2 grid grid-cols-2 divide-x divide-y divide-white/10 border-y border-white/10 text-center">
             {isAltFilterMode ? (
-              <div className="rounded border border-accent-blue/20 bg-accent-blue/5 px-2 py-2">
+              <div className="px-2 py-2">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-accent-blue">관찰 구간</p>
                 <p className="mt-1 text-xs font-bold text-white">
                   {formatPriceWithSymbol(setup.plan.entryLow)} ~ {formatPriceWithSymbol(setup.plan.entryHigh)}
                 </p>
               </div>
             ) : null}
-            <div className="rounded border border-signal-danger/20 bg-signal-danger/10 px-2 py-2">
+            <div className="px-2 py-2">
               <p className="text-[10px] font-bold uppercase tracking-wider text-signal-danger">무효 기준</p>
               <p className="mt-1 text-xs font-bold text-white">{formatPriceWithSymbol(setup.plan.invalidation)}</p>
             </div>
-            <div className="rounded border border-signal-success/20 bg-signal-success/10 px-2 py-2">
+            <div className="px-2 py-2">
               <p className="text-[10px] font-bold uppercase tracking-wider text-signal-success">다음 레벨</p>
               <p className="mt-1 text-xs font-bold text-white">{formatPriceWithSymbol(setup.plan.target1)}</p>
             </div>
             {isAltFilterMode ? (
-              <div className="rounded border border-signal-success/15 bg-signal-success/5 px-2 py-2">
+              <div className="px-2 py-2">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-signal-success">다음 레벨 2</p>
                 <p className="mt-1 text-xs font-bold text-white">{formatPriceWithSymbol(setup.plan.target2)}</p>
               </div>
@@ -714,7 +714,7 @@ function SetupCard({
           type="button"
           onClick={saveSetup}
           disabled={saveState === "saving"}
-          className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-accent-blue/30 bg-accent-blue/10 px-3 text-xs font-black text-accent-blue transition hover:bg-accent-blue hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 bg-accent-blue px-3 text-xs font-black text-slate-950 transition hover:bg-accent-blue/90 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {saveState === "saving" ? (
             <Loader2 size={14} className="animate-spin" aria-hidden />
@@ -764,7 +764,7 @@ function EmptyState({
         <button
           type="button"
           onClick={onUseRadar}
-          className="mt-4 inline-flex min-h-10 items-center justify-center rounded-md border border-signal-danger/30 bg-signal-danger/15 px-3 text-xs font-black text-signal-danger transition hover:bg-signal-danger hover:text-white"
+          className="mt-4 inline-flex min-h-10 items-center justify-center border-b border-signal-danger/40 px-0 text-xs font-black text-signal-danger transition hover:text-white"
         >
           확장 감지로 더 넓게 보기
         </button>
@@ -985,7 +985,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-black text-white">{excludeMajor ? "알트 기회/위험 필터" : "시장 레이더 TOP"}</h2>
-              <span className="rounded border border-accent-blue/30 bg-accent-blue/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent-blue">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-accent-blue">
                 Live
               </span>
             </div>
@@ -995,13 +995,13 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
                 : "전체 타임프레임에서 구조 변화가 선명한 코인을 먼저 추립니다. 오늘 무엇부터 볼지 줄여주는 레이더입니다."}
             </p>
             <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold text-slate-300">
-              <span className="whitespace-nowrap rounded-md border border-signal-warning/25 bg-signal-warning/10 px-2 py-1 text-signal-warning">
+              <span className="whitespace-nowrap text-signal-warning">
                 {excludeMajor ? "리스크 우선 필터" : "확인 순서 정리"}
               </span>
               <span className="whitespace-nowrap border-b border-surface-line px-0 py-1">
                 {excludeMajor ? "추적 후보 / 관망 / 고위험" : "관찰 구간 표시"}
               </span>
-              <span className="whitespace-nowrap rounded-md border border-orange-400/20 bg-orange-400/10 px-2 py-1 text-orange-200">
+              <span className="whitespace-nowrap text-orange-200">
                 {excludeMajor ? "BTC 방향성 의존 확인" : "확장 감지는 더 넓게 확인"}
               </span>
             </div>
