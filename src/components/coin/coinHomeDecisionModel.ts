@@ -10,7 +10,7 @@ export interface CoinHomeBoardItem {
   quoteVolume: number;
 }
 
-export type CoinHomeDecisionState = "관망" | "조건 대기" | "추적 가능" | "리스크 확대";
+export type CoinHomeDecisionState = "관망" | "조건 대기" | "추적 가능" | "위험 신호 증가";
 export type CoinHomeDirection = "상방 우세" | "하방 압력" | "관망" | "변동성 주의";
 export type CoinHomeLeadership = "BTC 우세" | "알트 순환" | "혼조" | "위험 회피";
 
@@ -121,8 +121,8 @@ function riskLabel({
 }
 
 function nextConditionFor(state: CoinHomeDecisionState, leadership: CoinHomeLeadership, topRisk: string) {
-  if (state === "리스크 확대" && topRisk.includes("BTC")) return "BTC가 하락 압력을 멈추고 1시간 추세를 회복하는지 확인합니다.";
-  if (state === "리스크 확대") return `${topRisk}이 줄어드는지 먼저 확인합니다.`;
+  if (state === "위험 신호 증가" && topRisk.includes("BTC")) return "BTC가 하락 압력을 멈추고 1시간 추세를 회복하는지 확인합니다.";
+  if (state === "위험 신호 증가") return `${topRisk} 관련 위험이 줄어드는지 먼저 확인합니다.`;
   if (leadership === "알트 순환") return "BTC가 무너지지 않는 상태에서 알트 거래대금이 유지되는지 확인합니다.";
   if (leadership === "BTC 우세") return "BTC 추세 유지와 알트 참여 확산 여부를 함께 확인합니다.";
   if (state === "추적 가능") return "준비도와 리스크 조건이 유지되는지 관찰합니다.";
@@ -188,7 +188,7 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
 
   const state: CoinHomeDecisionState =
     weakTrend || derivatives >= 24 || readinessScore < 30
-      ? "리스크 확대"
+      ? "위험 신호 증가"
       : readinessScore >= 70 && topRisk === "확인 조건 대기"
         ? "추적 가능"
         : readinessScore >= 50

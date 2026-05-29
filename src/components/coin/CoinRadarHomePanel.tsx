@@ -8,7 +8,7 @@ import type { CoinMarketMetricsPayload } from "@/lib/coinMarketMetrics";
 import type { Candle } from "@/lib/marketAnalysis";
 import type { LiquidationPressureReport } from "@/lib/liquidationPressure";
 import { analyzeTechnicalRadar, type IndicatorReading, type TechnicalRadarReport } from "@/lib/technicalRadar";
-import { buildCoinHomeDecision } from "@/components/coin/coinHomeDecisionModel";
+import { buildCoinHomeDecision, type CoinHomeDecisionSummary } from "@/components/coin/coinHomeDecisionModel";
 
 interface MarketBoardItem {
   symbol: string;
@@ -33,6 +33,8 @@ type CoinHomeState =
 
 const representativeSymbols = ["BTC", "ETH", "XRP"] as const;
 const fundingSymbols = ["BTC", "ETH", "XRP"] as const;
+
+type ConclusionSegment = { text: string; tone?: "up" | "down" };
 
 function clamp(value: number, min = 0, max = 100) {
   return Math.min(max, Math.max(min, value));
@@ -104,6 +106,41 @@ function checkFor(changePercent: number) {
   if (changePercent >= 2.5) return "BTC 추세 유지와 거래대금 동반 여부를 확인합니다.";
   if (changePercent <= -2.5) return "저점 이탈이 멈추는지, 반등 거래량이 붙는지 확인합니다.";
   return "BTC 1시간 추세와 주요 이벤트 전후 변동성을 함께 봅니다.";
+}
+
+function conclusionSegments(decision: CoinHomeDecisionSummary | undefined): ConclusionSegment[] {
+  if (!decision) return [{ text: "시장 데이터를 확인하는 중입니다." }];
+  if (decision.state === "위험 신호 증가") {
+    if (decision.direction === "하방 압력") {
+      return [
+        { text: "하방 압력", tone: "down" as const },
+        { text: "이 커져 신규 판단보다 방어적 확인이 우선입니다." }
+      ];
+    }
+    if (decision.direction === "상방 우세") {
+      return [
+        { text: "상승 흐름", tone: "up" as const },
+        { text: "은 있지만 위험 신호가 있어 추격보다 확인이 우선입니다." }
+      ];
+    }
+    return [{ text: "변동성이 커져 신규 판단보다 리스크 확인이 우선입니다." }];
+  }
+  if (decision.state === "추적 가능") {
+    return [
+      { text: "상승 조건", tone: "up" as const },
+      { text: "이 유지되면 추적 가능한 구간입니다." }
+    ];
+  }
+  if (decision.state === "조건 대기") {
+    return [{ text: "방향은 열렸지만 BTC 추세와 알트 참여 확인이 더 필요합니다." }];
+  }
+  return [{ text: "방향 근거가 부족해 관망이 우선입니다." }];
+}
+
+function conclusionToneClass(tone?: "up" | "down") {
+  if (tone === "up") return "text-emerald-400";
+  if (tone === "down") return "text-rose-400";
+  return "";
 }
 
 function toneForMarket(score: number | null) {
@@ -213,8 +250,6 @@ export function CoinRadarHomePanel() {
     );
   }
 
-  const decisionLine = `${summary?.decision.state}에 가깝고, ${summary?.decision.direction} 흐름에 ${summary?.decision.leadership}이 보입니다.`;
-
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2 px-1 text-[11px] font-semibold text-ui-muted">
@@ -230,14 +265,19 @@ export function CoinRadarHomePanel() {
           <div className="min-w-0">
             <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">오늘의 결론</p>
             <h2 className="text-ui-heading font-semibold tracking-tight text-ui-text">{summary?.decision.state}</h2>
-            <p className="mt-1 max-w-3xl text-ui-body text-ui-muted [word-break:keep-all]">{summary?.decision.reason}</p>
+            <p className="mt-1 max-w-full truncate whitespace-nowrap text-ui-body text-ui-muted">
+              {conclusionSegments(summary?.decision).map((part, index) => (
+                <span key={`${part.text}-${index}`} className={conclusionToneClass(part.tone)}>
+                  {part.text}
+                </span>
+              ))}
+            </p>
           </div>
         </div>
 
         <div className="grid gap-4 py-1 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
           <div className="min-w-0">
-            <p className="text-sm font-semibold leading-6 text-ui-text [word-break:keep-all]">{decisionLine}</p>
-            <div className="mt-2">
+            <div>
               <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{summary?.decision.scoreLabel}</p>
               <p className="mt-1 text-3xl font-semibold tracking-tight text-ui-text sm:text-4xl">{summary?.decision.readinessScore ?? "-"}점</p>
               <p className="mt-1 max-w-3xl text-xs leading-5 text-ui-muted [word-break:keep-all]">{summary?.decision.scoreDetail}</p>
