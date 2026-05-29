@@ -3,6 +3,8 @@ import { type MacroCalendarPayload } from "@/lib/macroCalendar";
 import { isSupabaseAdminConfigured, supabaseAdminRest } from "@/lib/server/supabaseAdmin";
 import { type MacroEventItem } from "@/data/macroEvents";
 import { normalizeMacroEvents } from "@/lib/macro/normalizeMacroEvent";
+import { getBeaOfficialEnrichments } from "@/lib/macro/sourceAdapters/bea";
+import { getCensusOfficialEnrichments } from "@/lib/macro/sourceAdapters/census";
 import { fetchDolOfficialEnrichments } from "@/lib/macro/sourceAdapters/dol";
 
 type MacroEventRow = {
@@ -140,8 +142,12 @@ export async function readStoredMacroCalendarPayload(): Promise<MacroCalendarPay
   if (!updatedAt || Date.now() - Date.parse(updatedAt) > 60 * 60 * 1000) return null;
 
   const baseItems = rows.map(rowToItem);
-  const dolEnrichments = await fetchDolOfficialEnrichments(baseItems).catch(() => []);
-  const items = normalizeMacroEvents(baseItems, dolEnrichments, Date.now());
+  const [beaEnrichments, censusEnrichments, dolEnrichments] = await Promise.all([
+    getBeaOfficialEnrichments().catch(() => []),
+    getCensusOfficialEnrichments().catch(() => []),
+    fetchDolOfficialEnrichments(baseItems).catch(() => [])
+  ]);
+  const items = normalizeMacroEvents(baseItems, [...beaEnrichments, ...censusEnrichments, ...dolEnrichments], Date.now());
   return {
     updatedAt,
     updatedAtLabel: "저장된 공식 확인 결과",

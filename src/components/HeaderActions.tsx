@@ -22,13 +22,11 @@ import { AuthStatus } from "@/components/AuthStatus";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { APP_VERSION_DISPLAY } from "@/lib/appVersion";
 import { billingPlans, getEntitlementLabel, hasAnyPaidEntitlement } from "@/lib/billing";
+import { clearPreferredMarket, readPreferredMarket, type PreferredMarket } from "@/lib/marketPreference";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 type HeaderMarket = "crypto" | "stocks";
 type AuthState = ReturnType<typeof useSupabaseAuth>;
-type DefaultEntry = "select" | "coin" | "global";
-
-const defaultEntryKey = "chartRadar.defaultEntry.v1";
 
 function marketAlertHref(market?: HeaderMarket) {
   return market === "stocks" ? "/alerts?market=global" : "/alerts?market=crypto";
@@ -186,16 +184,15 @@ function AccountSettingsSection({
 }
 
 function DisplaySettingsSection() {
-  const [defaultEntry, setDefaultEntry] = useState<DefaultEntry>("select");
+  const [preferredMarket, setPreferredMarket] = useState<PreferredMarket | null>(null);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(defaultEntryKey);
-    setDefaultEntry(saved === "coin" || saved === "global" ? saved : "select");
+    setPreferredMarket(readPreferredMarket());
   }, []);
 
-  const updateDefaultEntry = (value: DefaultEntry) => {
-    setDefaultEntry(value);
-    window.localStorage.setItem(defaultEntryKey, value);
+  const resetPreferredMarket = () => {
+    clearPreferredMarket();
+    setPreferredMarket(null);
   };
 
   return (
@@ -211,28 +208,20 @@ function DisplaySettingsSection() {
         <div className="grid gap-2">
           <span className="min-w-0">
             <span className="block text-sm font-black text-white">시작 화면</span>
-            <span className="mt-0.5 block text-xs leading-5 text-slate-400">앱을 열 때 시장 선택 없이 바로 들어갈 화면을 고릅니다.</span>
+            <span className="mt-0.5 block text-xs leading-5 text-slate-400">처음에는 시장을 선택하고, 이후에는 마지막으로 사용한 시장으로 바로 들어갑니다.</span>
           </span>
-          <div className="grid grid-cols-3 gap-1 border-y border-white/10 py-1">
-            {[
-              { value: "select", label: "선택" },
-              { value: "coin", label: "코인" },
-              { value: "global", label: "글로벌" }
-            ].map((item) => (
-              <button
-                key={item.value}
-                type="button"
-                onClick={() => updateDefaultEntry(item.value as DefaultEntry)}
-                className={`min-h-10 border-b-2 px-1 text-xs font-black transition ${
-                  defaultEntry === item.value
-                    ? "border-cyan-300 text-white"
-                    : "border-transparent text-slate-400 hover:text-white"
-                }`}
-                aria-pressed={defaultEntry === item.value}
-              >
-                {item.label}
-              </button>
-            ))}
+          <div className="border-y border-white/10 py-2">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-bold text-slate-400">현재 기억된 시장</span>
+              <span className="text-xs font-black text-white">{preferredMarket === "global" ? "Global Radar" : preferredMarket === "coin" ? "Coin Radar" : "선택 전"}</span>
+            </div>
+            <button
+              type="button"
+              onClick={resetPreferredMarket}
+              className="mt-2 min-h-9 w-full border border-white/10 px-3 text-xs font-black text-slate-300 transition hover:border-cyan-300/40 hover:text-white"
+            >
+              다음 시작 때 시장 다시 선택
+            </button>
           </div>
         </div>
       </div>

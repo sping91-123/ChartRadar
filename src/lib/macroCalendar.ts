@@ -63,7 +63,7 @@ const FOREX_FACTORY_THIS_WEEK = "https://nfs.faireconomy.media/ff_calendar_thisw
 const KST_TIME_ZONE = "Asia/Seoul";
 const RECENT_RELEASE_MS = 24 * 60 * 60 * 1000;
 const PREVIOUS_RELEASE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
-const PENDING_ACTUAL_REFRESH_WINDOW_MS = 6 * 60 * 60 * 1000;
+const PENDING_ACTUAL_REFRESH_WINDOW_MS = PREVIOUS_RELEASE_RETENTION_MS;
 const JOBLESS_CLAIMS_PATTERN =
   /신규\s*실업수당\s*청구|initial\s+jobless\s+claims|initial\s+claims|jobless\s+claims|unemployment\s+claims|unemployment\s+insurance\s+weekly\s+claims|continuing\s+claims/i;
 
@@ -376,8 +376,8 @@ async function getOfficialEnrichments(items: MacroEventItem[]) {
   return [
     ...blsEnrichments,
     ...fedEnrichments,
-    ...getBeaOfficialEnrichments(),
-    ...getCensusOfficialEnrichments(),
+    ...(await getBeaOfficialEnrichments().catch(() => [] as MacroSourceEnrichment[])),
+    ...(await getCensusOfficialEnrichments().catch(() => [] as MacroSourceEnrichment[])),
     ...dolEnrichments
   ];
 }
