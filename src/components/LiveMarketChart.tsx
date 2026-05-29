@@ -55,6 +55,7 @@ import {
   buildMajorScreenGuideSteps,
   buildMajorSummaryMetrics
 } from "@/components/crypto/beginnerGuideHelpers";
+import { candleTimeAt, overlayPresetMatches, readOverlaySettings, structureSensitivityLabel, toKstTime } from "@/components/crypto/chartInteractionHelpers";
 import { CryptoChartPanel } from "@/components/crypto/CryptoChartPanel";
 import { CryptoControlBar } from "@/components/crypto/CryptoControlBar";
 import { CryptoChartLoadingOverlay, CryptoErrorState } from "@/components/crypto/CryptoFallbackState";
@@ -133,31 +134,6 @@ import type {
   StructureSensitivity
 } from "@/components/crypto/types";
 
-/** lightweight-charts v5는 timeZone 옵션 미지원 → UTC 타임스탬프에 KST 오프셋 직접 가산 */
-const KST_OFFSET_SEC = 9 * 3600; // +9h
-
-function toKstTime(utcSec: number): Time {
-  return (utcSec + KST_OFFSET_SEC) as unknown as Time;
-}
-
-function candleTimeAt(candles: Candle[], index: number): Time | null {
-  if (index < 0 || index >= candles.length) return null;
-  return toKstTime(candles[index].time);
-}
-
-function readOverlaySettings(): OverlaySettings {
-  if (typeof window === "undefined") return defaultOverlaySettings;
-
-  try {
-    const raw = readLocalStorageWithLegacy(overlaySettingsStorageKey, legacyOverlaySettingsStorageKeys);
-    if (!raw) return defaultOverlaySettings;
-    const parsed = JSON.parse(raw) as Partial<OverlaySettings>;
-    return { ...defaultOverlaySettings, ...parsed };
-  } catch {
-    return defaultOverlaySettings;
-  }
-}
-
 function userFacingRiskPercent(analysis: MarketAnalysis | null) {
   if (!analysis) return 0;
   const base = analysis.bias === "neutral" ? 55 : 35;
@@ -223,15 +199,6 @@ function altAnalysisFilterClass(label: string) {
   if (label === "고위험 구간") return "border-signal-danger/30 bg-signal-danger/10 text-signal-danger";
   if (label === "관망 우위") return "border-signal-warning/30 bg-signal-warning/10 text-signal-warning";
   return "border-accent-blue/30 bg-accent-blue/10 text-accent-blue";
-}
-
-function overlayPresetMatches(settings: OverlaySettings, preset: keyof typeof overlayPresets) {
-  const target = overlayPresets[preset];
-  return (Object.keys(target) as Array<keyof OverlaySettings>).every((key) => settings[key] === target[key]);
-}
-
-function structureSensitivityLabel(value: StructureSensitivity) {
-  return structureSensitivityOptions.find((item) => item.value === value)?.label ?? "빠른 변화 감지";
 }
 
 function buildRadarPulse(analysis: MarketAnalysis, active?: TimeframeAnalysis): RadarPulseItem[] {

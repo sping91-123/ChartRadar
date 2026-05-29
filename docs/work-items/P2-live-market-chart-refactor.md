@@ -43,6 +43,7 @@
 - 2026-05-29: 알트 개별 분석 사용량 helper를 `src/components/crypto/altAnalysisUsage.ts`로 분리했다. Basic/Pro 한도, localStorage key, usage event 기록은 변경하지 않았다.
 - 2026-05-29: AI 브리핑 하이라이트 렌더링을 `src/components/crypto/HighlightedBriefing.tsx`로 분리했다. 브리핑 텍스트 정리와 keyword tone 렌더링 결과는 유지했다.
 - 2026-05-29: 초보자 안내 step과 메이저 summary metric 생성 로직을 `src/components/crypto/beginnerGuideHelpers.ts`로 분리했다. 판단 엔진, Basic/Pro 노출 정책, RadarInsight 입력은 변경하지 않았다.
+- 2026-05-29: 차트 KST 시간 변환, overlay 설정 읽기, overlay preset/sensitivity 표시 helper를 `src/components/crypto/chartInteractionHelpers.ts`로 분리했다. lightweight-charts lifecycle은 변경하지 않았다.
 
 ## 현재 남은 분리 후보
 
