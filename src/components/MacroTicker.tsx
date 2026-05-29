@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CalendarClock, ChevronRight, ExternalLink, Radio, RefreshCw } from "lucide-react";
+import { CalendarClock, ChevronRight, ExternalLink, Radio } from "lucide-react";
 import { type MacroEventItem } from "@/data/macroEvents";
 import { getMacroCalendarFallbackPayload, type MacroCalendarPayload } from "@/lib/macroCalendar";
-import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
+import { StatusPill } from "@/components/ui/DesignPrimitives";
 
 const RECENT_RELEASE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const PREVIOUS_RELEASE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -241,8 +241,6 @@ function MacroNewsItem({ item, sectionLabel, subdued = false }: { item: MacroEve
 export function MacroTicker({ compact = false, market = "crypto" }: { compact?: boolean; market?: "crypto" | "stocks" } = {}) {
   const pathname = usePathname();
   const [calendar, setCalendar] = useState<MacroCalendarPayload>(fallbackCalendar);
-  const [refreshNonce, setRefreshNonce] = useState(0);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const upcomingItems = getUpcomingItems(calendar.items);
   const releasedItems = getRecentReleasedItems(calendar.items);
   const previousReleasedItems = getPreviousReleasedItems(calendar.items);
@@ -261,14 +259,12 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
     };
 
     const loadCalendar = async () => {
-      setIsRefreshing(true);
       try {
         const response = await fetch(`/api/macro-calendar?market=${market}&ts=${Date.now()}`, { cache: "no-store" });
         if (response.ok) {
           const payload = (await response.json()) as MacroCalendarPayload;
           if (!cancelled) {
             setCalendar(payload);
-            setIsRefreshing(false);
             scheduleNextLoad(Math.max(30_000, Math.min(payload.nextRefreshMs ?? 600_000, 10 * 60_000)));
             return;
           }
@@ -277,10 +273,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
         // Keep the current calendar visible and retry soon.
       }
 
-      if (!cancelled) {
-        setIsRefreshing(false);
-        scheduleNextLoad(3 * 60_000);
-      }
+      if (!cancelled) scheduleNextLoad(3 * 60_000);
     };
 
     const handleFocusRefresh = () => {
@@ -296,7 +289,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
       document.removeEventListener("visibilitychange", handleFocusRefresh);
       if (timer) clearTimeout(timer);
     };
-  }, [market, refreshNonce]);
+  }, [market]);
 
   if (isNewsMacroReport) {
     const previousRelease = previousReleasedItems[0];
@@ -380,12 +373,8 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
           </div>
           <ChevronRight size={14} className="shrink-0 text-slate-600 transition group-hover:text-accent-blue" aria-hidden />
         </Link>
-        <div className="flex items-center justify-between gap-2 px-1 text-[11px] font-semibold text-ui-muted">
+        <div className="flex items-center gap-2 px-1 text-[11px] font-semibold text-ui-muted">
           <span className="min-w-0 truncate">{calendar.updatedAtLabel}</span>
-          <ActionButton tone="ghost" className="min-h-7 shrink-0 px-0" onClick={() => setRefreshNonce((value) => value + 1)} disabled={isRefreshing}>
-            <RefreshCw size={12} className={isRefreshing ? "animate-spin" : ""} aria-hidden />
-            새로고침
-          </ActionButton>
         </div>
       </div>
     );

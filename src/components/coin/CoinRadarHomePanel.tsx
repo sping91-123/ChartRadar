@@ -214,6 +214,14 @@ export function CoinRadarHomePanel() {
 
   return (
     <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2 px-1 text-[11px] font-semibold text-ui-muted">
+        <span className="min-w-0 truncate">{formatCachedAt(state.data.cachedAt)}</span>
+        <ActionButton tone="ghost" className="min-h-7 shrink-0 px-0" onClick={() => void load()}>
+          <RefreshCw size={12} aria-hidden />
+          새로고침
+        </ActionButton>
+      </div>
+
       <PanelCard variant="flat" padding="none" className="space-y-4 py-2">
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
@@ -221,10 +229,6 @@ export function CoinRadarHomePanel() {
             <h2 className="text-ui-heading font-semibold tracking-tight text-ui-text">{summary?.decision.state}</h2>
             <p className="mt-1 max-w-3xl text-ui-body text-ui-muted [word-break:keep-all]">{summary?.decision.reason}</p>
           </div>
-          <ActionButton tone="ghost" className="px-0" onClick={() => void load()}>
-            <RefreshCw size={14} aria-hidden />
-            {formatCachedAt(state.data.cachedAt)}
-          </ActionButton>
         </div>
 
         <div className="grid gap-4 py-1 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
