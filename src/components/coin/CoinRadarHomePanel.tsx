@@ -37,6 +37,7 @@ const fundingSymbols = ["BTC", "ETH", "XRP"] as const;
 type RepresentativeSymbol = (typeof tileSymbols)[number];
 type ConclusionSegment = { text: string; tone?: "up" | "down" };
 type DirectionTone = "up" | "down";
+type VisualTone = "long" | "short" | "watch" | "risk" | "info";
 
 const tradingViewLogoIds: Record<RepresentativeSymbol, string> = {
   BTC: "XTVCBTC",
@@ -80,6 +81,34 @@ function formatKrwRate(value: number | null | undefined) {
   if (value === null || value === undefined || !Number.isFinite(value)) return "미확인";
   return `₩${value.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}`;
 }
+
+function parseReadingNumber(value: string | undefined) {
+  const match = value?.match(/-?\d+(\.\d+)?/);
+  if (!match) return null;
+  const parsed = Number(match[0]);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function toneFromPercent(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "info" as const;
+  if (value >= 65) return "long" as const;
+  if (value <= 35) return "short" as const;
+  return "watch" as const;
+}
+
+function toneFromPremium(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "info" as const;
+  if (Math.abs(value) < 0.5) return "watch" as const;
+  return value > 0 ? "risk" as const : "info" as const;
+}
+
+const visualToneClass: Record<VisualTone, { text: string; bar: string }> = {
+  long: { text: "text-ui-long", bar: "bg-ui-long" },
+  short: { text: "text-ui-short", bar: "bg-ui-short" },
+  watch: { text: "text-ui-watch", bar: "bg-ui-watch" },
+  risk: { text: "text-ui-risk", bar: "bg-ui-risk" },
+  info: { text: "text-ui-brand", bar: "bg-ui-brand" }
+};
 
 function formatAnalysisUpdatedAt(ms: number) {
   const date = new Date(ms);
@@ -198,6 +227,117 @@ function HighlightDirectionalText({ text }: { text: string | undefined }) {
         );
       })}
     </>
+  );
+}
+
+function MarketStrengthGauge({
+  label,
+  value,
+  display,
+  min = 0,
+  max = 100,
+  detail,
+  tone = "info",
+  leftLabel,
+  rightLabel,
+  showCenter = false
+}: {
+  label: string;
+  value: number | null | undefined;
+  display: string;
+  min?: number;
+  max?: number;
+  detail?: string;
+  tone?: VisualTone;
+  leftLabel?: string;
+  rightLabel?: string;
+  showCenter?: boolean;
+}) {
+  const hasValue = value !== null && value !== undefined && Number.isFinite(value);
+  const percent = hasValue ? clamp(((value - min) / (max - min)) * 100) : 0;
+  const centerPercent = clamp(((0 - min) / (max - min)) * 100);
+  const toneClass = visualToneClass[tone];
+
+  return (
+    <article className="min-w-0 rounded-ui-sm border border-ui-line bg-ui-inset p-3">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{label}</p>
+          {detail ? <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{detail}</p> : null}
+        </div>
+        <p className={`shrink-0 text-right text-base font-semibold leading-5 ${toneClass.text}`}>{display}</p>
+      </div>
+      <div className="relative mt-3 h-2 overflow-hidden rounded-full bg-ui-line">
+        {showCenter ? <span className="absolute top-0 z-10 h-full w-px bg-ui-text/45" style={{ left: `${centerPercent}%` }} aria-hidden /> : null}
+        <span className={`block h-full rounded-full ${toneClass.bar}`} style={{ width: `${percent}%` }} aria-hidden />
+      </div>
+      {(leftLabel || rightLabel) ? (
+        <div className="mt-1.5 flex justify-between gap-3 text-[10px] font-semibold text-ui-subtle">
+          <span>{leftLabel}</span>
+          <span>{rightLabel}</span>
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+function TrendBreadthVisual({ report }: { report: TechnicalRadarReport | null | undefined }) {
+  const bullish = report?.bullishCount ?? 0;
+  const bearish = report?.bearishCount ?? 0;
+  const neutral = report?.neutralCount ?? 0;
+  const total = bullish + bearish + neutral;
+  const bullishWidth = total ? (bullish / total) * 100 : 0;
+  const neutralWidth = total ? (neutral / total) * 100 : 0;
+  const bearishWidth = total ? (bearish / total) * 100 : 0;
+
+  return (
+    <article className="min-w-0 rounded-ui-sm border border-ui-line bg-ui-inset p-3">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">BTC 트렌드</p>
+          <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{report?.summary ?? "BTC 추세 지표를 확인 중입니다."}</p>
+        </div>
+        <p className="shrink-0 text-right text-sm font-semibold leading-5 text-ui-text">{report?.trendLabel ?? "미확인"}</p>
+      </div>
+      <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-ui-line">
+        <span className="h-full bg-ui-long" style={{ width: `${bullishWidth}%` }} aria-hidden />
+        <span className="h-full bg-ui-watch" style={{ width: `${neutralWidth}%` }} aria-hidden />
+        <span className="h-full bg-ui-short" style={{ width: `${bearishWidth}%` }} aria-hidden />
+      </div>
+      <div className="mt-2 grid grid-cols-3 gap-2 text-[10px] font-semibold text-ui-muted">
+        <span className="text-ui-long">상승 {bullish}</span>
+        <span className="text-center text-ui-watch">중립 {neutral}</span>
+        <span className="text-right text-ui-short">하락 {bearish}</span>
+      </div>
+    </article>
+  );
+}
+
+function LongShortVisual({ report }: { report: LiquidationPressureReport | null | undefined }) {
+  const longPercent = report?.globalLongShort.longPercent ?? null;
+  const shortPercent = report?.globalLongShort.shortPercent ?? null;
+  const ratio = report?.globalLongShort.ratio ?? null;
+  const longWidth = longPercent !== null && Number.isFinite(longPercent) ? clamp(longPercent) : 50;
+  const shortWidth = shortPercent !== null && Number.isFinite(shortPercent) ? clamp(shortPercent) : 50;
+
+  return (
+    <article className="min-w-0 rounded-ui-sm border border-ui-line bg-ui-inset p-3">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">롱숏비율</p>
+          <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">BTCUSDT Binance 공개 long/short 비율입니다.</p>
+        </div>
+        <p className="shrink-0 text-right text-base font-semibold leading-5 text-ui-text">{formatRatio(ratio)}</p>
+      </div>
+      <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-ui-line">
+        <span className="h-full bg-ui-long" style={{ width: `${longWidth}%` }} aria-hidden />
+        <span className="h-full bg-ui-short" style={{ width: `${shortWidth}%` }} aria-hidden />
+      </div>
+      <div className="mt-2 flex justify-between gap-3 text-[10px] font-semibold">
+        <span className="text-ui-long">롱 {formatPlainPercent(longPercent, 1)}</span>
+        <span className="text-ui-short">숏 {formatPlainPercent(shortPercent, 1)}</span>
+      </div>
+    </article>
   );
 }
 
@@ -501,15 +641,71 @@ export function CoinRadarHomePanel() {
 
       <PanelCard variant="report" padding="lg" className="space-y-4">
         <SectionHeader eyebrow="BTC Market Strength" title="BTC 기준 시장 체력" description="선택 코인과 분리해 BTC 기준 과열, 추세, 파생 쏠림을 확인합니다." />
-        <div className="grid gap-0 sm:grid-cols-2">
-          <DataRow label="공포탐욕" value={summary?.fearGreed ? `${summary.fearGreed.score} · ${summary.fearGreed.label}` : "미확인"} />
-          <DataRow label="BTC RSI" value={summary?.rsi?.value ?? "미확인"} detail={summary?.rsi?.description} />
-          <DataRow label="BTC 스토캐스틱" value={summary?.stochastic?.value ?? "미확인"} detail={summary?.stochastic?.description} />
-          <DataRow label="BTC 트렌드" value={summary?.report?.trendLabel ?? "미확인"} detail={summary?.report?.summary} />
-          <DataRow label="BTC 도미넌스" value={formatPlainPercent(summary?.marketMetrics?.btcDominancePercent)} detail="CoinGecko global market cap 기준 BTC 비중입니다." />
-          <DataRow label="롱숏비율" value={formatRatio(summary?.btcFunding?.globalLongShort.ratio)} detail="BTCUSDT Binance 공개 long/short 비율입니다." />
-          <DataRow label="김프" value={formatPercent(summary?.marketMetrics?.kimchiPremiumPercent)} detail="업비트 BTC/KRW와 Binance BTCUSDT, USD/KRW 환율로 계산한 보조값입니다." />
-          <DataRow label="환율" value={formatKrwRate(summary?.marketMetrics?.usdKrw)} detail="USD/KRW public source 기준입니다. 국내 현물 해석용 보조값으로만 봅니다." />
+        <div className="grid gap-3 md:grid-cols-2">
+          <MarketStrengthGauge
+            label="공포탐욕"
+            value={summary?.fearGreed?.score}
+            display={summary?.fearGreed ? `${summary.fearGreed.score} · ${summary.fearGreed.label}` : "미확인"}
+            detail={summary?.fearGreed?.description}
+            tone={toneFromPercent(summary?.fearGreed?.score)}
+            leftLabel="공포"
+            rightLabel="탐욕"
+          />
+          <MarketStrengthGauge
+            label="BTC RSI"
+            value={parseReadingNumber(summary?.rsi?.value)}
+            display={summary?.rsi?.value ?? "미확인"}
+            detail={summary?.rsi?.description}
+            tone={summary?.rsi?.tone === "warning" ? "risk" : toneFromPercent(parseReadingNumber(summary?.rsi?.value))}
+            leftLabel="과매도"
+            rightLabel="과열"
+          />
+          <MarketStrengthGauge
+            label="BTC 스토캐스틱"
+            value={parseReadingNumber(summary?.stochastic?.value)}
+            display={summary?.stochastic?.value ?? "미확인"}
+            detail={summary?.stochastic?.description}
+            tone={summary?.stochastic?.tone === "warning" ? "risk" : toneFromPercent(parseReadingNumber(summary?.stochastic?.value))}
+            leftLabel="하방 과열"
+            rightLabel="상방 과열"
+          />
+          <TrendBreadthVisual report={summary?.report} />
+          <MarketStrengthGauge
+            label="BTC 도미넌스"
+            value={summary?.marketMetrics?.btcDominancePercent}
+            display={formatPlainPercent(summary?.marketMetrics?.btcDominancePercent)}
+            detail="CoinGecko global market cap 기준 BTC 비중입니다."
+            tone="info"
+            leftLabel="낮음"
+            rightLabel="높음"
+          />
+          <LongShortVisual report={summary?.btcFunding} />
+          <MarketStrengthGauge
+            label="김프"
+            value={summary?.marketMetrics?.kimchiPremiumPercent}
+            display={formatPercent(summary?.marketMetrics?.kimchiPremiumPercent)}
+            detail="업비트 BTC/KRW와 Binance BTCUSDT, USD/KRW 환율로 계산한 보조값입니다."
+            min={-5}
+            max={5}
+            tone={toneFromPremium(summary?.marketMetrics?.kimchiPremiumPercent)}
+            leftLabel="역프리미엄"
+            rightLabel="프리미엄"
+            showCenter
+          />
+          <article className="min-w-0 rounded-ui-sm border border-ui-line bg-ui-inset p-3">
+            <div className="flex min-w-0 items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">환율</p>
+                <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">USD/KRW public source 기준입니다. 국내 현물 해석용 보조값으로만 봅니다.</p>
+              </div>
+              <p className="shrink-0 text-right text-base font-semibold leading-5 text-ui-text">{formatKrwRate(summary?.marketMetrics?.usdKrw)}</p>
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-1 text-[10px] font-semibold text-ui-subtle">
+              <span>국내 현물</span>
+              <span className="text-center text-ui-muted">환산 기준</span>
+              <span className="text-right">보조값</span>
+            </div>
+          </article>
         </div>
       </PanelCard>
 
