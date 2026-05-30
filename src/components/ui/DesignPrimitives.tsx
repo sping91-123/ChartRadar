@@ -15,10 +15,10 @@ function cx(...classes: Array<string | false | null | undefined>) {
 
 const surfaceVariantClass: Record<SurfaceVariant, Record<Tone, string>> = {
   card: {
-    panel: "bg-transparent text-ui-text shadow-none",
-    elevated: "bg-transparent text-ui-text shadow-none",
-    inset: "bg-transparent text-ui-muted shadow-none",
-    critical: "bg-transparent text-ui-risk shadow-none"
+    panel: "border border-ui-line bg-ui-panel text-ui-text shadow-ui-panel",
+    elevated: "border border-ui-lineStrong bg-ui-elevated text-ui-text shadow-ui-elevated",
+    inset: "border border-ui-line bg-ui-inset text-ui-muted shadow-none",
+    critical: "border border-ui-line bg-ui-panel text-ui-risk shadow-ui-panel"
   },
   flat: {
     panel: "bg-transparent text-ui-text",
@@ -27,16 +27,16 @@ const surfaceVariantClass: Record<SurfaceVariant, Record<Tone, string>> = {
     critical: "bg-transparent text-ui-risk"
   },
   report: {
-    panel: "bg-transparent text-ui-text",
-    elevated: "bg-transparent text-ui-text",
-    inset: "bg-transparent text-ui-muted",
-    critical: "bg-transparent text-ui-risk"
+    panel: "border border-ui-line bg-ui-panel text-ui-text shadow-ui-panel",
+    elevated: "border border-ui-lineStrong bg-ui-elevated text-ui-text shadow-ui-elevated",
+    inset: "border border-ui-line bg-ui-inset text-ui-muted shadow-none",
+    critical: "border border-ui-line bg-ui-panel text-ui-risk shadow-ui-panel"
   },
   list: {
-    panel: "bg-transparent text-ui-text",
-    elevated: "bg-transparent text-ui-text",
-    inset: "bg-transparent text-ui-muted",
-    critical: "bg-transparent text-ui-risk"
+    panel: "border border-ui-line bg-ui-panel text-ui-text",
+    elevated: "border border-ui-lineStrong bg-ui-elevated text-ui-text",
+    inset: "border border-ui-line bg-ui-inset text-ui-muted",
+    critical: "border border-ui-line bg-ui-panel text-ui-risk"
   }
 };
 
@@ -53,8 +53,8 @@ const radiusClass: Record<SurfaceRadius, string> = {
   md: "rounded-ui"
 };
 
-function defaultRadiusForVariant(_variant: SurfaceVariant): SurfaceRadius {
-  return "none";
+function defaultRadiusForVariant(variant: SurfaceVariant): SurfaceRadius {
+  return variant === "flat" ? "none" : "md";
 }
 
 interface AppSurfaceProps {
@@ -159,7 +159,7 @@ export function DataRow({
         <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{label}</p>
         {detail ? <p className="mt-0.5 text-xs leading-5 text-ui-muted [word-break:keep-all]">{detail}</p> : null}
       </div>
-      <div className="min-w-0 shrink-0 text-right text-sm font-semibold text-ui-text">{value}</div>
+      <div className="min-w-0 max-w-[52%] shrink-0 text-right text-sm font-semibold leading-5 text-ui-text [overflow-wrap:anywhere]">{value}</div>
     </div>
   );
 }

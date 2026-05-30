@@ -144,7 +144,7 @@ export function SpotRadarPanel() {
   }, [filter, payload]);
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       <PanelCard variant="report" padding="lg" className="space-y-5">
         <SectionHeader
           eyebrow="Coin Spot"
@@ -175,14 +175,14 @@ export function SpotRadarPanel() {
           <DataRow label="평균 등락" value={payload ? formatPercent(payload.summary.averageChangePercent) : "-"} />
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5 rounded-ui-sm border border-ui-line bg-ui-inset p-1">
           {categoryFilters.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => setFilter(item.id)}
-              className={`min-h-8 border-b px-1.5 text-xs font-semibold transition ${
-                filter === item.id ? "border-ui-brand text-ui-text" : "border-transparent text-ui-muted hover:text-ui-text"
+              className={`min-h-8 rounded-ui-sm px-2 text-xs font-semibold transition ${
+                filter === item.id ? "bg-ui-active text-ui-activeText" : "text-ui-muted hover:bg-ui-panel hover:text-ui-text"
               }`}
             >
               {item.label}
@@ -225,7 +225,7 @@ export function SpotRadarPanel() {
         )}
       </PanelCard>
 
-      <PanelCard variant="flat" padding="none" className="border-y border-ui-line py-4">
+      <PanelCard variant="report" padding="md">
         <div className="flex items-start gap-3 text-sm text-ui-muted">
           <ShieldCheck size={18} className="mt-0.5 shrink-0 text-ui-brand" aria-hidden />
           <p>

@@ -466,7 +466,7 @@ export function WatchlistPanel() {
         />
       )}
 
-      <section className="border-y border-ui-line py-5 sm:py-6">
+      <section className="rounded-ui border border-ui-line bg-ui-panel p-4 shadow-ui-panel sm:p-5">
         <div className="flex flex-col gap-3 min-[420px]:flex-row min-[420px]:items-start min-[420px]:justify-between">
           <div className="flex min-w-0 items-start gap-3">
             <div className="grid h-10 w-10 shrink-0 place-items-center text-accent-blue">

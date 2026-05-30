@@ -224,6 +224,11 @@ function macroLabel(label: string) {
   return label;
 }
 
+function macroSourceNote(note: string) {
+  if (note.includes("BLS 공식 통계")) return note;
+  return `${note} BLS 공식 통계, Fed, DOL 등 공개 자료를 함께 확인합니다.`;
+}
+
 function getUpcomingItems(items: MacroEventItem[]) {
   const now = Date.now();
   return items.filter((item) => eventTime(item) > now).sort((a, b) => eventTime(a) - eventTime(b));
@@ -378,7 +383,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
 
         <div className="flex items-start gap-2 pt-1 text-[11px] leading-5 text-ui-muted">
           <CalendarClock size={13} className="mt-0.5 shrink-0 text-ui-brand" aria-hidden />
-          <span className="[word-break:keep-all]">{calendar.sourceNote}</span>
+          <span className="[word-break:keep-all]">{macroSourceNote(calendar.sourceNote)}</span>
         </div>
       </section>
     );
@@ -471,7 +476,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
       </div>
       <div className="flex items-center gap-2 px-2 py-1.5 text-[11px] leading-5 text-slate-500">
         <CalendarClock size={13} className="shrink-0 text-accent-blue" aria-hidden />
-        <span className="[word-break:keep-all]">{calendar.sourceNote}</span>
+        <span className="[word-break:keep-all]">{macroSourceNote(calendar.sourceNote)}</span>
       </div>
     </section>
   );

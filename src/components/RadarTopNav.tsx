@@ -55,8 +55,8 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
     <div
       className={
         isFixedGridNav
-          ? "grid gap-0.5"
-          : "flex gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid"
+          ? "grid gap-1"
+          : "flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid"
       }
       style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
     >
@@ -69,10 +69,10 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
           <Link
             key={label}
             href={href}
-            className={`group flex min-h-9 min-w-0 items-center justify-center gap-1 px-1 text-center text-[10.5px] font-black tracking-tight transition sm:min-h-10 sm:gap-1.5 sm:px-2 sm:text-xs ${
+            className={`group flex min-h-10 min-w-0 items-center justify-center gap-1 rounded-ui-sm px-1 text-center text-[10.5px] font-black tracking-tight transition sm:min-h-10 sm:gap-1.5 sm:px-2 sm:text-xs ${
               isFixedGridNav ? "w-full" : "shrink-0 md:shrink"
             } ${
-              active ? "bg-transparent text-ui-text" : "bg-transparent text-ui-muted hover:text-ui-text"
+              active ? "bg-ui-active text-ui-activeText" : "bg-transparent text-ui-muted hover:bg-ui-inset hover:text-ui-text"
             }`}
           >
             <Icon size={14} aria-hidden className={`shrink-0 ${active ? "text-ui-brand" : "text-ui-subtle transition group-hover:text-ui-muted"}`} />
@@ -84,8 +84,10 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
   );
 
   return (
-    <nav className="radar-bottom-nav fixed inset-x-0 bottom-0 z-40 overflow-hidden px-2 py-1">
-      {navContent}
+    <nav className="radar-bottom-nav fixed inset-x-0 bottom-0 z-40 px-2 py-1">
+      <div className="mx-auto max-w-md rounded-ui border border-ui-line bg-ui-panel p-1 shadow-ui-panel">
+        {navContent}
+      </div>
     </nav>
   );
 }

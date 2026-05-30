@@ -221,14 +221,11 @@ function CoinStatusTile({
     <button
       type="button"
       onClick={onClick}
-      className={`relative flex h-full min-h-0 w-full flex-col items-center justify-center overflow-hidden border-2 border-ui-canvas px-1.5 py-1 text-center transition hover:brightness-110 active:scale-[0.99] ${tileToneClass(
+      className={`relative flex h-full min-h-0 w-full flex-col items-center justify-center overflow-hidden border-2 border-ui-canvas px-1.5 py-1.5 text-center transition hover:brightness-110 active:scale-[0.99] ${tileToneClass(
         changePercent
       )}`}
       aria-label={`${symbol} 상세 보기`}
     >
-      <span className="absolute right-2 top-2 text-[10px] font-black uppercase tracking-[0.08em] text-white/75">
-        {primary ? "클릭 상세" : "상세"}
-      </span>
       <span className={`block max-w-full truncate font-black tracking-tight ${primary ? "text-4xl sm:text-5xl" : emphasis ? "text-2xl sm:text-3xl" : "text-base sm:text-xl"}`}>
         {symbol}
       </span>
@@ -354,7 +351,7 @@ export function CoinRadarHomePanel() {
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3 sm:gap-4">
       <div className="flex items-center justify-between gap-2 px-1 text-[11px] font-semibold text-ui-muted">
         <span className="min-w-0 truncate">{formatAnalysisUpdatedAt(state.data.analysisUpdatedAt)}</span>
         <ActionButton tone="ghost" className="min-h-7 shrink-0 px-0" onClick={() => void load()}>
@@ -363,12 +360,12 @@ export function CoinRadarHomePanel() {
         </ActionButton>
       </div>
 
-      <PanelCard variant="flat" padding="none" className="space-y-3 py-2">
+      <PanelCard variant="report" padding="lg" className="space-y-4">
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">오늘의 결론</p>
             <h2 className="text-ui-heading font-semibold tracking-tight text-ui-text">{summary?.decision.state}</h2>
-            <p className="mt-1 max-w-full truncate whitespace-nowrap text-ui-body text-ui-muted">
+            <p className="mt-1 max-w-3xl text-ui-body text-ui-muted [word-break:keep-all]">
               {conclusionSegments(summary?.decision).map((part, index) => (
                 <span key={`${part.text}-${index}`} className={conclusionToneClass(part.tone)}>
                   {part.text}
@@ -378,7 +375,7 @@ export function CoinRadarHomePanel() {
           </div>
         </div>
 
-        <div className="grid gap-4 py-1 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
+        <div className="grid gap-5 border-t border-ui-line pt-4 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
           <div className="min-w-0">
             <div>
               <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{summary?.decision.scoreLabel}</p>
@@ -404,9 +401,9 @@ export function CoinRadarHomePanel() {
         </div>
       </PanelCard>
 
-      <PanelCard variant="flat" padding="none" className="space-y-3 py-2">
+      <PanelCard variant="report" padding="lg" className="space-y-4">
         <SectionHeader eyebrow="Representative Coins" title="대표 코인 상태" />
-        <div className="mx-auto w-full max-w-xl overflow-hidden bg-ui-line p-px">
+        <div className="mx-auto w-full max-w-2xl overflow-hidden rounded-ui-sm bg-ui-line p-px">
           <div className="grid grid-cols-[minmax(0,1fr)_minmax(5.6rem,34%)] items-stretch gap-px">
             {(() => {
               const symbol = tileSymbols[0];
@@ -502,7 +499,7 @@ export function CoinRadarHomePanel() {
         </div>
       ) : null}
 
-      <PanelCard variant="flat" padding="none" className="space-y-3 py-2">
+      <PanelCard variant="report" padding="lg" className="space-y-4">
         <SectionHeader eyebrow="BTC Market Strength" title="BTC 기준 시장 체력" description="선택 코인과 분리해 BTC 기준 과열, 추세, 파생 쏠림을 확인합니다." />
         <div className="grid gap-0 sm:grid-cols-2">
           <DataRow label="공포탐욕" value={summary?.fearGreed ? `${summary.fearGreed.score} · ${summary.fearGreed.label}` : "미확인"} />
@@ -516,7 +513,7 @@ export function CoinRadarHomePanel() {
         </div>
       </PanelCard>
 
-      <PanelCard variant="flat" padding="none" className="space-y-3 py-2">
+      <PanelCard variant="report" padding="lg" className="space-y-4">
         <SectionHeader eyebrow="Funding" title="대표 코인 펀딩비" description="펀딩비는 포지션 쏠림을 보는 보조 지표이며 방향 지시가 아닙니다." />
         <div>
           {fundingSymbols.map((symbol) => {
@@ -533,7 +530,7 @@ export function CoinRadarHomePanel() {
         </div>
       </PanelCard>
 
-      <PanelCard variant="flat" padding="none" className="py-3">
+      <PanelCard variant="report" padding="md">
         <div className="flex items-start gap-3 text-sm text-ui-muted">
           <ShieldCheck size={18} className="mt-0.5 shrink-0 text-ui-brand" aria-hidden />
           <p>
