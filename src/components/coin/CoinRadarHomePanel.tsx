@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, RefreshCw, ShieldCheck, TrendingUp, X } from "lucide-react";
-import { ActionButton, DataRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
+import { ActionButton, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import type { CoinMarketMetricsPayload } from "@/lib/coinMarketMetrics";
 import type { Candle } from "@/lib/marketAnalysis";
 import type { LiquidationPressureReport } from "@/lib/liquidationPressure";
@@ -21,7 +21,7 @@ interface MarketBoardItem {
 interface CoinHomeData {
   board: MarketBoardItem[];
   technical: TechnicalRadarReport | null;
-  funding: Partial<Record<"BTC" | "ETH" | "XRP", LiquidationPressureReport>>;
+  funding: Partial<Record<RepresentativeSymbol, LiquidationPressureReport>>;
   marketMetrics: CoinMarketMetricsPayload | null;
   analysisUpdatedAt: number;
 }
@@ -32,7 +32,7 @@ type CoinHomeState =
   | { status: "error"; message: string };
 
 const tileSymbols = ["BTC", "ETH", "XRP", "SOL", "DOGE", "BNB"] as const;
-const fundingSymbols = ["BTC", "ETH", "XRP"] as const;
+const fundingSymbols = ["BTC", "ETH", "XRP", "SOL", "DOGE", "BNB"] as const;
 
 type RepresentativeSymbol = (typeof tileSymbols)[number];
 type ConclusionSegment = { text: string; tone?: "up" | "down" };
@@ -340,6 +340,29 @@ function LongShortVisual({ report }: { report: LiquidationPressureReport | null 
   );
 }
 
+function fundingToneClass(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "text-ui-muted";
+  if (value > 0.01) return "text-ui-long";
+  if (value < -0.01) return "text-ui-short";
+  return "text-ui-watch";
+}
+
+function FundingRateRow({ symbol, report }: { symbol: RepresentativeSymbol; report: LiquidationPressureReport | null | undefined }) {
+  return (
+    <article className="border-t border-ui-line py-3 first:border-t-0">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <p className="min-w-0 text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{symbol} 펀딩비</p>
+        <p className={`shrink-0 text-right text-sm font-semibold leading-5 ${fundingToneClass(report?.fundingRatePercent)}`}>
+          {formatPercent(report?.fundingRatePercent, 4)}
+        </p>
+      </div>
+      <p className="mt-1 line-clamp-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">
+        {report?.summary ?? "Binance 공개 데이터 확인 중입니다."}
+      </p>
+    </article>
+  );
+}
+
 function CoinStatusTile({
   symbol,
   item,
@@ -407,13 +430,26 @@ export function CoinRadarHomePanel() {
     setState({ status: "loading" });
 
     try {
-      const [boardPayload, candlesPayload, marketMetricsPayload, btcFundingPayload, ethFundingPayload, xrpFundingPayload] = await Promise.all([
+      const [
+        boardPayload,
+        candlesPayload,
+        marketMetricsPayload,
+        btcFundingPayload,
+        ethFundingPayload,
+        xrpFundingPayload,
+        solFundingPayload,
+        dogeFundingPayload,
+        bnbFundingPayload
+      ] = await Promise.all([
         jsonOrNull<{ items?: MarketBoardItem[]; cachedAt?: number }>("/api/market-board"),
         jsonOrNull<{ candles?: Candle[] }>("/api/crypto-candles?symbol=BTCUSDT&timeframe=1h&limit=180"),
         jsonOrNull<CoinMarketMetricsPayload>("/api/coin-market-metrics"),
         jsonOrNull<{ report?: LiquidationPressureReport }>("/api/liquidation-pressure?symbol=BTCUSDT&period=1h"),
         jsonOrNull<{ report?: LiquidationPressureReport }>("/api/liquidation-pressure?symbol=ETHUSDT&period=1h"),
-        jsonOrNull<{ report?: LiquidationPressureReport }>("/api/liquidation-pressure?symbol=XRPUSDT&period=1h")
+        jsonOrNull<{ report?: LiquidationPressureReport }>("/api/liquidation-pressure?symbol=XRPUSDT&period=1h"),
+        jsonOrNull<{ report?: LiquidationPressureReport }>("/api/liquidation-pressure?symbol=SOLUSDT&period=1h"),
+        jsonOrNull<{ report?: LiquidationPressureReport }>("/api/liquidation-pressure?symbol=DOGEUSDT&period=1h"),
+        jsonOrNull<{ report?: LiquidationPressureReport }>("/api/liquidation-pressure?symbol=BNBUSDT&period=1h")
       ]);
 
       const board = boardPayload?.items ?? [];
@@ -422,7 +458,10 @@ export function CoinRadarHomePanel() {
       const funding: CoinHomeData["funding"] = {
         BTC: btcFundingPayload?.report,
         ETH: ethFundingPayload?.report,
-        XRP: xrpFundingPayload?.report
+        XRP: xrpFundingPayload?.report,
+        SOL: solFundingPayload?.report,
+        DOGE: dogeFundingPayload?.report,
+        BNB: bnbFundingPayload?.report
       };
 
       if (board.length === 0 && !technical) {
@@ -710,14 +749,7 @@ export function CoinRadarHomePanel() {
         <div>
           {fundingSymbols.map((symbol) => {
             const report = state.data.funding[symbol] ?? null;
-            return (
-              <DataRow
-                key={symbol}
-                label={`${symbol} 펀딩비`}
-                value={formatPercent(report?.fundingRatePercent, 4)}
-                detail={report?.summary ?? "Binance 공개 데이터 확인 중입니다."}
-              />
-            );
+            return <FundingRateRow key={symbol} symbol={symbol} report={report} />;
           })}
         </div>
       </PanelCard>
