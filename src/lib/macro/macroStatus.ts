@@ -132,6 +132,9 @@ export function resolveMacroStatus(input: {
     };
   }
 
+  const distanceMs = scheduledMs - nowMs;
+  if (distanceMs > 0) return scheduledStatus(distanceMs);
+
   if (input.eventType === "numeric_release" && hasConfirmedActualValue(input.actualValue)) {
     return {
       status: "actual_available",
@@ -168,8 +171,6 @@ export function resolveMacroStatus(input: {
     };
   }
 
-  const distanceMs = scheduledMs - nowMs;
-  if (distanceMs > 0) return scheduledStatus(distanceMs);
   const elapsedMs = Math.abs(distanceMs);
 
   if (input.eventType === "numeric_release") return unresolvedNumericReleaseStatus(elapsedMs);

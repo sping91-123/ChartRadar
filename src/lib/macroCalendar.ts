@@ -61,6 +61,7 @@ type ForexFactoryEvent = {
 };
 
 const FOREX_FACTORY_THIS_WEEK = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
+const TRADING_ECONOMICS_NEXT_WEEK_URL = "https://tradingeconomics.com/calendar?country=united%20states&importance=2&range=4";
 const KST_TIME_ZONE = "Asia/Seoul";
 const RECENT_RELEASE_MS = 24 * 60 * 60 * 1000;
 const PREVIOUS_RELEASE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -273,6 +274,25 @@ function sortItems(items: MacroEventItem[]) {
   });
 }
 
+function selectCalendarItems(items: MacroEventItem[], now: number, maxItems = 18) {
+  const upcoming = items
+    .filter((item) => {
+      const time = Date.parse(item.releaseAt);
+      return Number.isFinite(time) && time >= now;
+    })
+    .sort((a, b) => Date.parse(a.releaseAt) - Date.parse(b.releaseAt))
+    .slice(0, 8);
+  const upcomingKeys = new Set(upcoming.map(eventDedupeKey));
+  const released = sortItems(
+    items.filter((item) => {
+      const time = Date.parse(item.releaseAt);
+      return Number.isFinite(time) && time < now && !upcomingKeys.has(eventDedupeKey(item));
+    })
+  ).slice(0, maxItems - upcoming.length);
+
+  return sortItems([...released, ...upcoming]);
+}
+
 function eventDedupeKey(item: MacroEventItem) {
   const dateKey = Number.isFinite(Date.parse(item.releaseAt)) ? new Date(item.releaseAt).toISOString().slice(0, 10) : item.releaseAt;
   return `${normalizeTitle(item.label).toLowerCase()}|${dateKey}|${item.source}`;
@@ -335,6 +355,90 @@ function getRefreshMs(items: MacroEventItem[]) {
   if (distance <= 30 * 60 * 1000) return 60 * 1000;
   if (distance <= 3 * 60 * 60 * 1000) return 3 * 60 * 1000;
   return 10 * 60 * 1000;
+}
+
+function stripHtml(value: string) {
+  return value
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function htmlCellValue(rowHtml: string, id: "actual" | "previous" | "consensus" | "forecast") {
+  const match = rowHtml.match(new RegExp(`<[^>]+id=['"]${id}['"][^>]*>([\\s\\S]*?)<\\/[^>]+>`, "i"));
+  return match ? stripHtml(match[1]) || undefined : undefined;
+}
+
+function parseTradingEconomicsReleaseAt(dateText: string, timeText: string) {
+  const timeMatch = timeText.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!timeMatch) return null;
+
+  let hour = Number(timeMatch[1]);
+  const minute = Number(timeMatch[2]);
+  const meridiem = timeMatch[3].toUpperCase();
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+  if (meridiem === "PM" && hour < 12) hour += 12;
+  if (meridiem === "AM" && hour === 12) hour = 0;
+
+  const releaseAt = new Date(`${dateText}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00.000Z`);
+  return Number.isFinite(releaseAt.getTime()) ? releaseAt.toISOString() : null;
+}
+
+function importanceFromTitle(title: string): MacroEventImportance {
+  return IMPORTANT_USD_EVENTS.some((pattern) => pattern.test(title)) ? 3 : 2;
+}
+
+function parseTradingEconomicsEvents(html: string) {
+  const rows = html.match(/<tr\s+data-url=[\s\S]*?(?=<tr\s+data-url=|<thead|<\/tbody>|$)/gi) ?? [];
+
+  return rows
+    .filter((row) => row.includes("calendar-event") && /data-country=['"]united states['"]/i.test(row))
+    .map((row): MacroEventItem | null => {
+      const titleMatch = row.match(/<a[^>]+class=['"]calendar-event['"][^>]*href=['"]([^'"]+)['"][^>]*>([\s\S]*?)<\/a>/i);
+      const dateMatch = row.match(/class=['"][^'"]*(\d{4}-\d{2}-\d{2})[^'"]*['"]/i);
+      const timeMatch = row.match(/<span[^>]+class=['"]event-[^'"]+['"][^>]*>([\s\S]*?)<\/span>/i);
+      if (!titleMatch?.[1] || !titleMatch[2] || !dateMatch?.[1] || !timeMatch?.[1]) return null;
+
+      const title = normalizeTitle(stripHtml(titleMatch[2]));
+      if (!title || !IMPORTANT_USD_EVENTS.some((pattern) => pattern.test(title))) return null;
+
+      const releaseAt = parseTradingEconomicsReleaseAt(dateMatch[1], stripHtml(timeMatch[1]));
+      if (!releaseAt) return null;
+
+      const href = titleMatch[1].startsWith("http") ? titleMatch[1] : `https://tradingeconomics.com${titleMatch[1]}`;
+      return {
+        label: title,
+        releaseAt,
+        dateKst: formatKstShort(releaseAt),
+        state: eventState(releaseAt),
+        importance: importanceFromTitle(title),
+        eventType: /fomc|fed|powell/i.test(title) ? "speech_event" : "numeric_release",
+        status: eventState(releaseAt) === "upcoming" ? "scheduled" : undefined,
+        forecast: htmlCellValue(row, "consensus") ?? htmlCellValue(row, "forecast"),
+        previous: htmlCellValue(row, "previous"),
+        actual: htmlCellValue(row, "actual"),
+        summary: eventSummary(title),
+        marketImpact: marketImpact(title),
+        source: sourceFromTitle(title),
+        sourceType: "public_calendar",
+        sourceUrl: href
+      };
+    })
+    .filter((item): item is MacroEventItem => Boolean(item));
+}
+
+async function fetchTradingEconomicsUpcomingEvents(now: number) {
+  const response = await fetch(TRADING_ECONOMICS_NEXT_WEEK_URL, {
+    headers: { "user-agent": "ChartRadarBot/1.0 (+https://chartradar.kr)" },
+    cache: "no-store"
+  });
+  if (!response.ok) throw new Error(`Trading Economics calendar ${response.status}`);
+  return parseTradingEconomicsEvents(await response.text()).filter((item) => {
+    const time = Date.parse(item.releaseAt);
+    return Number.isFinite(time) && time >= now;
+  });
 }
 
 async function fetchForexFactoryEvents() {
@@ -413,8 +517,14 @@ export async function getMacroCalendarPayload(options: { bypassCache?: boolean }
   if (!options.bypassCache && cachedPayload && cachedPayload.expiresAt > now) return withMacroCalendarDebug(cachedPayload.payload, "memory-cache");
 
   try {
-    const events = await fetchForexFactoryEvents();
-    const baseItems = events
+    const [forexFactoryResult, tradingEconomicsResult] = await Promise.allSettled([fetchForexFactoryEvents(), fetchTradingEconomicsUpcomingEvents(now)]);
+    const events = forexFactoryResult.status === "fulfilled" ? forexFactoryResult.value : [];
+    const tradingEconomicsItems = tradingEconomicsResult.status === "fulfilled" ? tradingEconomicsResult.value : [];
+    if (events.length === 0 && tradingEconomicsItems.length === 0) {
+      throw forexFactoryResult.status === "rejected" ? forexFactoryResult.reason : new Error("Public macro calendar unavailable");
+    }
+
+    const forexFactoryItems = events
       .filter(isImportantUsdEvent)
       .map(toMacroItem)
       .filter((item): item is MacroEventItem => Boolean(item))
@@ -422,20 +532,21 @@ export async function getMacroCalendarPayload(options: { bypassCache?: boolean }
         const time = Date.parse(item.releaseAt);
         return time >= now || now - time <= PREVIOUS_RELEASE_RETENTION_MS;
       });
+    const baseItems = [...forexFactoryItems, ...tradingEconomicsItems];
     const mergedBaseItems = mergeRecentReleasedEvents(baseItems, now);
     const enrichments = await getOfficialEnrichments(mergedBaseItems);
     const items = normalizeMacroEvents(mergedBaseItems, enrichments, now);
-    const sorted = sortItems(items).slice(0, 18);
+    const sorted = selectCalendarItems(items, now);
     const updatedAt = new Date().toISOString();
     const payload: MacroCalendarPayload = {
       updatedAt,
       updatedAtLabel: `${formatKstDateTime(updatedAt)} 자동 갱신`,
       fetchedAt: updatedAt,
       serverTime: updatedAt,
-      sourceName: enrichments.length ? "official_and_public_macro_sources" : "forex_factory_calendar",
+      sourceName: enrichments.length ? "official_and_public_macro_sources" : tradingEconomicsItems.length ? "public_macro_calendars" : "forex_factory_calendar",
       sourceUpdatedAt: updatedAt,
       cacheMode: "live-fetch",
-      source: enrichments.length ? "automatic-mixed" : "forex-factory",
+      source: enrichments.length || tradingEconomicsItems.length ? "automatic-mixed" : "forex-factory",
       sourceLabel: enrichments.length ? "공개 캘린더 + 공식 발표 확인" : "공개 경제 캘린더",
       sourceNote: "일정은 공개 캘린더로 자동 확인하고, 숫자형 지표는 가능한 공식 통계로 보강합니다. 문서형 이벤트는 실제값 대신 공식 문서 공개 상태로 표시합니다.",
       isAutomatic: true,
