@@ -24,9 +24,9 @@ function marketFromHeader(market?: HeaderMarket): PreferredMarket | null {
 }
 
 function MarketIcon({ market }: { market?: HeaderMarket }) {
-  if (market === "crypto") return <Bitcoin size={16} aria-hidden />;
-  if (market === "stocks") return <TrendingUp size={16} aria-hidden />;
-  return <span className="text-xs font-semibold">C</span>;
+  if (market === "crypto") return <Bitcoin size={18} aria-hidden />;
+  if (market === "stocks") return <TrendingUp size={18} aria-hidden />;
+  return <span className="text-sm font-semibold">C</span>;
 }
 
 export function HeaderMarketSwitcher({ market, subtitle }: { market?: HeaderMarket; subtitle: string }) {
@@ -80,21 +80,21 @@ export function HeaderMarketSwitcher({ market, subtitle }: { market?: HeaderMark
           event.stopPropagation();
           setOpen((value) => !value);
         }}
-        className="flex min-w-0 items-center gap-2 text-left sm:gap-2.5"
+        className="flex min-w-0 items-center gap-2.5 text-left sm:gap-3"
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-ui-sm border border-ui-line bg-ui-panel text-ui-brand sm:h-8 sm:w-8">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-ui-sm border border-ui-line bg-ui-panel text-ui-brand sm:h-10 sm:w-10">
           <MarketIcon market={market} />
         </span>
         <span className="min-w-0">
           <span className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-[15px] font-semibold leading-tight tracking-tight text-ui-text sm:text-lg">
+            <span className="truncate text-[17px] font-semibold leading-tight tracking-tight text-ui-text sm:text-xl">
               {title}
             </span>
-            <ChevronDown size={14} className={`shrink-0 text-ui-muted transition ${open ? "rotate-180" : ""}`} aria-hidden />
+            <ChevronDown size={16} className={`shrink-0 text-ui-muted transition ${open ? "rotate-180" : ""}`} aria-hidden />
           </span>
-          <span className="mt-0.5 hidden max-w-[34rem] text-[11px] leading-4 text-ui-muted sm:block">{subtitle}</span>
+          <span className="mt-0.5 hidden max-w-[34rem] text-xs leading-4 text-ui-muted sm:block">{subtitle}</span>
         </span>
       </button>
 

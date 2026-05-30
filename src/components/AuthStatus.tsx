@@ -32,7 +32,7 @@ export function AuthStatus({ variant = "default" }: { variant?: "default" | "com
 
   if (isLoading) {
     return (
-      <span className="inline-flex min-h-9 items-center gap-1.5 px-0 py-1 text-xs font-semibold text-slate-300">
+      <span className="inline-flex min-h-10 items-center gap-1.5 px-0 py-1 text-xs font-semibold text-slate-300">
         <Loader2 className="animate-spin" size={13} aria-hidden />
         확인 중
       </span>
@@ -47,7 +47,7 @@ export function AuthStatus({ variant = "default" }: { variant?: "default" | "com
     if (!user) {
       return (
         <span
-          className="inline-flex min-h-9 items-center gap-1.5 px-0 py-1 text-xs font-black text-cyan-100"
+          className="inline-flex min-h-10 items-center gap-1.5 px-0 py-1 text-xs font-black text-cyan-100"
           title="Basic 상태입니다. 로그인은 설정 메뉴에서 진행할 수 있습니다."
         >
           <UserCircle size={14} aria-hidden />
@@ -58,7 +58,7 @@ export function AuthStatus({ variant = "default" }: { variant?: "default" | "com
 
     return (
       <span
-        className={`inline-flex min-h-9 items-center gap-1.5 px-0 py-1 text-xs font-black ${
+        className={`inline-flex min-h-10 items-center gap-1.5 px-0 py-1 text-xs font-black ${
           isPaid
             ? "text-amber-100"
             : "text-cyan-100"

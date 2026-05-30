@@ -292,17 +292,17 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
   };
 
   return (
-    <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+    <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
       <div className="hidden min-[390px]:block">
         <AuthStatus variant="compact" />
       </div>
       <Link
         href={alertHref}
-        className="relative grid min-h-8 min-w-8 place-items-center rounded-full border border-transparent bg-transparent text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+        className="relative grid min-h-10 min-w-10 place-items-center rounded-full border border-transparent bg-transparent text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
         aria-label="알림 설정"
         title="알림 설정"
       >
-        <Bell size={16} aria-hidden />
+        <Bell size={18} aria-hidden />
         {typeof alertBadgeCount === "number" && alertBadgeCount > 0 ? (
           <span className="absolute -right-1 -top-1 grid min-h-4 min-w-4 place-items-center rounded-full bg-cyan-300 px-1 text-[10px] font-black leading-none text-slate-950">
             {alertBadgeCount > 9 ? "9+" : alertBadgeCount}
@@ -312,11 +312,11 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
       <button
         type="button"
         onClick={() => setIsSettingsOpen(true)}
-        className="grid min-h-8 min-w-8 place-items-center rounded-full border border-transparent bg-transparent text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+        className="grid min-h-10 min-w-10 place-items-center rounded-full border border-transparent bg-transparent text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
         aria-label="설정 열기"
         title="설정"
       >
-        <Menu size={18} aria-hidden />
+        <Menu size={20} aria-hidden />
       </button>
       {isSettingsOpen ? createPortal(
         <div
