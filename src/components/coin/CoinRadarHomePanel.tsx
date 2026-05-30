@@ -263,7 +263,7 @@ function MarketStrengthGauge({
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{label}</p>
-          {detail ? <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{detail}</p> : null}
+          {detail ? <p className="mt-1 truncate whitespace-nowrap text-xs leading-4 text-ui-muted">{detail}</p> : null}
         </div>
         <p className={`shrink-0 text-right text-base font-semibold leading-5 ${toneClass.text}`}>{display}</p>
       </div>
@@ -295,7 +295,6 @@ function TrendBreadthVisual({ report }: { report: TechnicalRadarReport | null | 
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">BTC 트렌드</p>
-          <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{report?.summary ?? "BTC 추세 지표를 확인 중입니다."}</p>
         </div>
         <p className="shrink-0 text-right text-sm font-semibold leading-5 text-ui-text">{report?.trendLabel ?? "미확인"}</p>
       </div>
@@ -325,7 +324,7 @@ function LongShortVisual({ report }: { report: LiquidationPressureReport | null 
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">롱숏비율</p>
-          <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">BTCUSDT Binance 공개 long/short 비율입니다.</p>
+          <p className="mt-1 truncate whitespace-nowrap text-xs leading-4 text-ui-muted">Binance long/short</p>
         </div>
         <p className="shrink-0 text-right text-base font-semibold leading-5 text-ui-text">{formatRatio(ratio)}</p>
       </div>
@@ -646,7 +645,6 @@ export function CoinRadarHomePanel() {
             label="공포탐욕"
             value={summary?.fearGreed?.score}
             display={summary?.fearGreed ? `${summary.fearGreed.score} · ${summary.fearGreed.label}` : "미확인"}
-            detail={summary?.fearGreed?.description}
             tone={toneFromPercent(summary?.fearGreed?.score)}
             leftLabel="공포"
             rightLabel="탐욕"
@@ -655,7 +653,6 @@ export function CoinRadarHomePanel() {
             label="BTC RSI"
             value={parseReadingNumber(summary?.rsi?.value)}
             display={summary?.rsi?.value ?? "미확인"}
-            detail={summary?.rsi?.description}
             tone={summary?.rsi?.tone === "warning" ? "risk" : toneFromPercent(parseReadingNumber(summary?.rsi?.value))}
             leftLabel="과매도"
             rightLabel="과열"
@@ -664,7 +661,6 @@ export function CoinRadarHomePanel() {
             label="BTC 스토캐스틱"
             value={parseReadingNumber(summary?.stochastic?.value)}
             display={summary?.stochastic?.value ?? "미확인"}
-            detail={summary?.stochastic?.description}
             tone={summary?.stochastic?.tone === "warning" ? "risk" : toneFromPercent(parseReadingNumber(summary?.stochastic?.value))}
             leftLabel="하방 과열"
             rightLabel="상방 과열"
@@ -674,7 +670,7 @@ export function CoinRadarHomePanel() {
             label="BTC 도미넌스"
             value={summary?.marketMetrics?.btcDominancePercent}
             display={formatPlainPercent(summary?.marketMetrics?.btcDominancePercent)}
-            detail="CoinGecko global market cap 기준 BTC 비중입니다."
+            detail="CoinGecko 기준"
             tone="info"
             leftLabel="낮음"
             rightLabel="높음"
@@ -684,7 +680,7 @@ export function CoinRadarHomePanel() {
             label="김프"
             value={summary?.marketMetrics?.kimchiPremiumPercent}
             display={formatPercent(summary?.marketMetrics?.kimchiPremiumPercent)}
-            detail="업비트 BTC/KRW와 Binance BTCUSDT, USD/KRW 환율로 계산한 보조값입니다."
+            detail="업비트·Binance 환산"
             min={-5}
             max={5}
             tone={toneFromPremium(summary?.marketMetrics?.kimchiPremiumPercent)}
@@ -696,7 +692,7 @@ export function CoinRadarHomePanel() {
             <div className="flex min-w-0 items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">환율</p>
-                <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">USD/KRW public source 기준입니다. 국내 현물 해석용 보조값으로만 봅니다.</p>
+                <p className="mt-1 truncate whitespace-nowrap text-xs leading-4 text-ui-muted">USD/KRW 기준</p>
               </div>
               <p className="shrink-0 text-right text-base font-semibold leading-5 text-ui-text">{formatKrwRate(summary?.marketMetrics?.usdKrw)}</p>
             </div>
