@@ -393,21 +393,33 @@ function CoinStatusTile({
     <button
       type="button"
       onClick={onClick}
-      className={`relative flex h-full min-h-0 w-full flex-col items-center justify-center overflow-hidden border-2 border-ui-canvas px-1.5 py-1.5 text-center transition hover:brightness-110 active:scale-[0.99] ${tileToneClass(
+      className={`relative flex h-full min-h-0 w-full flex-col items-center justify-center gap-1 overflow-hidden border border-ui-canvas px-1.5 py-2 text-center transition hover:brightness-110 active:scale-[0.99] ${tileToneClass(
         changePercent
       )}`}
       aria-label={`${symbol} 상세 보기`}
     >
-      <span className={`block max-w-full truncate font-black tracking-tight ${primary ? "text-4xl sm:text-5xl" : emphasis ? "text-2xl sm:text-3xl" : "text-base sm:text-xl"}`}>
+      <span
+        className={`block max-w-full truncate font-black leading-none tracking-tight ${
+          primary ? "text-[2.55rem] sm:text-5xl" : emphasis ? "text-[1.7rem] sm:text-3xl" : "text-[1.35rem] sm:text-xl"
+        }`}
+      >
         {symbol}
       </span>
-      <span className={`mt-1 max-w-full truncate font-semibold ${primary ? "block text-2xl sm:text-3xl" : "hidden"}`}>
+      <span className={`max-w-full truncate font-semibold leading-none ${primary ? "block text-[1.7rem] sm:text-3xl" : "hidden"}`}>
         {item ? `$${formatPrice(item.price)}` : "-"}
       </span>
-      <span className={`mt-1 block max-w-full truncate font-black ${primary ? "text-2xl sm:text-3xl" : emphasis ? "text-base sm:text-xl" : "text-sm sm:text-base"} ${tileAccentClass(changePercent)}`}>
+      <span
+        className={`block max-w-full truncate font-black leading-none ${
+          primary ? "text-[1.65rem] sm:text-3xl" : emphasis ? "text-[1.05rem] sm:text-xl" : "text-[0.95rem] sm:text-base"
+        } ${tileAccentClass(changePercent)}`}
+      >
         {formatPercent(item?.changePercent)}
       </span>
-      <span className={`mt-1 inline-flex max-w-full items-center justify-center truncate px-1.5 py-0.5 font-black ${primary ? "text-2xl sm:text-3xl" : emphasis ? "text-base sm:text-xl" : "text-sm sm:text-base"} ${scoreToneClass(score)}`}>
+      <span
+        className={`inline-flex max-w-full items-center justify-center truncate px-1.5 py-0.5 font-black leading-none ${
+          primary ? "text-[1.45rem] sm:text-3xl" : emphasis ? "text-[0.95rem] sm:text-xl" : "text-[0.85rem] sm:text-base"
+        } ${scoreToneClass(score)}`}
+      >
         {score}점
       </span>
     </button>
