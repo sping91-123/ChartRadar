@@ -80,6 +80,45 @@ function SettingsPlaceholder({
   );
 }
 
+function SettingsFaqNotice() {
+  return (
+    <div className="flex items-start gap-3 border-t border-white/10 px-0 py-2.5 text-left">
+      <HelpCircle className="mt-0.5 shrink-0 text-cyan-300" size={16} aria-hidden />
+      <div className="min-w-0">
+        <p className="text-sm font-black text-white">자주 묻는 질문</p>
+        <div className="mt-2 space-y-2 text-xs leading-5 text-slate-400">
+          <div>
+            <p className="font-black text-slate-200">Chart Radar는 투자 조언인가요?</p>
+            <p className="mt-0.5">
+              아닙니다. 홈과 각 탭은 시장 흐름, 리스크, 확인 조건을 정리하는 판단 보조용 요약이며 매수·매도 지시나 수익 보장을 제공하지 않습니다.
+            </p>
+          </div>
+          <div>
+            <p className="font-black text-slate-200">가격과 지표는 어디 기준인가요?</p>
+            <p className="mt-0.5">
+              공개 데이터 제공처 기준으로 자동 집계됩니다. 갱신 주기와 거래소별 차이가 있을 수 있으므로 최종 주문 전에는 실제 거래 화면에서 다시 확인해야 합니다.
+            </p>
+          </div>
+        </div>
+        <nav className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold text-slate-300" aria-label="정책 안내">
+          <Link href="/terms" className="hover:text-white">
+            이용약관
+          </Link>
+          <Link href="/privacy" className="hover:text-white">
+            개인정보
+          </Link>
+          <Link href="/account/delete" className="hover:text-white">
+            계정 삭제
+          </Link>
+          <Link href="/refund" className="hover:text-white">
+            구독 환불
+          </Link>
+        </nav>
+      </div>
+    </div>
+  );
+}
+
 function SettingsSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="border-t border-white/10 px-3 py-3 first:border-t-0">
@@ -323,7 +362,7 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
           role="dialog"
           aria-modal="true"
           aria-labelledby="settings-panel-title"
-          className="settings-fullscreen-panel settings-slide-panel fixed inset-0 z-[100] overflow-y-auto px-3 pb-3 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-5 sm:pb-5 sm:pt-[calc(env(safe-area-inset-top)+1.25rem)]"
+          className="settings-fullscreen-panel settings-slide-panel fixed inset-0 z-[100] overflow-y-auto overflow-x-hidden px-3 pb-3 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-5 sm:pb-5 sm:pt-[calc(env(safe-area-inset-top)+1.25rem)]"
         >
           <div className="mx-auto flex min-h-full w-full max-w-md flex-col">
             <header className="sticky top-0 z-10 -mx-3 flex items-center gap-3 border-b border-white/10 bg-inherit px-3 py-3 sm:-mx-5 sm:px-5">
@@ -349,9 +388,9 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
               <DisplaySettingsSection />
               <SettingsSection title="고객지원">
                 <div className="grid gap-1">
-              <SettingsLink href="/learn" icon={BookOpen} label="지표 안내" description="판단 강도와 시장별 용어를 카테고리별로 확인합니다." />
+                  <SettingsLink href="/learn" icon={BookOpen} label="지표 안내" description="판단 강도와 시장별 용어를 카테고리별로 확인합니다." />
                   <SettingsPlaceholder icon={LifeBuoy} label="고객센터" description="문의 접수 방식과 답변 기준을 준비 중입니다." />
-                  <SettingsPlaceholder icon={HelpCircle} label="자주 묻는 질문" description="로그인, 알림, 구독 관련 FAQ를 정리할 예정입니다." />
+                  <SettingsFaqNotice />
                   <SettingsPlaceholder icon={ReceiptText} label="정기결제 현황" description="결제 시스템 구축 후 구독 상태와 갱신일을 연결합니다." />
                 </div>
               </SettingsSection>

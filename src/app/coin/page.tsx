@@ -1,4 +1,3 @@
-import { AppFooter } from "@/components/AppFooter";
 import { CoinRadarHomePanel } from "@/components/coin/CoinRadarHomePanel";
 import { Header } from "@/components/Header";
 import { MacroTicker } from "@/components/MacroTicker";
@@ -14,7 +13,6 @@ export default function CoinHomePage() {
         <div className="mt-1">
           <CoinRadarHomePanel />
         </div>
-        <AppFooter />
       </div>
     </main>
   );

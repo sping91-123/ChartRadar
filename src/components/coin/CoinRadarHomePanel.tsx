@@ -2,7 +2,7 @@
 // Coin Radar 홈에서 대표 코인과 BTC 기준 시장 체력을 빠르게 요약합니다.
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ArrowDownRight, ArrowUpRight, RefreshCw, ShieldCheck, TrendingUp, X } from "lucide-react";
+import { AlertTriangle, ArrowDownRight, ArrowUpRight, RefreshCw, TrendingUp, X } from "lucide-react";
 import { ActionButton, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import type { CoinMarketMetricsPayload } from "@/lib/coinMarketMetrics";
 import type { Candle } from "@/lib/marketAnalysis";
@@ -751,15 +751,6 @@ export function CoinRadarHomePanel() {
             const report = state.data.funding[symbol] ?? null;
             return <FundingRateRow key={symbol} symbol={symbol} report={report} />;
           })}
-        </div>
-      </PanelCard>
-
-      <PanelCard variant="report" padding="md">
-        <div className="flex items-start gap-3 text-sm text-ui-muted">
-          <ShieldCheck size={18} className="mt-0.5 shrink-0 text-ui-brand" aria-hidden />
-          <p>
-            홈은 판단 보조용 요약입니다. 세부 조건은 선물/현물/뉴스/복기 화면에서 다시 확인하며, 매수·매도 지시형 문구를 제공하지 않습니다.
-          </p>
         </div>
       </PanelCard>
     </div>
