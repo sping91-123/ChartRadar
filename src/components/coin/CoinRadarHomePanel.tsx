@@ -240,7 +240,8 @@ function MarketStrengthGauge({
   tone = "info",
   leftLabel,
   rightLabel,
-  showCenter = false
+  showCenter = false,
+  showBar = true
 }: {
   label: string;
   value: number | null | undefined;
@@ -252,6 +253,7 @@ function MarketStrengthGauge({
   leftLabel?: string;
   rightLabel?: string;
   showCenter?: boolean;
+  showBar?: boolean;
 }) {
   const hasValue = value !== null && value !== undefined && Number.isFinite(value);
   const percent = hasValue ? clamp(((value - min) / (max - min)) * 100) : 0;
@@ -259,7 +261,7 @@ function MarketStrengthGauge({
   const toneClass = visualToneClass[tone];
 
   return (
-    <article className="min-w-0 rounded-ui-sm border border-ui-line bg-ui-inset p-3">
+    <article className="min-w-0 border-t border-ui-line py-3 first:border-t-0 md:[&:nth-child(-n+2)]:border-t-0">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{label}</p>
@@ -267,11 +269,13 @@ function MarketStrengthGauge({
         </div>
         <p className={`shrink-0 text-right text-base font-semibold leading-5 ${toneClass.text}`}>{display}</p>
       </div>
-      <div className="relative mt-3 h-2 overflow-hidden rounded-full bg-ui-line">
-        {showCenter ? <span className="absolute top-0 z-10 h-full w-px bg-ui-text/45" style={{ left: `${centerPercent}%` }} aria-hidden /> : null}
-        <span className={`block h-full rounded-full ${toneClass.bar}`} style={{ width: `${percent}%` }} aria-hidden />
-      </div>
-      {(leftLabel || rightLabel) ? (
+      {showBar ? (
+        <div className="relative mt-3 h-2 overflow-hidden rounded-full bg-ui-line">
+          {showCenter ? <span className="absolute top-0 z-10 h-full w-px bg-ui-text/45" style={{ left: `${centerPercent}%` }} aria-hidden /> : null}
+          <span className={`block h-full rounded-full ${toneClass.bar}`} style={{ width: `${percent}%` }} aria-hidden />
+        </div>
+      ) : null}
+      {showBar && (leftLabel || rightLabel) ? (
         <div className="mt-1.5 flex justify-between gap-3 text-[10px] font-semibold text-ui-subtle">
           <span>{leftLabel}</span>
           <span>{rightLabel}</span>
@@ -291,7 +295,7 @@ function TrendBreadthVisual({ report }: { report: TechnicalRadarReport | null | 
   const bearishWidth = total ? (bearish / total) * 100 : 0;
 
   return (
-    <article className="min-w-0 rounded-ui-sm border border-ui-line bg-ui-inset p-3">
+    <article className="min-w-0 border-t border-ui-line py-3 md:[&:nth-child(-n+2)]:border-t-0">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">BTC 트렌드</p>
@@ -320,11 +324,10 @@ function LongShortVisual({ report }: { report: LiquidationPressureReport | null 
   const shortWidth = shortPercent !== null && Number.isFinite(shortPercent) ? clamp(shortPercent) : 50;
 
   return (
-    <article className="min-w-0 rounded-ui-sm border border-ui-line bg-ui-inset p-3">
+    <article className="min-w-0 border-t border-ui-line py-3 md:[&:nth-child(-n+2)]:border-t-0">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">롱숏비율</p>
-          <p className="mt-1 truncate whitespace-nowrap text-xs leading-4 text-ui-muted">Binance long/short</p>
         </div>
         <p className="shrink-0 text-right text-base font-semibold leading-5 text-ui-text">{formatRatio(ratio)}</p>
       </div>
@@ -347,6 +350,13 @@ function fundingToneClass(value: number | null | undefined) {
   return "text-ui-watch";
 }
 
+function fundingSkewDescription(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "펀딩비 확인 중";
+  if (value > 0.001) return "롱 포지션 쏠림";
+  if (value < -0.001) return "숏 포지션 쏠림";
+  return "쏠림 낮음";
+}
+
 function FundingRateRow({ symbol, report }: { symbol: RepresentativeSymbol; report: LiquidationPressureReport | null | undefined }) {
   return (
     <article className="border-t border-ui-line py-3 first:border-t-0">
@@ -356,8 +366,8 @@ function FundingRateRow({ symbol, report }: { symbol: RepresentativeSymbol; repo
           {formatPercent(report?.fundingRatePercent, 4)}
         </p>
       </div>
-      <p className="mt-1 line-clamp-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">
-        {report?.summary ?? "Binance 공개 데이터 확인 중입니다."}
+      <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">
+        {fundingSkewDescription(report?.fundingRatePercent)}
       </p>
     </article>
   );
@@ -538,7 +548,7 @@ export function CoinRadarHomePanel() {
         </ActionButton>
       </div>
 
-      <PanelCard variant="report" padding="lg" className="space-y-4">
+      <PanelCard variant="flat" padding="none" className="space-y-4">
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">오늘의 결론</p>
@@ -579,16 +589,16 @@ export function CoinRadarHomePanel() {
         </div>
       </PanelCard>
 
-      <PanelCard variant="report" padding="lg" className="space-y-4">
+      <PanelCard variant="flat" padding="none" className="space-y-4">
         <SectionHeader eyebrow="Representative Coins" title="대표 코인 상태" />
         <div className="mx-auto w-full max-w-2xl overflow-hidden rounded-ui-sm bg-ui-line p-px">
-          <div className="grid grid-cols-[minmax(0,1fr)_minmax(5.6rem,34%)] items-stretch gap-px">
+          <div className="grid h-[clamp(10.5rem,42vw,18rem)] grid-cols-[minmax(0,1fr)_minmax(5.6rem,34%)] items-stretch gap-px">
             {(() => {
               const symbol = tileSymbols[0];
               const item = boardItem(state.data.board, symbol);
               const score = scoreFor(item?.changePercent ?? 0, summary?.fearGreed?.score ?? null);
               return (
-                <div className="aspect-square min-w-0 self-start">
+                <div className="min-w-0">
                   <CoinStatusTile symbol={symbol} item={item} score={score} primary onClick={() => setSelectedSymbol(symbol)} />
                 </div>
               );
@@ -601,7 +611,7 @@ export function CoinRadarHomePanel() {
               })}
             </div>
           </div>
-          <div className="mt-px grid h-24 grid-cols-[minmax(0,1fr)_minmax(5.6rem,34%)] gap-px sm:h-32">
+          <div className="mt-px grid h-[clamp(5.5rem,22vw,8rem)] grid-cols-[minmax(0,1fr)_minmax(5.6rem,34%)] gap-px">
             <div className="grid min-w-0 grid-cols-2 gap-px">
               {tileSymbols.slice(3, 5).map((symbol) => {
                 const item = boardItem(state.data.board, symbol);
@@ -677,7 +687,7 @@ export function CoinRadarHomePanel() {
         </div>
       ) : null}
 
-      <PanelCard variant="report" padding="lg" className="space-y-4">
+      <PanelCard variant="flat" padding="none" className="space-y-4">
         <SectionHeader eyebrow="BTC Market Strength" title="BTC 기준 시장 체력" description="선택 코인과 분리해 BTC 기준 과열, 추세, 파생 쏠림을 확인합니다." />
         <div className="grid gap-3 md:grid-cols-2">
           <MarketStrengthGauge
@@ -709,7 +719,6 @@ export function CoinRadarHomePanel() {
             label="BTC 도미넌스"
             value={summary?.marketMetrics?.btcDominancePercent}
             display={formatPlainPercent(summary?.marketMetrics?.btcDominancePercent)}
-            detail="CoinGecko 기준"
             tone="info"
             leftLabel="낮음"
             rightLabel="높음"
@@ -719,32 +728,23 @@ export function CoinRadarHomePanel() {
             label="김프"
             value={summary?.marketMetrics?.kimchiPremiumPercent}
             display={formatPercent(summary?.marketMetrics?.kimchiPremiumPercent)}
-            detail="업비트·Binance 환산"
             min={-5}
             max={5}
             tone={toneFromPremium(summary?.marketMetrics?.kimchiPremiumPercent)}
-            leftLabel="역프리미엄"
-            rightLabel="프리미엄"
-            showCenter
+            showBar={false}
           />
-          <article className="min-w-0 rounded-ui-sm border border-ui-line bg-ui-inset p-3">
+          <article className="min-w-0 border-t border-ui-line py-3">
             <div className="flex min-w-0 items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">환율</p>
-                <p className="mt-1 truncate whitespace-nowrap text-xs leading-4 text-ui-muted">USD/KRW 기준</p>
               </div>
               <p className="shrink-0 text-right text-base font-semibold leading-5 text-ui-text">{formatKrwRate(summary?.marketMetrics?.usdKrw)}</p>
-            </div>
-            <div className="mt-3 grid grid-cols-3 gap-1 text-[10px] font-semibold text-ui-subtle">
-              <span>국내 현물</span>
-              <span className="text-center text-ui-muted">환산 기준</span>
-              <span className="text-right">보조값</span>
             </div>
           </article>
         </div>
       </PanelCard>
 
-      <PanelCard variant="report" padding="lg" className="space-y-4">
+      <PanelCard variant="flat" padding="none" className="space-y-4">
         <SectionHeader eyebrow="Funding" title="대표 코인 펀딩비" description="펀딩비는 포지션 쏠림을 보는 보조 지표이며 방향 지시가 아닙니다." />
         <div>
           {fundingSymbols.map((symbol) => {
