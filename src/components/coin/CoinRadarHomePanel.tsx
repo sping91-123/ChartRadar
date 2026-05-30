@@ -21,6 +21,7 @@ interface MarketBoardItem {
 interface CoinHomeData {
   board: MarketBoardItem[];
   technical: TechnicalRadarReport | null;
+  technical4h: TechnicalRadarReport | null;
   funding: Partial<Record<RepresentativeSymbol, LiquidationPressureReport>>;
   marketMetrics: CoinMarketMetricsPayload | null;
   analysisUpdatedAt: number;
@@ -285,7 +286,7 @@ function MarketStrengthGauge({
   );
 }
 
-function TrendBreadthVisual({ report }: { report: TechnicalRadarReport | null | undefined }) {
+function TrendBreadthVisual({ report, label = "BTC 트렌드" }: { report: TechnicalRadarReport | null | undefined; label?: string }) {
   const bullish = report?.bullishCount ?? 0;
   const bearish = report?.bearishCount ?? 0;
   const neutral = report?.neutralCount ?? 0;
@@ -298,7 +299,7 @@ function TrendBreadthVisual({ report }: { report: TechnicalRadarReport | null | 
     <article className="min-w-0 border-t border-ui-line py-3 md:[&:nth-child(-n+2)]:border-t-0">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">BTC 트렌드</p>
+          <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{label}</p>
         </div>
         <p className="shrink-0 text-right text-sm font-semibold leading-5 text-ui-text">{report?.trendLabel ?? "미확인"}</p>
       </div>
@@ -455,6 +456,7 @@ export function CoinRadarHomePanel() {
       const [
         boardPayload,
         candlesPayload,
+        candles4hPayload,
         marketMetricsPayload,
         btcFundingPayload,
         ethFundingPayload,
@@ -465,6 +467,7 @@ export function CoinRadarHomePanel() {
       ] = await Promise.all([
         jsonOrNull<{ items?: MarketBoardItem[]; cachedAt?: number }>("/api/market-board"),
         jsonOrNull<{ candles?: Candle[] }>("/api/crypto-candles?symbol=BTCUSDT&timeframe=1h&limit=180"),
+        jsonOrNull<{ candles?: Candle[] }>("/api/crypto-candles?symbol=BTCUSDT&timeframe=4h&limit=180"),
         jsonOrNull<CoinMarketMetricsPayload>("/api/coin-market-metrics"),
         jsonOrNull<{ report?: LiquidationPressureReport }>("/api/liquidation-pressure?symbol=BTCUSDT&period=1h"),
         jsonOrNull<{ report?: LiquidationPressureReport }>("/api/liquidation-pressure?symbol=ETHUSDT&period=1h"),
@@ -476,7 +479,9 @@ export function CoinRadarHomePanel() {
 
       const board = boardPayload?.items ?? [];
       const candles = candlesPayload?.candles ?? [];
+      const candles4h = candles4hPayload?.candles ?? [];
       const technical = candles.length >= 60 ? analyzeTechnicalRadar(candles) : null;
+      const technical4h = candles4h.length >= 60 ? analyzeTechnicalRadar(candles4h) : null;
       const funding: CoinHomeData["funding"] = {
         BTC: btcFundingPayload?.report,
         ETH: ethFundingPayload?.report,
@@ -495,6 +500,7 @@ export function CoinRadarHomePanel() {
         data: {
           board,
           technical,
+          technical4h,
           funding,
           marketMetrics: marketMetricsPayload,
           analysisUpdatedAt: Date.now()
@@ -512,6 +518,7 @@ export function CoinRadarHomePanel() {
   const summary = useMemo(() => {
     if (state.status !== "ready") return null;
     const report = state.data.technical;
+    const report4h = state.data.technical4h;
     const fearGreed = report?.fearGreed ?? null;
     const tone = toneForMarket(fearGreed?.score ?? null);
     const btc = boardItem(state.data.board, "BTC");
@@ -526,7 +533,7 @@ export function CoinRadarHomePanel() {
       btcFunding
     });
 
-    return { report, fearGreed, tone, btc, rsi, stochastic, btcFunding, marketMetrics, decision };
+    return { report, report4h, fearGreed, tone, btc, rsi, stochastic, btcFunding, marketMetrics, decision };
   }, [state]);
 
   if (state.status === "loading") {
@@ -726,7 +733,8 @@ export function CoinRadarHomePanel() {
             leftLabel="하방 과열"
             rightLabel="상방 과열"
           />
-          <TrendBreadthVisual report={summary?.report} />
+          <TrendBreadthVisual report={summary?.report} label="BTC 1H 트렌드" />
+          <TrendBreadthVisual report={summary?.report4h} label="BTC 4H 트렌드" />
           <MarketStrengthGauge
             label="BTC 도미넌스"
             value={summary?.marketMetrics?.btcDominancePercent}
