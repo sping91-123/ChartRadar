@@ -399,6 +399,9 @@ function CoinStatusTile({
       )}`}
       aria-label={`${symbol} 상세 보기`}
     >
+      <span className="pointer-events-none absolute right-1 top-1 text-[9px] font-black leading-none text-white/60 sm:right-1.5 sm:top-1.5">
+        클릭상세
+      </span>
       <span
         className={`block max-w-full truncate font-black leading-none tracking-tight ${
           primary ? "text-[2.55rem] sm:text-5xl" : emphasis ? "text-[1.7rem] sm:text-3xl" : "text-[1.35rem] sm:text-xl"
