@@ -1,4 +1,5 @@
 import { AppFooter } from "@/components/AppFooter";
+import { CoinFuturesEvidenceGradePanel } from "@/components/coin/CoinEvidenceGradePanel";
 import { CoinFuturesBrief } from "@/components/coin/CoinFuturesBrief";
 import { CoinFuturesSwitch } from "@/components/coin/CoinFuturesSwitch";
 import { CoinFuturesSignalPressurePanel } from "@/components/coin/CoinSignalPressurePanel";
@@ -15,6 +16,7 @@ export function MajorsApp() {
         <CoinFuturesSwitch active="major" />
         <CoinFuturesBrief mode="major" />
         <CoinFuturesSignalPressurePanel mode="major" />
+        <CoinFuturesEvidenceGradePanel mode="major" />
         <LiveMarketChart majorOnly />
         <AppFooter />
       </div>

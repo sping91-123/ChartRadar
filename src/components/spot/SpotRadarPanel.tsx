@@ -10,6 +10,7 @@ import {
   formatDataAge,
   type CoinDataFreshnessItem
 } from "@/components/coin/CoinDataFreshnessPanel";
+import { CoinEvidenceGradePanel, type CoinEvidenceGradeItem } from "@/components/coin/CoinEvidenceGradePanel";
 import { CoinSignalPressurePanel, type CoinSignalPressureItem } from "@/components/coin/CoinSignalPressurePanel";
 import type { SpotExchange, SpotRadarCategory, SpotRadarItem, SpotRadarPayload } from "@/lib/spotRadarTypes";
 
@@ -216,6 +217,43 @@ function buildSpotFreshnessItems(payload: SpotRadarPayload): CoinDataFreshnessIt
   ];
 }
 
+function buildSpotEvidenceGradeItems(payload: SpotRadarPayload): CoinEvidenceGradeItem[] {
+  const riskCount = payload.items.filter((item) => item.category === "overheat" || item.category === "pressure").length;
+  const followCount = payload.items.filter((item) => item.category === "volume" || item.category === "gainer" || item.category === "pullback").length;
+  const activeCategoryCount = new Set(payload.items.map((item) => item.category)).size;
+
+  return [
+    {
+      grade: payload.items.length > 0 ? "S" : "검증중",
+      label: "핵심 근거",
+      title: `${payload.exchangeLabel} public 시세 ${payload.summary.displayedMarkets}개`,
+      detail: "현물 레이더는 주문·계정 정보 없이 공개 시세와 거래대금을 핵심 근거로만 사용합니다.",
+      tone: payload.items.length > 0 ? "long" : "watch"
+    },
+    {
+      grade: activeCategoryCount >= 3 ? "A" : "B",
+      label: "확인 근거",
+      title: `후보 분류 ${activeCategoryCount}개 · 추적 ${followCount}개`,
+      detail: "거래대금, 상승률, 눌림, 과열, 하락압력 분류를 나눠 같은 후보를 한 방향으로 단정하지 않습니다.",
+      tone: followCount > 0 ? "watch" : "info"
+    },
+    {
+      grade: riskCount > 0 ? "A" : "B",
+      label: "리스크 근거",
+      title: `주의 후보 ${riskCount}개`,
+      detail: "과열과 하락압력 후보가 있으면 추적 후보보다 회피 조건을 먼저 확인합니다.",
+      tone: riskCount > 0 ? "risk" : "info"
+    },
+    {
+      grade: "검증중",
+      label: "표본 상태",
+      title: "후보별 이후 흐름은 누적 관찰 중",
+      detail: "현물 후보의 실제 이후 흐름은 충분한 표본이 쌓인 뒤 별도 지표로 분리하는 쪽이 안전합니다.",
+      tone: "info"
+    }
+  ];
+}
+
 function buildSpotPressureItems(payload: SpotRadarPayload): CoinSignalPressureItem[] {
   const counts: Record<SpotRadarCategory, number> = {
     volume: 0,
@@ -402,6 +440,14 @@ export function SpotRadarPanel() {
           title="현물 데이터 신선도"
           description="거래소 응답 시각, 후보별 가격 시각, 분류 커버리지를 나눠서 오래된 후보를 먼저 걸러봅니다."
           items={buildSpotFreshnessItems(payload)}
+        />
+      ) : null}
+
+      {payload ? (
+        <CoinEvidenceGradePanel
+          title="현물 근거 등급"
+          description="후보를 만든 근거를 핵심 시세, 분류 확인, 리스크 근거, 검증 상태로 분리합니다."
+          items={buildSpotEvidenceGradeItems(payload)}
         />
       ) : null}
 

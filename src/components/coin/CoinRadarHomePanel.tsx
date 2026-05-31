@@ -11,6 +11,7 @@ import {
   formatDataAge,
   type CoinDataFreshnessItem
 } from "@/components/coin/CoinDataFreshnessPanel";
+import { CoinEvidenceGradePanel, type CoinEvidenceGradeItem } from "@/components/coin/CoinEvidenceGradePanel";
 import { CoinSignalPressurePanel, type CoinSignalPressureItem } from "@/components/coin/CoinSignalPressurePanel";
 import type { CoinMarketMetricsPayload } from "@/lib/coinMarketMetrics";
 import type { Candle } from "@/lib/marketAnalysis";
@@ -583,6 +584,61 @@ function buildHomePressureItems({
   ];
 }
 
+function buildHomeEvidenceGradeItems({
+  data,
+  report,
+  report4h,
+  btcFunding,
+  marketMetrics
+}: {
+  data: CoinHomeData;
+  report: TechnicalRadarReport | null | undefined;
+  report4h: TechnicalRadarReport | null | undefined;
+  btcFunding: LiquidationPressureReport | null | undefined;
+  marketMetrics: CoinMarketMetricsPayload | null | undefined;
+}): CoinEvidenceGradeItem[] {
+  const hasCoreStructure = data.board.length > 0 && Boolean(report) && Boolean(report4h);
+  const hasDerivatives = Boolean(btcFunding);
+  const metricsWarningCount = marketMetrics?.warnings.length ?? 0;
+  const metricsGrade = marketMetrics && metricsWarningCount === 0 ? "B" : "검증중";
+
+  return [
+    {
+      grade: hasCoreStructure ? "S" : "검증중",
+      label: "핵심 근거",
+      title: hasCoreStructure ? `대표 시세 ${data.board.length}개 · BTC 1H/4H` : "대표 시세와 BTC 구조 확인 중",
+      detail: hasCoreStructure
+        ? "가격, RSI, 추세, 변동성 데이터를 같은 판단 묶음에서 확인합니다."
+        : "핵심 가격 또는 BTC 구조 데이터가 부족하면 방향 판단 강도를 낮춥니다.",
+      tone: hasCoreStructure ? "long" : "watch"
+    },
+    {
+      grade: hasDerivatives ? "A" : "검증중",
+      label: "확인 근거",
+      title: hasDerivatives ? `펀딩 ${formatPercent(btcFunding?.fundingRatePercent, 4)} · 롱숏 ${formatRatio(btcFunding?.globalLongShort.ratio)}` : "파생 쏠림 확인 중",
+      detail: "파생 데이터는 핵심 방향을 보강하기보다 과열과 변동성 위험을 따로 확인하는 근거입니다.",
+      tone: hasDerivatives ? "watch" : "info"
+    },
+    {
+      grade: metricsGrade,
+      label: "보조 근거",
+      title: `김프 ${formatPercent(marketMetrics?.kimchiPremiumPercent)} · BTC.D ${formatPlainPercent(marketMetrics?.btcDominancePercent)}`,
+      detail:
+        metricsWarningCount > 0
+          ? "보조 소스 일부가 제한되어 있어 최종 판단보다 참고값으로만 둡니다."
+          : "도미넌스, 환율, 국내 프리미엄은 방향 판단과 분리해 보조 근거로 사용합니다.",
+      tone: metricsWarningCount > 0 ? "info" : "watch"
+    },
+    {
+      grade: "검증중",
+      label: "표본 상태",
+      title: "실제 이후 흐름은 누적 관찰 중",
+      detail: "충분한 표본이 없는 상태에서 확정 적중률처럼 보이는 표현은 쓰지 않습니다.",
+      tone: "info"
+    }
+  ];
+}
+
 function HomeRiskChecklist({
   decision,
   btcFunding,
@@ -917,6 +973,18 @@ export function CoinRadarHomePanel() {
         title="데이터 신선도"
         description="가격, 구조, 파생, 보조 지표의 갱신 상태를 분리해서 같은 시각의 신호인지 먼저 확인합니다."
         items={buildHomeFreshnessItems({
+          data: state.data,
+          report: summary?.report,
+          report4h: summary?.report4h,
+          btcFunding: summary?.btcFunding,
+          marketMetrics: summary?.marketMetrics
+        })}
+      />
+
+      <CoinEvidenceGradePanel
+        title="코인 근거 등급"
+        description="근거를 S/A/B와 검증 상태로 나눠서 강한 신호와 보조 신호를 섞어 보지 않습니다."
+        items={buildHomeEvidenceGradeItems({
           data: state.data,
           report: summary?.report,
           report4h: summary?.report4h,
