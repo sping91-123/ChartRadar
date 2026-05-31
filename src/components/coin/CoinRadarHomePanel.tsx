@@ -11,6 +11,7 @@ import {
   formatDataAge,
   type CoinDataFreshnessItem
 } from "@/components/coin/CoinDataFreshnessPanel";
+import { CoinSignalPressurePanel, type CoinSignalPressureItem } from "@/components/coin/CoinSignalPressurePanel";
 import type { CoinMarketMetricsPayload } from "@/lib/coinMarketMetrics";
 import type { Candle } from "@/lib/marketAnalysis";
 import type { LiquidationPressureReport } from "@/lib/liquidationPressure";
@@ -513,6 +514,75 @@ function buildHomeFreshnessItems({
   ];
 }
 
+function reportPressure(report: TechnicalRadarReport | null | undefined) {
+  if (!report) return { percent: 0, tone: "watch" as const };
+  const total = report.bullishCount + report.bearishCount + report.neutralCount;
+  const dominant = Math.max(report.bullishCount, report.bearishCount, report.neutralCount);
+  const percent = total > 0 ? clamp((dominant / total) * 100, 12, 92) : 0;
+  const tone = report.bearishCount > report.bullishCount ? ("short" as const) : report.bullishCount > report.bearishCount ? ("long" as const) : ("watch" as const);
+  return { percent, tone };
+}
+
+function buildHomePressureItems({
+  report,
+  report4h,
+  btc,
+  btcFunding,
+  marketMetrics
+}: {
+  report: TechnicalRadarReport | null | undefined;
+  report4h: TechnicalRadarReport | null | undefined;
+  btc: MarketBoardItem | null | undefined;
+  btcFunding: LiquidationPressureReport | null | undefined;
+  marketMetrics: CoinMarketMetricsPayload | null | undefined;
+}): CoinSignalPressureItem[] {
+  const btcChange = btc?.changePercent ?? 0;
+  const priceTone = btcChange >= 1 ? "long" : btcChange <= -1 ? "short" : "watch";
+  const structure = reportPressure(report);
+  const fundingRate = btcFunding?.fundingRatePercent ?? 0;
+  const longShortRatio = btcFunding?.globalLongShort.ratio ?? 1;
+  const derivativePercent = clamp(20 + Math.abs(fundingRate) * 1200 + Math.abs(longShortRatio - 1) * 35, 10, 95);
+  const derivativeTone =
+    btcFunding?.grade === "extreme" || btcFunding?.grade === "heated" || Math.abs(fundingRate) >= 0.01 || Math.abs(longShortRatio - 1) >= 0.35
+      ? "risk"
+      : "watch";
+  const kimchiPremium = marketMetrics?.kimchiPremiumPercent ?? 0;
+  const dominance = marketMetrics?.btcDominancePercent ?? null;
+  const marketPercent = clamp(18 + Math.abs(kimchiPremium) * 18 + (dominance === null ? 0 : Math.abs(dominance - 50) * 1.4), 8, 90);
+  const marketTone = Math.abs(kimchiPremium) >= 3 ? "risk" : Math.abs(kimchiPremium) >= 1 ? "watch" : "info";
+
+  return [
+    {
+      label: "가격 흐름",
+      title: btc ? `BTC ${formatPercent(btc.changePercent)}` : "BTC 확인 중",
+      detail: "대표 코인의 단기 등락이 전체 판단에 어느 정도 영향을 주는지 봅니다.",
+      tone: priceTone,
+      percent: clamp(22 + Math.abs(btcChange) * 12, 8, 92)
+    },
+    {
+      label: "구조 신호",
+      title: `1H ${report?.trendLabel ?? "확인 중"} · 4H ${report4h?.trendLabel ?? "확인 중"}`,
+      detail: "기술 구조는 단기 가격 신호를 검증하는 보조 압력으로 분리합니다.",
+      tone: structure.tone,
+      percent: structure.percent
+    },
+    {
+      label: "파생 압력",
+      title: `펀딩 ${formatPercent(btcFunding?.fundingRatePercent, 4)} · 롱숏 ${formatRatio(btcFunding?.globalLongShort.ratio)}`,
+      detail: "펀딩비, 롱숏 비율, 청산 등급이 과열 쪽으로 기울면 방향보다 위험을 먼저 봅니다.",
+      tone: derivativeTone,
+      percent: derivativePercent
+    },
+    {
+      label: "시장 보조",
+      title: `김프 ${formatPercent(kimchiPremium)} · BTC.D ${formatPlainPercent(dominance)}`,
+      detail: "국내 프리미엄과 BTC 도미넌스는 같은 방향 신호로 합치지 않고 보조 압력으로 둡니다.",
+      tone: marketTone,
+      percent: marketPercent
+    }
+  ];
+}
+
 function HomeRiskChecklist({
   decision,
   btcFunding,
@@ -863,6 +933,18 @@ export function CoinRadarHomePanel() {
           btc: summary?.btc,
           btcFunding: summary?.btcFunding,
           kimchiPremium: summary?.marketMetrics?.kimchiPremiumPercent
+        })}
+      />
+
+      <CoinSignalPressurePanel
+        title="코인 압력 분해"
+        description="같은 방향처럼 보이는 신호를 가격, 구조, 파생, 보조 지표로 나눠 봅니다."
+        items={buildHomePressureItems({
+          report: summary?.report,
+          report4h: summary?.report4h,
+          btc: summary?.btc,
+          btcFunding: summary?.btcFunding,
+          marketMetrics: summary?.marketMetrics
         })}
       />
 

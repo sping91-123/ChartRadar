@@ -10,6 +10,7 @@ import {
   formatDataAge,
   type CoinDataFreshnessItem
 } from "@/components/coin/CoinDataFreshnessPanel";
+import { CoinSignalPressurePanel, type CoinSignalPressureItem } from "@/components/coin/CoinSignalPressurePanel";
 import type { SpotExchange, SpotRadarCategory, SpotRadarItem, SpotRadarPayload } from "@/lib/spotRadarTypes";
 
 const exchanges: Array<{ id: SpotExchange; label: string }> = [
@@ -26,6 +27,15 @@ const categoryFilters: Array<{ id: "all" | SpotRadarCategory; label: string }> =
   { id: "pressure", label: "하락압력" },
   { id: "watch", label: "관망" }
 ];
+
+const spotCategoryDetails: Record<SpotRadarCategory, string> = {
+  volume: "거래대금이 붙은 후보는 방향과 지속성을 따로 확인합니다.",
+  gainer: "상승률 후보는 추격보다 첫 눌림과 거래대금 유지가 우선입니다.",
+  pullback: "눌림 후보는 지지 반응이 확인될 때만 추적 후보로 남깁니다.",
+  overheat: "과열 후보는 새 진입보다 변동성 확대와 되돌림 위험을 먼저 봅니다.",
+  pressure: "하락압력 후보는 반등 실패와 거래대금 동반 여부를 확인합니다.",
+  watch: "관망 후보는 방향 근거가 약해 다른 후보보다 우선순위를 낮춥니다."
+};
 
 function formatKrw(value: number) {
   if (!Number.isFinite(value)) return "미확인";
@@ -206,6 +216,34 @@ function buildSpotFreshnessItems(payload: SpotRadarPayload): CoinDataFreshnessIt
   ];
 }
 
+function buildSpotPressureItems(payload: SpotRadarPayload): CoinSignalPressureItem[] {
+  const counts: Record<SpotRadarCategory, number> = {
+    volume: 0,
+    gainer: 0,
+    pullback: 0,
+    overheat: 0,
+    pressure: 0,
+    watch: 0
+  };
+
+  payload.items.forEach((item) => {
+    counts[item.category] += 1;
+  });
+
+  const maxCount = Math.max(1, ...Object.values(counts));
+
+  return categoryFilters
+    .filter((item): item is { id: SpotRadarCategory; label: string } => item.id !== "all")
+    .map((item) => ({
+      label: item.label,
+      title: `${counts[item.id]}개 후보`,
+      detail: spotCategoryDetails[item.id],
+      tone: categoryTone(item.id),
+      percent: (counts[item.id] / maxCount) * 100,
+      value: `${counts[item.id]}개`
+    }));
+}
+
 function SpotRow({ item }: { item: SpotRadarItem }) {
   const DirectionIcon = item.changePercent >= 0 ? ArrowUpRight : ArrowDownRight;
 
@@ -364,6 +402,14 @@ export function SpotRadarPanel() {
           title="현물 데이터 신선도"
           description="거래소 응답 시각, 후보별 가격 시각, 분류 커버리지를 나눠서 오래된 후보를 먼저 걸러봅니다."
           items={buildSpotFreshnessItems(payload)}
+        />
+      ) : null}
+
+      {payload ? (
+        <CoinSignalPressurePanel
+          title="현물 후보 압력 분해"
+          description="거래대금, 상승률, 눌림, 과열, 하락압력, 관망 후보가 어느 쪽에 몰려 있는지 분리합니다."
+          items={buildSpotPressureItems(payload)}
         />
       ) : null}
 
