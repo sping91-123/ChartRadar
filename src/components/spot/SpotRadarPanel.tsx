@@ -526,7 +526,7 @@ function SpotPriorityPanel({ payload, chartPayload }: { payload: SpotRadarPayloa
   );
 }
 
-function SpotRow({ item }: { item: SpotRadarItem }) {
+function SpotRow({ item, chart }: { item: SpotRadarItem; chart: SpotChartSummary | null }) {
   const DirectionIcon = item.changePercent >= 0 ? ArrowUpRight : ArrowDownRight;
 
   return (
@@ -551,6 +551,23 @@ function SpotRow({ item }: { item: SpotRadarItem }) {
             <span className="font-semibold text-ui-text">확인</span> {item.check}
           </p>
         </div>
+
+        {chart ? (
+          <div className="mt-3 border-t border-ui-line pt-3">
+            <div className="flex min-w-0 items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">차트 근거</p>
+                <p className="mt-1 text-xs font-semibold leading-5 text-ui-text [word-break:keep-all]">
+                  {chart.structureLabel} · {formatRangePosition(chart.rangePositionPercent)} · 거래 {chart.volumeRatio === null ? "-" : `${chart.volumeRatio.toFixed(1)}x`}
+                </p>
+              </div>
+              <StatusPill tone={chart.tone} icon={LineChart} className="shrink-0">
+                {chartStatusLabel(chart.tone)}
+              </StatusPill>
+            </div>
+            <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{chart.detail}</p>
+          </div>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-3 gap-3 text-right sm:grid-cols-1 sm:gap-1.5">
@@ -671,6 +688,7 @@ export function SpotRadarPanel() {
 
     return counts;
   }, [payload]);
+  const chartByMarketForRows = useMemo(() => chartLookup(chartPayload), [chartPayload]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -775,7 +793,7 @@ export function SpotRadarPanel() {
         ) : filteredItems.length > 0 ? (
           <div>
             {filteredItems.map((item) => (
-              <SpotRow key={`${item.exchange}-${item.market}`} item={item} />
+              <SpotRow key={`${item.exchange}-${item.market}`} item={item} chart={chartByMarketForRows.get(item.market) ?? null} />
             ))}
           </div>
         ) : (
