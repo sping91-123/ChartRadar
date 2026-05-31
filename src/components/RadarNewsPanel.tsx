@@ -57,7 +57,6 @@ const marketCopy = {
   crypto: {
     eyebrow: "시장 뉴스 리포트",
     title: "뉴스 레이더",
-    description: "가격 변동성, 청산·거래량, ETF·규제·거시 이벤트를 중심으로 시장 흐름을 점검합니다.",
     marketLabel: "코인 시장",
     radarTitle: "오늘의 시장 레이더",
     directionLabel: "BTC 방향성",
@@ -69,7 +68,6 @@ const marketCopy = {
   stocks: {
     eyebrow: "글로벌 이벤트 리포트",
     title: "뉴스 레이더",
-    description: "중요 일정과 공개 뉴스가 지수·금리·달러 흐름에 미칠 영향을 정리합니다.",
     marketLabel: "글로벌 시장",
     radarTitle: "오늘의 시장 레이더",
     directionLabel: "지수 방향성",
@@ -83,7 +81,6 @@ const marketCopy = {
   {
     eyebrow: string;
     title: string;
-    description: string;
     marketLabel: string;
     radarTitle: string;
     directionLabel: string;
@@ -149,18 +146,6 @@ function timeLabel(value: string | number | undefined) {
     hour: "2-digit",
     minute: "2-digit"
   }).format(date);
-}
-
-function reportTimeLabel(value: string | number | undefined) {
-  const date = new Date(value ?? Date.now());
-  if (Number.isNaN(date.getTime())) return "업데이트 확인 중";
-  const pad = (next: number) => String(next).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-function refreshLabel(refreshIntervalMs?: number) {
-  const minutes = Math.max(1, Math.round((refreshIntervalMs ?? 60 * 60 * 1000) / 60000));
-  return `${minutes}분 단위 갱신`;
 }
 
 function itemTitle(item: RadarNewsItem, market: RadarNewsMarket) {
@@ -389,20 +374,18 @@ function leadSummary(briefing: RadarNewsBriefing | undefined, mood: Mood, market
       : "코인 시장의 주요 뉴스와 매크로 흐름을 확인하는 중입니다. 강한 공개 이슈가 잡히면 시장 해석과 체크포인트를 정리합니다.";
   const overview = cleanDisplayText(briefing?.overview, fallback);
   if (mood === "pending") return fallback;
-  return overview;
+  return sectionText(overview, fallback, 1);
 }
 
 function MarketRadarCard({
   briefing,
   digest,
   market,
-  updatedAt,
   hasBriefing
 }: {
   briefing?: RadarNewsBriefing;
   digest: { bullish: number; bearish: number; neutral: number; urgent: number };
   market: RadarNewsMarket;
-  updatedAt?: number;
   hasBriefing: boolean;
 }) {
   const mood = inferMood(digest, hasBriefing);
@@ -434,7 +417,6 @@ function MarketRadarCard({
         <MetricRow label="위험자산 심리" value={moodStyle.risk} />
         <MetricRow label={copy.directionLabel} value={moodStyle.chartTone} />
         <MetricRow label={copy.subMarketLabel} value={moodStyle.subTone} />
-        <MetricRow label="업데이트" value={reportTimeLabel(updatedAt)} />
       </div>
 
       <AppSurface tone="inset" variant="flat" padding="none" className="border-t border-ui-line pt-3">
@@ -574,13 +556,11 @@ function BriefingDetail({
 function BriefingCardView({
   card,
   briefing,
-  updatedAt,
   expanded,
   onToggle
 }: {
   card: BriefingCard;
   briefing: RadarNewsBriefing;
-  updatedAt?: number;
   expanded: boolean;
   onToggle: () => void;
 }) {
@@ -592,9 +572,6 @@ function BriefingCardView({
       <div className="flex flex-wrap items-center gap-2">
         <StatusPill tone={directionTone(card.tone)} icon={Icon}>
           {style.label}
-        </StatusPill>
-        <StatusPill tone="info" icon={Clock3}>
-          {timeLabel(updatedAt)}
         </StatusPill>
       </div>
 
@@ -729,15 +706,11 @@ export function RadarNewsPanel({ market = "crypto", afterBriefing }: { market?: 
         <SectionHeader
           eyebrow={copy.eyebrow}
           title={copy.title}
-          description={copy.description}
           action={
-            <div className="flex flex-col gap-1 sm:items-end">
-              <ActionButton tone="secondary" onClick={loadNews} disabled={status === "loading"}>
-                <RefreshCcw className={status === "loading" ? "animate-spin" : ""} size={16} aria-hidden />
-                다시 정리
-              </ActionButton>
-              <p className="text-[11px] font-semibold text-ui-subtle">{payload?.cached ? "저장된 1시간 리포트" : refreshLabel(payload?.refreshIntervalMs)}</p>
-            </div>
+            <ActionButton tone="secondary" onClick={loadNews} disabled={status === "loading"}>
+              <RefreshCcw className={status === "loading" ? "animate-spin" : ""} size={16} aria-hidden />
+              다시 정리
+            </ActionButton>
           }
         />
       </PanelCard>
@@ -754,18 +727,12 @@ export function RadarNewsPanel({ market = "crypto", afterBriefing }: { market?: 
         </AppSurface>
       ) : null}
 
-      <MarketRadarCard briefing={briefing} digest={digest} market={market} updatedAt={payload?.updatedAt} hasBriefing={hasBriefing} />
+      <MarketRadarCard briefing={briefing} digest={digest} market={market} hasBriefing={hasBriefing} />
 
       <section className="space-y-3">
         <SectionHeader
           eyebrow={market === "stocks" ? "이벤트 리포트" : "시장 구조 리포트"}
           title="오늘의 AI 브리핑"
-          description={market === "stocks" ? "지수, 금리, 달러와 연결되는 공개 일정과 뉴스 흐름입니다." : "가격 변동성, 주요 코인 흐름, 규제·ETF·거시 재료를 중심으로 정리합니다."}
-          action={
-            <StatusPill tone="info" icon={Clock3}>
-              {refreshLabel(payload?.refreshIntervalMs)}
-            </StatusPill>
-          }
         />
 
         {cards.length ? (
@@ -775,7 +742,6 @@ export function RadarNewsPanel({ market = "crypto", afterBriefing }: { market?: 
                 key={card.id}
                 card={card}
                 briefing={briefing as RadarNewsBriefing}
-                updatedAt={payload?.updatedAt}
                 expanded={expandedCardId === card.id}
                 onToggle={() => setExpandedCardId((current) => (current === card.id ? "" : card.id))}
               />

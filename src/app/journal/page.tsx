@@ -355,10 +355,6 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
   const [isLoadingRemote, setIsLoadingRemote] = useState(false);
 
   const marketLabel = market === "stocks" ? "글로벌" : "코인";
-  const marketHeroLine =
-    market === "stocks"
-      ? "글로벌 시장 매매의 판단 근거, 리스크 관리, 반복 실수를 정리합니다."
-      : "코인 매매의 진입 근거, 원칙 준수, 반복 실수를 정리합니다.";
 
   const refreshRemote = useCallback(async () => {
     if (!session?.accessToken) return;
@@ -552,29 +548,14 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                   <StatusPill tone={market === "stocks" ? "watch" : "info"}>{marketLabel}</StatusPill>
                 </div>
                 <h1 className="max-w-full text-xl font-semibold leading-tight tracking-tight text-ui-text [overflow-wrap:anywhere] sm:text-2xl">오늘의 판단을 다음 매매의 기준으로 바꿉니다.</h1>
-                <p className="mt-2 max-w-2xl text-ui-body text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]">{marketHeroLine}</p>
-                <p className="mt-1 text-ui-label font-semibold text-ui-subtle [overflow-wrap:anywhere]">좋은 매매보다 지킨 매매를 먼저 기록해보세요.</p>
               </div>
-              <AppSurface tone="inset" variant="flat" padding="none" radius="none" className="grid min-w-0 grid-cols-3 gap-1.5 border-t border-ui-line py-2 text-center lg:w-80">
-                {["차트 분석", "근거 저장", "결과 복기"].map((item) => (
-                  <div key={item} className="min-w-0 rounded-ui-sm px-2 py-1.5">
-                    <p className="truncate text-ui-label font-semibold text-ui-subtle">{item}</p>
-                  </div>
-                ))}
-              </AppSurface>
             </div>
           </div>
 
           <div className="grid gap-6 py-4">
             <PanelCard variant="report" padding="lg">
               <SectionHeader
-                eyebrow="Journal"
                 title="오늘의 복기"
-                description={
-                  summary.total
-                    ? "저장된 복기에서 원칙 준수, 반복 실수, 다음 체크포인트를 정리했습니다."
-                    : "아직 복기 데이터가 없습니다. 첫 복기를 남기면 반복 실수와 원칙 준수율을 정리해드립니다."
-                }
                 action={
                   <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
                     <ActionButton
@@ -593,18 +574,18 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
               <div className="mt-4">
                 <MetricRow
                   label="이번 주 복기 수"
-                  value={summary.total ? `${summary.weekCount}건` : "대기 중"}
-                  detail={summary.total ? "최근 7일 기준입니다." : "복기 1건 이상 저장 시 표시됩니다."}
+                  value={summary.total ? `${summary.weekCount}건` : "기록 없음"}
+                  detail={summary.total ? "최근 7일 기준입니다." : undefined}
                 />
                 <MetricRow
                   label="원칙 준수율"
-                  value={summary.complianceRate === null ? "대기 중" : `${summary.complianceRate}%`}
-                  detail={summary.complianceRate === null ? "지킨 기준과 깨진 기준 저장 후 표시됩니다." : "기록된 기준 기반입니다."}
+                  value={summary.complianceRate === null ? "기록 없음" : `${summary.complianceRate}%`}
+                  detail={summary.complianceRate === null ? undefined : "기록된 기준 기반입니다."}
                 />
                 <MetricRow
                   label="반복 실수"
-                  value={summary.repeatedMistake || "대기 중"}
-                  detail={summary.repeatedMistake ? "가장 자주 나온 깨진 기준입니다." : "깨진 기준 저장 후 표시됩니다."}
+                  value={summary.repeatedMistake || "기록 없음"}
+                  detail={summary.repeatedMistake ? "가장 자주 나온 깨진 기준입니다." : undefined}
                 />
                 <MetricRow label="다음 매매 전 체크" value="확인" detail={summary.checkpoint} />
               </div>
@@ -613,11 +594,10 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
             <section id="pending-radar" className="scroll-mt-4 scroll-mb-56">
             <PanelCard variant="report" padding="lg">
               <SectionHeader
-                title="복기 대기"
-                description="분석 화면에서 저장한 레이더를 결과 확인과 복기로 이어갑니다."
+                title="저장한 레이더"
                 action={
                   <StatusPill tone={pendingRadarEntries.length ? "risk" : "info"} icon={Target}>
-                    {pendingRadarEntries.length ? `${pendingRadarEntries.length}건 대기` : "대기 없음"}
+                    {pendingRadarEntries.length ? `${pendingRadarEntries.length}건` : "없음"}
                   </StatusPill>
                 }
               />
@@ -651,10 +631,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                 </div>
               ) : (
                 <AppSurface tone="inset" variant="report" padding="md" className="mt-4">
-                  <p className="text-sm font-semibold text-ui-text">아직 복기할 저장 레이더가 없습니다.</p>
-                  <p className="mt-2 text-ui-body text-ui-muted">
-                    분석 화면에서 레이더를 저장하면 이곳에서 결과를 확인할 수 있습니다. 저장된 근거가 생기면 복기 대기 카드로 이어집니다.
-                  </p>
+                  <p className="text-sm font-semibold text-ui-text">저장한 레이더가 없습니다.</p>
                 </AppSurface>
               )}
             </PanelCard>
@@ -664,7 +641,6 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
             <PanelCard variant="report" padding="lg" className="overflow-hidden">
               <SectionHeader
                 title="기록할 내용"
-                description="필수 항목을 먼저 채우고, 기준은 칩으로 빠르게 남깁니다."
                 action={<StatusPill tone="info" icon={ListChecks}>30초 복기</StatusPill>}
               />
 

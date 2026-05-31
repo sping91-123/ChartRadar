@@ -104,10 +104,10 @@ export function CryptoAltAnalysisLimitNotice({
 export function CryptoDetailScopeNotice({ hasCoinPro }: { hasCoinPro: boolean }) {
   return (
     <div className="border-t border-white/10 py-3 text-sm leading-6 text-slate-100">
-      <span className="block text-xs font-semibold text-slate-400">{hasCoinPro ? "근거 상세 범위" : "Basic 공개 범위"}</span>
+      <span className="block text-xs font-semibold text-slate-400">{hasCoinPro ? "공개 범위" : "Basic 공개 범위"}</span>
       <span className="mt-1 block">
         {hasCoinPro
-          ? "Pro에서는 아래에서 구조 근거, 기술 근거, 리스크 점검을 이어서 확인합니다."
+          ? "Pro에서는 아래에서 구조, 기술 지표, 리스크 점검을 이어서 확인합니다."
           : "Basic에서는 방향 요약만 제공합니다. 상세 조건, 무효화 기준, 세부 리스크는 Pro에서 확인할 수 있습니다."}
       </span>
     </div>
@@ -130,7 +130,7 @@ export function CryptoAiBriefingGateNotice({ isBasicAltView }: { isBasicAltView:
     <div className="border-y border-cyan-300/20 py-4">
       <p className="text-xs font-black text-cyan-100">Pro 판단 보조</p>
       <h3 className="mt-1 text-lg font-black text-white">
-        {isBasicAltView ? "AI 알트 브리핑은 Coin Pro에서 상세 근거로 열립니다." : "AI 레이더 브리핑은 Pro에서 상세 근거로 열립니다."}
+        {isBasicAltView ? "AI 알트 브리핑은 Coin Pro에서 상세 내용으로 열립니다." : "AI 레이더 브리핑은 Pro에서 상세 내용으로 열립니다."}
       </h3>
       <p className="mt-2 text-sm leading-6 text-slate-300 [word-break:keep-all]">
         {isBasicAltView
