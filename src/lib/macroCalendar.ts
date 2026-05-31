@@ -274,6 +274,10 @@ function sortItems(items: MacroEventItem[]) {
   });
 }
 
+function isVisibleMacroImportance(item: MacroEventItem) {
+  return item.importance >= 2;
+}
+
 function selectCalendarItems(items: MacroEventItem[], now: number, maxItems = 18) {
   const upcoming = items
     .filter((item) => {
@@ -492,7 +496,7 @@ async function getOfficialEnrichments(items: MacroEventItem[]) {
 export function getFallbackPayload(warning: string): MacroCalendarPayload {
   const updatedAt = macroCalendarUpdatedAtIso || new Date().toISOString();
   const fetchedAt = new Date().toISOString();
-  const items = sortItems(normalizeMacroEvents(macroItems.map((item) => ({ ...item, state: eventState(item.releaseAt) }))));
+  const items = sortItems(normalizeMacroEvents(macroItems.map((item) => ({ ...item, state: eventState(item.releaseAt) }))).filter(isVisibleMacroImportance));
 
   return {
     updatedAt,
@@ -535,7 +539,7 @@ export async function getMacroCalendarPayload(options: { bypassCache?: boolean }
     const baseItems = [...forexFactoryItems, ...tradingEconomicsItems];
     const mergedBaseItems = mergeRecentReleasedEvents(baseItems, now);
     const enrichments = await getOfficialEnrichments(mergedBaseItems);
-    const items = normalizeMacroEvents(mergedBaseItems, enrichments, now);
+    const items = normalizeMacroEvents(mergedBaseItems, enrichments, now).filter(isVisibleMacroImportance);
     const sorted = selectCalendarItems(items, now);
     const updatedAt = new Date().toISOString();
     const payload: MacroCalendarPayload = {
@@ -560,7 +564,7 @@ export async function getMacroCalendarPayload(options: { bypassCache?: boolean }
   } catch (error) {
     const fallback = getFallbackPayload(error instanceof Error ? error.message : "매크로 자동 갱신 실패");
     const enrichments = await getOfficialEnrichments(fallback.items).catch(() => [] as MacroSourceEnrichment[]);
-    const items = enrichments.length ? sortItems(normalizeMacroEvents(fallback.items, enrichments, now)) : fallback.items;
+    const items = enrichments.length ? sortItems(normalizeMacroEvents(fallback.items, enrichments, now).filter(isVisibleMacroImportance)) : fallback.items;
     const payload = {
       ...fallback,
       sourceLabel: enrichments.length ? "예비 일정 + 공식 발표 확인" : fallback.sourceLabel,
