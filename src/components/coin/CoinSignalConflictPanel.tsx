@@ -1,5 +1,6 @@
 import { AlertTriangle, CheckCircle2, GitCompareArrows, type LucideIcon } from "lucide-react";
 import { PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
+import { CompactHelp } from "@/components/ui/CompactHelp";
 
 type ConflictTone = "risk" | "watch" | "info" | "long" | "short";
 
@@ -12,16 +13,16 @@ export interface CoinSignalConflictItem {
 }
 
 function statusText(tone: ConflictTone) {
-  if (tone === "risk") return "위험 우선";
+  if (tone === "risk") return "위험";
   if (tone === "long") return "상방";
   if (tone === "short") return "하방";
-  if (tone === "watch") return "충돌 확인";
+  if (tone === "watch") return "확인";
   return "참고";
 }
 
 export function CoinSignalConflictPanel({
-  title = "신호 충돌 체크",
-  description = "상승 근거와 회피 조건이 동시에 잡히면 방향보다 리스크를 먼저 봅니다.",
+  title = "신호 충돌",
+  description,
   items
 }: {
   title?: string;
@@ -30,7 +31,7 @@ export function CoinSignalConflictPanel({
 }) {
   return (
     <PanelCard variant="flat" padding="none" className="space-y-4">
-      <SectionHeader eyebrow="Signal Conflict" title={title} description={description} />
+      <SectionHeader eyebrow="Signal Conflict" title={title} />
       <div className="grid gap-0 border-y border-ui-line md:grid-cols-2">
         {items.map((item, index) => {
           const Icon = item.icon ?? (item.tone === "risk" ? AlertTriangle : item.tone === "info" ? CheckCircle2 : GitCompareArrows);
@@ -51,7 +52,9 @@ export function CoinSignalConflictPanel({
                   {statusText(item.tone)}
                 </StatusPill>
               </div>
-              <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{item.detail}</p>
+              <div className="mt-2">
+                <CompactHelp label={description ?? item.label}>{item.detail}</CompactHelp>
+              </div>
             </article>
           );
         })}

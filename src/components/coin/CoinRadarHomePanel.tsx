@@ -4,14 +4,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, RefreshCw, TrendingUp, X } from "lucide-react";
 import { ActionButton, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
+import { CompactHelp } from "@/components/ui/CompactHelp";
 import { CoinSignalConflictPanel, type CoinSignalConflictItem } from "@/components/coin/CoinSignalConflictPanel";
-import {
-  CoinDataFreshnessPanel,
-  dataFreshnessTone,
-  formatDataAge,
-  type CoinDataFreshnessItem
-} from "@/components/coin/CoinDataFreshnessPanel";
-import { CoinEvidenceGradePanel, type CoinEvidenceGradeItem } from "@/components/coin/CoinEvidenceGradePanel";
 import { CoinSignalPressurePanel, type CoinSignalPressureItem } from "@/components/coin/CoinSignalPressurePanel";
 import type { CoinMarketMetricsPayload } from "@/lib/coinMarketMetrics";
 import type { Candle } from "@/lib/marketAnalysis";
@@ -127,15 +121,6 @@ const visualToneClass: Record<VisualTone, { text: string; bar: string }> = {
   info: { text: "text-ui-brand", bar: "bg-ui-brand" }
 };
 
-function formatAnalysisUpdatedAt(ms: number) {
-  const date = new Date(ms);
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const hour = date.getHours().toString().padStart(2, "0");
-  const minute = date.getMinutes().toString().padStart(2, "0");
-  return `${month}월 ${day}일 ${hour}:${minute} 갱신`;
-}
-
 function symbolLogoUrl(symbol: RepresentativeSymbol) {
   return `https://s3-symbol-logo.tradingview.com/crypto/${tradingViewLogoIds[symbol]}.svg`;
 }
@@ -223,7 +208,7 @@ function conclusionSegments(decision: CoinHomeDecisionSummary | undefined): Conc
   if (decision.state === "조건 대기") {
     return [{ text: "방향은 열렸지만 BTC 추세와 알트 참여 확인이 더 필요합니다." }];
   }
-  return [{ text: "방향 근거가 부족해 관망이 우선입니다." }];
+  return [{ text: "방향 정렬이 약해 관망이 우선입니다." }];
 }
 
 function conclusionToneClass(tone?: DirectionTone) {
@@ -447,74 +432,6 @@ function buildHomeConflictItems({
   ];
 }
 
-function buildHomeFreshnessItems({
-  data,
-  report,
-  report4h,
-  btcFunding,
-  marketMetrics
-}: {
-  data: CoinHomeData;
-  report: TechnicalRadarReport | null | undefined;
-  report4h: TechnicalRadarReport | null | undefined;
-  btcFunding: LiquidationPressureReport | null | undefined;
-  marketMetrics: CoinMarketMetricsPayload | null | undefined;
-}): CoinDataFreshnessItem[] {
-  const boardTimestamp = data.boardMeta.cachedAt ?? data.analysisUpdatedAt;
-  const btcFundingMeta = data.fundingMeta.BTC;
-  const fundingTimestamp = btcFundingMeta?.cachedAt ?? data.analysisUpdatedAt;
-  const metricsTimestamp = marketMetrics?.cachedAt ?? data.analysisUpdatedAt;
-  const metricsWarningCount = marketMetrics?.warnings.length ?? 0;
-
-  return [
-    {
-      label: "대표 시세",
-      title: data.board.length > 0 ? `${data.board.length}개 대표 코인` : "확인 중",
-      detail: `${formatDataAge(boardTimestamp)} · ${data.boardMeta.cached ? "최근 저장본" : "실시간 응답"} 기준입니다.`,
-      tone: dataFreshnessTone({
-        timestamp: boardTimestamp,
-        cached: data.boardMeta.cached,
-        stale: data.boardMeta.stale,
-        warningMs: 5 * 60 * 1000,
-        staleMs: 15 * 60 * 1000
-      })
-    },
-    {
-      label: "BTC 구조",
-      title: `1H ${report?.trendLabel ?? "확인 중"} · 4H ${report4h?.trendLabel ?? "확인 중"}`,
-      detail: `${formatDataAge(data.analysisUpdatedAt)} · RSI, 추세, 변동성 점수를 같은 시각에 재계산했습니다.`,
-      tone: report && report4h ? "long" : "watch"
-    },
-    {
-      label: "파생 쏠림",
-      title: btcFunding ? `펀딩 ${formatPercent(btcFunding.fundingRatePercent, 4)} · 롱숏 ${formatRatio(btcFunding.globalLongShort.ratio)}` : "확인 중",
-      detail: `${formatDataAge(fundingTimestamp)} · ${btcFundingMeta?.cached ? "최근 저장본" : "실시간 응답"} 기준으로 청산 압력과 롱숏 비율을 봅니다.`,
-      tone: dataFreshnessTone({
-        timestamp: fundingTimestamp,
-        cached: btcFundingMeta?.cached,
-        stale: btcFundingMeta?.stale,
-        warningMs: 2 * 60 * 1000,
-        staleMs: 10 * 60 * 1000
-      })
-    },
-    {
-      label: "보조 지표",
-      title: `김프 ${formatPercent(marketMetrics?.kimchiPremiumPercent)} · BTC.D ${formatPlainPercent(marketMetrics?.btcDominancePercent)}`,
-      detail:
-        metricsWarningCount > 0
-          ? `${formatDataAge(metricsTimestamp)} · ${metricsWarningCount}개 공개 소스가 제한되어 보조값으로만 봅니다.`
-          : `${formatDataAge(metricsTimestamp)} · 도미넌스, 환율, 김프 보조값을 함께 확인했습니다.`,
-      tone: dataFreshnessTone({
-        timestamp: metricsTimestamp,
-        cached: marketMetrics?.cached,
-        stale: marketMetrics?.stale,
-        warningMs: 5 * 60 * 1000,
-        staleMs: 20 * 60 * 1000
-      })
-    }
-  ];
-}
-
 function reportPressure(report: TechnicalRadarReport | null | undefined) {
   if (!report) return { percent: 0, tone: "watch" as const };
   const total = report.bullishCount + report.bearishCount + report.neutralCount;
@@ -584,61 +501,6 @@ function buildHomePressureItems({
   ];
 }
 
-function buildHomeEvidenceGradeItems({
-  data,
-  report,
-  report4h,
-  btcFunding,
-  marketMetrics
-}: {
-  data: CoinHomeData;
-  report: TechnicalRadarReport | null | undefined;
-  report4h: TechnicalRadarReport | null | undefined;
-  btcFunding: LiquidationPressureReport | null | undefined;
-  marketMetrics: CoinMarketMetricsPayload | null | undefined;
-}): CoinEvidenceGradeItem[] {
-  const hasCoreStructure = data.board.length > 0 && Boolean(report) && Boolean(report4h);
-  const hasDerivatives = Boolean(btcFunding);
-  const metricsWarningCount = marketMetrics?.warnings.length ?? 0;
-  const metricsGrade = marketMetrics && metricsWarningCount === 0 ? "B" : "검증중";
-
-  return [
-    {
-      grade: hasCoreStructure ? "S" : "검증중",
-      label: "핵심 근거",
-      title: hasCoreStructure ? `대표 시세 ${data.board.length}개 · BTC 1H/4H` : "대표 시세와 BTC 구조 확인 중",
-      detail: hasCoreStructure
-        ? "가격, RSI, 추세, 변동성 데이터를 같은 판단 묶음에서 확인합니다."
-        : "핵심 가격 또는 BTC 구조 데이터가 부족하면 방향 판단 강도를 낮춥니다.",
-      tone: hasCoreStructure ? "long" : "watch"
-    },
-    {
-      grade: hasDerivatives ? "A" : "검증중",
-      label: "확인 근거",
-      title: hasDerivatives ? `펀딩 ${formatPercent(btcFunding?.fundingRatePercent, 4)} · 롱숏 ${formatRatio(btcFunding?.globalLongShort.ratio)}` : "파생 쏠림 확인 중",
-      detail: "파생 데이터는 핵심 방향을 보강하기보다 과열과 변동성 위험을 따로 확인하는 근거입니다.",
-      tone: hasDerivatives ? "watch" : "info"
-    },
-    {
-      grade: metricsGrade,
-      label: "보조 근거",
-      title: `김프 ${formatPercent(marketMetrics?.kimchiPremiumPercent)} · BTC.D ${formatPlainPercent(marketMetrics?.btcDominancePercent)}`,
-      detail:
-        metricsWarningCount > 0
-          ? "보조 소스 일부가 제한되어 있어 최종 판단보다 참고값으로만 둡니다."
-          : "도미넌스, 환율, 국내 프리미엄은 방향 판단과 분리해 보조 근거로 사용합니다.",
-      tone: metricsWarningCount > 0 ? "info" : "watch"
-    },
-    {
-      grade: "검증중",
-      label: "표본 상태",
-      title: "실제 이후 흐름은 누적 관찰 중",
-      detail: "충분한 표본이 없는 상태에서 확정 적중률처럼 보이는 표현은 쓰지 않습니다.",
-      tone: "info"
-    }
-  ];
-}
-
 function HomeRiskChecklist({
   decision,
   btcFunding,
@@ -688,11 +550,7 @@ function HomeRiskChecklist({
 
   return (
     <PanelCard variant="flat" padding="none" className="space-y-4">
-      <SectionHeader
-        eyebrow="Risk First"
-        title="오늘 먼저 걸러볼 조건"
-        description="방향보다 회피 조건을 먼저 보고, 그다음 추적 조건과 파생 쏠림을 확인합니다."
-      />
+      <SectionHeader eyebrow="Risk First" title="오늘 먼저 걸러볼 조건" />
       <div className="grid gap-0 border-y border-ui-line md:grid-cols-2">
         {checks.map((check, index) => (
           <article
@@ -712,9 +570,11 @@ function HomeRiskChecklist({
                 {check.tone === "risk" ? "주의" : check.tone === "long" ? "상방" : check.tone === "short" ? "하방" : "확인"}
               </StatusPill>
             </div>
-            <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">
-              <HighlightDirectionalText text={check.detail} />
-            </p>
+            <div className="mt-2">
+              <CompactHelp label={check.label}>
+                <HighlightDirectionalText text={check.detail} />
+              </CompactHelp>
+            </div>
           </article>
         ))}
       </div>
@@ -920,8 +780,7 @@ export function CoinRadarHomePanel() {
 
   return (
     <div className="flex flex-col gap-3 sm:gap-4">
-      <div className="flex items-center justify-between gap-2 px-1 text-[11px] font-semibold text-ui-muted">
-        <span className="min-w-0 truncate">{formatAnalysisUpdatedAt(state.data.analysisUpdatedAt)}</span>
+      <div className="flex justify-end px-1">
         <ActionButton tone="ghost" className="min-h-7 shrink-0 px-0" onClick={() => void load()}>
           <RefreshCw size={12} aria-hidden />
           새로고침
@@ -948,7 +807,9 @@ export function CoinRadarHomePanel() {
             <div>
               <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{summary?.decision.scoreLabel}</p>
               <p className="mt-1 text-3xl font-semibold tracking-tight text-ui-text sm:text-4xl">{summary?.decision.readinessScore ?? "-"}점</p>
-              <p className="mt-1 max-w-3xl text-xs leading-5 text-ui-muted [word-break:keep-all]">{summary?.decision.scoreDetail}</p>
+              <div className="mt-2">
+                <CompactHelp label="점수">{summary?.decision.scoreDetail}</CompactHelp>
+              </div>
             </div>
           </div>
 
@@ -969,30 +830,6 @@ export function CoinRadarHomePanel() {
         </div>
       </PanelCard>
 
-      <CoinDataFreshnessPanel
-        title="데이터 신선도"
-        description="가격, 구조, 파생, 보조 지표의 갱신 상태를 분리해서 같은 시각의 신호인지 먼저 확인합니다."
-        items={buildHomeFreshnessItems({
-          data: state.data,
-          report: summary?.report,
-          report4h: summary?.report4h,
-          btcFunding: summary?.btcFunding,
-          marketMetrics: summary?.marketMetrics
-        })}
-      />
-
-      <CoinEvidenceGradePanel
-        title="코인 근거 등급"
-        description="근거를 S/A/B와 검증 상태로 나눠서 강한 신호와 보조 신호를 섞어 보지 않습니다."
-        items={buildHomeEvidenceGradeItems({
-          data: state.data,
-          report: summary?.report,
-          report4h: summary?.report4h,
-          btcFunding: summary?.btcFunding,
-          marketMetrics: summary?.marketMetrics
-        })}
-      />
-
       <HomeRiskChecklist decision={summary?.decision} btcFunding={summary?.btcFunding} kimchiPremium={summary?.marketMetrics?.kimchiPremiumPercent} />
 
       <CoinSignalConflictPanel
@@ -1006,7 +843,6 @@ export function CoinRadarHomePanel() {
 
       <CoinSignalPressurePanel
         title="코인 압력 분해"
-        description="같은 방향처럼 보이는 신호를 가격, 구조, 파생, 보조 지표로 나눠 봅니다."
         items={buildHomePressureItems({
           report: summary?.report,
           report4h: summary?.report4h,
@@ -1118,7 +954,7 @@ export function CoinRadarHomePanel() {
       ) : null}
 
       <PanelCard variant="flat" padding="none" className="space-y-4">
-        <SectionHeader eyebrow="BTC Market Strength" title="BTC 기준 시장 체력" description="선택 코인과 분리해 BTC 기준 과열, 추세, 파생 쏠림을 확인합니다." />
+        <SectionHeader eyebrow="BTC Market Strength" title="BTC 기준 시장 체력" />
         <div className="grid gap-3 md:grid-cols-2">
           <MarketStrengthGauge
             label="공포탐욕"

@@ -1,12 +1,13 @@
 import { BarChart3 } from "lucide-react";
 import { PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
+import { CompactHelp } from "@/components/ui/CompactHelp";
 
 export type CoinSignalPressureTone = "long" | "short" | "watch" | "risk" | "info";
 
 export interface CoinSignalPressureItem {
   label: string;
   title: string;
-  detail: string;
+  detail?: string;
   tone: CoinSignalPressureTone;
   percent: number;
   value?: string;
@@ -48,7 +49,7 @@ const futuresPressureItems: Record<FuturesPressureMode, CoinSignalPressureItem[]
     {
       label: "차트 구조",
       title: "MSB·CHoCH·OB·FVG",
-      detail: "구조 신호는 상단 판단을 검증하는 보조 근거로만 둡니다.",
+      detail: "구조 신호는 상단 판단을 확인하는 보조값으로만 둡니다.",
       tone: "info",
       percent: 68
     },
@@ -61,7 +62,7 @@ const futuresPressureItems: Record<FuturesPressureMode, CoinSignalPressureItem[]
     },
     {
       label: "충돌",
-      title: "상방 근거와 과열 동시 발생",
+      title: "상방 신호와 과열 동시 발생",
       detail: "신호가 충돌하면 방향보다 무효화 기준과 변동성부터 봅니다.",
       tone: "risk",
       percent: 74
@@ -102,16 +103,15 @@ const futuresPressureItems: Record<FuturesPressureMode, CoinSignalPressureItem[]
 
 export function CoinSignalPressurePanel({
   title,
-  description,
   items
 }: {
   title: string;
-  description: string;
+  description?: string;
   items: CoinSignalPressureItem[];
 }) {
   return (
     <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
-      <SectionHeader eyebrow="Signal Pressure" title={title} description={description} />
+      <SectionHeader eyebrow="Signal Pressure" title={title} />
       <div className="grid gap-0 md:grid-cols-2">
         {items.map((item, index) => (
           <article
@@ -132,7 +132,11 @@ export function CoinSignalPressurePanel({
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-ui-line">
               <span className={`block h-full rounded-full ${barClass[item.tone]}`} style={{ width: `${clampPercent(item.percent)}%` }} aria-hidden />
             </div>
-            <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{item.detail}</p>
+            {item.detail ? (
+              <div className="mt-2">
+                <CompactHelp label={item.label}>{item.detail}</CompactHelp>
+              </div>
+            ) : null}
           </article>
         ))}
       </div>
@@ -146,11 +150,6 @@ export function CoinFuturesSignalPressurePanel({ mode }: { mode: FuturesPressure
   return (
     <CoinSignalPressurePanel
       title={isAltMode ? "알트 선물 압력 분해" : "메이저 선물 압력 분해"}
-      description={
-        isAltMode
-          ? "알트 선물은 기회 신호보다 회피 조건, 유동성, BTC 기준 충돌을 먼저 분리합니다."
-          : "메이저 선물은 파생 쏠림, 차트 구조, 추적 조건, 충돌 여부를 같은 방향 신호로 섞지 않습니다."
-      }
       items={futuresPressureItems[mode]}
     />
   );

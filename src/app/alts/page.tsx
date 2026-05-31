@@ -1,6 +1,5 @@
 // 알트코인 관심 목록과 시장 레이더 감지를 별도 페이지로 보여줍니다.
 import { AppFooter } from "@/components/AppFooter";
-import { CoinFuturesEvidenceGradePanel } from "@/components/coin/CoinEvidenceGradePanel";
 import { CoinFuturesBrief } from "@/components/coin/CoinFuturesBrief";
 import { CoinFuturesSwitch } from "@/components/coin/CoinFuturesSwitch";
 import { CoinFuturesSignalPressurePanel } from "@/components/coin/CoinSignalPressurePanel";
@@ -19,7 +18,6 @@ export default function AltsPage() {
         <CoinFuturesSwitch active="alts" />
         <CoinFuturesBrief mode="alts" />
         <CoinFuturesSignalPressurePanel mode="alts" />
-        <CoinFuturesEvidenceGradePanel mode="alts" />
         <LiveMarketChart altOnly />
         <SetupScoutPanel excludeMajor />
         <WatchlistPanel />
