@@ -84,7 +84,7 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
   );
 
   return (
-    <nav className="radar-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-ui-line px-0 pt-1">
+    <nav className="radar-bottom-nav fixed inset-x-0 bottom-0 z-40 px-0 pt-1">
       <div className="mx-auto max-w-md px-2">
         {navContent}
       </div>

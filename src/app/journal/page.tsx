@@ -556,7 +556,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                 <p className="mt-2 max-w-2xl text-ui-body text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]">{marketHeroLine}</p>
                 <p className="mt-1 text-ui-label font-semibold text-ui-subtle [overflow-wrap:anywhere]">좋은 매매보다 지킨 매매를 먼저 기록해보세요.</p>
               </div>
-              <AppSurface tone="inset" variant="flat" padding="none" radius="none" className="grid min-w-0 grid-cols-3 gap-1.5 border-y border-ui-line py-2 text-center lg:w-80">
+              <AppSurface tone="inset" variant="flat" padding="none" radius="none" className="grid min-w-0 grid-cols-3 gap-1.5 border-t border-ui-line py-2 text-center lg:w-80">
                 {["차트 분석", "근거 저장", "결과 복기"].map((item) => (
                   <div key={item} className="min-w-0 rounded-ui-sm px-2 py-1.5">
                     <p className="truncate text-ui-label font-semibold text-ui-subtle">{item}</p>

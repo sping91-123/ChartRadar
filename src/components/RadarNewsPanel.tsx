@@ -631,7 +631,7 @@ function SourceReferenceList({ items }: { items: RadarNewsItem[] }) {
   }
 
   return (
-    <AppSurface as="details" tone="panel" variant="list" padding="md" className="border-y border-ui-line">
+    <AppSurface as="details" tone="panel" variant="list" padding="md" className="border-t border-ui-line">
       <summary className="cursor-pointer text-sm font-semibold text-ui-text">참고 뉴스 원문 보기</summary>
       <div className="mt-3 grid gap-2">
         {references.slice(0, 12).map((item) => {
@@ -743,13 +743,13 @@ export function RadarNewsPanel({ market = "crypto", afterBriefing }: { market?: 
       </PanelCard>
 
       {error ? (
-        <AppSurface variant="flat" tone="critical" padding="none" className="border-y border-rose-400/24 py-3 text-sm font-semibold text-ui-short shadow-none">
+        <AppSurface variant="flat" tone="critical" padding="none" className="border-t border-rose-400/24 py-3 text-sm font-semibold text-ui-short shadow-none">
           {error}
         </AppSurface>
       ) : null}
 
       {isInitialLoading ? (
-        <AppSurface variant="flat" tone="inset" padding="none" className="border-y border-ui-line py-3 text-sm font-semibold leading-6 text-ui-brand shadow-none">
+        <AppSurface variant="flat" tone="inset" padding="none" className="border-t border-ui-line py-3 text-sm font-semibold leading-6 text-ui-brand shadow-none">
           리포트 준비 중입니다. 공개 뉴스와 매크로 흐름을 읽어 시장 해석과 체크포인트를 정리하고 있습니다.
         </AppSurface>
       ) : null}

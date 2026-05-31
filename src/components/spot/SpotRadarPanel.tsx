@@ -168,14 +168,14 @@ export function SpotRadarPanel() {
           }
         />
 
-        <div className="grid gap-0 border-y border-ui-line sm:grid-cols-4">
+        <div className="grid gap-0 border-t border-ui-line sm:grid-cols-4">
           <DataRow label="거래소" value={payload?.exchangeLabel ?? exchanges.find((item) => item.id === exchange)?.label ?? "-"} />
           <DataRow label="표시 종목" value={payload ? `${payload.summary.displayedMarkets}개` : "-"} />
           <DataRow label="상승/하락" value={payload ? `${payload.summary.gainers}/${payload.summary.losers}` : "-"} />
           <DataRow label="평균 등락" value={payload ? formatPercent(payload.summary.averageChangePercent) : "-"} />
         </div>
 
-        <div className="flex flex-wrap gap-1.5 border-y border-ui-line py-1">
+        <div className="flex flex-wrap gap-1.5 border-t border-ui-line py-1">
           {categoryFilters.map((item) => (
             <button
               key={item.id}
@@ -201,11 +201,11 @@ export function SpotRadarPanel() {
         </div>
 
         {isLoading ? (
-          <div className="flex min-h-44 items-center justify-center border-y border-ui-line text-sm font-semibold text-ui-muted">
+          <div className="flex min-h-44 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
             현물 시장을 확인하는 중입니다.
           </div>
         ) : error ? (
-          <div className="flex min-h-44 flex-col items-center justify-center gap-3 border-y border-ui-line text-center">
+          <div className="flex min-h-44 flex-col items-center justify-center gap-3 border-t border-ui-line text-center">
             <AlertTriangle size={22} className="text-ui-risk" aria-hidden />
             <p className="text-sm font-semibold text-ui-text">{error}</p>
             <p className="text-xs text-ui-muted">거래소 public API 응답이 늦거나 제한될 수 있습니다.</p>
@@ -217,7 +217,7 @@ export function SpotRadarPanel() {
             ))}
           </div>
         ) : (
-          <div className="flex min-h-44 flex-col items-center justify-center gap-3 border-y border-ui-line text-center">
+          <div className="flex min-h-44 flex-col items-center justify-center gap-3 border-t border-ui-line text-center">
             <Search size={22} className="text-ui-muted" aria-hidden />
             <p className="text-sm font-semibold text-ui-text">해당 조건의 후보가 아직 없습니다.</p>
             <p className="text-xs text-ui-muted">필터를 전체로 바꾸거나 다른 거래소를 확인해 주세요.</p>

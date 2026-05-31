@@ -27,16 +27,16 @@ const surfaceVariantClass: Record<SurfaceVariant, Record<Tone, string>> = {
     critical: "bg-transparent text-ui-risk"
   },
   report: {
-    panel: "border-y border-ui-line bg-transparent text-ui-text shadow-none",
-    elevated: "border-y border-ui-lineStrong bg-transparent text-ui-text shadow-none",
-    inset: "border-y border-ui-line bg-transparent text-ui-muted shadow-none",
-    critical: "border-y border-ui-line bg-transparent text-ui-risk shadow-none"
+    panel: "bg-transparent text-ui-text shadow-none",
+    elevated: "bg-transparent text-ui-text shadow-none",
+    inset: "bg-transparent text-ui-muted shadow-none",
+    critical: "bg-transparent text-ui-risk shadow-none"
   },
   list: {
-    panel: "border-y border-ui-line bg-transparent text-ui-text",
-    elevated: "border-y border-ui-lineStrong bg-transparent text-ui-text",
-    inset: "border-y border-ui-line bg-transparent text-ui-muted",
-    critical: "border-y border-ui-line bg-transparent text-ui-risk"
+    panel: "bg-transparent text-ui-text",
+    elevated: "bg-transparent text-ui-text",
+    inset: "bg-transparent text-ui-muted",
+    critical: "bg-transparent text-ui-risk"
   }
 };
 
