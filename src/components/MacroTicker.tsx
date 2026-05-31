@@ -68,7 +68,7 @@ function macroValueText(value?: string) {
     .replace(/\bMoM\b/g, "전월비")
     .replace(/\bYoY\b/g, "전년비")
     .replace(/\bPrevious\b/gi, "이전")
-    .replace(/\bForecast\b/gi, "예상")
+    .replace(/\bForecast\b/gi, "예측")
     .replace(/\bActual\b/gi, "결과");
 }
 
@@ -84,7 +84,7 @@ function displayMacroValue(candidates: Array<string | undefined>, missingLabel: 
 }
 
 function displayConsensusValue(item: MacroEventItem) {
-  return displayMacroValue([item.consensusValue, item.forecast], "예상 확인 필요");
+  return displayMacroValue([item.consensusValue, item.forecast], "예측 확인 필요");
 }
 
 function displayPreviousValue(item: MacroEventItem) {
@@ -95,7 +95,7 @@ function displayActual(item: MacroEventItem) {
   if (isDocumentEvent(item)) return hasReleaseTimePassed(item) ? "공식 공개" : "예정";
   if (hasActualValue(item)) return primaryMacroValueText(item.actualValue ?? item.actual);
   if (hasReleaseTimePassed(item)) return "확인 중";
-  return "발표 전";
+  return "";
 }
 
 function getTimeLabel(releaseAt: string) {
@@ -248,13 +248,13 @@ function getCompactItem(items: MacroEventItem[]) {
   return nearestUpcoming ?? getRecentReleasedItems(visibleItems)[0] ?? visibleItems[0];
 }
 
-function MacroNewsValue({ label, value, pending = false }: { label: string; value?: string; pending?: boolean }) {
+function MacroNewsValue({ label, value, pending = false, blankWhenMissing = false }: { label: string; value?: string; pending?: boolean; blankWhenMissing?: boolean }) {
   return (
     <span className={`inline-flex min-w-0 max-w-full flex-wrap items-center gap-1 px-0 py-0.5 text-[11px] font-semibold ${
       pending ? "text-ui-risk" : "text-ui-muted"
     }`}>
       <span className="shrink-0 text-ui-subtle">{label}</span>
-      <span className="min-w-0 break-words">{value ?? "미정"}</span>
+      <span className="min-w-0 break-words">{value || (blankWhenMissing ? "" : "미정")}</span>
     </span>
   );
 }
@@ -273,8 +273,8 @@ function MacroNewsItem({ item, sectionLabel, subdued = false }: { item: MacroEve
       <h4 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{macroLabel(item.label)}</h4>
       <p className="mt-0.5 text-[11px] font-semibold leading-4 text-ui-muted">한국시간 {item.dateKst}</p>
       <div className="mt-1.5 grid grid-cols-3 gap-x-2 gap-y-1 text-left min-[420px]:flex min-[420px]:flex-wrap min-[420px]:gap-x-3">
-        <MacroNewsValue label={hasReleaseTimePassed(item) ? (isDocumentEvent(item) ? "상태" : "결과") : "예상"} value={hasReleaseTimePassed(item) ? displayActual(item) : displayConsensusValue(item)} pending={pendingActual} />
-        <MacroNewsValue label="예상" value={displayConsensusValue(item)} pending={displayConsensusValue(item) === "예상 확인 필요"} />
+        <MacroNewsValue label={isDocumentEvent(item) ? "상태" : "실제"} value={displayActual(item)} pending={pendingActual} blankWhenMissing />
+        <MacroNewsValue label="예측" value={displayConsensusValue(item)} pending={displayConsensusValue(item) === "예측 확인 필요"} />
         <MacroNewsValue label="이전" value={displayPreviousValue(item)} pending={displayPreviousValue(item) === "이전 확인 필요"} />
       </div>
       <p className="mt-1.5 min-w-0 whitespace-normal text-xs leading-relaxed text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]">{item.marketImpact}</p>
@@ -403,8 +403,8 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
 
     const isReleased = hasReleaseTimePassed(item);
     const eventKind = compactEventKind(item);
-    const primaryValueLabel = isReleased ? (isDocumentEvent(item) ? "상태" : "결과") : "예상";
-    const primaryValue = isReleased ? displayActual(item) : displayConsensusValue(item);
+    const primaryValueLabel = isDocumentEvent(item) ? "상태" : "실제";
+    const primaryValue = displayActual(item);
     const impactRead = cryptoImpactRead(item);
     const ImpactIcon = impactRead === "호재" ? TrendingUp : impactRead === "악재" ? TrendingDown : impactRead === "중립" ? Minus : null;
     const impactToneClass = impactRead === "호재" ? "text-emerald-400" : impactRead === "악재" ? "text-rose-400" : "text-slate-400";
@@ -433,7 +433,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
             </p>
             <p className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-bold leading-4 text-slate-500 [overflow-wrap:anywhere] [word-break:keep-all]">
               <span>{primaryValueLabel} {primaryValue}</span>
-              <span>예상 {displayConsensusValue(item)}</span>
+              <span>예측 {displayConsensusValue(item)}</span>
               <span>이전 {displayPreviousValue(item)}</span>
             </p>
           </div>
