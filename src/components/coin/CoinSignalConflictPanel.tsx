@@ -14,8 +14,8 @@ export interface CoinSignalConflictItem {
 
 function statusText(tone: ConflictTone) {
   if (tone === "risk") return "위험";
-  if (tone === "long") return "상방";
-  if (tone === "short") return "하방";
+  if (tone === "long") return "상승";
+  if (tone === "short") return "하락";
   if (tone === "watch") return "확인";
   return "참고";
 }
@@ -31,7 +31,7 @@ export function CoinSignalConflictPanel({
 }) {
   return (
     <PanelCard variant="flat" padding="none" className="space-y-4">
-      <SectionHeader eyebrow="Signal Conflict" title={title} />
+      <SectionHeader title={title} />
       <div className="grid gap-0 border-y border-ui-line md:grid-cols-2">
         {items.map((item, index) => {
           const Icon = item.icon ?? (item.tone === "risk" ? AlertTriangle : item.tone === "info" ? CheckCircle2 : GitCompareArrows);

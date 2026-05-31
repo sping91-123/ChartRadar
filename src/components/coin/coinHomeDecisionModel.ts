@@ -10,9 +10,9 @@ export interface CoinHomeBoardItem {
   quoteVolume: number;
 }
 
-export type CoinHomeDecisionState = "관망" | "조건 대기" | "상방 추적 가능" | "하방 압력 우세" | "변동성 경계";
-export type CoinHomeDirection = "상방 우세" | "하방 압력" | "관망" | "변동성 주의";
-export type CoinHomeLeadership = "BTC 우세" | "알트 순환" | "혼조" | "위험 회피";
+export type CoinHomeDecisionState = "기다림" | "조금 더 지켜보기" | "상승 가능성 높음" | "하락 위험 큼" | "크게 흔들림";
+export type CoinHomeDirection = "상승 쪽" | "하락 쪽" | "기다림" | "흔들림 주의";
+export type CoinHomeLeadership = "BTC 중심" | "알트도 강함" | "섞임" | "위험 줄이기";
 
 export interface CoinHomeDecisionSummary {
   state: CoinHomeDecisionState;
@@ -113,20 +113,20 @@ function riskLabel({
   kimchiRisk: number;
 }) {
   if (weakTrend && (constructiveTrend || btcChange <= -2.5)) return "BTC 상승 추세 이탈";
-  if (weakTrend) return "BTC 하락 추세 지속";
-  if (derivatives >= 20) return "펀딩비/롱숏 쏠림";
-  if (overheat) return "과열 확인";
-  if (kimchiRisk >= 7) return "김프/환율 영향";
-  return "확인 조건 대기";
+  if (weakTrend) return "BTC 약세 계속";
+  if (derivatives >= 20) return "선물 쏠림 큼";
+  if (overheat) return "가격 과열";
+  if (kimchiRisk >= 7) return "김프/환율 부담";
+  return "큰 경고 없음";
 }
 
 function nextConditionFor(state: CoinHomeDecisionState, leadership: CoinHomeLeadership, topRisk: string) {
-  if (state === "하방 압력 우세") return "숏 관점은 반등 실패와 1시간 하락 추세 유지 여부를 확인합니다.";
-  if (state === "변동성 경계") return `${topRisk}가 완화되는지보다, 롱/숏 기준선이 흔들리지 않는지 먼저 확인합니다.`;
-  if (leadership === "알트 순환") return "BTC가 무너지지 않는 상태에서 알트 거래대금이 유지되는지 확인합니다.";
-  if (leadership === "BTC 우세") return "BTC 추세 유지와 알트 참여 확산 여부를 함께 확인합니다.";
-  if (state === "상방 추적 가능") return "롱 관점은 눌림 후 상방 추세 유지와 거래대금 동반 여부를 확인합니다.";
-  return "BTC 추세와 주요 이벤트 전후 변동성을 먼저 확인합니다.";
+  if (state === "하락 위험 큼") return "반등이 바로 꺾이는지 봅니다.";
+  if (state === "크게 흔들림") return `${topRisk}이 줄어드는지 봅니다.`;
+  if (leadership === "알트도 강함") return "BTC가 버티고 알트 거래대금이 계속 붙는지 봅니다.";
+  if (leadership === "BTC 중심") return "BTC 상승이 이어지고 알트가 따라오는지 봅니다.";
+  if (state === "상승 가능성 높음") return "눌림 뒤 다시 오르는지 봅니다.";
+  return "BTC 흐름과 큰 뉴스 전후 움직임을 봅니다.";
 }
 
 function leadershipFor({
@@ -146,12 +146,12 @@ function leadershipFor({
   volumeBackedCount: number;
   dominance: number | null | undefined;
 }): CoinHomeLeadership {
-  if (weakTrend && participationRatio < 0.45) return "위험 회피";
-  if (constructiveTrend && participationRatio >= 0.55 && strongAltCount >= 2 && volumeBackedCount >= 2) return "알트 순환";
-  if (constructiveTrend && btcChange > 0 && participationRatio < 0.5) return "BTC 우세";
-  if (btcChange > 1.5 && participationRatio < 0.45) return "BTC 우세";
-  if (participationRatio >= 0.65 && (dominance === null || dominance === undefined || dominance < 58)) return "알트 순환";
-  return "혼조";
+  if (weakTrend && participationRatio < 0.45) return "위험 줄이기";
+  if (constructiveTrend && participationRatio >= 0.55 && strongAltCount >= 2 && volumeBackedCount >= 2) return "알트도 강함";
+  if (constructiveTrend && btcChange > 0 && participationRatio < 0.5) return "BTC 중심";
+  if (btcChange > 1.5 && participationRatio < 0.45) return "BTC 중심";
+  if (participationRatio >= 0.65 && (dominance === null || dominance === undefined || dominance < 58)) return "알트도 강함";
+  return "섞임";
 }
 
 export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHomeDecisionSummary {
@@ -184,26 +184,26 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
   });
 
   const direction: CoinHomeDirection =
-    derivatives >= 24 || overheat ? "변동성 주의" : weakTrend ? "하방 압력" : constructiveTrend ? "상방 우세" : "관망";
+    derivatives >= 24 || overheat ? "흔들림 주의" : weakTrend ? "하락 쪽" : constructiveTrend ? "상승 쪽" : "기다림";
 
   const state: CoinHomeDecisionState = weakTrend
-    ? "하방 압력 우세"
+    ? "하락 위험 큼"
     : derivatives >= 24 || overheat || readinessScore < 30
-      ? "변동성 경계"
-      : readinessScore >= 70 && topRisk === "확인 조건 대기"
-        ? "상방 추적 가능"
+      ? "크게 흔들림"
+      : readinessScore >= 70 && topRisk === "큰 경고 없음"
+        ? "상승 가능성 높음"
         : readinessScore >= 50
-          ? "조건 대기"
-          : "관망";
+          ? "조금 더 지켜보기"
+          : "기다림";
 
   const reason =
-    leadership === "알트 순환"
-      ? "BTC가 무너지지 않는 가운데 알트 참여가 확산되는지 보는 구간입니다."
-      : leadership === "BTC 우세"
-        ? "BTC가 시장 흐름을 이끌고 알트 참여는 제한적인 구간입니다."
-        : leadership === "위험 회피"
-          ? "BTC 약세와 리스크 지표가 먼저 보이는 구간입니다."
-          : "BTC와 알트 흐름이 엇갈려 확인 조건이 필요한 구간입니다.";
+    leadership === "알트도 강함"
+      ? "BTC가 버티는 동안 알트도 같이 움직이는 구간입니다."
+      : leadership === "BTC 중심"
+        ? "BTC가 시장을 이끌고 알트는 아직 덜 따라오는 구간입니다."
+        : leadership === "위험 줄이기"
+          ? "BTC가 약해 먼저 조심해야 하는 구간입니다."
+          : "BTC와 알트 흐름이 섞여 있어 한쪽으로 단정하기 어렵습니다.";
 
   return {
     state,
@@ -213,7 +213,7 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
     topRisk,
     nextCondition: nextConditionFor(state, leadership, topRisk),
     reason,
-    scoreLabel: "상방 추적 여건",
-    scoreDetail: "높을수록 롱 관점의 추세·참여 조건이 좋다는 뜻입니다. 낮은 점수는 숏 점수가 아니라 하방 압력이나 변동성 확인이 우선이라는 뜻입니다."
+    scoreLabel: "상승 가능성 점수",
+    scoreDetail: "높을수록 시장이 상승 쪽으로 움직일 가능성이 좋아 보입니다. 낮으면 기다리거나 하락 위험을 먼저 봅니다."
   };
 }

@@ -18,8 +18,8 @@ const briefItems: Record<
   major: [
     {
       label: "1. 위험 먼저",
-      title: "청산 압력·펀딩비·롱숏 쏠림",
-      detail: "방향보다 과열과 강제청산 위험을 먼저 봅니다. 쏠림이 크면 추격보다 반대 변동성 확인이 우선입니다.",
+      title: "청산 압력·펀딩비·포지션 쏠림",
+      detail: "방향보다 과열과 강제청산 위험을 먼저 봅니다. 쏠림이 크면 따라가기보다 반대로 크게 흔들릴 가능성을 먼저 봅니다.",
       tone: "risk",
       icon: AlertTriangle
     },
@@ -31,16 +31,16 @@ const briefItems: Record<
       icon: BarChart3
     },
     {
-      label: "3. 추적 조건",
+      label: "3. 볼 조건",
       title: "눌림 유지 또는 반등 실패",
-      detail: "롱 관점은 눌림 후 추세 유지, 숏 관점은 반등 실패와 하방 구조 유지를 확인합니다.",
+      detail: "상승 쪽은 눌림 뒤 다시 오르는지, 하락 쪽은 반등이 바로 꺾이는지 봅니다.",
       tone: "watch",
       icon: Gauge
     },
     {
       label: "4. 충돌 처리",
-      title: "롱 신호 + 과열이면 위험 우선",
-      detail: "상방 신호와 청산·펀딩 과열이 같이 보이면 진입 판단보다 무효화와 변동성 기준을 먼저 확인합니다.",
+      title: "상승 신호 + 과열이면 위험 우선",
+      detail: "상승 신호와 청산·펀딩 과열이 같이 보이면 진입 판단보다 기준 이탈과 가격 흔들림을 먼저 확인합니다.",
       tone: "risk",
       icon: GitCompareArrows
     }
@@ -48,21 +48,21 @@ const briefItems: Record<
   alts: [
     {
       label: "1. 고위험 필터",
-      title: "급등 추격·저유동성·BTC 의존",
+      title: "급등 따라가기·낮은 거래대금·BTC 의존",
       detail: "알트는 좋은 후보를 찾기 전에 피할 후보를 먼저 걸러야 합니다.",
       tone: "risk",
       icon: AlertTriangle
     },
     {
       label: "2. 후보 분류",
-      title: "추적 후보·관망·고위험",
+      title: "관심 후보·기다림·고위험",
       detail: "알트 기회/위험 필터에서 현재 후보가 어느 묶음인지 먼저 확인합니다.",
       tone: "watch",
       icon: Radar
     },
     {
       label: "3. 구조 확인",
-      title: "BTC 방향성·거래량·변동성",
+      title: "BTC 방향·거래량·가격 흔들림",
       detail: "알트 단독 신호보다 BTC 방향과 거래량 동반 여부를 함께 봅니다.",
       tone: "info",
       icon: BarChart3
@@ -70,7 +70,7 @@ const briefItems: Record<
     {
       label: "4. 충돌 처리",
       title: "급등 후보 + 저유동성이면 회피 우선",
-      detail: "알트는 좋은 후보처럼 보여도 변동성·저유동성·BTC 약세가 겹치면 고위험으로 먼저 분류합니다.",
+      detail: "알트는 좋아 보여도 가격 흔들림·낮은 거래대금·BTC 약세가 겹치면 고위험으로 먼저 분류합니다.",
       tone: "risk",
       icon: GitCompareArrows
     }
@@ -82,10 +82,7 @@ export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
 
   return (
     <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
-      <SectionHeader
-        eyebrow={isAltMode ? "Alt Futures" : "Major Futures"}
-        title={isAltMode ? "알트 선물 판단 순서" : "메이저 선물 판단 순서"}
-      />
+      <SectionHeader title={isAltMode ? "알트 선물 판단 순서" : "메이저 선물 판단 순서"} />
       <div className="grid gap-0 md:grid-cols-2">
         {briefItems[mode].map((item, index) => {
           const Icon = item.icon;

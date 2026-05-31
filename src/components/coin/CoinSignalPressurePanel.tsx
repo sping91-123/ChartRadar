@@ -24,9 +24,9 @@ const barClass: Record<CoinSignalPressureTone, string> = {
 };
 
 const pillLabel: Record<CoinSignalPressureTone, string> = {
-  long: "추적",
-  short: "압력",
-  watch: "확인",
+  long: "관심",
+  short: "하락",
+  watch: "보기",
   risk: "위험",
   info: "참고"
 };
@@ -40,7 +40,7 @@ const futuresPressureItems: Record<FuturesPressureMode, CoinSignalPressureItem[]
   major: [
     {
       label: "파생 쏠림",
-      title: "청산·펀딩·롱숏",
+      title: "청산·펀딩·포지션",
       detail: "방향보다 과열과 강제청산 위험을 먼저 분리합니다.",
       tone: "risk",
       percent: 88,
@@ -54,16 +54,16 @@ const futuresPressureItems: Record<FuturesPressureMode, CoinSignalPressureItem[]
       percent: 68
     },
     {
-      label: "추적 조건",
-      title: "눌림 유지·반등 실패",
+      label: "볼 조건",
+      title: "눌림 뒤 재상승·반등 실패",
       detail: "가격이 같은 방향을 유지하는지 확인할 조건만 남깁니다.",
       tone: "watch",
       percent: 56
     },
     {
       label: "충돌",
-      title: "상방 신호와 과열 동시 발생",
-      detail: "신호가 충돌하면 방향보다 무효화 기준과 변동성부터 봅니다.",
+      title: "상승 신호와 과열 동시 발생",
+      detail: "신호가 충돌하면 방향보다 기준 이탈과 가격 흔들림부터 봅니다.",
       tone: "risk",
       percent: 74
     }
@@ -79,7 +79,7 @@ const futuresPressureItems: Record<FuturesPressureMode, CoinSignalPressureItem[]
     },
     {
       label: "유동성",
-      title: "거래대금·변동성",
+      title: "거래대금·가격 흔들림",
       detail: "알트 단독 움직임보다 실제 거래가 붙었는지 확인합니다.",
       tone: "watch",
       percent: 72
@@ -87,14 +87,14 @@ const futuresPressureItems: Record<FuturesPressureMode, CoinSignalPressureItem[]
     {
       label: "BTC 기준",
       title: "방향 동조·분리",
-      detail: "BTC 약세와 알트 급등이 겹치면 추적 후보로 바로 보지 않습니다.",
+      detail: "BTC 약세와 알트 급등이 겹치면 관심 후보로 바로 보지 않습니다.",
       tone: "info",
       percent: 64
     },
     {
       label: "충돌",
       title: "기회 신호와 회피 조건",
-      detail: "상승 후보처럼 보여도 위험 신호가 겹치면 관망으로 낮춥니다.",
+      detail: "상승 후보처럼 보여도 위험 신호가 겹치면 기다림으로 낮춥니다.",
       tone: "risk",
       percent: 78
     }
@@ -111,7 +111,7 @@ export function CoinSignalPressurePanel({
 }) {
   return (
     <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
-      <SectionHeader eyebrow="Signal Pressure" title={title} />
+      <SectionHeader title={title} />
       <div className="grid gap-0 md:grid-cols-2">
         {items.map((item, index) => (
           <article

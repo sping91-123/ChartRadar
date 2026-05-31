@@ -18,8 +18,8 @@ const categoryFilters: Array<{ id: "all" | SpotRadarCategory; label: string }> =
   { id: "gainer", label: "상승률" },
   { id: "pullback", label: "눌림" },
   { id: "overheat", label: "과열" },
-  { id: "pressure", label: "하락압력" },
-  { id: "watch", label: "관망" }
+  { id: "pressure", label: "하락 위험" },
+  { id: "watch", label: "기다림" }
 ];
 
 function formatKrw(value: number) {
@@ -79,7 +79,16 @@ function changeClass(value: number) {
 
 function describeSpotItem(item: SpotRadarItem | null) {
   if (!item) return "해당 후보 없음";
-  return `${item.symbol} · ${item.categoryLabel}`;
+  return `${item.symbol} · ${displaySpotLabel(item.categoryLabel)}`;
+}
+
+function displaySpotLabel(value: string) {
+  return value
+    .replace(/관망/g, "기다림")
+    .replace(/추적/g, "관심")
+    .replace(/추격/g, "따라가기")
+    .replace(/하락압력/g, "하락 위험")
+    .replace(/하락 압력/g, "하락 위험");
 }
 
 function SpotMarketChecklist({ payload }: { payload: SpotRadarPayload }) {
@@ -103,8 +112,8 @@ function SpotMarketChecklist({ payload }: { payload: SpotRadarPayload }) {
       tone: riskTone
     },
     {
-      label: "추적 후보",
-      title: followItem ? describeSpotItem(followItem) : "추적 후보 대기",
+      label: "관심 후보",
+      title: followItem ? describeSpotItem(followItem) : "관심 후보 대기",
       tone: followItem?.category === "gainer" || followItem?.category === "volume" ? "long" : "watch"
     },
     {
@@ -127,7 +136,7 @@ function SpotMarketChecklist({ payload }: { payload: SpotRadarPayload }) {
               <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{check.title}</p>
             </div>
             <StatusPill tone={check.tone} className="shrink-0">
-              {check.tone === "risk" ? "주의" : check.tone === "long" ? "추적" : check.tone === "short" ? "압력" : "확인"}
+              {check.tone === "risk" ? "주의" : check.tone === "long" ? "관심" : check.tone === "short" ? "하락" : "확인"}
             </StatusPill>
           </div>
         </article>
@@ -149,7 +158,7 @@ function buildSpotConflictItems(payload: SpotRadarPayload): CoinSignalConflictIt
 
   return [
     {
-      label: "급등 vs 추격",
+      label: "급등 vs 따라가기",
       title: overheat ? `${overheat.symbol} · 과열 주의` : "과열 후보 약함",
       detail: overheat ? overheat.check : "상승률만으로 보지 않고 거래대금 유지와 첫 눌림 반응을 기다립니다.",
       tone: overheat ? "risk" : "info"
@@ -158,19 +167,19 @@ function buildSpotConflictItems(payload: SpotRadarPayload): CoinSignalConflictIt
       label: "거래대금 vs 방향",
       title: volumeLeader ? `${volumeLeader.symbol} · ${formatKrw(volumeLeader.quoteVolume24h)}` : "거래대금 확인 중",
       detail: volumeLeader
-        ? `거래대금 1위가 ${formatPercent(volumeLeader.changePercent)} 흐름입니다. 거래대금만 크고 방향이 약하면 관망 후보로 둡니다.`
+        ? `거래대금 1위가 ${formatPercent(volumeLeader.changePercent)} 흐름입니다. 거래대금만 크고 방향이 약하면 기다림 후보로 둡니다.`
         : "거래대금 리더가 확인되면 방향과 함께 비교합니다.",
       tone: volumeLeader && volumeLeader.changePercent >= 2.5 ? "long" : volumeLeader && volumeLeader.changePercent <= -2.5 ? "short" : "watch"
     },
     {
-      label: "하락압력 vs 반등",
-      title: pressure ? `${pressure.symbol} · 하락 압력` : "강한 하락압력 후보 없음",
+      label: "하락 위험 vs 반등",
+      title: pressure ? `${pressure.symbol} · 하락 위험` : "강한 하락 위험 후보 없음",
       detail: pressure ? pressure.check : "급락 후보가 약하면 눌림 대기 후보와 시장 폭을 우선 확인합니다.",
       tone: pressure ? "risk" : "info"
     },
     {
       label: "후보 vs 시장 폭",
-      title: followCandidate ? `${followCandidate.symbol} · ${followCandidate.categoryLabel}` : "추적 후보 대기",
+      title: followCandidate ? `${followCandidate.symbol} · ${displaySpotLabel(followCandidate.categoryLabel)}` : "관심 후보 대기",
       detail: `상승 ${payload.summary.gainers} / 하락 ${payload.summary.losers}. 폭 차이 ${broadSkew}개로, 후보 하나보다 시장 폭을 함께 봅니다.`,
       tone: followCandidate ? "watch" : "info"
     }
@@ -232,7 +241,7 @@ function SpotChartEvidencePanel({
 }) {
   return (
     <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
-      <SectionHeader eyebrow="Spot Chart" title="현물 차트" />
+      <SectionHeader title="현물 차트" />
 
       {loading ? (
         <div className="flex min-h-24 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
@@ -308,7 +317,7 @@ function priorityReason(item: SpotRadarItem, chart: SpotChartSummary | null) {
   const chartText = chart
     ? `${chart.structureLabel} · ${formatRangePosition(chart.rangePositionPercent)} · 거래 ${chart.volumeRatio === null ? "-" : `${chart.volumeRatio.toFixed(1)}x`}`
     : "차트 확인 중";
-  return `${item.categoryLabel} · ${chartText}`;
+  return `${displaySpotLabel(item.categoryLabel)} · ${chartText}`;
 }
 
 function buildSpotPriorityGroups(payload: SpotRadarPayload, chartPayload: SpotChartRadarPayload | null): SpotPriorityGroup[] {
@@ -354,20 +363,20 @@ function buildSpotPriorityGroups(payload: SpotRadarPayload, chartPayload: SpotCh
 
   return [
     {
-      label: "위험 Top",
+      label: "위험 먼저",
       title: "주의 후보",
       tone: "risk",
       items: riskItems
     },
     {
-      label: "추적 Top",
-      title: "추적 후보",
+      label: "관심 먼저",
+      title: "관심 후보",
       tone: "long",
       items: followItems
     },
     {
-      label: "관망 Top",
-      title: "관망 후보",
+      label: "기다림",
+      title: "기다림 후보",
       tone: "watch",
       items: watchItems
     }
@@ -379,7 +388,7 @@ function SpotPriorityPanel({ payload, chartPayload }: { payload: SpotRadarPayloa
 
   return (
     <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
-      <SectionHeader eyebrow="Priority" title="현물 우선순위" />
+      <SectionHeader title="현물 우선순위" />
       <div className="grid gap-0 lg:grid-cols-3">
         {groups.map((group, index) => (
           <article key={group.label} className={`min-w-0 py-3 lg:px-3 ${index > 0 ? "border-t border-ui-line lg:border-l lg:border-t-0" : ""}`}>
@@ -428,7 +437,7 @@ function SpotRow({ item, chart }: { item: SpotRadarItem; chart: SpotChartSummary
             </div>
             <p className="mt-1 text-xs leading-5 text-ui-muted">{item.market}</p>
           </div>
-          <StatusPill tone={categoryTone(item.category)}>{item.categoryLabel}</StatusPill>
+          <StatusPill tone={categoryTone(item.category)}>{displaySpotLabel(item.categoryLabel)}</StatusPill>
         </div>
 
         {chart ? (
@@ -572,7 +581,6 @@ export function SpotRadarPanel() {
     <div className="flex flex-col gap-4">
       <PanelCard variant="report" padding="lg" className="space-y-5">
         <SectionHeader
-          eyebrow="Coin Spot"
           title="현물 레이더"
           action={
             <div className="inline-flex items-center gap-1 border-b border-ui-line pb-1">
@@ -633,7 +641,7 @@ export function SpotRadarPanel() {
 
       <PanelCard variant="report" padding="lg" className="space-y-4">
         <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
-          <SectionHeader eyebrow="Watchlist Candidates" title="현물 관찰 후보" />
+          <SectionHeader title="현물 관찰 후보" />
           <ActionButton tone="ghost" className="whitespace-nowrap px-0" onClick={() => setExchange((current) => (current === "upbit" ? "bithumb" : "upbit"))}>
             <RefreshCw size={14} aria-hidden />
             거래소 전환
