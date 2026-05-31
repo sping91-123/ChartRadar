@@ -245,8 +245,7 @@ function getPreviousReleasedItems(items: MacroEventItem[]) {
 function getCompactItem(items: MacroEventItem[]) {
   const visibleItems = items.filter(isVisibleCompactImpact);
   const nearestUpcoming = getUpcomingItems(visibleItems)[0];
-  if (nearestUpcoming && isWithinNextDay(nearestUpcoming)) return nearestUpcoming;
-  return getRecentReleasedItems(visibleItems)[0] ?? nearestUpcoming ?? visibleItems[0];
+  return nearestUpcoming ?? getRecentReleasedItems(visibleItems)[0] ?? visibleItems[0];
 }
 
 function MacroNewsValue({ label, value, pending = false }: { label: string; value?: string; pending?: boolean }) {
@@ -297,6 +296,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
   const previousReleasedItems = getPreviousReleasedItems(calendar.items);
   const fullReleasedItems = previousReleasedItems.length ? previousReleasedItems : releasedItems;
   const nearestUpcoming = upcomingItems[0];
+  const featuredUpcomingItems = upcomingItems.slice(0, 8);
   const laterUpcomingItems = upcomingItems.slice(1, 7);
   const isNewsMacroReport = compact && pathname === "/news";
 
@@ -453,20 +453,20 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
         </div>
       </div>
       <div className="grid gap-2 p-2 lg:grid-cols-2">
-        <div>
+        <div className="order-2 border-t border-ui-line/60 pt-2 lg:border-t-0 lg:pt-0">
           <p className="text-xs font-black text-white">최근/지난 발표</p>
           {fullReleasedItems.length ? (
-            fullReleasedItems.map((item) => (
+            fullReleasedItems.slice(0, 4).map((item) => (
               <MacroNewsItem key={`${item.label}-${item.releaseAt}`} item={item} sectionLabel="발표" />
             ))
           ) : (
             <p className="py-3 text-xs leading-5 text-ui-muted [word-break:keep-all]">공식 캘린더에서 확인되는 발표 내역이 이 영역에 표시됩니다.</p>
           )}
         </div>
-        <div>
+        <div className="order-1 rounded-ui border border-accent-blue/25 bg-accent-blue/[0.04] p-2">
           <p className="text-xs font-black text-white">다가오는 일정</p>
-          {nearestUpcoming ? (
-            [nearestUpcoming, ...laterUpcomingItems].map((item) => (
+          {featuredUpcomingItems.length ? (
+            featuredUpcomingItems.map((item) => (
               <MacroNewsItem key={`${item.label}-${item.releaseAt}`} item={item} sectionLabel="예정" />
             ))
           ) : (
