@@ -164,7 +164,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
         <div className="flex items-center gap-3">
           <div className="radar-mark h-12 w-12 border border-accent-blue/30" />
           <div>
-            <p className="text-xs font-black uppercase tracking-widest text-accent-blue">Liquidation Pressure</p>
+            <p className="text-xs font-black tracking-widest text-accent-blue">청산 압력</p>
             <h3 className="mt-1 text-lg font-black text-white">청산 압력 확인 중</h3>
           </div>
           <Loader2 className="ml-auto animate-spin text-accent-blue" size={18} aria-hidden />
@@ -199,7 +199,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
         <div className="flex items-start gap-3">
           <div className="radar-mark h-14 w-14 shrink-0 border border-accent-blue/30" />
           <div>
-            <p className="text-xs font-black uppercase tracking-widest text-accent-blue">Liquidation Pressure</p>
+            <p className="text-xs font-black tracking-widest text-accent-blue">청산 압력</p>
             <h3 className="mt-1 text-lg font-black text-white">{compactSymbol(symbol)} 청산 압력 레이더</h3>
             <p className="mt-2 text-sm leading-6 text-slate-400 [word-break:keep-all]">{sideDescription(report.dominantSide)}</p>
           </div>

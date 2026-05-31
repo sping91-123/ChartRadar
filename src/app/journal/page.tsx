@@ -16,7 +16,6 @@ import {
   Target,
   Trash2
 } from "lucide-react";
-import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
 import { RadarTopNav } from "@/components/RadarTopNav";
 import {
@@ -947,7 +946,6 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
             </PanelCard>
           </div>
         </AppSurface>
-        <AppFooter />
       </div>
     </main>
   );

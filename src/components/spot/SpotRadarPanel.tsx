@@ -457,7 +457,7 @@ function SpotPriorityPanel({ payload, chartPayload }: { payload: SpotRadarPayloa
 
   return (
     <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
-      <SectionHeader title="현물 우선순위" />
+      <SectionHeader title="오늘 먼저 볼 코인" />
       <div className="grid gap-0 lg:grid-cols-2">
         {groups.map((group, index) => (
           <article key={group.label} className={`min-w-0 py-3 lg:px-3 ${index > 0 ? "border-t border-ui-line lg:border-l lg:border-t-0" : ""}`}>
@@ -991,7 +991,7 @@ export function SpotRadarPanel() {
 
       <PanelCard variant="report" padding="lg" className="space-y-4">
         <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
-          <SectionHeader title="현물 관찰 후보" />
+          <SectionHeader title="조건별 후보" />
           <ActionButton tone="ghost" className="whitespace-nowrap px-0" onClick={() => selectExchange(exchange === "upbit" ? "bithumb" : "upbit")}>
             <RefreshCw size={14} aria-hidden />
             거래소 전환
@@ -1020,7 +1020,7 @@ export function SpotRadarPanel() {
           <div className="flex min-h-44 flex-col items-center justify-center gap-3 border-t border-ui-line text-center">
             <Search size={22} className="text-ui-muted" aria-hidden />
             <p className="text-sm font-semibold text-ui-text">해당 조건의 후보가 아직 없습니다.</p>
-            <p className="text-xs text-ui-muted">필터를 전체로 바꾸거나 관심 알트 검색을 사용해 주세요.</p>
+            <p className="text-xs text-ui-muted">필터를 전체로 바꾸거나 관심 알트를 등록해 보세요.</p>
           </div>
         )}
       </PanelCard>

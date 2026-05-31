@@ -1,4 +1,3 @@
-import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
 import { MacroTicker } from "@/components/MacroTicker";
 import { RadarNewsPanel } from "@/components/RadarNewsPanel";
@@ -24,7 +23,6 @@ export default function NewsPage({ searchParams }: { searchParams?: { market?: s
             </section>
           }
         />
-        <AppFooter />
       </div>
     </main>
   );
