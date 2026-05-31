@@ -526,10 +526,10 @@ function PersonalSpotPanel({
   const selectedItem = payload?.items.find((item) => item.market === selectedMarket) ?? null;
 
   return (
-    <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <SectionHeader title="내 관심 알트" />
-        <ActionButton tone={selectedMarket ? "ghost" : "primary"} className={selectedMarket ? "px-0" : ""} onClick={onOpenPicker}>
+    <PanelCard variant="report" padding="md" className="space-y-2 border-y border-ui-line">
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <SectionHeader title="내 관심 알트" className="min-w-0 flex-1" />
+        <ActionButton tone={selectedMarket ? "ghost" : "primary"} className={`shrink-0 ${selectedMarket ? "min-h-8 px-0" : "min-h-8 px-2"}`} onClick={onOpenPicker}>
           <Search size={14} aria-hidden />
           {selectedMarket ? "변경" : "관심 알트 등록"}
         </ActionButton>
@@ -585,7 +585,7 @@ function PersonalSpotPanel({
         </div>
       ) : null}
 
-      <div className="border-t border-ui-line pt-3">
+      <div className="border-t border-ui-line pt-2">
         {!selectedMarket ? (
           <div className="flex min-h-32 flex-col items-center justify-center gap-3 text-center">
             <p className="text-sm font-semibold text-ui-text">관심 알트가 비어 있습니다.</p>
@@ -605,7 +605,7 @@ function PersonalSpotPanel({
             <p className="text-sm font-semibold text-ui-text">{error}</p>
           </div>
         ) : chart ? (
-          <article className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_12rem] sm:items-start">
+          <article className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_12rem] sm:items-start">
             <div className="min-w-0">
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -618,15 +618,15 @@ function PersonalSpotPanel({
                   {chartStatusLabel(chart.tone)}
                 </StatusPill>
               </div>
-              <div className="mt-3">
+              <div className="mt-2">
                 <SpotSparkline item={chart} />
               </div>
-              <div className="mt-2 grid grid-cols-3 gap-2 text-[10px] font-semibold text-ui-subtle">
+              <div className="mt-1.5 grid grid-cols-3 gap-2 text-[10px] font-semibold text-ui-subtle">
                 <span>{formatOptionalPercent(chart.changePercent)}</span>
                 <span className="text-center">{formatRangePosition(chart.rangePositionPercent)}</span>
                 <span className="text-right">{formatVolumeRatio(chart.volumeRatio)}</span>
               </div>
-              <SpotPlanGrid item={selectedItem} chart={chart} className="mt-3 border-t border-ui-line pt-3" />
+              <SpotPlanGrid item={selectedItem} chart={chart} className="mt-2 border-t border-ui-line pt-2" />
             </div>
             <div className="grid grid-cols-2 gap-3 text-right sm:grid-cols-1 sm:gap-2">
               <DataRow label="현재가" value={formatOptionalPrice(chartCurrentPrice(selectedItem, chart))} />
