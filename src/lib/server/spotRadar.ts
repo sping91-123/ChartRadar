@@ -29,7 +29,7 @@ const exchangeConfig: Record<SpotExchange, { label: string; baseUrl: string }> =
 };
 
 const CACHE_TTL_MS = 30 * 1000;
-const MAX_DISPLAY_ITEMS = 45;
+const MAX_DISPLAY_ITEMS = 120;
 const TICKER_CHUNK_SIZE = 70;
 
 const cache = new Map<SpotExchange, { cachedAt: number; payload: SpotRadarPayload }>();

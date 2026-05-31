@@ -292,13 +292,14 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
   const pathname = usePathname();
   const [calendar, setCalendar] = useState<MacroCalendarPayload>(fallbackCalendar);
   const [isPastExpanded, setIsPastExpanded] = useState(false);
+  const [isUpcomingExpanded, setIsUpcomingExpanded] = useState(false);
   const upcomingItems = getUpcomingItems(calendar.items);
   const releasedItems = getRecentReleasedItems(calendar.items);
   const previousReleasedItems = getPreviousReleasedItems(calendar.items);
   const fullReleasedItems = previousReleasedItems.length ? previousReleasedItems : releasedItems;
-  const visibleReleasedItems = fullReleasedItems.slice(0, 4);
+  const visibleReleasedItems = fullReleasedItems.slice(0, isPastExpanded ? 4 : 1);
   const nearestUpcoming = upcomingItems[0];
-  const featuredUpcomingItems = upcomingItems.slice(0, 8);
+  const featuredUpcomingItems = upcomingItems.slice(0, isUpcomingExpanded ? 8 : 2);
   const laterUpcomingItems = upcomingItems.slice(1, 7);
   const isNewsMacroReport = compact && pathname === "/news";
 
@@ -454,8 +455,8 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
           <p className="truncate text-[11px] font-bold text-slate-500">공식 발표 전후 자동 확인</p>
         </div>
       </div>
-      <div className="grid gap-2 p-2 lg:grid-cols-2">
-        <div className="order-2 border-t border-ui-line/60 pt-2 lg:border-t-0 lg:pt-0">
+      <div className="grid gap-2 p-2">
+        <div>
           <button
             type="button"
             onClick={() => setIsPastExpanded((value) => !value)}
@@ -465,7 +466,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
             <span className="min-w-0">
               <span className="block text-xs font-black text-ui-muted">지난 일정</span>
               <span className="mt-0.5 block truncate text-[11px] font-bold text-slate-500">
-                {fullReleasedItems.length ? `최근 발표 ${fullReleasedItems.length}개 묶음` : "확인된 지난 일정 없음"}
+                {fullReleasedItems.length ? (isPastExpanded ? `최근 발표 ${visibleReleasedItems.length}개` : "가장 최근 발표 1개") : "확인된 지난 일정 없음"}
               </span>
             </span>
             {isPastExpanded ? (
@@ -474,20 +475,35 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
               <ChevronRight size={16} className="shrink-0 text-slate-500" aria-hidden />
             )}
           </button>
-          {isPastExpanded ? (
-            visibleReleasedItems.length ? (
-              <div className="mt-2">
-                {visibleReleasedItems.map((item) => (
-                  <MacroNewsItem key={`${item.label}-${item.releaseAt}`} item={item} sectionLabel="발표" subdued />
-                ))}
-              </div>
-            ) : (
-              <p className="py-3 text-xs leading-5 text-ui-muted [word-break:keep-all]">공식 캘린더에서 확인되는 발표 내역이 이 영역에 표시됩니다.</p>
-            )
-          ) : null}
+          {visibleReleasedItems.length ? (
+            <div className="mt-2">
+              {visibleReleasedItems.map((item) => (
+                <MacroNewsItem key={`${item.label}-${item.releaseAt}`} item={item} sectionLabel="발표" subdued />
+              ))}
+            </div>
+          ) : (
+            <p className="py-3 text-xs leading-5 text-ui-muted [word-break:keep-all]">공식 캘린더에서 확인되는 발표 내역이 이 영역에 표시됩니다.</p>
+          )}
         </div>
-        <div className="order-1 rounded-ui border border-accent-blue/25 bg-accent-blue/[0.04] p-2">
-          <p className="text-xs font-black text-white">다가오는 일정</p>
+        <div className="rounded-ui border border-accent-blue/25 bg-accent-blue/[0.04] p-2">
+          <button
+            type="button"
+            onClick={() => setIsUpcomingExpanded((value) => !value)}
+            className="flex w-full items-center justify-between gap-2 px-1 pb-1 text-left"
+            aria-expanded={isUpcomingExpanded}
+          >
+            <span className="min-w-0">
+              <span className="block text-xs font-black text-white">다가오는 일정</span>
+              <span className="mt-0.5 block truncate text-[11px] font-bold text-slate-500">
+                {upcomingItems.length ? (isUpcomingExpanded ? `예정 ${featuredUpcomingItems.length}개` : "가까운 일정 2개") : "확인 중"}
+              </span>
+            </span>
+            {isUpcomingExpanded ? (
+              <ChevronDown size={16} className="shrink-0 text-slate-500" aria-hidden />
+            ) : (
+              <ChevronRight size={16} className="shrink-0 text-slate-500" aria-hidden />
+            )}
+          </button>
           {featuredUpcomingItems.length ? (
             featuredUpcomingItems.map((item) => (
               <MacroNewsItem key={`${item.label}-${item.releaseAt}`} item={item} sectionLabel="예정" />
@@ -496,10 +512,6 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
             <p className="py-3 text-xs leading-5 text-ui-muted [word-break:keep-all]">다가오는 주요 USD 일정을 확인하는 중입니다.</p>
           )}
         </div>
-      </div>
-      <div className="flex items-center gap-2 px-2 py-1.5 text-[11px] leading-5 text-slate-500">
-        <CalendarClock size={13} className="shrink-0 text-accent-blue" aria-hidden />
-        <span className="[word-break:keep-all]">{macroSourceNote(calendar.sourceNote)}</span>
       </div>
     </section>
   );

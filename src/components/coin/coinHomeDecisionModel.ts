@@ -37,6 +37,10 @@ function clamp(value: number, min = 0, max = 100) {
   return Math.min(max, Math.max(min, value));
 }
 
+function roundedScore(value: number) {
+  return Math.round(clamp(value, 0, 100) / 5) * 5;
+}
+
 function compactSymbol(symbol: string) {
   return symbol.replace("USDT.P", "").replace("USDT", "");
 }
@@ -122,7 +126,7 @@ function riskLabel({
 
 function nextConditionFor(state: CoinHomeDecisionState, leadership: CoinHomeLeadership, topRisk: string) {
   if (state === "하락 위험 큼") return "반등이 바로 꺾이는지 봅니다.";
-  if (state === "크게 흔들림") return `${topRisk}이 줄어드는지 봅니다.`;
+  if (state === "크게 흔들림") return topRisk === "큰 경고 없음" ? "가격 흔들림이 잦아드는지 봅니다." : `${topRisk}이 줄어드는지 봅니다.`;
   if (leadership === "알트도 강함") return "BTC가 버티고 알트 거래대금이 계속 붙는지 봅니다.";
   if (leadership === "BTC 중심") return "BTC 상승이 이어지고 알트가 따라오는지 봅니다.";
   if (state === "상승 가능성 높음") return "눌림 뒤 다시 오르는지 봅니다.";
@@ -170,7 +174,7 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
     stats.participationRatio >= 0.65 ? 12 : stats.participationRatio >= 0.5 ? 7 : stats.participationRatio >= 0.35 ? 2 : -5;
   const marketStrength = (fearGreed - 50) * 0.22 + trendBias(input.technical) + altParticipationBonus;
   const riskPenalty = derivatives + kimchiRisk + (overheat ? 10 : 0) + (weakTrend ? 18 : 0);
-  const readinessScore = Math.round(clamp(50 + marketStrength - riskPenalty, 0, 100));
+  const readinessScore = roundedScore(50 + marketStrength - riskPenalty);
   const topRisk = riskLabel({ weakTrend, constructiveTrend, btcChange, overheat, derivatives, kimchiRisk });
 
   const leadership = leadershipFor({
@@ -186,13 +190,19 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
   const direction: CoinHomeDirection =
     derivatives >= 24 || overheat ? "흔들림 주의" : weakTrend ? "하락 쪽" : constructiveTrend ? "상승 쪽" : "관망하기";
 
-  const state: CoinHomeDecisionState = weakTrend
+  const broadAltParticipation = stats.participationRatio >= 0.55 && stats.volumeBackedCount >= 2;
+  const strongUpsideSetup =
+    readinessScore >= 75 && constructiveTrend && broadAltParticipation && derivatives < 16 && !overheat && topRisk === "큰 경고 없음";
+  const clearDownsideSetup = weakTrend && (btcChange <= -1.5 || readinessScore <= 35 || stats.participationRatio < 0.35);
+  const unstableSetup = derivatives >= 28 || readinessScore <= 25 || (overheat && readinessScore < 60);
+
+  const state: CoinHomeDecisionState = clearDownsideSetup
     ? "하락 위험 큼"
-    : derivatives >= 24 || overheat || readinessScore < 30
+    : unstableSetup
       ? "크게 흔들림"
-      : readinessScore >= 70 && topRisk === "큰 경고 없음"
+      : strongUpsideSetup
         ? "상승 가능성 높음"
-        : readinessScore >= 50
+        : readinessScore >= 45
           ? "조금 더 지켜보기"
           : "관망하기";
 

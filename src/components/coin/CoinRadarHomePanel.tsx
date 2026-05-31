@@ -248,6 +248,8 @@ function MarketStrengthGauge({
   leftLabel,
   rightLabel,
   showCenter = false,
+  centerValue = 0,
+  centerLabel,
   showBar = true
 }: {
   label: string;
@@ -260,11 +262,13 @@ function MarketStrengthGauge({
   leftLabel?: string;
   rightLabel?: string;
   showCenter?: boolean;
+  centerValue?: number;
+  centerLabel?: string;
   showBar?: boolean;
 }) {
   const hasValue = value !== null && value !== undefined && Number.isFinite(value);
   const percent = hasValue ? clamp(((value - min) / (max - min)) * 100) : 0;
-  const centerPercent = clamp(((0 - min) / (max - min)) * 100);
+  const centerPercent = clamp(((centerValue - min) / (max - min)) * 100);
   const toneClass = visualToneClass[tone];
 
   return (
@@ -283,8 +287,13 @@ function MarketStrengthGauge({
         </div>
       ) : null}
       {showBar && (leftLabel || rightLabel) ? (
-        <div className="mt-1.5 flex justify-between gap-3 text-[10px] font-semibold text-ui-subtle">
+        <div className="relative mt-1.5 flex justify-between gap-3 text-[10px] font-semibold text-ui-subtle">
           <span>{leftLabel}</span>
+          {showCenter && centerLabel ? (
+            <span className="absolute -translate-x-1/2 whitespace-nowrap" style={{ left: `${centerPercent}%` }}>
+              {centerLabel}
+            </span>
+          ) : null}
           <span>{rightLabel}</span>
         </div>
       ) : null}
@@ -292,7 +301,15 @@ function MarketStrengthGauge({
   );
 }
 
-function TrendBreadthVisual({ report, label = "BTC 트렌드" }: { report: TechnicalRadarReport | null | undefined; label?: string }) {
+function TrendBreadthVisual({
+  report,
+  label = "BTC 트렌드",
+  mergeWithPrevious = false
+}: {
+  report: TechnicalRadarReport | null | undefined;
+  label?: string;
+  mergeWithPrevious?: boolean;
+}) {
   const bullish = report?.bullishCount ?? 0;
   const bearish = report?.bearishCount ?? 0;
   const neutral = report?.neutralCount ?? 0;
@@ -302,7 +319,7 @@ function TrendBreadthVisual({ report, label = "BTC 트렌드" }: { report: Techn
   const bearishWidth = total ? (bearish / total) * 100 : 0;
 
   return (
-    <article className="min-w-0 border-t border-ui-line py-3 md:[&:nth-child(-n+2)]:border-t-0">
+    <article className={`min-w-0 py-3 md:[&:nth-child(-n+2)]:border-t-0 ${mergeWithPrevious ? "" : "border-t border-ui-line"}`}>
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{label}</p>
@@ -343,8 +360,8 @@ function LongShortVisual({ report }: { report: LiquidationPressureReport | null 
         <span className="h-full bg-ui-short" style={{ width: `${shortWidth}%` }} aria-hidden />
       </div>
       <div className="mt-2 flex justify-between gap-3 text-[10px] font-semibold">
-        <span className="text-ui-long">상승 {formatPlainPercent(longPercent, 1)}</span>
-        <span className="text-ui-short">하락 {formatPlainPercent(shortPercent, 1)}</span>
+        <span className="text-ui-long">롱포지션 {formatPlainPercent(longPercent, 1)}</span>
+        <span className="text-ui-short">숏포지션 {formatPlainPercent(shortPercent, 1)}</span>
       </div>
     </article>
   );
@@ -740,14 +757,17 @@ export function CoinRadarHomePanel() {
             rightLabel="상승 과열"
           />
           <TrendBreadthVisual report={summary?.report} label="BTC 1H 트렌드" />
-          <TrendBreadthVisual report={summary?.report4h} label="BTC 4H 트렌드" />
+          <TrendBreadthVisual report={summary?.report4h} label="BTC 4H 트렌드" mergeWithPrevious />
           <MarketStrengthGauge
             label="BTC 도미넌스"
             value={summary?.marketMetrics?.btcDominancePercent}
             display={formatPlainPercent(summary?.marketMetrics?.btcDominancePercent)}
             tone="info"
-            leftLabel="낮음"
-            rightLabel="높음"
+            leftLabel="0%"
+            rightLabel="100%"
+            showCenter
+            centerValue={50}
+            centerLabel="50%"
           />
           <LongShortVisual report={summary?.btcFunding} />
           <MarketStrengthGauge
