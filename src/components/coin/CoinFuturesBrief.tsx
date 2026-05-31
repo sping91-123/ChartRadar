@@ -55,7 +55,7 @@ const briefItems: Record<
     },
     {
       label: "2. 후보 분류",
-      title: "관심 후보·기다림·고위험",
+      title: "관심 후보·관망하기·고위험",
       detail: "알트 기회/위험 필터에서 현재 후보가 어느 묶음인지 먼저 확인합니다.",
       tone: "watch",
       icon: Radar

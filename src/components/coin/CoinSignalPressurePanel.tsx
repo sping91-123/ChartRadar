@@ -94,7 +94,7 @@ const futuresPressureItems: Record<FuturesPressureMode, CoinSignalPressureItem[]
     {
       label: "충돌",
       title: "기회 신호와 회피 조건",
-      detail: "상승 후보처럼 보여도 위험 신호가 겹치면 기다림으로 낮춥니다.",
+      detail: "상승 후보처럼 보여도 위험 신호가 겹치면 관망하기로 낮춥니다.",
       tone: "risk",
       percent: 78
     }

@@ -19,7 +19,7 @@ const categoryFilters: Array<{ id: "all" | SpotRadarCategory; label: string }> =
   { id: "pullback", label: "눌림" },
   { id: "overheat", label: "과열" },
   { id: "pressure", label: "하락 위험" },
-  { id: "watch", label: "기다림" }
+  { id: "watch", label: "관망하기" }
 ];
 
 function formatKrw(value: number) {
@@ -84,7 +84,7 @@ function describeSpotItem(item: SpotRadarItem | null) {
 
 function displaySpotLabel(value: string) {
   return value
-    .replace(/관망/g, "기다림")
+    .replace(/관망/g, "관망하기")
     .replace(/추적/g, "관심")
     .replace(/추격/g, "따라가기")
     .replace(/하락압력/g, "하락 위험")
@@ -167,7 +167,7 @@ function buildSpotConflictItems(payload: SpotRadarPayload): CoinSignalConflictIt
       label: "거래대금 vs 방향",
       title: volumeLeader ? `${volumeLeader.symbol} · ${formatKrw(volumeLeader.quoteVolume24h)}` : "거래대금 확인 중",
       detail: volumeLeader
-        ? `거래대금 1위가 ${formatPercent(volumeLeader.changePercent)} 흐름입니다. 거래대금만 크고 방향이 약하면 기다림 후보로 둡니다.`
+        ? `거래대금 1위가 ${formatPercent(volumeLeader.changePercent)} 흐름입니다. 거래대금만 크고 방향이 약하면 관망하기 후보로 둡니다.`
         : "거래대금 리더가 확인되면 방향과 함께 비교합니다.",
       tone: volumeLeader && volumeLeader.changePercent >= 2.5 ? "long" : volumeLeader && volumeLeader.changePercent <= -2.5 ? "short" : "watch"
     },
@@ -375,8 +375,8 @@ function buildSpotPriorityGroups(payload: SpotRadarPayload, chartPayload: SpotCh
       items: followItems
     },
     {
-      label: "기다림",
-      title: "기다림 후보",
+      label: "관망하기",
+      title: "관망하기 후보",
       tone: "watch",
       items: watchItems
     }

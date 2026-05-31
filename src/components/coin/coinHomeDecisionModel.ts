@@ -10,8 +10,8 @@ export interface CoinHomeBoardItem {
   quoteVolume: number;
 }
 
-export type CoinHomeDecisionState = "기다림" | "조금 더 지켜보기" | "상승 가능성 높음" | "하락 위험 큼" | "크게 흔들림";
-export type CoinHomeDirection = "상승 쪽" | "하락 쪽" | "기다림" | "흔들림 주의";
+export type CoinHomeDecisionState = "관망하기" | "조금 더 지켜보기" | "상승 가능성 높음" | "하락 위험 큼" | "크게 흔들림";
+export type CoinHomeDirection = "상승 쪽" | "하락 쪽" | "관망하기" | "흔들림 주의";
 export type CoinHomeLeadership = "BTC 중심" | "알트도 강함" | "섞임" | "위험 줄이기";
 
 export interface CoinHomeDecisionSummary {
@@ -184,7 +184,7 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
   });
 
   const direction: CoinHomeDirection =
-    derivatives >= 24 || overheat ? "흔들림 주의" : weakTrend ? "하락 쪽" : constructiveTrend ? "상승 쪽" : "기다림";
+    derivatives >= 24 || overheat ? "흔들림 주의" : weakTrend ? "하락 쪽" : constructiveTrend ? "상승 쪽" : "관망하기";
 
   const state: CoinHomeDecisionState = weakTrend
     ? "하락 위험 큼"
@@ -194,7 +194,7 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
         ? "상승 가능성 높음"
         : readinessScore >= 50
           ? "조금 더 지켜보기"
-          : "기다림";
+          : "관망하기";
 
   const reason =
     leadership === "알트도 강함"
@@ -214,6 +214,6 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
     nextCondition: nextConditionFor(state, leadership, topRisk),
     reason,
     scoreLabel: "상승 가능성 점수",
-    scoreDetail: "높을수록 시장이 상승 쪽으로 움직일 가능성이 좋아 보입니다. 낮으면 기다리거나 하락 위험을 먼저 봅니다."
+    scoreDetail: "높을수록 시장이 상승 쪽으로 움직일 가능성이 좋아 보입니다. 낮으면 관망하거나 하락 위험을 먼저 봅니다."
   };
 }
