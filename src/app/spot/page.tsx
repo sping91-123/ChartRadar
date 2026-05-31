@@ -1,4 +1,3 @@
-import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
 import { RadarTopNav } from "@/components/RadarTopNav";
 import { SpotRadarPanel } from "@/components/spot/SpotRadarPanel";
@@ -10,7 +9,6 @@ export default function SpotPage() {
         <Header market="crypto" />
         <RadarTopNav market="crypto" />
         <SpotRadarPanel />
-        <AppFooter />
       </div>
     </main>
   );

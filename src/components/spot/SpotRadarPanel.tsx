@@ -1,7 +1,7 @@
 "use client";
 // 업비트/빗썸 KRW 현물 시장을 주문 기능 없이 관찰 후보 중심으로 보여줍니다.
 import { type FormEvent, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ArrowDownRight, ArrowUpRight, LineChart, RefreshCw, Search, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowDownRight, ArrowUpRight, HelpCircle, LineChart, RefreshCw, Search, X } from "lucide-react";
 import { ActionButton, DataRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import type { SpotChartRadarPayload, SpotChartSummary, SpotChartTone, SpotExchange, SpotRadarCategory, SpotRadarItem, SpotRadarPayload } from "@/lib/spotRadarTypes";
 
@@ -49,8 +49,61 @@ function formatOptionalPercent(value: number | null | undefined, digits = 1) {
 }
 
 function formatRangePosition(value: number | null | undefined) {
-  if (value === null || value === undefined || !Number.isFinite(value)) return "범위 확인 중";
-  return `범위 ${Math.round(value)}%`;
+  if (value === null || value === undefined || !Number.isFinite(value)) return "가격 위치 확인 중";
+  return `가격 위치 ${Math.round(value)}%`;
+}
+
+function formatVolumeRatio(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "거래대금 확인 중";
+  return `거래대금 ${value.toFixed(1)}배`;
+}
+
+function buildSpotPricePlan(item: SpotRadarItem | null | undefined, chart: SpotChartSummary | null | undefined) {
+  const current = item?.price ?? null;
+  if (current === null || !Number.isFinite(current) || current <= 0) {
+    return { firstPrice: null, secondPrice: null, invalidationPrice: null };
+  }
+
+  const rawSupport = chart?.supportPrice ?? item?.lowPrice ?? null;
+  const support = rawSupport !== null && Number.isFinite(rawSupport) && rawSupport > 0 ? Math.min(rawSupport, current * 0.998) : current * 0.975;
+  const distance = Math.max(current - support, current * 0.008);
+  const rangePosition = chart?.rangePositionPercent ?? (item?.rangePosition === null || item?.rangePosition === undefined ? null : item.rangePosition * 100);
+  const firstWeight = item?.category === "pullback" || (rangePosition !== null && rangePosition <= 45) ? 0.45 : 0.28;
+
+  return {
+    firstPrice: current - distance * firstWeight,
+    secondPrice: support,
+    invalidationPrice: support * 0.985
+  };
+}
+
+function SpotPlanGrid({
+  item,
+  chart,
+  className
+}: {
+  item: SpotRadarItem | null | undefined;
+  chart: SpotChartSummary | null | undefined;
+  className?: string;
+}) {
+  const plan = buildSpotPricePlan(item, chart);
+
+  return (
+    <div className={`grid grid-cols-3 gap-2 ${className ?? ""}`}>
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold text-ui-subtle">1차 볼 가격</p>
+        <p className="mt-1 truncate text-xs font-semibold text-ui-text">{formatOptionalPrice(plan.firstPrice)}</p>
+      </div>
+      <div className="min-w-0 text-center">
+        <p className="text-[10px] font-semibold text-ui-subtle">2차 볼 가격</p>
+        <p className="mt-1 truncate text-xs font-semibold text-ui-text">{formatOptionalPrice(plan.secondPrice)}</p>
+      </div>
+      <div className="min-w-0 text-right">
+        <p className="text-[10px] font-semibold text-ui-subtle">깨지면 제외</p>
+        <p className="mt-1 truncate text-xs font-semibold text-ui-short">{formatOptionalPrice(plan.invalidationPrice)}</p>
+      </div>
+    </div>
+  );
 }
 
 function categoryTone(category: SpotRadarCategory) {
@@ -197,15 +250,57 @@ function SpotSparkline({ item }: { item: SpotChartSummary }) {
 function SpotChartEvidencePanel({
   payload,
   loading,
-  error
+  error,
+  itemsByMarket
 }: {
   payload: SpotChartRadarPayload | null;
   loading: boolean;
   error: string | null;
+  itemsByMarket: Map<string, SpotRadarItem>;
 }) {
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+
   return (
     <section className="space-y-4 border-t border-ui-line pt-4">
-      <SectionHeader title="선택 후보 차트" />
+      <SectionHeader
+        title="선택 후보 차트"
+        action={
+          <ActionButton tone="ghost" className="px-0" onClick={() => setIsHelpOpen(true)} aria-label="차트 기준 보기">
+            <HelpCircle size={15} aria-hidden />
+            기준
+          </ActionButton>
+        }
+      />
+
+      {isHelpOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-sm border border-ui-line bg-ui-panel p-4 shadow-ui-elevated">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-base font-semibold text-ui-text">차트 기준</p>
+                <p className="mt-1 text-xs leading-5 text-ui-muted">짧은 현물 흐름을 빠르게 보기 위한 압축 표시입니다.</p>
+              </div>
+              <ActionButton tone="ghost" className="min-h-7 px-0" onClick={() => setIsHelpOpen(false)} aria-label="닫기">
+                <X size={16} aria-hidden />
+              </ActionButton>
+            </div>
+            <div className="mt-4 space-y-3 text-xs leading-5 text-ui-muted">
+              <p>
+                <span className="font-semibold text-ui-text">1H 차트</span>는 최근 1시간봉 흐름을 압축해서 보여줍니다.
+              </p>
+              <p>
+                <span className="font-semibold text-ui-text">가격 위치</span>는 최근 80시간 저점 0%, 고점 100% 기준 현재 위치입니다.
+              </p>
+              <p>
+                <span className="font-semibold text-ui-text">거래대금</span>은 최근 6시간 거래대금이 직전 평균보다 몇 배인지입니다.
+              </p>
+              <p>
+                <span className="font-semibold text-ui-text">1차/2차 볼 가격</span>은 현재가와 가까운 지지 구간을 기준으로 다시 볼 가격대입니다.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {loading ? (
         <div className="flex min-h-24 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
@@ -217,32 +312,37 @@ function SpotChartEvidencePanel({
         </div>
       ) : payload && payload.items.length > 0 ? (
         <div className="grid gap-0 md:grid-cols-2">
-          {payload.items.map((item, index) => (
-            <article
-              key={`${item.exchange}-${item.market}`}
-              className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0" : ""} ${
-                index % 2 === 1 ? "md:border-l md:border-ui-line" : ""
-              } ${index > 1 ? "md:border-t md:border-ui-line" : ""}`}
-            >
-              <div className="flex min-w-0 items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{item.symbol} · 1H</p>
-                  <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{item.structureLabel}</p>
+          {payload.items.map((item, index) => {
+            const spotItem = itemsByMarket.get(item.market) ?? null;
+
+            return (
+              <article
+                key={`${item.exchange}-${item.market}`}
+                className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0" : ""} ${
+                  index % 2 === 1 ? "md:border-l md:border-ui-line" : ""
+                } ${index > 1 ? "md:border-t md:border-ui-line" : ""}`}
+              >
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{item.symbol} · 1H</p>
+                    <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{item.structureLabel}</p>
+                  </div>
+                  <StatusPill tone={item.tone} icon={LineChart} className="shrink-0">
+                    {chartStatusLabel(item.tone)}
+                  </StatusPill>
                 </div>
-                <StatusPill tone={item.tone} icon={LineChart} className="shrink-0">
-                  {chartStatusLabel(item.tone)}
-                </StatusPill>
-              </div>
-              <div className="mt-3">
-                <SpotSparkline item={item} />
-              </div>
-              <div className="mt-2 grid grid-cols-3 gap-2 text-[10px] font-semibold text-ui-subtle">
-                <span>{formatOptionalPercent(item.changePercent)}</span>
-                <span className="text-center">{formatRangePosition(item.rangePositionPercent)}</span>
-                <span className="text-right">거래 {item.volumeRatio === null ? "-" : `${item.volumeRatio.toFixed(1)}x`}</span>
-              </div>
-            </article>
-          ))}
+                <div className="mt-3">
+                  <SpotSparkline item={item} />
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-2 text-[10px] font-semibold text-ui-subtle">
+                  <span>{formatOptionalPercent(item.changePercent)}</span>
+                  <span className="text-center">{formatRangePosition(item.rangePositionPercent)}</span>
+                  <span className="text-right">{formatVolumeRatio(item.volumeRatio)}</span>
+                </div>
+                <SpotPlanGrid item={spotItem} chart={item} className="mt-3 border-t border-ui-line pt-3" />
+              </article>
+            );
+          })}
         </div>
       ) : (
         <div className="flex min-h-24 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
@@ -289,7 +389,7 @@ function chartPriorityBoost(chart: SpotChartSummary | null) {
 
 function priorityReason(item: SpotRadarItem, chart: SpotChartSummary | null) {
   const chartText = chart
-    ? `${chart.structureLabel} · ${formatRangePosition(chart.rangePositionPercent)} · 거래 ${chart.volumeRatio === null ? "-" : `${chart.volumeRatio.toFixed(1)}x`}`
+    ? `${chart.structureLabel} · ${formatRangePosition(chart.rangePositionPercent)} · ${formatVolumeRatio(chart.volumeRatio)}`
     : "차트 확인 중";
   return `${displaySpotLabel(item.categoryLabel)} · ${chartText}`;
 }
@@ -478,11 +578,11 @@ function PersonalSpotPanel({
               <div className="mt-2 grid grid-cols-3 gap-2 text-[10px] font-semibold text-ui-subtle">
                 <span>{formatOptionalPercent(chart.changePercent)}</span>
                 <span className="text-center">{formatRangePosition(chart.rangePositionPercent)}</span>
-                <span className="text-right">거래 {chart.volumeRatio === null ? "-" : `${chart.volumeRatio.toFixed(1)}x`}</span>
+                <span className="text-right">{formatVolumeRatio(chart.volumeRatio)}</span>
               </div>
+              <SpotPlanGrid item={selectedItem} chart={chart} className="mt-3 border-t border-ui-line pt-3" />
             </div>
             <div className="grid grid-cols-2 gap-3 text-right sm:grid-cols-1 sm:gap-2">
-              <DataRow label="지지" value={formatOptionalPrice(chart.supportPrice)} />
               <DataRow label="저항" value={formatOptionalPrice(chart.resistancePrice)} />
               <DataRow label="레이더 후보" value={selectedItem ? displaySpotLabel(selectedItem.categoryLabel) : "직접 선택"} />
             </div>
@@ -520,13 +620,14 @@ function SpotRow({ item, chart }: { item: SpotRadarItem; chart: SpotChartSummary
               <div className="min-w-0">
                 <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">차트</p>
                 <p className="mt-1 text-xs font-semibold leading-5 text-ui-text [word-break:keep-all]">
-                  {chart.structureLabel} · {formatRangePosition(chart.rangePositionPercent)} · 거래 {chart.volumeRatio === null ? "-" : `${chart.volumeRatio.toFixed(1)}x`}
+                  {chart.structureLabel} · {formatRangePosition(chart.rangePositionPercent)} · {formatVolumeRatio(chart.volumeRatio)}
                 </p>
               </div>
               <StatusPill tone={chart.tone} icon={LineChart} className="shrink-0">
                 {chartStatusLabel(chart.tone)}
               </StatusPill>
             </div>
+            <SpotPlanGrid item={item} chart={chart} className="mt-3" />
           </div>
         ) : null}
       </div>
@@ -703,6 +804,7 @@ export function SpotRadarPanel() {
     return counts;
   }, [payload]);
   const chartByMarketForRows = useMemo(() => chartLookup(chartPayload), [chartPayload]);
+  const spotItemsByMarket = useMemo(() => new Map((payload?.items ?? []).map((item) => [item.market, item])), [payload]);
   const watchSuggestions = useMemo(() => {
     if (!payload) return [];
     const normalizedQuery = watchQuery.trim().toUpperCase().replace(/^KRW-?/, "");
@@ -792,7 +894,7 @@ export function SpotRadarPanel() {
           </ActionButton>
         </div>
 
-        {payload ? <SpotChartEvidencePanel payload={chartPayload} loading={isChartLoading} error={chartError} /> : null}
+        {payload ? <SpotChartEvidencePanel payload={chartPayload} loading={isChartLoading} error={chartError} itemsByMarket={spotItemsByMarket} /> : null}
 
         {isLoading ? (
           <div className="flex min-h-44 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
@@ -834,15 +936,6 @@ export function SpotRadarPanel() {
       />
 
       {payload ? <SpotPriorityPanel payload={payload} chartPayload={chartPayload} /> : null}
-
-      <PanelCard variant="report" padding="md">
-        <div className="flex items-start gap-3 text-sm text-ui-muted">
-          <ShieldCheck size={18} className="mt-0.5 shrink-0 text-ui-brand" aria-hidden />
-          <p>
-            public 시세만 사용합니다. 주문, 계정, API key, 보유 자산 조회는 포함하지 않습니다.
-          </p>
-        </div>
-      </PanelCard>
     </div>
   );
 }
