@@ -202,6 +202,7 @@ function analyzeCandles(exchange: SpotExchange, market: string, candles: Candle[
     symbol: market.replace("KRW-", ""),
     timeframe: "1h",
     structureLabel,
+    currentPrice: latest.close,
     rangePositionPercent,
     changePercent,
     volumeRatio,

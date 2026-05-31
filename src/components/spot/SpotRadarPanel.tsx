@@ -62,7 +62,7 @@ function formatVolumeRatio(value: number | null | undefined) {
 }
 
 function buildSpotPricePlan(item: SpotRadarItem | null | undefined, chart: SpotChartSummary | null | undefined) {
-  const current = item?.price ?? null;
+  const current = item?.price ?? chart?.currentPrice ?? null;
   if (current === null || !Number.isFinite(current) || current <= 0) {
     return { firstPrice: null, secondPrice: null, invalidationPrice: null };
   }
@@ -78,6 +78,10 @@ function buildSpotPricePlan(item: SpotRadarItem | null | undefined, chart: SpotC
     secondPrice: support,
     invalidationPrice: support * 0.985
   };
+}
+
+function chartCurrentPrice(item: SpotRadarItem | null | undefined, chart: SpotChartSummary | null | undefined) {
+  return item?.price ?? chart?.currentPrice ?? null;
 }
 
 function SpotPlanGrid({
@@ -245,7 +249,7 @@ function SpotSparkline({ item }: { item: SpotChartSummary }) {
 
   return (
     <svg className={`h-10 w-full ${chartToneClass[item.tone]}`} viewBox="0 0 100 36" preserveAspectRatio="none" aria-hidden>
-      <polyline points={points} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      <polyline points={points} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
     </svg>
   );
 }
@@ -329,6 +333,7 @@ function SpotChartEvidencePanel({
                   <div className="min-w-0">
                     <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{item.symbol} · 1H</p>
                     <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{item.structureLabel}</p>
+                    <p className="mt-1 text-xs font-semibold text-ui-muted">현재가 {formatOptionalPrice(chartCurrentPrice(spotItem, item))}</p>
                   </div>
                   <StatusPill tone={item.tone} icon={LineChart} className="shrink-0">
                     {chartStatusLabel(item.tone)}
@@ -624,6 +629,7 @@ function PersonalSpotPanel({
               <SpotPlanGrid item={selectedItem} chart={chart} className="mt-3 border-t border-ui-line pt-3" />
             </div>
             <div className="grid grid-cols-2 gap-3 text-right sm:grid-cols-1 sm:gap-2">
+              <DataRow label="현재가" value={formatOptionalPrice(chartCurrentPrice(selectedItem, chart))} />
               <DataRow label="저항" value={formatOptionalPrice(chart.resistancePrice)} />
               <DataRow label="레이더 후보" value={selectedItem ? displaySpotLabel(selectedItem.categoryLabel) : "직접 선택"} />
             </div>
