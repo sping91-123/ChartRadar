@@ -186,18 +186,18 @@ function riskFor(changePercent: number) {
 
 function checkFor(changePercent: number) {
   if (changePercent >= 2.5) return "오른 뒤에도 거래대금이 붙는지 봅니다.";
-  if (changePercent <= -2.5) return "반등이 바로 꺾이는지 봅니다.";
+  if (changePercent <= -2.5) return "반등이 오래 버티는지 봅니다.";
   return "BTC 흐름과 큰 뉴스 전후 움직임을 봅니다.";
 }
 
 function conclusionText(decision: CoinHomeDecisionSummary | undefined) {
   if (!decision) return "시장 데이터를 확인하는 중입니다.";
-  if (decision.state === "하락 위험 큼") return "하락 위험이 큽니다. 반등이 바로 꺾이는지 먼저 봅니다.";
+  if (decision.state === "하락 위험 큼") return "하락 위험이 큽니다. 반등이 오래 버티는지 먼저 봅니다.";
   if (decision.state === "크게 흔들림") {
     return "가격이 크게 흔들릴 수 있습니다. 무리하게 방향을 정하지 않습니다.";
   }
   if (decision.state === "상승 가능성 높음") {
-    return "상승 가능성이 높습니다. 눌림 뒤 다시 오르는지 봅니다.";
+    return "상승 가능성이 높습니다. 잠깐 밀린 뒤 다시 오르는지 봅니다.";
   }
   if (decision.state === "조금 더 지켜보기") {
     return "방향은 보이지만 아직 한 번 더 확인이 필요합니다.";
@@ -555,7 +555,7 @@ export function CoinRadarHomePanel() {
       <PanelCard variant="flat" padding="none" className="space-y-4">
         <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1">
           <div className="min-w-0">
-            <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">오늘의 결론</p>
+            <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">지금 시장 판단</p>
             <h2 className="text-ui-heading font-semibold tracking-tight text-ui-text">{summary?.decision.state}</h2>
           </div>
           <ActionButton tone="ghost" className="min-h-7 shrink-0 px-0" onClick={() => void load()}>

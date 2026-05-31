@@ -126,8 +126,10 @@ function stripMarkdown(value: string) {
     .replace(/`([^`]+)`/g, "$1")
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
     .replace(/[가-힣A-Za-z0-9,·ㆍ\s]{0,120}기사 묶음에서 확인되는 흐름입니다\.?/g, "공개 뉴스와 시장 반응을 함께 보면")
-    .replace(/상방 우호 \d+개,\s*하방 주의 \d+개,\s*중립 확인 \d+개로 정리됩니다\./g, "상방과 하방 재료가 함께 정리됩니다.")
+    .replace(/상방 우호 \d+개,\s*하방 주의 \d+개,\s*중립 확인 \d+개로 정리됩니다\./g, "상승 재료와 하락 재료가 함께 정리됩니다.")
     .replace(/상방 \d+\s*[·ㆍ]\s*하방 \d+\s*[·ㆍ]\s*중립 \d+/g, "")
+    .replace(/상방/g, "상승")
+    .replace(/하방/g, "하락")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -199,7 +201,7 @@ function sourceReferenceItems(items: RadarNewsItem[]) {
 function directionBadge(direction: RadarNewsDirection) {
   if (direction === "bullish") {
     return {
-      label: "상방 우세",
+      label: "상승 재료",
       caption: "",
       icon: TrendingUp,
       badge: "border-signal-success/30 bg-signal-success/10 text-signal-success",
@@ -208,7 +210,7 @@ function directionBadge(direction: RadarNewsDirection) {
   }
   if (direction === "bearish") {
     return {
-      label: "하방 주의",
+      label: "하락 재료",
       caption: "",
       icon: TrendingDown,
       badge: "border-signal-danger/30 bg-signal-danger/10 text-signal-danger",
@@ -240,25 +242,25 @@ function moodTone(mood: Mood): "long" | "short" | "watch" | "risk" {
 function moodCopy(mood: Mood) {
   if (mood === "up") {
     return {
-      label: "상방 우세",
+      label: "상승 재료 우세",
       caption: "",
       icon: TrendingUp,
       badge: "border-signal-success/30 bg-signal-success/10 text-signal-success",
       panel: "border-signal-success/20 bg-signal-success/10",
       risk: "위험자산 심리 개선",
-      chartTone: "상방 재료 우세",
+      chartTone: "상승 재료 우세",
       subTone: "선별 강세"
     };
   }
   if (mood === "down") {
     return {
-      label: "하방 주의",
+      label: "하락 재료 주의",
       caption: "",
       icon: TrendingDown,
       badge: "border-signal-danger/30 bg-signal-danger/10 text-signal-danger",
       panel: "border-signal-danger/20 bg-signal-danger/10",
       risk: "위험자산 심리 약화",
-      chartTone: "하방 압력 점검",
+      chartTone: "하락 압력 점검",
       subTone: "동반 약세 주의"
     };
   }

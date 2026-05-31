@@ -55,7 +55,7 @@ const futuresPressureItems: Record<FuturesPressureMode, CoinSignalPressureItem[]
     },
     {
       label: "볼 조건",
-      title: "눌림 뒤 재상승·반등 실패",
+      title: "가격 조정 후 재상승·반등 실패",
       detail: "가격이 같은 방향을 유지하는지 확인할 조건만 남깁니다.",
       tone: "watch",
       percent: 56

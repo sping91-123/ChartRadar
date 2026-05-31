@@ -120,16 +120,22 @@ function riskLabel({
   if (weakTrend) return "BTC 약세 계속";
   if (derivatives >= 20) return "선물 쏠림 큼";
   if (overheat) return "가격 과열";
-  if (kimchiRisk >= 7) return "김프/환율 부담";
+  if (kimchiRisk >= 7) return "김치 프리미엄/환율 부담";
   return "큰 경고 없음";
 }
 
 function nextConditionFor(state: CoinHomeDecisionState, leadership: CoinHomeLeadership, topRisk: string) {
-  if (state === "하락 위험 큼") return "반등이 바로 꺾이는지 봅니다.";
-  if (state === "크게 흔들림") return topRisk === "큰 경고 없음" ? "가격 흔들림이 잦아드는지 봅니다." : `${topRisk}이 줄어드는지 봅니다.`;
+  if (state === "하락 위험 큼") return "반등이 오래 버티는지 봅니다.";
+  if (state === "크게 흔들림") {
+    if (topRisk === "선물 쏠림 큼") return "선물 포지션 쏠림이 줄어드는지 봅니다.";
+    if (topRisk === "가격 과열") return "급등 과열이 식는지 봅니다.";
+    if (topRisk === "김치 프리미엄/환율 부담") return "김치 프리미엄과 환율 부담이 낮아지는지 봅니다.";
+    if (topRisk === "BTC 약세 계속" || topRisk === "BTC 상승 추세 이탈") return "BTC가 다시 버티는지 봅니다.";
+    return "가격 흔들림이 잦아드는지 봅니다.";
+  }
   if (leadership === "알트도 강함") return "BTC가 버티고 알트 거래대금이 계속 붙는지 봅니다.";
   if (leadership === "BTC 중심") return "BTC 상승이 이어지고 알트가 따라오는지 봅니다.";
-  if (state === "상승 가능성 높음") return "눌림 뒤 다시 오르는지 봅니다.";
+  if (state === "상승 가능성 높음") return "잠깐 밀린 뒤 다시 오르는지 봅니다.";
   return "BTC 흐름과 큰 뉴스 전후 움직임을 봅니다.";
 }
 

@@ -130,10 +130,10 @@ function finalViewTone(finalView: RadarFinalView): SummaryMetricTone {
 }
 
 function compactFinalViewLabel(finalView: RadarFinalView) {
-  if (finalView === "long_bias") return "상방 우위";
-  if (finalView === "short_bias") return "하방 우위";
+  if (finalView === "long_bias") return "상승 쪽 우세";
+  if (finalView === "short_bias") return "하락 쪽 우세";
   if (finalView === "high_risk") return "리스크 확인";
-  return "관망 우위";
+  return "방향 애매함";
 }
 
 function riskStateLabel(insight: RadarInsight) {
@@ -149,7 +149,7 @@ function compactLine(value: string | undefined, maxLength = 92) {
 }
 
 function defaultNextChecks(insight: RadarInsight, isPro: boolean) {
-  if (!isPro) return ["조건 충족 전 대기", "세부 추적 조건은 Pro에서 확인"];
+  if (!isPro) return ["새 포지션 기준 아직 부족", "구체 가격 기준은 Pro에서 확인"];
   if (insight.finalView === "long_bias") return [insight.longConditions[0], insight.invalidationConditions[0]].filter(Boolean);
   if (insight.finalView === "short_bias") return [insight.shortConditions[0], insight.invalidationConditions[0]].filter(Boolean);
   if (insight.finalView === "high_risk") return [insight.risks[0], insight.invalidationConditions[0]].filter(Boolean);
@@ -180,7 +180,7 @@ function CompactRadarInsightPanel({
       <SectionHeader
         eyebrow="오늘 먼저 볼 판단"
         title={insight.symbol}
-        description={`${insight.timeframe ?? "종합"} · 종합`}
+        description={insight.timeframe ? `${insight.timeframe} 기준` : "종합 기준"}
       />
 
       <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">

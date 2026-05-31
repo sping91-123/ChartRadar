@@ -16,9 +16,9 @@ const exchanges: Array<{ id: SpotExchange; label: string; logo: string }> = [
 
 const categoryFilters: Array<{ id: "all" | BuySpotCategory; label: string }> = [
   { id: "all", label: "전체" },
-  { id: "volume", label: "거래대금" },
-  { id: "gainer", label: "상승률" },
-  { id: "pullback", label: "눌림" }
+  { id: "volume", label: "거래 많은 코인" },
+  { id: "gainer", label: "많이 오른 코인" },
+  { id: "pullback", label: "가격 내려온 코인" }
 ];
 
 const spotExchangeStorageKey = "chart-radar.spot.exchange";
@@ -179,6 +179,8 @@ function spotMarketMoodClass(payload: SpotRadarPayload | null) {
 
 function displaySpotLabel(value: string) {
   return value
+    .replace(/눌림 대기/g, "가격 내려오면 확인")
+    .replace(/눌림/g, "가격 내려옴")
     .replace(/관망/g, "관망하기")
     .replace(/추적/g, "관심")
     .replace(/추격/g, "따라가기")
@@ -445,7 +447,7 @@ function buildSpotPriorityGroups(payload: SpotRadarPayload, chartPayload: SpotCh
     },
     {
       label: "지켜볼 후보",
-      title: "눌림 뒤 다시 볼 후보",
+      title: "가격 내려오면 다시 볼 후보",
       tone: "watch",
       items: watchItems
     }

@@ -32,8 +32,8 @@ const briefItems: Record<
     },
     {
       label: "3. 볼 조건",
-      title: "눌림 유지 또는 반등 실패",
-      detail: "상승 쪽은 눌림 뒤 다시 오르는지, 하락 쪽은 반등이 바로 꺾이는지 봅니다.",
+      title: "가격 조정 후 재상승 또는 반등 실패",
+      detail: "상승 쪽은 잠깐 밀린 뒤 다시 오르는지, 하락 쪽은 반등이 오래 버티는지 봅니다.",
       tone: "watch",
       icon: Gauge
     },
