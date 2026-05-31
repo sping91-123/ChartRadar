@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CalendarClock, ChevronRight, ExternalLink, Minus, Radio, TrendingDown, TrendingUp } from "lucide-react";
+import { CalendarClock, ChevronDown, ChevronRight, ExternalLink, Minus, Radio, TrendingDown, TrendingUp } from "lucide-react";
 import { type MacroEventItem } from "@/data/macroEvents";
 import { getMacroCalendarFallbackPayload, type MacroCalendarPayload } from "@/lib/macroCalendar";
 import { StatusPill } from "@/components/ui/DesignPrimitives";
@@ -291,10 +291,12 @@ function MacroNewsItem({ item, sectionLabel, subdued = false }: { item: MacroEve
 export function MacroTicker({ compact = false, market = "crypto" }: { compact?: boolean; market?: "crypto" | "stocks" } = {}) {
   const pathname = usePathname();
   const [calendar, setCalendar] = useState<MacroCalendarPayload>(fallbackCalendar);
+  const [isPastExpanded, setIsPastExpanded] = useState(false);
   const upcomingItems = getUpcomingItems(calendar.items);
   const releasedItems = getRecentReleasedItems(calendar.items);
   const previousReleasedItems = getPreviousReleasedItems(calendar.items);
   const fullReleasedItems = previousReleasedItems.length ? previousReleasedItems : releasedItems;
+  const visibleReleasedItems = fullReleasedItems.slice(0, 4);
   const nearestUpcoming = upcomingItems[0];
   const featuredUpcomingItems = upcomingItems.slice(0, 8);
   const laterUpcomingItems = upcomingItems.slice(1, 7);
@@ -454,14 +456,35 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
       </div>
       <div className="grid gap-2 p-2 lg:grid-cols-2">
         <div className="order-2 border-t border-ui-line/60 pt-2 lg:border-t-0 lg:pt-0">
-          <p className="text-xs font-black text-white">최근/지난 발표</p>
-          {fullReleasedItems.length ? (
-            fullReleasedItems.slice(0, 4).map((item) => (
-              <MacroNewsItem key={`${item.label}-${item.releaseAt}`} item={item} sectionLabel="발표" />
-            ))
-          ) : (
-            <p className="py-3 text-xs leading-5 text-ui-muted [word-break:keep-all]">공식 캘린더에서 확인되는 발표 내역이 이 영역에 표시됩니다.</p>
-          )}
+          <button
+            type="button"
+            onClick={() => setIsPastExpanded((value) => !value)}
+            className="flex w-full items-center justify-between gap-2 rounded-ui border border-ui-line/60 bg-white/[0.02] px-3 py-2 text-left transition hover:bg-white/[0.04]"
+            aria-expanded={isPastExpanded}
+          >
+            <span className="min-w-0">
+              <span className="block text-xs font-black text-ui-muted">지난 일정</span>
+              <span className="mt-0.5 block truncate text-[11px] font-bold text-slate-500">
+                {fullReleasedItems.length ? `최근 발표 ${fullReleasedItems.length}개 묶음` : "확인된 지난 일정 없음"}
+              </span>
+            </span>
+            {isPastExpanded ? (
+              <ChevronDown size={16} className="shrink-0 text-slate-500" aria-hidden />
+            ) : (
+              <ChevronRight size={16} className="shrink-0 text-slate-500" aria-hidden />
+            )}
+          </button>
+          {isPastExpanded ? (
+            visibleReleasedItems.length ? (
+              <div className="mt-2">
+                {visibleReleasedItems.map((item) => (
+                  <MacroNewsItem key={`${item.label}-${item.releaseAt}`} item={item} sectionLabel="발표" subdued />
+                ))}
+              </div>
+            ) : (
+              <p className="py-3 text-xs leading-5 text-ui-muted [word-break:keep-all]">공식 캘린더에서 확인되는 발표 내역이 이 영역에 표시됩니다.</p>
+            )
+          ) : null}
         </div>
         <div className="order-1 rounded-ui border border-accent-blue/25 bg-accent-blue/[0.04] p-2">
           <p className="text-xs font-black text-white">다가오는 일정</p>
