@@ -1441,10 +1441,10 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
       id="basic-coins"
       className={
         isMajorScreen
-          ? "scroll-mt-24 rounded-ui border border-ui-line bg-ui-panel p-4 pb-6 text-ui-text shadow-ui-panel sm:p-5"
+          ? "scroll-mt-24 border-y border-ui-line px-0 py-4 pb-6 text-ui-text sm:py-5"
           : altOnly
-            ? "scroll-mt-24 rounded-ui border border-ui-line bg-ui-panel p-4 pb-6 text-ui-text shadow-ui-panel sm:p-5"
-          : "scroll-mt-24 rounded-ui border border-ui-line bg-ui-panel p-4 pb-6 shadow-ui-panel sm:p-5"
+            ? "scroll-mt-24 border-y border-ui-line px-0 py-4 pb-6 text-ui-text sm:py-5"
+          : "scroll-mt-24 border-y border-ui-line px-0 py-4 pb-6 sm:py-5"
       }
     >
       <CryptoControlBar

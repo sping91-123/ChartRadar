@@ -7,8 +7,8 @@ const futuresTabs = [
 
 export function CoinFuturesSwitch({ active }: { active: "major" | "alts" }) {
   return (
-    <nav className="rounded-ui border border-ui-line bg-ui-panel p-1" aria-label="코인 선물 내부 탭">
-      <div className="grid grid-cols-2 gap-1">
+    <nav className="border-y border-ui-line py-1" aria-label="코인 선물 내부 탭">
+      <div className="grid grid-cols-2 gap-0">
         {futuresTabs.map((tab) => {
           const isActive = tab.id === active;
 
@@ -16,8 +16,8 @@ export function CoinFuturesSwitch({ active }: { active: "major" | "alts" }) {
             <Link
               key={tab.id}
               href={tab.href}
-              className={`min-w-0 rounded-ui-sm px-2 py-2 text-center transition ${
-                isActive ? "bg-ui-active text-ui-activeText" : "text-ui-muted hover:bg-ui-inset hover:text-ui-text"
+              className={`min-w-0 border-b px-2 py-2 text-center transition ${
+                isActive ? "border-ui-brand text-ui-text" : "border-transparent text-ui-muted hover:text-ui-text"
               }`}
             >
               <span className="block text-sm font-semibold leading-5 tracking-tight">{tab.label}</span>

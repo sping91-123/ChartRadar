@@ -30,7 +30,7 @@ export function CryptoControlBar({
   return (
     <div
       data-testid="crypto-control-bar"
-      className="sticky top-0 z-40 -mx-4 border-b border-ui-line bg-ui-panel px-4 py-2 shadow-none backdrop-blur sm:-mx-5 sm:px-5"
+      className="sticky top-0 z-40 border-b border-ui-line bg-ui-canvas py-2 shadow-none backdrop-blur"
     >
       <div className="mx-auto max-w-5xl">
         <CryptoRadarControlTabs

@@ -175,14 +175,14 @@ export function SpotRadarPanel() {
           <DataRow label="평균 등락" value={payload ? formatPercent(payload.summary.averageChangePercent) : "-"} />
         </div>
 
-        <div className="flex flex-wrap gap-1.5 rounded-ui-sm border border-ui-line bg-ui-inset p-1">
+        <div className="flex flex-wrap gap-1.5 border-y border-ui-line py-1">
           {categoryFilters.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => setFilter(item.id)}
-              className={`min-h-8 rounded-ui-sm px-2 text-xs font-semibold transition ${
-                filter === item.id ? "bg-ui-active text-ui-activeText" : "text-ui-muted hover:bg-ui-panel hover:text-ui-text"
+              className={`min-h-8 border-b px-2 text-xs font-semibold transition ${
+                filter === item.id ? "border-b border-ui-brand text-ui-text" : "text-ui-muted hover:text-ui-text"
               }`}
             >
               {item.label}

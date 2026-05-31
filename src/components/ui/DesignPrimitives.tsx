@@ -27,16 +27,16 @@ const surfaceVariantClass: Record<SurfaceVariant, Record<Tone, string>> = {
     critical: "bg-transparent text-ui-risk"
   },
   report: {
-    panel: "border border-ui-line bg-ui-panel text-ui-text shadow-ui-panel",
-    elevated: "border border-ui-lineStrong bg-ui-elevated text-ui-text shadow-ui-elevated",
-    inset: "border border-ui-line bg-ui-inset text-ui-muted shadow-none",
-    critical: "border border-ui-line bg-ui-panel text-ui-risk shadow-ui-panel"
+    panel: "border-y border-ui-line bg-transparent text-ui-text shadow-none",
+    elevated: "border-y border-ui-lineStrong bg-transparent text-ui-text shadow-none",
+    inset: "border-y border-ui-line bg-transparent text-ui-muted shadow-none",
+    critical: "border-y border-ui-line bg-transparent text-ui-risk shadow-none"
   },
   list: {
-    panel: "border border-ui-line bg-ui-panel text-ui-text",
-    elevated: "border border-ui-lineStrong bg-ui-elevated text-ui-text",
-    inset: "border border-ui-line bg-ui-inset text-ui-muted",
-    critical: "border border-ui-line bg-ui-panel text-ui-risk"
+    panel: "border-y border-ui-line bg-transparent text-ui-text",
+    elevated: "border-y border-ui-lineStrong bg-transparent text-ui-text",
+    inset: "border-y border-ui-line bg-transparent text-ui-muted",
+    critical: "border-y border-ui-line bg-transparent text-ui-risk"
   }
 };
 
@@ -54,7 +54,7 @@ const radiusClass: Record<SurfaceRadius, string> = {
 };
 
 function defaultRadiusForVariant(variant: SurfaceVariant): SurfaceRadius {
-  return variant === "flat" ? "none" : "md";
+  return variant === "flat" || variant === "report" || variant === "list" ? "none" : "md";
 }
 
 interface AppSurfaceProps {

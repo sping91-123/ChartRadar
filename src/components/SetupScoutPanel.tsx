@@ -976,7 +976,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
   const canShowAltProDetails = !isAltFilterMode || isPaid;
 
   return (
-    <section className="rounded-ui border border-ui-line bg-ui-panel p-4 shadow-ui-panel sm:p-5">
+    <section className="border-y border-ui-line py-4 sm:py-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <div className="grid h-10 w-10 shrink-0 place-items-center text-accent-blue">

@@ -743,13 +743,13 @@ export function RadarNewsPanel({ market = "crypto", afterBriefing }: { market?: 
       </PanelCard>
 
       {error ? (
-        <AppSurface tone="inset" padding="sm" className="border-rose-400/24 bg-rose-400/10 text-sm font-semibold text-ui-short shadow-none">
+        <AppSurface variant="flat" tone="critical" padding="none" className="border-y border-rose-400/24 py-3 text-sm font-semibold text-ui-short shadow-none">
           {error}
         </AppSurface>
       ) : null}
 
       {isInitialLoading ? (
-        <AppSurface tone="inset" padding="md" className="text-sm font-semibold leading-6 text-ui-brand shadow-none">
+        <AppSurface variant="flat" tone="inset" padding="none" className="border-y border-ui-line py-3 text-sm font-semibold leading-6 text-ui-brand shadow-none">
           리포트 준비 중입니다. 공개 뉴스와 매크로 흐름을 읽어 시장 해석과 체크포인트를 정리하고 있습니다.
         </AppSurface>
       ) : null}
