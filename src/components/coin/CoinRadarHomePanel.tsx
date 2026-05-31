@@ -43,8 +43,6 @@ type CoinHomeState =
 const tileSymbols = ["BTC", "ETH", "XRP", "SOL", "DOGE", "BNB"] as const;
 
 type RepresentativeSymbol = (typeof tileSymbols)[number];
-type ConclusionSegment = { text: string; tone?: "up" | "down" };
-type DirectionTone = "up" | "down";
 type VisualTone = "long" | "short" | "watch" | "risk" | "info";
 
 const tradingViewLogoIds: Record<RepresentativeSymbol, string> = {
@@ -102,6 +100,13 @@ function toneFromPercent(value: number | null | undefined) {
   if (value >= 65) return "long" as const;
   if (value <= 35) return "short" as const;
   return "watch" as const;
+}
+
+function toneFromFearGreed(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "info" as const;
+  if (value < 50) return "short" as const;
+  if (value > 50) return "long" as const;
+  return "info" as const;
 }
 
 function toneFromPremium(value: number | null | undefined) {
@@ -185,56 +190,19 @@ function checkFor(changePercent: number) {
   return "BTC 흐름과 큰 뉴스 전후 움직임을 봅니다.";
 }
 
-function conclusionSegments(decision: CoinHomeDecisionSummary | undefined): ConclusionSegment[] {
-  if (!decision) return [{ text: "시장 데이터를 확인하는 중입니다." }];
-  if (decision.state === "하락 위험 큼") {
-    return [
-      { text: "하락 위험", tone: "down" },
-      { text: "이 큽니다. 반등이 바로 꺾이는지 먼저 봅니다." }
-    ];
-  }
+function conclusionText(decision: CoinHomeDecisionSummary | undefined) {
+  if (!decision) return "시장 데이터를 확인하는 중입니다.";
+  if (decision.state === "하락 위험 큼") return "하락 위험이 큽니다. 반등이 바로 꺾이는지 먼저 봅니다.";
   if (decision.state === "크게 흔들림") {
-    return [{ text: "가격이 크게 흔들릴 수 있습니다. 무리하게 방향을 정하지 않습니다." }];
+    return "가격이 크게 흔들릴 수 있습니다. 무리하게 방향을 정하지 않습니다.";
   }
   if (decision.state === "상승 가능성 높음") {
-    return [
-      { text: "상승 가능성", tone: "up" },
-      { text: "이 높습니다. 눌림 뒤 다시 오르는지 봅니다." }
-    ];
+    return "상승 가능성이 높습니다. 눌림 뒤 다시 오르는지 봅니다.";
   }
   if (decision.state === "조금 더 지켜보기") {
-    return [{ text: "방향은 보이지만 아직 한 번 더 확인이 필요합니다." }];
+    return "방향은 보이지만 아직 한 번 더 확인이 필요합니다.";
   }
-  return [{ text: "아직 한쪽 방향이 뚜렷하지 않습니다." }];
-}
-
-function conclusionToneClass(tone?: DirectionTone) {
-  if (tone === "up") return "text-emerald-400";
-  if (tone === "down") return "text-rose-400";
-  return "";
-}
-
-function directionalTone(value: string): DirectionTone | null {
-  if (/상승|오름|반등|회복|돌파/.test(value)) return "up";
-  if (/하락|약세|이탈|실패|꺾/.test(value)) return "down";
-  return null;
-}
-
-function HighlightDirectionalText({ text }: { text: string | undefined }) {
-  if (!text) return null;
-  const parts = text.split(/(상승|오름|반등|회복|돌파|하락|약세|이탈|실패|꺾)/g);
-  return (
-    <>
-      {parts.map((part, index) => {
-        const tone = directionalTone(part);
-        return (
-          <span key={`${part}-${index}`} className={tone ? conclusionToneClass(tone) : undefined}>
-            {part}
-          </span>
-        );
-      })}
-    </>
-  );
+  return "아직 한쪽 방향이 뚜렷하지 않습니다.";
 }
 
 function MarketStrengthGauge({
@@ -590,11 +558,7 @@ export function CoinRadarHomePanel() {
             <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">오늘의 결론</p>
             <h2 className="text-ui-heading font-semibold tracking-tight text-ui-text">{summary?.decision.state}</h2>
             <p className="mt-1 max-w-3xl text-ui-body text-ui-muted [word-break:keep-all]">
-              {conclusionSegments(summary?.decision).map((part, index) => (
-                <span key={`${part.text}-${index}`} className={conclusionToneClass(part.tone)}>
-                  {part.text}
-                </span>
-              ))}
+              {conclusionText(summary?.decision)}
             </p>
           </div>
           <ActionButton tone="ghost" className="min-h-7 shrink-0 px-0" onClick={() => void load()}>
@@ -615,13 +579,13 @@ export function CoinRadarHomePanel() {
             <div>
               <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">조심할 점</p>
               <p className="mt-1 text-base font-semibold text-ui-text">
-                <HighlightDirectionalText text={summary?.decision.topRisk} />
+                {summary?.decision.topRisk}
               </p>
             </div>
             <div className="min-w-0">
               <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">다음에 볼 것</p>
               <p className="mt-1 min-w-0 text-sm font-semibold leading-5 text-ui-text [overflow-wrap:anywhere] [word-break:keep-all]">
-                <HighlightDirectionalText text={summary?.decision.nextCondition} />
+                {summary?.decision.nextCondition}
               </p>
             </div>
           </div>
@@ -713,13 +677,13 @@ export function CoinRadarHomePanel() {
                   <div>
                     <p className="font-semibold text-ui-text">리스크</p>
                     <p className="mt-1">
-                      <HighlightDirectionalText text={riskFor(item?.changePercent ?? 0)} />
+                      {riskFor(item?.changePercent ?? 0)}
                     </p>
                   </div>
                   <div>
                     <p className="font-semibold text-ui-text">확인</p>
                     <p className="mt-1">
-                      <HighlightDirectionalText text={checkFor(item?.changePercent ?? 0)} />
+                      {checkFor(item?.changePercent ?? 0)}
                     </p>
                   </div>
                 </div>
@@ -736,7 +700,7 @@ export function CoinRadarHomePanel() {
             label="공포탐욕"
             value={summary?.fearGreed?.score}
             display={summary?.fearGreed ? `${summary.fearGreed.score} · ${summary.fearGreed.label}` : "미확인"}
-            tone={toneFromPercent(summary?.fearGreed?.score)}
+            tone={toneFromFearGreed(summary?.fearGreed?.score)}
             leftLabel="공포"
             rightLabel="탐욕"
           />

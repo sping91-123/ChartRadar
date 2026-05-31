@@ -36,9 +36,18 @@ function hasReleaseTimePassed(item: MacroEventItem) {
   return eventTime(item) <= Date.now();
 }
 
-function isWithinNextDay(item: MacroEventItem) {
-  const diff = eventTime(item) - Date.now();
-  return diff > 0 && diff <= RECENT_RELEASE_WINDOW_MS;
+function kstDateKey(input: number | string) {
+  const date = typeof input === "number" ? new Date(input) : new Date(input);
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(date);
+}
+
+function isSameKstDate(input: string) {
+  return kstDateKey(input) === kstDateKey(Date.now());
 }
 
 function isRecentlyReleased(item: MacroEventItem) {
@@ -110,7 +119,7 @@ function getTimeLabel(releaseAt: string) {
 
 function compactEventKind(item: MacroEventItem) {
   if (hasReleaseTimePassed(item)) return "최근 발표";
-  if (isWithinNextDay(item)) return "오늘 예정";
+  if (isSameKstDate(item.releaseAt)) return "오늘 예정";
   return "다음 일정";
 }
 
