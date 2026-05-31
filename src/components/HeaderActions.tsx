@@ -90,7 +90,7 @@ function SettingsFaqNotice() {
           <div>
             <p className="font-black text-slate-200">Chart Radar는 투자 조언인가요?</p>
             <p className="mt-0.5">
-              아닙니다. 홈과 각 탭은 시장 흐름, 리스크, 확인 조건을 정리하는 판단 보조용 요약이며 매수·매도 지시나 수익 보장을 제공하지 않습니다.
+              아닙니다. 홈과 각 탭은 시장 흐름, 리스크, 확인 조건을 정리하는 판단 보조용 요약이며 매수·매도 지시나 성과 약속을 제공하지 않습니다.
             </p>
           </div>
           <div>

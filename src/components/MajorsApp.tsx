@@ -1,4 +1,5 @@
 import { AppFooter } from "@/components/AppFooter";
+import { CoinFuturesBrief } from "@/components/coin/CoinFuturesBrief";
 import { CoinFuturesSwitch } from "@/components/coin/CoinFuturesSwitch";
 import { Header } from "@/components/Header";
 import { LiveMarketChart } from "@/components/LiveMarketChart";
@@ -11,6 +12,7 @@ export function MajorsApp() {
         <Header market="crypto" />
         <RadarTopNav />
         <CoinFuturesSwitch active="major" />
+        <CoinFuturesBrief mode="major" />
         <LiveMarketChart majorOnly />
         <AppFooter />
       </div>

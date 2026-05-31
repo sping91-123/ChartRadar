@@ -58,6 +58,77 @@ function changeClass(value: number) {
   return "text-ui-muted";
 }
 
+function describeSpotItem(item: SpotRadarItem | null) {
+  if (!item) return "해당 후보 없음";
+  return `${item.symbol} · ${item.categoryLabel}`;
+}
+
+function SpotMarketChecklist({ payload }: { payload: SpotRadarPayload }) {
+  const riskItems = payload.items.filter((item) => item.category === "overheat" || item.category === "pressure");
+  const avoidItem =
+    riskItems.find((item) => item.category === "overheat") ??
+    riskItems.find((item) => item.category === "pressure") ??
+    null;
+  const followItem =
+    payload.items.find((item) => item.category === "pullback") ??
+    payload.items.find((item) => item.category === "volume") ??
+    payload.items.find((item) => item.category === "gainer") ??
+    null;
+  const marketTone = payload.summary.averageChangePercent > 0.3 ? "long" : payload.summary.averageChangePercent < -0.3 ? "short" : "watch";
+  const riskTone = riskItems.length > 0 ? "risk" : "watch";
+
+  const checks: Array<{ label: string; title: string; detail: string; tone: "risk" | "watch" | "info" | "long" | "short" }> = [
+    {
+      label: "피할 후보",
+      title: avoidItem ? describeSpotItem(avoidItem) : "강한 회피 후보 없음",
+      detail: avoidItem ? `${avoidItem.risk} ${avoidItem.check}` : "과열·하락압력 후보가 약하면 거래대금과 눌림 확인으로 넘어갑니다.",
+      tone: riskTone
+    },
+    {
+      label: "추적 후보",
+      title: followItem ? describeSpotItem(followItem) : "추적 후보 대기",
+      detail: followItem ? `${followItem.check}` : "거래대금이 붙거나 눌림 후 지지 반응이 보일 때 후보로 올립니다.",
+      tone: followItem?.category === "gainer" || followItem?.category === "volume" ? "long" : "watch"
+    },
+    {
+      label: "시장 폭",
+      title: `상승 ${payload.summary.gainers} / 하락 ${payload.summary.losers}`,
+      detail: `평균 등락 ${formatPercent(payload.summary.averageChangePercent)} · 거래대금 1위 ${payload.summary.leaderSymbol}.`,
+      tone: marketTone
+    },
+    {
+      label: "데이터 상태",
+      title: `${formatTime(new Date(payload.cachedAt).toISOString())} 갱신`,
+      detail: `${payload.exchangeLabel} public 시세 기준입니다. ${payload.cached ? "최근 응답 캐시를 사용 중입니다." : "방금 새로 확인한 응답입니다."}`,
+      tone: "info"
+    }
+  ];
+
+  return (
+    <div className="grid gap-0 border-t border-ui-line md:grid-cols-2">
+      {checks.map((check, index) => (
+        <article
+          key={check.label}
+          className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0" : ""} ${
+            index % 2 === 1 ? "md:border-l md:border-ui-line" : ""
+          } ${index > 1 ? "md:border-t md:border-ui-line" : ""}`}
+        >
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{check.label}</p>
+              <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{check.title}</p>
+            </div>
+            <StatusPill tone={check.tone} className="shrink-0">
+              {check.tone === "risk" ? "주의" : check.tone === "long" ? "추적" : check.tone === "short" ? "압력" : "확인"}
+            </StatusPill>
+          </div>
+          <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{check.detail}</p>
+        </article>
+      ))}
+    </div>
+  );
+}
+
 function SpotRow({ item }: { item: SpotRadarItem }) {
   const DirectionIcon = item.changePercent >= 0 ? ArrowUpRight : ArrowDownRight;
 
@@ -174,6 +245,8 @@ export function SpotRadarPanel() {
           <DataRow label="상승/하락" value={payload ? `${payload.summary.gainers}/${payload.summary.losers}` : "-"} />
           <DataRow label="평균 등락" value={payload ? formatPercent(payload.summary.averageChangePercent) : "-"} />
         </div>
+
+        {payload ? <SpotMarketChecklist payload={payload} /> : null}
 
         <div className="flex flex-wrap gap-1.5 border-t border-ui-line py-1">
           {categoryFilters.map((item) => (

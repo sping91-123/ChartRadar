@@ -373,6 +373,89 @@ function FundingRateRow({ symbol, report }: { symbol: RepresentativeSymbol; repo
   );
 }
 
+function HomeRiskChecklist({
+  decision,
+  btcFunding,
+  kimchiPremium
+}: {
+  decision: CoinHomeDecisionSummary | undefined;
+  btcFunding: LiquidationPressureReport | null | undefined;
+  kimchiPremium: number | null | undefined;
+}) {
+  const fundingText = fundingSkewDescription(btcFunding?.fundingRatePercent);
+  const longShortRatio = formatRatio(btcFunding?.globalLongShort.ratio);
+  const kimchiText = formatPercent(kimchiPremium);
+  const riskTone = decision?.topRisk && decision.topRisk !== "확인 조건 대기" ? "risk" : "watch";
+  const fundingTone =
+    btcFunding?.grade === "extreme" || btcFunding?.grade === "heated" || Math.abs(btcFunding?.fundingRatePercent ?? 0) >= 0.01 ? "risk" : "watch";
+  const kimchiTone = Math.abs(kimchiPremium ?? 0) >= 3 ? "risk" : Math.abs(kimchiPremium ?? 0) >= 1 ? "watch" : "info";
+
+  const checks: Array<{ label: string; title: string; detail: string; tone: "risk" | "watch" | "info" | "long" | "short" }> = [
+    {
+      label: "1. 피할 조건",
+      title: decision?.topRisk ?? "리스크 확인 중",
+      detail:
+        decision?.topRisk && decision.topRisk !== "확인 조건 대기"
+          ? "이 조건이 먼저 풀리는지 확인하기 전에는 추격보다 관찰이 우선입니다."
+          : "뚜렷한 회피 신호가 약해도 확인 조건 없이 추격하지 않습니다.",
+      tone: riskTone
+    },
+    {
+      label: "2. 추적 조건",
+      title: decision?.direction ?? "방향 확인 중",
+      detail: decision?.nextCondition ?? "BTC 추세와 알트 참여 확산 여부를 먼저 확인합니다.",
+      tone: decision?.direction === "상방 우세" ? "long" : decision?.direction === "하방 압력" ? "short" : "watch"
+    },
+    {
+      label: "3. 파생 쏠림",
+      title: fundingText,
+      detail: `BTC 롱숏비율 ${longShortRatio} · 펀딩비 ${formatPercent(btcFunding?.fundingRatePercent, 4)}. 쏠림이 커질수록 변동성 확인이 우선입니다.`,
+      tone: fundingTone
+    },
+    {
+      label: "4. 국내 프리미엄",
+      title: kimchiText,
+      detail: "김프가 커지면 해외 시세와 국내 현물 체감 흐름이 어긋날 수 있습니다.",
+      tone: kimchiTone
+    }
+  ];
+
+  return (
+    <PanelCard variant="flat" padding="none" className="space-y-4">
+      <SectionHeader
+        eyebrow="Risk First"
+        title="오늘 먼저 걸러볼 조건"
+        description="방향보다 회피 조건을 먼저 보고, 그다음 추적 조건과 파생 쏠림을 확인합니다."
+      />
+      <div className="grid gap-0 border-y border-ui-line md:grid-cols-2">
+        {checks.map((check, index) => (
+          <article
+            key={check.label}
+            className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0" : ""} ${
+              index % 2 === 1 ? "md:border-l md:border-ui-line" : ""
+            } ${index > 1 ? "md:border-t md:border-ui-line" : ""}`}
+          >
+            <div className="flex min-w-0 items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{check.label}</p>
+                <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">
+                  <HighlightDirectionalText text={check.title} />
+                </p>
+              </div>
+              <StatusPill tone={check.tone} className="shrink-0">
+                {check.tone === "risk" ? "주의" : check.tone === "long" ? "상방" : check.tone === "short" ? "하방" : "확인"}
+              </StatusPill>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">
+              <HighlightDirectionalText text={check.detail} />
+            </p>
+          </article>
+        ))}
+      </div>
+    </PanelCard>
+  );
+}
+
 function CoinStatusTile({
   symbol,
   item,
@@ -609,6 +692,8 @@ export function CoinRadarHomePanel() {
           </div>
         </div>
       </PanelCard>
+
+      <HomeRiskChecklist decision={summary?.decision} btcFunding={summary?.btcFunding} kimchiPremium={summary?.marketMetrics?.kimchiPremiumPercent} />
 
       <PanelCard variant="flat" padding="none" className="space-y-4">
         <SectionHeader eyebrow="Representative Coins" title="대표 코인 상태" />
