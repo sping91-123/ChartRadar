@@ -178,6 +178,9 @@ function analyzeCandles(exchange: SpotExchange, market: string, candles: Candle[
   } else if (nearBottom && (changePercent ?? 0) <= -3) {
     tone = "short";
     structureLabel = "하단 압력 확인";
+  } else if ((changePercent ?? 0) <= -5) {
+    tone = "short";
+    structureLabel = "흐름 약세 확인";
   } else if (aboveTrend) {
     tone = "long";
     structureLabel = "추세 유지 확인";

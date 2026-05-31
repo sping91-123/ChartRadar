@@ -92,7 +92,7 @@ function categoryFor(ticker: SpotTicker, volumeRank: number): { category: SpotRa
   const changePercent = ticker.signed_change_rate * 100;
   const position = rangePosition(ticker);
 
-  if (changePercent >= 9 || (changePercent >= 6 && position !== null && position >= 0.82)) {
+  if (changePercent >= 7.5 || (changePercent >= 5 && position !== null && position >= 0.7)) {
     return {
       category: "overheat",
       label: "과열 주의",
@@ -101,7 +101,16 @@ function categoryFor(ticker: SpotTicker, volumeRank: number): { category: SpotRa
     };
   }
 
-  if (volumeRank <= 10 && Math.abs(changePercent) >= 2.5) {
+  if (changePercent <= -5) {
+    return {
+      category: "pressure",
+      label: "하락 압력",
+      risk: "반등보다 추가 변동성 확인이 먼저입니다.",
+      check: "저점 갱신이 멈추는지, 거래대금이 줄어드는지 봅니다."
+    };
+  }
+
+  if (volumeRank <= 10 && changePercent >= 2.5) {
     return {
       category: "volume",
       label: "거래대금 집중",
@@ -125,15 +134,6 @@ function categoryFor(ticker: SpotTicker, volumeRank: number): { category: SpotRa
       label: "눌림 대기",
       risk: "반등이 약하면 횡보로 길어질 수 있습니다.",
       check: "저점 이탈 없이 거래대금이 다시 붙는지 확인합니다."
-    };
-  }
-
-  if (changePercent <= -5) {
-    return {
-      category: "pressure",
-      label: "하락 압력",
-      risk: "반등보다 추가 변동성 확인이 먼저입니다.",
-      check: "저점 갱신이 멈추는지, 거래대금이 줄어드는지 봅니다."
     };
   }
 

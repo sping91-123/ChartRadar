@@ -298,7 +298,7 @@ export function fallbackKoreanNewsTitle(title: string, market: RadarNewsMarket =
     if (text.includes("sec") || text.includes("lawsuit") || text.includes("regulation")) return `${asset} 규제 리스크 점검`;
     if (text.includes("hack") || text.includes("exploit")) return `${asset} 보안 리스크 점검`;
     if (text.includes("rally") || text.includes("surge") || text.includes("breakout")) return `${asset} 강세 흐름 지속 여부 점검`;
-    if (text.includes("liquidation") || text.includes("sell-off") || text.includes("plunge")) return `${asset} 하방 변동성 확대 여부 점검`;
+    if (text.includes("liquidation") || text.includes("sell-off") || text.includes("plunge")) return `${asset} 하락 변동성 확대 여부 점검`;
     return contextualFallbackTitle(title, market);
   }
 
@@ -348,7 +348,7 @@ export function analyzeNewsText(input: string, market: RadarNewsMarket = "crypto
   const hasRateBurden = uniqueTags.includes("금리 부담");
 
   const headline =
-    direction === "bullish" ? "상방에 우호적인 뉴스입니다." : direction === "bearish" ? "하방 변동성을 조심해야 하는 뉴스입니다." : "방향성보다 확인이 필요한 뉴스입니다.";
+    direction === "bullish" ? "상승에 도움이 되는 뉴스입니다." : direction === "bearish" ? "하락 변동성을 조심해야 하는 뉴스입니다." : "방향성보다 확인이 필요한 뉴스입니다.";
 
   const summary =
     direction === "bullish"

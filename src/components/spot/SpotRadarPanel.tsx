@@ -149,8 +149,39 @@ function buyCandidateItems(payload: SpotRadarPayload) {
   return payload.items.filter((item) => buyCategories.has(item.category));
 }
 
+function rangePositionPercent(item: SpotRadarItem | null | undefined) {
+  return item?.rangePosition === null || item?.rangePosition === undefined ? null : item.rangePosition * 100;
+}
+
+function candidateChangePercent(item: SpotRadarItem | null | undefined, chart: SpotChartSummary | null | undefined) {
+  return chart?.changePercent ?? item?.changePercent ?? null;
+}
+
+function candidateRangePosition(item: SpotRadarItem | null | undefined, chart: SpotChartSummary | null | undefined) {
+  return chart?.rangePositionPercent ?? rangePositionPercent(item);
+}
+
+function isReasonableBuyCandidate(item: SpotRadarItem | null | undefined, chart: SpotChartSummary | null | undefined = null) {
+  if (!item || !buyCategories.has(item.category)) return false;
+  if (item.category === "volume" && item.changePercent <= 0) return false;
+  if (chart?.tone === "risk" || chart?.tone === "short") return false;
+
+  const changePercent = candidateChangePercent(item, chart);
+  const position = candidateRangePosition(item, chart);
+  const tooExtended = changePercent !== null && Number.isFinite(changePercent) && changePercent >= 7.5;
+  const nearTopExtended =
+    changePercent !== null &&
+    Number.isFinite(changePercent) &&
+    changePercent >= 5 &&
+    position !== null &&
+    Number.isFinite(position) &&
+    position >= 70;
+
+  return !tooExtended && !nearTopExtended;
+}
+
 function safeBuyCandidateItems(payload: SpotRadarPayload | null) {
-  return payload ? buyCandidateItems(payload) : [];
+  return payload ? buyCandidateItems(payload).filter((item) => isReasonableBuyCandidate(item)) : [];
 }
 
 function filteredBuyCandidateItems(payload: SpotRadarPayload | null, filter: "all" | BuySpotCategory) {
@@ -189,7 +220,7 @@ function displaySpotLabel(value: string) {
 }
 
 function SpotMarketChecklist({ payload }: { payload: SpotRadarPayload }) {
-  const buyItems = buyCandidateItems(payload);
+  const buyItems = safeBuyCandidateItems(payload);
   const followItem =
     buyItems.find((item) => item.category === "pullback") ??
     buyItems.find((item) => item.category === "volume") ??
@@ -268,6 +299,7 @@ function SpotChartEvidencePanel({
   itemsByMarket: Map<string, SpotRadarItem>;
 }) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const visibleItems = (payload?.items ?? []).filter((item) => isReasonableBuyCandidate(itemsByMarket.get(item.market) ?? null, item));
 
   return (
     <section className="space-y-4 border-t border-ui-line pt-4">
@@ -319,9 +351,9 @@ function SpotChartEvidencePanel({
         <div className="flex min-h-24 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
           {error}
         </div>
-      ) : payload && payload.items.length > 0 ? (
+      ) : visibleItems.length > 0 ? (
         <div className="grid gap-0 md:grid-cols-2">
-          {payload.items.map((item, index) => {
+          {visibleItems.map((item, index) => {
             const spotItem = itemsByMarket.get(item.market) ?? null;
 
             return (
@@ -401,6 +433,11 @@ function chartPriorityBoost(chart: SpotChartSummary | null) {
   return toneBoost + volumeBoost;
 }
 
+function positiveMoveScore(changePercent: number) {
+  if (!Number.isFinite(changePercent) || changePercent <= 0) return 0;
+  return Math.min(changePercent, 6);
+}
+
 function priorityReason(item: SpotRadarItem, chart: SpotChartSummary | null) {
   const chartText = chart
     ? `${chart.structureLabel} · ${formatRangePosition(chart.rangePositionPercent)} · ${formatVolumeRatio(chart.volumeRatio)}`
@@ -410,30 +447,33 @@ function priorityReason(item: SpotRadarItem, chart: SpotChartSummary | null) {
 
 function buildSpotPriorityGroups(payload: SpotRadarPayload, chartPayload: SpotChartRadarPayload | null): SpotPriorityGroup[] {
   const chartByMarket = chartLookup(chartPayload);
-  const enriched = buyCandidateItems(payload).map((item) => {
-    const chart = chartByMarket.get(item.market) ?? null;
-    const followBase = item.category === "volume" ? 36 : item.category === "gainer" ? 30 : item.category === "pullback" ? 26 : 0;
-    const chartBoost = chartPriorityBoost(chart);
-    const followScore = followBase + (chart?.tone === "long" ? 18 : chart?.tone === "watch" ? 8 : 0) + Math.max(item.changePercent, 0);
-    const watchScore = (item.category === "pullback" ? 32 : 12) + (chart?.tone === "watch" ? 14 : 0) + chartBoost;
+  const enriched = safeBuyCandidateItems(payload)
+    .map((item) => {
+      const chart = chartByMarket.get(item.market) ?? null;
+      const followBase = item.category === "volume" ? 36 : item.category === "gainer" ? 30 : item.category === "pullback" ? 26 : 0;
+      const chartBoost = chartPriorityBoost(chart);
+      const followScore = followBase + (chart?.tone === "long" ? 18 : chart?.tone === "watch" ? 8 : 0) + positiveMoveScore(item.changePercent);
+      const watchScore = (item.category === "pullback" ? 32 : 12) + (chart?.tone === "watch" ? 14 : 0) + chartBoost;
 
-    return {
-      item,
-      chart,
-      followScore,
-      watchScore,
-      reason: priorityReason(item, chart)
-    };
-  });
+      return {
+        item,
+        chart,
+        followScore,
+        watchScore,
+        reason: priorityReason(item, chart)
+      };
+    })
+    .filter(({ item, chart }) => isReasonableBuyCandidate(item, chart));
 
   const followItems = enriched
     .filter(({ item, chart }) => item.category === "volume" || item.category === "gainer" || chart?.tone === "long")
     .sort((left, right) => right.followScore - left.followScore)
     .slice(0, 3)
     .map(({ item, chart, followScore, reason }) => ({ item, chart, score: followScore, reason, tone: chart?.tone === "long" ? ("long" as const) : ("watch" as const) }));
+  const followMarkets = new Set(followItems.map(({ item }) => item.market));
 
   const watchItems = enriched
-    .filter(({ item, chart }) => item.category === "pullback" || chart?.tone === "watch" || chart === null)
+    .filter(({ item, chart }) => !followMarkets.has(item.market) && (item.category === "pullback" || chart?.tone === "watch" || chart === null))
     .sort((left, right) => right.watchScore - left.watchScore)
     .slice(0, 3)
     .map(({ item, chart, watchScore, reason }) => ({ item, chart, score: watchScore, reason, tone: "watch" as const }));
@@ -850,25 +890,28 @@ export function SpotRadarPanel() {
     };
   }, [exchange, watchMarket]);
 
-  const filteredItems = useMemo(() => {
-    return filteredBuyCandidateItems(payload, filter);
-  }, [filter, payload]);
+  const chartByMarketForRows = useMemo(() => chartLookup(chartPayload), [chartPayload]);
+  const visibleCandidateItems = useMemo(() => {
+    return safeBuyCandidateItems(payload).filter((item) => isReasonableBuyCandidate(item, chartByMarketForRows.get(item.market) ?? null));
+  }, [chartByMarketForRows, payload]);
+  const visibleFilteredItems = useMemo(() => {
+    if (filter === "all") return visibleCandidateItems;
+    return visibleCandidateItems.filter((item) => item.category === filter);
+  }, [filter, visibleCandidateItems]);
   const categoryCounts = useMemo(() => {
-    const candidates = safeBuyCandidateItems(payload);
     const counts: Record<"all" | BuySpotCategory, number> = {
-      all: candidates.length,
+      all: visibleCandidateItems.length,
       volume: 0,
       gainer: 0,
       pullback: 0
     };
 
-    candidates.forEach((item) => {
+    visibleCandidateItems.forEach((item) => {
       counts[item.category as BuySpotCategory] += 1;
     });
 
     return counts;
-  }, [payload]);
-  const chartByMarketForRows = useMemo(() => chartLookup(chartPayload), [chartPayload]);
+  }, [visibleCandidateItems]);
   const spotItemsByMarket = useMemo(() => new Map((payload?.items ?? []).map((item) => [item.market, item])), [payload]);
   const watchSuggestions = useMemo(() => {
     if (!payload) return [];
@@ -968,7 +1011,7 @@ export function SpotRadarPanel() {
         />
 
         <div className="grid gap-0 sm:grid-cols-2">
-          <DataRow label="살펴볼 후보" value={payload ? `${buyCandidateItems(payload).length}개` : "-"} className="py-1" />
+          <DataRow label="살펴볼 후보" value={payload ? `${visibleCandidateItems.length}개` : "-"} className="py-1" />
           <DataRow label="오늘 분위기" value={<span className={spotMarketMoodClass(payload)}>{spotMarketMood(payload)}</span>} className="py-1" />
         </div>
 
@@ -1012,9 +1055,9 @@ export function SpotRadarPanel() {
             <p className="text-sm font-semibold text-ui-text">{error}</p>
             <p className="text-xs text-ui-muted">거래소 public API 응답이 늦거나 제한될 수 있습니다.</p>
           </div>
-        ) : filteredItems.length > 0 ? (
+        ) : visibleFilteredItems.length > 0 ? (
           <div>
-            {filteredItems.map((item) => (
+            {visibleFilteredItems.map((item) => (
               <SpotRow key={`${item.exchange}-${item.market}`} item={item} chart={chartByMarketForRows.get(item.market) ?? null} />
             ))}
           </div>

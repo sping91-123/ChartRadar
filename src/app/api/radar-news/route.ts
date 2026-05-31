@@ -683,9 +683,9 @@ async function loadFeed(feed: NewsFeed, market: RadarNewsMarket) {
 }
 
 function toneLabel(tone: RadarNewsDirection) {
-  if (tone === "bullish") return "상방 우호";
-  if (tone === "bearish") return "하방 주의";
-  return "중립 확인";
+  if (tone === "bullish") return "상승 재료";
+  if (tone === "bearish") return "하락 재료";
+  return "중립";
 }
 
 function itemTitle(item: RadarNewsItem, market: RadarNewsMarket) {
@@ -806,7 +806,7 @@ function fallbackNewsBriefing(items: RadarNewsItem[], model = "rules", market: R
     overview:
       items.length === 0
         ? `${marketLabel}에 즉시 방향을 정할 만큼 강한 뉴스는 아직 확인되지 않습니다. 뉴스가 비어 있는 상태가 아니라, 시장 영향이 큰 이슈만 추려 보는 중입니다. 예정 이벤트와 가격 반응을 함께 확인하세요.`
-        : `지난 1시간 기준으로 오늘 확인할 주요 시장 이슈와 ${marketLabel} 전체 흐름에 영향을 줄 만한 기사, 매크로 재료를 묶어 보면 상방 우호 ${bullish}개, 하방 주의 ${bearish}개, 중립 확인 ${neutral}개로 정리됩니다. ${briefingFocus} ${followUpFocus}`,
+        : `지난 1시간 기준으로 오늘 확인할 주요 시장 이슈와 ${marketLabel} 전체 흐름에 영향을 줄 만한 기사, 매크로 재료를 묶어 보면 상승 재료 ${bullish}개, 하락 재료 ${bearish}개, 중립 ${neutral}개로 정리됩니다. ${briefingFocus} ${followUpFocus}`,
     keyIssues: items.length === 0 ? emptyKeyIssues : fallbackIssues,
     marketImpact:
       items.length === 0
@@ -836,18 +836,18 @@ function fallbackNewsBriefing(items: RadarNewsItem[], model = "rules", market: R
         : market === "stocks"
           ? [
               "속보 직후보다 1시간 단위로 금리, 달러, 지수선물, 주요 섹터 반응이 같은 방향인지 확인하세요.",
-              "상방 재료와 하방 재료가 동시에 나오면 한쪽 결론보다 변동성 확대 가능성을 먼저 봐야 합니다.",
+              "상승 재료와 하락 재료가 동시에 나오면 한쪽 결론보다 변동성 확대 가능성을 먼저 봐야 합니다.",
               "가장 강하게 반응하는 축이 지수, 반도체·AI, 원자재, 달러 중 어디인지 확인하세요."
             ]
           : [
               "속보 직후보다 1시간 단위로 금리, 달러, BTC, ETH 반응이 같은 방향인지 확인하세요.",
-              "상방 재료와 하방 재료가 동시에 나오면 한쪽 결론보다 변동성 확대 가능성을 먼저 봐야 합니다.",
+              "상승 재료와 하락 재료가 동시에 나오면 한쪽 결론보다 변동성 확대 가능성을 먼저 봐야 합니다.",
               "가장 강하게 반응하는 자산이 BTC인지 ETH인지, 아니면 도미넌스와 스테이블코인 흐름인지 확인하세요."
             ],
     finalSummary:
       items.length === 0
         ? "현재 강한 뉴스는 없습니다. 다음 이벤트와 가격 반응을 기준으로 다시 확인하세요."
-        : bullish > bearish ? "뉴스 흐름은 우호적입니다. 다만 차트가 따라붙는지 확인하세요." : bearish > bullish ? "뉴스 흐름은 방어적입니다. 반등보다 리스크 관리가 먼저입니다." : "뉴스 흐름은 중립입니다. 방향이 확인될 때까지 서두르지 않는 편이 좋습니다."
+        : bullish > bearish ? "상승 재료가 더 많습니다. 다만 차트가 따라붙는지 확인하세요." : bearish > bullish ? "하락 재료가 더 많습니다. 반등보다 리스크 관리가 먼저입니다." : "뉴스 흐름은 중립입니다. 방향이 확인될 때까지 서두르지 않는 편이 좋습니다."
   };
 }
 
