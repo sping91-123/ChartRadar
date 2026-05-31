@@ -255,6 +255,23 @@ export function SpotRadarPanel() {
     if (filter === "all") return payload.items;
     return payload.items.filter((item) => item.category === filter);
   }, [filter, payload]);
+  const categoryCounts = useMemo(() => {
+    const counts: Record<"all" | SpotRadarCategory, number> = {
+      all: payload?.items.length ?? 0,
+      volume: 0,
+      gainer: 0,
+      pullback: 0,
+      overheat: 0,
+      pressure: 0,
+      watch: 0
+    };
+
+    payload?.items.forEach((item) => {
+      counts[item.category] += 1;
+    });
+
+    return counts;
+  }, [payload]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -300,7 +317,8 @@ export function SpotRadarPanel() {
                 filter === item.id ? "border-b border-ui-brand text-ui-text" : "text-ui-muted hover:text-ui-text"
               }`}
             >
-              {item.label}
+              <span>{item.label}</span>
+              <span className="ml-1 text-[10px] text-ui-subtle">{categoryCounts[item.id]}</span>
             </button>
           ))}
         </div>
