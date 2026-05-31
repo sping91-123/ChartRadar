@@ -603,6 +603,9 @@ export function CoinRadarHomePanel() {
             })()}
           </div>
         </div>
+        <p className="-mt-2 border-t border-ui-line pt-2 text-right text-[11px] font-semibold leading-4 text-ui-subtle">
+          코인을 클릭하여 상태 상세보기
+        </p>
 
         <div className="grid gap-5 border-t border-ui-line pt-4 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
           <div className="min-w-0">
