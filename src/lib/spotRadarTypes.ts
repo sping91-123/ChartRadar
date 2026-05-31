@@ -42,3 +42,32 @@ export interface SpotRadarPayload {
   cachedAt: number;
   cached: boolean;
 }
+
+export type SpotChartTone = "long" | "short" | "watch" | "risk" | "info";
+
+export interface SpotChartSummary {
+  exchange: SpotExchange;
+  market: string;
+  symbol: string;
+  timeframe: "1h";
+  structureLabel: string;
+  rangePositionPercent: number | null;
+  changePercent: number | null;
+  volumeRatio: number | null;
+  ma20Position: "above" | "below" | "flat" | "unknown";
+  supportPrice: number | null;
+  resistancePrice: number | null;
+  tone: SpotChartTone;
+  detail: string;
+  updatedAt: string;
+  sparkline: number[];
+}
+
+export interface SpotChartRadarPayload {
+  exchange: SpotExchange;
+  exchangeLabel: string;
+  items: SpotChartSummary[];
+  failedMarkets: string[];
+  cachedAt: number;
+  cached: boolean;
+}

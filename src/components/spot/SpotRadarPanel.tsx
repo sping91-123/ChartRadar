@@ -1,7 +1,7 @@
 "use client";
 // 업비트/빗썸 KRW 현물 시장을 주문 기능 없이 관찰 후보 중심으로 보여줍니다.
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ArrowDownRight, ArrowUpRight, RefreshCw, Search, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowDownRight, ArrowUpRight, LineChart, RefreshCw, Search, ShieldCheck } from "lucide-react";
 import { ActionButton, DataRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import { CoinSignalConflictPanel, type CoinSignalConflictItem } from "@/components/coin/CoinSignalConflictPanel";
 import {
@@ -12,7 +12,7 @@ import {
 } from "@/components/coin/CoinDataFreshnessPanel";
 import { CoinEvidenceGradePanel, type CoinEvidenceGradeItem } from "@/components/coin/CoinEvidenceGradePanel";
 import { CoinSignalPressurePanel, type CoinSignalPressureItem } from "@/components/coin/CoinSignalPressurePanel";
-import type { SpotExchange, SpotRadarCategory, SpotRadarItem, SpotRadarPayload } from "@/lib/spotRadarTypes";
+import type { SpotChartRadarPayload, SpotChartSummary, SpotChartTone, SpotExchange, SpotRadarCategory, SpotRadarItem, SpotRadarPayload } from "@/lib/spotRadarTypes";
 
 const exchanges: Array<{ id: SpotExchange; label: string }> = [
   { id: "upbit", label: "업비트" },
@@ -55,6 +55,16 @@ function formatPercent(value: number) {
   return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
 }
 
+function formatOptionalPercent(value: number | null | undefined, digits = 1) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "확인 중";
+  return `${value >= 0 ? "+" : ""}${value.toFixed(digits)}%`;
+}
+
+function formatRangePosition(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "범위 확인 중";
+  return `범위 ${Math.round(value)}%`;
+}
+
 function formatTime(value: string) {
   return new Intl.DateTimeFormat("ko-KR", {
     hour: "2-digit",
@@ -68,6 +78,21 @@ function categoryTone(category: SpotRadarCategory) {
   if (category === "gainer" || category === "volume") return "long" as const;
   if (category === "pullback") return "watch" as const;
   return "info" as const;
+}
+
+const chartToneClass: Record<SpotChartTone, string> = {
+  long: "text-ui-long",
+  short: "text-ui-short",
+  watch: "text-ui-watch",
+  risk: "text-ui-risk",
+  info: "text-ui-brand"
+};
+
+function chartStatusLabel(tone: SpotChartTone) {
+  if (tone === "long") return "유지";
+  if (tone === "short") return "압력";
+  if (tone === "risk") return "주의";
+  return "확인";
 }
 
 function changeClass(value: number) {
@@ -282,6 +307,87 @@ function buildSpotPressureItems(payload: SpotRadarPayload): CoinSignalPressureIt
     }));
 }
 
+function SpotSparkline({ item }: { item: SpotChartSummary }) {
+  const values = item.sparkline.length > 1 ? item.sparkline : [50, 50];
+  const points = values
+    .map((value, index) => {
+      const x = values.length === 1 ? 0 : (index / (values.length - 1)) * 100;
+      const y = 34 - (Math.min(100, Math.max(0, value)) / 100) * 30;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+
+  return (
+    <svg className={`h-10 w-full ${chartToneClass[item.tone]}`} viewBox="0 0 100 36" preserveAspectRatio="none" aria-hidden>
+      <polyline points={points} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SpotChartEvidencePanel({
+  payload,
+  loading,
+  error
+}: {
+  payload: SpotChartRadarPayload | null;
+  loading: boolean;
+  error: string | null;
+}) {
+  return (
+    <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
+      <SectionHeader
+        eyebrow="Spot Chart"
+        title="현물 차트 근거"
+        description="상위 현물 후보를 1시간봉 공개 캔들로 확인해 범위 위치, 평균선, 거래대금 변화를 분리해서 봅니다."
+      />
+
+      {loading ? (
+        <div className="flex min-h-24 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
+          현물 차트 근거를 확인하는 중입니다.
+        </div>
+      ) : error ? (
+        <div className="flex min-h-24 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
+          {error}
+        </div>
+      ) : payload && payload.items.length > 0 ? (
+        <div className="grid gap-0 md:grid-cols-2">
+          {payload.items.map((item, index) => (
+            <article
+              key={`${item.exchange}-${item.market}`}
+              className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0" : ""} ${
+                index % 2 === 1 ? "md:border-l md:border-ui-line" : ""
+              } ${index > 1 ? "md:border-t md:border-ui-line" : ""}`}
+            >
+              <div className="flex min-w-0 items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{item.symbol} · 1H</p>
+                  <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{item.structureLabel}</p>
+                </div>
+                <StatusPill tone={item.tone} icon={LineChart} className="shrink-0">
+                  {chartStatusLabel(item.tone)}
+                </StatusPill>
+              </div>
+              <div className="mt-3">
+                <SpotSparkline item={item} />
+              </div>
+              <div className="mt-2 grid grid-cols-3 gap-2 text-[10px] font-semibold text-ui-subtle">
+                <span>{formatOptionalPercent(item.changePercent)}</span>
+                <span className="text-center">{formatRangePosition(item.rangePositionPercent)}</span>
+                <span className="text-right">거래 {item.volumeRatio === null ? "-" : `${item.volumeRatio.toFixed(1)}x`}</span>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{item.detail}</p>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="flex min-h-24 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
+          차트 근거를 표시할 후보가 아직 없습니다.
+        </div>
+      )}
+    </PanelCard>
+  );
+}
+
 function SpotRow({ item }: { item: SpotRadarItem }) {
   const DirectionIcon = item.changePercent >= 0 ? ArrowUpRight : ArrowDownRight;
 
@@ -334,6 +440,9 @@ export function SpotRadarPanel() {
   const [exchange, setExchange] = useState<SpotExchange>("upbit");
   const [filter, setFilter] = useState<"all" | SpotRadarCategory>("all");
   const [payload, setPayload] = useState<SpotRadarPayload | null>(null);
+  const [chartPayload, setChartPayload] = useState<SpotChartRadarPayload | null>(null);
+  const [isChartLoading, setIsChartLoading] = useState(false);
+  const [chartError, setChartError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -360,6 +469,47 @@ export function SpotRadarPanel() {
       cancelled = true;
     };
   }, [exchange]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadChartEvidence() {
+      if (!payload || payload.items.length === 0) {
+        setChartPayload(null);
+        setIsChartLoading(false);
+        setChartError(null);
+        return;
+      }
+
+      const markets = payload.items.slice(0, 6).map((item) => item.market);
+      setIsChartLoading(true);
+      setChartError(null);
+
+      try {
+        const params = new URLSearchParams({
+          exchange,
+          markets: markets.join(","),
+          limit: "80"
+        });
+        const response = await fetch(`/api/spot-chart-radar?${params.toString()}`, { cache: "no-store" });
+        const nextPayload = (await response.json()) as SpotChartRadarPayload & { error?: string };
+        if (!response.ok) throw new Error(nextPayload.error || "현물 차트 근거를 확인하지 못했습니다.");
+        if (!cancelled) setChartPayload(nextPayload);
+      } catch (loadError) {
+        if (!cancelled) {
+          setChartPayload(null);
+          setChartError(loadError instanceof Error ? loadError.message : "현물 차트 근거를 확인하지 못했습니다.");
+        }
+      } finally {
+        if (!cancelled) setIsChartLoading(false);
+      }
+    }
+
+    void loadChartEvidence();
+    return () => {
+      cancelled = true;
+    };
+  }, [exchange, payload]);
 
   const filteredItems = useMemo(() => {
     if (!payload) return [];
@@ -450,6 +600,8 @@ export function SpotRadarPanel() {
           items={buildSpotEvidenceGradeItems(payload)}
         />
       ) : null}
+
+      {payload ? <SpotChartEvidencePanel payload={chartPayload} loading={isChartLoading} error={chartError} /> : null}
 
       {payload ? (
         <CoinSignalPressurePanel
