@@ -4,6 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, RefreshCw, Search, ShieldCheck } from "lucide-react";
 import { ActionButton, DataRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import { CoinSignalConflictPanel, type CoinSignalConflictItem } from "@/components/coin/CoinSignalConflictPanel";
+import {
+  CoinDataFreshnessPanel,
+  dataFreshnessTone,
+  formatDataAge,
+  type CoinDataFreshnessItem
+} from "@/components/coin/CoinDataFreshnessPanel";
 import type { SpotExchange, SpotRadarCategory, SpotRadarItem, SpotRadarPayload } from "@/lib/spotRadarTypes";
 
 const exchanges: Array<{ id: SpotExchange; label: string }> = [
@@ -96,23 +102,15 @@ function SpotMarketChecklist({ payload }: { payload: SpotRadarPayload }) {
       title: `상승 ${payload.summary.gainers} / 하락 ${payload.summary.losers}`,
       detail: `평균 등락 ${formatPercent(payload.summary.averageChangePercent)} · 거래대금 1위 ${payload.summary.leaderSymbol}.`,
       tone: marketTone
-    },
-    {
-      label: "데이터 상태",
-      title: `${formatTime(new Date(payload.cachedAt).toISOString())} 갱신`,
-      detail: `${payload.exchangeLabel} public 시세 기준입니다. ${payload.cached ? "최근 응답 캐시를 사용 중입니다." : "방금 새로 확인한 응답입니다."}`,
-      tone: "info"
     }
   ];
 
   return (
-    <div className="grid gap-0 border-t border-ui-line md:grid-cols-2">
+    <div className="grid gap-0 border-t border-ui-line md:grid-cols-3">
       {checks.map((check, index) => (
         <article
           key={check.label}
-          className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0" : ""} ${
-            index % 2 === 1 ? "md:border-l md:border-ui-line" : ""
-          } ${index > 1 ? "md:border-t md:border-ui-line" : ""}`}
+          className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0 md:border-l" : ""}`}
         >
           <div className="flex min-w-0 items-start justify-between gap-3">
             <div className="min-w-0">
@@ -167,6 +165,43 @@ function buildSpotConflictItems(payload: SpotRadarPayload): CoinSignalConflictIt
       title: followCandidate ? `${followCandidate.symbol} · ${followCandidate.categoryLabel}` : "추적 후보 대기",
       detail: `상승 ${payload.summary.gainers} / 하락 ${payload.summary.losers}. 폭 차이 ${broadSkew}개로, 후보 하나보다 시장 폭을 함께 봅니다.`,
       tone: followCandidate ? "watch" : "info"
+    }
+  ];
+}
+
+function buildSpotFreshnessItems(payload: SpotRadarPayload): CoinDataFreshnessItem[] {
+  const itemTimestamps = payload.items.map((item) => Date.parse(item.updatedAt)).filter((value): value is number => Number.isFinite(value));
+  const latestItemTimestamp = itemTimestamps.length > 0 ? Math.max(...itemTimestamps) : null;
+  const riskCount = payload.items.filter((item) => item.category === "overheat" || item.category === "pressure").length;
+  const activeCategoryCount = new Set(payload.items.map((item) => item.category)).size;
+
+  return [
+    {
+      label: "거래소 응답",
+      title: `${formatDataAge(payload.cachedAt)} · ${payload.cached ? "최근 저장본" : "실시간 응답"}`,
+      detail: `${payload.exchangeLabel} public 시세 ${payload.summary.totalMarkets}개 중 ${payload.summary.displayedMarkets}개를 레이더 후보로 정리했습니다.`,
+      tone: dataFreshnessTone({
+        timestamp: payload.cachedAt,
+        cached: payload.cached,
+        warningMs: 3 * 60 * 1000,
+        staleMs: 10 * 60 * 1000
+      })
+    },
+    {
+      label: "후보 시각",
+      title: latestItemTimestamp ? formatDataAge(latestItemTimestamp) : "시각 확인 중",
+      detail: `후보별 거래소 업데이트 시각을 비교해 오래된 가격 후보를 분리해서 봅니다.`,
+      tone: dataFreshnessTone({
+        timestamp: latestItemTimestamp,
+        warningMs: 5 * 60 * 1000,
+        staleMs: 20 * 60 * 1000
+      })
+    },
+    {
+      label: "분류 커버리지",
+      title: `${payload.items.length}개 후보 · ${activeCategoryCount}개 분류`,
+      detail: `주의 후보 ${riskCount}개를 거래대금, 상승률, 눌림 후보와 분리했습니다.`,
+      tone: riskCount > 0 ? "watch" : "info"
     }
   ];
 }
@@ -323,6 +358,14 @@ export function SpotRadarPanel() {
           ))}
         </div>
       </PanelCard>
+
+      {payload ? (
+        <CoinDataFreshnessPanel
+          title="현물 데이터 신선도"
+          description="거래소 응답 시각, 후보별 가격 시각, 분류 커버리지를 나눠서 오래된 후보를 먼저 걸러봅니다."
+          items={buildSpotFreshnessItems(payload)}
+        />
+      ) : null}
 
       {payload ? <CoinSignalConflictPanel title="현물 신호 충돌 체크" description="거래대금, 급등, 하락압력, 시장 폭이 서로 맞는지 먼저 비교합니다." items={buildSpotConflictItems(payload)} /> : null}
 

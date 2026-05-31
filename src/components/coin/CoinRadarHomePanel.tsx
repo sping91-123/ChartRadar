@@ -5,6 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, RefreshCw, TrendingUp, X } from "lucide-react";
 import { ActionButton, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import { CoinSignalConflictPanel, type CoinSignalConflictItem } from "@/components/coin/CoinSignalConflictPanel";
+import {
+  CoinDataFreshnessPanel,
+  dataFreshnessTone,
+  formatDataAge,
+  type CoinDataFreshnessItem
+} from "@/components/coin/CoinDataFreshnessPanel";
 import type { CoinMarketMetricsPayload } from "@/lib/coinMarketMetrics";
 import type { Candle } from "@/lib/marketAnalysis";
 import type { LiquidationPressureReport } from "@/lib/liquidationPressure";
@@ -19,11 +25,19 @@ interface MarketBoardItem {
   quoteVolume: number;
 }
 
+interface CoinHomeResponseMeta {
+  cachedAt: number | null;
+  cached: boolean;
+  stale: boolean;
+}
+
 interface CoinHomeData {
   board: MarketBoardItem[];
+  boardMeta: CoinHomeResponseMeta;
   technical: TechnicalRadarReport | null;
   technical4h: TechnicalRadarReport | null;
   funding: Partial<Record<RepresentativeSymbol, LiquidationPressureReport>>;
+  fundingMeta: Partial<Record<RepresentativeSymbol, CoinHomeResponseMeta>>;
   marketMetrics: CoinMarketMetricsPayload | null;
   analysisUpdatedAt: number;
 }
@@ -126,6 +140,14 @@ function symbolLogoUrl(symbol: RepresentativeSymbol) {
 
 function boardItem(board: MarketBoardItem[], symbol: RepresentativeSymbol) {
   return board.find((item) => compactSymbol(item.symbol) === symbol) ?? null;
+}
+
+function responseMeta(payload: { cachedAt?: number; cached?: boolean; stale?: boolean } | null | undefined): CoinHomeResponseMeta {
+  return {
+    cachedAt: typeof payload?.cachedAt === "number" && Number.isFinite(payload.cachedAt) ? payload.cachedAt : null,
+    cached: Boolean(payload?.cached),
+    stale: Boolean(payload?.stale)
+  };
 }
 
 function directionFor(changePercent: number) {
@@ -423,6 +445,74 @@ function buildHomeConflictItems({
   ];
 }
 
+function buildHomeFreshnessItems({
+  data,
+  report,
+  report4h,
+  btcFunding,
+  marketMetrics
+}: {
+  data: CoinHomeData;
+  report: TechnicalRadarReport | null | undefined;
+  report4h: TechnicalRadarReport | null | undefined;
+  btcFunding: LiquidationPressureReport | null | undefined;
+  marketMetrics: CoinMarketMetricsPayload | null | undefined;
+}): CoinDataFreshnessItem[] {
+  const boardTimestamp = data.boardMeta.cachedAt ?? data.analysisUpdatedAt;
+  const btcFundingMeta = data.fundingMeta.BTC;
+  const fundingTimestamp = btcFundingMeta?.cachedAt ?? data.analysisUpdatedAt;
+  const metricsTimestamp = marketMetrics?.cachedAt ?? data.analysisUpdatedAt;
+  const metricsWarningCount = marketMetrics?.warnings.length ?? 0;
+
+  return [
+    {
+      label: "대표 시세",
+      title: data.board.length > 0 ? `${data.board.length}개 대표 코인` : "확인 중",
+      detail: `${formatDataAge(boardTimestamp)} · ${data.boardMeta.cached ? "최근 저장본" : "실시간 응답"} 기준입니다.`,
+      tone: dataFreshnessTone({
+        timestamp: boardTimestamp,
+        cached: data.boardMeta.cached,
+        stale: data.boardMeta.stale,
+        warningMs: 5 * 60 * 1000,
+        staleMs: 15 * 60 * 1000
+      })
+    },
+    {
+      label: "BTC 구조",
+      title: `1H ${report?.trendLabel ?? "확인 중"} · 4H ${report4h?.trendLabel ?? "확인 중"}`,
+      detail: `${formatDataAge(data.analysisUpdatedAt)} · RSI, 추세, 변동성 점수를 같은 시각에 재계산했습니다.`,
+      tone: report && report4h ? "long" : "watch"
+    },
+    {
+      label: "파생 쏠림",
+      title: btcFunding ? `펀딩 ${formatPercent(btcFunding.fundingRatePercent, 4)} · 롱숏 ${formatRatio(btcFunding.globalLongShort.ratio)}` : "확인 중",
+      detail: `${formatDataAge(fundingTimestamp)} · ${btcFundingMeta?.cached ? "최근 저장본" : "실시간 응답"} 기준으로 청산 압력과 롱숏 비율을 봅니다.`,
+      tone: dataFreshnessTone({
+        timestamp: fundingTimestamp,
+        cached: btcFundingMeta?.cached,
+        stale: btcFundingMeta?.stale,
+        warningMs: 2 * 60 * 1000,
+        staleMs: 10 * 60 * 1000
+      })
+    },
+    {
+      label: "보조 지표",
+      title: `김프 ${formatPercent(marketMetrics?.kimchiPremiumPercent)} · BTC.D ${formatPlainPercent(marketMetrics?.btcDominancePercent)}`,
+      detail:
+        metricsWarningCount > 0
+          ? `${formatDataAge(metricsTimestamp)} · ${metricsWarningCount}개 공개 소스가 제한되어 보조값으로만 봅니다.`
+          : `${formatDataAge(metricsTimestamp)} · 도미넌스, 환율, 김프 보조값을 함께 확인했습니다.`,
+      tone: dataFreshnessTone({
+        timestamp: metricsTimestamp,
+        cached: marketMetrics?.cached,
+        stale: marketMetrics?.stale,
+        warningMs: 5 * 60 * 1000,
+        staleMs: 20 * 60 * 1000
+      })
+    }
+  ];
+}
+
 function HomeRiskChecklist({
   decision,
   btcFunding,
@@ -600,16 +690,16 @@ export function CoinRadarHomePanel() {
         dogeFundingPayload,
         bnbFundingPayload
       ] = await Promise.all([
-        jsonOrNull<{ items?: MarketBoardItem[]; cachedAt?: number }>("/api/market-board"),
+        jsonOrNull<{ items?: MarketBoardItem[]; cachedAt?: number; cached?: boolean; stale?: boolean }>("/api/market-board"),
         jsonOrNull<{ candles?: Candle[] }>("/api/crypto-candles?symbol=BTCUSDT&timeframe=1h&limit=180"),
         jsonOrNull<{ candles?: Candle[] }>("/api/crypto-candles?symbol=BTCUSDT&timeframe=4h&limit=180"),
         jsonOrNull<CoinMarketMetricsPayload>("/api/coin-market-metrics"),
-        jsonOrNull<{ report?: LiquidationPressureReport }>("/api/liquidation-pressure?symbol=BTCUSDT&period=1h"),
-        jsonOrNull<{ report?: LiquidationPressureReport }>("/api/liquidation-pressure?symbol=ETHUSDT&period=1h"),
-        jsonOrNull<{ report?: LiquidationPressureReport }>("/api/liquidation-pressure?symbol=XRPUSDT&period=1h"),
-        jsonOrNull<{ report?: LiquidationPressureReport }>("/api/liquidation-pressure?symbol=SOLUSDT&period=1h"),
-        jsonOrNull<{ report?: LiquidationPressureReport }>("/api/liquidation-pressure?symbol=DOGEUSDT&period=1h"),
-        jsonOrNull<{ report?: LiquidationPressureReport }>("/api/liquidation-pressure?symbol=BNBUSDT&period=1h")
+        jsonOrNull<{ report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean }>("/api/liquidation-pressure?symbol=BTCUSDT&period=1h"),
+        jsonOrNull<{ report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean }>("/api/liquidation-pressure?symbol=ETHUSDT&period=1h"),
+        jsonOrNull<{ report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean }>("/api/liquidation-pressure?symbol=XRPUSDT&period=1h"),
+        jsonOrNull<{ report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean }>("/api/liquidation-pressure?symbol=SOLUSDT&period=1h"),
+        jsonOrNull<{ report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean }>("/api/liquidation-pressure?symbol=DOGEUSDT&period=1h"),
+        jsonOrNull<{ report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean }>("/api/liquidation-pressure?symbol=BNBUSDT&period=1h")
       ]);
 
       const board = boardPayload?.items ?? [];
@@ -625,6 +715,14 @@ export function CoinRadarHomePanel() {
         DOGE: dogeFundingPayload?.report,
         BNB: bnbFundingPayload?.report
       };
+      const fundingMeta: CoinHomeData["fundingMeta"] = {
+        BTC: responseMeta(btcFundingPayload),
+        ETH: responseMeta(ethFundingPayload),
+        XRP: responseMeta(xrpFundingPayload),
+        SOL: responseMeta(solFundingPayload),
+        DOGE: responseMeta(dogeFundingPayload),
+        BNB: responseMeta(bnbFundingPayload)
+      };
 
       if (board.length === 0 && !technical) {
         throw new Error("코인 홈 데이터를 확인하지 못했습니다.");
@@ -634,9 +732,11 @@ export function CoinRadarHomePanel() {
         status: "ready",
         data: {
           board,
+          boardMeta: responseMeta(boardPayload),
           technical,
           technical4h,
           funding,
+          fundingMeta,
           marketMetrics: marketMetricsPayload,
           analysisUpdatedAt: Date.now()
         }
@@ -742,6 +842,18 @@ export function CoinRadarHomePanel() {
           </div>
         </div>
       </PanelCard>
+
+      <CoinDataFreshnessPanel
+        title="데이터 신선도"
+        description="가격, 구조, 파생, 보조 지표의 갱신 상태를 분리해서 같은 시각의 신호인지 먼저 확인합니다."
+        items={buildHomeFreshnessItems({
+          data: state.data,
+          report: summary?.report,
+          report4h: summary?.report4h,
+          btcFunding: summary?.btcFunding,
+          marketMetrics: summary?.marketMetrics
+        })}
+      />
 
       <HomeRiskChecklist decision={summary?.decision} btcFunding={summary?.btcFunding} kimchiPremium={summary?.marketMetrics?.kimchiPremiumPercent} />
 

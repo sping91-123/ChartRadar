@@ -1,4 +1,4 @@
-import { AlertTriangle, BarChart3, Gauge, GitCompareArrows, LockKeyhole, Radar } from "lucide-react";
+import { AlertTriangle, BarChart3, Clock3, Gauge, GitCompareArrows, LockKeyhole, Radar } from "lucide-react";
 import { PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 
 type FuturesBriefMode = "major" | "alts";
@@ -44,7 +44,14 @@ const briefItems: Record<
       icon: GitCompareArrows
     },
     {
-      label: "5. 상세 판단",
+      label: "5. 데이터 확인",
+      title: "차트·파생·AI 갱신 시각 분리",
+      detail: "캔들, 청산 압력, AI 브리핑은 갱신 주기가 다를 수 있어 같은 방향 신호라도 최신 시각을 먼저 확인합니다.",
+      tone: "info",
+      icon: Clock3
+    },
+    {
+      label: "6. 상세 판단",
       title: "무효화 기준·세부 리스크",
       detail: "구체 조건, 무효화 기준, AI 브리핑은 Pro 영역에서 전체 맥락으로 확인합니다.",
       tone: "long",
@@ -81,7 +88,14 @@ const briefItems: Record<
       icon: GitCompareArrows
     },
     {
-      label: "5. 상세 판단",
+      label: "5. 데이터 확인",
+      title: "시세·거래대금·BTC 기준 분리",
+      detail: "알트 후보의 가격 시각, 거래대금 변화, BTC 방향 기준이 서로 어긋나면 추적 후보로 바로 보지 않습니다.",
+      tone: "info",
+      icon: Clock3
+    },
+    {
+      label: "6. 상세 판단",
       title: "추적 조건·무효화 기준",
       detail: "Basic은 방향 요약 중심이며, 세부 가격 조건과 리스크는 Pro에서 확인합니다.",
       tone: "long",
