@@ -388,6 +388,144 @@ function SpotChartEvidencePanel({
   );
 }
 
+type SpotPriorityGroup = {
+  label: string;
+  title: string;
+  tone: SpotChartTone;
+  items: Array<{
+    item: SpotRadarItem;
+    chart: SpotChartSummary | null;
+    score: number;
+    reason: string;
+    tone: SpotChartTone;
+  }>;
+};
+
+function chartLookup(payload: SpotChartRadarPayload | null) {
+  return new Map((payload?.items ?? []).map((item) => [item.market, item]));
+}
+
+function chartPriorityBoost(chart: SpotChartSummary | null) {
+  if (!chart) return 0;
+  const volumeBoost = chart.volumeRatio === null ? 0 : Math.min(chart.volumeRatio * 4, 14);
+  const toneBoost = chart.tone === "risk" ? 22 : chart.tone === "long" ? 18 : chart.tone === "short" ? 14 : chart.tone === "watch" ? 8 : 4;
+  return toneBoost + volumeBoost;
+}
+
+function priorityReason(item: SpotRadarItem, chart: SpotChartSummary | null) {
+  const chartText = chart
+    ? `${chart.structureLabel} · ${formatRangePosition(chart.rangePositionPercent)} · 거래 ${chart.volumeRatio === null ? "-" : `${chart.volumeRatio.toFixed(1)}x`}`
+    : "차트 근거 확인 중";
+  return `${item.categoryLabel} · ${chartText}`;
+}
+
+function buildSpotPriorityGroups(payload: SpotRadarPayload, chartPayload: SpotChartRadarPayload | null): SpotPriorityGroup[] {
+  const chartByMarket = chartLookup(chartPayload);
+  const enriched = payload.items.map((item) => {
+    const chart = chartByMarket.get(item.market) ?? null;
+    const absChange = Math.abs(item.changePercent);
+    const riskBase = item.category === "overheat" ? 44 : item.category === "pressure" ? 38 : 0;
+    const followBase = item.category === "volume" ? 36 : item.category === "gainer" ? 30 : item.category === "pullback" ? 26 : 0;
+    const chartBoost = chartPriorityBoost(chart);
+    const rangeRisk = chart?.rangePositionPercent !== null && chart?.rangePositionPercent !== undefined && (chart.rangePositionPercent >= 82 || chart.rangePositionPercent <= 18) ? 8 : 0;
+    const riskScore = riskBase + chartBoost + rangeRisk + absChange;
+    const followScore = followBase + (chart?.tone === "long" ? 18 : chart?.tone === "watch" ? 8 : 0) + Math.max(item.changePercent, 0);
+    const watchScore = (item.category === "watch" ? 28 : 8) + (chart?.tone === "watch" ? 14 : 0) + (chart ? 4 : 0);
+
+    return {
+      item,
+      chart,
+      riskScore,
+      followScore,
+      watchScore,
+      reason: priorityReason(item, chart)
+    };
+  });
+
+  const riskItems = enriched
+    .filter(({ item, chart }) => item.category === "overheat" || item.category === "pressure" || chart?.tone === "risk" || chart?.tone === "short")
+    .sort((left, right) => right.riskScore - left.riskScore)
+    .slice(0, 3)
+    .map(({ item, chart, riskScore, reason }) => ({ item, chart, score: riskScore, reason, tone: chart?.tone === "short" ? ("short" as const) : ("risk" as const) }));
+
+  const followItems = enriched
+    .filter(({ item, chart }) => item.category === "volume" || item.category === "gainer" || item.category === "pullback" || chart?.tone === "long")
+    .sort((left, right) => right.followScore - left.followScore)
+    .slice(0, 3)
+    .map(({ item, chart, followScore, reason }) => ({ item, chart, score: followScore, reason, tone: chart?.tone === "long" ? ("long" as const) : ("watch" as const) }));
+
+  const watchItems = enriched
+    .filter(({ item, chart }) => item.category === "watch" || chart?.tone === "watch" || chart === null)
+    .sort((left, right) => right.watchScore - left.watchScore)
+    .slice(0, 3)
+    .map(({ item, chart, watchScore, reason }) => ({ item, chart, score: watchScore, reason, tone: "watch" as const }));
+
+  return [
+    {
+      label: "위험 Top",
+      title: "차트와 분류가 함께 조심스러운 후보",
+      tone: "risk",
+      items: riskItems
+    },
+    {
+      label: "추적 Top",
+      title: "거래대금과 차트 근거를 함께 볼 후보",
+      tone: "long",
+      items: followItems
+    },
+    {
+      label: "관망 Top",
+      title: "방향 근거가 아직 덜 정렬된 후보",
+      tone: "watch",
+      items: watchItems
+    }
+  ];
+}
+
+function SpotPriorityPanel({ payload, chartPayload }: { payload: SpotRadarPayload; chartPayload: SpotChartRadarPayload | null }) {
+  const groups = buildSpotPriorityGroups(payload, chartPayload);
+
+  return (
+    <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
+      <SectionHeader
+        eyebrow="Priority"
+        title="현물 우선순위 Top"
+        description="후보 분류와 1시간봉 차트 근거를 합쳐 위험, 추적, 관망 후보를 따로 정렬합니다."
+      />
+      <div className="grid gap-0 lg:grid-cols-3">
+        {groups.map((group, index) => (
+          <article key={group.label} className={`min-w-0 py-3 lg:px-3 ${index > 0 ? "border-t border-ui-line lg:border-l lg:border-t-0" : ""}`}>
+            <div className="flex min-w-0 items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{group.label}</p>
+                <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{group.title}</p>
+              </div>
+              <StatusPill tone={group.tone} className="shrink-0">
+                {group.items.length}개
+              </StatusPill>
+            </div>
+            <div className="mt-3 space-y-3">
+              {group.items.length > 0 ? (
+                group.items.map(({ item, reason, score, tone }) => (
+                  <div key={`${group.label}-${item.market}`} className="border-t border-ui-line pt-3 first:border-t-0 first:pt-0">
+                    <div className="flex min-w-0 items-center justify-between gap-3">
+                      <p className="truncate text-sm font-semibold text-ui-text">{item.symbol}</p>
+                      <span className={`shrink-0 text-xs font-semibold ${chartToneClass[tone]}`}>{Math.round(score)}점</span>
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{reason}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="border-t border-ui-line pt-3 text-xs leading-5 text-ui-muted">해당 묶음에 우선 표시할 후보가 아직 없습니다.</p>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+    </PanelCard>
+  );
+}
+
 function SpotRow({ item }: { item: SpotRadarItem }) {
   const DirectionIcon = item.changePercent >= 0 ? ArrowUpRight : ArrowDownRight;
 
@@ -602,6 +740,8 @@ export function SpotRadarPanel() {
       ) : null}
 
       {payload ? <SpotChartEvidencePanel payload={chartPayload} loading={isChartLoading} error={chartError} /> : null}
+
+      {payload ? <SpotPriorityPanel payload={payload} chartPayload={chartPayload} /> : null}
 
       {payload ? (
         <CoinSignalPressurePanel
