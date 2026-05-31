@@ -1,4 +1,4 @@
-import { AlertTriangle, BarChart3, Gauge, LockKeyhole, Radar } from "lucide-react";
+import { AlertTriangle, BarChart3, Gauge, GitCompareArrows, LockKeyhole, Radar } from "lucide-react";
 import { PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 
 type FuturesBriefMode = "major" | "alts";
@@ -37,7 +37,14 @@ const briefItems: Record<
       icon: Gauge
     },
     {
-      label: "4. 상세 판단",
+      label: "4. 충돌 처리",
+      title: "롱 신호 + 과열이면 위험 우선",
+      detail: "상방 근거와 청산·펀딩 과열이 같이 보이면 진입 판단보다 무효화와 변동성 기준을 먼저 확인합니다.",
+      tone: "risk",
+      icon: GitCompareArrows
+    },
+    {
+      label: "5. 상세 판단",
       title: "무효화 기준·세부 리스크",
       detail: "구체 조건, 무효화 기준, AI 브리핑은 Pro 영역에서 전체 맥락으로 확인합니다.",
       tone: "long",
@@ -67,7 +74,14 @@ const briefItems: Record<
       icon: BarChart3
     },
     {
-      label: "4. 상세 판단",
+      label: "4. 충돌 처리",
+      title: "급등 후보 + 저유동성이면 회피 우선",
+      detail: "알트는 좋은 후보처럼 보여도 변동성·저유동성·BTC 약세가 겹치면 고위험으로 먼저 분류합니다.",
+      tone: "risk",
+      icon: GitCompareArrows
+    },
+    {
+      label: "5. 상세 판단",
       title: "추적 조건·무효화 기준",
       detail: "Basic은 방향 요약 중심이며, 세부 가격 조건과 리스크는 Pro에서 확인합니다.",
       tone: "long",

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, RefreshCw, Search, ShieldCheck } from "lucide-react";
 import { ActionButton, DataRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
+import { CoinSignalConflictPanel, type CoinSignalConflictItem } from "@/components/coin/CoinSignalConflictPanel";
 import type { SpotExchange, SpotRadarCategory, SpotRadarItem, SpotRadarPayload } from "@/lib/spotRadarTypes";
 
 const exchanges: Array<{ id: SpotExchange; label: string }> = [
@@ -127,6 +128,47 @@ function SpotMarketChecklist({ payload }: { payload: SpotRadarPayload }) {
       ))}
     </div>
   );
+}
+
+function buildSpotConflictItems(payload: SpotRadarPayload): CoinSignalConflictItem[] {
+  const volumeLeader = payload.items[0] ?? null;
+  const overheat = payload.items.find((item) => item.category === "overheat") ?? null;
+  const pressure = payload.items.find((item) => item.category === "pressure") ?? null;
+  const followCandidate =
+    payload.items.find((item) => item.category === "pullback") ??
+    payload.items.find((item) => item.category === "volume" && item.changePercent > 0) ??
+    payload.items.find((item) => item.category === "gainer") ??
+    null;
+  const broadSkew = Math.abs(payload.summary.gainers - payload.summary.losers);
+
+  return [
+    {
+      label: "급등 vs 추격",
+      title: overheat ? `${overheat.symbol} · 과열 주의` : "과열 후보 약함",
+      detail: overheat ? overheat.check : "상승률만으로 보지 않고 거래대금 유지와 첫 눌림 반응을 기다립니다.",
+      tone: overheat ? "risk" : "info"
+    },
+    {
+      label: "거래대금 vs 방향",
+      title: volumeLeader ? `${volumeLeader.symbol} · ${formatKrw(volumeLeader.quoteVolume24h)}` : "거래대금 확인 중",
+      detail: volumeLeader
+        ? `거래대금 1위가 ${formatPercent(volumeLeader.changePercent)} 흐름입니다. 거래대금만 크고 방향이 약하면 관망 후보로 둡니다.`
+        : "거래대금 리더가 확인되면 방향과 함께 비교합니다.",
+      tone: volumeLeader && volumeLeader.changePercent >= 2.5 ? "long" : volumeLeader && volumeLeader.changePercent <= -2.5 ? "short" : "watch"
+    },
+    {
+      label: "하락압력 vs 반등",
+      title: pressure ? `${pressure.symbol} · 하락 압력` : "강한 하락압력 후보 없음",
+      detail: pressure ? pressure.check : "급락 후보가 약하면 눌림 대기 후보와 시장 폭을 우선 확인합니다.",
+      tone: pressure ? "risk" : "info"
+    },
+    {
+      label: "후보 vs 시장 폭",
+      title: followCandidate ? `${followCandidate.symbol} · ${followCandidate.categoryLabel}` : "추적 후보 대기",
+      detail: `상승 ${payload.summary.gainers} / 하락 ${payload.summary.losers}. 폭 차이 ${broadSkew}개로, 후보 하나보다 시장 폭을 함께 봅니다.`,
+      tone: followCandidate ? "watch" : "info"
+    }
+  ];
 }
 
 function SpotRow({ item }: { item: SpotRadarItem }) {
@@ -263,6 +305,8 @@ export function SpotRadarPanel() {
           ))}
         </div>
       </PanelCard>
+
+      {payload ? <CoinSignalConflictPanel title="현물 신호 충돌 체크" description="거래대금, 급등, 하락압력, 시장 폭이 서로 맞는지 먼저 비교합니다." items={buildSpotConflictItems(payload)} /> : null}
 
       <PanelCard variant="report" padding="lg" className="space-y-4">
         <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">

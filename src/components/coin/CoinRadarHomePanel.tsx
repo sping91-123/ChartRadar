@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, RefreshCw, TrendingUp, X } from "lucide-react";
 import { ActionButton, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
+import { CoinSignalConflictPanel, type CoinSignalConflictItem } from "@/components/coin/CoinSignalConflictPanel";
 import type { CoinMarketMetricsPayload } from "@/lib/coinMarketMetrics";
 import type { Candle } from "@/lib/marketAnalysis";
 import type { LiquidationPressureReport } from "@/lib/liquidationPressure";
@@ -373,6 +374,55 @@ function FundingRateRow({ symbol, report }: { symbol: RepresentativeSymbol; repo
   );
 }
 
+function buildHomeConflictItems({
+  decision,
+  btc,
+  btcFunding,
+  kimchiPremium
+}: {
+  decision: CoinHomeDecisionSummary | undefined;
+  btc: MarketBoardItem | null | undefined;
+  btcFunding: LiquidationPressureReport | null | undefined;
+  kimchiPremium: number | null | undefined;
+}): CoinSignalConflictItem[] {
+  const btcChange = btc?.changePercent ?? null;
+  const funding = btcFunding?.fundingRatePercent ?? null;
+  const longShortRatio = btcFunding?.globalLongShort.ratio ?? null;
+  const riskIsActive = Boolean(decision?.topRisk && decision.topRisk !== "확인 조건 대기");
+  const priceWeakButLongCrowded = (btcChange ?? 0) < 0 && (funding ?? 0) > 0.001;
+  const priceStrongButCrowded = (btcChange ?? 0) > 1 && ((funding ?? 0) > 0.01 || (longShortRatio ?? 1) >= 1.35);
+  const kimchiSkew = Math.abs(kimchiPremium ?? 0) >= 1.5;
+
+  return [
+    {
+      label: "방향 vs 리스크",
+      title: riskIsActive ? `${decision?.direction ?? "방향 확인"} · ${decision?.topRisk}` : decision?.direction ?? "방향 확인 중",
+      detail: riskIsActive
+        ? "추적 조건이 있더라도 회피 조건이 먼저 풀리는지 확인합니다."
+        : "뚜렷한 충돌은 약하지만, 확인 조건 없이 추격하지 않습니다.",
+      tone: riskIsActive ? "risk" : "info"
+    },
+    {
+      label: "가격 vs 파생",
+      title: priceWeakButLongCrowded ? "가격 약세인데 롱 쏠림" : priceStrongButCrowded ? "상승 중 파생 쏠림" : fundingSkewDescription(funding),
+      detail: `BTC 등락 ${formatPercent(btcChange)} · 펀딩비 ${formatPercent(funding, 4)} · 롱숏비율 ${formatRatio(longShortRatio)}.`,
+      tone: priceWeakButLongCrowded || priceStrongButCrowded ? "risk" : "watch"
+    },
+    {
+      label: "시장 주도",
+      title: decision?.leadership ?? "주도 흐름 확인 중",
+      detail: decision?.reason ?? "BTC와 알트 참여가 같은 방향으로 정렬되는지 확인합니다.",
+      tone: decision?.leadership === "알트 순환" || decision?.leadership === "BTC 우세" ? "long" : decision?.leadership === "위험 회피" ? "risk" : "watch"
+    },
+    {
+      label: "국내 vs 글로벌",
+      title: kimchiSkew ? `김프 괴리 ${formatPercent(kimchiPremium)}` : `김프 ${formatPercent(kimchiPremium)}`,
+      detail: kimchiSkew ? "국내 현물 체감과 글로벌 선물 흐름이 다를 수 있어 같은 신호로 해석하지 않습니다." : "국내 프리미엄 괴리는 제한적입니다.",
+      tone: kimchiSkew ? "watch" : "info"
+    }
+  ];
+}
+
 function HomeRiskChecklist({
   decision,
   btcFunding,
@@ -694,6 +744,15 @@ export function CoinRadarHomePanel() {
       </PanelCard>
 
       <HomeRiskChecklist decision={summary?.decision} btcFunding={summary?.btcFunding} kimchiPremium={summary?.marketMetrics?.kimchiPremiumPercent} />
+
+      <CoinSignalConflictPanel
+        items={buildHomeConflictItems({
+          decision: summary?.decision,
+          btc: summary?.btc,
+          btcFunding: summary?.btcFunding,
+          kimchiPremium: summary?.marketMetrics?.kimchiPremiumPercent
+        })}
+      />
 
       <PanelCard variant="flat" padding="none" className="space-y-4">
         <SectionHeader eyebrow="Representative Coins" title="대표 코인 상태" />
