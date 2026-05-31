@@ -33,7 +33,6 @@ type CoinHomeState =
   | { status: "error"; message: string };
 
 const tileSymbols = ["BTC", "ETH", "XRP", "SOL", "DOGE", "BNB"] as const;
-const fundingSymbols = ["BTC", "ETH", "XRP", "SOL", "DOGE", "BNB"] as const;
 
 type RepresentativeSymbol = (typeof tileSymbols)[number];
 type ConclusionSegment = { text: string; tone?: "up" | "down" };
@@ -660,7 +659,7 @@ export function CoinRadarHomePanel() {
             const score = scoreFor(item?.changePercent ?? 0, summary?.fearGreed?.score ?? null);
 
             return (
-              <div className="relative w-full max-w-sm border border-ui-line bg-ui-panel p-4 text-ui-text shadow-none">
+              <div className="relative max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto border border-ui-line bg-ui-panel p-4 text-ui-text shadow-none">
                 <button
                   type="button"
                   onClick={() => setSelectedSymbol(null)}
@@ -688,6 +687,9 @@ export function CoinRadarHomePanel() {
                     <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">신호 정렬도</p>
                     <p className="text-2xl font-semibold">{score}점</p>
                   </div>
+                </div>
+                <div className="mt-4 border-y border-ui-line">
+                  <FundingRateRow symbol={selectedSymbol} report={state.data.funding[selectedSymbol] ?? null} />
                 </div>
                 <div className="mt-4 space-y-3 text-sm leading-6 text-ui-muted">
                   <div>
@@ -767,15 +769,6 @@ export function CoinRadarHomePanel() {
         </div>
       </PanelCard>
 
-      <PanelCard variant="flat" padding="none" className="space-y-4">
-        <SectionHeader eyebrow="Funding" title="대표 코인 펀딩비" description="펀딩비는 포지션 쏠림을 보는 보조 지표이며 방향 지시가 아닙니다." />
-        <div>
-          {fundingSymbols.map((symbol) => {
-            const report = state.data.funding[symbol] ?? null;
-            return <FundingRateRow key={symbol} symbol={symbol} report={report} />;
-          })}
-        </div>
-      </PanelCard>
     </div>
   );
 }
