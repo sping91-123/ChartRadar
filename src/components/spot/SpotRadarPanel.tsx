@@ -21,6 +21,9 @@ const categoryFilters: Array<{ id: "all" | BuySpotCategory; label: string }> = [
   { id: "pullback", label: "눌림" }
 ];
 
+const spotExchangeStorageKey = "chart-radar.spot.exchange";
+const spotWatchMarketStorageKey = "chart-radar.spot.watch-market";
+
 function formatKrw(value: number) {
   if (!Number.isFinite(value)) return "미확인";
   if (value >= 1_0000_0000_0000) return `${(value / 1_0000_0000_0000).toFixed(1)}조`;
@@ -380,6 +383,10 @@ function personalSpotTitle(market: string | null) {
   return market ? market.replace("KRW-", "") : "코인 선택";
 }
 
+function isSpotExchange(value: string | null): value is SpotExchange {
+  return value === "upbit" || value === "bithumb";
+}
+
 function chartPriorityBoost(chart: SpotChartSummary | null) {
   if (!chart) return 0;
   const volumeBoost = chart.volumeRatio === null ? 0 : Math.min(chart.volumeRatio * 4, 14);
@@ -489,9 +496,12 @@ function PersonalSpotPanel({
   chart,
   loading,
   error,
+  isPickerOpen,
   onQueryChange,
   onSelectMarket,
-  onSubmit
+  onSubmit,
+  onOpenPicker,
+  onClosePicker
 }: {
   exchange: SpotExchange;
   payload: SpotRadarPayload | null;
@@ -501,9 +511,12 @@ function PersonalSpotPanel({
   chart: SpotChartSummary | null;
   loading: boolean;
   error: string | null;
+  isPickerOpen: boolean;
   onQueryChange: (value: string) => void;
   onSelectMarket: (market: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onOpenPicker: () => void;
+  onClosePicker: () => void;
 }) {
   const selectedItem = payload?.items.find((item) => item.market === selectedMarket) ?? null;
 
@@ -511,43 +524,71 @@ function PersonalSpotPanel({
     <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <SectionHeader title="내 관심 알트" />
-        <form onSubmit={onSubmit} className="flex w-full min-w-0 gap-2 sm:max-w-sm">
-          <label className="sr-only" htmlFor="spot-watch-symbol">관심 코인 검색</label>
-          <input
-            id="spot-watch-symbol"
-            value={query}
-            onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="예: SOL, XRP"
-            className="min-h-9 min-w-0 flex-1 border border-ui-line bg-ui-canvas px-3 text-sm font-semibold text-ui-text outline-none transition placeholder:text-ui-subtle focus:border-ui-brand"
-          />
-          <ActionButton type="submit" tone="primary" className="min-h-9 shrink-0 px-3">
-            <Search size={14} aria-hidden />
-            보기
-          </ActionButton>
-        </form>
+        <ActionButton tone={selectedMarket ? "ghost" : "primary"} className={selectedMarket ? "px-0" : ""} onClick={onOpenPicker}>
+          <Search size={14} aria-hidden />
+          {selectedMarket ? "변경" : "관심 알트 등록"}
+        </ActionButton>
       </div>
 
-      {suggestions.length > 0 ? (
-        <div className="flex gap-1.5 overflow-x-auto border-t border-ui-line pt-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {suggestions.map((item) => (
-            <button
-              key={`${item.exchange}-${item.market}`}
-              type="button"
-              onClick={() => onSelectMarket(item.market)}
-              className={`min-h-8 shrink-0 border px-2 text-xs font-semibold transition ${
-                selectedMarket === item.market ? "border-ui-brand bg-ui-brand/15 text-ui-text" : "border-ui-line text-ui-muted hover:text-ui-text"
-              }`}
-            >
-              {item.symbol}
-            </button>
-          ))}
+      {isPickerOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md border border-ui-line bg-ui-panel p-4 shadow-ui-elevated">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-base font-semibold text-ui-text">관심 알트 등록</p>
+                <p className="mt-1 text-xs leading-5 text-ui-muted">티커를 검색해서 계속 볼 코인 하나를 고릅니다.</p>
+              </div>
+              <ActionButton tone="ghost" className="min-h-7 px-0" onClick={onClosePicker} aria-label="닫기">
+                <X size={16} aria-hidden />
+              </ActionButton>
+            </div>
+
+            <form onSubmit={onSubmit} className="mt-4 flex w-full min-w-0 gap-2">
+              <label className="sr-only" htmlFor="spot-watch-symbol">관심 코인 검색</label>
+              <input
+                id="spot-watch-symbol"
+                value={query}
+                onChange={(event) => onQueryChange(event.target.value)}
+                placeholder="예: SOL, XRP"
+                autoFocus
+                className="min-h-10 min-w-0 flex-1 border border-ui-line bg-ui-canvas px-3 text-sm font-semibold text-ui-text outline-none transition placeholder:text-ui-subtle focus:border-ui-brand"
+              />
+              <ActionButton type="submit" tone="primary" className="min-h-10 shrink-0 px-3">
+                보기
+              </ActionButton>
+            </form>
+
+            {suggestions.length > 0 ? (
+              <div className="mt-3 flex gap-1.5 overflow-x-auto border-t border-ui-line pt-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {suggestions.map((item) => (
+                  <button
+                    key={`${item.exchange}-${item.market}`}
+                    type="button"
+                    onClick={() => onSelectMarket(item.market)}
+                    className={`min-h-8 shrink-0 border px-2 text-xs font-semibold transition ${
+                      selectedMarket === item.market ? "border-ui-brand bg-ui-brand/15 text-ui-text" : "border-ui-line text-ui-muted hover:text-ui-text"
+                    }`}
+                  >
+                    {item.symbol}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-3 border-t border-ui-line pt-3 text-xs leading-5 text-ui-muted">티커를 입력하면 후보가 표시됩니다.</p>
+            )}
+          </div>
         </div>
       ) : null}
 
       <div className="border-t border-ui-line pt-3">
         {!selectedMarket ? (
-          <div className="flex min-h-28 items-center justify-center text-sm font-semibold text-ui-muted">
-            관심 코인을 검색하면 1H 현물 차트 상태를 따로 보여줍니다.
+          <div className="flex min-h-32 flex-col items-center justify-center gap-3 text-center">
+            <p className="text-sm font-semibold text-ui-text">관심 알트가 비어 있습니다.</p>
+            <p className="max-w-sm text-xs leading-5 text-ui-muted">물려 있거나 계속 보고 싶은 알트 하나를 등록해두면 이 화면 맨 위에서 바로 확인합니다.</p>
+            <ActionButton tone="primary" onClick={onOpenPicker}>
+              <Search size={14} aria-hidden />
+              관심 알트 등록
+            </ActionButton>
           </div>
         ) : loading ? (
           <div className="flex min-h-28 items-center justify-center text-sm font-semibold text-ui-muted">
@@ -661,12 +702,28 @@ export function SpotRadarPanel() {
   const [watchQuery, setWatchQuery] = useState("");
   const [watchMarket, setWatchMarket] = useState<string | null>(null);
   const [watchChartPayload, setWatchChartPayload] = useState<SpotChartRadarPayload | null>(null);
+  const [isWatchPickerOpen, setIsWatchPickerOpen] = useState(false);
   const [isChartLoading, setIsChartLoading] = useState(false);
   const [isWatchChartLoading, setIsWatchChartLoading] = useState(false);
   const [chartError, setChartError] = useState<string | null>(null);
   const [watchChartError, setWatchChartError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const storedExchange = window.localStorage.getItem(spotExchangeStorageKey);
+      if (isSpotExchange(storedExchange)) setExchange(storedExchange);
+
+      const storedMarket = normalizeSpotSearch(window.localStorage.getItem(spotWatchMarketStorageKey) ?? "");
+      if (storedMarket) {
+        setWatchMarket(storedMarket);
+        setWatchQuery(storedMarket.replace("KRW-", ""));
+      }
+    } catch {
+      // localStorage가 막힌 환경에서는 기본값으로 동작합니다.
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -820,9 +877,33 @@ export function SpotRadarPanel() {
   }, [payload, watchQuery]);
   const watchChart = watchChartPayload?.items[0] ?? null;
 
+  function selectExchange(nextExchange: SpotExchange) {
+    setExchange(nextExchange);
+    try {
+      window.localStorage.setItem(spotExchangeStorageKey, nextExchange);
+    } catch {
+      // 저장이 막힌 환경에서는 현재 세션에서만 유지합니다.
+    }
+  }
+
+  function openWatchPicker() {
+    setWatchQuery(watchMarket ? watchMarket.replace("KRW-", "") : "");
+    setIsWatchPickerOpen(true);
+  }
+
+  function closeWatchPicker() {
+    setIsWatchPickerOpen(false);
+  }
+
   function selectWatchMarket(market: string) {
     setWatchMarket(market);
     setWatchQuery(market.replace("KRW-", ""));
+    setIsWatchPickerOpen(false);
+    try {
+      window.localStorage.setItem(spotWatchMarketStorageKey, market);
+    } catch {
+      // 저장이 막힌 환경에서는 현재 세션에서만 유지합니다.
+    }
   }
 
   function submitWatchSearch(event: FormEvent<HTMLFormElement>) {
@@ -838,6 +919,23 @@ export function SpotRadarPanel() {
 
   return (
     <div className="flex flex-col gap-4">
+      <PersonalSpotPanel
+        exchange={exchange}
+        payload={payload}
+        selectedMarket={watchMarket}
+        query={watchQuery}
+        suggestions={watchSuggestions}
+        chart={watchChart}
+        loading={isWatchChartLoading}
+        error={watchChartError}
+        isPickerOpen={isWatchPickerOpen}
+        onQueryChange={setWatchQuery}
+        onSelectMarket={selectWatchMarket}
+        onSubmit={submitWatchSearch}
+        onOpenPicker={openWatchPicker}
+        onClosePicker={closeWatchPicker}
+      />
+
       <PanelCard variant="report" padding="lg" className="space-y-2">
         <SectionHeader
           title="현물 레이더"
@@ -847,7 +945,7 @@ export function SpotRadarPanel() {
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => setExchange(item.id)}
+                  onClick={() => selectExchange(item.id)}
                   className={`inline-flex min-h-10 items-center gap-2 border px-2 text-xs font-semibold transition ${
                     exchange === item.id ? "border-ui-brand bg-ui-brand/15 text-ui-text" : "border-transparent text-ui-muted hover:border-ui-line hover:text-ui-text"
                   }`}
@@ -888,7 +986,7 @@ export function SpotRadarPanel() {
       <PanelCard variant="report" padding="lg" className="space-y-4">
         <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
           <SectionHeader title="현물 관찰 후보" />
-          <ActionButton tone="ghost" className="whitespace-nowrap px-0" onClick={() => setExchange((current) => (current === "upbit" ? "bithumb" : "upbit"))}>
+          <ActionButton tone="ghost" className="whitespace-nowrap px-0" onClick={() => selectExchange(exchange === "upbit" ? "bithumb" : "upbit")}>
             <RefreshCw size={14} aria-hidden />
             거래소 전환
           </ActionButton>
@@ -920,20 +1018,6 @@ export function SpotRadarPanel() {
           </div>
         )}
       </PanelCard>
-
-      <PersonalSpotPanel
-        exchange={exchange}
-        payload={payload}
-        selectedMarket={watchMarket}
-        query={watchQuery}
-        suggestions={watchSuggestions}
-        chart={watchChart}
-        loading={isWatchChartLoading}
-        error={watchChartError}
-        onQueryChange={setWatchQuery}
-        onSelectMarket={selectWatchMarket}
-        onSubmit={submitWatchSearch}
-      />
 
       {payload ? <SpotPriorityPanel payload={payload} chartPayload={chartPayload} /> : null}
     </div>
