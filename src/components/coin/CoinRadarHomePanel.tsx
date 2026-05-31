@@ -553,47 +553,20 @@ export function CoinRadarHomePanel() {
   return (
     <div className="flex flex-col gap-3 sm:gap-4">
       <PanelCard variant="flat" padding="none" className="space-y-4">
-        <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1">
           <div className="min-w-0">
             <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">오늘의 결론</p>
             <h2 className="text-ui-heading font-semibold tracking-tight text-ui-text">{summary?.decision.state}</h2>
-            <p className="mt-1 max-w-3xl text-ui-body text-ui-muted [word-break:keep-all]">
-              {conclusionText(summary?.decision)}
-            </p>
           </div>
           <ActionButton tone="ghost" className="min-h-7 shrink-0 px-0" onClick={() => void load()}>
             <RefreshCw size={12} aria-hidden />
             새로고침
           </ActionButton>
+          <p className="col-span-2 min-w-0 text-ui-body text-ui-muted [word-break:keep-all]">
+            {conclusionText(summary?.decision)}
+          </p>
         </div>
 
-        <div className="grid gap-5 border-t border-ui-line pt-4 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
-          <div className="min-w-0">
-            <div>
-              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{summary?.decision.scoreLabel}</p>
-              <p className="mt-1 text-3xl font-semibold tracking-tight text-ui-text sm:text-4xl">{summary?.decision.readinessScore ?? "-"}점</p>
-            </div>
-          </div>
-
-          <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-1">
-            <div>
-              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">조심할 점</p>
-              <p className="mt-1 text-base font-semibold text-ui-text">
-                {summary?.decision.topRisk}
-              </p>
-            </div>
-            <div className="min-w-0">
-              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">다음에 볼 것</p>
-              <p className="mt-1 min-w-0 text-sm font-semibold leading-5 text-ui-text [overflow-wrap:anywhere] [word-break:keep-all]">
-                {summary?.decision.nextCondition}
-              </p>
-            </div>
-          </div>
-        </div>
-      </PanelCard>
-
-      <PanelCard variant="flat" padding="none" className="space-y-4">
-        <SectionHeader title="대표 코인 상태" />
         <div className="mx-auto w-full max-w-2xl overflow-hidden rounded-ui-sm bg-ui-line p-px">
           <div className="grid h-[clamp(10.5rem,42vw,18rem)] grid-cols-[minmax(0,1fr)_minmax(5.6rem,34%)] items-stretch gap-px">
             {(() => {
@@ -628,6 +601,30 @@ export function CoinRadarHomePanel() {
               const score = scoreFor(item?.changePercent ?? 0, summary?.fearGreed?.score ?? null);
               return <CoinStatusTile symbol={symbol} item={item} score={score} onClick={() => setSelectedSymbol(symbol)} />;
             })()}
+          </div>
+        </div>
+
+        <div className="grid gap-5 border-t border-ui-line pt-4 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
+          <div className="min-w-0">
+            <div>
+              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{summary?.decision.scoreLabel}</p>
+              <p className="mt-1 text-3xl font-semibold tracking-tight text-ui-text sm:text-4xl">{summary?.decision.readinessScore ?? "-"}점</p>
+            </div>
+          </div>
+
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <div>
+              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">조심할 점</p>
+              <p className="mt-1 text-base font-semibold text-ui-text">
+                {summary?.decision.topRisk}
+              </p>
+            </div>
+            <div className="min-w-0">
+              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">다음에 볼 것</p>
+              <p className="mt-1 min-w-0 text-sm font-semibold leading-5 text-ui-text [overflow-wrap:anywhere] [word-break:keep-all]">
+                {summary?.decision.nextCondition}
+              </p>
+            </div>
           </div>
         </div>
       </PanelCard>
@@ -723,7 +720,7 @@ export function CoinRadarHomePanel() {
           <TrendBreadthVisual report={summary?.report} label="BTC 1H 트렌드" />
           <TrendBreadthVisual report={summary?.report4h} label="BTC 4H 트렌드" mergeWithPrevious />
           <MarketStrengthGauge
-            label="BTC 도미넌스"
+            label="BTC 도미넌스 (비트코인 시장 점유율)"
             value={summary?.marketMetrics?.btcDominancePercent}
             display={formatPlainPercent(summary?.marketMetrics?.btcDominancePercent)}
             tone="info"
@@ -735,7 +732,7 @@ export function CoinRadarHomePanel() {
           />
           <LongShortVisual report={summary?.btcFunding} />
           <MarketStrengthGauge
-            label="김프"
+            label="김치 프리미엄"
             value={summary?.marketMetrics?.kimchiPremiumPercent}
             display={formatPercent(summary?.marketMetrics?.kimchiPremiumPercent)}
             min={-5}

@@ -10,8 +10,8 @@ type BuySpotCategory = Extract<SpotRadarCategory, "volume" | "gainer" | "pullbac
 const buyCategories = new Set<SpotRadarCategory>(["volume", "gainer", "pullback"]);
 
 const exchanges: Array<{ id: SpotExchange; label: string; logo: string }> = [
-  { id: "upbit", label: "업비트", logo: "/brand/upbit-logo.svg" },
-  { id: "bithumb", label: "빗썸", logo: "/brand/bithumb-logo.svg" }
+  { id: "upbit", label: "업비트", logo: "/brand/upbit-app-icon.png" },
+  { id: "bithumb", label: "빗썸", logo: "/brand/bithumb-app-icon.jpg" }
 ];
 
 const categoryFilters: Array<{ id: "all" | BuySpotCategory; label: string }> = [
@@ -91,6 +91,30 @@ function buyCandidateItems(payload: SpotRadarPayload) {
 
 function safeBuyCandidateItems(payload: SpotRadarPayload | null) {
   return payload ? buyCandidateItems(payload) : [];
+}
+
+function filteredBuyCandidateItems(payload: SpotRadarPayload | null, filter: "all" | BuySpotCategory) {
+  const candidates = safeBuyCandidateItems(payload);
+  if (filter === "all") return candidates;
+  return candidates.filter((item) => item.category === filter);
+}
+
+function spotMarketMood(payload: SpotRadarPayload | null) {
+  if (!payload || payload.summary.displayedMarkets === 0) return "-";
+  const { displayedMarkets, gainers, losers } = payload.summary;
+  const difference = gainers - losers;
+  const threshold = Math.max(5, Math.round(displayedMarkets * 0.12));
+
+  if (difference >= threshold) return "상승 우세";
+  if (difference <= -threshold) return "하락 우세";
+  return "혼조";
+}
+
+function spotMarketMoodClass(payload: SpotRadarPayload | null) {
+  const mood = spotMarketMood(payload);
+  if (mood.startsWith("상승")) return "text-ui-long";
+  if (mood.startsWith("하락")) return "text-ui-short";
+  return "text-ui-text";
 }
 
 function displaySpotLabel(value: string) {
@@ -180,12 +204,12 @@ function SpotChartEvidencePanel({
   error: string | null;
 }) {
   return (
-    <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
-      <SectionHeader title="현물 차트" />
+    <section className="space-y-4 border-t border-ui-line pt-4">
+      <SectionHeader title="선택 후보 차트" />
 
       {loading ? (
         <div className="flex min-h-24 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
-          현물 차트를 확인하는 중입니다.
+          선택한 후보 차트를 확인하는 중입니다.
         </div>
       ) : error ? (
         <div className="flex min-h-24 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
@@ -225,7 +249,7 @@ function SpotChartEvidencePanel({
           차트를 표시할 후보가 아직 없습니다.
         </div>
       )}
-    </PanelCard>
+    </section>
   );
 }
 
@@ -578,7 +602,16 @@ export function SpotRadarPanel() {
         return;
       }
 
-      const markets = buyCandidateItems(payload).slice(0, 6).map((item) => item.market);
+      const markets = filteredBuyCandidateItems(payload, filter)
+        .slice(0, 6)
+        .map((item) => item.market);
+      if (markets.length === 0) {
+        setChartPayload(null);
+        setIsChartLoading(false);
+        setChartError(null);
+        return;
+      }
+
       setIsChartLoading(true);
       setChartError(null);
 
@@ -606,7 +639,7 @@ export function SpotRadarPanel() {
     return () => {
       cancelled = true;
     };
-  }, [exchange, payload]);
+  }, [exchange, filter, payload]);
 
   useEffect(() => {
     let cancelled = false;
@@ -652,10 +685,7 @@ export function SpotRadarPanel() {
   }, [exchange, watchMarket]);
 
   const filteredItems = useMemo(() => {
-    if (!payload) return [];
-    const candidates = buyCandidateItems(payload);
-    if (filter === "all") return candidates;
-    return candidates.filter((item) => item.category === filter);
+    return filteredBuyCandidateItems(payload, filter);
   }, [filter, payload]);
   const categoryCounts = useMemo(() => {
     const candidates = safeBuyCandidateItems(payload);
@@ -706,11 +736,11 @@ export function SpotRadarPanel() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PanelCard variant="report" padding="lg" className="space-y-5">
+      <PanelCard variant="report" padding="lg" className="space-y-2">
         <SectionHeader
           title="현물 레이더"
           action={
-            <div className="inline-flex items-center gap-1 border-b border-ui-line pb-1">
+            <div className="inline-flex items-center gap-1">
               {exchanges.map((item) => (
                 <button
                   key={item.id}
@@ -721,7 +751,7 @@ export function SpotRadarPanel() {
                   }`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={item.logo} alt="" className="h-5 w-auto shrink-0 rounded-sm bg-white" loading="lazy" />
+                  <img src={item.logo} alt="" className="h-6 w-6 shrink-0 rounded-[0.45rem] bg-white object-cover" loading="lazy" />
                   <span>{item.label}</span>
                 </button>
               ))}
@@ -729,11 +759,9 @@ export function SpotRadarPanel() {
           }
         />
 
-        <div className="grid gap-0 border-t border-ui-line sm:grid-cols-4">
-          <DataRow label="거래소" value={payload?.exchangeLabel ?? exchanges.find((item) => item.id === exchange)?.label ?? "-"} />
-          <DataRow label="살펴볼 후보" value={payload ? `${buyCandidateItems(payload).length}개` : "-"} />
-          <DataRow label="상승/하락" value={payload ? `${payload.summary.gainers}/${payload.summary.losers}` : "-"} />
-          <DataRow label="평균 등락" value={payload ? formatPercent(payload.summary.averageChangePercent) : "-"} />
+        <div className="grid gap-0 sm:grid-cols-2">
+          <DataRow label="살펴볼 후보" value={payload ? `${buyCandidateItems(payload).length}개` : "-"} className="py-1" />
+          <DataRow label="오늘 분위기" value={<span className={spotMarketMoodClass(payload)}>{spotMarketMood(payload)}</span>} className="py-1" />
         </div>
 
         {payload ? <SpotMarketChecklist payload={payload} /> : null}
@@ -755,24 +783,6 @@ export function SpotRadarPanel() {
         </div>
       </PanelCard>
 
-      {payload ? <SpotChartEvidencePanel payload={chartPayload} loading={isChartLoading} error={chartError} /> : null}
-
-      <PersonalSpotPanel
-        exchange={exchange}
-        payload={payload}
-        selectedMarket={watchMarket}
-        query={watchQuery}
-        suggestions={watchSuggestions}
-        chart={watchChart}
-        loading={isWatchChartLoading}
-        error={watchChartError}
-        onQueryChange={setWatchQuery}
-        onSelectMarket={selectWatchMarket}
-        onSubmit={submitWatchSearch}
-      />
-
-      {payload ? <SpotPriorityPanel payload={payload} chartPayload={chartPayload} /> : null}
-
       <PanelCard variant="report" padding="lg" className="space-y-4">
         <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
           <SectionHeader title="현물 관찰 후보" />
@@ -781,6 +791,8 @@ export function SpotRadarPanel() {
             거래소 전환
           </ActionButton>
         </div>
+
+        {payload ? <SpotChartEvidencePanel payload={chartPayload} loading={isChartLoading} error={chartError} /> : null}
 
         {isLoading ? (
           <div className="flex min-h-44 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
@@ -806,6 +818,22 @@ export function SpotRadarPanel() {
           </div>
         )}
       </PanelCard>
+
+      <PersonalSpotPanel
+        exchange={exchange}
+        payload={payload}
+        selectedMarket={watchMarket}
+        query={watchQuery}
+        suggestions={watchSuggestions}
+        chart={watchChart}
+        loading={isWatchChartLoading}
+        error={watchChartError}
+        onQueryChange={setWatchQuery}
+        onSelectMarket={selectWatchMarket}
+        onSubmit={submitWatchSearch}
+      />
+
+      {payload ? <SpotPriorityPanel payload={payload} chartPayload={chartPayload} /> : null}
 
       <PanelCard variant="report" padding="md">
         <div className="flex items-start gap-3 text-sm text-ui-muted">
