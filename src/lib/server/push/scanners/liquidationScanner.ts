@@ -13,11 +13,13 @@ export async function scanLiquidationEvent(): Promise<PushAlertEvent | null> {
     ruleId: "liquidation-pressure",
     alertKind: "liquidation",
     eventKey: `liquidation-pressure:crypto:${report.symbol ?? "BTCUSDT"}:${report.grade}:${eventBucket(30)}`,
+    symbol: report.symbol ?? "BTCUSDT",
     title: "Chart Radar 청산 압력 확대 감지",
     body: `BTC 청산 압력이 ${report.grade === "extreme" ? "매우 높음" : "높음"} 구간입니다. 변동성 확대 가능성이 있어 리스크 확인이 필요합니다.`,
     data: {
       type: "liquidation-pressure",
       market: "crypto",
+      symbol: report.symbol ?? "BTCUSDT",
       alert_kind: "liquidation",
       alertKind: "liquidation",
       target: "/crypto",

@@ -4,6 +4,7 @@ import type { RecentPushAlertEventRow } from "@/lib/server/push/duplicateGuard";
 
 const cryptoAltMarketScoutCooldownMinutes = 360;
 const setupSymbolCooldownMinutes = 120;
+const liquidationPressureCooldownMinutes = 180;
 const cryptoAltMarketScoutGlobalCooldownMinutes = 60;
 
 export interface CooldownDecision {
@@ -48,7 +49,7 @@ function recentRowIsCryptoAltMarketScout(row: RecentPushAlertEventRow) {
 }
 
 function cooldownMinutesForEvent(event: PushAlertEvent) {
-  if (event.ruleId === "liquidation-pressure") return 0;
+  if (event.ruleId === "liquidation-pressure") return liquidationPressureCooldownMinutes;
   if (isCryptoAltMarketScoutEvent(event)) return cryptoAltMarketScoutCooldownMinutes;
   if (event.score !== undefined) return setupSymbolCooldownMinutes;
   return 0;
