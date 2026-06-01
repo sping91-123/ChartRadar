@@ -1,198 +1,180 @@
-# ChartRadar Agent Guide
+## 자동 실행 레벨
 
-이 문서는 ChartRadar 저장소에서 Codex와 하위 작업 에이전트가 항상 먼저 참고해야 하는 저장소 운영 지침입니다.
+대표의 명령어에 따라 Codex의 자율 실행 범위를 아래처럼 구분한다.
 
-## 프로젝트 정체성
+### `AUTO PLAN ONLY`
 
-- ChartRadar는 StarOn Labs의 코인/글로벌 시장 판단 보조 앱이다.
-- 사용자는 제품 오너이며 최종 의사결정자다.
-- 앱의 핵심 가치는 사용자가 차트를 오래 보지 않아도 방향, 리스크, 관망/추적 조건을 빠르게 정리하게 돕는 것이다.
-- 투자 권유, 수익 보장, 진입 지시처럼 보이는 문구를 피한다.
-- 표현은 매수/매도 지시가 아니라 판단 보조, 추적 조건, 리스크, 무효화 기준, 확인 조건 중심으로 작성한다.
+* 코드와 문서를 수정하지 않는다.
+* 다음 작업 1개를 선택하고 아래만 보고한다.
 
-## 기준 저장소
+  * 선택한 작업.
+  * 선택 이유.
+  * 예상 수정 파일.
+  * 위험도.
+  * 필요한 검증 명령.
+  * 중단 가능성이 있는 조건.
 
-- 기본 로컬 경로는 `X:\Chart-Radar`이다.
-- 예전 `C:\Users\USER\...` 경로는 legacy path로 본다.
-- 작업 전 반드시 현재 repo path와 Git 루트를 확인한다.
-- 기본 브랜치는 `main`이다.
-- 운영 URL은 `https://chartradar.kr`이다.
-- 앱 구조는 Next.js 웹앱을 Capacitor Android WebView로 감싼 하이브리드 앱이다.
+### `AUTO NEXT`
 
-## 기준 Route
+* active run의 다음 `TODO` 1개만 처리한다.
+* active run이 없거나 모든 항목이 `DONE`이면 `docs/work-queue.md`와 `docs/work-items/`를 확인하고 다음 후보 1개를 제안한다.
+* 낮은 위험 또는 중간 위험 작업은 계획 보고 후 진행할 수 있다.
+* 고위험 작업은 계획만 보고하고 대표 승인 전에는 수정하지 않는다.
 
-- `/`: 시장 선택과 앱 진입.
-- `/crypto`: BTC/ETH 중심 코인 레이더.
-- `/alts`: 알트코인 레이더.
-- `/global`: 글로벌 시장흐름 대시보드.
-- `/global/assets`: 글로벌 자산 레이더.
-- `/news`: 뉴스/이벤트 레이더.
-- `/alerts`: 알림 설정/상태.
-- `/journal`: 복기/저널.
-- `/learn`: 지표 안내.
-- `/login`: 로그인.
-- `/pro`: Pro 요금제와 구독.
-- `/terms`, `/privacy`, `/refund`, `/account/delete`: 정책과 계정 안내.
-- `/admin/entitlements`: 관리자 권한/구독 보정.
-- `/majors`는 `/crypto` 호환 또는 redirect로만 취급한다.
-- `/stocks`, `/calculator`, `/diagnosis`, `/report`, `/settings`, `/pro/apply`는 현재 주력 route가 아니다.
+### `AUTO FIX SAFE`
 
-## 작업 운영 원칙
+* 명백한 오류, 타입 에러, 빌드 실패, smoke 실패, UI 깨짐처럼 범위가 좁고 원인이 분명한 문제만 수정한다.
+* 결제, 인증, Supabase, Android release, FCM, production 관련 변경은 제외한다.
+* 수정 범위가 예상보다 커지면 즉시 중단하고 보고한다.
 
-- 한 번에 하나의 작업만 처리한다.
-- 작업 전 `git status --short --branch`와 `git rev-list --left-right --count HEAD...origin/main`을 확인한다.
-- local `main`과 `origin/main`이 불일치하면 새 작업을 시작하지 말고 보고한다.
-- 작업트리가 dirty이면 기존 변경의 정체를 먼저 확인하고, 무관하거나 충돌 가능성이 있으면 중단한다.
-- 기존 사용자 변경이나 미커밋 파일을 되돌리지 않는다.
-- 검증 통과 후 하나의 논리 단위로 커밋한다.
-- 대표의 명시 승인 전에는 `git push`를 실행하지 않는다.
-- 대표의 명시 승인 없이 deploy, Play Console 업로드, AAB 제출, production DB migration을 실행하지 않는다.
-- 비밀값, `.env` 실제 파일, `google-services.json`, keystore는 출력하거나 커밋하지 않는다.
-- 앱 기능 작업과 문서 작업은 한 커밋에 섞지 않는다.
+### `AUTO QA SWEEP`
 
-## 고위험 영역
+* 기능 추가 없이 품질 점검만 수행한다.
+* route 진입, 모바일 화면, Pro gating, 문구, 빈 상태, 로딩 상태, 에러 상태를 확인한다.
+* 발견한 문제는 `docs/work-items/` 후보로 정리한다.
+* 대표 지시 없이 대규모 리팩터링이나 디자인 변경을 하지 않는다.
 
-아래는 항상 고위험으로 취급한다. 필요한 경우 계획을 먼저 제시하고 최소 변경으로 진행한다.
+### `AUTO RUN ACTIVE PLAN`
 
-- RevenueCat.
-- `src/lib/billing.ts`.
-- planId / productId / entitlement.
-- Supabase / RLS / production DB migration.
-- Google 로그인 / OAuth / 세션.
-- Android / Capacitor / AAB / Play Console.
-- FCM / push token / push-cron.
-- `.env`, Firebase key, keystore, `android/app/google-services.json`.
-- 계정 삭제, 로그아웃, 세션 복구, 관리자 권한 보정.
+* `docs/automation-runs/active-run.md`의 `TODO`를 순서대로 처리한다.
+* 한 턴에는 하나의 작업만 완료한다.
+* 각 작업 후 검증, 보고, 커밋 여부를 명확히 남긴다.
+* 다음 작업으로 넘어가기 전 현재 작업의 미완료/리스크를 먼저 정리한다.
 
-## Basic/Pro 원칙
+## 작업 우선순위 산정 기준
 
-- Basic은 방향성 요약, 핵심 흐름, 제한된 판단 중심으로 노출한다.
-- Pro는 세부 조건, 리스크, 무효화 기준, 추적 조건, 다음 행동 기준, 업데이트 시각을 보여준다.
-- Pro gating은 BM 핵심이므로 함부로 약화하지 않는다.
-- UI에서 숨기는 것만으로 민감 정보가 보호된다고 판단하지 않는다. 가능하면 데이터 전달 전 제한한다.
-- 결제 유도 문구는 과장되거나 투자 수익을 보장하는 느낌이면 안 된다.
-- 권장 표현은 판단 보조, 추적 조건, 확인 필요, 관망 우위, 리스크 확대다.
+active run이 비어 있거나 다음 작업 후보를 골라야 할 때는 아래 기준으로 우선순위를 매긴다.
 
-## 결제와 구독 주의사항
+우선순위 점수는 아래 항목을 합산해서 판단한다.
 
-- 결제와 구독 권한은 고위험 영역이다.
-- RevenueCat productId, entitlement, basePlanId, planId 매핑을 임의 변경하지 않는다.
-- `bundle_yearly`는 legacy internal plan id이며, 사용자 노출 상품은 All Market Pro 6개월 구독이다.
-- 사용자 화면과 Google Play 상품에는 연간/690,000원 문구가 노출되면 안 된다.
-- 결제 API, `src/lib/billing.ts`, app store sync, RevenueCat key 관련 변경은 `npm.cmd run smoke:billing`을 포함한다.
-- production 결제 환경변수나 secret 값을 출력하지 않는다.
+* 사용자 영향도: 실제 사용자가 바로 체감하는가.
+* 출시 필요성: 비공개 테스트, Play Console, 결제, 로그인, 앱 안정성에 직접 연결되는가.
+* 수익화 영향: Pro 전환, 구독, paywall, entitlement, 가격 정책에 영향을 주는가.
+* 위험 감소: 장애, 오작동, 개인정보, secret, 인증, 결제 오류 가능성을 낮추는가.
+* 구현 확실성: 현재 코드 구조에서 안전하게 끝낼 수 있는가.
+* 검증 가능성: 자동 검증 또는 명확한 수동 확인이 가능한가.
+* 작업 크기: 한 커밋 단위로 작게 끝낼 수 있는가.
 
-## 인증과 Supabase 주의사항
+우선순위 기본값은 아래 순서를 따른다.
 
-- Supabase service role key, access token, refresh token, private key는 절대 커밋하거나 출력하지 않는다.
-- Google Identity Services, Firebase, Supabase Google Provider, OAuth consent screen은 같은 ChartRadar 프로젝트 기준으로 맞아야 한다.
-- refresh token 저장 정책은 보안 영향이 있으므로 문서와 코드 변경을 분리해서 검토한다.
-- admin API는 비로그인 401, 비관리자 403 원칙을 지킨다.
+1. 앱 실행 불가, 로그인 불가, 결제 권한 오류, 데이터 노출 같은 치명 문제.
+2. 비공개 테스트 또는 출시 심사에 필요한 문제.
+3. Pro gating, 구독, 관리자 권한처럼 BM에 직접 연결되는 문제.
+4. 사용자가 자주 보는 핵심 route의 UX 문제.
+5. 알림, 복기, 뉴스, 글로벌, 알트 등 기능 완성도 개선.
+6. 내부 문서, 리팩터링, 개발 편의성 개선.
 
-## Android와 Play Console 주의사항
+## Definition of Done
 
-- Android 앱은 `https://chartradar.kr`을 여는 Capacitor WebView 구조다.
-- `android/app/google-services.json`은 로컬에는 필요할 수 있지만 Git에는 포함하면 안 된다.
-- `versionCode`는 Play Console 업로드 전 기존 업로드보다 높아야 한다.
-- AndroidManifest, Firebase, FCM, Google Sign-In 변경은 기존 설치 앱에 자동 반영되지 않는다. 새 APK/AAB 빌드와 Play Console 업로드가 필요하다.
-- 자동 AAB 업로드, Play Console 제출, production release는 대표의 명시 지시 없이는 하지 않는다.
-- `npm.cmd run app:android:release`는 최종 제출 준비 단계에서만 실행한다.
+작업 완료는 단순히 코드를 수정했다는 뜻이 아니다. 아래 조건을 충족해야 완료로 본다.
 
-## 자동화 운영
+### 공통 완료 기준
 
-- `docs/work-queue.md`는 작업 우선순위와 상태를 관리하는 상위 인덱스다.
-- `docs/work-items/`는 세부 작업 문서 위치다.
-- `docs/automation-runs/active-run.md`는 대표가 지정한 특정 문제 묶음을 순서대로 처리하는 active run 문서다.
-- 대표가 `AUTO NEXT`라고 하면 먼저 `docs/automation-runs/active-run.md`가 있는지 확인한다.
-- active run에 `TODO`가 있으면 `docs/work-items/`에서 임의 선택하지 말고 active run의 다음 `TODO` 1개만 처리한다.
-- active run이 비어 있거나 모든 작업이 `DONE`이면 그때만 `docs/work-items/`에서 다음 후보를 제안한다.
-- 대표가 `AUTO PLAN ONLY`라고 하면 active run의 다음 `TODO`에 대한 계획만 보고하고 수정하지 않는다.
-- 대표가 `AUTO RUN ACTIVE PLAN`이라고 하면 active run의 `TODO`를 순서대로 처리하되, 한 턴에는 하나의 작업만 처리한다.
-- `AUTO NEXT`는 선택 이유, 위험도, 수정 범위, 검증 명령을 먼저 정리한 뒤 진행한다.
-- active run 또는 work item 완료 시 해당 항목 상태를 `DONE`으로 갱신할지 보고한다. 같은 커밋에 포함해도 되는 문서 갱신인지 판단한다.
-- 고위험 작업은 실행 전 멈추고 대표 승인을 요청한다.
-- push는 대표 승인 전 금지한다.
-- 필요한 경우 `tools/dev-agent/profiles/`의 역할 프로필을 참고한다.
-- 작업 템플릿은 `tools/dev-agent/task-template.md`를 사용한다.
-- 결과 보고는 `tools/dev-agent/report-template.md`를 사용한다.
-- subagent는 조사, 위험 검토, 테스트 계획, 리뷰에만 사용한다.
-- 병렬 수정은 금지한다. 실제 코드 수정은 하나의 main 작업 흐름에서만 한다.
+* 요청 범위가 충족되어야 한다.
+* 변경 파일이 작업 목적과 직접 관련되어야 한다.
+* 불필요한 리팩터링이나 스타일 변경을 섞지 않는다.
+* secret, token, key, 개인정보가 출력되거나 커밋되지 않아야 한다.
+* `git diff --check`를 통과해야 한다.
+* 작업 성격에 맞는 검증 명령을 실행해야 한다.
+* 실패한 검증이 있으면 실패 원인과 남은 리스크를 보고해야 한다.
 
-## 방 운영과 연속성 기준
+### 앱 코드 완료 기준
 
-- 전략실 메인방은 제품 방향 결정, active run 등록, 우선순위 조정, 결과 검수에 사용한다.
-- active-run 실행방은 하나의 active run을 끝낼 때까지 유지한다. 작업마다 새 방을 만들지 않는다.
-- 고위험 전용방은 결제, 인증, Supabase, Android release, FCM, production migration처럼 별도 검토가 필요한 작업에 사용한다.
-- 작업 연속성의 source of truth는 채팅방 기억이 아니라 `AGENTS.md`, `docs/automation-runs/active-run.md`, completed 기록, GitHub Issue, PR이다.
-- 채팅방이 길어지거나 느려지면 새 방에서 이어가되, 반드시 저장소 문서와 GitHub 상태를 먼저 읽고 이어간다.
+* TypeScript 타입 오류가 없어야 한다.
+* production build가 깨지지 않아야 한다.
+* 모바일 WebView 기준에서 주요 화면이 깨지지 않아야 한다.
+* 빈 상태, 로딩 상태, 에러 상태가 최소한의 안내를 가져야 한다.
+* Basic/Pro 노출 정책을 약화하지 않아야 한다.
+* 투자 권유, 수익 보장, 진입 지시처럼 보이는 문구가 없어야 한다.
 
-## PR 기반 작업 흐름
+### UI 작업 완료 기준
 
-- 구현 작업은 가능하면 `main` 직접 작업이 아니라 branch/PR 단위로 진행한다.
-- active run에서 구현 작업을 선정한 뒤 GitHub Issue 또는 명확한 작업 문서를 기준으로 브랜치를 만든다.
-- 브랜치 이름은 `codex/` prefix를 사용하고 작업 목적이 보이도록 짧게 작성한다.
-- 작업 후 검증을 실행하고, PR 본문에 변경 파일, 검증 결과, 남은 리스크, 스크린샷 또는 화면 확인 결과를 남긴다.
-- UI/디자인 작업은 스크린샷 확인 전 merge 또는 push하지 않는다.
-- 고위험 작업은 PR 기반으로 진행하고 대표 승인 전 merge하지 않는다.
-- 문서만 수정하는 낮은 위험 작업은 대표가 해당 턴에서 safe push를 허용했거나 명시적으로 push를 요청한 경우에만 `main` push가 가능하다.
-- 결제, 인증, Supabase, Android, FCM, production 관련 변경은 자동 push 금지다.
+* 모바일 화면에서 첫 화면의 핵심 메시지가 분명해야 한다.
+* 사용자가 다음에 눌러야 할 행동이 하나 이상 명확해야 한다.
+* 카드, 버튼, 배지, 문구의 위계가 과하게 복잡하지 않아야 한다.
+* 스크롤, 하단 버튼, safe area, WebView 높이 문제가 없어야 한다.
+* 가능하면 스크린샷 또는 화면 확인 결과를 보고한다.
 
-## MCP와 외부 도구 위치
+### Pro/Billing 작업 완료 기준
 
-- MCP는 Codex가 GitHub, 브라우저, 문서, 외부 시스템에 접근하기 위한 연결 계층이다.
-- 현재 작업 자동화의 중심은 MCP 자체 오케스트레이터가 아니라 저장소 문서, GitHub Issue, branch, PR이다.
-- MCP 기반 자체 오케스트레이터는 장기 과제로 분리하고, 단기 운영은 active run과 PR 흐름을 우선한다.
+* 상품명, 가격, 기간, entitlement, plan id가 서로 충돌하지 않아야 한다.
+* legacy plan id가 사용자 화면에 노출되지 않아야 한다.
+* Google Play 상품 문구와 앱 내부 문구가 어긋나지 않아야 한다.
+* `npm.cmd run smoke:billing`을 포함해야 한다.
+* 대표 승인 전에는 push, release, deploy를 하지 않는다.
 
-## 검증 명령
+## UI/UX 품질 기준
 
-작업 성격에 맞게 `package.json` 기준 실제 존재하는 명령을 사용한다. 기본 후보는 아래와 같다.
+ChartRadar는 단순 지표 나열 앱이 아니라 판단 보조 앱이다. 화면은 아래 원칙을 따른다.
 
-- 문서만 수정한 경우.
-  - `git diff --check`.
-  - `git status --short --branch`.
-- 일반 앱 코드 수정.
-  - `git diff --check`.
-  - `cmd /c npx tsc --noEmit`.
-  - `npm.cmd run build`.
-  - `npm.cmd run smoke:mobile`.
-  - `npm.cmd run smoke:all`.
-- 운영/크론/푸시/매크로 변경.
-  - `npm.cmd run smoke:ops`.
-  - 가능하면 `/api/push-cron?dryRun=1&diagnostics=1` 로컬 확인.
-  - dryRun에서 실제 발송, DB write, 민감정보 노출이 없는지 확인.
-- 결제 변경.
-  - `npm.cmd run smoke:billing`.
-  - RevenueCat, Toss, Supabase entitlement 경로를 함께 확인.
-- Android 변경.
-  - `npm.cmd run app:sync`.
-  - `npm.cmd run app:android:debug`.
-  - release AAB는 대표 지시가 있을 때만 생성한다.
+* 사용자가 첫 5초 안에 현재 상태를 이해해야 한다.
+* 핵심은 방향, 리스크, 관망/추적 조건, 무효화 기준이다.
+* 데이터가 많아도 사용자가 먼저 볼 것은 1~3개로 압축한다.
+* 전문 용어는 쓰되, 사용자의 다음 판단에 도움이 되게 설명한다.
+* 빨리 진입하라고 유도하지 말고, 확인 조건과 리스크를 먼저 보여준다.
+* Basic 화면은 아쉬움은 있어도 쓸모가 있어야 한다.
+* Pro 화면은 돈을 낼 이유가 명확해야 한다.
+* 모든 주요 route는 모바일 기준으로 먼저 확인한다.
+* `/crypto`, `/alts`, `/global`, `/news`, `/journal`, `/pro`는 핵심 route로 취급한다.
 
-## 완료 보고 형식
+## 실패 시 복구 규칙
 
-작업 완료 시 반드시 아래를 보고한다.
+검증 실패 시 Codex는 무작정 수정 범위를 넓히지 않는다.
 
-- 선택한 작업.
-- 선택 이유.
-- 수정 파일.
-- 변경 내용.
-- 건드리지 않은 고위험 영역.
-- 검증 결과.
-- 커밋 해시 또는 미커밋 상태.
-- `git status --short --branch`.
-- push 여부. 대표 승인 전에는 하지 않음.
-- 다음 추천 작업.
+### 타입 오류
 
-## 중단 조건
+* 현재 작업으로 인해 발생한 오류인지 먼저 확인한다.
+* 직접 관련된 오류만 수정한다.
+* 기존 누적 오류로 보이면 중단하고 보고한다.
 
-아래 상황에서는 작업을 중단하고 보고한다.
+### 빌드 실패
 
-- 작업트리가 dirty이고 기존 변경의 정체가 불명확함.
-- local과 `origin/main`이 불일치함.
-- 고위험 영역 수정이 필요하지만 대표의 범위 승인이나 계획 확인이 없음.
-- production DB migration 필요.
-- Android release/AAB 생성 필요.
-- 비밀값 파일 또는 민감값 추적 감지.
-- 검증 실패 원인이 불명확함.
-- 여러 작업이 충돌 가능함.
-- 요청 범위 밖의 앱 코드 수정이 필요함.
+* 에러 로그의 최초 원인을 기준으로 수정한다.
+* 의존성 설치, package 변경, 설정 변경이 필요하면 먼저 보고한다.
+* 빌드 실패가 고위험 영역과 연결되면 중단한다.
+
+### smoke 실패
+
+* 실패한 smoke의 목적을 먼저 파악한다.
+* 현재 변경과 직접 관련 있으면 수정한다.
+* 관련이 불명확하면 실패 로그와 의심 범위를 보고한다.
+
+### UI 확인 실패
+
+* 레이아웃 깨짐, 버튼 가림, 모바일 스크롤 문제는 같은 작업 범위 안에서 수정할 수 있다.
+* 디자인 방향 자체가 바뀌는 수정은 대표에게 보고한다.
+
+## subagent 사용 기준
+
+subagent는 실제 코드 수정을 병렬로 수행하지 않는다. 아래 목적에만 사용한다.
+
+* 위험 검토.
+* 영향 범위 조사.
+* 테스트 케이스 도출.
+* 코드 리뷰.
+* 문구 검토.
+* 출시/심사 체크리스트 확인.
+
+subagent 결과는 반드시 아래 형식으로 요약한다.
+
+* 조사한 범위.
+* 발견한 문제.
+* 수정이 필요한 파일.
+* 고위험 여부.
+* 추천 검증 명령.
+* main 작업 흐름에 반영할 항목.
+* 보류할 항목.
+
+subagent 의견은 참고 자료이며, 최종 수정은 main 작업 흐름에서만 수행한다.
+
+## 작업 산출물 기록
+
+작업이 끝나면 필요한 경우 아래 문서 중 하나를 갱신한다.
+
+* `docs/automation-runs/active-run.md`
+* `docs/work-queue.md`
+* `docs/work-items/`
+* PR 본문
+* completed 기록 문서
+
+단, 문서 갱신이 앱 코드 변경과 같은 커밋에 들어가도 되는지 판단한다. 기능 구현과 무관한 대규모 문서 정리는 별도 커밋으로 분리한다.
