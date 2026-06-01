@@ -1,5 +1,9 @@
-import { BarChart3 } from "lucide-react";
-import { PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { BarChart3, RefreshCcw, Zap } from "lucide-react";
+import type { LiquidationPressureReport, LiquidationPressureSide } from "@/lib/liquidationPressure";
+import { ActionButton, AppSurface, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import { CompactHelp } from "@/components/ui/CompactHelp";
 
 export type CoinSignalPressureTone = "long" | "short" | "watch" | "risk" | "info";
@@ -14,6 +18,32 @@ export interface CoinSignalPressureItem {
 }
 
 type FuturesPressureMode = "major" | "alts";
+type LoadStatus = "idle" | "loading" | "ready" | "error";
+
+type FuturesSymbolInfo = {
+  symbol: string;
+  label: string;
+};
+
+type FuturesPressurePayload = {
+  report?: LiquidationPressureReport;
+  error?: string;
+};
+
+const futuresSymbols: Record<FuturesPressureMode, FuturesSymbolInfo[]> = {
+  major: [
+    { symbol: "BTCUSDT", label: "BTC" },
+    { symbol: "ETHUSDT", label: "ETH" },
+    { symbol: "SOLUSDT", label: "SOL" },
+    { symbol: "BNBUSDT", label: "BNB" }
+  ],
+  alts: [
+    { symbol: "SOLUSDT", label: "SOL" },
+    { symbol: "XRPUSDT", label: "XRP" },
+    { symbol: "DOGEUSDT", label: "DOGE" },
+    { symbol: "BNBUSDT", label: "BNB" }
+  ]
+};
 
 const barClass: Record<CoinSignalPressureTone, string> = {
   long: "bg-ui-long",
@@ -34,6 +64,71 @@ const pillLabel: Record<CoinSignalPressureTone, string> = {
 function clampPercent(value: number) {
   if (!Number.isFinite(value)) return 0;
   return Math.min(100, Math.max(0, value));
+}
+
+function formatPercent(value: number | null | undefined, digits = 1) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "-";
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(digits)}%`;
+}
+
+function formatPlainPercent(value: number | null | undefined, digits = 0) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "-";
+  return `${value.toFixed(digits)}%`;
+}
+
+function pressureScore(report: LiquidationPressureReport) {
+  return Math.max(report.upsideShortPressure, report.downsideLongPressure);
+}
+
+function pressureTone(report: LiquidationPressureReport): CoinSignalPressureTone {
+  if (report.dominantSide === "upsideShorts") return "long";
+  if (report.dominantSide === "downsideLongs") return "short";
+  return "watch";
+}
+
+function sideTitle(side: LiquidationPressureSide) {
+  if (side === "upsideShorts") return "숏 몰림";
+  if (side === "downsideLongs") return "롱 몰림";
+  return "쏠림 약함";
+}
+
+function sideAction(side: LiquidationPressureSide) {
+  if (side === "upsideShorts") return "위로 튈 수 있음";
+  if (side === "downsideLongs") return "아래로 밀릴 수 있음";
+  return "방향 확인";
+}
+
+function gradeLabel(report: LiquidationPressureReport) {
+  if (report.grade === "extreme") return "쏠림 매우 강함";
+  if (report.grade === "heated") return "쏠림 강함";
+  if (report.grade === "normal") return "쏠림 보통";
+  return "쏠림 약함";
+}
+
+function mainTrigger(report: LiquidationPressureReport) {
+  const funding = report.fundingRatePercent;
+  const oi = report.openInterestChangePercent;
+  const takerBuy = report.takerFlow.buyPercent;
+  const takerSell = report.takerFlow.sellPercent;
+  const globalLong = report.globalLongShort.longPercent;
+  const globalShort = report.globalLongShort.shortPercent;
+
+  if (oi !== null && oi !== undefined && oi > 2) return `선물 계약 ${formatPercent(oi)} 증가`;
+  if (oi !== null && oi !== undefined && oi < -1) return `선물 계약 ${formatPercent(oi)} 감소`;
+  if (funding !== null && funding !== undefined && Math.abs(funding) >= 0.03) return `펀딩비 ${formatPercent(funding, 4)}`;
+  if (takerBuy !== null && takerBuy >= 55) return `시장가 매수 ${formatPlainPercent(takerBuy)}`;
+  if (takerSell !== null && takerSell >= 55) return `시장가 매도 ${formatPlainPercent(takerSell)}`;
+  if (globalLong !== null && globalLong !== undefined && globalLong >= 56) return `롱포지션 ${formatPlainPercent(globalLong)}`;
+  if (globalShort !== null && globalShort !== undefined && globalShort >= 56) return `숏포지션 ${formatPlainPercent(globalShort)}`;
+  return "쏠림 크지 않음";
+}
+
+async function fetchPressure(symbol: string) {
+  const response = await fetch(`/api/liquidation-pressure?symbol=${encodeURIComponent(symbol)}&period=1h`, { cache: "no-store" });
+  const payload = (await response.json()) as FuturesPressurePayload;
+  if (!response.ok || !payload.report) throw new Error(payload.error ?? "선물 압력 확인 실패");
+  return payload.report;
 }
 
 const futuresPressureItems: Record<FuturesPressureMode, CoinSignalPressureItem[]> = {
@@ -146,11 +241,117 @@ export function CoinSignalPressurePanel({
 
 export function CoinFuturesSignalPressurePanel({ mode }: { mode: FuturesPressureMode }) {
   const isAltMode = mode === "alts";
+  const symbols = useMemo(() => futuresSymbols[mode], [mode]);
+  const [status, setStatus] = useState<LoadStatus>("idle");
+  const [reports, setReports] = useState<LiquidationPressureReport[]>([]);
+  const [error, setError] = useState("");
+
+  const loadReports = useCallback(async () => {
+    setStatus("loading");
+    setError("");
+    const results = await Promise.allSettled(symbols.map((item) => fetchPressure(item.symbol)));
+    const nextReports = results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
+
+    if (nextReports.length) {
+      setReports(nextReports);
+      setStatus("ready");
+      return;
+    }
+
+    setStatus("error");
+    setError("선물 쏠림 데이터를 잠시 확인하지 못했습니다.");
+  }, [symbols]);
+
+  useEffect(() => {
+    void loadReports();
+  }, [loadReports]);
+
+  const cards = useMemo(() => {
+    return reports
+      .map((report) => {
+        const meta = symbols.find((item) => item.symbol === report.symbol);
+        return { report, label: meta?.label ?? report.symbol.replace(/USDT$/, "") };
+      })
+      .sort((a, b) => pressureScore(b.report) - pressureScore(a.report))
+      .slice(0, 4);
+  }, [reports, symbols]);
+
+  const topCard = cards[0];
+  const topSummary = topCard
+    ? `${topCard.label} ${sideTitle(topCard.report.dominantSide)} · ${mainTrigger(topCard.report)}`
+    : isAltMode
+      ? "알트 선물 쏠림을 확인하는 중입니다."
+      : "메이저 선물 쏠림을 확인하는 중입니다.";
 
   return (
-    <CoinSignalPressurePanel
-      title={isAltMode ? "알트 선물 압력 분해" : "메이저 선물 압력 분해"}
-      items={futuresPressureItems[mode]}
-    />
+    <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
+      <SectionHeader
+        eyebrow="Binance 공개 선물 데이터"
+        title={isAltMode ? "알트 선물 쏠림" : "메이저 선물 쏠림"}
+        description={topSummary}
+        action={
+          <ActionButton tone="secondary" onClick={loadReports} disabled={status === "loading"}>
+            <RefreshCcw className={status === "loading" ? "animate-spin" : ""} size={15} aria-hidden />
+            갱신
+          </ActionButton>
+        }
+      />
+
+      {error ? (
+        <AppSurface variant="flat" tone="critical" padding="none" className="border-t border-ui-line py-2 text-sm font-semibold text-ui-risk">
+          {error}
+        </AppSurface>
+      ) : null}
+
+      {status === "loading" && !cards.length ? (
+        <AppSurface variant="flat" tone="inset" padding="none" className="border-t border-ui-line py-3 text-sm font-semibold text-ui-muted">
+          선물 쏠림 확인 중
+        </AppSurface>
+      ) : null}
+
+      {cards.length ? (
+        <div className="grid gap-0 md:grid-cols-2">
+          {cards.map(({ report, label }, index) => {
+            const tone = pressureTone(report);
+            const score = pressureScore(report);
+            return (
+              <article
+                key={report.symbol}
+                className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0" : ""} ${
+                  index % 2 === 1 ? "md:border-l md:border-ui-line" : ""
+                } ${index > 1 ? "md:border-t md:border-ui-line" : ""}`}
+              >
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{label}</p>
+                    <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{sideTitle(report.dominantSide)}</p>
+                  </div>
+                  <StatusPill tone={tone} icon={Zap} className="shrink-0">
+                    {gradeLabel(report)}
+                  </StatusPill>
+                </div>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-ui-line">
+                  <span className={`block h-full rounded-full ${barClass[tone]}`} style={{ width: `${clampPercent(score)}%` }} aria-hidden />
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs font-semibold leading-5 text-ui-muted">
+                  <span>{sideAction(report.dominantSide)}</span>
+                  <span className="text-right text-ui-text">{mainTrigger(report)}</span>
+                  <span>롱 {formatPlainPercent(report.globalLongShort.longPercent)}</span>
+                  <span className="text-right">계약 변화 {formatPercent(report.openInterestChangePercent)}</span>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : status !== "loading" ? (
+        <AppSurface variant="flat" tone="inset" padding="none" className="border-t border-ui-line py-3 text-sm font-semibold text-ui-muted">
+          공개 선물 데이터를 불러오지 못해 기본 판단 순서만 확인합니다.
+        </AppSurface>
+      ) : null}
+
+      <CompactHelp label="데이터 기준">
+        Binance 공개 선물 데이터의 미결제약정, 펀딩비, 롱/숏 비율, 시장가 체결 쏠림을 묶어 과열과 흔들림 위험만 빠르게 보여줍니다.
+      </CompactHelp>
+    </PanelCard>
   );
 }

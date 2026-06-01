@@ -128,6 +128,9 @@ const usageMeterPanel = read("src/components/UsageMeterPanel.tsx");
 const stockRadarApp = read("src/components/StockRadarApp.tsx");
 const setupScoutPanel = read("src/components/SetupScoutPanel.tsx");
 const watchlistPanel = read("src/components/WatchlistPanel.tsx");
+const majorsApp = read("src/components/MajorsApp.tsx");
+const altsPage = read("src/app/alts/page.tsx");
+const coinSignalPressurePanel = read("src/components/coin/CoinSignalPressurePanel.tsx");
 const apiRoutes = walk("src/app/api", [".ts"]);
 
 expectIncludes(rateLimit, "UPSTASH_REDIS_REST_URL", "Upstash rate limit URL", "src/lib/server/rateLimit.ts");
@@ -227,6 +230,12 @@ expectIncludes(setupScoutPanel, 'hasMarketEntitlement(profile?.plan, "crypto")',
 expectIncludes(watchlistPanel, 'hasMarketEntitlement(profile?.plan, "crypto")', "관심코인 권한", "src/components/WatchlistPanel.tsx");
 expectIncludes(scoutRoute, "entitlement.isPaid ? 120 : 20", "코인 일일 레이더 권한", "src/app/api/scout/route.ts");
 expectIncludes(stockRadarApp, 'hasMarketEntitlement(profile?.plan, "stocks")', "글로벌 레이더 권한", "src/components/StockRadarApp.tsx");
+expectIncludes(majorsApp, "CoinFuturesSignalPressurePanel", "Futures pressure panel on majors", "src/components/MajorsApp.tsx");
+expectIncludes(altsPage, "CoinFuturesSignalPressurePanel", "Futures pressure panel on alts", "src/app/alts/page.tsx");
+expectIncludes(coinSignalPressurePanel, "/api/liquidation-pressure?symbol=", "Futures pressure live API source", "src/components/coin/CoinSignalPressurePanel.tsx");
+expectIncludes(coinSignalPressurePanel, "Binance 공개 선물 데이터", "Futures pressure public data label", "src/components/coin/CoinSignalPressurePanel.tsx");
+expectIncludes(coinSignalPressurePanel, "메이저 선물 쏠림", "Major futures pressure scan copy", "src/components/coin/CoinSignalPressurePanel.tsx");
+expectIncludes(coinSignalPressurePanel, "알트 선물 쏠림", "Alt futures pressure scan copy", "src/components/coin/CoinSignalPressurePanel.tsx");
 
 const macroHealth = await fetchMacroCalendarHealth();
 if (macroHealth.reachable && macroHealth.ok) {
