@@ -29,6 +29,7 @@ export interface CoinHomeDecisionSummary {
 interface BuildCoinHomeDecisionInput {
   board: CoinHomeBoardItem[];
   technical: TechnicalRadarReport | null;
+  technical4h?: TechnicalRadarReport | null;
   marketMetrics: CoinMarketMetricsPayload | null;
   btcFunding: LiquidationPressureReport | null;
 }
@@ -66,6 +67,30 @@ function trendIsConstructive(report: TechnicalRadarReport | null, btcChange: num
   return Boolean(report?.trendLabel.includes("상승")) || btcChange >= 2.5;
 }
 
+function stableTrendState({
+  technical,
+  technical4h,
+  btcChange
+}: {
+  technical: TechnicalRadarReport | null;
+  technical4h: TechnicalRadarReport | null | undefined;
+  btcChange: number;
+}) {
+  const shortWeak = trendIsWeak(technical, btcChange);
+  const shortConstructive = trendIsConstructive(technical, btcChange);
+  const higherWeak = trendIsWeak(technical4h ?? null, btcChange <= -1.2 ? btcChange : 0);
+  const higherConstructive = trendIsConstructive(technical4h ?? null, btcChange >= 1.2 ? btcChange : 0);
+
+  return {
+    shortWeak,
+    shortConstructive,
+    higherWeak,
+    higherConstructive,
+    weakTrend: (shortWeak && !higherConstructive) || (higherWeak && btcChange <= 0),
+    constructiveTrend: (shortConstructive && !higherWeak) || (higherConstructive && btcChange >= 0)
+  };
+}
+
 function altStats(board: CoinHomeBoardItem[]) {
   const alts = board.filter((item) => compactSymbol(item.symbol) !== "BTC");
   const positive = alts.filter((item) => item.changePercent > 0);
@@ -88,17 +113,26 @@ function altStats(board: CoinHomeBoardItem[]) {
 
 function derivativeRisk(report: LiquidationPressureReport | null) {
   if (!report) return 0;
-  const gradeRisk = report.grade === "extreme" ? 24 : report.grade === "heated" ? 16 : report.grade === "normal" ? 7 : 0;
+  const gradeRisk = report.grade === "extreme" ? 24 : report.grade === "heated" ? 14 : report.grade === "normal" ? 2 : 0;
   const longShortRatio = report.globalLongShort.ratio;
-  const ratioRisk = longShortRatio && Number.isFinite(longShortRatio) ? Math.min(Math.abs(longShortRatio - 1) * 12, 12) : 0;
-  const fundingRisk = report.fundingRatePercent && Number.isFinite(report.fundingRatePercent) ? Math.min(Math.abs(report.fundingRatePercent) * 650, 12) : 0;
+  const ratioRisk = longShortRatio && Number.isFinite(longShortRatio) ? Math.min(Math.max(Math.abs(longShortRatio - 1) - 0.2, 0) * 18, 10) : 0;
+  const fundingRisk = report.fundingRatePercent && Number.isFinite(report.fundingRatePercent) ? Math.min(Math.max(Math.abs(report.fundingRatePercent) - 0.01, 0) * 500, 10) : 0;
   return gradeRisk + ratioRisk + fundingRisk;
 }
 
 function kimchiFxRisk(metrics: CoinMarketMetricsPayload | null) {
   const kimchi = metrics?.kimchiPremiumPercent;
-  const kimchiRisk = kimchi && Number.isFinite(kimchi) ? Math.min(Math.abs(kimchi) * 2.5, 12) : 0;
-  return kimchiRisk;
+  const usdKrw = metrics?.usdKrw;
+  const kimchiRisk =
+    kimchi && Number.isFinite(kimchi)
+      ? kimchi > 1.5
+        ? Math.min((kimchi - 1.5) * 3, 10)
+        : kimchi < -3
+          ? Math.min(Math.abs(kimchi + 3) * 1.5, 5)
+          : 0
+      : 0;
+  const fxRisk = usdKrw && Number.isFinite(usdKrw) ? (usdKrw >= 1500 ? 5 : usdKrw >= 1450 ? 3 : 0) : 0;
+  return kimchiRisk + fxRisk;
 }
 
 function riskLabel({
@@ -170,16 +204,18 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
   const stats = altStats(input.board);
   const fearGreed = input.technical?.fearGreed.score ?? 50;
   const dominance = input.marketMetrics?.btcDominancePercent;
-  const constructiveTrend = trendIsConstructive(input.technical, btcChange);
-  const weakTrend = trendIsWeak(input.technical, btcChange);
+  const trendState = stableTrendState({ technical: input.technical, technical4h: input.technical4h, btcChange });
+  const { constructiveTrend, weakTrend } = trendState;
   const derivatives = derivativeRisk(input.btcFunding);
   const kimchiRisk = kimchiFxRisk(input.marketMetrics);
-  const overheat = fearGreed >= 78 || btcChange >= 5 || stats.strongCount >= 4;
+  const overheat = fearGreed >= 80 || btcChange >= 5 || (stats.strongCount >= 4 && stats.participationRatio >= 0.7);
 
   const altParticipationBonus =
     stats.participationRatio >= 0.65 ? 12 : stats.participationRatio >= 0.5 ? 7 : stats.participationRatio >= 0.35 ? 2 : -5;
-  const marketStrength = (fearGreed - 50) * 0.22 + trendBias(input.technical) + altParticipationBonus;
-  const riskPenalty = derivatives + kimchiRisk + (overheat ? 10 : 0) + (weakTrend ? 18 : 0);
+  const trendStrength = trendBias(input.technical) * 0.65 + trendBias(input.technical4h ?? null) * 0.35;
+  const weakTrendPenalty = weakTrend ? (trendState.higherWeak ? 16 : 8) : 0;
+  const riskPenalty = derivatives + kimchiRisk + (overheat ? 10 : 0) + weakTrendPenalty + (trendState.shortWeak && trendState.higherWeak ? 8 : 0);
+  const marketStrength = (fearGreed - 50) * 0.2 + trendStrength + altParticipationBonus;
   const readinessScore = roundedScore(50 + marketStrength - riskPenalty);
   const topRisk = riskLabel({ weakTrend, constructiveTrend, btcChange, overheat, derivatives, kimchiRisk });
 
@@ -196,11 +232,11 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
   const direction: CoinHomeDirection =
     derivatives >= 24 || overheat ? "흔들림 주의" : weakTrend ? "하락 쪽" : constructiveTrend ? "상승 쪽" : "관망하기";
 
-  const broadAltParticipation = stats.participationRatio >= 0.55 && stats.volumeBackedCount >= 2;
+  const broadAltParticipation = stats.participationRatio >= 0.6 && stats.volumeBackedCount >= 2;
   const strongUpsideSetup =
-    readinessScore >= 75 && constructiveTrend && broadAltParticipation && derivatives < 16 && !overheat && topRisk === "큰 경고 없음";
-  const clearDownsideSetup = weakTrend && (btcChange <= -1.5 || readinessScore <= 35 || stats.participationRatio < 0.35);
-  const unstableSetup = derivatives >= 28 || readinessScore <= 25 || (overheat && readinessScore < 60);
+    readinessScore >= 80 && constructiveTrend && !trendState.higherWeak && broadAltParticipation && derivatives < 14 && !overheat && topRisk === "큰 경고 없음";
+  const clearDownsideSetup = weakTrend && (btcChange <= -2 || (trendState.higherWeak && (readinessScore <= 35 || stats.participationRatio < 0.45)));
+  const unstableSetup = derivatives >= 28 || readinessScore <= 10 || (overheat && readinessScore < 55);
 
   const state: CoinHomeDecisionState = clearDownsideSetup
     ? "하락 위험 큼"

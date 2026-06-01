@@ -522,6 +522,7 @@ export function CoinRadarHomePanel() {
     const decision = buildCoinHomeDecision({
       board: state.data.board,
       technical: report,
+      technical4h: report4h,
       marketMetrics,
       btcFunding
     });
