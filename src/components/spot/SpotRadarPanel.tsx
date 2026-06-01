@@ -1,7 +1,7 @@
 "use client";
 // 업비트/빗썸 KRW 현물 시장을 주문 기능 없이 관찰 후보 중심으로 보여줍니다.
 import { type FormEvent, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ArrowDownRight, ArrowUpRight, HelpCircle, LineChart, RefreshCw, Search, X } from "lucide-react";
+import { AlertTriangle, ArrowDownRight, ArrowUpRight, HelpCircle, LineChart, Search, X } from "lucide-react";
 import { ActionButton, DataRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import type { SpotChartRadarPayload, SpotChartSummary, SpotChartTone, SpotExchange, SpotRadarCategory, SpotRadarItem, SpotRadarPayload } from "@/lib/spotRadarTypes";
 
@@ -1063,13 +1063,7 @@ export function SpotRadarPanel() {
       </PanelCard>
 
       <PanelCard variant="report" padding="lg" className="space-y-4">
-        <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
-          <SectionHeader title="조건별 후보" />
-          <ActionButton tone="ghost" className="whitespace-nowrap px-0" onClick={() => selectExchange(exchange === "upbit" ? "bithumb" : "upbit")}>
-            <RefreshCw size={14} aria-hidden />
-            거래소 전환
-          </ActionButton>
-        </div>
+        <SectionHeader title="조건별 후보" />
 
         {payload ? <SpotChartEvidencePanel payload={chartPayload} loading={isChartLoading} error={chartError} itemsByMarket={spotItemsByMarket} /> : null}
 
