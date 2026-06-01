@@ -180,7 +180,7 @@ function buildAltAnalysisRiskSignals(analysis: MarketAnalysis, active?: Timefram
     signals.push("저유동성 리스크");
   }
   if (analysis.bias === "neutral" || active?.condition.regime === "mixed") {
-    signals.push("상방/하방 근거 혼재");
+    signals.push("상승/하락 근거 혼재");
   }
   if (analysis.readiness !== "high") signals.push("리스크 점검");
 
@@ -202,7 +202,7 @@ function altAnalysisFilterClass(label: string) {
 
 function buildRadarPulse(analysis: MarketAnalysis, active?: TimeframeAnalysis): RadarPulseItem[] {
   const directionTitle =
-    analysis.bias === "long" ? "롱 우세" : analysis.bias === "short" ? "숏 우세" : "횡보 관찰";
+    analysis.bias === "long" ? "롱 환경" : analysis.bias === "short" ? "숏 환경" : "관망";
   const directionTone: RadarPulseTone =
     analysis.bias === "long" ? "long" : analysis.bias === "short" ? "short" : "warn";
   const riskText =
@@ -2018,7 +2018,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                           <div className={`border-t px-0 py-2 ${biasClasses(analysis.bias)}`}>
                           <p className="text-[11px] font-bold opacity-80">방향 결론</p>
                           <p className="mt-1 text-base font-black">
-                            {analysis.bias === "long" ? "롱 우세" : analysis.bias === "short" ? "숏 우세" : "횡보 관찰"}
+                            {analysis.bias === "long" ? "롱 환경" : analysis.bias === "short" ? "숏 환경" : "관망"}
                           </p>
                         </div>
                         <div className="border-t border-white/10 py-2">

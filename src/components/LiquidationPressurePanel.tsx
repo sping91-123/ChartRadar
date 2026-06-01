@@ -1,7 +1,8 @@
 "use client";
 // Binance 공개 데이터로 청산 압력과 고배율 위험 거리를 설명하는 코인 전용 패널입니다.
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { AlertTriangle, ArrowDown, ArrowUp, Gauge, HelpCircle, Loader2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, ArrowDown, ArrowUp, Gauge, Loader2 } from "lucide-react";
+import { CompactHelp } from "@/components/ui/CompactHelp";
 import type { ChartTimeframe } from "@/lib/marketAnalysis";
 import type { LiquidationPressureReport, LiquidationPressureSide } from "@/lib/liquidationPressure";
 
@@ -87,23 +88,14 @@ function takerInterpretation(report: LiquidationPressureReport) {
   return "매수와 매도 체결이 크게 한쪽으로 기울지 않았습니다.";
 }
 
-function TooltipLine({ children }: { children: ReactNode }) {
-  return (
-    <span className="group relative inline-flex items-center gap-1">
-      <HelpCircle size={13} className="text-slate-500" aria-hidden />
-      <span className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 hidden w-[min(18rem,calc(100vw-2rem))] rounded-md border border-white/10 bg-slate-950 px-3 py-2 text-[11px] leading-5 text-slate-300 shadow-xl group-hover:block sm:left-1/2 sm:right-auto sm:w-64 sm:-translate-x-1/2">
-        {children}
-      </span>
-    </span>
-  );
-}
-
 function Metric({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="rounded-md border border-white/10 bg-black/20 p-3">
-      <p className="text-[11px] font-bold text-slate-500">{label}</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] font-bold text-slate-500">{label}</p>
+        {sub ? <CompactHelp label={label}>{sub}</CompactHelp> : null}
+      </div>
       <p className="mt-1 text-sm font-black text-white">{value}</p>
-      {sub ? <p className="mt-1 text-[11px] leading-4 text-slate-500">{sub}</p> : null}
     </div>
   );
 }
@@ -200,8 +192,10 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
           <div className="radar-mark h-14 w-14 shrink-0 border border-accent-blue/30" />
           <div>
             <p className="text-xs font-black tracking-widest text-accent-blue">청산 압력</p>
-            <h3 className="mt-1 text-lg font-black text-white">{compactSymbol(symbol)} 청산 압력 레이더</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-400 [word-break:keep-all]">{sideDescription(report.dominantSide)}</p>
+            <div className="mt-1 flex items-center gap-2">
+              <h3 className="text-lg font-black text-white">{compactSymbol(symbol)} 청산 압력 레이더</h3>
+              <CompactHelp label="청산 압력">{sideDescription(report.dominantSide)}</CompactHelp>
+            </div>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -231,9 +225,9 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
             <div className="h-full rounded-r-full bg-signal-danger" style={{ width: downsideWidth }} />
           </div>
         </div>
-        <p className="mt-3 text-xs leading-5 text-slate-500 [word-break:keep-all]">
-          공개 시장 데이터로 위아래 변동성 압력을 추정합니다. 한쪽 압력이 높을수록 급격한 흔들림에 대비해야 합니다.
-        </p>
+        <div className="mt-3">
+          <CompactHelp label="압력 점수">공개 시장 데이터로 위아래 변동성 압력을 추정합니다. 한쪽 압력이 높을수록 급격한 흔들림에 대비해야 합니다.</CompactHelp>
+        </div>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
@@ -247,7 +241,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
         <div className="border-y border-white/10 py-4">
           <div className="flex items-center justify-between gap-2">
             <h4 className="text-sm font-black text-white">글로벌 롱/숏 비율</h4>
-            <TooltipLine>Binance 기준 롱과 숏 포지션 비율입니다. 한쪽으로 몰릴수록 반대 방향 변동성도 같이 커질 수 있습니다.</TooltipLine>
+            <CompactHelp label="롱/숏 비율">Binance 기준 롱과 숏 포지션 비율입니다. 한쪽으로 몰릴수록 반대 방향 변동성도 같이 커질 수 있습니다.</CompactHelp>
           </div>
           <div className="mt-3">
             <div className="flex items-center justify-between text-xs font-black">
@@ -264,16 +258,13 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
                 style={{ width: `${Math.max(0, Math.min(100, report.globalLongShort.shortPercent ?? 0))}%` }}
               />
             </div>
-            <p className="mt-2 text-[11px] leading-5 text-slate-500 [word-break:keep-all]">
-              한 막대 안에서 롱과 숏 쏠림을 비교합니다. 한쪽이 과하게 높으면 반대 방향 변동성도 같이 커질 수 있습니다.
-            </p>
           </div>
         </div>
 
         <div className="border-y border-white/10 py-4">
           <div className="flex items-center justify-between gap-2">
             <h4 className="text-sm font-black text-white">체결 쏠림</h4>
-            <TooltipLine>최근 시장가 매수와 시장가 매도 중 어느 쪽 체결이 더 강했는지 보는 값입니다. 한쪽으로 치우치면 단기 변동성이 커질 수 있습니다.</TooltipLine>
+            <CompactHelp label="체결 쏠림">최근 시장가 매수와 시장가 매도 중 어느 쪽 체결이 더 강했는지 보는 값입니다. 한쪽으로 치우치면 단기 변동성이 커질 수 있습니다.</CompactHelp>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Metric label="시장가 매수" value={formatPercent(report.takerFlow.buyPercent, 1)} sub={report.takerFlow.buyVolume === null ? "-" : report.takerFlow.buyVolume.toLocaleString("ko-KR", { maximumFractionDigits: 2 })} />

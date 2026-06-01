@@ -55,8 +55,8 @@ const briefItems: Record<
     },
     {
       label: "2. 후보 분류",
-      title: "관심 후보·관망하기·고위험",
-      detail: "알트 기회/위험 필터에서 현재 후보가 어느 묶음인지 먼저 확인합니다.",
+      title: "추적 후보·관망·고위험 제외",
+      detail: "고위험 알트는 목록에서 빼고, 남은 후보가 추적 후보인지 관망인지 먼저 확인합니다.",
       tone: "watch",
       icon: Radar
     },

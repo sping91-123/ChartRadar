@@ -65,7 +65,7 @@ function buildWatchlistRiskSignals(setup: ScoutSetup) {
 
   if (setup.status === "active" || setup.proximity === "ready") signals.push("급등 추격 주의");
   if (setup.watchKind === "counter" || active?.condition.regime === "mixed") {
-    signals.push("상방/하방 근거 혼재");
+    signals.push("상승/하락 근거 혼재");
     signals.push("BTC 방향성 의존");
   }
   if (active?.condition.volatilityState === "expanded") signals.push("변동성 확대");
@@ -117,7 +117,7 @@ function classifyWatchlistSetup(setup: ScoutSetup): WatchlistFilterMeta {
 function watchlistJudgmentLabel(setup: ScoutSetup, meta: WatchlistFilterMeta) {
   if (meta.bucket === "danger") return "고위험";
   if (meta.bucket === "watch") return "관망 우위";
-  return setup.plan.side === "long" ? "롱 우위" : "숏 우위";
+  return setup.plan.side === "long" ? "롱 환경" : "숏 환경";
 }
 
 function WatchlistProCta() {
