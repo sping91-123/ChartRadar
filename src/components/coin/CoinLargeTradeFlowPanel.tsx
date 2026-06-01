@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshCcw, Waves } from "lucide-react";
-import type { LargeTradeFlowReport, LargeTradeSide } from "@/lib/largeTradeFlow";
+import type { LargeTradeAnomalyLevel, LargeTradeFlowReport, LargeTradeSide } from "@/lib/largeTradeFlow";
 import { ActionButton, AppSurface, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import { CompactHelp } from "@/components/ui/CompactHelp";
 
@@ -65,6 +65,18 @@ function gradeLabel(report: LargeTradeFlowReport) {
   if (report.grade === "heated") return "강함";
   if (report.grade === "normal") return "보통";
   return "약함";
+}
+
+function anomalyLabel(level: LargeTradeAnomalyLevel) {
+  if (level === "high") return "높음";
+  if (level === "watch") return "주의";
+  return "낮음";
+}
+
+function anomalyClass(level: LargeTradeAnomalyLevel) {
+  if (level === "high") return "text-ui-risk";
+  if (level === "watch") return "text-ui-watch";
+  return "text-ui-muted";
 }
 
 function flowScore(report: LargeTradeFlowReport) {
@@ -175,6 +187,8 @@ export function CoinLargeTradeFlowPanel({ mode }: { mode: LargeTradeMode }) {
                   <span className="text-right">매도 {formatUsd(report.sellNotionalUsd)}</span>
                   <span>쏠림 {formatPercent(report.imbalancePercent)}</span>
                   <span className="text-right">{report.windowMinutes ? `${report.windowMinutes}분 범위` : "최근 체결"}</span>
+                  <span>반복 체결</span>
+                  <span className={`text-right ${anomalyClass(report.anomalyLevel)}`}>{anomalyLabel(report.anomalyLevel)}</span>
                 </div>
               </article>
             );
@@ -187,7 +201,7 @@ export function CoinLargeTradeFlowPanel({ mode }: { mode: LargeTradeMode }) {
       ) : null}
 
       <CompactHelp label="데이터 기준">
-        Binance 공개 선물 체결에서 최근 aggregate trades를 읽어, 종목별 기준 금액보다 큰 체결만 매수 우세인지 매도 우세인지 요약합니다.
+        Binance 공개 선물 체결에서 최근 aggregate trades를 읽어 큰 체결 방향과 반복·교대 체결 징후를 함께 봅니다. 계정 식별은 없으므로 자전거래 확정이 아니라 이상 체결 가능성만 표시합니다.
       </CompactHelp>
     </PanelCard>
   );

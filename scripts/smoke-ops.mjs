@@ -261,10 +261,12 @@ expectIncludes(coinOptionsMarketPanel, "/api/options-market?currency=", "Options
 expectIncludes(coinOptionsMarketPanel, "Deribit 공개 옵션 데이터", "Options market public data label", "src/components/coin/CoinOptionsMarketPanel.tsx");
 expectIncludes(coinOptionsMarketPanel, "옵션 시장 온도", "Options market panel copy", "src/components/coin/CoinOptionsMarketPanel.tsx");
 expectIncludes(largeTradeFlowRoute, "fetchLargeTradeFlowReport", "Large trade flow API source", "src/app/api/large-trade-flow/route.ts");
+expectIncludes(read("src/lib/largeTradeFlow.ts"), "anomalyScore", "Large trade repeated-flow score", "src/lib/largeTradeFlow.ts");
 expectIncludes(coinLargeTradeFlowPanel, "/api/large-trade-flow?symbol=", "Large trade flow live API source", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
 expectIncludes(coinLargeTradeFlowPanel, "Binance 공개 선물 체결", "Large trade flow public data label", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
 expectIncludes(coinLargeTradeFlowPanel, "메이저 큰 체결 흐름", "Major large trade flow copy", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
 expectIncludes(coinLargeTradeFlowPanel, "알트 큰 체결 흐름", "Alt large trade flow copy", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
+expectIncludes(coinLargeTradeFlowPanel, "반복 체결", "Large trade repeated-flow copy", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
 expectIncludes(tokenUnlocksRoute, "fetchTokenUnlockReport", "Token unlock API source", "src/app/api/token-unlocks/route.ts");
 expectIncludes(tokenUnlocksLib, "percentOfMarketCap", "Token unlock market-cap pressure field", "src/lib/tokenUnlocks.ts");
 expectIncludes(coinUnlockPressurePanel, "/api/token-unlocks?limit=", "Token unlock live API source", "src/components/coin/CoinUnlockPressurePanel.tsx");

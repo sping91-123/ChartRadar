@@ -1,6 +1,7 @@
 // Binance 공개 선물 체결 데이터를 큰 금액 체결 흐름으로 요약합니다.
 export type LargeTradeSide = "buy" | "sell" | "balanced";
 export type LargeTradeGrade = "calm" | "normal" | "heated" | "extreme";
+export type LargeTradeAnomalyLevel = "low" | "watch" | "high";
 
 export interface BinanceAggregateTradeRow {
   a?: number;
@@ -31,6 +32,8 @@ export interface LargeTradeFlowReport {
   imbalancePercent: number;
   dominantSide: LargeTradeSide;
   grade: LargeTradeGrade;
+  anomalyLevel: LargeTradeAnomalyLevel;
+  anomalyScore: number;
   summary: string;
   trigger: string;
   windowMinutes: number | null;
@@ -94,6 +97,60 @@ function thresholdFor(symbol: string, notionals: number[]) {
   return Math.max(base, sorted[Math.min(index, sorted.length - 1)] ?? base);
 }
 
+function quantityBucket(quantity: number) {
+  if (quantity >= 1_000) return quantity.toFixed(0);
+  if (quantity >= 10) return quantity.toFixed(1);
+  if (quantity >= 1) return quantity.toFixed(2);
+  return quantity.toFixed(4);
+}
+
+function anomalyLevelFor(score: number): LargeTradeAnomalyLevel {
+  if (score >= 60) return "high";
+  if (score >= 35) return "watch";
+  return "low";
+}
+
+function repeatedTradeSignal(trades: LargeTradeEntry[], thresholdUsd: number) {
+  const candidates = trades.filter((trade) => trade.notionalUsd >= thresholdUsd * 0.25).slice(-300);
+  if (candidates.length < 10) {
+    return { anomalyLevel: "low" as const, anomalyScore: 0 };
+  }
+
+  const bucketCounts = new Map<string, number>();
+  for (const trade of candidates) {
+    const bucket = quantityBucket(trade.quantity);
+    bucketCounts.set(bucket, (bucketCounts.get(bucket) ?? 0) + 1);
+  }
+
+  const maxRepeatCount = Array.from(bucketCounts.values()).reduce((max, value) => Math.max(max, value), 0);
+  const repeatRatio = maxRepeatCount / candidates.length;
+  const sorted = candidates.slice().sort((a, b) => a.timestamp - b.timestamp);
+  let alternatingRepeats = 0;
+  for (let index = 1; index < sorted.length; index += 1) {
+    const previous = sorted[index - 1];
+    const current = sorted[index];
+    const quantityGap = Math.abs(current.quantity - previous.quantity) / Math.max(current.quantity, previous.quantity, 1);
+    if (previous.side !== current.side && quantityGap <= 0.02) alternatingRepeats += 1;
+  }
+
+  const alternatingRatio = alternatingRepeats / Math.max(1, sorted.length - 1);
+  const buyNotional = candidates.filter((trade) => trade.side === "buy").reduce((sum, trade) => sum + trade.notionalUsd, 0);
+  const sellNotional = candidates.filter((trade) => trade.side === "sell").reduce((sum, trade) => sum + trade.notionalUsd, 0);
+  const totalNotional = buyNotional + sellNotional;
+  const balancePercent = totalNotional > 0 ? Math.abs(((buyNotional - sellNotional) / totalNotional) * 100) : 100;
+  const timestamps = sorted.map((trade) => trade.timestamp);
+  const windowMinutes =
+    timestamps.length >= 2 ? Math.max(1, Math.round((timestamps[timestamps.length - 1] - timestamps[0]) / 60_000)) : 1;
+  const densityScore = candidates.length / windowMinutes >= 20 ? 12 : candidates.length / windowMinutes >= 10 ? 7 : 0;
+  const balanceScore = totalNotional >= thresholdUsd * 5 && balancePercent <= 8 ? 18 : totalNotional >= thresholdUsd * 3 && balancePercent <= 14 ? 10 : 0;
+  const score = Math.min(100, Math.round(repeatRatio * 35 + alternatingRatio * 45 + balanceScore + densityScore));
+
+  return {
+    anomalyLevel: anomalyLevelFor(score),
+    anomalyScore: score
+  };
+}
+
 export function buildLargeTradeFlowReport(symbol: string, rows: BinanceAggregateTradeRow[], updatedAt = Date.now()): LargeTradeFlowReport {
   const trades = rows
     .map((row) => {
@@ -129,6 +186,7 @@ export function buildLargeTradeFlowReport(symbol: string, rows: BinanceAggregate
   const windowMinutes =
     timestamps.length >= 2 ? Math.max(1, Math.round((timestamps[timestamps.length - 1] - timestamps[0]) / 60_000)) : null;
   const largest = topTrades[0];
+  const anomaly = repeatedTradeSignal(trades, thresholdUsd);
 
   return {
     symbol,
@@ -143,6 +201,8 @@ export function buildLargeTradeFlowReport(symbol: string, rows: BinanceAggregate
     imbalancePercent,
     dominantSide: side,
     grade,
+    anomalyLevel: anomaly.anomalyLevel,
+    anomalyScore: anomaly.anomalyScore,
     summary: `${sideLabel(side)} · ${formatUsd(totalLargeNotionalUsd)}`,
     trigger: largest ? `최대 ${largest.side === "buy" ? "매수" : "매도"} ${formatUsd(largest.notionalUsd)}` : "뚜렷한 큰 체결 적음",
     windowMinutes,
