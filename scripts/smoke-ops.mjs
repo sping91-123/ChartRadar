@@ -253,6 +253,7 @@ expectIncludes(majorsApp, "CoinOnchainPulsePanel", "On-chain pulse panel on majo
 expectIncludes(majorsApp, "CoinOptionsMarketPanel", "Options market panel on majors", "src/components/MajorsApp.tsx");
 expectIncludes(majorsApp, "CoinLargeTradeFlowPanel", "Large trade flow panel on majors", "src/components/MajorsApp.tsx");
 expectIncludes(altsPage, "CoinFuturesSignalPressurePanel", "Futures pressure panel on alts", "src/app/alts/page.tsx");
+expectIncludes(altsPage, "CoinStablecoinLiquidityPanel", "Stablecoin liquidity panel on alts", "src/app/alts/page.tsx");
 expectIncludes(altsPage, "CoinLargeTradeFlowPanel", "Large trade flow panel on alts", "src/app/alts/page.tsx");
 expectIncludes(altsPage, "CoinUnlockPressurePanel", "Token unlock pressure panel on alts", "src/app/alts/page.tsx");
 expectIncludes(coinSignalPressurePanel, "/api/liquidation-pressure?symbol=", "Futures pressure live API source", "src/components/coin/CoinSignalPressurePanel.tsx");
