@@ -64,19 +64,41 @@ function formatVolumeRatio(value: number | null | undefined) {
 function buildSpotPricePlan(item: SpotRadarItem | null | undefined, chart: SpotChartSummary | null | undefined) {
   const current = item?.price ?? chart?.currentPrice ?? null;
   if (current === null || !Number.isFinite(current) || current <= 0) {
-    return { firstPrice: null, secondPrice: null, invalidationPrice: null };
+    return {
+      firstPrice: null,
+      secondPrice: null,
+      invalidationPrice: null,
+      resistancePrice: null,
+      summaryLabel: "가격 확인 중",
+      roomLabel: "저항 확인 중"
+    };
   }
 
   const rawSupport = chart?.supportPrice ?? item?.lowPrice ?? null;
   const support = rawSupport !== null && Number.isFinite(rawSupport) && rawSupport > 0 ? Math.min(rawSupport, current * 0.998) : current * 0.975;
+  const rawResistance = chart?.resistancePrice ?? item?.highPrice ?? null;
+  const resistance =
+    rawResistance !== null && Number.isFinite(rawResistance) && rawResistance > current ? rawResistance : current + Math.max(current - support, current * 0.012);
   const distance = Math.max(current - support, current * 0.008);
   const rangePosition = chart?.rangePositionPercent ?? (item?.rangePosition === null || item?.rangePosition === undefined ? null : item.rangePosition * 100);
   const firstWeight = item?.category === "pullback" || (rangePosition !== null && rangePosition <= 45) ? 0.45 : 0.28;
+  const firstPrice = current - distance * firstWeight;
+  const secondPrice = support;
+  const invalidationPrice = support * 0.985;
+  const firstGapPercent = ((current - firstPrice) / current) * 100;
+  const resistanceRoomPercent = ((resistance - current) / current) * 100;
+  const summaryLabel =
+    current <= firstPrice * 1.006 || firstGapPercent <= 0.6
+      ? "현재 구간 확인"
+      : `${firstGapPercent.toFixed(1)}% 내려오면 1차 확인`;
 
   return {
-    firstPrice: current - distance * firstWeight,
-    secondPrice: support,
-    invalidationPrice: support * 0.985
+    firstPrice,
+    secondPrice,
+    invalidationPrice,
+    resistancePrice: resistance,
+    summaryLabel,
+    roomLabel: `저항까지 +${Math.max(0, resistanceRoomPercent).toFixed(1)}%`
   };
 }
 
@@ -96,18 +118,24 @@ function SpotPlanGrid({
   const plan = buildSpotPricePlan(item, chart);
 
   return (
-    <div className={`grid grid-cols-3 gap-2 ${className ?? ""}`}>
-      <div className="min-w-0">
-        <p className="text-[10px] font-semibold text-ui-subtle">1차 볼 가격</p>
-        <p className="mt-1 truncate text-xs font-semibold text-ui-text">{formatOptionalPrice(plan.firstPrice)}</p>
+    <div className={className ?? ""}>
+      <div className="mb-2 flex min-w-0 items-center justify-between gap-2 text-[10px] font-semibold text-ui-muted">
+        <span className="truncate text-ui-text">{plan.summaryLabel}</span>
+        <span className="shrink-0 text-ui-subtle">{plan.roomLabel}</span>
       </div>
-      <div className="min-w-0 text-center">
-        <p className="text-[10px] font-semibold text-ui-subtle">2차 볼 가격</p>
-        <p className="mt-1 truncate text-xs font-semibold text-ui-text">{formatOptionalPrice(plan.secondPrice)}</p>
-      </div>
-      <div className="min-w-0 text-right">
-        <p className="text-[10px] font-semibold text-ui-subtle">깨지면 제외</p>
-        <p className="mt-1 truncate text-xs font-semibold text-ui-short">{formatOptionalPrice(plan.invalidationPrice)}</p>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold text-ui-subtle">1차 확인가</p>
+          <p className="mt-1 truncate text-xs font-semibold text-ui-text">{formatOptionalPrice(plan.firstPrice)}</p>
+        </div>
+        <div className="min-w-0 text-center">
+          <p className="text-[10px] font-semibold text-ui-subtle">2차 확인가</p>
+          <p className="mt-1 truncate text-xs font-semibold text-ui-text">{formatOptionalPrice(plan.secondPrice)}</p>
+        </div>
+        <div className="min-w-0 text-right">
+          <p className="text-[10px] font-semibold text-ui-subtle">깨지면 제외</p>
+          <p className="mt-1 truncate text-xs font-semibold text-ui-short">{formatOptionalPrice(plan.invalidationPrice)}</p>
+        </div>
       </div>
     </div>
   );

@@ -126,6 +126,7 @@ const pushPlatformGuard = read("supabase/migrations/20260519_android_push_platfo
 const vercelConfig = read("vercel.json");
 const usageMeterPanel = read("src/components/UsageMeterPanel.tsx");
 const stockRadarApp = read("src/components/StockRadarApp.tsx");
+const spotRadarPanel = read("src/components/spot/SpotRadarPanel.tsx");
 const setupScoutPanel = read("src/components/SetupScoutPanel.tsx");
 const watchlistPanel = read("src/components/WatchlistPanel.tsx");
 const majorsApp = read("src/components/MajorsApp.tsx");
@@ -240,6 +241,9 @@ expectIncludes(setupScoutPanel, 'hasMarketEntitlement(profile?.plan, "crypto")',
 expectIncludes(watchlistPanel, 'hasMarketEntitlement(profile?.plan, "crypto")', "관심코인 권한", "src/components/WatchlistPanel.tsx");
 expectIncludes(scoutRoute, "entitlement.isPaid ? 120 : 20", "코인 일일 레이더 권한", "src/app/api/scout/route.ts");
 expectIncludes(stockRadarApp, 'hasMarketEntitlement(profile?.plan, "stocks")', "글로벌 레이더 권한", "src/components/StockRadarApp.tsx");
+expectIncludes(spotRadarPanel, "1차 확인가", "현물 1차 확인가 표시", "src/components/spot/SpotRadarPanel.tsx");
+expectIncludes(spotRadarPanel, "저항까지", "현물 저항 여유 표시", "src/components/spot/SpotRadarPanel.tsx");
+expectIncludes(spotRadarPanel, "깨지면 제외", "현물 제외 기준 표시", "src/components/spot/SpotRadarPanel.tsx");
 expectIncludes(majorsApp, "CoinFuturesSignalPressurePanel", "Futures pressure panel on majors", "src/components/MajorsApp.tsx");
 expectIncludes(majorsApp, "CoinOnchainPulsePanel", "On-chain pulse panel on majors", "src/components/MajorsApp.tsx");
 expectIncludes(majorsApp, "CoinOptionsMarketPanel", "Options market panel on majors", "src/components/MajorsApp.tsx");
