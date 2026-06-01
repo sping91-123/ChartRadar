@@ -88,6 +88,13 @@ const checks = [
     expectedText: "옵션 통화"
   },
   {
+    label: "큰 체결 비정상 심볼 차단",
+    path: "/api/large-trade-flow?symbol=NOTREAL",
+    method: "GET",
+    expectedStatus: [400],
+    expectedText: "큰 체결 심볼"
+  },
+  {
     label: "관심코인 스캔 비정상 심볼 차단",
     path: "/api/watchlist-scan",
     method: "POST",

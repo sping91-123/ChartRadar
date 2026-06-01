@@ -1,5 +1,6 @@
 // 알트코인 관심 목록과 시장 레이더 감지를 별도 페이지로 보여줍니다.
 import { CoinFuturesSwitch } from "@/components/coin/CoinFuturesSwitch";
+import { CoinLargeTradeFlowPanel } from "@/components/coin/CoinLargeTradeFlowPanel";
 import { CoinFuturesSignalPressurePanel } from "@/components/coin/CoinSignalPressurePanel";
 import { Header } from "@/components/Header";
 import { LiveMarketChart } from "@/components/LiveMarketChart";
@@ -15,6 +16,7 @@ export default function AltsPage() {
         <RadarTopNav />
         <CoinFuturesSwitch active="alts" />
         <CoinFuturesSignalPressurePanel mode="alts" />
+        <CoinLargeTradeFlowPanel mode="alts" />
         <LiveMarketChart altOnly />
         <SetupScoutPanel excludeMajor />
         <WatchlistPanel />

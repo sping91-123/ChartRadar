@@ -133,6 +133,8 @@ const altsPage = read("src/app/alts/page.tsx");
 const coinSignalPressurePanel = read("src/components/coin/CoinSignalPressurePanel.tsx");
 const coinOptionsMarketPanel = read("src/components/coin/CoinOptionsMarketPanel.tsx");
 const optionsMarketRoute = read("src/app/api/options-market/route.ts");
+const coinLargeTradeFlowPanel = read("src/components/coin/CoinLargeTradeFlowPanel.tsx");
+const largeTradeFlowRoute = read("src/app/api/large-trade-flow/route.ts");
 const apiRoutes = walk("src/app/api", [".ts"]);
 
 expectIncludes(rateLimit, "UPSTASH_REDIS_REST_URL", "Upstash rate limit URL", "src/lib/server/rateLimit.ts");
@@ -234,7 +236,9 @@ expectIncludes(scoutRoute, "entitlement.isPaid ? 120 : 20", "코인 일일 레�
 expectIncludes(stockRadarApp, 'hasMarketEntitlement(profile?.plan, "stocks")', "글로벌 레이더 권한", "src/components/StockRadarApp.tsx");
 expectIncludes(majorsApp, "CoinFuturesSignalPressurePanel", "Futures pressure panel on majors", "src/components/MajorsApp.tsx");
 expectIncludes(majorsApp, "CoinOptionsMarketPanel", "Options market panel on majors", "src/components/MajorsApp.tsx");
+expectIncludes(majorsApp, "CoinLargeTradeFlowPanel", "Large trade flow panel on majors", "src/components/MajorsApp.tsx");
 expectIncludes(altsPage, "CoinFuturesSignalPressurePanel", "Futures pressure panel on alts", "src/app/alts/page.tsx");
+expectIncludes(altsPage, "CoinLargeTradeFlowPanel", "Large trade flow panel on alts", "src/app/alts/page.tsx");
 expectIncludes(coinSignalPressurePanel, "/api/liquidation-pressure?symbol=", "Futures pressure live API source", "src/components/coin/CoinSignalPressurePanel.tsx");
 expectIncludes(coinSignalPressurePanel, "Binance 공개 선물 데이터", "Futures pressure public data label", "src/components/coin/CoinSignalPressurePanel.tsx");
 expectIncludes(coinSignalPressurePanel, "메이저 선물 쏠림", "Major futures pressure scan copy", "src/components/coin/CoinSignalPressurePanel.tsx");
@@ -243,6 +247,11 @@ expectIncludes(optionsMarketRoute, "fetchOptionsMarketReport", "Options market A
 expectIncludes(coinOptionsMarketPanel, "/api/options-market?currency=", "Options market live API source", "src/components/coin/CoinOptionsMarketPanel.tsx");
 expectIncludes(coinOptionsMarketPanel, "Deribit 공개 옵션 데이터", "Options market public data label", "src/components/coin/CoinOptionsMarketPanel.tsx");
 expectIncludes(coinOptionsMarketPanel, "옵션 시장 온도", "Options market panel copy", "src/components/coin/CoinOptionsMarketPanel.tsx");
+expectIncludes(largeTradeFlowRoute, "fetchLargeTradeFlowReport", "Large trade flow API source", "src/app/api/large-trade-flow/route.ts");
+expectIncludes(coinLargeTradeFlowPanel, "/api/large-trade-flow?symbol=", "Large trade flow live API source", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
+expectIncludes(coinLargeTradeFlowPanel, "Binance 공개 선물 체결", "Large trade flow public data label", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
+expectIncludes(coinLargeTradeFlowPanel, "메이저 큰 체결 흐름", "Major large trade flow copy", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
+expectIncludes(coinLargeTradeFlowPanel, "알트 큰 체결 흐름", "Alt large trade flow copy", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
 
 const macroHealth = await fetchMacroCalendarHealth();
 if (macroHealth.reachable && macroHealth.ok) {
