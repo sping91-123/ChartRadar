@@ -3,6 +3,7 @@ import { CoinLargeTradeFlowPanel } from "@/components/coin/CoinLargeTradeFlowPan
 import { CoinFuturesSwitch } from "@/components/coin/CoinFuturesSwitch";
 import { CoinOnchainPulsePanel } from "@/components/coin/CoinOnchainPulsePanel";
 import { CoinFuturesSignalPressurePanel } from "@/components/coin/CoinSignalPressurePanel";
+import { CoinStablecoinLiquidityPanel } from "@/components/coin/CoinStablecoinLiquidityPanel";
 import { Header } from "@/components/Header";
 import { LiveMarketChart } from "@/components/LiveMarketChart";
 import { RadarTopNav } from "@/components/RadarTopNav";
@@ -15,6 +16,7 @@ export function MajorsApp() {
         <RadarTopNav />
         <CoinFuturesSwitch active="major" />
         <CoinFuturesSignalPressurePanel mode="major" />
+        <CoinStablecoinLiquidityPanel />
         <CoinOnchainPulsePanel />
         <CoinOptionsMarketPanel />
         <CoinLargeTradeFlowPanel mode="major" />
