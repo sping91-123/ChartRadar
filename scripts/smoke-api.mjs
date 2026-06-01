@@ -95,6 +95,13 @@ const checks = [
     expectedText: "큰 체결 심볼"
   },
   {
+    label: "온체인 비정상 네트워크 차단",
+    path: "/api/onchain-metrics?network=eth",
+    method: "GET",
+    expectedStatus: [400],
+    expectedText: "network"
+  },
+  {
     label: "언락 데이터 비정상 limit 차단",
     path: "/api/token-unlocks?limit=bad",
     method: "GET",
