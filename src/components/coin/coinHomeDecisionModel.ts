@@ -1,6 +1,7 @@
 import type { CoinMarketMetricsPayload } from "@/lib/coinMarketMetrics";
 import type { LargeTradeFlowReport } from "@/lib/largeTradeFlow";
 import type { LiquidationPressureReport } from "@/lib/liquidationPressure";
+import type { OptionsMarketReport } from "@/lib/optionsMarket";
 import type { StablecoinLiquidityReport } from "@/lib/stablecoinLiquidity";
 import type { TechnicalRadarReport } from "@/lib/technicalRadar";
 
@@ -36,6 +37,7 @@ interface BuildCoinHomeDecisionInput {
   btcFunding: LiquidationPressureReport | null;
   stablecoinLiquidity?: StablecoinLiquidityReport | null;
   largeTradeFlow?: LargeTradeFlowReport | null;
+  optionsMarket?: OptionsMarketReport | null;
 }
 
 function clamp(value: number, min = 0, max = 100) {
@@ -180,6 +182,34 @@ function largeTradeRisk(report: LargeTradeFlowReport | null | undefined) {
   return sellRisk + anomalyRisk;
 }
 
+function optionsBias(report: OptionsMarketReport | null | undefined) {
+  if (!report || report.dominantSide === "balanced") return 0;
+  const gradeWeight = report.grade === "extreme" ? 8 : report.grade === "heated" ? 5 : report.grade === "normal" ? 2 : 0;
+  const biasWeight = Math.min(Math.abs(report.biasPercent), 60) / 60;
+  return report.dominantSide === "call" ? gradeWeight * biasWeight : -gradeWeight * biasWeight;
+}
+
+function optionsRisk(report: OptionsMarketReport | null | undefined) {
+  if (!report) return 0;
+  const volatilityRisk =
+    report.expectedMovePercent !== null && report.expectedMovePercent >= 14
+      ? 10
+      : report.expectedMovePercent !== null && report.expectedMovePercent >= 9
+        ? 5
+        : 0;
+  const putRisk =
+    report.dominantSide === "put"
+      ? report.grade === "extreme"
+        ? 12
+        : report.grade === "heated"
+          ? 8
+          : report.grade === "normal"
+            ? 4
+            : 0
+      : 0;
+  return volatilityRisk + putRisk;
+}
+
 function riskLabel({
   weakTrend,
   constructiveTrend,
@@ -188,7 +218,8 @@ function riskLabel({
   derivatives,
   kimchiRisk,
   liquidity,
-  largeTrade
+  largeTrade,
+  options
 }: {
   weakTrend: boolean;
   constructiveTrend: boolean;
@@ -198,11 +229,13 @@ function riskLabel({
   kimchiRisk: number;
   liquidity: number;
   largeTrade: number;
+  options: number;
 }) {
   if (weakTrend && (constructiveTrend || btcChange <= -2.5)) return "BTC 상승 추세 이탈";
   if (weakTrend) return "BTC 약세 계속";
   if (derivatives >= 20) return "선물 쏠림 큼";
   if (largeTrade >= 12) return "큰 매도 체결";
+  if (options >= 12) return "옵션 변동성 큼";
   if (liquidity >= 12) return "스테이블코인 유출";
   if (overheat) return "가격 과열";
   if (kimchiRisk >= 7) return "김치 프리미엄/환율 부담";
@@ -214,6 +247,7 @@ function nextConditionFor(state: CoinHomeDecisionState, leadership: CoinHomeLead
   if (state === "크게 흔들림") {
     if (topRisk === "선물 쏠림 큼") return "선물 포지션 쏠림이 줄어드는지 봅니다.";
     if (topRisk === "큰 매도 체결") return "큰 매도가 멈추는지 봅니다.";
+    if (topRisk === "옵션 변동성 큼") return "옵션 예상 변동 폭이 줄어드는지 봅니다.";
     if (topRisk === "스테이블코인 유출") return "시장에 새 돈이 다시 들어오는지 봅니다.";
     if (topRisk === "가격 과열") return "급등 과열이 식는지 봅니다.";
     if (topRisk === "김치 프리미엄/환율 부담") return "김치 프리미엄과 환율 부담이 낮아지는지 봅니다.";
@@ -265,6 +299,8 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
   const liquidityStrength = liquidityBias(input.stablecoinLiquidity);
   const largeTrade = largeTradeRisk(input.largeTradeFlow);
   const largeTradeStrength = largeTradeBias(input.largeTradeFlow);
+  const options = optionsRisk(input.optionsMarket);
+  const optionsStrength = optionsBias(input.optionsMarket);
   const overheat = fearGreed >= 80 || btcChange >= 5 || (stats.strongCount >= 4 && stats.participationRatio >= 0.7);
 
   const altParticipationBonus =
@@ -272,10 +308,17 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
   const trendStrength = trendBias(input.technical) * 0.65 + trendBias(input.technical4h ?? null) * 0.35;
   const weakTrendPenalty = weakTrend ? (trendState.higherWeak ? 16 : 8) : 0;
   const riskPenalty =
-    derivatives + kimchiRisk + liquidity + largeTrade + (overheat ? 10 : 0) + weakTrendPenalty + (trendState.shortWeak && trendState.higherWeak ? 8 : 0);
-  const marketStrength = (fearGreed - 50) * 0.2 + trendStrength + altParticipationBonus + liquidityStrength + largeTradeStrength;
+    derivatives +
+    kimchiRisk +
+    liquidity +
+    largeTrade +
+    options +
+    (overheat ? 10 : 0) +
+    weakTrendPenalty +
+    (trendState.shortWeak && trendState.higherWeak ? 8 : 0);
+  const marketStrength = (fearGreed - 50) * 0.2 + trendStrength + altParticipationBonus + liquidityStrength + largeTradeStrength + optionsStrength;
   const readinessScore = roundedScore(50 + marketStrength - riskPenalty);
-  const topRisk = riskLabel({ weakTrend, constructiveTrend, btcChange, overheat, derivatives, kimchiRisk, liquidity, largeTrade });
+  const topRisk = riskLabel({ weakTrend, constructiveTrend, btcChange, overheat, derivatives, kimchiRisk, liquidity, largeTrade, options });
 
   const leadership = leadershipFor({
     constructiveTrend,
@@ -299,6 +342,7 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
     derivatives < 14 &&
     liquidity < 8 &&
     largeTrade < 8 &&
+    options < 8 &&
     !overheat &&
     topRisk === "큰 경고 없음";
   const clearDownsideSetup = weakTrend && (btcChange <= -2 || (trendState.higherWeak && (readinessScore <= 35 || stats.participationRatio < 0.45)));
