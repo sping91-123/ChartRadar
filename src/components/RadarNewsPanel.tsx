@@ -53,6 +53,8 @@ type BriefingCard = {
   relatedItems: RadarNewsItem[];
 };
 
+const NEWS_CARD_LIMIT = 3;
+
 const marketCopy = {
   crypto: {
     eyebrow: "시장 뉴스 리포트",
@@ -91,7 +93,7 @@ const marketCopy = {
 >;
 
 function newsCacheKey(market: RadarNewsMarket) {
-  return `chart-radar.news.${market}.v15`;
+  return `chart-radar.news.${market}.v16`;
 }
 
 function canUseStorage() {
@@ -311,7 +313,7 @@ function inferMood(digest: { bullish: number; bearish: number; neutral: number; 
 function mergeTags(items: RadarNewsItem[], fallback: string[], market: RadarNewsMarket) {
   const tags = items.flatMap((item) => [...item.assets, ...item.tags]);
   const next = Array.from(new Set([...tags, ...fallback].map((tag) => cleanDisplayText(tag)).filter(Boolean)));
-  if (next.length) return next.slice(0, 5);
+  if (next.length) return next.slice(0, 4);
   return market === "stocks" ? ["금리", "나스닥", "실적"] : ["BTC", "ETH", "금리"];
 }
 
@@ -345,8 +347,8 @@ function buildBriefingCards(briefing: RadarNewsBriefing | undefined, items: Rada
   if (items.length === 0) return [];
   const issues = briefing.keyIssues ?? [];
   if (issues.length > 0) {
-    return issues.slice(0, 5).map((issue, index) => {
-      const relatedItems = items.filter((item) => item.direction === issue.tone).slice(0, 3);
+    return issues.slice(0, NEWS_CARD_LIMIT).map((issue, index) => {
+      const relatedItems = items.filter((item) => item.direction === issue.tone).slice(0, 2);
       return {
         id: `issue-${index}-${issue.tone}`,
         title: cleanDisplayText(issue.title, market === "stocks" ? "글로벌 시장 흐름 점검" : "코인 시장 흐름 점검"),
@@ -359,7 +361,7 @@ function buildBriefingCards(briefing: RadarNewsBriefing | undefined, items: Rada
     });
   }
 
-  return items.slice(0, 5).map((item, index) => ({
+  return items.slice(0, NEWS_CARD_LIMIT).map((item, index) => ({
     id: `news-${index}-${item.id}`,
     title: itemTitle(item, market),
     tone: item.direction,
@@ -570,7 +572,7 @@ function BriefingCardView({
   const Icon = style.icon;
 
   return (
-    <PanelCard variant="flat" padding="none" className="space-y-3 border-t border-ui-line py-5">
+    <PanelCard variant="flat" padding="none" className="space-y-2.5 border-t border-ui-line py-4">
       <div className="flex flex-wrap items-center gap-2">
         <StatusPill tone={directionTone(card.tone)} icon={Icon}>
           {style.label}
@@ -578,20 +580,21 @@ function BriefingCardView({
       </div>
 
       <h3 className="text-base font-semibold leading-6 text-ui-text [word-break:keep-all] sm:text-lg">{card.title}</h3>
-      <p className="line-clamp-2 text-sm leading-6 text-ui-muted [word-break:keep-all]">{card.summary}</p>
 
-      <div className="flex flex-wrap gap-1.5">
-        {card.tags.slice(0, 3).map((tag) => (
-          <span key={tag} className="rounded-ui-sm border border-ui-line bg-ui-inset px-2 py-1 text-[11px] font-semibold text-ui-muted">
-            {tag}
-          </span>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-1.5">
+          {card.tags.slice(0, 2).map((tag) => (
+            <span key={tag} className="rounded-ui-sm border border-ui-line bg-ui-inset px-2 py-1 text-[11px] font-semibold text-ui-muted">
+              {tag}
+            </span>
+          ))}
+        </div>
+
+        <ActionButton tone={expanded ? "ghost" : "secondary"} onClick={onToggle} aria-expanded={expanded} className="w-fit">
+          {expanded ? "접기" : "내용 보기"}
+          {expanded ? <ChevronUp size={15} aria-hidden /> : <ChevronDown size={15} aria-hidden />}
+        </ActionButton>
       </div>
-
-      <ActionButton tone={expanded ? "ghost" : "secondary"} onClick={onToggle} aria-expanded={expanded} className="w-full sm:w-auto">
-        {expanded ? "상세 접기" : "자세히 보기"}
-        {expanded ? <ChevronUp size={15} aria-hidden /> : <ChevronDown size={15} aria-hidden />}
-      </ActionButton>
 
       {expanded ? <BriefingDetail card={card} briefing={briefing} /> : null}
     </PanelCard>
