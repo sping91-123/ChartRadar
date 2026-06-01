@@ -16,11 +16,11 @@ type NavItem = {
 };
 
 const cryptoNavItems: NavItem[] = [
-  { label: "홈", icon: Home, href: "/coin", match: ["/coin"] },
-  { label: "현물", icon: Coins, href: "/spot", match: ["/spot"] },
-  { label: "선물", icon: Radar, href: "/crypto", match: ["/crypto", "/alts"] },
-  { label: "뉴스", icon: Newspaper, href: "/news?market=crypto", match: ["/news"], market: "crypto" },
-  { label: "복기", icon: History, href: "/journal?market=crypto", match: ["/journal"], market: "crypto" }
+  { label: "홈", icon: Home, href: "/crypto/home", match: ["/crypto/home"] },
+  { label: "현물", icon: Coins, href: "/crypto/spot", match: ["/crypto/spot"] },
+  { label: "선물", icon: Radar, href: "/crypto/perpetual", match: ["/crypto/perpetual", "/crypto/perpetual/alts"] },
+  { label: "뉴스", icon: Newspaper, href: "/crypto/news", match: ["/crypto/news"], market: "crypto" },
+  { label: "복기", icon: History, href: "/crypto/review", match: ["/crypto/review"], market: "crypto" }
 ];
 
 const stockNavItems: NavItem[] = [
@@ -31,13 +31,14 @@ const stockNavItems: NavItem[] = [
 ];
 
 const allNavItems: NavItem[] = [
-  { label: "BTC/ETH", icon: Radar, href: "/crypto", match: ["/crypto", "/alts"] },
+  { label: "Coin Radar", icon: Radar, href: "/crypto/home", match: ["/crypto/home", "/crypto/spot", "/crypto/perpetual", "/crypto/perpetual/alts", "/crypto/news", "/crypto/review", "/crypto/alert"] },
   { label: "글로벌", icon: TrendingUp, href: "/global", match: ["/stocks", "/global", "/global/assets"] },
   { label: "요금제", icon: Crown, href: "/pro", match: ["/pro", "/checkout/success", "/checkout/fail", "/refund"] }
 ];
 
 function inferMarket(pathname: string): MarketScope {
   if (pathname === "/stocks" || pathname === "/global" || pathname.startsWith("/global/")) return "stocks";
+  if (pathname.startsWith("/crypto/")) return "crypto";
   return "crypto";
 }
 

@@ -256,7 +256,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
             <DataRow label="글로벌 Pro" value={<AccessValue open={hasGlobalAccess} />} detail="미국장 30초 체크, 지수선물, 매크로 압력." />
           </div>
           {freePlan ? (
-            <ActionButton href="/crypto" tone="secondary" className="mt-4 w-full">
+            <ActionButton href="/crypto/home" tone="secondary" className="mt-4 w-full">
               Basic으로 먼저 둘러보기
             </ActionButton>
           ) : null}

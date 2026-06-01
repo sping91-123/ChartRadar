@@ -22,14 +22,14 @@ export default function manifest(): MetadataRoute.Manifest {
         name: "Coin Radar",
         short_name: "Coin",
         description: "BTC와 ETH 시장 레이더를 바로 엽니다.",
-        url: "/crypto?source=pwa-shortcut",
+        url: "/crypto/home?source=pwa-shortcut",
         icons: [{ src: icon, sizes: "1024x1024", type: "image/png" }]
       },
       {
         name: "Altcoin Radar",
         short_name: "Altcoin",
         description: "알트코인 감지 목록을 바로 확인합니다.",
-        url: "/alts?source=pwa-shortcut",
+        url: "/crypto/perpetual/alts?source=pwa-shortcut",
         icons: [{ src: icon, sizes: "1024x1024", type: "image/png" }]
       },
       {
@@ -43,7 +43,7 @@ export default function manifest(): MetadataRoute.Manifest {
         name: "Radar News",
         short_name: "News",
         description: "오늘 시장 이슈와 매크로 체크를 바로 확인합니다.",
-        url: "/news?source=pwa-shortcut",
+        url: "/crypto/news?source=pwa-shortcut",
         icons: [{ src: icon, sizes: "1024x1024", type: "image/png" }]
       }
     ],

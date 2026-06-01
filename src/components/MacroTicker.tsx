@@ -439,7 +439,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
     const impactRead = cryptoImpactRead(item);
     const ImpactIcon = impactRead === "호재" ? TrendingUp : impactRead === "악재" ? TrendingDown : impactRead === "중립" ? Minus : null;
     const impactToneClass = impactRead === "호재" ? "text-emerald-400" : impactRead === "악재" ? "text-rose-400" : "text-slate-400";
-    const href = market === "stocks" ? "/macro-calendar?market=global" : "/macro-calendar?market=crypto";
+    const href = market === "stocks" ? "/schedule?market=global" : "/schedule?market=crypto";
 
     return (
       <div className="space-y-1.5">

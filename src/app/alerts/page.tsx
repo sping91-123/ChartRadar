@@ -3,9 +3,11 @@ import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
 import { RadarAlertCenter } from "@/components/RadarAlertCenter";
 import { RadarTopNav } from "@/components/RadarTopNav";
+import { redirect } from "next/navigation";
 
 export default function AlertsPage({ searchParams }: { searchParams?: { market?: string } }) {
   const market = searchParams?.market === "stocks" || searchParams?.market === "global" ? "stocks" : "crypto";
+  if (market === "crypto") redirect("/crypto/alert");
 
   return (
     <main className="min-h-screen px-3 pb-10 sm:px-5">

@@ -29,7 +29,7 @@ type HeaderMarket = "crypto" | "stocks";
 type AuthState = ReturnType<typeof useSupabaseAuth>;
 
 function marketAlertHref(market?: HeaderMarket) {
-  return market === "stocks" ? "/alerts?market=global" : "/alerts?market=crypto";
+  return market === "stocks" ? "/alerts?market=global" : "/crypto/alert";
 }
 
 function marketProHref(market?: HeaderMarket) {
@@ -313,7 +313,7 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
   useEffect(() => {
     if (!isSettingsOpen) return;
 
-    window.history.pushState({ chartRadarSettingsPanel: true }, "", window.location.href);
+    window.history.pushState({ chartRadarSettingsPanel: true }, "", "/menu");
     const handlePopState = () => {
       setIsSettingsOpen(false);
     };
