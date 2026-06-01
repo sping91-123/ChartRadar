@@ -44,7 +44,7 @@ export type RadarNewsBriefing = {
 };
 
 const sourceDisplayNames: Record<string, string> = {
-  Official: "공식 일정",
+  Official: "공식 자료",
   BLS: "미 노동통계국",
   BEA: "미 경제분석국",
   Census: "미 인구조사국",
@@ -259,17 +259,17 @@ function contextualFallbackTitle(originalTitle: string, market: RadarNewsMarket)
     if (/etf/.test(text) && /inflow|outflow|flow/.test(text)) return `${asset} ETF 수급 흐름 점검`;
     if (/stablecoin|usdt|usdc/.test(text)) return "스테이블코인 수급과 규제 흐름 점검";
     if (/fed|fomc|rate|yield|treasury|dollar/.test(text)) return "금리·달러 부담에 코인 시장 방향성 점검";
-    if (/cpi|ppi|pce|inflation/.test(text)) return "물가 지표 앞두고 코인 시장 변동성 점검";
-    if (/jobless|payroll|jobs|unemployment/.test(text)) return "고용지표 대기 속 위험자산 흐름 점검";
+    if (/cpi|ppi|pce|inflation/.test(text)) return "물가 뉴스에 코인 시장 변동성 점검";
+    if (/jobless|payroll|jobs|unemployment/.test(text)) return "고용 뉴스에 위험자산 흐름 점검";
     if (/liquidation|sell-off|correction|slump|drop/.test(text)) return "청산과 변동성 확대 가능성 점검";
     if (/regulation|sec|cftc|congress|stablecoin bill|clarity act|genius act/.test(text)) return "규제 이슈가 코인 시장 심리에 미치는 영향 점검";
     return `${asset} 주요 시장 이슈 점검`;
   }
 
-  if (/fomc|minutes/.test(text)) return "FOMC 의사록 공개 앞두고 금리 경계감 유지";
+  if (/fomc|minutes/.test(text)) return "연준 의사록 뉴스에 금리 경계감 유지";
   if (/fed|powell|rate|yield|treasury/.test(text)) return "미국 금리 경계감에 지수 방향성 점검";
-  if (/cpi|ppi|pce|inflation/.test(text)) return "물가 지표 앞두고 인플레 부담 재점검";
-  if (/jobless|payroll|jobs|employment|unemployment/.test(text)) return "고용지표 발표 전 미국 지수선물 흐름 점검";
+  if (/cpi|ppi|pce|inflation/.test(text)) return "물가 뉴스에 인플레 부담 재점검";
+  if (/jobless|payroll|jobs|employment|unemployment/.test(text)) return "고용 뉴스에 미국 지수선물 흐름 점검";
   if (/oil|crude|brent|wti|gas prices|energy/.test(text)) return "유가 흐름에 인플레 부담 재점검";
   if (/dollar|dxy/.test(text)) return "달러 강세 여부에 위험자산 부담 점검";
   if (/vix|volatility/.test(text)) return "변동성 확대 가능성에 위험자산 경계";

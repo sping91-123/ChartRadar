@@ -61,9 +61,9 @@ const marketCopy = {
     radarTitle: "오늘의 시장 레이더",
     directionLabel: "BTC 방향성",
     subMarketLabel: "알트코인 분위기",
-    cadenceLine: "뉴스 레이더는 1시간 단위로 갱신되며, 짧은 제목보다 공개 뉴스의 공통 흐름을 먼저 정리합니다.",
+    cadenceLine: "뉴스 레이더는 1시간 단위로 갱신되며, 시장 전체에 영향이 큰 공개 뉴스만 추려 보여줍니다.",
     emptyState:
-      "현재 코인 시장 전체를 흔들 만한 강한 매크로 뉴스는 잡히지 않았습니다. 개별 알트·프로젝트 뉴스는 제외하고, BTC·ETH·ETF·금리·달러·물가·고용·규제·청산 흐름에 영향을 주는 이슈가 잡히면 이곳에 표시됩니다."
+      "현재 코인 시장 전체를 흔들 만한 강한 공개 뉴스는 잡히지 않았습니다. 개별 알트·프로젝트 뉴스는 제외하고, BTC·ETH·ETF·금리·달러·규제·청산 흐름에 영향을 주는 뉴스가 잡히면 이곳에 표시됩니다."
   },
   stocks: {
     eyebrow: "글로벌 뉴스 리포트",
@@ -72,7 +72,7 @@ const marketCopy = {
     radarTitle: "오늘의 시장 레이더",
     directionLabel: "지수 방향성",
     subMarketLabel: "섹터 분위기",
-    cadenceLine: "뉴스 레이더는 1시간 단위로 갱신되며, 금리, 달러, 원자재, 주요 지수에 영향을 주는 공개 뉴스의 공통 흐름을 먼저 정리합니다.",
+    cadenceLine: "뉴스 레이더는 1시간 단위로 갱신되며, 금리, 달러, 원자재, 주요 지수에 영향을 주는 공개 뉴스만 추려 보여줍니다.",
     emptyState:
       "현재 글로벌 시장을 흔들 만한 강한 공개 뉴스는 잡히지 않았습니다. 개별 종목성 뉴스는 제외하고, 금리·물가·고용·달러·VIX·원자재·주요 지수에 영향을 주는 뉴스가 잡히면 이곳에 표시됩니다."
   }
@@ -91,7 +91,7 @@ const marketCopy = {
 >;
 
 function newsCacheKey(market: RadarNewsMarket) {
-  return `chart-radar.news.${market}.v14`;
+  return `chart-radar.news.${market}.v15`;
 }
 
 function canUseStorage() {
@@ -125,7 +125,7 @@ function stripMarkdown(value: string) {
     .replace(/\*(.*?)\*/g, "$1")
     .replace(/`([^`]+)`/g, "$1")
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/[가-힣A-Za-z0-9,·ㆍ\s]{0,120}기사 묶음에서 확인되는 흐름입니다\.?/g, "공개 뉴스와 시장 반응을 함께 보면")
+    .replace(/[가-힣A-Za-z0-9,·ㆍ\s]{0,120}기사 묶음에서 확인되는 흐름입니다\.?/g, "")
     .replace(/상방 우호 \d+개,\s*하방 주의 \d+개,\s*중립 확인 \d+개로 정리됩니다\./g, "상승 재료와 하락 재료가 함께 정리됩니다.")
     .replace(/상방 \d+\s*[·ㆍ]\s*하방 \d+\s*[·ㆍ]\s*중립 \d+/g, "")
     .replace(/상방/g, "상승")
@@ -351,7 +351,7 @@ function buildBriefingCards(briefing: RadarNewsBriefing | undefined, items: Rada
         id: `issue-${index}-${issue.tone}`,
         title: cleanDisplayText(issue.title, market === "stocks" ? "글로벌 시장 흐름 점검" : "코인 시장 흐름 점검"),
         tone: issue.tone,
-        summary: sectionText(issue.detail, briefing.overview, 2),
+        summary: sectionText(issue.detail, briefing.overview, 1),
         tags: mergeTags(relatedItems, [market === "stocks" ? "나스닥" : "BTC", "금리", "변동성"], market),
         issue,
         relatedItems
@@ -372,8 +372,8 @@ function buildBriefingCards(briefing: RadarNewsBriefing | undefined, items: Rada
 function leadSummary(briefing: RadarNewsBriefing | undefined, mood: Mood, market: RadarNewsMarket) {
   const fallback =
     market === "stocks"
-      ? "글로벌 시장의 주요 뉴스와 매크로 흐름을 확인하는 중입니다. 강한 공개 이슈가 잡히면 시장 해석과 체크포인트를 정리합니다."
-      : "코인 시장의 주요 뉴스와 매크로 흐름을 확인하는 중입니다. 강한 공개 이슈가 잡히면 시장 해석과 체크포인트를 정리합니다.";
+      ? "글로벌 시장의 주요 뉴스 흐름을 확인하는 중입니다. 강한 공개 이슈가 잡히면 시장 해석과 체크포인트를 정리합니다."
+      : "코인 시장의 주요 뉴스 흐름을 확인하는 중입니다. 강한 공개 이슈가 잡히면 시장 해석과 체크포인트를 정리합니다.";
   const overview = cleanDisplayText(briefing?.overview, fallback);
   if (mood === "pending") return fallback;
   return sectionText(overview, fallback, 1);
@@ -733,8 +733,8 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
 
       <section className="space-y-3">
         <SectionHeader
-          eyebrow={market === "stocks" ? "이벤트 리포트" : "시장 구조 리포트"}
-          title="오늘의 AI 브리핑"
+          eyebrow="뉴스 브리핑"
+          title="오늘 볼 뉴스"
         />
 
         {cards.length ? (
@@ -760,7 +760,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
         <div className="flex items-start gap-2">
           <ShieldAlert size={15} className="mt-0.5 shrink-0 text-ui-brand" aria-hidden />
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-ui-text">시장 해석 기준</p>
+            <p className="text-sm font-semibold text-ui-text">뉴스 선별 기준</p>
             <p className="mt-2 text-sm leading-6 text-ui-muted [word-break:keep-all]">{copy.cadenceLine}</p>
           </div>
         </div>

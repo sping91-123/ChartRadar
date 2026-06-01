@@ -168,7 +168,7 @@ expectIncludes(macroTicker, "BLS 공식 통계", "매크로 출처명 한글 표
 expectIncludes(radarNewsApi, "GROQ_API_KEY", "뉴스 Groq 우선 연결", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsApi, "USE_GEMINI_NEWS_FALLBACK", "뉴스 Gemini fallback 옵션", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsApi, "ensureKoreanText", "뉴스 브리핑 한국어 보정", "src/app/api/radar-news/route.ts");
-expectIncludes(radarNewsApi, "오늘 확인할 주요 시장 이슈", "뉴스 기본 브리핑 문구", "src/app/api/radar-news/route.ts");
+expectIncludes(radarNewsApi, "지난 1시간 뉴스 흐름", "뉴스 기본 브리핑 문구", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsApi, "미국 물가 이슈", "뉴스 물가 표현 보강", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsApi, "correctDollarToWonDrift", "뉴스 달러 금액 원화 오역 보정", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsApi, "원문의 달러 금액", "뉴스 달러 단위 보존 프롬프트", "src/app/api/radar-news/route.ts");
@@ -181,18 +181,18 @@ expectIncludes(radarNewsPanel, "뉴스 레이더", "코인 뉴스 요약 화면"
 expectIncludes(radarNewsPanel, "오늘의 시장 레이더", "시장 레이더 요약 카드", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "자세히 보기", "뉴스 상세 브리핑 버튼", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "참고 뉴스", "참고 뉴스 목록 화면", "src/components/RadarNewsPanel.tsx");
-expectIncludes(radarNewsPanel, "chart-radar.news.${market}.v14", "뉴스 캐시 버전 갱신", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "chart-radar.news.${market}.v15", "뉴스 캐시 버전 갱신", "src/components/RadarNewsPanel.tsx");
 expectNotIncludes(newsPage, "MacroTicker", "뉴스 페이지 일정 분리", "src/app/news/page.tsx");
 expectNotIncludes(newsPage, "이번 주 주요 매크로 일정", "뉴스 페이지 매크로 일정 제거", "src/app/news/page.tsx");
 expectNotIncludes(radarNewsPanel, "afterBriefing", "뉴스 패널 일정 슬롯 제거", "src/components/RadarNewsPanel.tsx");
 {
   const reportIndex = newsPage.indexOf("<RadarNewsPanel");
-  const briefingIndex = radarNewsPanel.indexOf("오늘의 AI 브리핑");
-  const criteriaIndex = radarNewsPanel.indexOf("시장 해석 기준");
+  const briefingIndex = radarNewsPanel.indexOf("오늘 볼 뉴스");
+  const criteriaIndex = radarNewsPanel.indexOf("뉴스 선별 기준");
   if (reportIndex >= 0 && briefingIndex >= 0 && criteriaIndex > briefingIndex) {
-    pass("뉴스 리포트 단독 배치", "뉴스 브리핑 다음에는 뉴스 해석 기준만 표시합니다.");
+    pass("뉴스 리포트 단독 배치", "뉴스 브리핑 다음에는 뉴스 선별 기준만 표시합니다.");
   } else {
-    fail("뉴스 리포트 단독 배치", "뉴스 페이지는 뉴스 브리핑과 뉴스 해석 기준만 포함해야 합니다.");
+    fail("뉴스 리포트 단독 배치", "뉴스 페이지는 뉴스 브리핑과 뉴스 선별 기준만 포함해야 합니다.");
   }
 }
 expectIncludes(radarNewsLib, "미국 증시 뉴스", "뉴스 출처명 한국어 표시", "src/lib/radarNews.ts");
