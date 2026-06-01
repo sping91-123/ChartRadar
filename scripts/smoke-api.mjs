@@ -95,6 +95,13 @@ const checks = [
     expectedText: "큰 체결 심볼"
   },
   {
+    label: "언락 데이터 비정상 limit 차단",
+    path: "/api/token-unlocks?limit=bad",
+    method: "GET",
+    expectedStatus: [400],
+    expectedText: "limit"
+  },
+  {
     label: "관심코인 스캔 비정상 심볼 차단",
     path: "/api/watchlist-scan",
     method: "POST",

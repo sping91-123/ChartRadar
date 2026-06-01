@@ -2,6 +2,7 @@
 import { CoinFuturesSwitch } from "@/components/coin/CoinFuturesSwitch";
 import { CoinLargeTradeFlowPanel } from "@/components/coin/CoinLargeTradeFlowPanel";
 import { CoinFuturesSignalPressurePanel } from "@/components/coin/CoinSignalPressurePanel";
+import { CoinUnlockPressurePanel } from "@/components/coin/CoinUnlockPressurePanel";
 import { Header } from "@/components/Header";
 import { LiveMarketChart } from "@/components/LiveMarketChart";
 import { RadarTopNav } from "@/components/RadarTopNav";
@@ -17,6 +18,7 @@ export default function AltsPage() {
         <CoinFuturesSwitch active="alts" />
         <CoinFuturesSignalPressurePanel mode="alts" />
         <CoinLargeTradeFlowPanel mode="alts" />
+        <CoinUnlockPressurePanel />
         <LiveMarketChart altOnly />
         <SetupScoutPanel excludeMajor />
         <WatchlistPanel />
