@@ -1026,7 +1026,7 @@ export function SpotRadarPanel() {
                   type="button"
                   onClick={() => selectExchange(item.id)}
                   className={`inline-flex min-h-10 items-center gap-2 border px-2 text-xs font-semibold transition ${
-                    exchange === item.id ? "border-ui-brand bg-ui-brand/15 text-ui-text" : "border-transparent text-ui-muted hover:border-ui-line hover:text-ui-text"
+                    exchange === item.id ? "border-white bg-ui-brand/15 text-ui-text" : "border-transparent text-ui-muted hover:border-ui-line hover:text-ui-text"
                   }`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
