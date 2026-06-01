@@ -484,7 +484,6 @@ async function jsonOrNull<T>(input: RequestInfo | URL) {
 export function CoinRadarHomePanel() {
   const [state, setState] = useState<CoinHomeState>({ status: "loading" });
   const [selectedSymbol, setSelectedSymbol] = useState<RepresentativeSymbol | null>(null);
-  const [showMarketDetails, setShowMarketDetails] = useState(false);
 
   async function load() {
     setState({ status: "loading" });
@@ -672,7 +671,7 @@ export function CoinRadarHomePanel() {
             })()}
           </div>
         </div>
-        <p className="-mt-2 border-t border-ui-line pt-2 text-right text-[11px] font-semibold leading-4 text-ui-subtle">
+        <p className="-mt-2 text-right text-[11px] font-semibold leading-4 text-ui-subtle">
           코인을 클릭하여 상태 상세보기
         </p>
 
@@ -763,14 +762,7 @@ export function CoinRadarHomePanel() {
       ) : null}
 
       <PanelCard variant="flat" padding="none" className="space-y-4">
-        <SectionHeader
-          title="BTC 기준 시장 체력"
-          action={
-            <ActionButton tone="ghost" className="min-h-7 shrink-0 px-0" onClick={() => setShowMarketDetails((value) => !value)}>
-              {showMarketDetails ? "접기" : "자세히"}
-            </ActionButton>
-          }
-        />
+        <SectionHeader title="BTC 기준 시장 체력" />
         <div className="grid gap-3 md:grid-cols-2">
           <MarketStrengthGauge
             label="공포탐욕"
@@ -805,8 +797,6 @@ export function CoinRadarHomePanel() {
             leftLabel="낮음"
             rightLabel="높음"
           />
-          {showMarketDetails ? (
-            <>
           <MarketStrengthGauge
             label="BTC RSI"
             value={parseReadingNumber(summary?.rsi?.value)}
@@ -854,8 +844,6 @@ export function CoinRadarHomePanel() {
               <p className="shrink-0 text-right text-base font-semibold leading-5 text-ui-text">{formatKrwRate(summary?.marketMetrics?.usdKrw)}</p>
             </div>
           </article>
-            </>
-          ) : null}
         </div>
       </PanelCard>
 
