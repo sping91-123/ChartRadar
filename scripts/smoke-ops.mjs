@@ -179,10 +179,12 @@ expectIncludes(radarNewsApi, "PERSONAL_FINANCE_NOISE_KEYWORDS", "뉴스 개인�
 expectIncludes(radarNewsApi, "GLOBAL_MARKET_CONFIRMATION_KEYWORDS", "뉴스 매크로 문맥 확인", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsPanel, "뉴스 레이더", "코인 뉴스 요약 화면", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "오늘의 시장 레이더", "시장 레이더 요약 카드", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "compactCheckpoint", "뉴스 상단 체크포인트 압축", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "다음 확인", "뉴스 상단 체크포인트 라벨", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "NEWS_CARD_LIMIT = 3", "뉴스 카드 노출 수 제한", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "내용 보기", "뉴스 상세 브리핑 버튼", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "참고 뉴스", "참고 뉴스 목록 화면", "src/components/RadarNewsPanel.tsx");
-expectIncludes(radarNewsPanel, "chart-radar.news.${market}.v16", "뉴스 캐시 버전 갱신", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "chart-radar.news.${market}.v17", "뉴스 캐시 버전 갱신", "src/components/RadarNewsPanel.tsx");
 expectNotIncludes(newsPage, "MacroTicker", "뉴스 페이지 일정 분리", "src/app/news/page.tsx");
 expectNotIncludes(newsPage, "이번 주 주요 매크로 일정", "뉴스 페이지 매크로 일정 제거", "src/app/news/page.tsx");
 expectNotIncludes(radarNewsPanel, "afterBriefing", "뉴스 패널 일정 슬롯 제거", "src/components/RadarNewsPanel.tsx");

@@ -93,7 +93,7 @@ const marketCopy = {
 >;
 
 function newsCacheKey(market: RadarNewsMarket) {
-  return `chart-radar.news.${market}.v16`;
+  return `chart-radar.news.${market}.v17`;
 }
 
 function canUseStorage() {
@@ -381,6 +381,22 @@ function leadSummary(briefing: RadarNewsBriefing | undefined, mood: Mood, market
   return sectionText(overview, fallback, 1);
 }
 
+function compactCheckpoint(value: string | undefined, mood: Mood, market: RadarNewsMarket) {
+  const text = cleanDisplayText(value);
+  if (mood === "pending") return "새 뉴스 유입 대기";
+
+  if (market === "stocks") {
+    if (mood === "up") return "지수선물·섹터 반응 확인";
+    if (mood === "down" || mood === "risk") return "금리·달러 부담 확인";
+    return "지수선물·달러 방향 확인";
+  }
+
+  if (mood === "up") return "BTC·ETH 동반 반응 확인";
+  if (mood === "down" || mood === "risk") return "BTC 지지선 이탈 확인";
+  if (/거래량|volume/i.test(text)) return "거래량 동반 여부 확인";
+  return "BTC·ETH 방향 확인";
+}
+
 function MarketRadarCard({
   briefing,
   digest,
@@ -397,11 +413,10 @@ function MarketRadarCard({
   const MoodIcon = moodStyle.icon;
   const copy = marketCopy[market];
   const summary = leadSummary(briefing, mood, market);
-  const checkpoint = cleanDisplayText(
+  const checkpoint = compactCheckpoint(
     briefing?.strategyNotes?.[0],
-    market === "stocks"
-      ? "금리, 달러, 지수선물과 주요 섹터 반응을 함께 확인하세요."
-      : "BTC와 ETH의 지지·저항 반응, 금리와 달러 흐름을 함께 확인하세요."
+    mood,
+    market
   );
 
   return (
@@ -424,12 +439,12 @@ function MarketRadarCard({
       </div>
 
       <AppSurface tone="inset" variant="flat" padding="none" className="border-t border-ui-line pt-3">
-        <div className="flex items-start gap-2">
-          <ListChecks size={15} className="mt-0.5 shrink-0 text-ui-brand" aria-hidden />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-ui-text">오늘 체크포인트</p>
-            <p className="mt-1 text-sm leading-6 text-ui-muted [word-break:keep-all]">{checkpoint}</p>
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <div className="flex items-center gap-2">
+            <ListChecks size={15} className="shrink-0 text-ui-brand" aria-hidden />
+            <p className="text-sm font-semibold text-ui-muted">다음 확인</p>
           </div>
+          <p className="text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{checkpoint}</p>
         </div>
       </AppSurface>
     </PanelCard>
