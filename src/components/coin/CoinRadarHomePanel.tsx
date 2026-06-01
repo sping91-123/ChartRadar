@@ -538,7 +538,8 @@ export function CoinRadarHomePanel() {
       technical: report,
       technical4h: report4h,
       marketMetrics,
-      btcFunding
+      btcFunding,
+      stablecoinLiquidity
     });
 
     return { report, report4h, fearGreed, btc, rsi, stochastic, btcFunding, marketMetrics, stablecoinLiquidity, decision };
