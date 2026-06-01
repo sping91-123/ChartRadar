@@ -1,6 +1,6 @@
 "use client";
 // 시장 뉴스 브리핑과 참고 뉴스 목록을 카드형 레이더로 보여주는 패널입니다.
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -66,15 +66,15 @@ const marketCopy = {
       "현재 코인 시장 전체를 흔들 만한 강한 매크로 뉴스는 잡히지 않았습니다. 개별 알트·프로젝트 뉴스는 제외하고, BTC·ETH·ETF·금리·달러·물가·고용·규제·청산 흐름에 영향을 주는 이슈가 잡히면 이곳에 표시됩니다."
   },
   stocks: {
-    eyebrow: "글로벌 이벤트 리포트",
+    eyebrow: "글로벌 뉴스 리포트",
     title: "뉴스 레이더",
     marketLabel: "글로벌 시장",
     radarTitle: "오늘의 시장 레이더",
     directionLabel: "지수 방향성",
     subMarketLabel: "섹터 분위기",
-    cadenceLine: "뉴스 레이더는 1시간 단위로 갱신되며, CPI, FOMC, 고용, 금리, 원자재와 공개 뉴스의 공통 흐름을 먼저 정리합니다.",
+    cadenceLine: "뉴스 레이더는 1시간 단위로 갱신되며, 금리, 달러, 원자재, 주요 지수에 영향을 주는 공개 뉴스의 공통 흐름을 먼저 정리합니다.",
     emptyState:
-      "현재 글로벌 시장을 흔들 만한 강한 일정·뉴스는 잡히지 않았습니다. 개별 종목성 뉴스는 제외하고, 금리·물가·고용·달러·VIX·원자재·주요 지수에 영향을 주는 일정이나 이슈가 잡히면 이곳에 표시됩니다."
+      "현재 글로벌 시장을 흔들 만한 강한 공개 뉴스는 잡히지 않았습니다. 개별 종목성 뉴스는 제외하고, 금리·물가·고용·달러·VIX·원자재·주요 지수에 영향을 주는 뉴스가 잡히면 이곳에 표시됩니다."
   }
 } satisfies Record<
   RadarNewsMarket,
@@ -646,7 +646,7 @@ function SourceReferenceList({ items }: { items: RadarNewsItem[] }) {
   );
 }
 
-export function RadarNewsPanel({ market = "crypto", afterBriefing }: { market?: RadarNewsMarket; afterBriefing?: ReactNode } = {}) {
+export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket } = {}) {
   const copy = marketCopy[market];
   const [payload, setPayload] = useState<NewsPayload | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -725,7 +725,7 @@ export function RadarNewsPanel({ market = "crypto", afterBriefing }: { market?: 
 
       {isInitialLoading ? (
         <AppSurface variant="flat" tone="inset" padding="none" className="border-t border-ui-line py-3 text-sm font-semibold leading-6 text-ui-brand shadow-none">
-          리포트 준비 중입니다. 공개 뉴스와 매크로 흐름을 읽어 시장 해석과 체크포인트를 정리하고 있습니다.
+          리포트 준비 중입니다. 공개 뉴스를 읽어 시장 해석과 체크포인트를 정리하고 있습니다.
         </AppSurface>
       ) : null}
 
@@ -755,8 +755,6 @@ export function RadarNewsPanel({ market = "crypto", afterBriefing }: { market?: 
 
         <SourceReferenceList items={payload?.items ?? []} />
       </section>
-
-      {afterBriefing}
 
       <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
         <div className="flex items-start gap-2">
