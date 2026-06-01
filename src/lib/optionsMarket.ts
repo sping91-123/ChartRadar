@@ -13,7 +13,9 @@ export interface DeribitOptionSummaryRow {
 }
 
 export interface OptionsMarketExpiry {
+  expiryKey: string;
   label: string;
+  daysToExpiry: number | null;
   totalOpenInterest: number;
   callOpenInterest: number;
   putOpenInterest: number;
@@ -37,6 +39,9 @@ export interface OptionsMarketReport {
   putVolumeUsd: number;
   callPutVolumeRatio: number | null;
   averageMarkIv: number | null;
+  expectedMovePercent: number | null;
+  expectedMoveLow: number | null;
+  expectedMoveHigh: number | null;
   dominantSide: OptionsMarketSide;
   grade: OptionsMarketGrade;
   biasPercent: number;
@@ -76,6 +81,8 @@ const monthIndex: Record<string, number> = {
   DEC: 11
 };
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
 function toNumber(value: unknown) {
   const num = Number(value);
   return Number.isFinite(num) ? num : null;
@@ -109,6 +116,25 @@ function expirySortKey(raw: string) {
   const year = Number(`20${match[3]}`);
   if (!Number.isFinite(day) || month === undefined || !Number.isFinite(year)) return raw;
   return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function expiryTimeFromKey(expiryKey: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(expiryKey);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  const time = Date.UTC(year, month, day, 8);
+  return Number.isFinite(time) ? time : null;
+}
+
+function daysToExpiryFromKey(expiryKey: string, updatedAt: number) {
+  const expiryTime = expiryTimeFromKey(expiryKey);
+  if (expiryTime === null || !Number.isFinite(updatedAt)) return null;
+  const days = Math.ceil((expiryTime - updatedAt) / MS_PER_DAY);
+  if (!Number.isFinite(days)) return null;
+  return Math.max(1, days);
 }
 
 function parseOptionRow(row: DeribitOptionSummaryRow): ParsedOptionRow | null {
@@ -161,6 +187,46 @@ function triggerFor(activeExpiry: OptionsMarketExpiry | null, topStrike: Options
   return "뚜렷한 집중 구간 없음";
 }
 
+function expectedMoveFor(
+  underlyingPrice: number | null,
+  averageMarkIv: number | null,
+  activeExpiry: OptionsMarketExpiry | null
+) {
+  if (
+    underlyingPrice === null ||
+    averageMarkIv === null ||
+    activeExpiry === null ||
+    activeExpiry.daysToExpiry === null ||
+    !Number.isFinite(underlyingPrice) ||
+    !Number.isFinite(averageMarkIv) ||
+    !Number.isFinite(activeExpiry.daysToExpiry) ||
+    underlyingPrice <= 0 ||
+    averageMarkIv <= 0
+  ) {
+    return {
+      expectedMovePercent: null,
+      expectedMoveLow: null,
+      expectedMoveHigh: null
+    };
+  }
+
+  const expectedMovePercent = (averageMarkIv / 100) * Math.sqrt(activeExpiry.daysToExpiry / 365) * 100;
+  if (!Number.isFinite(expectedMovePercent) || expectedMovePercent <= 0) {
+    return {
+      expectedMovePercent: null,
+      expectedMoveLow: null,
+      expectedMoveHigh: null
+    };
+  }
+
+  const expectedMovePrice = underlyingPrice * (expectedMovePercent / 100);
+  return {
+    expectedMovePercent,
+    expectedMoveLow: Math.max(0, underlyingPrice - expectedMovePrice),
+    expectedMoveHigh: underlyingPrice + expectedMovePrice
+  };
+}
+
 export function buildOptionsMarketReport(currency: OptionsCurrency, rows: DeribitOptionSummaryRow[], updatedAt = Date.now()): OptionsMarketReport {
   const parsedRows = rows.map(parseOptionRow).filter((row): row is ParsedOptionRow => row !== null);
   const callRows = parsedRows.filter((row) => row.optionType === "C");
@@ -184,7 +250,9 @@ export function buildOptionsMarketReport(currency: OptionsCurrency, rows: Deribi
 
   for (const row of parsedRows) {
     const expiry = expiryMap.get(row.expiryKey) ?? {
+      expiryKey: row.expiryKey,
       label: row.expiryLabel,
+      daysToExpiry: daysToExpiryFromKey(row.expiryKey, updatedAt),
       totalOpenInterest: 0,
       callOpenInterest: 0,
       putOpenInterest: 0
@@ -211,6 +279,7 @@ export function buildOptionsMarketReport(currency: OptionsCurrency, rows: Deribi
   const side = dominantSide(callOpenInterest, putOpenInterest);
   const grade = gradeFor(biasPercent, averageMarkIv);
   const underlyingPrice = parsedRows.find((row) => row.underlyingPrice !== null)?.underlyingPrice ?? null;
+  const expectedMove = expectedMoveFor(underlyingPrice, averageMarkIv, activeExpiry);
   const ivText = averageMarkIv === null ? "IV 확인 중" : `IV ${averageMarkIv.toFixed(0)}%`;
 
   return {
@@ -224,6 +293,9 @@ export function buildOptionsMarketReport(currency: OptionsCurrency, rows: Deribi
     putVolumeUsd,
     callPutVolumeRatio: safeRatio(callVolumeUsd, putVolumeUsd),
     averageMarkIv,
+    expectedMovePercent: expectedMove.expectedMovePercent,
+    expectedMoveLow: expectedMove.expectedMoveLow,
+    expectedMoveHigh: expectedMove.expectedMoveHigh,
     dominantSide: side,
     grade,
     biasPercent,

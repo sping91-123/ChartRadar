@@ -261,9 +261,11 @@ expectIncludes(coinOnchainPulsePanel, "/api/onchain-metrics?network=btc", "On-ch
 expectIncludes(coinOnchainPulsePanel, "mempool.space 공개 온체인 데이터", "On-chain public data label", "src/components/coin/CoinOnchainPulsePanel.tsx");
 expectIncludes(coinOnchainPulsePanel, "BTC 온체인 체온", "On-chain panel copy", "src/components/coin/CoinOnchainPulsePanel.tsx");
 expectIncludes(optionsMarketRoute, "fetchOptionsMarketReport", "Options market API source", "src/app/api/options-market/route.ts");
+expectIncludes(read("src/lib/optionsMarket.ts"), "expectedMovePercent", "Options expected move field", "src/lib/optionsMarket.ts");
 expectIncludes(coinOptionsMarketPanel, "/api/options-market?currency=", "Options market live API source", "src/components/coin/CoinOptionsMarketPanel.tsx");
 expectIncludes(coinOptionsMarketPanel, "Deribit 공개 옵션 데이터", "Options market public data label", "src/components/coin/CoinOptionsMarketPanel.tsx");
 expectIncludes(coinOptionsMarketPanel, "옵션 시장 온도", "Options market panel copy", "src/components/coin/CoinOptionsMarketPanel.tsx");
+expectIncludes(coinOptionsMarketPanel, "예상 변동", "Options expected move copy", "src/components/coin/CoinOptionsMarketPanel.tsx");
 expectIncludes(largeTradeFlowRoute, "fetchLargeTradeFlowReport", "Large trade flow API source", "src/app/api/large-trade-flow/route.ts");
 expectIncludes(read("src/lib/largeTradeFlow.ts"), "anomalyScore", "Large trade repeated-flow score", "src/lib/largeTradeFlow.ts");
 expectIncludes(coinLargeTradeFlowPanel, "/api/large-trade-flow?symbol=", "Large trade flow live API source", "src/components/coin/CoinLargeTradeFlowPanel.tsx");

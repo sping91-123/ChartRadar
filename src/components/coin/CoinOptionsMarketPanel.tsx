@@ -25,6 +25,11 @@ function formatPercent(value: number | null | undefined) {
   return `${value.toFixed(0)}%`;
 }
 
+function formatExpectedMove(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "-";
+  return `±${value.toFixed(value >= 10 ? 0 : 1)}%`;
+}
+
 function formatUsd(value: number) {
   if (!Number.isFinite(value) || value <= 0) return "-";
   if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
@@ -36,6 +41,12 @@ function formatUsd(value: number) {
 function formatPrice(value: number | null | undefined) {
   if (value === null || value === undefined || !Number.isFinite(value)) return "-";
   return `$${Math.round(value).toLocaleString("en-US")}`;
+}
+
+function formatPriceRange(low: number | null | undefined, high: number | null | undefined) {
+  if (low === null || low === undefined || high === null || high === undefined) return "-";
+  if (!Number.isFinite(low) || !Number.isFinite(high)) return "-";
+  return `${formatPrice(low)}~${formatPrice(high)}`;
 }
 
 function sideTone(side: OptionsMarketSide) {
@@ -152,6 +163,8 @@ export function CoinOptionsMarketPanel() {
                   <span className="text-right text-ui-text">{report.trigger}</span>
                   <span>콜/풋 계약 {formatRatio(report.callPutOpenInterestRatio)}</span>
                   <span className="text-right">IV {formatPercent(report.averageMarkIv)}</span>
+                  <span>예상 변동 {formatExpectedMove(report.expectedMovePercent)}</span>
+                  <span className="text-right">예상 범위 {formatPriceRange(report.expectedMoveLow, report.expectedMoveHigh)}</span>
                   <span>거래대금 {formatUsd(report.callVolumeUsd + report.putVolumeUsd)}</span>
                   <span className="text-right">집중 가격 {formatPrice(report.topStrike?.strike)}</span>
                 </div>
@@ -166,7 +179,7 @@ export function CoinOptionsMarketPanel() {
       ) : null}
 
       <CompactHelp label="데이터 기준">
-        Deribit 공개 옵션 요약에서 BTC/ETH 옵션의 미결제약정, 거래대금, IV를 묶어 콜과 풋 중 어디에 더 몰렸는지만 보여줍니다.
+        Deribit 공개 옵션 요약에서 BTC/ETH 옵션의 미결제약정, 거래대금, IV를 묶어 봅니다. 예상 변동은 미결제약정이 가장 큰 만기와 IV로 계산한 참고 범위입니다.
       </CompactHelp>
     </PanelCard>
   );
