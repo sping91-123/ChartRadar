@@ -7,6 +7,7 @@ import { ActionButton, PanelCard, SectionHeader, StatusPill } from "@/components
 import type { CoinMarketMetricsPayload } from "@/lib/coinMarketMetrics";
 import type { Candle } from "@/lib/marketAnalysis";
 import type { LiquidationPressureReport } from "@/lib/liquidationPressure";
+import type { StablecoinLiquidityReport } from "@/lib/stablecoinLiquidity";
 import { analyzeTechnicalRadar, type IndicatorReading, type TechnicalRadarReport } from "@/lib/technicalRadar";
 import { buildCoinHomeDecision, type CoinHomeDecisionSummary } from "@/components/coin/coinHomeDecisionModel";
 
@@ -32,6 +33,7 @@ interface CoinHomeData {
   funding: Partial<Record<RepresentativeSymbol, LiquidationPressureReport>>;
   fundingMeta: Partial<Record<RepresentativeSymbol, CoinHomeResponseMeta>>;
   marketMetrics: CoinMarketMetricsPayload | null;
+  stablecoinLiquidity: StablecoinLiquidityReport | null;
   analysisUpdatedAt: number;
 }
 
@@ -113,6 +115,14 @@ function toneFromPremium(value: number | null | undefined) {
   if (value === null || value === undefined || !Number.isFinite(value)) return "info" as const;
   if (Math.abs(value) < 0.5) return "watch" as const;
   return value > 0 ? "risk" as const : "info" as const;
+}
+
+function toneFromLiquidity(report: StablecoinLiquidityReport | null | undefined) {
+  if (!report) return "info" as const;
+  if (report.grade === "strong") return "long" as const;
+  if (report.grade === "building") return "info" as const;
+  if (report.grade === "drying") return "risk" as const;
+  return "watch" as const;
 }
 
 const visualToneClass: Record<VisualTone, { text: string; bar: string }> = {
@@ -442,6 +452,7 @@ export function CoinRadarHomePanel() {
         candlesPayload,
         candles4hPayload,
         marketMetricsPayload,
+        stablecoinLiquidityPayload,
         btcFundingPayload,
         ethFundingPayload,
         xrpFundingPayload,
@@ -453,6 +464,7 @@ export function CoinRadarHomePanel() {
         jsonOrNull<{ candles?: Candle[] }>("/api/crypto-candles?symbol=BTCUSDT&timeframe=1h&limit=180"),
         jsonOrNull<{ candles?: Candle[] }>("/api/crypto-candles?symbol=BTCUSDT&timeframe=4h&limit=180"),
         jsonOrNull<CoinMarketMetricsPayload>("/api/coin-market-metrics"),
+        jsonOrNull<{ report?: StablecoinLiquidityReport }>("/api/stablecoin-liquidity"),
         jsonOrNull<{ report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean }>("/api/liquidation-pressure?symbol=BTCUSDT&period=1h"),
         jsonOrNull<{ report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean }>("/api/liquidation-pressure?symbol=ETHUSDT&period=1h"),
         jsonOrNull<{ report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean }>("/api/liquidation-pressure?symbol=XRPUSDT&period=1h"),
@@ -497,6 +509,7 @@ export function CoinRadarHomePanel() {
           funding,
           fundingMeta,
           marketMetrics: marketMetricsPayload,
+          stablecoinLiquidity: stablecoinLiquidityPayload?.report ?? null,
           analysisUpdatedAt: Date.now()
         }
       });
@@ -519,6 +532,7 @@ export function CoinRadarHomePanel() {
     const stochastic = findReading(report, "Stochastic");
     const btcFunding = state.data.funding.BTC ?? null;
     const marketMetrics = state.data.marketMetrics;
+    const stablecoinLiquidity = state.data.stablecoinLiquidity;
     const decision = buildCoinHomeDecision({
       board: state.data.board,
       technical: report,
@@ -527,7 +541,7 @@ export function CoinRadarHomePanel() {
       btcFunding
     });
 
-    return { report, report4h, fearGreed, btc, rsi, stochastic, btcFunding, marketMetrics, decision };
+    return { report, report4h, fearGreed, btc, rsi, stochastic, btcFunding, marketMetrics, stablecoinLiquidity, decision };
   }, [state]);
 
   if (state.status === "loading") {
@@ -733,6 +747,13 @@ export function CoinRadarHomePanel() {
             showCenter
             centerValue={50}
             centerLabel="50%"
+          />
+          <MarketStrengthGauge
+            label="스테이블코인 유동성"
+            value={summary?.stablecoinLiquidity?.flowScore}
+            display={summary?.stablecoinLiquidity ? `${summary.stablecoinLiquidity.flowScore}점` : "미확인"}
+            detail={summary?.stablecoinLiquidity?.summary}
+            tone={toneFromLiquidity(summary?.stablecoinLiquidity)}
           />
           <LongShortVisual report={summary?.btcFunding} />
           <MarketStrengthGauge

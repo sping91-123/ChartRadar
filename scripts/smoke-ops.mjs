@@ -131,6 +131,7 @@ const setupScoutPanel = read("src/components/SetupScoutPanel.tsx");
 const watchlistPanel = read("src/components/WatchlistPanel.tsx");
 const majorsApp = read("src/components/MajorsApp.tsx");
 const altsPage = read("src/app/alts/page.tsx");
+const coinRadarHomePanel = read("src/components/coin/CoinRadarHomePanel.tsx");
 const coinSignalPressurePanel = read("src/components/coin/CoinSignalPressurePanel.tsx");
 const coinOptionsMarketPanel = read("src/components/coin/CoinOptionsMarketPanel.tsx");
 const optionsMarketRoute = read("src/app/api/options-market/route.ts");
@@ -247,6 +248,8 @@ expectIncludes(stockRadarApp, 'hasMarketEntitlement(profile?.plan, "stocks")', "
 expectIncludes(spotRadarPanel, "1차 확인가", "현물 1차 확인가 표시", "src/components/spot/SpotRadarPanel.tsx");
 expectIncludes(spotRadarPanel, "저항까지", "현물 저항 여유 표시", "src/components/spot/SpotRadarPanel.tsx");
 expectIncludes(spotRadarPanel, "깨지면 제외", "현물 제외 기준 표시", "src/components/spot/SpotRadarPanel.tsx");
+expectIncludes(coinRadarHomePanel, "/api/stablecoin-liquidity", "Home stablecoin liquidity API source", "src/components/coin/CoinRadarHomePanel.tsx");
+expectIncludes(coinRadarHomePanel, "스테이블코인 유동성", "Home stablecoin liquidity copy", "src/components/coin/CoinRadarHomePanel.tsx");
 expectIncludes(majorsApp, "CoinFuturesSignalPressurePanel", "Futures pressure panel on majors", "src/components/MajorsApp.tsx");
 expectIncludes(majorsApp, "CoinStablecoinLiquidityPanel", "Stablecoin liquidity panel on majors", "src/components/MajorsApp.tsx");
 expectIncludes(majorsApp, "CoinOnchainPulsePanel", "On-chain pulse panel on majors", "src/components/MajorsApp.tsx");
