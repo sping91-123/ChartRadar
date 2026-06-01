@@ -81,6 +81,13 @@ const checks = [
     expectedText: "기간"
   },
   {
+    label: "옵션 시장 비정상 통화 차단",
+    path: "/api/options-market?currency=XRP",
+    method: "GET",
+    expectedStatus: [400],
+    expectedText: "옵션 통화"
+  },
+  {
     label: "관심코인 스캔 비정상 심볼 차단",
     path: "/api/watchlist-scan",
     method: "POST",

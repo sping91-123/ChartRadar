@@ -1,3 +1,4 @@
+import { CoinOptionsMarketPanel } from "@/components/coin/CoinOptionsMarketPanel";
 import { CoinFuturesSwitch } from "@/components/coin/CoinFuturesSwitch";
 import { CoinFuturesSignalPressurePanel } from "@/components/coin/CoinSignalPressurePanel";
 import { Header } from "@/components/Header";
@@ -12,6 +13,7 @@ export function MajorsApp() {
         <RadarTopNav />
         <CoinFuturesSwitch active="major" />
         <CoinFuturesSignalPressurePanel mode="major" />
+        <CoinOptionsMarketPanel />
         <LiveMarketChart majorOnly />
       </div>
     </main>
