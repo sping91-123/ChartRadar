@@ -634,6 +634,7 @@ function SourceReferenceList({ items }: { items: RadarNewsItem[] }) {
         {references.slice(0, 12).map((item) => {
           const style = directionBadge(item.direction);
           const sourceName = displayNewsSource(item.source) || sourceDomain(item.link);
+          const title = sourceReferenceTitle(item);
           return (
             <article key={item.id} className="border-t border-ui-line pt-3 first:border-t-0 first:pt-0">
               <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-ui-subtle">
@@ -649,13 +650,12 @@ function SourceReferenceList({ items }: { items: RadarNewsItem[] }) {
                 rel="noreferrer"
                 className="mt-2 flex items-start justify-between gap-3 text-sm font-semibold leading-5 text-ui-text transition hover:text-ui-brand [word-break:keep-all]"
               >
-                <span className="line-clamp-2">{sourceReferenceTitle(item)}</span>
+                <span className="line-clamp-2">{title}</span>
                 <ExternalLink size={13} className="mt-1 shrink-0 text-ui-brand" aria-hidden />
               </a>
-              {item.originalTitle && item.originalTitle !== sourceReferenceTitle(item) ? (
-                <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-ui-subtle [word-break:break-word]">원문: {item.originalTitle}</p>
+              {item.originalTitle && item.originalTitle !== title ? (
+                <p className="mt-1 line-clamp-1 text-[11px] leading-4 text-ui-subtle [word-break:break-word]">원문: {item.originalTitle}</p>
               ) : null}
-              <p className="mt-2 line-clamp-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{cleanDisplayText(item.summary)}</p>
             </article>
           );
         })}
