@@ -260,6 +260,8 @@ expectIncludes(coinSignalPressurePanel, "/api/liquidation-pressure?symbol=", "Fu
 expectIncludes(coinSignalPressurePanel, "Binance 공개 선물 데이터", "Futures pressure public data label", "src/components/coin/CoinSignalPressurePanel.tsx");
 expectIncludes(coinSignalPressurePanel, "메이저 선물 쏠림", "Major futures pressure scan copy", "src/components/coin/CoinSignalPressurePanel.tsx");
 expectIncludes(coinSignalPressurePanel, "알트 선물 쏠림", "Alt futures pressure scan copy", "src/components/coin/CoinSignalPressurePanel.tsx");
+expectIncludes(coinSignalPressurePanel, "롱 위험", "Futures long risk score copy", "src/components/coin/CoinSignalPressurePanel.tsx");
+expectIncludes(coinSignalPressurePanel, "숏 위험", "Futures short risk score copy", "src/components/coin/CoinSignalPressurePanel.tsx");
 expectIncludes(onchainMetricsRoute, "fetchBitcoinOnchainMetricReport", "On-chain metrics API source", "src/app/api/onchain-metrics/route.ts");
 expectIncludes(onchainMetricsLib, "mempoolVsizeMb", "On-chain mempool pressure field", "src/lib/onchainMetrics.ts");
 expectIncludes(coinOnchainPulsePanel, "/api/onchain-metrics?network=btc", "On-chain live API source", "src/components/coin/CoinOnchainPulsePanel.tsx");

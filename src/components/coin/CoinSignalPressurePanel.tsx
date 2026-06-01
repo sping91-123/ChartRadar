@@ -338,6 +338,8 @@ export function CoinFuturesSignalPressurePanel({ mode }: { mode: FuturesPressure
                   <span className="text-right text-ui-text">{mainTrigger(report)}</span>
                   <span>롱 {formatPlainPercent(report.globalLongShort.longPercent)}</span>
                   <span className="text-right">계약 변화 {formatPercent(report.openInterestChangePercent)}</span>
+                  <span>롱 위험 {report.downsideLongPressure}점</span>
+                  <span className="text-right">숏 위험 {report.upsideShortPressure}점</span>
                 </div>
               </article>
             );
