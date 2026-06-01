@@ -484,6 +484,7 @@ async function jsonOrNull<T>(input: RequestInfo | URL) {
 export function CoinRadarHomePanel() {
   const [state, setState] = useState<CoinHomeState>({ status: "loading" });
   const [selectedSymbol, setSelectedSymbol] = useState<RepresentativeSymbol | null>(null);
+  const [showMarketDetails, setShowMarketDetails] = useState(false);
 
   async function load() {
     setState({ status: "loading" });
@@ -762,7 +763,14 @@ export function CoinRadarHomePanel() {
       ) : null}
 
       <PanelCard variant="flat" padding="none" className="space-y-4">
-        <SectionHeader title="BTC 기준 시장 체력" />
+        <SectionHeader
+          title="BTC 기준 시장 체력"
+          action={
+            <ActionButton tone="ghost" className="min-h-7 shrink-0 px-0" onClick={() => setShowMarketDetails((value) => !value)}>
+              {showMarketDetails ? "접기" : "자세히"}
+            </ActionButton>
+          }
+        />
         <div className="grid gap-3 md:grid-cols-2">
           <MarketStrengthGauge
             label="공포탐욕"
@@ -772,6 +780,33 @@ export function CoinRadarHomePanel() {
             leftLabel="공포"
             rightLabel="탐욕"
           />
+          <MarketStrengthGauge
+            label="스테이블코인 유동성"
+            value={summary?.stablecoinLiquidity?.flowScore}
+            display={summary?.stablecoinLiquidity ? `${summary.stablecoinLiquidity.flowScore}점` : "미확인"}
+            detail={summary?.stablecoinLiquidity?.summary}
+            tone={toneFromLiquidity(summary?.stablecoinLiquidity)}
+          />
+          <MarketStrengthGauge
+            label="큰 체결 흐름"
+            value={largeTradeGaugeValue(summary?.largeTradeFlow)}
+            display={largeTradeDisplay(summary?.largeTradeFlow)}
+            detail={summary?.largeTradeFlow?.summary}
+            tone={largeTradeTone(summary?.largeTradeFlow)}
+            leftLabel="매도"
+            rightLabel="매수"
+          />
+          <MarketStrengthGauge
+            label="옵션 예상 변동"
+            value={optionsGaugeValue(summary?.optionsMarket)}
+            display={optionsDisplay(summary?.optionsMarket)}
+            detail={summary?.optionsMarket?.trigger}
+            tone={optionsTone(summary?.optionsMarket)}
+            leftLabel="낮음"
+            rightLabel="높음"
+          />
+          {showMarketDetails ? (
+            <>
           <MarketStrengthGauge
             label="BTC RSI"
             value={parseReadingNumber(summary?.rsi?.value)}
@@ -801,31 +836,6 @@ export function CoinRadarHomePanel() {
             centerValue={50}
             centerLabel="50%"
           />
-          <MarketStrengthGauge
-            label="스테이블코인 유동성"
-            value={summary?.stablecoinLiquidity?.flowScore}
-            display={summary?.stablecoinLiquidity ? `${summary.stablecoinLiquidity.flowScore}점` : "미확인"}
-            detail={summary?.stablecoinLiquidity?.summary}
-            tone={toneFromLiquidity(summary?.stablecoinLiquidity)}
-          />
-          <MarketStrengthGauge
-            label="큰 체결 흐름"
-            value={largeTradeGaugeValue(summary?.largeTradeFlow)}
-            display={largeTradeDisplay(summary?.largeTradeFlow)}
-            detail={summary?.largeTradeFlow?.summary}
-            tone={largeTradeTone(summary?.largeTradeFlow)}
-            leftLabel="매도"
-            rightLabel="매수"
-          />
-          <MarketStrengthGauge
-            label="옵션 예상 변동"
-            value={optionsGaugeValue(summary?.optionsMarket)}
-            display={optionsDisplay(summary?.optionsMarket)}
-            detail={summary?.optionsMarket?.trigger}
-            tone={optionsTone(summary?.optionsMarket)}
-            leftLabel="낮음"
-            rightLabel="높음"
-          />
           <LongShortVisual report={summary?.btcFunding} />
           <MarketStrengthGauge
             label="김치 프리미엄"
@@ -844,6 +854,8 @@ export function CoinRadarHomePanel() {
               <p className="shrink-0 text-right text-base font-semibold leading-5 text-ui-text">{formatKrwRate(summary?.marketMetrics?.usdKrw)}</p>
             </div>
           </article>
+            </>
+          ) : null}
         </div>
       </PanelCard>
 

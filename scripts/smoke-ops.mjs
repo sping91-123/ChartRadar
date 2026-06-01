@@ -255,6 +255,8 @@ expectIncludes(coinRadarHomePanel, "/api/large-trade-flow?symbol=BTCUSDT", "Home
 expectIncludes(coinRadarHomePanel, "큰 체결 흐름", "Home large trade flow copy", "src/components/coin/CoinRadarHomePanel.tsx");
 expectIncludes(coinRadarHomePanel, "/api/options-market?currency=BTC", "Home options market API source", "src/components/coin/CoinRadarHomePanel.tsx");
 expectIncludes(coinRadarHomePanel, "옵션 예상 변동", "Home options expected move copy", "src/components/coin/CoinRadarHomePanel.tsx");
+expectIncludes(coinRadarHomePanel, "showMarketDetails", "Home market details collapsed state", "src/components/coin/CoinRadarHomePanel.tsx");
+expectIncludes(coinRadarHomePanel, "자세히", "Home market details toggle copy", "src/components/coin/CoinRadarHomePanel.tsx");
 expectIncludes(coinHomeDecisionModel, "stablecoinLiquidity", "Home decision uses stablecoin liquidity", "src/components/coin/coinHomeDecisionModel.ts");
 expectIncludes(coinHomeDecisionModel, "스테이블코인 유출", "Home decision stablecoin risk label", "src/components/coin/coinHomeDecisionModel.ts");
 expectIncludes(coinHomeDecisionModel, "largeTradeFlow", "Home decision uses large trade flow", "src/components/coin/coinHomeDecisionModel.ts");
