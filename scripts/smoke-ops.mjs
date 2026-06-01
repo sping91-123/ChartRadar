@@ -251,8 +251,12 @@ expectIncludes(spotRadarPanel, "저항까지", "현물 저항 여유 표시", "s
 expectIncludes(spotRadarPanel, "깨지면 제외", "현물 제외 기준 표시", "src/components/spot/SpotRadarPanel.tsx");
 expectIncludes(coinRadarHomePanel, "/api/stablecoin-liquidity", "Home stablecoin liquidity API source", "src/components/coin/CoinRadarHomePanel.tsx");
 expectIncludes(coinRadarHomePanel, "스테이블코인 유동성", "Home stablecoin liquidity copy", "src/components/coin/CoinRadarHomePanel.tsx");
+expectIncludes(coinRadarHomePanel, "/api/large-trade-flow?symbol=BTCUSDT", "Home large trade flow API source", "src/components/coin/CoinRadarHomePanel.tsx");
+expectIncludes(coinRadarHomePanel, "큰 체결 흐름", "Home large trade flow copy", "src/components/coin/CoinRadarHomePanel.tsx");
 expectIncludes(coinHomeDecisionModel, "stablecoinLiquidity", "Home decision uses stablecoin liquidity", "src/components/coin/coinHomeDecisionModel.ts");
 expectIncludes(coinHomeDecisionModel, "스테이블코인 유출", "Home decision stablecoin risk label", "src/components/coin/coinHomeDecisionModel.ts");
+expectIncludes(coinHomeDecisionModel, "largeTradeFlow", "Home decision uses large trade flow", "src/components/coin/coinHomeDecisionModel.ts");
+expectIncludes(coinHomeDecisionModel, "큰 매도 체결", "Home decision large trade risk label", "src/components/coin/coinHomeDecisionModel.ts");
 expectIncludes(majorsApp, "CoinFuturesSignalPressurePanel", "Futures pressure panel on majors", "src/components/MajorsApp.tsx");
 expectIncludes(majorsApp, "CoinStablecoinLiquidityPanel", "Stablecoin liquidity panel on majors", "src/components/MajorsApp.tsx");
 expectIncludes(majorsApp, "CoinOnchainPulsePanel", "On-chain pulse panel on majors", "src/components/MajorsApp.tsx");

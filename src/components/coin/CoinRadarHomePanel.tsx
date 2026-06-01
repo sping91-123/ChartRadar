@@ -6,6 +6,7 @@ import { AlertTriangle, ArrowDownRight, ArrowUpRight, RefreshCw, TrendingUp, X }
 import { ActionButton, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import type { CoinMarketMetricsPayload } from "@/lib/coinMarketMetrics";
 import type { Candle } from "@/lib/marketAnalysis";
+import type { LargeTradeFlowReport } from "@/lib/largeTradeFlow";
 import type { LiquidationPressureReport } from "@/lib/liquidationPressure";
 import type { StablecoinLiquidityReport } from "@/lib/stablecoinLiquidity";
 import { analyzeTechnicalRadar, type IndicatorReading, type TechnicalRadarReport } from "@/lib/technicalRadar";
@@ -34,6 +35,7 @@ interface CoinHomeData {
   fundingMeta: Partial<Record<RepresentativeSymbol, CoinHomeResponseMeta>>;
   marketMetrics: CoinMarketMetricsPayload | null;
   stablecoinLiquidity: StablecoinLiquidityReport | null;
+  largeTradeFlow: LargeTradeFlowReport | null;
   analysisUpdatedAt: number;
 }
 
@@ -123,6 +125,26 @@ function toneFromLiquidity(report: StablecoinLiquidityReport | null | undefined)
   if (report.grade === "building") return "info" as const;
   if (report.grade === "drying") return "risk" as const;
   return "watch" as const;
+}
+
+function largeTradeTone(report: LargeTradeFlowReport | null | undefined) {
+  if (!report) return "info" as const;
+  if (report.anomalyLevel === "high") return "risk" as const;
+  if (report.dominantSide === "buy") return "long" as const;
+  if (report.dominantSide === "sell") return "short" as const;
+  return "watch" as const;
+}
+
+function largeTradeGaugeValue(report: LargeTradeFlowReport | null | undefined) {
+  if (!report) return null;
+  return clamp(50 + report.imbalancePercent * 0.45, 0, 100);
+}
+
+function largeTradeDisplay(report: LargeTradeFlowReport | null | undefined) {
+  if (!report) return "미확인";
+  if (report.dominantSide === "buy") return "매수 우세";
+  if (report.dominantSide === "sell") return "매도 우세";
+  return "균형";
 }
 
 const visualToneClass: Record<VisualTone, { text: string; bar: string }> = {
@@ -453,6 +475,7 @@ export function CoinRadarHomePanel() {
         candles4hPayload,
         marketMetricsPayload,
         stablecoinLiquidityPayload,
+        largeTradeFlowPayload,
         btcFundingPayload,
         ethFundingPayload,
         xrpFundingPayload,
@@ -465,6 +488,7 @@ export function CoinRadarHomePanel() {
         jsonOrNull<{ candles?: Candle[] }>("/api/crypto-candles?symbol=BTCUSDT&timeframe=4h&limit=180"),
         jsonOrNull<CoinMarketMetricsPayload>("/api/coin-market-metrics"),
         jsonOrNull<{ report?: StablecoinLiquidityReport }>("/api/stablecoin-liquidity"),
+        jsonOrNull<{ report?: LargeTradeFlowReport }>("/api/large-trade-flow?symbol=BTCUSDT"),
         jsonOrNull<{ report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean }>("/api/liquidation-pressure?symbol=BTCUSDT&period=1h"),
         jsonOrNull<{ report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean }>("/api/liquidation-pressure?symbol=ETHUSDT&period=1h"),
         jsonOrNull<{ report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean }>("/api/liquidation-pressure?symbol=XRPUSDT&period=1h"),
@@ -510,6 +534,7 @@ export function CoinRadarHomePanel() {
           fundingMeta,
           marketMetrics: marketMetricsPayload,
           stablecoinLiquidity: stablecoinLiquidityPayload?.report ?? null,
+          largeTradeFlow: largeTradeFlowPayload?.report ?? null,
           analysisUpdatedAt: Date.now()
         }
       });
@@ -533,16 +558,18 @@ export function CoinRadarHomePanel() {
     const btcFunding = state.data.funding.BTC ?? null;
     const marketMetrics = state.data.marketMetrics;
     const stablecoinLiquidity = state.data.stablecoinLiquidity;
+    const largeTradeFlow = state.data.largeTradeFlow;
     const decision = buildCoinHomeDecision({
       board: state.data.board,
       technical: report,
       technical4h: report4h,
       marketMetrics,
       btcFunding,
-      stablecoinLiquidity
+      stablecoinLiquidity,
+      largeTradeFlow
     });
 
-    return { report, report4h, fearGreed, btc, rsi, stochastic, btcFunding, marketMetrics, stablecoinLiquidity, decision };
+    return { report, report4h, fearGreed, btc, rsi, stochastic, btcFunding, marketMetrics, stablecoinLiquidity, largeTradeFlow, decision };
   }, [state]);
 
   if (state.status === "loading") {
@@ -755,6 +782,15 @@ export function CoinRadarHomePanel() {
             display={summary?.stablecoinLiquidity ? `${summary.stablecoinLiquidity.flowScore}점` : "미확인"}
             detail={summary?.stablecoinLiquidity?.summary}
             tone={toneFromLiquidity(summary?.stablecoinLiquidity)}
+          />
+          <MarketStrengthGauge
+            label="큰 체결 흐름"
+            value={largeTradeGaugeValue(summary?.largeTradeFlow)}
+            display={largeTradeDisplay(summary?.largeTradeFlow)}
+            detail={summary?.largeTradeFlow?.summary}
+            tone={largeTradeTone(summary?.largeTradeFlow)}
+            leftLabel="매도"
+            rightLabel="매수"
           />
           <LongShortVisual report={summary?.btcFunding} />
           <MarketStrengthGauge
