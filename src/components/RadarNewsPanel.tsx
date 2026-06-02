@@ -14,7 +14,6 @@ import {
   ListChecks,
   Newspaper,
   RefreshCcw,
-  ShieldAlert,
   Sparkles,
   Target,
   TrendingDown,
@@ -63,7 +62,6 @@ const marketCopy = {
     radarTitle: "오늘의 시장 레이더",
     directionLabel: "BTC 방향성",
     subMarketLabel: "알트코인 분위기",
-    cadenceLine: "뉴스 레이더는 1시간 단위로 갱신되며, 시장 전체에 영향이 큰 공개 뉴스만 추려 보여줍니다.",
     emptyState:
       "현재 코인 시장 전체를 흔들 만한 강한 공개 뉴스는 잡히지 않았습니다. 개별 알트·프로젝트 뉴스는 제외하고, BTC·ETH·ETF·금리·달러·규제·청산 흐름에 영향을 주는 뉴스가 잡히면 이곳에 표시됩니다."
   },
@@ -74,7 +72,6 @@ const marketCopy = {
     radarTitle: "오늘의 시장 레이더",
     directionLabel: "지수 방향성",
     subMarketLabel: "섹터 분위기",
-    cadenceLine: "뉴스 레이더는 1시간 단위로 갱신되며, 금리, 달러, 원자재, 주요 지수에 영향을 주는 공개 뉴스만 추려 보여줍니다.",
     emptyState:
       "현재 글로벌 시장을 흔들 만한 강한 공개 뉴스는 잡히지 않았습니다. 개별 종목성 뉴스는 제외하고, 금리·물가·고용·달러·VIX·원자재·주요 지수에 영향을 주는 뉴스가 잡히면 이곳에 표시됩니다."
   }
@@ -87,7 +84,6 @@ const marketCopy = {
     radarTitle: string;
     directionLabel: string;
     subMarketLabel: string;
-    cadenceLine: string;
     emptyState: string;
   }
 >;
@@ -150,6 +146,25 @@ function timeLabel(value: string | number | undefined) {
     hour: "2-digit",
     minute: "2-digit"
   }).format(date);
+}
+
+function updatedAtLabel(value: string | number | undefined) {
+  if (!value) return "최근 갱신 확인 중";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "최근 갱신 확인 중";
+  const label = new Intl.DateTimeFormat("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date);
+  return `최근 갱신 ${label}`;
+}
+
+function refreshIntervalLabel(value: number | undefined) {
+  if (!value) return "";
+  const minutes = Math.max(1, Math.round(value / 60_000));
+  if (minutes === 60) return "1시간 단위 자동 갱신";
+  if (minutes > 60 && minutes % 60 === 0) return `${minutes / 60}시간 단위 자동 갱신`;
+  return `${minutes}분 단위 자동 갱신`;
 }
 
 function itemTitle(item: RadarNewsItem, market: RadarNewsMarket) {
@@ -220,7 +235,7 @@ function directionBadge(direction: RadarNewsDirection) {
     };
   }
   return {
-    label: "혼조",
+    label: "혼재 / 확인 필요",
     caption: "",
     icon: Target,
     badge: "border-signal-warning/30 bg-signal-warning/10 text-signal-warning",
@@ -719,20 +734,25 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
   const cards = useMemo(() => buildBriefingCards(briefing, payload?.items ?? [], market), [briefing, market, payload?.items]);
   const isInitialLoading = status === "loading" && !payload;
   const hasBriefing = Boolean(briefing && (payload?.items ?? []).length > 0 && cards.length);
+  const refreshLabel = refreshIntervalLabel(payload?.refreshIntervalMs);
 
   return (
-    <section className="space-y-5">
-      <PanelCard variant="report">
-        <SectionHeader
-          eyebrow={copy.eyebrow}
-          title={copy.title}
-          action={
-            <ActionButton tone="secondary" onClick={loadNews} disabled={status === "loading"}>
-              <RefreshCcw className={status === "loading" ? "animate-spin" : ""} size={16} aria-hidden />
-              다시 정리
-            </ActionButton>
-          }
-        />
+    <section className="space-y-4">
+      <PanelCard variant="report" padding="none" className="border-b border-ui-line pb-3">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">{copy.eyebrow}</p>
+            <h2 className="text-ui-heading font-semibold tracking-tight text-ui-text">{copy.title}</h2>
+            <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[11px] font-semibold text-ui-muted">
+              <span>{updatedAtLabel(payload?.updatedAt)}</span>
+              {refreshLabel ? <span>{refreshLabel}</span> : null}
+            </div>
+          </div>
+          <ActionButton tone="secondary" onClick={loadNews} disabled={status === "loading"} className="shrink-0 px-2 sm:px-3">
+            <RefreshCcw className={status === "loading" ? "animate-spin" : ""} size={16} aria-hidden />
+            다시 정리
+          </ActionButton>
+        </div>
       </PanelCard>
 
       {error ? (
@@ -773,17 +793,6 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
 
         <SourceReferenceList items={payload?.items ?? []} />
       </section>
-
-      <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
-        <div className="flex items-start gap-2">
-          <ShieldAlert size={15} className="mt-0.5 shrink-0 text-ui-brand" aria-hidden />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-ui-text">뉴스 선별 기준</p>
-            <p className="mt-2 text-sm leading-6 text-ui-muted [word-break:keep-all]">{copy.cadenceLine}</p>
-          </div>
-        </div>
-      </PanelCard>
-
     </section>
   );
 }

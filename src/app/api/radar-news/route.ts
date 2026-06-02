@@ -399,6 +399,55 @@ const CRYPTO_EQUITY_NOISE_KEYWORDS = [
   "cloud growth",
   "salaried jobs"
 ];
+const CRYPTO_DIRECT_TITLE_KEYWORDS = [
+  "bitcoin",
+  "btc",
+  "ethereum",
+  "ether",
+  "eth",
+  "crypto",
+  "cryptocurrency",
+  "digital asset",
+  "digital assets",
+  "blockchain",
+  "stablecoin",
+  "stablecoins",
+  "usdt",
+  "usdc",
+  "defi",
+  "token",
+  "tokens",
+  "exchange",
+  "binance",
+  "coinbase",
+  "gemini crypto",
+  "crypto exchange",
+  "bitcoin etf",
+  "spot bitcoin etf",
+  "ether etf",
+  "crypto etf",
+  "mining",
+  "miner",
+  "miners"
+];
+const CRYPTO_MEDICAL_NOISE_KEYWORDS = [
+  "clinical trial",
+  "trial data",
+  "drug",
+  "medicine",
+  "pharma",
+  "pharmaceutical",
+  "biotech",
+  "fda",
+  "therapy",
+  "therapeutic",
+  "treatment",
+  "patient",
+  "patients",
+  "cancer cases",
+  "bowel disease",
+  "vaccine"
+];
 
 function keywordInText(text: string, keyword: string) {
   if (/^[a-z0-9]+$/i.test(keyword)) {
@@ -413,6 +462,22 @@ function hasKeyword(text: string, keywords: readonly string[]) {
 
 function hasPersonalFinanceNoise(text: string) {
   return hasKeyword(text, PERSONAL_FINANCE_NOISE_KEYWORDS);
+}
+
+function hasCryptoDirectTitleContext(text: string) {
+  return (
+    hasKeyword(text, CRYPTO_DIRECT_TITLE_KEYWORDS) ||
+    /(?:bitcoin|btc|ether|ethereum|crypto|digital asset).{0,32}treasur/.test(text) ||
+    /treasur.{0,32}(?:bitcoin|btc|ether|ethereum|crypto|digital asset)/.test(text)
+  );
+}
+
+function hasCryptoMacroTitleContext(text: string) {
+  return hasKeyword(text, CRYPTO_STRONG_MACRO_KEYWORDS) && !hasKeyword(text, CRYPTO_EQUITY_NOISE_KEYWORDS);
+}
+
+function hasCryptoMedicalNoise(text: string) {
+  return hasKeyword(text, CRYPTO_MEDICAL_NOISE_KEYWORDS);
 }
 
 function isMarketMovingGlobalNews(title: string) {
@@ -432,25 +497,37 @@ function isMarketMovingGlobalNews(title: string) {
   return hasMajorAsset && hasContext;
 }
 
-function cryptoMarketNewsScore(title: string) {
-  const lower = title.toLowerCase();
-  if (hasPersonalFinanceNoise(lower)) return -10;
+function cryptoMarketNewsScore(title: string, excerpt = "") {
+  const titleLower = title.toLowerCase();
+  const combinedLower = `${title} ${excerpt}`.toLowerCase();
+  if (hasPersonalFinanceNoise(combinedLower)) return -10;
+  if (hasCryptoMedicalNoise(titleLower) && !hasCryptoDirectTitleContext(titleLower)) return -20;
 
-  const majorHits = CRYPTO_MAJOR_MARKET_KEYWORDS.filter((keyword) => keywordInText(lower, keyword)).length;
-  const macroHits = CRYPTO_MACRO_KEYWORDS.filter((keyword) => keywordInText(lower, keyword)).length;
-  const policyHits = CRYPTO_POLICY_KEYWORDS.filter((keyword) => keywordInText(lower, keyword)).length;
-  const altOnlyHits = CRYPTO_ALT_ONLY_KEYWORDS.filter((keyword) => keywordInText(lower, keyword)).length;
-  const projectNoiseHits = CRYPTO_PROJECT_NOISE_KEYWORDS.filter((keyword) => keywordInText(lower, keyword)).length;
-  const strongMacroHit = CRYPTO_STRONG_MACRO_KEYWORDS.some((keyword) => keywordInText(lower, keyword));
-  const systemicContextHit = CRYPTO_SYSTEMIC_CONTEXT_KEYWORDS.some((keyword) => keywordInText(lower, keyword));
-  const equityNoiseHit = CRYPTO_EQUITY_NOISE_KEYWORDS.some((keyword) => keywordInText(lower, keyword));
+  const titleMajorHits = CRYPTO_MAJOR_MARKET_KEYWORDS.filter((keyword) => keywordInText(titleLower, keyword)).length;
+  const titleMacroHits = CRYPTO_MACRO_KEYWORDS.filter((keyword) => keywordInText(titleLower, keyword)).length;
+  const titlePolicyHits = CRYPTO_POLICY_KEYWORDS.filter((keyword) => keywordInText(titleLower, keyword)).length;
+  const titleAltOnlyHits = CRYPTO_ALT_ONLY_KEYWORDS.filter((keyword) => keywordInText(titleLower, keyword)).length;
+  const titleSystemicHits = titleMajorHits + titleMacroHits + titlePolicyHits;
+  const directTitleHit = hasCryptoDirectTitleContext(titleLower);
+  const titleRelevant = titleSystemicHits > 0 || directTitleHit || hasCryptoMacroTitleContext(titleLower);
+
+  if (!titleRelevant) return -6 - titleAltOnlyHits;
+
+  const majorHits = CRYPTO_MAJOR_MARKET_KEYWORDS.filter((keyword) => keywordInText(combinedLower, keyword)).length;
+  const macroHits = CRYPTO_MACRO_KEYWORDS.filter((keyword) => keywordInText(combinedLower, keyword)).length;
+  const policyHits = CRYPTO_POLICY_KEYWORDS.filter((keyword) => keywordInText(combinedLower, keyword)).length;
+  const altOnlyHits = CRYPTO_ALT_ONLY_KEYWORDS.filter((keyword) => keywordInText(combinedLower, keyword)).length;
+  const projectNoiseHits = CRYPTO_PROJECT_NOISE_KEYWORDS.filter((keyword) => keywordInText(combinedLower, keyword)).length;
+  const strongMacroHit = CRYPTO_STRONG_MACRO_KEYWORDS.some((keyword) => keywordInText(combinedLower, keyword));
+  const systemicContextHit = CRYPTO_SYSTEMIC_CONTEXT_KEYWORDS.some((keyword) => keywordInText(combinedLower, keyword));
+  const equityNoiseHit = CRYPTO_EQUITY_NOISE_KEYWORDS.some((keyword) => keywordInText(combinedLower, keyword));
   const systemicHits = majorHits + macroHits + policyHits;
 
-  if (systemicHits === 0) return -6 - altOnlyHits - projectNoiseHits;
+  if (systemicHits === 0) return directTitleHit ? 3 - projectNoiseHits : -6 - altOnlyHits - projectNoiseHits;
   if (equityNoiseHit && majorHits === 0 && policyHits === 0) return -5;
   if (majorHits === 0 && policyHits === 0 && !strongMacroHit) return -4 - altOnlyHits - projectNoiseHits;
   if (majorHits > 0 && policyHits === 0 && macroHits === 0 && !systemicContextHit) return -2 - altOnlyHits - projectNoiseHits;
-  if (altOnlyHits > 0 && majorHits === 0 && !keywordInText(lower, "crypto market") && !keywordInText(lower, "stablecoin")) return -3;
+  if (altOnlyHits > 0 && majorHits === 0 && !keywordInText(combinedLower, "crypto market") && !keywordInText(combinedLower, "stablecoin")) return -3;
 
   return majorHits * 4 + macroHits * 3 + policyHits * 3 - altOnlyHits * 2 - projectNoiseHits * 3;
 }
@@ -458,7 +535,7 @@ function cryptoMarketNewsScore(title: string) {
 function selectFeedRecords(records: Array<{ title: string; link: string; publishedAt: string; excerpt: string }>, market: RadarNewsMarket) {
   if (market !== "stocks") {
     return records
-      .map((record) => ({ record, score: cryptoMarketNewsScore(`${record.title} ${record.excerpt}`) }))
+      .map((record) => ({ record, score: cryptoMarketNewsScore(record.title, record.excerpt) }))
       .filter((item) => item.score >= 2)
       .sort((a, b) => b.score - a.score || new Date(b.record.publishedAt).getTime() - new Date(a.record.publishedAt).getTime())
       .slice(0, 8)
@@ -691,7 +768,7 @@ async function loadFeed(feed: NewsFeed, market: RadarNewsMarket) {
 function toneLabel(tone: RadarNewsDirection) {
   if (tone === "bullish") return "상승 재료";
   if (tone === "bearish") return "하락 재료";
-  return "중립";
+  return "혼재 / 확인 필요";
 }
 
 function itemTitle(item: RadarNewsItem, market: RadarNewsMarket) {

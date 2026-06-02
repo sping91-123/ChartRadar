@@ -200,6 +200,9 @@ expectIncludes(radarNewsPanel, "뉴스 레이더", "코인 뉴스 요약 화면"
 expectIncludes(radarNewsPanel, "오늘의 시장 레이더", "시장 레이더 요약 카드", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "compactCheckpoint", "뉴스 상단 체크포인트 압축", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "다음 확인", "뉴스 상단 체크포인트 라벨", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "최근 갱신", "뉴스 상단 갱신 시각 표시", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "1시간 단위 자동 갱신", "뉴스 상단 갱신 주기 표시", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "혼재 / 확인 필요", "뉴스 neutral 라벨 보강", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "NEWS_CARD_LIMIT = 3", "뉴스 카드 노출 수 제한", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "내용 보기", "뉴스 상세 브리핑 버튼", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "참고 뉴스", "참고 뉴스 목록 화면", "src/components/RadarNewsPanel.tsx");
@@ -208,16 +211,13 @@ expectIncludes(radarNewsPanel, "chart-radar.news.${market}.v17", "뉴스 캐시 
 expectNotIncludes(newsPage, "MacroTicker", "뉴스 페이지 일정 분리", "src/app/news/page.tsx");
 expectNotIncludes(newsPage, "이번 주 주요 매크로 일정", "뉴스 페이지 매크로 일정 제거", "src/app/news/page.tsx");
 expectNotIncludes(radarNewsPanel, "afterBriefing", "뉴스 패널 일정 슬롯 제거", "src/components/RadarNewsPanel.tsx");
-{
-  const reportIndex = newsPage.indexOf("<RadarNewsPanel");
-  const briefingIndex = radarNewsPanel.indexOf("오늘 볼 뉴스");
-  const criteriaIndex = radarNewsPanel.indexOf("뉴스 선별 기준");
-  if (reportIndex >= 0 && briefingIndex >= 0 && criteriaIndex > briefingIndex) {
-    pass("뉴스 리포트 단독 배치", "뉴스 브리핑 다음에는 뉴스 선별 기준만 표시합니다.");
-  } else {
-    fail("뉴스 리포트 단독 배치", "뉴스 페이지는 뉴스 브리핑과 뉴스 선별 기준만 포함해야 합니다.");
-  }
-}
+expectNotIncludes(radarNewsPanel, "뉴스 선별 기준", "뉴스 하단 선별 기준 문구 제거", "src/components/RadarNewsPanel.tsx");
+expectNotIncludes(radarNewsPanel, "뉴스 레이더는 1시간 단위", "뉴스 하단 갱신 안내 문구 제거", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsApi, "CRYPTO_MEDICAL_NOISE_KEYWORDS", "코인 뉴스 바이오/임상 노이즈 차단", "src/app/api/radar-news/route.ts");
+expectIncludes(radarNewsApi, "cryptoMarketNewsScore(record.title, record.excerpt)", "코인 뉴스 title 중심 관련성 점수", "src/app/api/radar-news/route.ts");
+expectIncludes(radarNewsLib, "hasCryptoOutflowSofteningContext", "뉴스 outflow 완화 문맥 보정", "src/lib/radarNews.ts");
+expectIncludes(radarNewsLib, "hasCryptoInflowWeakeningContext", "뉴스 inflow 감소 문맥 보정", "src/lib/radarNews.ts");
+expectIncludes(radarNewsLib, "hasTreasuryYieldContext", "뉴스 Treasury yield 문맥 분리", "src/lib/radarNews.ts");
 expectIncludes(radarNewsLib, "미국 증시 뉴스", "뉴스 출처명 한국어 표시", "src/lib/radarNews.ts");
 expectIncludes(radarNewsLib, "net loss", "뉴스 실적 손실 분류", "src/lib/radarNews.ts");
 expectIncludes(radarNewsLib, "digitized finance", "뉴스 토큰화 금융 분류", "src/lib/radarNews.ts");

@@ -89,7 +89,7 @@ const stockAssets = [
 const cryptoBullishRules: Rule[] = [
   { keywords: ["etf inflow", "inflows", "approval", "approved", "accumulation"], score: 13, tag: "수요 유입" },
   { keywords: ["record high", "all-time high", "ath", "breakout", "rally", "surge", "soars"], score: 11, tag: "상승 모멘텀" },
-  { keywords: ["institutional", "blackrock", "fidelity", "microstrategy", "treasury"], score: 9, tag: "기관 수요" },
+  { keywords: ["institutional", "blackrock", "fidelity", "microstrategy", "bitcoin treasury", "crypto treasury", "digital asset treasury", "buy more bitcoin", "wall street doubles down", "more investment"], score: 9, tag: "기관 수요" },
   { keywords: ["rate cut", "cuts rates", "liquidity", "stimulus"], score: 8, tag: "유동성 완화" },
   { keywords: ["partnership", "mainnet", "upgrade", "launches", "digitized finance"], score: 6, tag: "프로젝트 호재" },
   { keywords: ["recover bitcoin", "recovering bitcoin", "wallet recovery"], score: 4, tag: "수급 이슈" }
@@ -147,6 +147,16 @@ function unique<T>(items: T[]) {
   return Array.from(new Set(items));
 }
 
+function removeTags(tags: string[], values: string[]) {
+  for (const value of values) {
+    let index = tags.indexOf(value);
+    while (index >= 0) {
+      tags.splice(index, 1);
+      index = tags.indexOf(value);
+    }
+  }
+}
+
 function clamp(min: number, max: number, value: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -155,6 +165,37 @@ function rulesForMarket(market: RadarNewsMarket) {
   return market === "stocks"
     ? { assetRules: stockAssets, bullishRules: stockBullishRules, bearishRules: stockBearishRules, defaultAsset: "글로벌 시장", defaultTag: "글로벌 뉴스" }
     : { assetRules: cryptoAssets, bullishRules: cryptoBullishRules, bearishRules: cryptoBearishRules, defaultAsset: "코인 시장", defaultTag: "코인 뉴스" };
+}
+
+function hasCryptoOutflowSofteningContext(text: string) {
+  return (
+    /outflows?.{0,36}(?:noise|temporary|offset|eased|slowed)/i.test(text) ||
+    /(?:noise|temporary|offset|eased|slowed).{0,36}outflows?/i.test(text) ||
+    /wall street.{0,32}doubles down/i.test(text) ||
+    /(?:doubles down|more investment|invests more).{0,36}crypto/i.test(text)
+  );
+}
+
+function hasCryptoInflowWeakeningContext(text: string) {
+  return (
+    /inflows?.{0,42}(?:fall|falls|fell|drop|drops|dropped|decline|declines|slowdown|slows|lowest|weaken|weakens)/i.test(text) ||
+    /(?:fall|falls|fell|drop|drops|dropped|decline|declines|slowdown|slows|lowest|weaken|weakens).{0,42}inflows?/i.test(text)
+  );
+}
+
+function hasTreasuryYieldContext(text: string) {
+  return /(?:u\.s\.\s*)?treasury yields?|bond yields?|yields?\s+(?:rise|rises|fall|falls|slide|slides|jump|jumps|drop|drops)/i.test(text);
+}
+
+function treasuryYieldMove(text: string): "up" | "down" | null {
+  const yieldSubject = "(?:u\\.s\\.\\s*)?treasury yields?|bond yields?|yields?";
+  const upMove = "rise|rises|higher|jump|jumps|surge|surges|climb|climbs";
+  const downMove = "fall|falls|slide|slides|drop|drops|lower|decline|declines|ease|eases";
+  const downPattern = new RegExp(`(?:${yieldSubject}).{0,24}(?:${downMove})|(?:${downMove}).{0,24}(?:${yieldSubject})`, "i");
+  if (downPattern.test(text)) return "down";
+  const upPattern = new RegExp(`(?:${yieldSubject}).{0,24}(?:${upMove})|(?:${upMove}).{0,24}(?:${yieldSubject})`, "i");
+  if (upPattern.test(text)) return "up";
+  return null;
 }
 
 export function displayNewsSource(source: string) {
@@ -335,6 +376,29 @@ export function analyzeNewsText(input: string, market: RadarNewsMarket = "crypto
     if (includesAny(text, rule.keywords)) {
       rawScore += rule.score;
       tags.push(rule.tag);
+    }
+  }
+
+  if (market === "crypto") {
+    if (hasCryptoOutflowSofteningContext(raw)) {
+      rawScore = Math.max(rawScore, 50);
+      removeTags(tags, ["매도 압력"]);
+      tags.push("혼재 수급");
+    }
+    if (hasCryptoInflowWeakeningContext(raw)) {
+      rawScore = Math.min(rawScore, 42);
+      removeTags(tags, ["수요 유입", "기관 수요"]);
+      tags.push("수급 둔화");
+    }
+    if (hasTreasuryYieldContext(raw)) {
+      const yieldMove = treasuryYieldMove(raw);
+      if (yieldMove === "up") {
+        rawScore -= 8;
+        tags.push("금리 부담");
+      } else if (yieldMove === "down") {
+        rawScore += 4;
+        tags.push("금리 완화 확인");
+      }
     }
   }
 
