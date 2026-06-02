@@ -1305,6 +1305,49 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
     setMsbMode(option.msbMode);
   }
 
+  function renderStructureCriteriaPanel() {
+    const modeLabel = analysisMode === "confirmed" ? "닫힌 봉 기준" : "진행 중 봉 포함";
+    const msbLabel = msbMode === "close" ? "종가 돌파" : "윅 포함 돌파";
+
+    return (
+      <div className="mt-3 border-y border-ui-line py-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-black text-white">현재 분석 기준</p>
+            <p className="mt-1 text-[11px] leading-5 text-slate-500 [word-break:keep-all]">
+              감지 결과를 읽기 전에 기준을 먼저 확인합니다. 기본은 균형 감지이며, 빠른 변화는 민감하게 볼 때만 사용합니다.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 text-[11px] font-bold text-slate-500">
+            <span>현재 {structureSensitivityLabel(structureSensitivity)}</span>
+            <span>{modeLabel}</span>
+            <span>{msbLabel}</span>
+          </div>
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {structureSensitivityOptions.map((item) => {
+            const active = structureSensitivity === item.value;
+            return (
+              <button
+                key={item.value}
+                type="button"
+                onClick={() => applyStructurePreset(item)}
+                className={`min-h-14 border-t px-0 py-3 text-left transition sm:border-b-2 sm:border-t-0 sm:px-3 sm:py-2 ${
+                  active
+                    ? "border-accent-blue text-accent-blue sm:border-ui-brand sm:text-ui-text"
+                    : "border-surface-line text-slate-300 hover:border-accent-blue/60 sm:border-transparent sm:text-ui-muted sm:hover:text-ui-text"
+                }`}
+              >
+                <span className="block text-sm font-black sm:font-semibold">{item.label}</span>
+                <span className="mt-1 block text-[11px] font-semibold opacity-80">{item.description}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   function comparableSnapshotFromWeb() {
     if (!activeAnalysis) return null;
 
@@ -1592,42 +1635,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         />
       ) : null}
 
-      {!isMajorScreen ? (
-        <div className="mt-3 border-y border-ui-line py-3">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-xs font-black text-white">구조 감지 기준</p>
-              <p className="mt-1 text-[11px] leading-5 text-slate-500 [word-break:keep-all]">
-                초보자는 균형 감지를 기본으로 두고, 더 빠른 변화를 보고 싶을 때만 빠른 변화 감지를 쓰면 됩니다.
-              </p>
-            </div>
-            <span className="text-[11px] font-bold text-slate-500">
-              현재 {structureSensitivityLabel(structureSensitivity)}
-            </span>
-          </div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-3">
-            {structureSensitivityOptions.map((item) => {
-              const active = structureSensitivity === item.value;
-              return (
-                <button
-                  key={item.value}
-                  type="button"
-                  onClick={() => applyStructurePreset(item)}
-                  className={`min-h-16 border-t px-0 py-3 text-left transition ${
-                    active
-                      ? "border-accent-blue text-accent-blue"
-                      : "border-surface-line text-slate-300 hover:border-accent-blue/60"
-                  }`}
-                >
-                  <span className="block text-sm font-black">{item.label}</span>
-                  <span className="mt-1 block text-[11px] font-semibold opacity-80">{item.description}</span>
-                  <span className="mt-1 block text-[10px] font-semibold opacity-70">{item.detail}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
+      {renderStructureCriteriaPanel()}
 
       {altOnly && !visibleAltAnalysisGate.allowed ? (
         <CryptoAltAnalysisLimitNotice
@@ -1680,39 +1688,6 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               }
             />
           </div>
-          ) : null}
-          {isMajorScreen ? (
-            <div className="border-t border-ui-line pt-3">
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">구조 감지 기준</p>
-                  <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">
-                    기본은 균형 감지입니다. 빠른 변화 감지는 더 민감하게 구조 변화를 확인할 때만 사용합니다.
-                  </p>
-                </div>
-                <span className="text-xs font-semibold text-ui-muted">현재 {structureSensitivityLabel(structureSensitivity)}</span>
-              </div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                {structureSensitivityOptions.map((item) => {
-                  const active = structureSensitivity === item.value;
-                  return (
-                    <button
-                      key={item.value}
-                      type="button"
-                      onClick={() => applyStructurePreset(item)}
-                      className={`min-h-14 border-b-2 px-3 py-2 text-left transition ${
-                        active
-                          ? "border-ui-brand bg-transparent text-ui-text"
-                          : "border-transparent bg-transparent text-ui-muted hover:text-ui-text"
-                      }`}
-                    >
-                      <span className="block text-sm font-semibold">{item.label}</span>
-                      <span className="mt-1 block text-[11px] font-semibold opacity-80">{item.description}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
           ) : null}
         </CryptoSummarySection>
       ) : (
@@ -2128,9 +2103,9 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   <p className="mt-2 text-sm leading-6 text-slate-300">{analysis.summaryLine}</p>
                 </div>
                 <div className="border-t border-ui-line py-3">
-                  <h4 className="text-base font-black text-white">구조 감지 기준</h4>
+                  <h4 className="text-base font-black text-white">상세 분석 기준</h4>
                   <p className="mt-2 text-sm leading-6 text-slate-300">
-                    현재는 {structureSensitivityLabel(structureSensitivity)} 기준입니다. 빠른 변화와 큰 구조 중 무엇을 더 중요하게 볼지 정합니다.
+                    상단에서 선택한 {structureSensitivityLabel(structureSensitivity)} 기준으로 구조 변화를 판독합니다. 이 값은 결과를 해석하는 보조 기준입니다.
                   </p>
                 </div>
               </div>
@@ -2708,7 +2683,10 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
 
           {analysis ? (
             <div className="border-y border-ui-line py-4">
-              <h3 className="text-sm font-bold text-white">분석 기준</h3>
+              <h3 className="text-sm font-bold text-white">상세 분석 기준</h3>
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                위 결과를 만들 때 참고한 세부 기준입니다. 방향 지시가 아니라 구조와 변동성 해석을 보조하는 값입니다.
+              </p>
               <div className="mt-3 grid grid-cols-2 gap-3">
                 <MiniMetric label="구조 감지" value={structureSensitivityLabel(structureSensitivity)} />
                 <MiniMetric label="MSB 판정" value={msbMode === "close" ? "종가 돌파" : "윅 포함 돌파"} />
