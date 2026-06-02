@@ -272,7 +272,7 @@ expectIncludes(altsPage, "CoinLargeTradeFlowPanel", "Large trade flow panel on a
 expectIncludes(altsPage, "CoinUnlockPressurePanel", "Token unlock pressure panel on alts", "src/app/crypto/perpetual/alts/page.tsx");
 expectIncludes(coinSignalPressurePanel, "/api/liquidation-pressure?symbol=", "Futures pressure live API source", "src/components/coin/CoinSignalPressurePanel.tsx");
 expectIncludes(coinSignalPressurePanel, "Binance 공개 선물 데이터", "Futures pressure public data label", "src/components/coin/CoinSignalPressurePanel.tsx");
-expectIncludes(coinSignalPressurePanel, "메이저 선물 쏠림", "Major futures pressure scan copy", "src/components/coin/CoinSignalPressurePanel.tsx");
+expectIncludes(coinSignalPressurePanel, "BTC/ETH 선물 쏠림", "Major futures pressure scan copy", "src/components/coin/CoinSignalPressurePanel.tsx");
 expectIncludes(coinSignalPressurePanel, "알트 선물 쏠림", "Alt futures pressure scan copy", "src/components/coin/CoinSignalPressurePanel.tsx");
 expectIncludes(coinSignalPressurePanel, "하방 압력", "Futures downside pressure score copy", "src/components/coin/CoinSignalPressurePanel.tsx");
 expectIncludes(coinSignalPressurePanel, "상방 압력", "Futures upside pressure score copy", "src/components/coin/CoinSignalPressurePanel.tsx");
@@ -296,7 +296,7 @@ expectIncludes(largeTradeFlowRoute, "fetchLargeTradeFlowReport", "Large trade fl
 expectIncludes(read("src/lib/largeTradeFlow.ts"), "anomalyScore", "Large trade repeated-flow score", "src/lib/largeTradeFlow.ts");
 expectIncludes(coinLargeTradeFlowPanel, "/api/large-trade-flow?symbol=", "Large trade flow live API source", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
 expectIncludes(coinLargeTradeFlowPanel, "Binance 공개 선물 체결", "Large trade flow public data label", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
-expectIncludes(coinLargeTradeFlowPanel, "메이저 큰 체결 흐름", "Major large trade flow copy", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
+expectIncludes(coinLargeTradeFlowPanel, "BTC/ETH 큰 체결 흐름", "Major large trade flow copy", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
 expectIncludes(coinLargeTradeFlowPanel, "알트 큰 체결 흐름", "Alt large trade flow copy", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
 expectIncludes(coinLargeTradeFlowPanel, "반복 체결", "Large trade repeated-flow copy", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
 expectIncludes(tokenUnlocksRoute, "fetchTokenUnlockReport", "Token unlock API source", "src/app/api/token-unlocks/route.ts");

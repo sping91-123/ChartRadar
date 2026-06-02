@@ -73,8 +73,12 @@ export function CoinOnchainPulsePanel() {
     <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
       <SectionHeader
         eyebrow="mempool.space 공개 온체인 데이터"
-        title="BTC 온체인 체온"
-        description={report?.summary ?? "BTC 네트워크 수수료와 대기 거래를 확인하는 중입니다."}
+        title="BTC 온체인 체온 참고"
+        description={
+          report?.summary
+            ? `${report.summary} 네트워크 수수료, 대기 거래, 혼잡도를 보는 변동성 참고값입니다.`
+            : "BTC 네트워크 수수료, 대기 거래, 혼잡도를 보조 확인하는 중입니다."
+        }
         action={
           <ActionButton tone="secondary" onClick={loadReport} disabled={status === "loading"}>
             <RefreshCcw className={status === "loading" ? "animate-spin" : ""} size={15} aria-hidden />
@@ -136,7 +140,7 @@ export function CoinOnchainPulsePanel() {
       ) : null}
 
       <CompactHelp label="데이터 기준">
-        mempool.space 공개 API에서 BTC 수수료, 대기 거래, 난이도 예상만 읽습니다. 주문, 계정, 지갑 정보는 사용하지 않습니다.
+        mempool.space 공개 API에서 BTC 수수료, 대기 거래, 난이도 예상만 읽습니다. 직접 선물 방향 결론이 아니라 네트워크 혼잡이 변동성 리스크로 이어질 수 있는지 보는 참고값입니다.
       </CompactHelp>
     </PanelCard>
   );

@@ -33,9 +33,7 @@ type FuturesPressurePayload = {
 const futuresSymbols: Record<FuturesPressureMode, FuturesSymbolInfo[]> = {
   major: [
     { symbol: "BTCUSDT", label: "BTC" },
-    { symbol: "ETHUSDT", label: "ETH" },
-    { symbol: "SOLUSDT", label: "SOL" },
-    { symbol: "BNBUSDT", label: "BNB" }
+    { symbol: "ETHUSDT", label: "ETH" }
   ],
   alts: [
     { symbol: "SOLUSDT", label: "SOL" },
@@ -259,7 +257,7 @@ export function CoinFuturesSignalPressurePanel({ mode }: { mode: FuturesPressure
     }
 
     setStatus("error");
-    setError("선물 쏠림 데이터를 잠시 확인하지 못했습니다.");
+    setError("선물 쏠림 데이터 응답 지연입니다. 추가 확인 조건으로 남겨 둡니다.");
   }, [symbols]);
 
   useEffect(() => {
@@ -281,13 +279,13 @@ export function CoinFuturesSignalPressurePanel({ mode }: { mode: FuturesPressure
     ? `${topCard.label} ${sideTitle(topCard.report.dominantSide)} · ${mainTrigger(topCard.report)}`
     : isAltMode
       ? "알트 선물 쏠림을 확인하는 중입니다."
-      : "메이저 선물 쏠림을 확인하는 중입니다.";
+      : "BTC/ETH 선물 쏠림을 확인하는 중입니다.";
 
   return (
     <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
       <SectionHeader
         eyebrow="Binance 공개 선물 데이터"
-        title={isAltMode ? "알트 선물 쏠림" : "메이저 선물 쏠림"}
+        title={isAltMode ? "알트 선물 쏠림" : "BTC/ETH 선물 쏠림"}
         description={topSummary}
         action={
           <ActionButton tone="secondary" onClick={loadReports} disabled={status === "loading"}>
@@ -347,12 +345,14 @@ export function CoinFuturesSignalPressurePanel({ mode }: { mode: FuturesPressure
         </div>
       ) : status !== "loading" ? (
         <AppSurface variant="flat" tone="inset" padding="none" className="border-t border-ui-line py-3 text-sm font-semibold text-ui-muted">
-          공개 선물 데이터를 불러오지 못해 기본 판단 순서만 확인합니다.
+          공개 선물 데이터 응답이 지연되고 있습니다. 쏠림은 추가 확인 조건으로 남겨 둡니다.
         </AppSurface>
       ) : null}
 
       <CompactHelp label="데이터 기준">
-        Binance 공개 선물 데이터의 미결제약정, 펀딩비, 상방·하방 포지션 비율, 시장가 유입·이탈 쏠림을 묶어 과열과 흔들림 위험만 빠르게 보여줍니다.
+        {isAltMode
+          ? "Binance 공개 선물 데이터에서 SOL, XRP, DOGE, BNB의 미결제약정, 펀딩비, 상방·하방 포지션 비율, 시장가 유입·이탈 쏠림을 묶어 과열과 흔들림 위험만 빠르게 보여줍니다."
+          : "Binance 공개 선물 데이터에서 BTC와 ETH의 미결제약정, 펀딩비, 상방·하방 포지션 비율, 시장가 유입·이탈 쏠림을 묶어 과열과 흔들림 위험만 빠르게 보여줍니다."}
       </CompactHelp>
     </PanelCard>
   );

@@ -82,8 +82,12 @@ export function CoinStablecoinLiquidityPanel() {
     <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
       <SectionHeader
         eyebrow="DeFiLlama 공개 스테이블코인 데이터"
-        title="스테이블코인 유동성"
-        description={report?.summary ?? "시장에 새 돈이 들어오는지 확인하는 중입니다."}
+        title="스테이블코인 유동성 참고"
+        description={
+          report?.summary
+            ? `${report.summary} 선물 직접 신호가 아니라 시장 전체 환경 참고값입니다.`
+            : "시장 전체 유동성 배경을 보조 확인하는 중입니다."
+        }
         action={
           <ActionButton tone="secondary" onClick={loadReport} disabled={status === "loading"}>
             <RefreshCcw className={status === "loading" ? "animate-spin" : ""} size={15} aria-hidden />
@@ -145,7 +149,7 @@ export function CoinStablecoinLiquidityPanel() {
       ) : null}
 
       <CompactHelp label="데이터 기준">
-        DeFiLlama stablecoincharts/all 공개 데이터에서 달러 스테이블코인 유통량만 봅니다. 주문, 계정, 보유 자산 정보는 사용하지 않습니다.
+        DeFiLlama stablecoincharts/all 공개 데이터에서 달러 스테이블코인 유통량만 봅니다. BTC/ETH 또는 알트 선물 방향 결론이 아니라 시장 전체 환경을 보조 확인하는 값입니다.
       </CompactHelp>
     </PanelCard>
   );

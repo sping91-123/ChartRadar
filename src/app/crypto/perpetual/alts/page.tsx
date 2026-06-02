@@ -19,16 +19,30 @@ export default function CryptoPerpetualAltsPage() {
         <CoinFuturesSwitch active="alts" />
         <CoinFuturesBrief mode="alts" />
         <section className="pt-1">
-          <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">세부 근거</p>
-          <h2 className="mt-1 text-ui-heading font-semibold tracking-tight text-ui-text">알트 선물 리스크를 나눠서 확인합니다</h2>
+          <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">앱이 감지한 알트 직접 신호</p>
+          <h2 className="mt-1 text-ui-heading font-semibold tracking-tight text-ui-text">알트 쏠림, 큰 체결, 언락 부담을 먼저 확인합니다</h2>
           <p className="mt-1 text-ui-body text-ui-muted [word-break:keep-all]">
-            상단 결론을 먼저 보고, 아래 패널에서 알트 포지션 쏠림·큰 체결·유동성·언락·차트·후보 흐름을 순서대로 확인합니다.
+            알트 선물 화면은 SOL, XRP, DOGE, BNB의 포지션 쏠림, 큰 체결 흐름, 언락·변동성 부담을 우선 분리합니다.
           </p>
         </section>
         <CoinFuturesSignalPressurePanel mode="alts" />
         <CoinLargeTradeFlowPanel mode="alts" />
-        <CoinStablecoinLiquidityPanel />
         <CoinUnlockPressurePanel />
+        <section className="pt-1">
+          <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">시장 환경 참고</p>
+          <h2 className="mt-1 text-ui-heading font-semibold tracking-tight text-ui-text">알트 직접 신호와 분리해서 봅니다</h2>
+          <p className="mt-1 text-ui-body text-ui-muted [word-break:keep-all]">
+            스테이블코인 유동성은 알트 선물의 직접 신호가 아니라 시장 전체 환경을 보조 확인하는 값입니다.
+          </p>
+        </section>
+        <CoinStablecoinLiquidityPanel />
+        <section className="pt-1">
+          <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">세부 근거</p>
+          <h2 className="mt-1 text-ui-heading font-semibold tracking-tight text-ui-text">알트 구조와 후보 흐름을 다시 확인합니다</h2>
+          <p className="mt-1 text-ui-body text-ui-muted [word-break:keep-all]">
+            상단에서 감지한 리스크가 차트 구조, 셋업 후보, 관심목록 흐름과 충돌하는지 하단에서 확인합니다.
+          </p>
+        </section>
         <LiveMarketChart altOnly />
         <SetupScoutPanel excludeMajor />
         <WatchlistPanel />

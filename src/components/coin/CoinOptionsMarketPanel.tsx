@@ -112,13 +112,15 @@ export function CoinOptionsMarketPanel() {
       .sort((a, b) => Math.abs(b.biasPercent) - Math.abs(a.biasPercent))[0];
   }, [reports]);
 
-  const topSummary = topReport ? `${topReport.currency} ${topReport.summary}` : "BTC/ETH 옵션 쏠림을 확인하는 중입니다.";
+  const topSummary = topReport
+    ? `${topReport.currency} ${topReport.summary} 방향 결론이 아니라 변동성 참고값으로만 봅니다.`
+    : "BTC/ETH 옵션 쏠림을 변동성 참고값으로 확인하는 중입니다.";
 
   return (
     <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
       <SectionHeader
         eyebrow="Deribit 공개 옵션 데이터"
-        title="옵션 시장 온도"
+        title="옵션 시장 온도 참고"
         description={topSummary}
         action={
           <ActionButton tone="secondary" onClick={loadReports} disabled={status === "loading"}>
@@ -179,7 +181,7 @@ export function CoinOptionsMarketPanel() {
       ) : null}
 
       <CompactHelp label="데이터 기준">
-        Deribit 공개 옵션 요약에서 BTC/ETH 옵션의 미결제약정, 거래대금, IV를 묶어 봅니다. 예상 변동은 미결제약정이 가장 큰 만기와 IV로 계산한 참고 범위입니다.
+        Deribit 공개 옵션 요약에서 BTC/ETH 옵션의 미결제약정, 거래대금, IV를 묶어 봅니다. 예상 변동은 선물 방향 결론이 아니라 시장 전체 변동성 압력을 보조 확인하는 참고 범위입니다.
       </CompactHelp>
     </PanelCard>
   );
