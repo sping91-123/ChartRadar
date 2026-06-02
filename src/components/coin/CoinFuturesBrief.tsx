@@ -1,4 +1,4 @@
-import { AlertTriangle, BarChart3, Gauge, GitCompareArrows, Radar } from "lucide-react";
+import { AlertTriangle, Gauge, GitCompareArrows, Radar } from "lucide-react";
 import { PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import { CompactHelp } from "@/components/ui/CompactHelp";
 
@@ -17,82 +17,96 @@ const briefItems: Record<
 > = {
   major: [
     {
-      label: "1. 위험 먼저",
-      title: "청산 압력·펀딩비·포지션 쏠림",
-      detail: "방향보다 과열과 강제청산 위험을 먼저 봅니다. 쏠림이 크면 따라가기보다 반대로 크게 흔들릴 가능성을 먼저 봅니다.",
+      label: "핵심 확인 1",
+      title: "포지션 쏠림",
+      detail: "펀딩비, 미결제약정, 상방·하방 포지션 비율이 한쪽으로 몰리는지 먼저 확인합니다.",
       tone: "risk",
       icon: AlertTriangle
     },
     {
-      label: "2. 구조 확인",
-      title: "MSB·CHoCH·OB·FVG·POC",
-      detail: "차트 구조는 진입 지시가 아니라 상단 판단을 확인하는 보조값으로만 사용합니다.",
+      label: "핵심 확인 2",
+      title: "큰 체결 흐름",
+      detail: "큰 유입·이탈 체결이 반복되는지 확인합니다. 반복 체결은 방향 신호보다 변동성 리스크로 먼저 봅니다.",
       tone: "info",
-      icon: BarChart3
+      icon: Radar
     },
     {
-      label: "3. 볼 조건",
-      title: "가격 조정 후 재상승 또는 반등 실패",
-      detail: "상승 쪽은 잠깐 밀린 뒤 다시 오르는지, 하락 쪽은 반등이 오래 버티는지 봅니다.",
+      label: "핵심 확인 3",
+      title: "변동성·유동성 압력",
+      detail: "옵션 예상 변동, 스테이블코인 유동성, BTC 온체인 혼잡이 동시에 커지는지 확인합니다.",
       tone: "watch",
       icon: Gauge
-    },
-    {
-      label: "4. 충돌 처리",
-      title: "상승 신호 + 과열이면 위험 우선",
-      detail: "상승 신호와 청산·펀딩 과열이 같이 보이면 진입 판단보다 기준 이탈과 가격 흔들림을 먼저 확인합니다.",
-      tone: "risk",
-      icon: GitCompareArrows
     }
   ],
   alts: [
     {
-      label: "1. 고위험 필터",
-      title: "급등 따라가기·낮은 거래대금·BTC 의존",
-      detail: "알트는 좋은 후보를 찾기 전에 피할 후보를 먼저 걸러야 합니다.",
+      label: "핵심 확인 1",
+      title: "알트 포지션 쏠림",
+      detail: "SOL, XRP, DOGE, BNB 같은 알트 선물에서 상방·하방 포지션이 한쪽으로 몰리는지 먼저 확인합니다.",
       tone: "risk",
       icon: AlertTriangle
     },
     {
-      label: "2. 후보 분류",
-      title: "추적 후보·관망·고위험 제외",
-      detail: "고위험 알트는 목록에서 빼고, 남은 후보가 추적 후보인지 관망인지 먼저 확인합니다.",
+      label: "핵심 확인 2",
+      title: "큰 유입·이탈 체결",
+      detail: "큰 체결이 한쪽으로 반복되면 후보 신호보다 변동성 확대 여부를 먼저 확인합니다.",
       tone: "watch",
       icon: Radar
     },
     {
-      label: "3. 구조 확인",
-      title: "BTC 방향·거래량·가격 흔들림",
-      detail: "알트 단독 신호보다 BTC 방향과 거래량 동반 여부를 함께 봅니다.",
+      label: "핵심 확인 3",
+      title: "유동성·언락·변동성 압력",
+      detail: "스테이블코인 유동성, 언락 부담, BTC 변동성이 겹치는지 확인합니다.",
       tone: "info",
-      icon: BarChart3
-    },
-    {
-      label: "4. 충돌 처리",
-      title: "급등 후보 + 저유동성이면 회피 우선",
-      detail: "알트는 좋아 보여도 가격 흔들림·낮은 거래대금·BTC 약세가 겹치면 고위험으로 먼저 분류합니다.",
-      tone: "risk",
-      icon: GitCompareArrows
+      icon: Gauge
     }
   ]
 };
 
 export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
   const isAltMode = mode === "alts";
+  const cautionItems = isAltMode
+    ? ["BTC 약세와 같이 밀리는지 확인", "알트만 과열되는지 확인", "큰 이탈 체결이 반복되는지 확인", "언락·유동성 부담이 있는지 확인"]
+    : ["포지션 쏠림이 풀리는지 확인", "BTC 추세와 반대로 과열되는지 확인", "큰 유입·이탈 체결이 반복되는지 확인"];
 
   return (
     <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
-      <SectionHeader title={isAltMode ? "알트 선물 판단 순서" : "메이저 선물 판단 순서"} />
-      <div className="grid gap-0 md:grid-cols-2">
+      <SectionHeader
+        title={isAltMode ? "알트 선물 리스크 결론" : "선물 시장 결론"}
+        description={
+          isAltMode
+            ? "알트 선물은 추적 후보보다 쏠림, 유동성, 언락 리스크를 먼저 확인합니다."
+            : "오늘 선물은 방향보다 쏠림과 변동성 리스크를 먼저 확인합니다."
+        }
+      />
+
+      <article className="border-t border-ui-line py-3">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">선물 리스크 결론</p>
+            <p className="mt-1 text-base font-semibold leading-6 text-ui-text [word-break:keep-all]">
+              {isAltMode ? "알트 변동성 주의 · 리스크 우선" : "리스크 우선 · 확인 대기"}
+            </p>
+          </div>
+          <StatusPill tone="risk" icon={GitCompareArrows} className="shrink-0">
+            리스크
+          </StatusPill>
+        </div>
+        <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">
+          {isAltMode
+            ? "BTC 약세, 낮은 유동성, 큰 이탈 체결, 언락 부담이 겹치면 추적 후보를 제한하고 세부 근거를 다시 확인합니다."
+            : "포지션 쏠림과 큰 체결이 함께 커질 때는 추적보다 변동성 확대 여부를 먼저 봅니다."}
+        </p>
+      </article>
+
+      <div className="grid gap-0 md:grid-cols-3">
         {briefItems[mode].map((item, index) => {
           const Icon = item.icon;
 
           return (
             <article
               key={item.label}
-              className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0" : ""} ${
-                index % 2 === 1 ? "md:border-l md:border-ui-line" : ""
-              } ${index > 1 ? "md:border-t md:border-ui-line" : ""}`}
+              className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-l md:border-t-0" : ""}`}
             >
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -100,7 +114,7 @@ export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
                   <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{item.title}</p>
                 </div>
                 <StatusPill tone={item.tone} icon={Icon} className="shrink-0">
-                  {item.tone === "risk" ? "주의" : item.tone === "long" ? "Pro" : "확인"}
+                  {item.tone === "risk" ? "주의" : "확인"}
                 </StatusPill>
               </div>
               <div className="mt-2">
@@ -109,6 +123,25 @@ export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
             </article>
           );
         })}
+      </div>
+
+      <div className="border-t border-ui-line pt-3">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">조심할 것</p>
+            <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">상단 결론이 바뀌는 조건을 먼저 확인합니다.</p>
+          </div>
+          <StatusPill tone="watch" className="shrink-0">
+            확인 필요
+          </StatusPill>
+        </div>
+        <div className="mt-3 grid gap-0 md:grid-cols-3">
+          {cautionItems.map((item, index) => (
+            <p key={item} className={`py-2 text-xs font-semibold leading-5 text-ui-muted [word-break:keep-all] md:px-3 ${index > 0 ? "border-t border-ui-line md:border-l md:border-t-0" : ""}`}>
+              {item}
+            </p>
+          ))}
+        </div>
       </div>
     </PanelCard>
   );

@@ -248,7 +248,7 @@ expectIncludes(scoutRoute, "entitlement.isPaid ? 120 : 20", "코인 일일 레�
 expectIncludes(stockRadarApp, 'hasMarketEntitlement(profile?.plan, "stocks")', "글로벌 레이더 권한", "src/components/StockRadarApp.tsx");
 expectIncludes(spotRadarPanel, "1차 확인가", "현물 1차 확인가 표시", "src/components/spot/SpotRadarPanel.tsx");
 expectIncludes(spotRadarPanel, "저항까지", "현물 저항 여유 표시", "src/components/spot/SpotRadarPanel.tsx");
-expectIncludes(spotRadarPanel, "깨지면 제외", "현물 제외 기준 표시", "src/components/spot/SpotRadarPanel.tsx");
+expectIncludes(spotRadarPanel, "무효화 기준", "현물 무효화 기준 표시", "src/components/spot/SpotRadarPanel.tsx");
 expectIncludes(coinRadarHomePanel, "/api/stablecoin-liquidity", "Home stablecoin liquidity API source", "src/components/coin/CoinRadarHomePanel.tsx");
 expectIncludes(coinRadarHomePanel, "스테이블코인 유동성", "Home stablecoin liquidity copy", "src/components/coin/CoinRadarHomePanel.tsx");
 expectIncludes(coinRadarHomePanel, "/api/large-trade-flow?symbol=BTCUSDT", "Home large trade flow API source", "src/components/coin/CoinRadarHomePanel.tsx");
@@ -258,7 +258,7 @@ expectIncludes(coinRadarHomePanel, "옵션 예상 변동", "Home options expecte
 expectIncludes(coinHomeDecisionModel, "stablecoinLiquidity", "Home decision uses stablecoin liquidity", "src/components/coin/coinHomeDecisionModel.ts");
 expectIncludes(coinHomeDecisionModel, "스테이블코인 유출", "Home decision stablecoin risk label", "src/components/coin/coinHomeDecisionModel.ts");
 expectIncludes(coinHomeDecisionModel, "largeTradeFlow", "Home decision uses large trade flow", "src/components/coin/coinHomeDecisionModel.ts");
-expectIncludes(coinHomeDecisionModel, "큰 매도 체결", "Home decision large trade risk label", "src/components/coin/coinHomeDecisionModel.ts");
+expectIncludes(coinHomeDecisionModel, "큰 이탈 체결", "Home decision large trade risk label", "src/components/coin/coinHomeDecisionModel.ts");
 expectIncludes(coinHomeDecisionModel, "optionsMarket", "Home decision uses options market", "src/components/coin/coinHomeDecisionModel.ts");
 expectIncludes(coinHomeDecisionModel, "옵션 변동성 큼", "Home decision options risk label", "src/components/coin/coinHomeDecisionModel.ts");
 expectIncludes(majorsApp, "CoinFuturesSignalPressurePanel", "Futures pressure panel on majors", "src/components/MajorsApp.tsx");
@@ -274,8 +274,8 @@ expectIncludes(coinSignalPressurePanel, "/api/liquidation-pressure?symbol=", "Fu
 expectIncludes(coinSignalPressurePanel, "Binance 공개 선물 데이터", "Futures pressure public data label", "src/components/coin/CoinSignalPressurePanel.tsx");
 expectIncludes(coinSignalPressurePanel, "메이저 선물 쏠림", "Major futures pressure scan copy", "src/components/coin/CoinSignalPressurePanel.tsx");
 expectIncludes(coinSignalPressurePanel, "알트 선물 쏠림", "Alt futures pressure scan copy", "src/components/coin/CoinSignalPressurePanel.tsx");
-expectIncludes(coinSignalPressurePanel, "롱 위험", "Futures long risk score copy", "src/components/coin/CoinSignalPressurePanel.tsx");
-expectIncludes(coinSignalPressurePanel, "숏 위험", "Futures short risk score copy", "src/components/coin/CoinSignalPressurePanel.tsx");
+expectIncludes(coinSignalPressurePanel, "하방 압력", "Futures downside pressure score copy", "src/components/coin/CoinSignalPressurePanel.tsx");
+expectIncludes(coinSignalPressurePanel, "상방 압력", "Futures upside pressure score copy", "src/components/coin/CoinSignalPressurePanel.tsx");
 expectIncludes(onchainMetricsRoute, "fetchBitcoinOnchainMetricReport", "On-chain metrics API source", "src/app/api/onchain-metrics/route.ts");
 expectIncludes(onchainMetricsLib, "mempoolVsizeMb", "On-chain mempool pressure field", "src/lib/onchainMetrics.ts");
 expectIncludes(coinOnchainPulsePanel, "/api/onchain-metrics?network=btc", "On-chain live API source", "src/components/coin/CoinOnchainPulsePanel.tsx");

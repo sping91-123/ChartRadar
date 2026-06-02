@@ -378,8 +378,8 @@ export function RadarInsightPanel({
       </div>
 
       <div className="mt-3 grid gap-3 lg:grid-cols-3">
-        <InsightList title="롱 추적 조건" items={insight.longConditions} locked={!isPro} />
-        <InsightList title="숏 추적 조건" items={insight.shortConditions} locked={!isPro} />
+        <InsightList title="상방 추적 조건" items={insight.longConditions} locked={!isPro} />
+        <InsightList title="하방 추적 조건" items={insight.shortConditions} locked={!isPro} />
         <InsightList title="무효화 기준" items={insight.invalidationConditions} locked={!isPro} />
       </div>
 

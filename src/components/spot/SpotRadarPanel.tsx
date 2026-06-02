@@ -1,6 +1,6 @@
 "use client";
 // 업비트/빗썸 KRW 현물 시장을 주문 기능 없이 관찰 후보 중심으로 보여줍니다.
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, HelpCircle, LineChart, Search, X } from "lucide-react";
 import { ActionButton, DataRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import type { SpotChartRadarPayload, SpotChartSummary, SpotChartTone, SpotExchange, SpotRadarCategory, SpotRadarItem, SpotRadarPayload } from "@/lib/spotRadarTypes";
@@ -16,9 +16,9 @@ const exchanges: Array<{ id: SpotExchange; label: string; logo: string }> = [
 
 const categoryFilters: Array<{ id: "all" | BuySpotCategory; label: string }> = [
   { id: "all", label: "전체" },
-  { id: "volume", label: "거래 많은 코인" },
-  { id: "gainer", label: "많이 오른 코인" },
-  { id: "pullback", label: "가격 내려온 코인" }
+  { id: "volume", label: "거래대금 후보" },
+  { id: "gainer", label: "강한 후보" },
+  { id: "pullback", label: "눌림 확인 후보" }
 ];
 
 const spotExchangeStorageKey = "chart-radar.spot.exchange";
@@ -133,7 +133,7 @@ function SpotPlanGrid({
           <p className="mt-1 truncate text-xs font-semibold text-ui-text">{formatOptionalPrice(plan.secondPrice)}</p>
         </div>
         <div className="min-w-0 text-right">
-          <p className="text-[10px] font-semibold text-ui-subtle">깨지면 제외</p>
+          <p className="text-[10px] font-semibold text-ui-subtle">무효화 기준</p>
           <p className="mt-1 truncate text-xs font-semibold text-ui-short">{formatOptionalPrice(plan.invalidationPrice)}</p>
         </div>
       </div>
@@ -239,10 +239,10 @@ function spotMarketMoodClass(payload: SpotRadarPayload | null) {
 function displaySpotLabel(value: string) {
   return value
     .replace(/눌림 대기/g, "가격 내려오면 확인")
-    .replace(/눌림/g, "가격 내려옴")
-    .replace(/관망/g, "관망하기")
-    .replace(/추적/g, "관심")
-    .replace(/추격/g, "따라가기")
+    .replace(/눌림/g, "눌림 확인")
+    .replace(/관망/g, "관망")
+    .replace(/추적/g, "추적")
+    .replace(/추격/g, "추격 주의")
     .replace(/하락압력/g, "하락 위험")
     .replace(/하락 압력/g, "하락 위험");
 }
@@ -260,7 +260,7 @@ function SpotMarketChecklist({ payload }: { payload: SpotRadarPayload }) {
 
   const checks: Array<{ label: string; title: string; tone: "risk" | "watch" | "info" | "long" | "short" }> = [
     {
-      label: "살펴볼 후보",
+      label: "추적 후보",
       title: followItem ? describeSpotItem(followItem) : "후보 대기",
       tone: followItem?.category === "gainer" || followItem?.category === "volume" ? "long" : "watch"
     },
@@ -270,7 +270,7 @@ function SpotMarketChecklist({ payload }: { payload: SpotRadarPayload }) {
       tone: volumeItem ? "long" : "watch"
     },
     {
-      label: "오르는 후보",
+      label: "강한 후보",
       title: gainerItem ? describeSpotItem(gainerItem) : `상승 ${payload.summary.gainers}개`,
       tone: gainerItem ? "long" : marketTone
     }
@@ -289,7 +289,7 @@ function SpotMarketChecklist({ payload }: { payload: SpotRadarPayload }) {
               <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{check.title}</p>
             </div>
             <StatusPill tone={check.tone} className="shrink-0">
-              {check.tone === "risk" ? "주의" : check.tone === "long" ? "관심" : check.tone === "short" ? "하락" : "확인"}
+              {check.tone === "risk" ? "주의" : check.tone === "long" ? "추적" : check.tone === "short" ? "리스크" : "확인"}
             </StatusPill>
           </div>
         </article>
@@ -508,57 +508,146 @@ function buildSpotPriorityGroups(payload: SpotRadarPayload, chartPayload: SpotCh
 
   return [
     {
-      label: "살 만한 후보",
-      title: "거래와 상승이 같이 보이는 후보",
+      label: "오늘 추적 후보",
+      title: "거래대금과 1H 구조를 같이 확인할 후보",
       tone: "long",
       items: followItems
     },
     {
-      label: "지켜볼 후보",
-      title: "가격 내려오면 다시 볼 후보",
+      label: "눌림 확인 후보",
+      title: "가격이 다시 확인 구간에 가까워질 때 볼 후보",
       tone: "watch",
       items: watchItems
     }
   ];
 }
 
-function SpotPriorityPanel({ payload, chartPayload }: { payload: SpotRadarPayload; chartPayload: SpotChartRadarPayload | null }) {
-  const groups = buildSpotPriorityGroups(payload, chartPayload);
+function SpotPriorityPanel({
+  payload,
+  chartPayload,
+  loading,
+  error,
+  action
+}: {
+  payload: SpotRadarPayload | null;
+  chartPayload: SpotChartRadarPayload | null;
+  loading: boolean;
+  error: string | null;
+  action?: ReactNode;
+}) {
+  const groups = payload ? buildSpotPriorityGroups(payload, chartPayload) : [];
+  const invalidationItems = groups.flatMap((group) => group.items).slice(0, 3);
 
   return (
     <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
-      <SectionHeader title="오늘 먼저 볼 코인" />
-      <div className="grid gap-0 lg:grid-cols-2">
-        {groups.map((group, index) => (
-          <article key={group.label} className={`min-w-0 py-3 lg:px-3 ${index > 0 ? "border-t border-ui-line lg:border-l lg:border-t-0" : ""}`}>
+      <SectionHeader title="오늘 현물 후보" action={action} />
+
+      {loading ? (
+        <div className="flex min-h-28 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
+          오늘 추적 후보를 확인하는 중입니다.
+        </div>
+      ) : error ? (
+        <div className="flex min-h-28 flex-col items-center justify-center gap-3 border-t border-ui-line text-center">
+          <AlertTriangle size={22} className="text-ui-risk" aria-hidden />
+          <p className="text-sm font-semibold text-ui-text">{error}</p>
+          <p className="text-xs text-ui-muted">거래소 public API 응답이 늦거나 제한될 수 있습니다.</p>
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-0 lg:grid-cols-2">
+            {groups.map((group, index) => (
+              <article key={group.label} className={`min-w-0 py-3 lg:px-3 ${index > 0 ? "border-t border-ui-line lg:border-l lg:border-t-0" : ""}`}>
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{group.label}</p>
+                    <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{group.title}</p>
+                  </div>
+                  <StatusPill tone={group.tone} className="shrink-0">
+                    {group.items.length}개
+                  </StatusPill>
+                </div>
+                <div className="mt-3 space-y-3">
+                  {group.items.length > 0 ? (
+                    group.items.map(({ item, chart, reason, score, tone }) => {
+                      const plan = buildSpotPricePlan(item, chart);
+                      return (
+                        <div key={`${group.label}-${item.market}`} className="border-t border-ui-line pt-3 first:border-t-0 first:pt-0">
+                          <div className="flex min-w-0 items-center justify-between gap-3">
+                            <p className="truncate text-sm font-semibold text-ui-text">{item.symbol}</p>
+                            <span className={`shrink-0 text-xs font-semibold ${chartToneClass[tone]}`}>{Math.round(score)}점</span>
+                          </div>
+                          <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{reason}</p>
+                          <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">다시 볼 조건: {plan.summaryLabel}</p>
+                          <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">확인 필요: {item.check}</p>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="border-t border-ui-line pt-3 text-xs leading-5 text-ui-muted">해당 묶음에 우선 표시할 후보가 아직 없습니다.</p>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="border-t border-ui-line pt-3">
             <div className="flex min-w-0 items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{group.label}</p>
-                <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{group.title}</p>
+                <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">무효화 기준</p>
+                <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">아래 가격과 리스크 조건이 흔들리면 후보 강도를 낮춰 다시 확인합니다.</p>
               </div>
-              <StatusPill tone={group.tone} className="shrink-0">
-                {group.items.length}개
+              <StatusPill tone="risk" className="shrink-0">
+                리스크
               </StatusPill>
             </div>
-            <div className="mt-3 space-y-3">
-              {group.items.length > 0 ? (
-                group.items.map(({ item, reason, score, tone }) => (
-                  <div key={`${group.label}-${item.market}`} className="border-t border-ui-line pt-3 first:border-t-0 first:pt-0">
-                    <div className="flex min-w-0 items-center justify-between gap-3">
-                      <p className="truncate text-sm font-semibold text-ui-text">{item.symbol}</p>
-                      <span className={`shrink-0 text-xs font-semibold ${chartToneClass[tone]}`}>{Math.round(score)}점</span>
-                    </div>
-                    <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{reason}</p>
-                  </div>
-                ))
+            <div className="mt-3 grid gap-0 md:grid-cols-3">
+              {invalidationItems.length > 0 ? (
+                invalidationItems.map(({ item, chart }, index) => {
+                  const plan = buildSpotPricePlan(item, chart);
+                  return (
+                    <article key={`risk-${item.market}`} className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-l md:border-t-0" : ""}`}>
+                      <div className="flex min-w-0 items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-ui-text">{item.symbol}</p>
+                          <p className="mt-1 text-xs font-semibold text-ui-short">무효화 기준 {formatOptionalPrice(plan.invalidationPrice)}</p>
+                        </div>
+                        <StatusPill tone="watch" className="shrink-0">
+                          확인
+                        </StatusPill>
+                      </div>
+                      <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{item.risk}</p>
+                    </article>
+                  );
+                })
               ) : (
-                <p className="border-t border-ui-line pt-3 text-xs leading-5 text-ui-muted">해당 묶음에 우선 표시할 후보가 아직 없습니다.</p>
+                <p className="border-t border-ui-line pt-3 text-xs leading-5 text-ui-muted">무효화 기준을 표시할 후보가 아직 없습니다.</p>
               )}
             </div>
-          </article>
-        ))}
-      </div>
+          </div>
+        </>
+      )}
     </PanelCard>
+  );
+}
+
+function SpotExchangeToggle({ exchange, onSelectExchange }: { exchange: SpotExchange; onSelectExchange: (exchange: SpotExchange) => void }) {
+  return (
+    <div className="inline-flex items-center gap-1">
+      {exchanges.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => onSelectExchange(item.id)}
+          className={`inline-flex min-h-10 items-center gap-2 border px-2 text-xs font-semibold transition ${
+            exchange === item.id ? "border-white bg-ui-brand/15 text-ui-text" : "border-transparent text-ui-muted hover:border-ui-line hover:text-ui-text"
+          }`}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={item.logo} alt="" className="h-6 w-6 shrink-0 rounded-[0.45rem] bg-white object-cover" loading="lazy" />
+          <span>{item.label}</span>
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -659,7 +748,7 @@ function PersonalSpotPanel({
         {!selectedMarket ? (
           <div className="flex min-h-32 flex-col items-center justify-center gap-3 text-center">
             <p className="text-sm font-semibold text-ui-text">관심 알트가 비어 있습니다.</p>
-            <p className="max-w-sm text-xs leading-5 text-ui-muted">물려 있거나 계속 보고 싶은 알트 하나를 등록해두면 이 화면 맨 위에서 바로 확인합니다.</p>
+            <p className="max-w-sm text-xs leading-5 text-ui-muted">계속 확인할 알트 하나를 등록해두면 관심 알트 영역에서 따로 추적합니다.</p>
             <ActionButton tone="primary" onClick={onOpenPicker}>
               <Search size={14} aria-hidden />
               관심 알트 등록
@@ -998,48 +1087,19 @@ export function SpotRadarPanel() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PersonalSpotPanel
-        exchange={exchange}
+      <SpotPriorityPanel
         payload={payload}
-        selectedMarket={watchMarket}
-        query={watchQuery}
-        suggestions={watchSuggestions}
-        chart={watchChart}
-        loading={isWatchChartLoading}
-        error={watchChartError}
-        isPickerOpen={isWatchPickerOpen}
-        onQueryChange={setWatchQuery}
-        onSelectMarket={selectWatchMarket}
-        onSubmit={submitWatchSearch}
-        onOpenPicker={openWatchPicker}
-        onClosePicker={closeWatchPicker}
+        chartPayload={chartPayload}
+        loading={isLoading}
+        error={error}
+        action={<SpotExchangeToggle exchange={exchange} onSelectExchange={selectExchange} />}
       />
 
       <PanelCard variant="report" padding="lg" className="space-y-2">
-        <SectionHeader
-          title="현물 레이더"
-          action={
-            <div className="inline-flex items-center gap-1">
-              {exchanges.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => selectExchange(item.id)}
-                  className={`inline-flex min-h-10 items-center gap-2 border px-2 text-xs font-semibold transition ${
-                    exchange === item.id ? "border-white bg-ui-brand/15 text-ui-text" : "border-transparent text-ui-muted hover:border-ui-line hover:text-ui-text"
-                  }`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={item.logo} alt="" className="h-6 w-6 shrink-0 rounded-[0.45rem] bg-white object-cover" loading="lazy" />
-                  <span>{item.label}</span>
-                </button>
-              ))}
-            </div>
-          }
-        />
+        <SectionHeader title="시장 요약" />
 
         <div className="grid gap-0 sm:grid-cols-2">
-          <DataRow label="살펴볼 후보" value={payload ? `${visibleCandidateItems.length}개` : "-"} className="py-1" />
+          <DataRow label="추적 후보" value={payload ? `${visibleCandidateItems.length}개` : "-"} className="py-1" />
           <DataRow label="오늘 분위기" value={<span className={spotMarketMoodClass(payload)}>{spotMarketMood(payload)}</span>} className="py-1" />
         </div>
 
@@ -1063,7 +1123,7 @@ export function SpotRadarPanel() {
       </PanelCard>
 
       <PanelCard variant="report" padding="lg" className="space-y-4">
-        <SectionHeader title="조건별 후보" />
+        <SectionHeader title="세부 후보와 차트 근거" />
 
         {payload ? <SpotChartEvidencePanel payload={chartPayload} loading={isChartLoading} error={chartError} itemsByMarket={spotItemsByMarket} /> : null}
 
@@ -1092,7 +1152,22 @@ export function SpotRadarPanel() {
         )}
       </PanelCard>
 
-      {payload ? <SpotPriorityPanel payload={payload} chartPayload={chartPayload} /> : null}
+      <PersonalSpotPanel
+        exchange={exchange}
+        payload={payload}
+        selectedMarket={watchMarket}
+        query={watchQuery}
+        suggestions={watchSuggestions}
+        chart={watchChart}
+        loading={isWatchChartLoading}
+        error={watchChartError}
+        isPickerOpen={isWatchPickerOpen}
+        onQueryChange={setWatchQuery}
+        onSelectMarket={selectWatchMarket}
+        onSubmit={submitWatchSearch}
+        onOpenPicker={openWatchPicker}
+        onClosePicker={closeWatchPicker}
+      />
     </div>
   );
 }

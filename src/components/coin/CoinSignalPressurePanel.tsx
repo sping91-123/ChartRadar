@@ -54,8 +54,8 @@ const barClass: Record<CoinSignalPressureTone, string> = {
 };
 
 const pillLabel: Record<CoinSignalPressureTone, string> = {
-  long: "관심",
-  short: "하락",
+  long: "상방",
+  short: "하방",
   watch: "보기",
   risk: "위험",
   info: "참고"
@@ -88,14 +88,14 @@ function pressureTone(report: LiquidationPressureReport): CoinSignalPressureTone
 }
 
 function sideTitle(side: LiquidationPressureSide) {
-  if (side === "upsideShorts") return "숏 몰림";
-  if (side === "downsideLongs") return "롱 몰림";
+  if (side === "upsideShorts") return "상방 변동성 압력";
+  if (side === "downsideLongs") return "하방 변동성 압력";
   return "쏠림 약함";
 }
 
 function sideAction(side: LiquidationPressureSide) {
-  if (side === "upsideShorts") return "위로 튈 수 있음";
-  if (side === "downsideLongs") return "아래로 밀릴 수 있음";
+  if (side === "upsideShorts") return "상방 급변 가능성 확인";
+  if (side === "downsideLongs") return "하방 급변 가능성 확인";
   return "방향 확인";
 }
 
@@ -117,10 +117,10 @@ function mainTrigger(report: LiquidationPressureReport) {
   if (oi !== null && oi !== undefined && oi > 2) return `선물 계약 ${formatPercent(oi)} 증가`;
   if (oi !== null && oi !== undefined && oi < -1) return `선물 계약 ${formatPercent(oi)} 감소`;
   if (funding !== null && funding !== undefined && Math.abs(funding) >= 0.03) return `펀딩비 ${formatPercent(funding, 4)}`;
-  if (takerBuy !== null && takerBuy >= 55) return `시장가 매수 ${formatPlainPercent(takerBuy)}`;
-  if (takerSell !== null && takerSell >= 55) return `시장가 매도 ${formatPlainPercent(takerSell)}`;
-  if (globalLong !== null && globalLong !== undefined && globalLong >= 56) return `롱포지션 ${formatPlainPercent(globalLong)}`;
-  if (globalShort !== null && globalShort !== undefined && globalShort >= 56) return `숏포지션 ${formatPlainPercent(globalShort)}`;
+  if (takerBuy !== null && takerBuy >= 55) return `시장가 유입 ${formatPlainPercent(takerBuy)}`;
+  if (takerSell !== null && takerSell >= 55) return `시장가 이탈 ${formatPlainPercent(takerSell)}`;
+  if (globalLong !== null && globalLong !== undefined && globalLong >= 56) return `상방 포지션 ${formatPlainPercent(globalLong)}`;
+  if (globalShort !== null && globalShort !== undefined && globalShort >= 56) return `하방 포지션 ${formatPlainPercent(globalShort)}`;
   return "쏠림 크지 않음";
 }
 
@@ -135,8 +135,8 @@ const futuresPressureItems: Record<FuturesPressureMode, CoinSignalPressureItem[]
   major: [
     {
       label: "파생 쏠림",
-      title: "청산·펀딩·포지션",
-      detail: "방향보다 과열과 강제청산 위험을 먼저 분리합니다.",
+      title: "레버리지·펀딩·포지션",
+      detail: "방향보다 과열과 강제 변동성 위험을 먼저 분리합니다.",
       tone: "risk",
       percent: 88,
       value: "우선"
@@ -336,10 +336,10 @@ export function CoinFuturesSignalPressurePanel({ mode }: { mode: FuturesPressure
                 <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs font-semibold leading-5 text-ui-muted">
                   <span>{sideAction(report.dominantSide)}</span>
                   <span className="text-right text-ui-text">{mainTrigger(report)}</span>
-                  <span>롱 {formatPlainPercent(report.globalLongShort.longPercent)}</span>
+                  <span>상방 포지션 {formatPlainPercent(report.globalLongShort.longPercent)}</span>
                   <span className="text-right">계약 변화 {formatPercent(report.openInterestChangePercent)}</span>
-                  <span>롱 위험 {report.downsideLongPressure}점</span>
-                  <span className="text-right">숏 위험 {report.upsideShortPressure}점</span>
+                  <span>하방 압력 {report.downsideLongPressure}점</span>
+                  <span className="text-right">상방 압력 {report.upsideShortPressure}점</span>
                 </div>
               </article>
             );
@@ -352,7 +352,7 @@ export function CoinFuturesSignalPressurePanel({ mode }: { mode: FuturesPressure
       ) : null}
 
       <CompactHelp label="데이터 기준">
-        Binance 공개 선물 데이터의 미결제약정, 펀딩비, 롱/숏 비율, 시장가 체결 쏠림을 묶어 과열과 흔들림 위험만 빠르게 보여줍니다.
+        Binance 공개 선물 데이터의 미결제약정, 펀딩비, 상방·하방 포지션 비율, 시장가 유입·이탈 쏠림을 묶어 과열과 흔들림 위험만 빠르게 보여줍니다.
       </CompactHelp>
     </PanelCard>
   );

@@ -9,8 +9,8 @@ export function AppFooter() {
         <ShieldAlert className="mt-0.5 shrink-0 text-accent-blue" size={16} aria-hidden />
         <div className="space-y-2">
           <p>
-            Chart Radar는 매매 계획과 리스크 요소를 정리하는 시장 분석 도구입니다. 제공되는 모든 정보는
-            매수·매도 추천, 투자 자문, 성과 약속으로 해석될 수 없습니다. 레버리지 거래와 파생상품 거래에는 원금 손실과
+            Chart Radar는 시장 판단과 리스크 요소를 정리하는 분석 도구입니다. 제공되는 모든 정보는
+            특정 거래 권유, 투자 자문, 성과 약속으로 해석될 수 없습니다. 레버리지 거래와 파생상품 거래에는 원금 손실과
             청산 위험이 있으며, 모든 투자 판단과 책임은 사용자 본인에게 있습니다.
           </p>
           <p>

@@ -55,9 +55,13 @@ function sideTone(side: LargeTradeSide) {
 }
 
 function sideLabel(side: LargeTradeSide) {
-  if (side === "buy") return "큰 매수 우세";
-  if (side === "sell") return "큰 매도 우세";
+  if (side === "buy") return "큰 유입 우세";
+  if (side === "sell") return "큰 이탈 우세";
   return "큰 체결 균형";
+}
+
+function displayTrigger(value: string) {
+  return value.replace(/\uB9E4\uC218/g, "유입").replace(/\uB9E4\uB3C4/g, "이탈");
 }
 
 function gradeLabel(report: LargeTradeFlowReport) {
@@ -182,9 +186,9 @@ export function CoinLargeTradeFlowPanel({ mode }: { mode: LargeTradeMode }) {
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs font-semibold leading-5 text-ui-muted">
                   <span>큰 체결 {report.largeTradeCount}건</span>
-                  <span className="text-right text-ui-text">{report.trigger}</span>
-                  <span>매수 {formatUsd(report.buyNotionalUsd)}</span>
-                  <span className="text-right">매도 {formatUsd(report.sellNotionalUsd)}</span>
+                  <span className="text-right text-ui-text">{displayTrigger(report.trigger)}</span>
+                  <span>유입 {formatUsd(report.buyNotionalUsd)}</span>
+                  <span className="text-right">이탈 {formatUsd(report.sellNotionalUsd)}</span>
                   <span>쏠림 {formatPercent(report.imbalancePercent)}</span>
                   <span className="text-right">{report.windowMinutes ? `${report.windowMinutes}분 범위` : "최근 체결"}</span>
                   <span>반복 체결</span>

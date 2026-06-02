@@ -146,7 +146,7 @@ export function CryptoMajorDetailGateNotice() {
     <div className="border-y border-cyan-300/20 py-4">
       <p className="text-sm font-bold text-cyan-100">Pro 상세 판단 보조</p>
       <p className="mt-2 text-sm leading-6 text-slate-300 [word-break:keep-all]">
-        Basic에서는 방향 요약만 제공합니다. 구체적인 롱/숏 추적 조건, 무효화 기준, 관찰 구간, 다음 레벨, 세부 리스크는 Pro에서 확인할 수 있습니다.
+        Basic에서는 방향 요약만 제공합니다. 구체적인 상방/하방 추적 조건, 무효화 기준, 관찰 구간, 다음 레벨, 세부 리스크는 Pro에서 확인할 수 있습니다.
         이 정보는 투자 권유가 아니라 판단 보조용입니다.
       </p>
     </div>

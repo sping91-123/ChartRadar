@@ -13,9 +13,9 @@ export interface CoinHomeBoardItem {
   quoteVolume: number;
 }
 
-export type CoinHomeDecisionState = "관망하기" | "조금 더 지켜보기" | "상승 가능성 높음" | "하락 위험 큼" | "크게 흔들림";
+export type CoinHomeDecisionState = "관망하기" | "확인 필요" | "추적 우세" | "하락 위험 큼" | "크게 흔들림";
 export type CoinHomeDirection = "상승 쪽" | "하락 쪽" | "관망하기" | "흔들림 주의";
-export type CoinHomeLeadership = "BTC 중심" | "알트도 강함" | "섞임" | "위험 줄이기";
+export type CoinHomeLeadership = "BTC 중심" | "알트도 강함" | "섞임" | "리스크 우선";
 
 export interface CoinHomeDecisionSummary {
   state: CoinHomeDecisionState;
@@ -234,7 +234,7 @@ function riskLabel({
   if (weakTrend && (constructiveTrend || btcChange <= -2.5)) return "BTC 상승 추세 이탈";
   if (weakTrend) return "BTC 약세 계속";
   if (derivatives >= 20) return "선물 쏠림 큼";
-  if (largeTrade >= 12) return "큰 매도 체결";
+  if (largeTrade >= 12) return "큰 이탈 체결";
   if (options >= 12) return "옵션 변동성 큼";
   if (liquidity >= 12) return "스테이블코인 유출";
   if (overheat) return "가격 과열";
@@ -243,10 +243,10 @@ function riskLabel({
 }
 
 function nextConditionFor(state: CoinHomeDecisionState, leadership: CoinHomeLeadership, topRisk: string) {
-  if (state === "하락 위험 큼") return "반등이 오래 버티는지 봅니다.";
+  if (state === "하락 위험 큼") return "BTC 하락 우위가 완화되는지 확인합니다.";
   if (state === "크게 흔들림") {
     if (topRisk === "선물 쏠림 큼") return "선물 포지션 쏠림이 줄어드는지 봅니다.";
-    if (topRisk === "큰 매도 체결") return "큰 매도가 멈추는지 봅니다.";
+    if (topRisk === "큰 이탈 체결") return "큰 이탈이 멈추는지 봅니다.";
     if (topRisk === "옵션 변동성 큼") return "옵션 예상 변동 폭이 줄어드는지 봅니다.";
     if (topRisk === "스테이블코인 유출") return "시장에 새 돈이 다시 들어오는지 봅니다.";
     if (topRisk === "가격 과열") return "급등 과열이 식는지 봅니다.";
@@ -256,7 +256,7 @@ function nextConditionFor(state: CoinHomeDecisionState, leadership: CoinHomeLead
   }
   if (leadership === "알트도 강함") return "BTC가 버티고 알트 거래대금이 계속 붙는지 봅니다.";
   if (leadership === "BTC 중심") return "BTC 상승이 이어지고 알트가 따라오는지 봅니다.";
-  if (state === "상승 가능성 높음") return "잠깐 밀린 뒤 다시 오르는지 봅니다.";
+  if (state === "추적 우세") return "잠깐 쉬어도 흐름이 유지되는지 봅니다.";
   return "BTC 흐름과 큰 뉴스 전후 움직임을 봅니다.";
 }
 
@@ -277,7 +277,7 @@ function leadershipFor({
   volumeBackedCount: number;
   dominance: number | null | undefined;
 }): CoinHomeLeadership {
-  if (weakTrend && participationRatio < 0.45) return "위험 줄이기";
+  if (weakTrend && participationRatio < 0.45) return "리스크 우선";
   if (constructiveTrend && participationRatio >= 0.55 && strongAltCount >= 2 && volumeBackedCount >= 2) return "알트도 강함";
   if (constructiveTrend && btcChange > 0 && participationRatio < 0.5) return "BTC 중심";
   if (btcChange > 1.5 && participationRatio < 0.45) return "BTC 중심";
@@ -353,9 +353,9 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
     : unstableSetup
       ? "크게 흔들림"
       : strongUpsideSetup
-        ? "상승 가능성 높음"
+        ? "추적 우세"
         : readinessScore >= 45
-          ? "조금 더 지켜보기"
+          ? "확인 필요"
           : "관망하기";
 
   const reason =
@@ -363,8 +363,8 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
       ? "BTC가 버티는 동안 알트도 같이 움직이는 구간입니다."
       : leadership === "BTC 중심"
         ? "BTC가 시장을 이끌고 알트는 아직 덜 따라오는 구간입니다."
-        : leadership === "위험 줄이기"
-          ? "BTC가 약해 먼저 조심해야 하는 구간입니다."
+        : leadership === "리스크 우선"
+          ? "BTC가 약해 리스크 확인이 먼저인 구간입니다."
           : "BTC와 알트 흐름이 섞여 있어 한쪽으로 단정하기 어렵습니다.";
 
   return {
@@ -375,7 +375,7 @@ export function buildCoinHomeDecision(input: BuildCoinHomeDecisionInput): CoinHo
     topRisk,
     nextCondition: nextConditionFor(state, leadership, topRisk),
     reason,
-    scoreLabel: "상승 가능성 점수",
-    scoreDetail: "높을수록 시장이 상승 쪽으로 움직일 가능성이 좋아 보입니다. 낮으면 관망하거나 하락 위험을 먼저 봅니다."
+    scoreLabel: "오늘 대응 모드",
+    scoreDetail: "높을수록 시장 흐름을 추적할 근거가 많아 보입니다. 낮으면 관망하거나 하락 위험을 먼저 봅니다."
   };
 }

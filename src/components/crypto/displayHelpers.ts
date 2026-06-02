@@ -13,8 +13,8 @@ export function symbolLabel(symbol: string) {
 }
 
 export function biasLabel(bias?: MarketAnalysis["bias"]) {
-  if (bias === "long") return "롱 우세";
-  if (bias === "short") return "숏 우세";
+  if (bias === "long") return "상방 우세";
+  if (bias === "short") return "하방 우세";
   return "횡보 관찰";
 }
 
@@ -35,8 +35,8 @@ export function stateLabel(value: string) {
   if (value === "above") return "위";
   if (value === "below") return "아래";
   if (value === "near") return "근처";
-  if (value === "long") return "롱";
-  if (value === "short") return "숏";
+  if (value === "long") return "상방";
+  if (value === "short") return "하방";
   if (value === "premium") return "프리미엄";
   if (value === "discount") return "디스카운트";
   if (value === "equilibrium") return "중간";
@@ -153,8 +153,8 @@ export function aiStateLabel(value?: string | null) {
   if (value === "above") return "위";
   if (value === "below") return "아래";
   if (value === "near") return "근처";
-  if (value === "long") return "롱";
-  if (value === "short") return "숏";
+  if (value === "long") return "상방";
+  if (value === "short") return "하방";
   if (value === "premium") return "프리미엄";
   if (value === "discount") return "디스카운트";
   if (value === "equilibrium") return "중간";

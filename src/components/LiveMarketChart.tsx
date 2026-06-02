@@ -202,7 +202,7 @@ function altAnalysisFilterClass(label: string) {
 
 function buildRadarPulse(analysis: MarketAnalysis, active?: TimeframeAnalysis): RadarPulseItem[] {
   const directionTitle =
-    analysis.bias === "long" ? "롱 환경" : analysis.bias === "short" ? "숏 환경" : "관망";
+    analysis.bias === "long" ? "상방 환경" : analysis.bias === "short" ? "하방 환경" : "관망";
   const directionTone: RadarPulseTone =
     analysis.bias === "long" ? "long" : analysis.bias === "short" ? "short" : "warn";
   const riskText =
@@ -335,7 +335,7 @@ function timeframeSignalSummary(item: TimeframeAnalysis) {
   const parts: string[] = [];
   if (item.inOb && item.latestOb) parts.push(`${item.latestOb.direction === "bullish" ? "상승" : "하락"} OB 내부`);
   if (item.inFvg && item.latestFvg) parts.push(item.latestFvg.state === "ifvg" ? "iFVG 내부" : "FVG 내부");
-  if (item.oteZone !== "none") parts.push(`${item.oteZone === "long" ? "롱" : "숏"} OTE`);
+  if (item.oteZone !== "none") parts.push(`${item.oteZone === "long" ? "상방" : "하방"} OTE`);
   if (item.latestSweep && item.latestSweep.age <= 8) parts.push(`Sweep ${barsAgoLabel(item.latestSweep.age, item.timeframe)}`);
   if (item.latestCisd && item.latestCisd.age <= 8) parts.push(`CISD ${barsAgoLabel(item.latestCisd.age, item.timeframe)}`);
   if (item.latestDisplacement && item.latestDisplacement.age <= 8) {
@@ -931,25 +931,25 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         {
           price: activeAnalysis.oteLevels.longLow,
           color: "#14b8a6",
-          title: `${activeAnalysis.timeframe} OTE 롱 하단`,
+          title: `${activeAnalysis.timeframe} OTE 상방 하단`,
           style: LineStyle.Dotted
         },
         {
           price: activeAnalysis.oteLevels.longHigh,
           color: "#14b8a6",
-          title: `${activeAnalysis.timeframe} OTE 롱 상단`,
+          title: `${activeAnalysis.timeframe} OTE 상방 상단`,
           style: LineStyle.Dotted
         },
         {
           price: activeAnalysis.oteLevels.shortLow,
           color: "#a855f7",
-          title: `${activeAnalysis.timeframe} OTE 숏 하단`,
+          title: `${activeAnalysis.timeframe} OTE 하방 하단`,
           style: LineStyle.Dotted
         },
         {
           price: activeAnalysis.oteLevels.shortHigh,
           color: "#a855f7",
-          title: `${activeAnalysis.timeframe} OTE 숏 상단`,
+          title: `${activeAnalysis.timeframe} OTE 하방 상단`,
           style: LineStyle.Dotted
         },
         {
@@ -1054,15 +1054,15 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
     return {
       higher:
         higherBullish === higher.length
-          ? "상위 구조 롱 정렬"
+          ? "상위 구조 상방 정렬"
           : higherBearish === higher.length
-            ? "상위 구조 숏 정렬"
+            ? "상위 구조 하방 정렬"
             : "상위 구조 혼합",
       fast:
         fastBullish === fast.length
-          ? "단기 구조 롱 정렬"
+          ? "단기 구조 상방 정렬"
           : fastBearish === fast.length
-            ? "단기 구조 숏 정렬"
+            ? "단기 구조 하방 정렬"
             : "단기 구조 혼합"
     };
   }, [analysis]);
@@ -1868,8 +1868,8 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 <span className="rounded-md border border-emerald-400/20 bg-emerald-400/10 px-2 py-1 text-emerald-300">OB</span>
                 <span className="rounded-md border border-sky-400/20 bg-sky-400/10 px-2 py-1 text-sky-300">FVG / iFVG</span>
                 <span className="rounded-md border border-amber-400/20 bg-amber-400/10 px-2 py-1 text-amber-300">POC</span>
-                <span className="rounded-md border border-teal-400/20 bg-teal-400/10 px-2 py-1 text-teal-300">OTE 롱</span>
-                <span className="rounded-md border border-violet-400/20 bg-violet-400/10 px-2 py-1 text-violet-300">OTE 숏</span>
+                <span className="rounded-md border border-teal-400/20 bg-teal-400/10 px-2 py-1 text-teal-300">OTE 상방</span>
+                <span className="rounded-md border border-violet-400/20 bg-violet-400/10 px-2 py-1 text-violet-300">OTE 하방</span>
                 <span className="rounded-md border border-slate-400/20 bg-slate-400/10 px-2 py-1 text-slate-300">PD 50%</span>
                 <span className="rounded-md border border-green-500/20 bg-green-500/10 px-2 py-1 text-green-300">MSB</span>
                 <span className="rounded-md border border-rose-400/20 bg-rose-400/10 px-2 py-1 text-rose-300">CHoCH</span>
@@ -2018,7 +2018,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                           <div className={`border-t px-0 py-2 ${biasClasses(analysis.bias)}`}>
                           <p className="text-[11px] font-bold opacity-80">방향 결론</p>
                           <p className="mt-1 text-base font-black">
-                            {analysis.bias === "long" ? "롱 환경" : analysis.bias === "short" ? "숏 환경" : "관망"}
+                            {analysis.bias === "long" ? "상방 환경" : analysis.bias === "short" ? "하방 환경" : "관망"}
                           </p>
                         </div>
                         <div className="border-t border-white/10 py-2">
@@ -2484,10 +2484,10 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   {activeAnalysis.oteLevels ? (
                     <>
                       <p className="border-t border-teal-500/20 py-2 text-sm leading-6 text-slate-200 first:border-t-0">
-                        OTE 롱 / {formatPriceRange(activeAnalysis.oteLevels.longLow, activeAnalysis.oteLevels.longHigh)}
+                        OTE 상방 / {formatPriceRange(activeAnalysis.oteLevels.longLow, activeAnalysis.oteLevels.longHigh)}
                       </p>
                       <p className="border-t border-purple-500/20 py-2 text-sm leading-6 text-slate-200 first:border-t-0">
-                        OTE 숏 / {formatPriceRange(activeAnalysis.oteLevels.shortLow, activeAnalysis.oteLevels.shortHigh)}
+                        OTE 하방 / {formatPriceRange(activeAnalysis.oteLevels.shortLow, activeAnalysis.oteLevels.shortHigh)}
                       </p>
                     </>
                   ) : null}
@@ -2525,7 +2525,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                     ))
                   ) : (
                     <p className="border-y border-signal-success/20 py-2 text-sm leading-6 text-slate-300">
-                      현재 기준으로 눈에 띄는 롱 반대 요소는 크지 않습니다.
+                      현재 기준으로 눈에 띄는 상방 반대 요소는 크지 않습니다.
                     </p>
                   )}
                 </div>
@@ -2546,7 +2546,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                     ))
                   ) : (
                     <p className="border-y border-signal-success/20 py-2 text-sm leading-6 text-slate-300">
-                      현재 기준으로 눈에 띄는 숏 반대 요소는 크지 않습니다.
+                      현재 기준으로 눈에 띄는 하방 반대 요소는 크지 않습니다.
                     </p>
                   )}
                 </div>

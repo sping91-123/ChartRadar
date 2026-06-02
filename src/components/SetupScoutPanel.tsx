@@ -170,7 +170,7 @@ function classifyAltSetup(setup: ScoutSetup): AltFilterMeta {
 function altJudgmentLabel(setup: ScoutSetup, meta: AltFilterMeta) {
   if (meta.bucket === "danger") return "고위험";
   if (meta.bucket === "watch") return "관망 우위";
-  return setup.plan.side === "long" ? "롱 환경" : "숏 환경";
+  return setup.plan.side === "long" ? "상방 환경" : "하방 환경";
 }
 
 function buildAltBtcInfluence(setup: ScoutSetup) {
@@ -401,10 +401,10 @@ function buildEvidence(setup: ScoutSetup) {
   if (active?.inFvg) evidence.push("FVG 내부");
   if (active?.volumeProfile?.position === "near") evidence.push("POC 근접");
   if (active?.volumeProfile?.position === "above" && setup.plan.side === "long") {
-    evidence.push("POC 위 롱 우위");
+    evidence.push("POC 위 상방 우위");
   }
   if (active?.volumeProfile?.position === "below" && setup.plan.side === "short") {
-    evidence.push("POC 아래 숏 우위");
+    evidence.push("POC 아래 하방 우위");
   }
 
   return evidence;
@@ -463,7 +463,7 @@ function buildJournalNote(setup: ScoutSetup) {
     "추적 후보:",
     ...(opportunities.length ? opportunities.map((item) => `- ${item}`) : ["- 별도 추적 후보 없음"]),
     "",
-    "주의: 이 기록은 매수·매도 추천이 아니라, 시장 구조 관찰 기록입니다."
+    "주의: 이 기록은 투자 권유가 아니라, 시장 구조 관찰 기록입니다."
   ].join("\n");
 }
 
@@ -574,7 +574,7 @@ function SetupCard({
             </span>
             <SideIcon className={sideColor} size={16} aria-hidden />
             <span className={`whitespace-nowrap text-xs font-bold ${isAltFilterMode && altMeta?.bucket !== "candidate" ? "text-slate-300" : sideColor}`}>
-              {isAltFilterMode && altMeta ? altJudgmentLabel(setup, altMeta) : isLong ? "롱 환경" : "숏 환경"}
+              {isAltFilterMode && altMeta ? altJudgmentLabel(setup, altMeta) : isLong ? "상방 환경" : "하방 환경"}
             </span>
             {shouldShowProDetails ? (
               <span className={`whitespace-nowrap text-xs font-bold ${modeBadgeClass.replace(/bg-[^ ]+/g, "").replace(/border-[^ ]+/g, "")}`}>

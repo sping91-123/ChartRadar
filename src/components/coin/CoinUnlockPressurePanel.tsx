@@ -140,7 +140,7 @@ export function CoinUnlockPressurePanel() {
       ) : null}
 
       <CompactHelp label="계산 기준">
-        Unlock Value와 % of MCAP를 함께 봅니다. 시총 대비 비율이 클수록 단기 매도 물량 부담이 커질 수 있습니다.
+        Unlock Value와 % of MCAP를 함께 봅니다. 시총 대비 비율이 클수록 단기 공급 부담이 커질 수 있습니다.
       </CompactHelp>
     </PanelCard>
   );

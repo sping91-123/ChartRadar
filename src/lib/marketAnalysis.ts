@@ -1792,50 +1792,50 @@ function buildSummaryLine(
 
   if (bias === "long") {
     if (active.choch === "bearish") {
-      return "큰 방향은 롱 쪽이지만 단기 구조가 먼저 흔들리고 있어서, 추격보다 재정렬 확인이 먼저입니다.";
+      return "큰 방향은 상방 쪽이지만 단기 구조가 먼저 흔들리고 있어서, 추격보다 재정렬 확인이 먼저입니다.";
     }
     if (active.inFvg && active.latestFvg?.state === "ifvg" && active.latestFvg.direction === "bullish") {
       return "최근 하락 FVG가 뒤집혀 상승 iFVG로 작동하는 구간이라면, 지지 반응 확인이 더 중요합니다.";
     }
     if (active.premiumDiscount === "premium") {
-      return "롱 우세지만 프리미엄 구간이라 지금 바로 올려잡기보다 눌림 확인이 더 자연스럽습니다.";
+      return "상방 우세지만 프리미엄 구간이라 지금 바로 올려잡기보다 눌림 확인이 더 자연스럽습니다.";
     }
     if (active.inOb && active.latestOb?.direction === "bullish") {
-      return "현재가가 상승 OB 안에 있어, 롱 관찰 구간으로 보기 좋은 자리입니다.";
+      return "현재가가 상승 OB 안에 있어, 상방 관찰 구간으로 보기 좋은 자리입니다.";
     }
     if (active.inFvg && active.latestFvg?.direction === "bullish") {
       return "상승 FVG 내부라면 눌림 이후 반응을 보는 쪽이 더 깔끔합니다.";
     }
     if (htfBullish >= 2) {
       return killzone === "off"
-        ? "상위 구조가 롱 쪽으로 정렬돼 있습니다. 다만 지금은 킬존 밖이라 타이밍은 조금 더 가려보는 편이 좋습니다."
-        : `상위 구조가 롱 쪽으로 정렬돼 있고 현재 ${killzoneText} 킬존이라 롱 시나리오를 볼 시간대입니다.`;
+        ? "상위 구조가 상방 쪽으로 정렬돼 있습니다. 다만 지금은 킬존 밖이라 타이밍은 조금 더 가려보는 편이 좋습니다."
+        : `상위 구조가 상방 쪽으로 정렬돼 있고 현재 ${killzoneText} 킬존이라 상방 시나리오를 볼 시간대입니다.`;
     }
-    return "롱 쪽이 조금 더 우세하지만, 자리와 반응 확인이 아직 더 필요합니다.";
+    return "상방 쪽이 조금 더 우세하지만, 자리와 반응 확인이 아직 더 필요합니다.";
   }
 
   if (bias === "short") {
     if (active.choch === "bullish") {
-      return "큰 방향은 숏 쪽이지만 단기 구조가 먼저 들리고 있어서, 바로 누르기보다 재차 꺾이는지 보는 편이 좋습니다.";
+      return "큰 방향은 하방 쪽이지만 단기 구조가 먼저 들리고 있어서, 바로 판단하기보다 재차 꺾이는지 보는 편이 좋습니다.";
     }
     if (active.inFvg && active.latestFvg?.state === "ifvg" && active.latestFvg.direction === "bearish") {
       return "최근 상승 FVG가 뒤집혀 하락 iFVG로 작동하는 구간이라면, 저항 반응 확인이 더 중요합니다.";
     }
     if (active.premiumDiscount === "discount") {
-      return "숏 우세지만 디스카운트 구간이라 아래에서 무리하게 누르기보다 되돌림을 기다리는 편이 낫습니다.";
+      return "하방 우세지만 디스카운트 구간이라 아래에서 무리하게 추격하기보다 되돌림을 기다리는 편이 낫습니다.";
     }
     if (active.inOb && active.latestOb?.direction === "bearish") {
-      return "현재가가 하락 OB 안에 있어, 숏 관찰 구간으로 보기 좋은 자리입니다.";
+      return "현재가가 하락 OB 안에 있어, 하방 관찰 구간으로 보기 좋은 자리입니다.";
     }
     if (active.inFvg && active.latestFvg?.direction === "bearish") {
       return "하락 FVG 내부라면 되돌림 이후 저항 반응을 보는 쪽이 더 깔끔합니다.";
     }
     if (htfBearish >= 2) {
       return killzone === "off"
-        ? "상위 구조가 숏 쪽으로 정렬돼 있습니다. 다만 지금은 킬존 밖이라 타이밍은 조금 더 가려보는 편이 좋습니다."
-        : `상위 구조가 숏 쪽으로 정렬돼 있고 현재 ${killzoneText} 킬존이라 숏 시나리오를 볼 시간대입니다.`;
+        ? "상위 구조가 하방 쪽으로 정렬돼 있습니다. 다만 지금은 킬존 밖이라 타이밍은 조금 더 가려보는 편이 좋습니다."
+        : `상위 구조가 하방 쪽으로 정렬돼 있고 현재 ${killzoneText} 킬존이라 하방 시나리오를 볼 시간대입니다.`;
     }
-    return "숏 쪽이 조금 더 우세하지만, 자리와 반응 확인이 아직 더 필요합니다.";
+    return "하방 쪽이 조금 더 우세하지만, 자리와 반응 확인이 아직 더 필요합니다.";
   }
 
   if (active.msb !== "unknown") {
@@ -1850,24 +1850,24 @@ function buildActionGuide(bias: BiasSide, active: TimeframeAnalysis | undefined,
 
   if (readiness === "high") {
     if (bias === "long") {
-      return "롱 우세와 타이밍 조건이 비교적 같이 맞고 있습니다. 다만 추격보다 OB, FVG/iFVG, 눌림 반응과 무효화 조건 확인이 먼저입니다.";
+      return "상방 우세와 타이밍 조건이 비교적 같이 맞고 있습니다. 다만 추격보다 OB, FVG/iFVG, 눌림 반응과 무효화 조건 확인이 먼저입니다.";
     }
     if (bias === "short") {
-      return "숏 우세와 타이밍 조건이 비교적 같이 맞고 있습니다. 다만 아래에서 누르기보다 되돌림과 iFVG 저항 반응, 무효화 조건 확인이 먼저입니다.";
+      return "하방 우세와 타이밍 조건이 비교적 같이 맞고 있습니다. 다만 아래에서 무리하게 추격하기보다 되돌림과 iFVG 저항 반응, 무효화 조건 확인이 먼저입니다.";
     }
   }
 
   if (readiness === "medium") {
     if (bias === "long") {
-      return "롱 쪽 그림은 살아 있지만 아직 한두 가지가 덜 맞습니다. 추격보다 눌림, 재확인, 손절 기준이 먼저입니다.";
+      return "상방 쪽 그림은 살아 있지만 아직 한두 가지가 덜 맞습니다. 추격보다 눌림, 재확인, 손절 기준이 먼저입니다.";
     }
     if (bias === "short") {
-      return "숏 쪽 그림은 살아 있지만 아직 한두 가지가 덜 맞습니다. 바로 누르기보다 되돌림과 재차 꺾임 확인이 먼저입니다.";
+      return "하방 쪽 그림은 살아 있지만 아직 한두 가지가 덜 맞습니다. 바로 판단하기보다 되돌림과 재차 꺾임 확인이 먼저입니다.";
     }
   }
 
   if (bias === "neutral") {
-    return "관망 우위입니다. 억지로 롱이나 숏을 정하기보다 구조가 더 또렷해질 때까지 추적 조건을 확인하는 편이 낫습니다.";
+    return "관망 우위입니다. 억지로 상방이나 하방을 정하기보다 구조가 더 또렷해질 때까지 추적 조건을 확인하는 편이 낫습니다.";
   }
 
   return "구조는 보이지만 바로 판단하기엔 아직 성급할 수 있습니다. 자리, 반응, 리스크 기준을 먼저 확인하세요.";
@@ -1915,7 +1915,7 @@ function buildCheckpoints(active: TimeframeAnalysis | undefined) {
   }
 
   if (active.oteZone !== "none") {
-    checkpoints.push(`${active.timeframe} 현재 ${active.oteZone === "long" ? "롱" : "숏"} OTE 구간`);
+    checkpoints.push(`${active.timeframe} 현재 ${active.oteZone === "long" ? "상방" : "하방"} OTE 구간`);
   }
 
   if (!checkpoints.length) {
@@ -1957,11 +1957,11 @@ function buildCurrentLocationLabel(active: TimeframeAnalysis | undefined, bias: 
   }
 
   if (active.oteZone === "long") {
-    return "롱 OTE 구간";
+    return "상방 OTE 구간";
   }
 
   if (active.oteZone === "short") {
-    return "숏 OTE 구간";
+    return "하방 OTE 구간";
   }
 
   if (active.premiumDiscount === "premium" && bias === "long") {
@@ -1996,7 +1996,7 @@ function buildScenarioCard(
 
   if (!active) {
     return {
-      title: side === "long" ? "롱 시나리오" : "숏 시나리오",
+      title: side === "long" ? "상방 시나리오" : "하방 시나리오",
       summary: "데이터를 불러오는 중입니다.",
       blockers: []
     };
@@ -2011,11 +2011,11 @@ function buildScenarioCard(
   }
 
   if (active.premiumDiscount === "premium" && side === "long") {
-    blockers.push("프리미엄 구간이라 롱 추격은 불리합니다.");
+    blockers.push("프리미엄 구간이라 상방 추격은 불리합니다.");
   }
 
   if (active.premiumDiscount === "discount" && side === "short") {
-    blockers.push("디스카운트 구간이라 숏 추격은 불리합니다.");
+    blockers.push("디스카운트 구간이라 하방 추격은 불리합니다.");
   }
 
   if (killzone === "off") {
@@ -2033,28 +2033,28 @@ function buildScenarioCard(
   let summary = "";
   if (side === "long") {
     if (active.inOb && active.latestOb?.direction === "bullish") {
-      summary = "상승 OB 반응을 확인하는 롱 시나리오가 가장 자연스럽습니다.";
+      summary = "상승 OB 반응을 확인하는 상방 시나리오가 가장 자연스럽습니다.";
     } else if (active.inFvg && active.latestFvg?.direction === "bullish") {
-      summary = `${active.latestFvg.state === "ifvg" ? "iFVG" : "FVG"} 지지 반응을 보는 롱 시나리오를 검토할 수 있습니다.`;
+      summary = `${active.latestFvg.state === "ifvg" ? "iFVG" : "FVG"} 지지 반응을 보는 상방 시나리오를 검토할 수 있습니다.`;
     } else if (active.oteZone === "long") {
-      summary = "롱 OTE 구간이라 구조가 다시 붙는지 보는 시나리오가 유효합니다.";
+      summary = "상방 OTE 구간이라 구조가 다시 붙는지 보는 시나리오가 유효합니다.";
     } else {
-      summary = "롱 쪽 구조가 살아 있다면 눌림 뒤 재상승을 보는 시나리오가 기본입니다.";
+      summary = "상방 쪽 구조가 살아 있다면 눌림 뒤 재상승을 보는 시나리오가 기본입니다.";
     }
   } else {
     if (active.inOb && active.latestOb?.direction === "bearish") {
-      summary = "하락 OB 저항을 확인하는 숏 시나리오가 가장 자연스럽습니다.";
+      summary = "하락 OB 저항을 확인하는 하방 시나리오가 가장 자연스럽습니다.";
     } else if (active.inFvg && active.latestFvg?.direction === "bearish") {
-      summary = `${active.latestFvg.state === "ifvg" ? "iFVG" : "FVG"} 저항 반응을 보는 숏 시나리오를 검토할 수 있습니다.`;
+      summary = `${active.latestFvg.state === "ifvg" ? "iFVG" : "FVG"} 저항 반응을 보는 하방 시나리오를 검토할 수 있습니다.`;
     } else if (active.oteZone === "short") {
-      summary = "숏 OTE 구간이라 구조가 다시 눌리는지 보는 시나리오가 유효합니다.";
+      summary = "하방 OTE 구간이라 구조가 다시 눌리는지 보는 시나리오가 유효합니다.";
     } else {
-      summary = "숏 쪽 구조가 살아 있다면 되돌림 뒤 재하락을 보는 시나리오가 기본입니다.";
+      summary = "하방 쪽 구조가 살아 있다면 되돌림 뒤 재하락을 보는 시나리오가 기본입니다.";
     }
   }
 
   return {
-    title: side === "long" ? "롱 시나리오" : "숏 시나리오",
+    title: side === "long" ? "상방 시나리오" : "하방 시나리오",
     summary,
     blockers: blockers.slice(0, 4)
   };
@@ -2102,13 +2102,13 @@ function pickPlanZone(side: "long" | "short", active: TimeframeAnalysis, price: 
   if (active.oteZone === side && active.oteLevels) {
     return side === "long"
       ? {
-          label: `${active.timeframe} 롱 OTE`,
+          label: `${active.timeframe} 상방 OTE`,
           top: active.oteLevels.longHigh,
           bottom: active.oteLevels.longLow,
           kind: "ote"
         }
       : {
-          label: `${active.timeframe} 숏 OTE`,
+          label: `${active.timeframe} 하방 OTE`,
           top: active.oteLevels.shortHigh,
           bottom: active.oteLevels.shortLow,
           kind: "ote"
@@ -2222,7 +2222,7 @@ function buildTradePlanCandidate(
     mode: tradingMode,
     side,
     quality,
-    title: `${side === "long" ? "롱" : "숏"} 분석 시나리오`,
+    title: `${side === "long" ? "상방" : "하방"} 분석 시나리오`,
     entryLabel: zone.label,
     entryLow,
     entryHigh,
@@ -2258,7 +2258,7 @@ function buildOpportunityFlags(
     flags.push(active.latestFvg.state === "ifvg" ? "iFVG 반응 구간 안에 있음" : "FVG 반응 구간 안에 있음");
   }
   if ((bias === "long" && active.oteZone === "long") || (bias === "short" && active.oteZone === "short")) {
-    flags.push(`${bias === "long" ? "롱" : "숏"} OTE 구간`);
+    flags.push(`${bias === "long" ? "상방" : "하방"} OTE 구간`);
   }
   if ((bias === "long" && active.premiumDiscount === "discount") || (bias === "short" && active.premiumDiscount === "premium")) {
     flags.push(`${bias === "long" ? "디스카운트" : "프리미엄"} 위치`);
@@ -2291,12 +2291,12 @@ function buildRiskFlags(
     flags.push("상위 시간대 구조가 반대 방향");
   }
   if (bias !== "neutral" && active.choch === opposite) flags.push("현재 TF CHoCH가 반대로 먼저 꺾임");
-  if (bias === "long" && active.premiumDiscount === "premium") flags.push("롱 기준 프리미엄 추격 구간");
-  if (bias === "short" && active.premiumDiscount === "discount") flags.push("숏 기준 디스카운트 추격 구간");
+  if (bias === "long" && active.premiumDiscount === "premium") flags.push("상방 기준 프리미엄 추격 구간");
+  if (bias === "short" && active.premiumDiscount === "discount") flags.push("하방 기준 디스카운트 추격 구간");
   if (killzone === "off") flags.push("킬존 바깥 시간대");
   if (active.volumeProfile?.position === "near") flags.push("POC 근처 균형 구간");
-  if (bias === "long" && active.volumeProfile?.position === "below") flags.push("롱 기준 POC 아래 위치");
-  if (bias === "short" && active.volumeProfile?.position === "above") flags.push("숏 기준 POC 위 위치");
+  if (bias === "long" && active.volumeProfile?.position === "below") flags.push("상방 기준 POC 아래 위치");
+  if (bias === "short" && active.volumeProfile?.position === "above") flags.push("하방 기준 POC 위 위치");
   if (bias !== "neutral" && active.latestSweep?.direction === opposite && active.latestSweep.age <= 8) flags.push("최근 반대 방향 스윕 발생");
   if (bias !== "neutral" && active.latestCisd?.direction === opposite && active.latestCisd.age <= 8) flags.push("최근 반대 방향 CISD 발생");
   if (bias === "long" && active.inOb && active.latestOb?.direction === "bearish") flags.push("현재가가 하락 OB 안에 있음");
@@ -2553,7 +2553,7 @@ export function summarizeMarket(
   if (active && active.oteZone !== "none") {
     appendReason(
       reasons,
-      `${active.timeframe} ${active.oteZone === "long" ? "롱" : "숏"} OTE`,
+      `${active.timeframe} ${active.oteZone === "long" ? "상방" : "하방"} OTE`,
       active.oteZone === "long" ? "bullish" : "bearish"
     );
   }
@@ -2585,11 +2585,11 @@ export function summarizeMarket(
   }
 
   if (active?.premiumDiscount === "premium" && bias === "long") {
-    warnings.push("프리미엄 구간이라 롱 추격은 조심하는 편이 좋습니다.");
+    warnings.push("프리미엄 구간이라 상방 추격은 조심하는 편이 좋습니다.");
   }
 
   if (active?.premiumDiscount === "discount" && bias === "short") {
-    warnings.push("디스카운트 구간이라 숏 추격은 조심하는 편이 좋습니다.");
+    warnings.push("디스카운트 구간이라 하방 추격은 조심하는 편이 좋습니다.");
   }
 
   if (bias === "neutral") {
@@ -2601,11 +2601,11 @@ export function summarizeMarket(
   }
 
   if (active?.latestCisd?.direction === "bullish" && bias === "short") {
-    warnings.push("OB 내부에서 상승 CISD가 보입니다. 숏 확신은 한 번 줄여서 보는 편이 좋습니다.");
+    warnings.push("OB 내부에서 상승 CISD가 보입니다. 하방 확신은 한 번 줄여서 보는 편이 좋습니다.");
   }
 
   if (active?.latestCisd?.direction === "bearish" && bias === "long") {
-    warnings.push("OB 내부에서 하락 CISD가 보입니다. 롱 확신은 한 번 줄여서 보는 편이 좋습니다.");
+    warnings.push("OB 내부에서 하락 CISD가 보입니다. 상방 확신은 한 번 줄여서 보는 편이 좋습니다.");
   }
 
   let readinessScore = 0;
@@ -2656,7 +2656,7 @@ export function summarizeMarket(
     killzone,
     biasScore: Number(weightedScore.toFixed(2)),
     readiness,
-    verdict: bias === "long" ? "롱 시나리오 우세" : bias === "short" ? "숏 시나리오 우세" : "횡보 / 관찰",
+    verdict: bias === "long" ? "상방 시나리오 우세" : bias === "short" ? "하방 시나리오 우세" : "횡보 / 관찰",
     summaryLine: buildSummaryLine(bias, active, htf, killzone),
     actionGuide: buildActionGuide(bias, active, readiness),
     currentLocationLabel: buildCurrentLocationLabel(active, bias),

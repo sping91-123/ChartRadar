@@ -117,7 +117,7 @@ function classifyWatchlistSetup(setup: ScoutSetup): WatchlistFilterMeta {
 function watchlistJudgmentLabel(setup: ScoutSetup, meta: WatchlistFilterMeta) {
   if (meta.bucket === "danger") return "고위험";
   if (meta.bucket === "watch") return "관망 우위";
-  return setup.plan.side === "long" ? "롱 환경" : "숏 환경";
+  return setup.plan.side === "long" ? "상방 환경" : "하방 환경";
 }
 
 function WatchlistProCta() {
