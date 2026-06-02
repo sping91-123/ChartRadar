@@ -1,7 +1,7 @@
 "use client";
 // Pro 구독 플랜과 결제 시작 버튼을 보여주는 판매 패널입니다.
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
+import { Bell, BookOpen, CheckCircle2, Gauge, Loader2, ShieldAlert, ShieldCheck, Sparkles, type LucideIcon } from "lucide-react";
 import {
   type BillingEntitlementPlan,
   type BillingPlanId,
@@ -23,27 +23,29 @@ type CheckoutState =
   | { status: "restoring" }
   | { status: "message"; tone: "info" | "error"; text: string };
 
+type ValueCardTone = "info" | "watch" | "risk" | "long" | "locked";
+
 function scopeCopy(scope: BillingPageScope) {
   if (scope === "crypto") {
     return {
       eyebrow: "COIN PRO",
-      title: "Coin Pro 권한과 플랜을 확인합니다.",
-      body: "BTC/ETH·알트 추적 조건, 무효화 기준, 세부 리스크를 코인 시장 기준으로 정리합니다."
+      title: "Coin Pro에서 열리는 판단 근거",
+      body: "Basic은 오늘 결론과 핵심 리스크를 먼저 보여주고, Coin Pro는 코인 홈·현물·선물의 추적 조건, 무효화 기준, 세부 리스크까지 엽니다."
     };
   }
 
   if (scope === "stocks") {
     return {
       eyebrow: "GLOBAL PRO",
-      title: "Global Pro 권한과 플랜을 확인합니다.",
-      body: "미국장 30초 체크, 지수선물, 매크로 압력, 섹터 로테이션, 대장주 레이더를 한 화면에서 정리합니다."
+      title: "Global Pro에서 열리는 판단 근거",
+      body: "Basic은 미국장 30초 체크와 핵심 리스크를 보여주고, Global Pro는 먼저 볼 자산, 세부 근거, 지수선물·매크로·섹터 해석까지 엽니다."
     };
   }
 
   return {
     eyebrow: "ALL MARKET PRO",
-    title: "All Market Pro 권한과 플랜을 확인합니다.",
-    body: "Coin Pro와 Global Pro를 통합해 코인과 미국장을 함께 보는 사용자를 위한 판단 보조 흐름을 제공합니다."
+    title: "Pro에서 열리는 판단 근거",
+    body: "Basic은 오늘 결론과 핵심 리스크를 확인하는 흐름입니다. Pro는 추적 조건, 무효화 기준, 세부 근거를 열어 코인과 미국장을 함께 판단하도록 돕습니다."
   };
 }
 
@@ -69,6 +71,107 @@ function planScopeTone(plan: BillingPlan) {
 
 function AccessValue({ open }: { open: boolean }) {
   return <span className={open ? "text-ui-long" : "text-ui-locked"}>{open ? "열림" : "Basic"}</span>;
+}
+
+const planDepthRows: Array<{ label: string; value: string; detail: string; tone: ValueCardTone }> = [
+  {
+    label: "Basic",
+    value: "오늘 결론",
+    detail: "오늘 시장 상태, 핵심 리스크, 일부 후보를 먼저 확인합니다.",
+    tone: "locked"
+  },
+  {
+    label: "Coin Pro",
+    value: "코인 상세 판단",
+    detail: "코인 홈, 현물, 메이저 선물, 알트 선물의 추적 조건과 무효화 기준을 엽니다.",
+    tone: "info"
+  },
+  {
+    label: "Global Pro",
+    value: "미국장 상세 판단",
+    detail: "미국장 30초 체크 이후 먼저 볼 자산, 리스크 해석, 세부 근거를 엽니다.",
+    tone: "info"
+  },
+  {
+    label: "All Market Pro",
+    value: "통합 판단 흐름",
+    detail: "코인 리스크와 미국장 리스크를 함께 보는 가장 넓은 Pro 범위입니다.",
+    tone: "watch"
+  }
+];
+
+const proUnlockItems: Array<{ icon: LucideIcon; title: string; detail: string }> = [
+  {
+    icon: Gauge,
+    title: "추적 조건",
+    detail: "오늘 결론 뒤에 어떤 조건을 다시 확인해야 하는지 코인과 글로벌 화면에서 더 자세히 봅니다."
+  },
+  {
+    icon: ShieldAlert,
+    title: "무효화 기준",
+    detail: "후보나 시나리오를 계속 볼지 낮춰 볼지 판단하는 기준을 분리해서 확인합니다."
+  },
+  {
+    icon: BookOpen,
+    title: "세부 리스크",
+    detail: "변동성, 체결 흐름, 매크로 압력, 섹터와 대장주 흐름을 첫 결론 아래에서 나눠 봅니다."
+  },
+  {
+    icon: Bell,
+    title: "알림·복기 연결",
+    detail: "확인 조건을 알림과 복기 흐름으로 이어가며 같은 기준으로 다시 점검합니다."
+  }
+];
+
+const preSubscriptionNotes = [
+  "Pro는 판단 보조 범위를 넓히는 구독이며 특정 거래 권유가 아닙니다.",
+  "확인 조건과 세부 리스크를 더 자세히 보여주지만 결과를 보장하지 않습니다.",
+  "가격과 시장 데이터는 제공처, 갱신 주기, 실제 거래 화면에 따라 차이가 날 수 있습니다.",
+  "최종 판단과 책임은 사용자 본인에게 있습니다."
+];
+
+function ValueCard({
+  label,
+  value,
+  detail,
+  tone = "info"
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  tone?: ValueCardTone;
+}) {
+  return (
+    <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-4">
+      <StatusPill tone={tone}>{label}</StatusPill>
+      <p className="mt-2 text-base font-semibold leading-6 text-ui-text [word-break:keep-all]">{value}</p>
+      <p className="mt-2 text-ui-body leading-6 text-ui-muted [word-break:keep-all]">{detail}</p>
+    </PanelCard>
+  );
+}
+
+function ProUnlocksSection() {
+  return (
+    <section className="flex flex-col gap-3">
+      <SectionHeader
+        eyebrow="PRO UNLOCKS"
+        title="Pro에서 열리는 것"
+        description="가격보다 먼저 확인할 것은 Pro가 여는 판단 깊이입니다. 새 기능을 과장하지 않고, 이미 연결된 판단 보조 흐름을 기준으로 정리합니다."
+      />
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {proUnlockItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <PanelCard key={item.title} variant="flat" padding="none" className="border-t border-ui-line py-4">
+              <Icon size={18} className="text-ui-brand" aria-hidden />
+              <h3 className="mt-3 text-sm font-semibold text-ui-text">{item.title}</h3>
+              <p className="mt-2 text-ui-body leading-6 text-ui-muted [word-break:keep-all]">{item.detail}</p>
+            </PanelCard>
+          );
+        })}
+      </div>
+    </section>
+  );
 }
 
 function PlanCard({
@@ -241,14 +344,43 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
           <SectionHeader eyebrow={copy.eyebrow} title={copy.title} description={copy.body} />
           <StatusPill tone={session ? "info" : "locked"} className="self-start">{currentPlanLabel}</StatusPill>
         </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="border-t border-ui-line pt-3">
+            <StatusPill tone="locked">Basic</StatusPill>
+            <p className="mt-2 text-sm font-semibold leading-6 text-ui-text [word-break:keep-all]">오늘 결론과 핵심 리스크를 먼저 확인</p>
+          </div>
+          <div className="border-t border-ui-line pt-3">
+            <StatusPill tone="info">Pro</StatusPill>
+            <p className="mt-2 text-sm font-semibold leading-6 text-ui-text [word-break:keep-all]">추적 조건, 무효화 기준, 세부 근거까지 확인</p>
+          </div>
+          <div className="border-t border-ui-line pt-3">
+            <StatusPill tone="watch" icon={Sparkles}>All Market</StatusPill>
+            <p className="mt-2 text-sm font-semibold leading-6 text-ui-text [word-break:keep-all]">코인과 미국장을 함께 보는 통합 판단 흐름</p>
+          </div>
+        </div>
       </AppSurface>
+
+      <section className="flex flex-col gap-3">
+        <SectionHeader
+          eyebrow="BASIC VS PRO"
+          title="가격보다 먼저 보는 차이"
+          description="Basic은 첫 판단을 빠르게 보여주고, Pro는 그 판단이 왜 나왔는지와 언제 다시 봐야 하는지를 더 깊게 엽니다."
+        />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {planDepthRows.map((item) => (
+            <ValueCard key={item.label} label={item.label} value={item.value} detail={item.detail} tone={item.tone} />
+          ))}
+        </div>
+      </section>
+
+      <ProUnlocksSection />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
           <SectionHeader
             eyebrow="CURRENT PLAN"
             title="현재 이용 상태"
-            description="로그인된 계정의 Pro 권한과 Basic에서 확인 가능한 범위를 먼저 보여줍니다."
+            description="로그인된 계정에서 지금 열려 있는 시장 범위를 확인합니다."
           />
           <div className="mt-4">
             <DataRow label="현재 플랜" value={currentPlanLabel} detail={session ? "구독 권한은 계정 기준으로 적용됩니다." : "결제 전 Google 로그인이 필요합니다."} />
@@ -264,15 +396,14 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
 
         <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
           <SectionHeader
-            eyebrow="PLAN DIFFERENCE"
-            title="Basic과 Pro 차이"
-            description="Basic은 방향 요약 중심이고, Pro는 상세 근거와 리스크 세부 정보를 열어 확인하는 구조입니다."
+            eyebrow="WHY ALL MARKET"
+            title="All Market Pro가 자연스러운 경우"
+            description="코인만 보거나 미국장만 보는 날도 있지만, 리스크가 커지는 날에는 두 시장을 같이 확인하는 편이 판단 흐름이 더 끊기지 않습니다."
           />
           <div className="mt-4">
-            <DataRow label="Basic" value="방향 요약" detail="상세 조건, 무효화 기준, 세부 리스크는 제한됩니다." />
-            <DataRow label="Coin Pro" value="코인 상세" detail="BTC/ETH·알트 리스크, 추적 조건, 무효화 기준." />
-            <DataRow label="Global Pro" value="미국장 상세" detail="지수선물, 매크로 압력, 섹터 로테이션, 대장주 레이더." />
-            <DataRow label="All Market" value="전체 시장" detail="Coin Pro + Global Pro 통합 권한." />
+            <DataRow label="코인 리스크" value="Coin Pro" detail="코인 홈, 현물, 메이저 선물, 알트 선물의 세부 조건을 확인합니다." />
+            <DataRow label="미국장 리스크" value="Global Pro" detail="지수선물, 달러·금리, 섹터와 대장주 흐름을 확인합니다." />
+            <DataRow label="통합 판단" value="All Market" detail="두 시장이 같은 방향으로 리스크를 키우는지 함께 확인합니다." />
           </div>
         </PanelCard>
       </div>
@@ -285,7 +416,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
       ) : null}
 
       <div className="flex flex-col gap-3">
-        <SectionHeader eyebrow="AVAILABLE PLANS" title="선택 가능한 Pro 플랜" description="가격과 권한 범위를 확인한 뒤 필요한 시장만 선택할 수 있습니다." />
+        <SectionHeader eyebrow="AVAILABLE PLANS" title="현재 플랜과 가격 선택" description="표시된 가격과 결제 버튼은 기존 플랜 정보를 그대로 사용합니다. 필요한 시장 범위만 선택하세요." />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {paidPlans.map((plan) => (
             <PlanCard
@@ -313,6 +444,12 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
           <h3 className="text-ui-title font-semibold text-ui-text">구독 전 확인할 점</h3>
         </div>
         <ul className="mt-3 space-y-2 text-ui-body text-ui-muted">
+          {preSubscriptionNotes.map((note) => (
+            <li key={note} className="flex gap-2 [word-break:keep-all]">
+              <span className="text-ui-subtle" aria-hidden>·</span>
+              <span>{note}</span>
+            </li>
+          ))}
           {subscriptionTrustNotes.map((note) => (
             <li key={note} className="flex gap-2 [word-break:keep-all]">
               <span className="text-ui-subtle" aria-hidden>·</span>
