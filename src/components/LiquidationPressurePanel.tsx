@@ -2,6 +2,7 @@
 // Binance 공개 데이터로 변동성 압력과 고배율 위험 거리를 설명하는 코인 전용 패널입니다.
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowDown, ArrowUp, Gauge, Loader2 } from "lucide-react";
+import { RadarScanLoader } from "@/components/RadarScanLoader";
 import { CompactHelp } from "@/components/ui/CompactHelp";
 import type { ChartTimeframe } from "@/lib/marketAnalysis";
 import type { LiquidationPressureReport, LiquidationPressureSide } from "@/lib/liquidationPressure";
@@ -154,7 +155,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
     return (
       <section className="border-y border-accent-blue/20 py-4">
         <div className="flex items-center gap-3">
-          <div className="radar-mark h-12 w-12 border border-accent-blue/30" />
+          <RadarScanLoader size="sm" />
           <div>
             <p className="text-xs font-black tracking-widest text-accent-blue">변동성 압력</p>
             <h3 className="mt-1 text-lg font-black text-white">변동성 압력 확인 중</h3>
@@ -189,7 +190,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
     <section className="border-y border-accent-blue/20 py-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-3">
-          <div className="radar-mark h-14 w-14 shrink-0 border border-accent-blue/30" />
+          <RadarScanLoader size="sm" className="shrink-0" />
           <div>
             <p className="text-xs font-black tracking-widest text-accent-blue">변동성 압력</p>
             <div className="mt-1 flex items-center gap-2">

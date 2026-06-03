@@ -59,6 +59,7 @@ import { CryptoChartPanel } from "@/components/crypto/CryptoChartPanel";
 import { CryptoControlBar } from "@/components/crypto/CryptoControlBar";
 import { CryptoChartLoadingOverlay, CryptoErrorState } from "@/components/crypto/CryptoFallbackState";
 import { HighlightedBriefing } from "@/components/crypto/HighlightedBriefing";
+import { RadarScanLoader } from "@/components/RadarScanLoader";
 import {
   buildMarketCacheKey,
   fetchCryptoSymbolList,
@@ -1967,7 +1968,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               {marketBriefing.status === "loading" ? (
                 <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 px-4">
                   <div className="w-full max-w-sm rounded-2xl border border-accent-blue/25 bg-slate-950 p-6 text-center shadow-none">
-                    <div className="radar-mark-lg mx-auto h-36 w-36 border border-accent-blue/30" />
+                    <RadarScanLoader size="lg" label="레이더가 시장 조건을 스캔하는 중입니다." className="mx-auto" />
                     <p className="mt-5 text-base font-black text-white">AI 레이더 스캔 중</p>
                     <p className="mt-2 text-sm leading-6 text-slate-400">
                       {radarProfile === "technical"

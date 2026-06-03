@@ -524,11 +524,8 @@ html.theme-light body {
   inset: 0;
   display: grid;
   place-items: center;
-  content: "C";
+  content: "";
   background: transparent;
-  color: #4f7cff;
-  font-weight: 700;
-  font-size: 1rem;
   opacity: 1;
   z-index: 0;
 }
@@ -558,11 +555,8 @@ html.theme-light body {
   inset: 0;
   display: grid;
   place-items: center;
-  content: "C";
+  content: "";
   background: transparent;
-  color: #4f7cff;
-  font-weight: 700;
-  font-size: 2.75rem;
   opacity: 1;
   z-index: 0;
 }
@@ -570,6 +564,84 @@ html.theme-light body {
 .radar-mark-lg::after {
   content: "";
   display: none;
+}
+
+.radar-scan-loader {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at center, rgba(14, 165, 233, 0.28) 0 8%, transparent 9% 100%),
+    radial-gradient(circle at center, transparent 0 31%, rgba(56, 189, 248, 0.44) 32% 34%, transparent 35% 57%, rgba(37, 99, 235, 0.42) 58% 60%, transparent 61%),
+    linear-gradient(145deg, rgba(2, 6, 23, 0.98), rgba(8, 13, 28, 0.98));
+  border: 1px solid rgba(56, 189, 248, 0.36);
+  box-shadow: inset 0 0 28px rgba(14, 165, 233, 0.1);
+}
+
+.radar-scan-loader::before,
+.radar-scan-loader::after {
+  position: absolute;
+  inset: 18%;
+  content: "";
+  border-radius: 9999px;
+  border: 1px solid rgba(125, 211, 252, 0.2);
+}
+
+.radar-scan-loader::after {
+  inset: 34%;
+  border-color: rgba(59, 130, 246, 0.28);
+}
+
+.radar-scan-loader__beam {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: conic-gradient(from 0deg, rgba(34, 211, 238, 0.48) 0deg, rgba(37, 99, 235, 0.18) 30deg, transparent 48deg 360deg);
+  mix-blend-mode: screen;
+  animation: radar-loader-spin 1.8s linear infinite;
+}
+
+.radar-scan-loader__pulse {
+  position: absolute;
+  inset: 22%;
+  border-radius: 9999px;
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  animation: radar-loader-pulse 1.8s ease-out infinite;
+}
+
+.radar-scan-loader__dot {
+  position: relative;
+  z-index: 2;
+  width: 12%;
+  height: 12%;
+  min-width: 5px;
+  min-height: 5px;
+  border-radius: 9999px;
+  background: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.52);
+}
+
+@keyframes radar-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes radar-loader-pulse {
+  0% {
+    opacity: 0.6;
+    transform: scale(0.72);
+  }
+  70% {
+    opacity: 0.08;
+    transform: scale(1.25);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.34);
+  }
 }
 
 .radar-scan-line {
