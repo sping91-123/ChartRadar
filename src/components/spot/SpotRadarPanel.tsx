@@ -1085,8 +1085,29 @@ export function SpotRadarPanel() {
     selectWatchMarket(market);
   }
 
+  const personalSpotPanel = (
+    <PersonalSpotPanel
+      exchange={exchange}
+      payload={payload}
+      selectedMarket={watchMarket}
+      query={watchQuery}
+      suggestions={watchSuggestions}
+      chart={watchChart}
+      loading={isWatchChartLoading}
+      error={watchChartError}
+      isPickerOpen={isWatchPickerOpen}
+      onQueryChange={setWatchQuery}
+      onSelectMarket={selectWatchMarket}
+      onSubmit={submitWatchSearch}
+      onOpenPicker={openWatchPicker}
+      onClosePicker={closeWatchPicker}
+    />
+  );
+
   return (
     <div className="flex flex-col gap-4">
+      {watchMarket ? personalSpotPanel : null}
+
       <SpotPriorityPanel
         payload={payload}
         chartPayload={chartPayload}
@@ -1152,22 +1173,7 @@ export function SpotRadarPanel() {
         )}
       </PanelCard>
 
-      <PersonalSpotPanel
-        exchange={exchange}
-        payload={payload}
-        selectedMarket={watchMarket}
-        query={watchQuery}
-        suggestions={watchSuggestions}
-        chart={watchChart}
-        loading={isWatchChartLoading}
-        error={watchChartError}
-        isPickerOpen={isWatchPickerOpen}
-        onQueryChange={setWatchQuery}
-        onSelectMarket={selectWatchMarket}
-        onSubmit={submitWatchSearch}
-        onOpenPicker={openWatchPicker}
-        onClosePicker={closeWatchPicker}
-      />
+      {watchMarket ? null : personalSpotPanel}
     </div>
   );
 }
