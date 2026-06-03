@@ -6,7 +6,7 @@ import { useState } from "react";
 import { ArrowLeft, CheckCircle2, Crown, LogIn, LogOut, ShieldCheck, Trash2, UserCircle, UserPlus } from "lucide-react";
 import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
-import { getEntitlementLabel, hasAnyPaidEntitlement } from "@/lib/billing";
+import { getEntitlementLabel, hasAnyPaidEntitlement, hasMarketEntitlement } from "@/lib/billing";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 function formatAccountDate(value?: string | null) {
@@ -37,12 +37,96 @@ function AccountInfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function MarketAccessRow({
+  label,
+  isOpen,
+  description
+}: {
+  label: string;
+  isOpen: boolean;
+  description: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3 border-t border-surface-line py-3 first:border-t-0">
+      <div className="min-w-0">
+        <p className="text-sm font-black text-white">{label}</p>
+        <p className="mt-1 text-xs leading-5 text-slate-400 [word-break:keep-all]">{description}</p>
+      </div>
+      <span
+        className={`inline-flex min-h-7 shrink-0 items-center rounded-full border px-2.5 text-xs font-black ${
+          isOpen ? "border-cyan-300/35 bg-cyan-300/10 text-cyan-100" : "border-white/10 bg-white/[0.03] text-slate-400"
+        }`}
+      >
+        {isOpen ? "열림" : "Basic"}
+      </span>
+    </div>
+  );
+}
+
+function AccountPlanSection({
+  planLabel,
+  isPaid,
+  hasCryptoAccess,
+  hasGlobalAccess
+}: {
+  planLabel: string;
+  isPaid: boolean;
+  hasCryptoAccess: boolean;
+  hasGlobalAccess: boolean;
+}) {
+  const enabledScopes = [hasCryptoAccess ? "코인" : null, hasGlobalAccess ? "글로벌" : null].filter(Boolean).join(" · ");
+
+  return (
+    <section className="border-y border-cyan-300/20 py-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-xs font-bold text-cyan-200">현재 플랜</p>
+          <p className="mt-1 text-xl font-black text-white">{planLabel}</p>
+          <p className="mt-2 text-sm leading-6 text-slate-400 [word-break:keep-all]">
+            {isPaid ? `${enabledScopes || "Pro"} 권한이 현재 계정에 열려 있습니다.` : "Basic은 오늘 결론과 핵심 리스크 중심으로 확인합니다."}
+          </p>
+        </div>
+        {!isPaid ? (
+          <Link
+            href="/pro"
+            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-cyan-300/35 bg-cyan-300 px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-cyan-200"
+          >
+            <Crown size={16} aria-hidden />
+            Pro 범위 보기
+          </Link>
+        ) : null}
+      </div>
+
+      <div className="mt-4 border-y border-surface-line">
+        <MarketAccessRow
+          label="Coin Pro 권한"
+          isOpen={hasCryptoAccess}
+          description="Coin Pro에서는 코인 홈, 현물, 선물 화면의 세부 근거, 추적 조건, 무효화 기준을 확인합니다."
+        />
+        <MarketAccessRow
+          label="Global Pro 권한"
+          isOpen={hasGlobalAccess}
+          description="Global Pro에서는 미국장 30초 체크의 세부 근거, 먼저 볼 자산, 리스크 해석을 확인합니다."
+        />
+      </div>
+
+      {isPaid ? (
+        <p className="mt-3 text-xs leading-5 text-slate-500 [word-break:keep-all]">
+          알림과 복기는 화면에서 제공되는 조건 확인과 기록 흐름에 맞춰 함께 사용합니다.
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 export default function AccountPage() {
   const { user, profile, isLoading, signOut } = useSupabaseAuth();
   const [confirmedDeleteGuide, setConfirmedDeleteGuide] = useState(false);
   const plan = profile?.plan ?? "free";
   const isPaid = hasAnyPaidEntitlement(plan);
   const planLabel = getEntitlementLabel(plan);
+  const hasCryptoAccess = hasMarketEntitlement(plan, "crypto");
+  const hasGlobalAccess = hasMarketEntitlement(plan, "stocks");
   const email = user?.email ?? profile?.email ?? null;
   const provider = user?.app_metadata?.provider ?? user?.app_metadata?.providers?.[0] ?? null;
   const isAdmin = profile?.plan === "admin" || user?.app_metadata?.role === "admin" || user?.app_metadata?.plan === "admin";
@@ -112,10 +196,17 @@ export default function AccountPage() {
                   <AccountInfoRow label="로그인 상태" value="로그인 상태입니다." />
                   <AccountInfoRow label="이메일" value={email ?? "이메일 정보 없음"} />
                   <AccountInfoRow label="계정 유형" value={providerLabel(provider)} />
-                  <AccountInfoRow label="현재 베타/Pro 상태" value={`${planLabel}${isPaid ? " 활성" : " 이용 중"} · 베타 이용 가능`} />
+                  <AccountInfoRow label="현재 플랜" value={planLabel} />
                   {createdAt ? <AccountInfoRow label="가입일" value={createdAt} /> : null}
                   {lastSignInAt ? <AccountInfoRow label="마지막 로그인" value={lastSignInAt} /> : null}
                 </section>
+
+                <AccountPlanSection
+                  planLabel={planLabel}
+                  isPaid={isPaid}
+                  hasCryptoAccess={hasCryptoAccess}
+                  hasGlobalAccess={hasGlobalAccess}
+                />
                 {isAdmin ? (
                   <section className="border-y border-amber-300/25 bg-amber-300/10 py-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
