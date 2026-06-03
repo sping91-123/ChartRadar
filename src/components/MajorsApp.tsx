@@ -30,7 +30,7 @@ export function MajorsApp() {
           <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">시장 환경 참고</p>
           <h2 className="mt-1 text-ui-heading font-semibold tracking-tight text-ui-text">선물 방향보다 배경 리스크로 봅니다</h2>
           <p className="mt-1 text-ui-body text-ui-muted [word-break:keep-all]">
-            스테이블코인 유동성, BTC 온체인 혼잡, 옵션 예상 변동은 BTC/ETH 직접 선물 신호가 아니라 시장 전체 환경을 보조 확인하는 값입니다.
+            스테이블코인 유동성, BTC 온체인 혼잡, 옵션 예상 변동은 BTC/ETH 선물 판단을 보조하는 시장 환경 값입니다.
           </p>
         </section>
         <CoinStablecoinLiquidityPanel />

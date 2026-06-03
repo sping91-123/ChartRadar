@@ -85,7 +85,7 @@ export function CoinStablecoinLiquidityPanel() {
         title="스테이블코인 유동성 참고"
         description={
           report?.summary
-            ? `${report.summary} 선물 직접 신호가 아니라 시장 전체 환경 참고값입니다.`
+            ? `${report.summary} 선물 판단을 보조하는 시장 전체 환경 참고값입니다.`
             : "시장 전체 유동성 배경을 보조 확인하는 중입니다."
         }
         action={
