@@ -15,6 +15,9 @@ const checks = [
   { label: "코인 복기", path: "/crypto/review" },
   { label: "일정", path: "/schedule?market=crypto" },
   { label: "메뉴", path: "/menu" },
+  { label: "회원정보관리", path: "/account" },
+  { label: "용어 안내", path: "/learn" },
+  { label: "자주 묻는 질문", path: "/faq" },
   { label: "기존 메이저 주소 리다이렉트", path: "/majors", expectedStatus: [200, 307, 308] },
   { label: "기존 알트코인 주소 리다이렉트", path: "/alts", expectedStatus: [200, 307, 308] },
   { label: "글로벌", path: "/global" },
@@ -64,7 +67,7 @@ const checks = [
     body: {
       planId: "crypto_monthly",
       orderId: "cr_crypto_monthly_smoke",
-      amount: 39000,
+      amount: 29000,
       paymentKey: "smoke_payment_key"
     },
     expectedStatus: [401]

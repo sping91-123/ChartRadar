@@ -1,13 +1,14 @@
 // Chart Radar에서 사용하는 주요 지표와 구조 판독 기준을 카테고리별로 안내합니다.
 import type { Metadata } from "next";
-import { Activity, ArrowLeft, BarChart3, Bell, BookOpen, ChevronDown, Gauge, Globe2, Newspaper, ShieldAlert, Sparkles } from "lucide-react";
+import { Activity, BarChart3, Bell, BookOpen, ChevronDown, Gauge, Globe2, Newspaper, ShieldAlert, Sparkles } from "lucide-react";
 import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
-import { ActionButton, AppSurface, DataRow, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
+import { HistoryBackButton } from "@/components/HistoryBackButton";
+import { AppSurface, DataRow, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 
 export const metadata: Metadata = {
-  title: "지표 안내",
-  description: "Chart Radar 주요 지표, 판단 강도, 레이더 용어 안내"
+  title: "용어 안내",
+  description: "Chart Radar 주요 지표와 시장별 용어 안내"
 };
 
 const guideCategories = [
@@ -299,15 +300,12 @@ export default function LearnPage() {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
         <Header />
 
-        <ActionButton href="/" tone="ghost" className="w-fit">
-          <ArrowLeft size={16} aria-hidden />
-          홈으로 돌아가기
-        </ActionButton>
+        <HistoryBackButton className="w-fit" />
 
         <AppSurface variant="report" tone="panel" padding="lg" className="space-y-5">
           <SectionHeader
             eyebrow="Learn Center"
-            title="용어 사전"
+            title="용어 안내"
             description="궁금한 분야를 먼저 고른 뒤 필요한 용어만 펼쳐서 확인하세요. 모든 설명은 방향을 단정하지 않는 판단 보조 기준입니다."
             action={<StatusPill tone="info">{guideCategories.length}개 카테고리</StatusPill>}
           />
