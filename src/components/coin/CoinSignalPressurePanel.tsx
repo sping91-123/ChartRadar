@@ -17,10 +17,10 @@ export interface CoinSignalPressureItem {
   value?: string;
 }
 
-type FuturesPressureMode = "major" | "alts";
+export type FuturesPressureMode = "major" | "alts";
 type LoadStatus = "idle" | "loading" | "ready" | "error";
 
-type FuturesSymbolInfo = {
+export type FuturesSymbolInfo = {
   symbol: string;
   label: string;
 };
@@ -237,9 +237,10 @@ export function CoinSignalPressurePanel({
   );
 }
 
-export function CoinFuturesSignalPressurePanel({ mode }: { mode: FuturesPressureMode }) {
+export function CoinFuturesSignalPressurePanel({ mode, symbols: customSymbols }: { mode: FuturesPressureMode; symbols?: FuturesSymbolInfo[] }) {
   const isAltMode = mode === "alts";
-  const symbols = useMemo(() => futuresSymbols[mode], [mode]);
+  const symbols = useMemo(() => (customSymbols?.length ? customSymbols : futuresSymbols[mode]), [customSymbols, mode]);
+  const symbolLabelText = useMemo(() => symbols.map((item) => item.label).join(", "), [symbols]);
   const [status, setStatus] = useState<LoadStatus>("idle");
   const [reports, setReports] = useState<LiquidationPressureReport[]>([]);
   const [error, setError] = useState("");
@@ -247,6 +248,7 @@ export function CoinFuturesSignalPressurePanel({ mode }: { mode: FuturesPressure
   const loadReports = useCallback(async () => {
     setStatus("loading");
     setError("");
+    setReports([]);
     const results = await Promise.allSettled(symbols.map((item) => fetchPressure(item.symbol)));
     const nextReports = results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
 
@@ -351,7 +353,7 @@ export function CoinFuturesSignalPressurePanel({ mode }: { mode: FuturesPressure
 
       <CompactHelp label="데이터 기준">
         {isAltMode
-          ? "Binance 공개 선물 데이터에서 SOL, XRP, DOGE, BNB의 미결제약정, 펀딩비, 상방·하방 포지션 비율, 시장가 유입·이탈 쏠림을 묶어 과열과 흔들림 위험만 빠르게 보여줍니다."
+          ? `Binance 공개 선물 데이터에서 ${symbolLabelText}의 미결제약정, 펀딩비, 상방·하방 포지션 비율, 시장가 유입·이탈 쏠림을 묶어 과열과 흔들림 위험만 빠르게 보여줍니다.`
           : "Binance 공개 선물 데이터에서 BTC와 ETH의 미결제약정, 펀딩비, 상방·하방 포지션 비율, 시장가 유입·이탈 쏠림을 묶어 과열과 흔들림 위험만 빠르게 보여줍니다."}
       </CompactHelp>
     </PanelCard>

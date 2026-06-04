@@ -1,7 +1,6 @@
 import { CoinFuturesSwitch } from "@/components/coin/CoinFuturesSwitch";
 import { CoinFuturesBrief } from "@/components/coin/CoinFuturesBrief";
-import { CoinLargeTradeFlowPanel } from "@/components/coin/CoinLargeTradeFlowPanel";
-import { CoinFuturesSignalPressurePanel } from "@/components/coin/CoinSignalPressurePanel";
+import { AltFuturesSignalSection } from "@/components/coin/AltFuturesSignalSection";
 import { CoinStablecoinLiquidityPanel } from "@/components/coin/CoinStablecoinLiquidityPanel";
 import { CoinUnlockPressurePanel } from "@/components/coin/CoinUnlockPressurePanel";
 import { Header } from "@/components/Header";
@@ -18,15 +17,7 @@ export default function CryptoPerpetualAltsPage() {
         <RadarTopNav />
         <CoinFuturesSwitch active="alts" />
         <CoinFuturesBrief mode="alts" />
-        <section className="pt-1">
-          <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">앱이 감지한 알트 직접 신호</p>
-          <h2 className="mt-1 text-ui-heading font-semibold tracking-tight text-ui-text">알트 쏠림, 큰 체결, 언락 부담을 먼저 확인합니다</h2>
-          <p className="mt-1 text-ui-body text-ui-muted [word-break:keep-all]">
-            알트 선물 화면은 SOL, XRP, DOGE, BNB의 포지션 쏠림, 큰 체결 흐름, 언락·변동성 부담을 우선 분리합니다.
-          </p>
-        </section>
-        <CoinFuturesSignalPressurePanel mode="alts" />
-        <CoinLargeTradeFlowPanel mode="alts" />
+        <AltFuturesSignalSection />
         <CoinUnlockPressurePanel />
         <section className="pt-1">
           <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">시장 환경 참고</p>

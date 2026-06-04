@@ -6,10 +6,10 @@ import type { LargeTradeAnomalyLevel, LargeTradeFlowReport, LargeTradeSide } fro
 import { ActionButton, AppSurface, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import { CompactHelp } from "@/components/ui/CompactHelp";
 
-type LargeTradeMode = "major" | "alts";
+export type LargeTradeMode = "major" | "alts";
 type LoadStatus = "idle" | "loading" | "ready" | "error";
 
-type SymbolInfo = {
+export type LargeTradeSymbolInfo = {
   symbol: string;
   label: string;
 };
@@ -19,7 +19,7 @@ type LargeTradePayload = {
   error?: string;
 };
 
-const flowSymbols: Record<LargeTradeMode, SymbolInfo[]> = {
+const flowSymbols: Record<LargeTradeMode, LargeTradeSymbolInfo[]> = {
   major: [
     { symbol: "BTCUSDT", label: "BTC" },
     { symbol: "ETHUSDT", label: "ETH" }
@@ -101,9 +101,10 @@ async function fetchLargeTradeFlow(symbol: string) {
   return payload.report;
 }
 
-export function CoinLargeTradeFlowPanel({ mode }: { mode: LargeTradeMode }) {
+export function CoinLargeTradeFlowPanel({ mode, symbols: customSymbols }: { mode: LargeTradeMode; symbols?: LargeTradeSymbolInfo[] }) {
   const isAltMode = mode === "alts";
-  const symbols = useMemo(() => flowSymbols[mode], [mode]);
+  const symbols = useMemo(() => (customSymbols?.length ? customSymbols : flowSymbols[mode]), [customSymbols, mode]);
+  const symbolLabelText = useMemo(() => symbols.map((item) => item.label).join(", "), [symbols]);
   const [status, setStatus] = useState<LoadStatus>("idle");
   const [reports, setReports] = useState<LargeTradeFlowReport[]>([]);
   const [error, setError] = useState("");
@@ -111,6 +112,7 @@ export function CoinLargeTradeFlowPanel({ mode }: { mode: LargeTradeMode }) {
   const loadReports = useCallback(async () => {
     setStatus("loading");
     setError("");
+    setReports([]);
     const results = await Promise.allSettled(symbols.map((item) => fetchLargeTradeFlow(item.symbol)));
     const nextReports = results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
 
@@ -213,7 +215,7 @@ export function CoinLargeTradeFlowPanel({ mode }: { mode: LargeTradeMode }) {
 
       <CompactHelp label="데이터 기준">
         {isAltMode
-          ? "Binance 공개 선물 체결에서 SOL, XRP, DOGE, BNB의 최근 aggregate trades를 읽어 큰 체결 방향과 반복·교대 체결 징후를 함께 봅니다. 계정 식별은 없으므로 이상 체결 가능성만 표시합니다."
+          ? `Binance 공개 선물 체결에서 ${symbolLabelText}의 최근 aggregate trades를 읽어 큰 체결 방향과 반복·교대 체결 징후를 함께 봅니다. 계정 식별은 없으므로 이상 체결 가능성만 표시합니다.`
           : "Binance 공개 선물 체결에서 BTC와 ETH의 최근 aggregate trades를 읽어 큰 체결 방향과 반복·교대 체결 징후를 함께 봅니다. 계정 식별은 없으므로 이상 체결 가능성만 표시합니다."}
       </CompactHelp>
     </PanelCard>
