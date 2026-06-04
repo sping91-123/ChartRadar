@@ -272,7 +272,7 @@ function compactSymbol(symbol: string) {
 
 function presetSideLabel(side: SetupAlertPreset["side"], market: AlertMarket = "crypto") {
   if (market === "stocks") return side === "long" ? "상승 우세" : "하락 우세";
-  return side === "long" ? "롱 우세" : "숏 우세";
+  return side === "long" ? "상방 우세" : "하방 우세";
 }
 
 function formatSavedAt(ms: number) {

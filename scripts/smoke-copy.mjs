@@ -42,6 +42,12 @@ const blockedPhrases = [
 ];
 const advisoryBlockedPhrases = ["수익 보장", "확정 신호", "반드시 상승", "반드시 하락", "매수하세요", "매도하세요"];
 const apiCopyFiles = ["src/app/api/radar-news/route.ts"];
+const alertCopyFiles = [
+  "src/lib/radarAlerts.ts",
+  "src/components/RadarAlertCenter.tsx",
+  "src/lib/server/push/eventBuilders.ts"
+];
+const alertBlockedPhrases = ["롱 우세", "숏 우세", "롱/숏 비율", "청산 압력", "추격 진입"];
 
 const brokenPatterns = ["�", "媛", "肄", "湲", "덉", "쒖", "뺤", "釉", "諛", "留", "寃", "怨", "臾", "濡"];
 
@@ -82,6 +88,15 @@ for (const file of files) {
 for (const file of apiCopyFiles) {
   const source = readFileSync(path.join(root, file), "utf8");
   for (const phrase of advisoryBlockedPhrases) {
+    if (source.includes(phrase)) {
+      failures.push({ file, phrase });
+    }
+  }
+}
+
+for (const file of alertCopyFiles) {
+  const source = readFileSync(path.join(root, file), "utf8");
+  for (const phrase of alertBlockedPhrases) {
     if (source.includes(phrase)) {
       failures.push({ file, phrase });
     }

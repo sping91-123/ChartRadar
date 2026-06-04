@@ -38,12 +38,12 @@ export const radarAlertRules: RadarAlertRule[] = [
     id: "liquidation-pressure",
     category: "crypto",
     tier: "pro",
-    title: "청산 압력 급등",
-    shortTitle: "청산 압력",
-    description: "롱/숏 비율, OI 변화, 체결 쏠림이 함께 과열될 때 알려줍니다.",
-    trigger: "청산 압력 레이더가 과열 또는 극단 구간에 진입하면 리스크 확인 알림을 보냅니다.",
+    title: "포지션 압력 확대",
+    shortTitle: "포지션 압력",
+    description: "상방/하방 포지션 쏠림, OI 변화, 체결 쏠림이 함께 과열될 때 알려줍니다.",
+    trigger: "포지션 압력 레이더가 과열 또는 극단 구간에 들어서면 리스크 확인 알림을 보냅니다.",
     cadence: "15분 단위 확인",
-    value: "추격 진입과 고배율 구간을 피해야 할 때를 더 빨리 알아차릴 수 있습니다.",
+    value: "추격 주의와 고변동성 구간을 더 빨리 확인할 수 있습니다.",
     defaultEnabled: true
   },
   {
