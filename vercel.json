@@ -4,6 +4,9 @@
     "src/app/api/liquidation-pressure/route.ts": {
       "regions": ["icn1"]
     },
+    "src/app/api/large-trade-flow/route.ts": {
+      "regions": ["icn1"]
+    },
     "src/app/api/push-cron/route.ts": {
       "regions": ["icn1"]
     },
