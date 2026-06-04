@@ -7,6 +7,7 @@ const allowedPushTargetPaths = new Set([
   "/alts",
   "/global",
   "/global/assets",
+  "/schedule",
   "/news?market=global",
   "/news?market=crypto",
   "/journal?market=global",
