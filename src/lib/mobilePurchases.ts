@@ -246,6 +246,25 @@ async function purchaseMatchedProduct(params: NativePurchaseParams & { platform:
       : Purchases.purchaseStoreProduct({ product: params.product });
 }
 
+async function purchaseOfferingPackage(params: NativePurchaseParams & { platform: NativePurchasePlatform; aPackage: PurchasesPackage }) {
+  const Purchases = await getRevenueCatPurchases();
+  const { productId, basePlanId } = getNativeStoreProductIds(params.plan);
+  const subscriptionOption = params.platform === "android" ? findSubscriptionOption(params.aPackage.product, params.plan) : null;
+  logNativePurchase("matched base plan id", {
+    planId: params.plan.id,
+    basePlanId,
+    matched: params.platform !== "android" || Boolean(subscriptionOption),
+    optionCount: params.aPackage.product.subscriptionOptions?.length ?? 0
+  });
+  logNativePurchase("purchasePackage start", {
+    planId: params.plan.id,
+    productId,
+    basePlanId,
+    packageId: params.aPackage.identifier
+  });
+  return Purchases.purchasePackage({ aPackage: params.aPackage });
+}
+
 export async function purchaseNativePlan(params: NativePurchaseParams) {
   const platform = getNativePurchasePlatform();
   if (!platform) throw new NativePurchaseError("native_unavailable", "Native purchases are not available on this platform.");
@@ -278,7 +297,7 @@ export async function purchaseNativePlan(params: NativePurchaseParams) {
         basePlanId,
         packageId: offeringPackage.identifier
       });
-      result = await purchaseMatchedProduct({ ...params, platform, product: offeringPackage.product, aPackage: offeringPackage });
+      result = await purchaseOfferingPackage({ ...params, platform, aPackage: offeringPackage });
     } else {
       warnNativePurchase("offering package not found, falling back to getProducts", {
         planId: params.plan.id,
