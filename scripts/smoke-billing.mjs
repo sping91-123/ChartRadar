@@ -318,6 +318,11 @@ expectIncludes(files.mobilePurchases, "Purchases.restorePurchases", "RevenueCat 
 expectIncludes(files.mobilePurchases, "/api/billing/app-store/sync", "앱 구독 확인 호출", "src/lib/mobilePurchases.ts");
 expectIncludes(files.mobilePurchases, "basePlanId", "앱 구독 기본 요금제 ID 전달", "src/lib/mobilePurchases.ts");
 expectIncludes(files.mobilePurchases, "NativePurchaseError", "네이티브 결제 오류 코드 분리", "src/lib/mobilePurchases.ts");
+expectIncludes(files.mobilePurchases, "Purchases.getOfferings", "RevenueCat Offering 상품 조회", "src/lib/mobilePurchases.ts");
+expectIncludes(files.mobilePurchases, "getRevenueCatPackageId", "RevenueCat package ID 매핑", "src/lib/mobilePurchases.ts");
+expectIncludes(files.mobilePurchases, "bundle_6month", "All Market Pro 6개월 package ID", "src/lib/mobilePurchases.ts");
+expectIncludes(files.mobilePurchases, "Purchases.purchasePackage", "RevenueCat Offering package 구매 fallback", "src/lib/mobilePurchases.ts");
+expectIncludes(files.mobilePurchases, "matched offering package", "RevenueCat Offering package 매칭 로그", "src/lib/mobilePurchases.ts");
 expectIncludes(files.mobilePurchases, "getProducts start", "RevenueCat 상품 조회 단계 로그", "src/lib/mobilePurchases.ts");
 expectIncludes(files.mobilePurchases, "getProducts success", "RevenueCat 상품 조회 결과 로그", "src/lib/mobilePurchases.ts");
 expectIncludes(files.mobilePurchases, "matched product id", "RevenueCat 상품 매칭 로그", "src/lib/mobilePurchases.ts");
