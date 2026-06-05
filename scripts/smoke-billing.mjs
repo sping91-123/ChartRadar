@@ -299,6 +299,9 @@ expectIncludes(files.proPricingPanel, "웹 결제는 준비 중입니다. Androi
 expectIncludes(files.proPricingPanel, "NATIVE_CHECKOUT_TIMEOUT_MS = 60_000", "네이티브 결제 timeout guard", "src/components/ProPricingPanel.tsx");
 expectIncludes(files.proPricingPanel, "NATIVE_CHECKOUT_TIMEOUT_MESSAGE", "네이티브 결제 지연 안내", "src/components/ProPricingPanel.tsx");
 expectIncludes(files.proPricingPanel, "withTimeout(", "네이티브 결제 무한 로딩 방지", "src/components/ProPricingPanel.tsx");
+expectIncludes(files.proPricingPanel, "NativeCheckoutTimeoutError", "네이티브 결제 timeout 상태 분리", "src/components/ProPricingPanel.tsx");
+expectIncludes(files.proPricingPanel, "nativeCheckoutErrorMessage", "네이티브 결제 안전 문구 매핑", "src/components/ProPricingPanel.tsx");
+expectIncludes(files.proPricingPanel, "message={checkoutState.status === \"message\" && checkoutState.planId === plan.id", "플랜 카드 근처 결제 안내 표시", "src/components/ProPricingPanel.tsx");
 expectIncludes(files.proPricingPanel, "결제 후 Pro 기능을 바로 이용하려면 먼저 구글 로그인이 필요합니다.", "결제 전 로그인 안내", "src/components/ProPricingPanel.tsx");
 expectIncludes(files.proPricingPanel, "scopeCopy", "Pro 플랜 시장별 문구 분리", "src/components/ProPricingPanel.tsx");
 expectIncludes(files.proPricingPanel, "purchaseNativePlan", "네이티브 앱 결제 분기", "src/components/ProPricingPanel.tsx");
@@ -314,6 +317,15 @@ expectIncludes(files.mobilePurchases, "Purchases.purchaseSubscriptionOption", "R
 expectIncludes(files.mobilePurchases, "Purchases.restorePurchases", "RevenueCat 구독 복원 호출", "src/lib/mobilePurchases.ts");
 expectIncludes(files.mobilePurchases, "/api/billing/app-store/sync", "앱 구독 확인 호출", "src/lib/mobilePurchases.ts");
 expectIncludes(files.mobilePurchases, "basePlanId", "앱 구독 기본 요금제 ID 전달", "src/lib/mobilePurchases.ts");
+expectIncludes(files.mobilePurchases, "NativePurchaseError", "네이티브 결제 오류 코드 분리", "src/lib/mobilePurchases.ts");
+expectIncludes(files.mobilePurchases, "getProducts start", "RevenueCat 상품 조회 단계 로그", "src/lib/mobilePurchases.ts");
+expectIncludes(files.mobilePurchases, "getProducts success", "RevenueCat 상품 조회 결과 로그", "src/lib/mobilePurchases.ts");
+expectIncludes(files.mobilePurchases, "matched product id", "RevenueCat 상품 매칭 로그", "src/lib/mobilePurchases.ts");
+expectIncludes(files.mobilePurchases, "matched base plan id", "Google Play 기본 요금제 매칭 로그", "src/lib/mobilePurchases.ts");
+expectIncludes(files.mobilePurchases, "purchaseSubscriptionOption start", "Google Play 구독 옵션 구매 시작 로그", "src/lib/mobilePurchases.ts");
+expectIncludes(files.mobilePurchases, "product_load_failed", "Google Play 상품 빈 응답 분리", "src/lib/mobilePurchases.ts");
+expectIncludes(files.mobilePurchases, "base_plan_not_found", "Google Play basePlan 미매칭 분리", "src/lib/mobilePurchases.ts");
+expectIncludes(files.mobilePurchases, "platform === \"android\" && !subscriptionOption", "Android basePlan 미매칭 차단", "src/lib/mobilePurchases.ts");
 expectIncludes(files.mobilePurchases, "앱 구독 상태를 계정에 연결하지 못했습니다.", "앱 구독 실패 사용자 문구", "src/lib/mobilePurchases.ts");
 if (files.mobilePurchases.includes("서버에 반영하지 못했습니다.") || files.checkoutRoute.includes("환경변수가 https://")) {
   fail("결제 내부 문구 노출 방지", "사용자에게 서버 반영 또는 환경변수 문구가 노출될 수 있습니다.");

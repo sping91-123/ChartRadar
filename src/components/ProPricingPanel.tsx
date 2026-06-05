@@ -13,7 +13,7 @@ import {
   hasMarketEntitlement,
   subscriptionTrustNotes
 } from "@/lib/billing";
-import { fetchNativePlanPriceLabels, isNativePurchaseAvailable, purchaseNativePlan, restoreNativeEntitlement } from "@/lib/mobilePurchases";
+import { fetchNativePlanPriceLabels, isNativePurchaseAvailable, NativePurchaseError, purchaseNativePlan, restoreNativeEntitlement } from "@/lib/mobilePurchases";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { ActionButton, AppSurface, DataRow, MetricRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 
@@ -21,23 +21,47 @@ type CheckoutState =
   | { status: "idle" }
   | { status: "loading"; planId: string }
   | { status: "restoring" }
-  | { status: "message"; tone: "info" | "error"; text: string };
+  | { status: "message"; tone: "info" | "error"; text: string; planId?: string };
 
 type ValueCardTone = "info" | "watch" | "risk" | "long" | "locked";
 
 const NATIVE_CHECKOUT_TIMEOUT_MS = 60_000;
 const WEB_CHECKOUT_UNAVAILABLE_MESSAGE = "웹 결제는 준비 중입니다. Android 앱에서 Google Play 구독으로 결제해 주세요.";
-const NATIVE_CHECKOUT_TIMEOUT_MESSAGE = "결제창 응답이 지연되고 있습니다. Google Play 결제 상태를 확인한 뒤 다시 시도해 주세요.";
+const NATIVE_CHECKOUT_TIMEOUT_MESSAGE = "Google Play 결제창을 여는 데 시간이 오래 걸리고 있습니다. 앱을 다시 열거나 잠시 후 다시 시도해 주세요.";
+
+class NativeCheckoutTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NativeCheckoutTimeoutError";
+  }
+}
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<T>((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+    timeoutId = setTimeout(() => reject(new NativeCheckoutTimeoutError(message)), timeoutMs);
   });
 
   return Promise.race([promise, timeout]).finally(() => {
     if (timeoutId) clearTimeout(timeoutId);
   });
+}
+
+function nativeCheckoutErrorMessage(error: unknown) {
+  if (error instanceof NativeCheckoutTimeoutError) return NATIVE_CHECKOUT_TIMEOUT_MESSAGE;
+
+  if (error instanceof NativePurchaseError) {
+    if (error.code === "purchase_cancelled") return "결제가 취소되었습니다.";
+    if (error.code === "product_load_failed" || error.code === "product_not_found" || error.code === "base_plan_not_found") {
+      return "Google Play 상품 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
+    }
+  }
+
+  return "결제창을 열지 못했습니다. 잠시 후 다시 시도해 주세요.";
+}
+
+function logNativeCheckout(event: string, details: Record<string, string | boolean | number> = {}) {
+  console.info(`[ChartRadar billing] ${event}`, details);
 }
 
 function scopeCopy(scope: BillingPageScope) {
@@ -196,6 +220,7 @@ function PlanCard({
   isCurrent,
   nativePurchaseAvailable,
   priceLabel,
+  message,
   onCheckout
 }: {
   plan: BillingPlan;
@@ -203,6 +228,7 @@ function PlanCard({
   isCurrent: boolean;
   nativePurchaseAvailable: boolean;
   priceLabel: string;
+  message?: { tone: "info" | "error"; text: string };
   onCheckout: (plan: BillingPlan) => void;
 }) {
   const hasMonthlyValue = plan.monthlyValue > 0 && plan.billingPeriodMonths > 1;
@@ -254,6 +280,12 @@ function PlanCard({
           {isBusy ? <Loader2 className="mr-2 animate-spin" size={16} aria-hidden /> : null}
           {checkoutCtaLabel(plan, nativePurchaseAvailable)}
         </ActionButton>
+        {message ? (
+          <AppSurface tone="inset" variant="report" padding="md" className={`mt-3 ${message.tone === "error" ? "text-ui-short" : "text-ui-muted"}`}>
+            <StatusPill tone={message.tone === "error" ? "risk" : "info"}>{message.tone === "error" ? "확인 필요" : "결제 상태"}</StatusPill>
+            <p className="mt-2 text-ui-body font-semibold [word-break:keep-all]">{message.text}</p>
+          </AppSurface>
+        ) : null}
       </div>
     </AppSurface>
   );
@@ -308,7 +340,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
 
   async function startCheckout(plan: BillingPlan) {
     if (!nativePurchaseAvailable) {
-      setCheckoutState({ status: "message", tone: "info", text: WEB_CHECKOUT_UNAVAILABLE_MESSAGE });
+      setCheckoutState({ status: "message", tone: "info", text: WEB_CHECKOUT_UNAVAILABLE_MESSAGE, planId: plan.id });
       return;
     }
 
@@ -325,6 +357,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
     const checkoutRunId = checkoutRunRef.current + 1;
     checkoutRunRef.current = checkoutRunId;
     setCheckoutState({ status: "loading", planId: plan.id });
+    logNativeCheckout("native purchase start", { planId: plan.id });
 
     try {
       if (!user?.id) throw new Error("앱 구독을 연결하려면 로그인 정보를 먼저 확인해야 합니다.");
@@ -334,10 +367,17 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
         NATIVE_CHECKOUT_TIMEOUT_MESSAGE
       );
       if (!isMountedRef.current || checkoutRunRef.current !== checkoutRunId) return;
-      setCheckoutState({ status: "message", tone: "info", text: result.message });
+      logNativeCheckout("native purchase success", { planId: plan.id });
+      setCheckoutState({ status: "message", tone: "info", text: result.message, planId: plan.id });
     } catch (error) {
       if (!isMountedRef.current || checkoutRunRef.current !== checkoutRunId) return;
-      setCheckoutState({ status: "message", tone: "error", text: error instanceof Error ? error.message : "결제 연결 상태를 확인하지 못했습니다." });
+      const isTimeout = error instanceof NativeCheckoutTimeoutError;
+      logNativeCheckout(isTimeout ? "native purchase timeout" : "native purchase error", {
+        planId: plan.id,
+        timeout: isTimeout,
+        errorCode: error instanceof NativePurchaseError ? error.code : "unknown"
+      });
+      setCheckoutState({ status: "message", tone: "error", text: nativeCheckoutErrorMessage(error), planId: plan.id });
     }
   }
 
@@ -453,6 +493,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
               isCurrent={currentPlanId === plan.id}
               nativePurchaseAvailable={nativePurchaseAvailable}
               priceLabel={nativePriceLabels[plan.id] ?? plan.priceLabel}
+              message={checkoutState.status === "message" && checkoutState.planId === plan.id ? { tone: checkoutState.tone, text: checkoutState.text } : undefined}
               onCheckout={startCheckout}
             />
           ))}
