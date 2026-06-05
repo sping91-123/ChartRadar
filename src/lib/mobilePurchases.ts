@@ -265,6 +265,24 @@ async function purchaseOfferingPackage(params: NativePurchaseParams & { platform
   return Purchases.purchasePackage({ aPackage: params.aPackage });
 }
 
+async function purchaseAndroidStoreProduct(params: NativePurchaseParams & { product: PurchasesStoreProduct }) {
+  const Purchases = await getRevenueCatPurchases();
+  const { productId, basePlanId } = getNativeStoreProductIds(params.plan);
+  const subscriptionOption = findSubscriptionOption(params.product, params.plan);
+  logNativePurchase("matched base plan id", {
+    planId: params.plan.id,
+    basePlanId,
+    matched: Boolean(subscriptionOption),
+    optionCount: params.product.subscriptionOptions?.length ?? 0
+  });
+  logNativePurchase("purchaseStoreProduct start", {
+    planId: params.plan.id,
+    productId,
+    basePlanId
+  });
+  return Purchases.purchaseStoreProduct({ product: params.product });
+}
+
 export async function purchaseNativePlan(params: NativePurchaseParams) {
   const platform = getNativePurchasePlatform();
   if (!platform) throw new NativePurchaseError("native_unavailable", "Native purchases are not available on this platform.");
@@ -274,36 +292,8 @@ export async function purchaseNativePlan(params: NativePurchaseParams) {
     logNativePurchase("native purchase start", { platform, planId: params.plan.id, productId, basePlanId });
     await configurePurchases(platform, params.userId);
     const Purchases = await getRevenueCatPurchases();
-    logNativePurchase("getOfferings start", { planId: params.plan.id, productId, packageId: getRevenueCatPackageId(params.plan) });
-    const offerings = await Purchases.getOfferings().catch((error) => {
-      warnNativePurchase("getOfferings error", { planId: params.plan.id, productId });
-      throw error;
-    });
-    const offeringPackage = findOfferingPackage(offerings, params.plan);
-    logNativePurchase("getOfferings success", {
-      planId: params.plan.id,
-      productId,
-      packageId: getRevenueCatPackageId(params.plan),
-      offeringCount: Object.keys(offerings.all).length,
-      packageCount: (offerings.current ?? offerings.all.default)?.availablePackages.length ?? 0,
-      matched: Boolean(offeringPackage)
-    });
-
     let result;
-    if (offeringPackage) {
-      logNativePurchase("matched offering package", {
-        planId: params.plan.id,
-        productId,
-        basePlanId,
-        packageId: offeringPackage.identifier
-      });
-      result = await purchaseOfferingPackage({ ...params, platform, aPackage: offeringPackage });
-    } else {
-      warnNativePurchase("offering package not found, falling back to getProducts", {
-        planId: params.plan.id,
-        productId,
-        packageId: getRevenueCatPackageId(params.plan)
-      });
+    if (platform === "android") {
       logNativePurchase("getProducts start", { planId: params.plan.id, productId });
       const { products } = await Purchases.getProducts({
         productIdentifiers: [productId]
@@ -317,7 +307,52 @@ export async function purchaseNativePlan(params: NativePurchaseParams) {
       const product = findStoreProduct(products, params.plan);
       logNativePurchase("matched product id", { planId: params.plan.id, productId, matched: Boolean(product) });
       if (!product) throw new NativePurchaseError("product_not_found", "Requested app store product was not found in RevenueCat products.");
-      result = await purchaseMatchedProduct({ ...params, platform, product });
+      result = await purchaseAndroidStoreProduct({ ...params, product });
+    } else {
+      logNativePurchase("getOfferings start", { planId: params.plan.id, productId, packageId: getRevenueCatPackageId(params.plan) });
+      const offerings = await Purchases.getOfferings().catch((error) => {
+        warnNativePurchase("getOfferings error", { planId: params.plan.id, productId });
+        throw error;
+      });
+      const offeringPackage = findOfferingPackage(offerings, params.plan);
+      logNativePurchase("getOfferings success", {
+        planId: params.plan.id,
+        productId,
+        packageId: getRevenueCatPackageId(params.plan),
+        offeringCount: Object.keys(offerings.all).length,
+        packageCount: (offerings.current ?? offerings.all.default)?.availablePackages.length ?? 0,
+        matched: Boolean(offeringPackage)
+      });
+
+      if (offeringPackage) {
+        logNativePurchase("matched offering package", {
+          planId: params.plan.id,
+          productId,
+          basePlanId,
+          packageId: offeringPackage.identifier
+        });
+        result = await purchaseOfferingPackage({ ...params, platform, aPackage: offeringPackage });
+      } else {
+        warnNativePurchase("offering package not found, falling back to getProducts", {
+          planId: params.plan.id,
+          productId,
+          packageId: getRevenueCatPackageId(params.plan)
+        });
+        logNativePurchase("getProducts start", { planId: params.plan.id, productId });
+        const { products } = await Purchases.getProducts({
+          productIdentifiers: [productId]
+        });
+        logNativePurchase("getProducts success", { planId: params.plan.id, productId, productCount: products.length });
+
+        if (products.length === 0) {
+          throw new NativePurchaseError("product_load_failed", "RevenueCat returned no products for the requested product id.");
+        }
+
+        const product = findStoreProduct(products, params.plan);
+        logNativePurchase("matched product id", { planId: params.plan.id, productId, matched: Boolean(product) });
+        if (!product) throw new NativePurchaseError("product_not_found", "Requested app store product was not found in RevenueCat products.");
+        result = await purchaseMatchedProduct({ ...params, platform, product });
+      }
     }
     logNativePurchase("purchase success", { planId: params.plan.id, productId, basePlanId });
     if (!hasActivePlan(result.customerInfo, params.plan)) {
