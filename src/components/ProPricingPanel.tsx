@@ -1,6 +1,6 @@
 "use client";
 // Pro 구독 플랜과 결제 시작 버튼을 보여주는 판매 패널입니다.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Bell, BookOpen, CheckCircle2, Gauge, Loader2, ShieldAlert, ShieldCheck, Sparkles, type LucideIcon } from "lucide-react";
 import {
   type BillingEntitlementPlan,
@@ -24,6 +24,21 @@ type CheckoutState =
   | { status: "message"; tone: "info" | "error"; text: string };
 
 type ValueCardTone = "info" | "watch" | "risk" | "long" | "locked";
+
+const NATIVE_CHECKOUT_TIMEOUT_MS = 60_000;
+const WEB_CHECKOUT_UNAVAILABLE_MESSAGE = "웹 결제는 준비 중입니다. Android 앱에서 Google Play 구독으로 결제해 주세요.";
+const NATIVE_CHECKOUT_TIMEOUT_MESSAGE = "결제창 응답이 지연되고 있습니다. Google Play 결제 상태를 확인한 뒤 다시 시도해 주세요.";
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<T>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timeoutId) clearTimeout(timeoutId);
+  });
+}
 
 function scopeCopy(scope: BillingPageScope) {
   if (scope === "crypto") {
@@ -49,7 +64,8 @@ function scopeCopy(scope: BillingPageScope) {
   };
 }
 
-function checkoutCtaLabel(plan: BillingPlan) {
+function checkoutCtaLabel(plan: BillingPlan, nativePurchaseAvailable: boolean) {
+  if (!nativePurchaseAvailable) return "Android 앱에서 결제 가능";
   if (plan.marketScope === "crypto") return "Coin Pro로 코인 상세 판단 열기";
   if (plan.marketScope === "stocks") return "Global Pro로 미국장 상세 판단 열기";
   if (plan.marketScope === "bundle") return "All Market Pro로 전체 시장 판단 열기";
@@ -178,12 +194,14 @@ function PlanCard({
   plan,
   isBusy,
   isCurrent,
+  nativePurchaseAvailable,
   priceLabel,
   onCheckout
 }: {
   plan: BillingPlan;
   isBusy: boolean;
   isCurrent: boolean;
+  nativePurchaseAvailable: boolean;
   priceLabel: string;
   onCheckout: (plan: BillingPlan) => void;
 }) {
@@ -234,7 +252,7 @@ function PlanCard({
       <div className="mt-auto pt-5">
         <ActionButton tone="primary" onClick={() => onCheckout(plan)} disabled={isBusy} className="w-full whitespace-normal break-keep px-2 text-center leading-5 min-[360px]:px-3">
           {isBusy ? <Loader2 className="mr-2 animate-spin" size={16} aria-hidden /> : null}
-          {checkoutCtaLabel(plan)}
+          {checkoutCtaLabel(plan, nativePurchaseAvailable)}
         </ActionButton>
       </div>
     </AppSurface>
@@ -245,6 +263,8 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
   const { session, user, profile, isLoading } = useSupabaseAuth();
   const [checkoutState, setCheckoutState] = useState<CheckoutState>({ status: "idle" });
   const [nativePriceLabels, setNativePriceLabels] = useState<Partial<Record<BillingPlanId, string>>>({});
+  const checkoutRunRef = useRef(0);
+  const isMountedRef = useRef(true);
   const visiblePlans = useMemo(() => getBillingPlansForPage(marketScope), [marketScope]);
   const freePlan = visiblePlans.find((plan) => plan.id === "free");
   const paidPlans = visiblePlans.filter((plan) => plan.id !== "free");
@@ -255,6 +275,16 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
   const currentPlanLabel = isLoading ? "확인 중" : session ? getEntitlementLabel(currentPlanId) : "로그인 필요";
   const hasCryptoAccess = hasMarketEntitlement(currentPlanId, "crypto");
   const hasGlobalAccess = hasMarketEntitlement(currentPlanId, "stocks");
+  const plansDescription = nativePurchaseAvailable
+    ? "표시된 가격과 결제 버튼은 기존 플랜 정보를 그대로 사용합니다. 필요한 시장 범위만 선택하세요."
+    : "표시된 가격은 앱 구독 기준입니다. 웹 결제는 준비 중이며 Android 앱에서 Google Play 구독으로 결제할 수 있습니다.";
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      checkoutRunRef.current += 1;
+    };
+  }, []);
 
   useEffect(() => {
     if (!nativePurchaseAvailable || !user?.id) {
@@ -277,6 +307,11 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
   }, [nativePurchaseAvailable, user?.id, visiblePlanIds, visiblePlans]);
 
   async function startCheckout(plan: BillingPlan) {
+    if (!nativePurchaseAvailable) {
+      setCheckoutState({ status: "message", tone: "info", text: WEB_CHECKOUT_UNAVAILABLE_MESSAGE });
+      return;
+    }
+
     if (isLoading) {
       setCheckoutState({ status: "message", tone: "info", text: "계정 상태를 확인하고 있습니다. 잠시 후 다시 눌러 주세요." });
       return;
@@ -287,29 +322,21 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
       return;
     }
 
+    const checkoutRunId = checkoutRunRef.current + 1;
+    checkoutRunRef.current = checkoutRunId;
     setCheckoutState({ status: "loading", planId: plan.id });
 
     try {
-      if (nativePurchaseAvailable) {
-        if (!user?.id) throw new Error("앱 구독을 연결하려면 로그인 정보를 먼저 확인해야 합니다.");
-        const result = await purchaseNativePlan({ plan, userId: user.id, accessToken: session.accessToken });
-        setCheckoutState({ status: "message", tone: "info", text: result.message });
-        return;
-      }
-
-      const response = await fetch("/api/billing/checkout", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${session.accessToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ planId: plan.id, platform: "web" })
-      });
-      const data = (await response.json().catch(() => ({}))) as { paymentUrl?: string; message?: string; error?: string };
-      if (!response.ok) throw new Error(data.error ?? "결제창을 열지 못했습니다. 잠시 후 다시 시도해 주세요.");
-      if (data.paymentUrl) {
-        window.location.href = data.paymentUrl;
-        return;
-      }
-      setCheckoutState({ status: "message", tone: "info", text: data.message ?? "결제창 연결 정보를 확인하지 못했습니다." });
+      if (!user?.id) throw new Error("앱 구독을 연결하려면 로그인 정보를 먼저 확인해야 합니다.");
+      const result = await withTimeout(
+        purchaseNativePlan({ plan, userId: user.id, accessToken: session.accessToken }),
+        NATIVE_CHECKOUT_TIMEOUT_MS,
+        NATIVE_CHECKOUT_TIMEOUT_MESSAGE
+      );
+      if (!isMountedRef.current || checkoutRunRef.current !== checkoutRunId) return;
+      setCheckoutState({ status: "message", tone: "info", text: result.message });
     } catch (error) {
+      if (!isMountedRef.current || checkoutRunRef.current !== checkoutRunId) return;
       setCheckoutState({ status: "message", tone: "error", text: error instanceof Error ? error.message : "결제 연결 상태를 확인하지 못했습니다." });
     }
   }
@@ -416,7 +443,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
       ) : null}
 
       <div className="flex flex-col gap-3">
-        <SectionHeader eyebrow="AVAILABLE PLANS" title="현재 플랜과 가격 선택" description="표시된 가격과 결제 버튼은 기존 플랜 정보를 그대로 사용합니다. 필요한 시장 범위만 선택하세요." />
+        <SectionHeader eyebrow="AVAILABLE PLANS" title="현재 플랜과 가격 선택" description={plansDescription} />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {paidPlans.map((plan) => (
             <PlanCard
@@ -424,6 +451,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
               plan={plan}
               isBusy={checkoutState.status === "loading" && checkoutState.planId === plan.id}
               isCurrent={currentPlanId === plan.id}
+              nativePurchaseAvailable={nativePurchaseAvailable}
               priceLabel={nativePriceLabels[plan.id] ?? plan.priceLabel}
               onCheckout={startCheckout}
             />
