@@ -83,7 +83,7 @@ const expectedProductPlanPairs = [
 ];
 
 function planBlock(planId) {
-  const match = new RegExp(`id:\\s*"${planId}"[\\s\\S]*?(?=\\n\\s*\\},\\n\\s*\\{\\n\\s*id:|\\n\\s*\\}\\n\\];)`).exec(files.billing);
+  const match = new RegExp(`id:\\s*"${planId}"[\\s\\S]*?(?=\\r?\\n\\s*\\},\\r?\\n\\s*\\{\\r?\\n\\s*id:|\\r?\\n\\s*\\}\\r?\\n\\];)`).exec(files.billing);
   return match?.[0] ?? "";
 }
 
