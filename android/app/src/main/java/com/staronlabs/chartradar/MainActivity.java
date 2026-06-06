@@ -4,12 +4,12 @@ package com.staronlabs.chartradar;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.SystemClock;
-import android.view.View;
-import android.view.Window;
 import android.widget.Toast;
 
 import com.getcapacitor.BridgeActivity;
+import androidx.activity.EdgeToEdge;
 import androidx.activity.OnBackPressedCallback;
+import androidx.activity.SystemBarStyle;
 import androidx.core.splashscreen.SplashScreen;
 
 public class MainActivity extends BridgeActivity {
@@ -23,12 +23,8 @@ public class MainActivity extends BridgeActivity {
         SplashScreen splashScreen = SplashScreen.installSplashScreen(this);
         splashScreen.setKeepOnScreenCondition(() -> SystemClock.elapsedRealtime() - splashStartedAt < MIN_SPLASH_DURATION_MS);
 
+        EdgeToEdge.enable(this, SystemBarStyle.dark(Color.TRANSPARENT), SystemBarStyle.dark(Color.TRANSPARENT));
         super.onCreate(savedInstanceState);
-
-        Window window = getWindow();
-        window.setStatusBarColor(Color.parseColor("#0B0B0F"));
-        window.setNavigationBarColor(Color.parseColor("#0B0B0F"));
-        window.getDecorView().setSystemUiVisibility(window.getDecorView().getSystemUiVisibility() & ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
