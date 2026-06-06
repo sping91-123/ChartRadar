@@ -10,6 +10,7 @@ interface NativePurchaseParams {
   plan: BillingPlan;
   userId: string;
   accessToken: string;
+  onStage?: (stage: NativePurchaseStageEvent) => void;
 }
 
 interface NativeRestoreParams {
@@ -41,6 +42,25 @@ export type NativePurchaseErrorCode =
   | "purchase_cancelled"
   | "purchase_failed"
   | "entitlement_missing";
+
+export type NativePurchaseStage =
+  | "native_start"
+  | "configure_start"
+  | "configure_success"
+  | "configure_cached"
+  | "get_products_start"
+  | "get_products_success"
+  | "product_matched"
+  | "base_plan_matched"
+  | "purchase_start"
+  | "purchase_success"
+  | "purchase_cancel"
+  | "purchase_error";
+
+export interface NativePurchaseStageEvent {
+  stage: NativePurchaseStage;
+  details?: Record<string, string | number | boolean | null>;
+}
 
 export class NativePurchaseError extends Error {
   code: NativePurchaseErrorCode;
@@ -77,22 +97,31 @@ function warnNativePurchase(event: string, details: Record<string, string | numb
   console.warn(`[ChartRadar billing] ${event}`, details);
 }
 
+function emitNativePurchaseStage(params: Pick<NativePurchaseParams, "onStage">, stage: NativePurchaseStage, details: Record<string, string | number | boolean | null> = {}) {
+  params.onStage?.({ stage, details });
+}
+
 function getRevenueCatApiKey(platform: NativePurchasePlatform) {
   return platform === "android"
     ? process.env.NEXT_PUBLIC_REVENUECAT_ANDROID_API_KEY
     : process.env.NEXT_PUBLIC_REVENUECAT_IOS_API_KEY;
 }
 
-async function configurePurchases(platform: NativePurchasePlatform, userId: string) {
-  if (configuredUserId === userId) return;
+async function configurePurchases(platform: NativePurchasePlatform, userId: string, onStage?: NativePurchaseParams["onStage"]) {
+  if (configuredUserId === userId) {
+    onStage?.({ stage: "configure_cached", details: { platform } });
+    return;
+  }
   const apiKey = getRevenueCatApiKey(platform);
   if (!apiKey) {
     throw new NativePurchaseError("config_missing", "RevenueCat API key is missing.");
   }
 
   const Purchases = await getRevenueCatPurchases();
+  onStage?.({ stage: "configure_start", details: { platform } });
   await Purchases.configure({ apiKey, appUserID: userId });
   configuredUserId = userId;
+  onStage?.({ stage: "configure_success", details: { platform } });
 }
 
 function hasActivePlan(customerInfo: RevenueCatCustomerInfo, plan: BillingPlan) {
@@ -230,6 +259,12 @@ async function purchaseMatchedProduct(params: NativePurchaseParams & { platform:
     matched: params.platform !== "android" || Boolean(subscriptionOption),
     optionCount: params.product.subscriptionOptions?.length ?? 0
   });
+  emitNativePurchaseStage(params, "base_plan_matched", {
+    planId: params.plan.id,
+    basePlanId,
+    matched: params.platform !== "android" || Boolean(subscriptionOption),
+    optionCount: params.product.subscriptionOptions?.length ?? 0
+  });
   if (params.platform === "android" && !subscriptionOption) {
     throw new NativePurchaseError("base_plan_not_found", "Requested Google Play base plan was not found in RevenueCat subscription options.");
   }
@@ -239,6 +274,7 @@ async function purchaseMatchedProduct(params: NativePurchaseParams & { platform:
     productId,
     basePlanId
   });
+  emitNativePurchaseStage(params, "purchase_start", { planId: params.plan.id, productId, basePlanId });
   return subscriptionOption
     ? Purchases.purchaseSubscriptionOption({ subscriptionOption })
     : params.aPackage
@@ -256,12 +292,19 @@ async function purchaseOfferingPackage(params: NativePurchaseParams & { platform
     matched: params.platform !== "android" || Boolean(subscriptionOption),
     optionCount: params.aPackage.product.subscriptionOptions?.length ?? 0
   });
+  emitNativePurchaseStage(params, "base_plan_matched", {
+    planId: params.plan.id,
+    basePlanId,
+    matched: params.platform !== "android" || Boolean(subscriptionOption),
+    optionCount: params.aPackage.product.subscriptionOptions?.length ?? 0
+  });
   logNativePurchase("purchasePackage start", {
     planId: params.plan.id,
     productId,
     basePlanId,
     packageId: params.aPackage.identifier
   });
+  emitNativePurchaseStage(params, "purchase_start", { planId: params.plan.id, productId, basePlanId });
   return Purchases.purchasePackage({ aPackage: params.aPackage });
 }
 
@@ -270,6 +313,12 @@ async function purchaseAndroidStoreProduct(params: NativePurchaseParams & { prod
   const { productId, basePlanId } = getNativeStoreProductIds(params.plan);
   const subscriptionOption = findSubscriptionOption(params.product, params.plan);
   logNativePurchase("matched base plan id", {
+    planId: params.plan.id,
+    basePlanId,
+    matched: Boolean(subscriptionOption),
+    optionCount: params.product.subscriptionOptions?.length ?? 0
+  });
+  emitNativePurchaseStage(params, "base_plan_matched", {
     planId: params.plan.id,
     basePlanId,
     matched: Boolean(subscriptionOption),
@@ -284,6 +333,7 @@ async function purchaseAndroidStoreProduct(params: NativePurchaseParams & { prod
     productId,
     basePlanId
   });
+  emitNativePurchaseStage(params, "purchase_start", { planId: params.plan.id, productId, basePlanId });
   return Purchases.purchaseSubscriptionOption({ subscriptionOption });
 }
 
@@ -294,15 +344,18 @@ export async function purchaseNativePlan(params: NativePurchaseParams) {
 
   try {
     logNativePurchase("native purchase start", { platform, planId: params.plan.id, productId, basePlanId });
-    await configurePurchases(platform, params.userId);
+    emitNativePurchaseStage(params, "native_start", { platform, planId: params.plan.id, productId, basePlanId });
+    await configurePurchases(platform, params.userId, params.onStage);
     const Purchases = await getRevenueCatPurchases();
     let result;
     if (platform === "android") {
       logNativePurchase("getProducts start", { planId: params.plan.id, productId });
+      emitNativePurchaseStage(params, "get_products_start", { planId: params.plan.id, productId });
       const { products } = await Purchases.getProducts({
         productIdentifiers: [productId]
       });
       logNativePurchase("getProducts success", { planId: params.plan.id, productId, productCount: products.length });
+      emitNativePurchaseStage(params, "get_products_success", { planId: params.plan.id, productId, productCount: products.length });
 
       if (products.length === 0) {
         throw new NativePurchaseError("product_load_failed", "RevenueCat returned no products for the requested product id.");
@@ -310,6 +363,7 @@ export async function purchaseNativePlan(params: NativePurchaseParams) {
 
       const product = findStoreProduct(products, params.plan);
       logNativePurchase("matched product id", { planId: params.plan.id, productId, matched: Boolean(product) });
+      emitNativePurchaseStage(params, "product_matched", { planId: params.plan.id, productId, matched: Boolean(product) });
       if (!product) throw new NativePurchaseError("product_not_found", "Requested app store product was not found in RevenueCat products.");
       result = await purchaseAndroidStoreProduct({ ...params, product });
     } else {
@@ -342,11 +396,13 @@ export async function purchaseNativePlan(params: NativePurchaseParams) {
           productId,
           packageId: getRevenueCatPackageId(params.plan)
         });
-        logNativePurchase("getProducts start", { planId: params.plan.id, productId });
+      logNativePurchase("getProducts start", { planId: params.plan.id, productId });
+        emitNativePurchaseStage(params, "get_products_start", { planId: params.plan.id, productId });
         const { products } = await Purchases.getProducts({
           productIdentifiers: [productId]
         });
         logNativePurchase("getProducts success", { planId: params.plan.id, productId, productCount: products.length });
+        emitNativePurchaseStage(params, "get_products_success", { planId: params.plan.id, productId, productCount: products.length });
 
         if (products.length === 0) {
           throw new NativePurchaseError("product_load_failed", "RevenueCat returned no products for the requested product id.");
@@ -354,11 +410,13 @@ export async function purchaseNativePlan(params: NativePurchaseParams) {
 
         const product = findStoreProduct(products, params.plan);
         logNativePurchase("matched product id", { planId: params.plan.id, productId, matched: Boolean(product) });
+        emitNativePurchaseStage(params, "product_matched", { planId: params.plan.id, productId, matched: Boolean(product) });
         if (!product) throw new NativePurchaseError("product_not_found", "Requested app store product was not found in RevenueCat products.");
         result = await purchaseMatchedProduct({ ...params, platform, product });
       }
     }
     logNativePurchase("purchase success", { planId: params.plan.id, productId, basePlanId });
+    emitNativePurchaseStage(params, "purchase_success", { planId: params.plan.id, productId, basePlanId });
     if (!hasActivePlan(result.customerInfo, params.plan)) {
       const { customerInfo } = await Purchases.getCustomerInfo();
       if (!hasActivePlan(customerInfo, params.plan)) {
@@ -371,6 +429,12 @@ export async function purchaseNativePlan(params: NativePurchaseParams) {
   } catch (error) {
     const normalized = normalizePurchaseError(error);
     warnNativePurchase(normalized instanceof NativePurchaseError && normalized.code === "purchase_cancelled" ? "purchase cancel" : "purchase error", {
+      planId: params.plan.id,
+      productId,
+      basePlanId,
+      errorCode: normalized instanceof NativePurchaseError ? normalized.code : "unknown"
+    });
+    emitNativePurchaseStage(params, normalized instanceof NativePurchaseError && normalized.code === "purchase_cancelled" ? "purchase_cancel" : "purchase_error", {
       planId: params.plan.id,
       productId,
       basePlanId,

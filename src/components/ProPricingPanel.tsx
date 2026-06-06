@@ -13,13 +13,13 @@ import {
   hasMarketEntitlement,
   subscriptionTrustNotes
 } from "@/lib/billing";
-import { fetchNativePlanPriceLabels, isNativePurchaseAvailable, NativePurchaseError, purchaseNativePlan, restoreNativeEntitlement } from "@/lib/mobilePurchases";
+import { fetchNativePlanPriceLabels, isNativePurchaseAvailable, NativePurchaseError, purchaseNativePlan, restoreNativeEntitlement, type NativePurchaseStageEvent } from "@/lib/mobilePurchases";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { ActionButton, AppSurface, DataRow, MetricRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 
 type CheckoutState =
   | { status: "idle" }
-  | { status: "loading"; planId: string }
+  | { status: "loading"; planId: string; stageText?: string }
   | { status: "restoring" }
   | { status: "message"; tone: "info" | "error"; text: string; planId?: string };
 
@@ -47,8 +47,54 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string)
   });
 }
 
-function nativeCheckoutErrorMessage(error: unknown) {
-  if (error instanceof NativeCheckoutTimeoutError) return NATIVE_CHECKOUT_TIMEOUT_MESSAGE;
+function nativeStageText(event: NativePurchaseStageEvent) {
+  switch (event.stage) {
+    case "native_start":
+      return "결제 단계: Android 결제 환경을 확인하는 중입니다.";
+    case "configure_start":
+      return "결제 단계: 결제 서비스를 연결하는 중입니다.";
+    case "configure_success":
+      return "결제 단계: 결제 서비스 연결이 확인됐습니다.";
+    case "configure_cached":
+      return "결제 단계: 기존 결제 서비스 연결을 사용합니다.";
+    case "get_products_start":
+      return "결제 단계: Google Play 상품 정보를 확인하는 중입니다.";
+    case "get_products_success":
+      return `결제 단계: Google Play 상품 ${event.details?.productCount ?? 0}개를 확인했습니다.`;
+    case "product_matched":
+      return event.details?.matched
+        ? "결제 단계: 요청한 Google Play 상품을 찾았습니다."
+        : "결제 단계: 요청한 Google Play 상품을 찾지 못했습니다.";
+    case "base_plan_matched":
+      return event.details?.matched
+        ? "결제 단계: Google Play 기본 요금제를 확인했습니다."
+        : "결제 단계: Google Play 기본 요금제를 찾지 못했습니다.";
+    case "purchase_start":
+      return "결제 단계: Google Play 결제창을 요청했습니다.";
+    case "purchase_success":
+      return "결제 단계: Google Play 결제가 완료됐습니다.";
+    case "purchase_cancel":
+      return "결제 단계: 결제가 취소되었습니다.";
+    case "purchase_error":
+      return "결제 단계: 결제창 요청 중 오류가 발생했습니다.";
+    default:
+      return "결제 단계: Google Play 결제 상태를 확인하는 중입니다.";
+  }
+}
+
+function nativeCheckoutErrorMessage(error: unknown, lastStage?: NativePurchaseStageEvent) {
+  if (error instanceof NativeCheckoutTimeoutError) {
+    if (lastStage?.stage === "purchase_start") {
+      return "상품과 기본 요금제는 확인됐지만 Google Play 결제창 요청 단계에서 지연되고 있습니다. 앱을 다시 열거나 잠시 후 다시 시도해 주세요.";
+    }
+    if (lastStage?.stage === "get_products_start") {
+      return "Google Play 상품 정보를 불러오는 단계에서 응답이 지연되고 있습니다. Play 스토어 계정과 네트워크 상태를 확인한 뒤 다시 시도해 주세요.";
+    }
+    if (lastStage?.stage === "base_plan_matched" || lastStage?.stage === "product_matched" || lastStage?.stage === "get_products_success") {
+      return "상품 정보는 확인됐지만 Google Play 결제창을 여는 단계로 넘어가는 데 시간이 오래 걸리고 있습니다. 잠시 후 다시 시도해 주세요.";
+    }
+    return NATIVE_CHECKOUT_TIMEOUT_MESSAGE;
+  }
 
   if (error instanceof NativePurchaseError) {
     if (error.code === "purchase_cancelled") return "결제가 취소되었습니다.";
@@ -221,6 +267,7 @@ function PlanCard({
   nativePurchaseAvailable,
   priceLabel,
   message,
+  busyStageText,
   onCheckout
 }: {
   plan: BillingPlan;
@@ -229,6 +276,7 @@ function PlanCard({
   nativePurchaseAvailable: boolean;
   priceLabel: string;
   message?: { tone: "info" | "error"; text: string };
+  busyStageText?: string;
   onCheckout: (plan: BillingPlan) => void;
 }) {
   const hasMonthlyValue = plan.monthlyValue > 0 && plan.billingPeriodMonths > 1;
@@ -280,6 +328,12 @@ function PlanCard({
           {isBusy ? <Loader2 className="mr-2 animate-spin" size={16} aria-hidden /> : null}
           {checkoutCtaLabel(plan, nativePurchaseAvailable)}
         </ActionButton>
+        {isBusy && busyStageText ? (
+          <AppSurface tone="inset" variant="report" padding="md" className="mt-3 text-ui-muted">
+            <StatusPill tone="info">결제 진행</StatusPill>
+            <p className="mt-2 text-ui-body font-semibold [word-break:keep-all]">{busyStageText}</p>
+          </AppSurface>
+        ) : null}
         {message ? (
           <AppSurface tone="inset" variant="report" padding="md" className={`mt-3 ${message.tone === "error" ? "text-ui-short" : "text-ui-muted"}`}>
             <StatusPill tone={message.tone === "error" ? "risk" : "info"}>{message.tone === "error" ? "확인 필요" : "결제 상태"}</StatusPill>
@@ -297,6 +351,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
   const [nativePriceLabels, setNativePriceLabels] = useState<Partial<Record<BillingPlanId, string>>>({});
   const checkoutRunRef = useRef(0);
   const isMountedRef = useRef(true);
+  const lastNativeStageRef = useRef<NativePurchaseStageEvent | undefined>(undefined);
   const visiblePlans = useMemo(() => getBillingPlansForPage(marketScope), [marketScope]);
   const freePlan = visiblePlans.find((plan) => plan.id === "free");
   const paidPlans = visiblePlans.filter((plan) => plan.id !== "free");
@@ -356,13 +411,22 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
 
     const checkoutRunId = checkoutRunRef.current + 1;
     checkoutRunRef.current = checkoutRunId;
-    setCheckoutState({ status: "loading", planId: plan.id });
+    lastNativeStageRef.current = undefined;
+    setCheckoutState({ status: "loading", planId: plan.id, stageText: "결제 단계: Android 결제 요청을 시작합니다." });
     logNativeCheckout("native purchase start", { planId: plan.id });
+    const handleNativeStage = (event: NativePurchaseStageEvent) => {
+      lastNativeStageRef.current = event;
+      if (!isMountedRef.current || checkoutRunRef.current !== checkoutRunId) return;
+      setCheckoutState((current) => {
+        if (current.status !== "loading" || current.planId !== plan.id) return current;
+        return { ...current, stageText: nativeStageText(event) };
+      });
+    };
 
     try {
       if (!user?.id) throw new Error("앱 구독을 연결하려면 로그인 정보를 먼저 확인해야 합니다.");
       const result = await withTimeout(
-        purchaseNativePlan({ plan, userId: user.id, accessToken: session.accessToken }),
+        purchaseNativePlan({ plan, userId: user.id, accessToken: session.accessToken, onStage: handleNativeStage }),
         NATIVE_CHECKOUT_TIMEOUT_MS,
         NATIVE_CHECKOUT_TIMEOUT_MESSAGE
       );
@@ -377,7 +441,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
         timeout: isTimeout,
         errorCode: error instanceof NativePurchaseError ? error.code : "unknown"
       });
-      setCheckoutState({ status: "message", tone: "error", text: nativeCheckoutErrorMessage(error), planId: plan.id });
+      setCheckoutState({ status: "message", tone: "error", text: nativeCheckoutErrorMessage(error, lastNativeStageRef.current), planId: plan.id });
     }
   }
 
@@ -493,6 +557,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
               isCurrent={currentPlanId === plan.id}
               nativePurchaseAvailable={nativePurchaseAvailable}
               priceLabel={nativePriceLabels[plan.id] ?? plan.priceLabel}
+              busyStageText={checkoutState.status === "loading" && checkoutState.planId === plan.id ? checkoutState.stageText : undefined}
               message={checkoutState.status === "message" && checkoutState.planId === plan.id ? { tone: checkoutState.tone, text: checkoutState.text } : undefined}
               onCheckout={startCheckout}
             />
