@@ -98,6 +98,9 @@ function nativeCheckoutErrorMessage(error: unknown, lastStage?: NativePurchaseSt
 
   if (error instanceof NativePurchaseError) {
     if (error.code === "purchase_cancelled") return "결제가 취소되었습니다.";
+    if (error.code === "configure_timeout") {
+      return "Android 결제 서비스 연결 단계에서 응답이 지연되고 있습니다. 앱을 완전히 닫았다가 다시 열고, Play 스토어 계정 상태를 확인한 뒤 다시 시도해 주세요.";
+    }
     if (error.code === "product_load_failed" || error.code === "product_not_found" || error.code === "base_plan_not_found") {
       return "Google Play 상품 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
     }

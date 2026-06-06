@@ -1,6 +1,6 @@
 // 앱에서 RevenueCat 구독 결제와 서버 권한 동기화를 처리합니다.
 import { Capacitor } from "@capacitor/core";
-import type { PurchasesOfferings, PurchasesPackage, PurchasesStoreProduct, SubscriptionOption } from "@revenuecat/purchases-capacitor";
+import { Purchases, type PurchasesOfferings, type PurchasesPackage, type PurchasesStoreProduct, type SubscriptionOption } from "@revenuecat/purchases-capacitor";
 import { getStoreProductIdentifier, hasStoreEntitlementForPlan, type BillingPlan, type BillingPlanId } from "@/lib/billing";
 import { supabaseAuthRefreshEvent } from "@/lib/supabase";
 
@@ -34,6 +34,7 @@ type RevenueCatCustomerInfo = {
 export type NativePurchaseErrorCode =
   | "native_unavailable"
   | "config_missing"
+  | "configure_timeout"
   | "offering_load_failed"
   | "package_not_found"
   | "product_load_failed"
@@ -73,11 +74,9 @@ export class NativePurchaseError extends Error {
 }
 
 let configuredUserId: string | null = null;
-
-async function getRevenueCatPurchases() {
-  const { Purchases } = await import("@revenuecat/purchases-capacitor");
-  return Purchases;
-}
+let configurePromise: Promise<void> | null = null;
+let configurePromiseUserId: string | null = null;
+const CONFIGURE_TIMEOUT_MS = 20_000;
 
 export function getNativePurchasePlatform(): NativePurchasePlatform | null {
   if (!Capacitor.isNativePlatform()) return null;
@@ -101,6 +100,16 @@ function emitNativePurchaseStage(params: Pick<NativePurchaseParams, "onStage">, 
   params.onStage?.({ stage, details });
 }
 
+function withNativePurchaseTimeout<T>(promise: Promise<T>, timeoutMs: number, error: NativePurchaseError) {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<T>((_, reject) => {
+    timeoutId = setTimeout(() => reject(error), timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timeoutId) clearTimeout(timeoutId);
+  });
+}
+
 function getRevenueCatApiKey(platform: NativePurchasePlatform) {
   return platform === "android"
     ? process.env.NEXT_PUBLIC_REVENUECAT_ANDROID_API_KEY
@@ -117,11 +126,26 @@ async function configurePurchases(platform: NativePurchasePlatform, userId: stri
     throw new NativePurchaseError("config_missing", "RevenueCat API key is missing.");
   }
 
-  const Purchases = await getRevenueCatPurchases();
   onStage?.({ stage: "configure_start", details: { platform } });
-  await Purchases.configure({ apiKey, appUserID: userId });
-  configuredUserId = userId;
-  onStage?.({ stage: "configure_success", details: { platform } });
+  if (!configurePromise || configurePromiseUserId !== userId) {
+    configurePromiseUserId = userId;
+    configurePromise = withNativePurchaseTimeout(
+      Purchases.configure({ apiKey, appUserID: userId }),
+      CONFIGURE_TIMEOUT_MS,
+      new NativePurchaseError("configure_timeout", "Native purchase configuration timed out.")
+    );
+  }
+
+  try {
+    await configurePromise;
+    configuredUserId = userId;
+    onStage?.({ stage: "configure_success", details: { platform } });
+  } finally {
+    if (configurePromiseUserId === userId) {
+      configurePromise = null;
+      configurePromiseUserId = null;
+    }
+  }
 }
 
 function hasActivePlan(customerInfo: RevenueCatCustomerInfo, plan: BillingPlan) {
@@ -250,7 +274,6 @@ function normalizePurchaseError(error: unknown) {
 }
 
 async function purchaseMatchedProduct(params: NativePurchaseParams & { platform: NativePurchasePlatform; product: PurchasesStoreProduct; aPackage?: PurchasesPackage | null }) {
-  const Purchases = await getRevenueCatPurchases();
   const { productId, basePlanId } = getNativeStoreProductIds(params.plan);
   const subscriptionOption = params.platform === "android" ? findSubscriptionOption(params.product, params.plan) : null;
   logNativePurchase("matched base plan id", {
@@ -283,7 +306,6 @@ async function purchaseMatchedProduct(params: NativePurchaseParams & { platform:
 }
 
 async function purchaseOfferingPackage(params: NativePurchaseParams & { platform: NativePurchasePlatform; aPackage: PurchasesPackage }) {
-  const Purchases = await getRevenueCatPurchases();
   const { productId, basePlanId } = getNativeStoreProductIds(params.plan);
   const subscriptionOption = params.platform === "android" ? findSubscriptionOption(params.aPackage.product, params.plan) : null;
   logNativePurchase("matched base plan id", {
@@ -309,7 +331,6 @@ async function purchaseOfferingPackage(params: NativePurchaseParams & { platform
 }
 
 async function purchaseAndroidStoreProduct(params: NativePurchaseParams & { product: PurchasesStoreProduct }) {
-  const Purchases = await getRevenueCatPurchases();
   const { productId, basePlanId } = getNativeStoreProductIds(params.plan);
   const subscriptionOption = findSubscriptionOption(params.product, params.plan);
   logNativePurchase("matched base plan id", {
@@ -346,7 +367,6 @@ export async function purchaseNativePlan(params: NativePurchaseParams) {
     logNativePurchase("native purchase start", { platform, planId: params.plan.id, productId, basePlanId });
     emitNativePurchaseStage(params, "native_start", { platform, planId: params.plan.id, productId, basePlanId });
     await configurePurchases(platform, params.userId, params.onStage);
-    const Purchases = await getRevenueCatPurchases();
     let result;
     if (platform === "android") {
       logNativePurchase("getProducts start", { planId: params.plan.id, productId });
@@ -449,7 +469,6 @@ export async function fetchNativePlanPriceLabels(plans: BillingPlan[], userId: s
   if (!platform) return {};
 
   await configurePurchases(platform, userId);
-  const Purchases = await getRevenueCatPurchases();
   const paidPlans = plans.filter((plan) => plan.appStoreProductId);
   const productIdentifiers = Array.from(new Set(paidPlans.map((plan) => plan.appStoreProductId).filter(Boolean))) as string[];
   const priceLabels: Partial<Record<BillingPlanId, string>> = {};
@@ -493,7 +512,6 @@ export async function restoreNativePurchases(params: NativePurchaseParams) {
   if (!platform) throw new Error("구독 권한 불러오기는 Android 또는 iOS 앱에서만 사용할 수 있습니다.");
 
   await configurePurchases(platform, params.userId);
-  const Purchases = await getRevenueCatPurchases();
   const { customerInfo } = await Purchases.restorePurchases();
   if (!hasActivePlan(customerInfo, params.plan)) {
     throw new Error("불러올 수 있는 활성 구독 권한을 찾지 못했습니다.");
@@ -508,7 +526,6 @@ export async function restoreNativeEntitlement(params: NativeRestoreParams) {
   if (!platform) throw new Error("구독 권한 불러오기는 Android 또는 iOS 앱에서만 사용할 수 있습니다.");
 
   await configurePurchases(platform, params.userId);
-  const Purchases = await getRevenueCatPurchases();
   await Purchases.restorePurchases();
   await syncAnyAppStoreEntitlement({ ...params, platform });
   return { message: "구독 권한을 확인하고 Pro 권한을 다시 연결했습니다." };
