@@ -205,29 +205,25 @@ function scoreFor(changePercent: number, marketScore: number | null) {
 }
 
 function tileToneClass(changePercent: number) {
-  if (changePercent >= 3) return "bg-emerald-500 text-white";
-  if (changePercent >= 2) return "bg-emerald-600 text-white";
-  if (changePercent >= 1) return "bg-emerald-700 text-white";
-  if (changePercent >= 0) return "bg-emerald-950 text-emerald-50";
-  if (changePercent <= -3) return "bg-red-600 text-white";
-  if (changePercent <= -2) return "bg-red-700 text-white";
-  if (changePercent <= -1) return "bg-red-800 text-red-50";
-  return "bg-red-950 text-red-50";
+  if (changePercent >= 2.5) return "border-emerald-400/25 bg-emerald-500/10";
+  if (changePercent >= 0) return "border-emerald-500/15 bg-emerald-500/5";
+  if (changePercent <= -2.5) return "border-red-400/25 bg-red-500/10";
+  return "border-red-500/15 bg-red-500/5";
 }
 
 function tileAccentClass(changePercent: number) {
-  if (changePercent >= 0) return changePercent >= 3 ? "text-white" : "text-emerald-100";
-  return changePercent <= -3 ? "text-white" : "text-red-100";
+  if (changePercent >= 0) return "text-emerald-200";
+  return "text-red-200";
 }
 
 function scoreToneClass(score: number) {
-  if (score >= 80) return "bg-emerald-300 text-emerald-950";
-  if (score >= 70) return "bg-emerald-500 text-white";
-  if (score >= 60) return "bg-emerald-800 text-emerald-50";
-  if (score >= 50) return "bg-slate-600 text-slate-50";
-  if (score >= 40) return "bg-red-900 text-red-50";
-  if (score >= 30) return "bg-red-700 text-white";
-  return "bg-red-500 text-white";
+  if (score >= 80) return "bg-emerald-300/20 text-emerald-100";
+  if (score >= 70) return "bg-emerald-500/15 text-emerald-100";
+  if (score >= 60) return "bg-emerald-800/35 text-emerald-100";
+  if (score >= 50) return "bg-slate-600/35 text-slate-100";
+  if (score >= 40) return "bg-red-900/35 text-red-100";
+  if (score >= 30) return "bg-red-700/25 text-red-100";
+  return "bg-red-500/20 text-red-100";
 }
 
 function riskFor(changePercent: number) {
@@ -279,18 +275,18 @@ function readinessDisplay(decision: CoinHomeDecisionSummary | undefined) {
   if (!decision) return { label: "오늘 대응 모드", value: "확인 중", detail: "시장 데이터 확인 중" };
   const score = `${decision.readinessScore}/100`;
   if (decision.state === "하락 위험 큼" || decision.readinessScore <= 20) {
-    return { label: "오늘 대응 모드", value: `리스크 우선 · ${score}`, detail: "추적보다 회복 조건 확인이 먼저입니다." };
+    return { label: "오늘 대응 모드", value: `추적 준비도 ${score}`, detail: "추적 전 회복 조건을 먼저 봅니다." };
   }
   if (decision.state === "크게 흔들림") {
-    return { label: "오늘 대응 모드", value: `변동성 주의 · ${score}`, detail: "쏠림이 줄어드는지 먼저 봅니다." };
+    return { label: "오늘 대응 모드", value: `추적 준비도 ${score}`, detail: "쏠림 완화 후 다시 봅니다." };
   }
   if (decision.state === "관망하기" || decision.readinessScore < 45) {
-    return { label: "오늘 대응 모드", value: `관망 우선 · ${score}`, detail: "방향보다 확인 조건을 앞에 둡니다." };
+    return { label: "오늘 대응 모드", value: `추적 준비도 ${score}`, detail: "방향보다 확인 조건을 앞에 둡니다." };
   }
   if (decision.state === "확인 필요") {
-    return { label: "오늘 대응 모드", value: `확인 대기 · ${score}`, detail: "흐름 정렬 여부를 한 번 더 봅니다." };
+    return { label: "오늘 대응 모드", value: `추적 준비도 ${score}`, detail: "흐름 정렬 여부를 한 번 더 봅니다." };
   }
-  return { label: "오늘 대응 모드", value: `추적 우세 · ${score}`, detail: "흐름 유지 조건을 같이 봅니다." };
+  return { label: "오늘 대응 모드", value: `추적 준비도 ${score}`, detail: "흐름 유지 조건을 같이 봅니다." };
 }
 
 function marketModeDisplay(decision: CoinHomeDecisionSummary | undefined) {
@@ -511,50 +507,39 @@ function CoinStatusTile({
   symbol,
   item,
   score,
-  primary,
-  emphasis,
   onClick
 }: {
   symbol: RepresentativeSymbol;
   item: MarketBoardItem | null;
   score: number;
-  primary?: boolean;
-  emphasis?: boolean;
   onClick: () => void;
 }) {
   const changePercent = item?.changePercent ?? 0;
+  const direction = directionFor(changePercent);
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`relative flex h-full min-h-0 w-full flex-col items-center justify-center gap-1 overflow-hidden border border-ui-canvas px-1.5 py-2 text-center transition hover:brightness-110 active:scale-[0.99] ${tileToneClass(
+      className={`flex min-h-14 w-full items-center gap-3 rounded-ui-sm border px-3 py-2 text-left transition hover:bg-ui-inset/55 active:scale-[0.99] ${tileToneClass(
         changePercent
       )}`}
       aria-label={`${symbol} 상세 보기`}
     >
-      <span
-        className={`block max-w-full truncate font-black leading-none tracking-tight ${
-          primary ? "text-[2.55rem] sm:text-5xl" : emphasis ? "text-[1.7rem] sm:text-3xl" : "text-[1.35rem] sm:text-xl"
-        }`}
-      >
-        {symbol}
-      </span>
-      <span className={`max-w-full truncate font-semibold leading-none ${primary ? "block text-[1.7rem] sm:text-3xl" : "hidden"}`}>
-        {item ? `$${formatPrice(item.price)}` : "-"}
-      </span>
-      <span
-        className={`block max-w-full truncate font-black leading-none ${
-          primary ? "text-[1.65rem] sm:text-3xl" : emphasis ? "text-[1.05rem] sm:text-xl" : "text-[0.95rem] sm:text-base"
-        } ${tileAccentClass(changePercent)}`}
-      >
+      <span className="w-12 shrink-0 text-sm font-black tracking-tight text-ui-text">{symbol}</span>
+      <span className={`w-16 shrink-0 text-right text-sm font-semibold ${tileAccentClass(changePercent)}`}>
         {formatPercent(item?.changePercent)}
       </span>
-      <span
-        className={`inline-flex max-w-full items-center justify-center truncate px-1.5 py-0.5 font-black leading-none ${
-          primary ? "text-[1.45rem] sm:text-3xl" : emphasis ? "text-[0.95rem] sm:text-xl" : "text-[0.85rem] sm:text-base"
-        } ${scoreToneClass(score)}`}
-      >
+      <span className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-black leading-none ${scoreToneClass(score)}`}>
         {score}점
+      </span>
+      <span className="min-w-0 flex-1 text-right">
+        <span className={`block truncate text-xs font-semibold ${direction.tone === "long" ? "text-ui-long" : direction.tone === "short" ? "text-ui-short" : "text-ui-watch"}`}>
+          {direction.label}
+        </span>
+        <span className="mt-0.5 block truncate text-[10px] font-semibold text-ui-subtle">
+          {item ? `$${formatPrice(item.price)}` : "가격 확인 중"}
+        </span>
       </span>
     </button>
   );
@@ -866,41 +851,12 @@ export function CoinRadarHomePanel() {
                 <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">대표 코인별 확인 근거</p>
                 <p className="text-right text-[11px] font-semibold leading-4 text-ui-subtle">코인별 상세 확인</p>
               </div>
-              <div className="mx-auto w-full max-w-2xl overflow-hidden rounded-ui-sm bg-ui-line p-px">
-                <div className="grid h-[clamp(10.5rem,42vw,18rem)] grid-cols-[minmax(0,1fr)_minmax(5.6rem,34%)] items-stretch gap-px">
-                  {(() => {
-                    const symbol = tileSymbols[0];
-                    const item = boardItem(state.data.board, symbol);
-                    const score = scoreFor(item?.changePercent ?? 0, summary?.fearGreed?.score ?? null);
-                    return (
-                      <div className="min-w-0">
-                        <CoinStatusTile symbol={symbol} item={item} score={score} primary onClick={() => setSelectedSymbol(symbol)} />
-                      </div>
-                    );
-                  })()}
-                  <div className="grid min-w-0 grid-rows-2 gap-px self-stretch">
-                    {tileSymbols.slice(1, 3).map((symbol) => {
-                      const item = boardItem(state.data.board, symbol);
-                      const score = scoreFor(item?.changePercent ?? 0, summary?.fearGreed?.score ?? null);
-                      return <CoinStatusTile key={symbol} symbol={symbol} item={item} score={score} emphasis onClick={() => setSelectedSymbol(symbol)} />;
-                    })}
-                  </div>
-                </div>
-                <div className="mt-px grid h-[clamp(5.5rem,22vw,8rem)] grid-cols-[minmax(0,1fr)_minmax(5.6rem,34%)] gap-px">
-                  <div className="grid min-w-0 grid-cols-2 gap-px">
-                    {tileSymbols.slice(3, 5).map((symbol) => {
-                      const item = boardItem(state.data.board, symbol);
-                      const score = scoreFor(item?.changePercent ?? 0, summary?.fearGreed?.score ?? null);
-                      return <CoinStatusTile key={symbol} symbol={symbol} item={item} score={score} onClick={() => setSelectedSymbol(symbol)} />;
-                    })}
-                  </div>
-                  {(() => {
-                    const symbol = tileSymbols[5];
-                    const item = boardItem(state.data.board, symbol);
-                    const score = scoreFor(item?.changePercent ?? 0, summary?.fearGreed?.score ?? null);
-                    return <CoinStatusTile symbol={symbol} item={item} score={score} onClick={() => setSelectedSymbol(symbol)} />;
-                  })()}
-                </div>
+              <div className="mx-auto grid w-full max-w-2xl gap-2">
+                {tileSymbols.map((symbol) => {
+                  const item = boardItem(state.data.board, symbol);
+                  const score = scoreFor(item?.changePercent ?? 0, summary?.fearGreed?.score ?? null);
+                  return <CoinStatusTile key={symbol} symbol={symbol} item={item} score={score} onClick={() => setSelectedSymbol(symbol)} />;
+                })}
               </div>
             </section>
 

@@ -1,7 +1,6 @@
 "use client";
 // 글로벌 시장 주요 종목을 차트와 기술지표 레이더로 보여주는 화면.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
 import { CandlestickSeries, createChart, type IChartApi, type ISeriesApi, type Time } from "lightweight-charts";
 import { RadarInsightPanel } from "@/components/RadarInsightPanel";
 import { TechnicalRadarPanel } from "@/components/TechnicalRadarPanel";
@@ -23,7 +22,7 @@ import { GlobalIctPanel } from "@/components/global/GlobalIctPanel";
 import { GlobalRadarControlDock } from "@/components/global/GlobalRadarControlDock";
 import { GlobalAssetChartPanel } from "@/components/global/GlobalAssetChartPanel";
 import { GlobalAssetSelectionPanel } from "@/components/global/GlobalAssetSelectionPanel";
-import { formatKstChartTime, getGlobalSessionState, groupPlaybook, toneBadgeClass } from "@/components/global/stockRadarDisplay";
+import { formatKstChartTime, getGlobalSessionState, groupPlaybook } from "@/components/global/stockRadarDisplay";
 import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { hasMarketEntitlement } from "@/lib/billing";
@@ -34,7 +33,6 @@ import { technicalRadarReportToRadarInsight, visibleRadarInsightForPlan } from "
 
 export function StockRadarApp() {
   const { profile } = useSupabaseAuth();
-  const pathname = usePathname();
   const isPaid = hasMarketEntitlement(profile?.plan, "stocks");
   const chartRef = useRef<HTMLDivElement | null>(null);
   const chartApiRef = useRef<IChartApi | null>(null);
@@ -49,7 +47,6 @@ export function StockRadarApp() {
   const [sessionState, setSessionState] = useState<ReturnType<typeof getGlobalSessionState> | null>(null);
   const [savedSymbols, setSavedSymbols] = useState<string[]>([]);
   const watchlistLimit = getWatchlistLimit(profile?.plan ?? "free");
-  const showMobileDock = pathname === "/global/assets";
 
   const selectedInfo = useMemo(() => universe.find((item) => item.symbol === symbol) ?? null, [symbol, universe]);
   const featuredItems = useMemo(
@@ -234,7 +231,7 @@ export function StockRadarApp() {
   return (
     <section
       id="asset-radar"
-      className="scroll-mt-24 border-y border-surface-line py-5 pb-40 sm:py-6 sm:pb-36"
+      className="scroll-mt-24 border-y border-surface-line py-5 pb-8 sm:py-6 sm:pb-10"
     >
       <GlobalAssetSelectionPanel
         symbol={symbol}
@@ -253,6 +250,12 @@ export function StockRadarApp() {
         selectedGroup={selectedGroup}
         onSelectedGroupChange={setSelectedGroup}
         visibleUniverse={visibleUniverse}
+      />
+      <GlobalRadarControlDock
+        timeframe={timeframe}
+        onTimeframeChange={setTimeframe}
+        radarMode={radarMode}
+        onRadarModeChange={setRadarMode}
       />
 
       {state.status === "ready" && radarMode !== "ict" && visibleRadarInsight ? (
@@ -295,13 +298,6 @@ export function StockRadarApp() {
           ) : null}
         </>
       ) : null}
-      <GlobalRadarControlDock
-        timeframe={timeframe}
-        onTimeframeChange={setTimeframe}
-        radarMode={radarMode}
-        onRadarModeChange={setRadarMode}
-        showMobileDock={showMobileDock}
-      />
     </section>
   );
 }

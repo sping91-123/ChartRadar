@@ -98,7 +98,7 @@ export function GlobalAssetSelectionPanel({
           </label>
         </div>
 
-        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {featuredItems.map((item) => (
             <button
               key={item.symbol}
@@ -143,7 +143,7 @@ export function GlobalAssetSelectionPanel({
             </button>
           </div>
 
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {visibleSavedItems.map((item) => (
               <button
                 key={item.symbol}

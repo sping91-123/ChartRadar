@@ -1,11 +1,12 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
-import { CircleHelp, X } from "lucide-react";
+import { X } from "lucide-react";
 
 export function CompactHelp({ children, label = "상세" }: { children?: ReactNode; label?: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const titleId = useId();
+  const buttonLabel = label.includes("기준") ? label : "기준 보기";
 
   if (!children) return null;
 
@@ -15,9 +16,9 @@ export function CompactHelp({ children, label = "상세" }: { children?: ReactNo
         type="button"
         aria-label={`${label} 보기`}
         onClick={() => setIsOpen(true)}
-        className="inline-grid h-6 w-6 place-items-center border border-ui-line text-ui-muted transition hover:text-ui-text"
+        className="inline-flex min-h-7 items-center justify-center whitespace-nowrap rounded-full border border-ui-line/25 bg-ui-inset/35 px-2.5 text-[11px] font-bold text-ui-muted transition hover:border-accent-blue/35 hover:bg-ui-inset/55 hover:text-ui-text"
       >
-        <CircleHelp size={14} aria-hidden />
+        {buttonLabel}
       </button>
       {isOpen ? (
         <div
@@ -27,7 +28,7 @@ export function CompactHelp({ children, label = "상세" }: { children?: ReactNo
           aria-labelledby={titleId}
           onClick={() => setIsOpen(false)}
         >
-          <div className="relative w-full max-w-sm border border-ui-line bg-ui-panel p-4 text-ui-text shadow-none" onClick={(event) => event.stopPropagation()}>
+          <div className="relative w-full max-w-sm rounded-ui-lg border border-ui-line/25 bg-ui-panel p-4 text-ui-text shadow-none" onClick={(event) => event.stopPropagation()}>
             <button
               type="button"
               onClick={() => setIsOpen(false)}

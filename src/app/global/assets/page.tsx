@@ -7,7 +7,7 @@ import { StockRadarApp } from "@/components/StockRadarApp";
 
 export default function GlobalAssetsPage() {
   return (
-    <main className="min-h-screen px-3 pb-64 sm:px-5 sm:pb-44 lg:pb-36">
+    <main className="min-h-screen px-3 pb-28 sm:px-5 sm:pb-24 lg:pb-20">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 sm:gap-4">
         <Header market="stocks" />
         <RadarTopNav market="stocks" />
