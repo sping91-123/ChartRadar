@@ -130,10 +130,10 @@ function finalViewTone(finalView: RadarFinalView): SummaryMetricTone {
 }
 
 function compactFinalViewLabel(finalView: RadarFinalView) {
-  if (finalView === "long_bias") return "상방 우위";
-  if (finalView === "short_bias") return "하방 우위";
+  if (finalView === "long_bias") return "상승 쪽 우세";
+  if (finalView === "short_bias") return "하락 쪽 우세";
   if (finalView === "high_risk") return "리스크 확인";
-  return "관망 우위";
+  return "방향 애매함";
 }
 
 function riskStateLabel(insight: RadarInsight) {
@@ -149,7 +149,7 @@ function compactLine(value: string | undefined, maxLength = 92) {
 }
 
 function defaultNextChecks(insight: RadarInsight, isPro: boolean) {
-  if (!isPro) return ["조건 충족 전 대기", "세부 추적 조건은 Pro에서 확인"];
+  if (!isPro) return ["새 포지션 기준 아직 부족", "구체 가격 기준은 Pro에서 확인"];
   if (insight.finalView === "long_bias") return [insight.longConditions[0], insight.invalidationConditions[0]].filter(Boolean);
   if (insight.finalView === "short_bias") return [insight.shortConditions[0], insight.invalidationConditions[0]].filter(Boolean);
   if (insight.finalView === "high_risk") return [insight.risks[0], insight.invalidationConditions[0]].filter(Boolean);
@@ -172,8 +172,7 @@ function CompactRadarInsightPanel({
   const compactStatusItems: Array<{ label: string; value: string; tone: SummaryMetricTone }> = [
     { label: "현재 판단", value: compactFinalViewLabel(insight.finalView), tone: statusTone },
     { label: "판단 강도", value: `판단 강도 ${insight.strengthLabel}`, tone: "info" },
-    { label: "리스크 상태", value: riskStateLabel(insight), tone: insight.finalView === "high_risk" ? "risk" : "watch" },
-    { label: "상세 근거", value: isPro ? "상세 근거 열림" : "상세 근거 잠금", tone: isPro ? "info" : "locked" }
+    { label: "리스크 상태", value: riskStateLabel(insight), tone: insight.finalView === "high_risk" ? "risk" : "watch" }
   ];
 
   return (
@@ -181,7 +180,7 @@ function CompactRadarInsightPanel({
       <SectionHeader
         eyebrow="오늘 먼저 볼 판단"
         title={insight.symbol}
-        description={`${insight.timeframe ?? "종합"} · 종합`}
+        description={insight.timeframe ? `${insight.timeframe} 기준` : "종합 기준"}
       />
 
       <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
@@ -222,7 +221,7 @@ function CompactRadarInsightPanel({
           <p className="mt-2 text-xs font-semibold text-ui-muted">{insight.strength} / 100</p>
           <div className="mt-3">
             <MetricRow label="현재가" value={priceLabel ?? "-"} />
-            <MetricRow label="데이터" value={dataStatusLabel ?? "-"} />
+            {dataStatusLabel ? <MetricRow label="업데이트" value={dataStatusLabel} /> : null}
           </div>
         </div>
       </div>
@@ -241,7 +240,7 @@ function CompactRadarInsightPanel({
 
       <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="border-t border-ui-line pt-3">
-          <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">핵심 근거</p>
+          <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">확인한 내용</p>
           <ul className="mt-2 divide-y divide-ui-line">
             {keyReasons.map((item) => (
               <li key={item} className="py-2 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">
@@ -363,10 +362,10 @@ export function RadarInsightPanel({
 
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
         <InsightList
-          title="핵심 근거"
+          title="확인한 내용"
           items={keyReasons}
           locked={!isPro && insight.keyReasons.length > 1}
-          previewText="Basic에서는 방향 요약만 제공합니다. 나머지 근거는 Pro에서 전체 맥락으로 확인합니다."
+          previewText="Basic에서는 방향 요약만 제공합니다. 나머지 내용은 Pro에서 전체 맥락으로 확인합니다."
           showLockedPreviewItems
         />
         <InsightList
@@ -379,8 +378,8 @@ export function RadarInsightPanel({
       </div>
 
       <div className="mt-3 grid gap-3 lg:grid-cols-3">
-        <InsightList title="롱 추적 조건" items={insight.longConditions} locked={!isPro} />
-        <InsightList title="숏 추적 조건" items={insight.shortConditions} locked={!isPro} />
+        <InsightList title="상방 추적 조건" items={insight.longConditions} locked={!isPro} />
+        <InsightList title="하방 추적 조건" items={insight.shortConditions} locked={!isPro} />
         <InsightList title="무효화 기준" items={insight.invalidationConditions} locked={!isPro} />
       </div>
 

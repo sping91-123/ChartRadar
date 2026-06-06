@@ -175,6 +175,13 @@ function modeClass(mode: MarketMode) {
   return "border-cyan-300/30 bg-cyan-400/12 text-cyan-100";
 }
 
+function modeDecisionLabel(payload: DashboardPayload) {
+  if (payload.decisionLabel) return payload.decisionLabel;
+  if (payload.marketMode === "Risk-On") return "Risk-On 확인";
+  if (payload.marketMode === "Risk-Off") return "Risk-Off 주의";
+  return "중립 확인";
+}
+
 function toneClass(tone: PressureTone) {
   if (tone === "supportive") return "border-emerald-300/20 bg-emerald-400/10 text-emerald-100";
   if (tone === "burden") return "border-rose-300/20 bg-rose-400/10 text-rose-100";
@@ -289,6 +296,84 @@ function FallbackChecklist({ compact = false }: { compact?: boolean }) {
   );
 }
 
+function focusAssetsForPayload(payload: DashboardPayload): FocusAsset[] {
+  if (payload.focusAssets?.length) return payload.focusAssets.slice(0, 3);
+  if (payload.basicIndexSummary) {
+    return [
+      {
+        symbol: payload.basicIndexSummary.symbol,
+        label: payload.basicIndexSummary.label,
+        reason: payload.basicIndexSummary.interpretation,
+        tone: payload.basicIndexSummary.tone
+      }
+    ];
+  }
+  return [];
+}
+
+function FocusAssetStrip({ items }: { items: FocusAsset[] }) {
+  return (
+    <article className="border-y border-white/10 py-4">
+      <div className="flex items-start gap-3">
+        <Sparkles className="mt-0.5 shrink-0 text-cyan-300" size={18} aria-hidden />
+        <div className="min-w-0">
+          <p className="text-xs font-black text-cyan-200">오늘 먼저 볼 자산</p>
+          <h3 className="mt-1 text-sm font-black text-white">핵심 1~3개만 먼저 확인</h3>
+        </div>
+      </div>
+      {items.length ? (
+        <div className="mt-3 grid divide-y divide-white/10 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          {items.map((item, index) => (
+            <div key={`${item.symbol}-${index}`} className="px-3 py-3 first:pt-0 sm:py-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-black text-slate-400">확인 {index + 1}</span>
+                {itemToneBadge({ tone: item.tone })}
+              </div>
+              <p className="mt-2 text-base font-black text-white">{item.symbol}</p>
+              <p className="mt-1 text-[11px] font-bold text-slate-400">{item.label}</p>
+              <p className="mt-2 text-xs font-bold leading-5 text-slate-200 [word-break:keep-all]">{item.reason}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-3">
+          <FallbackChecklist compact />
+        </div>
+      )}
+    </article>
+  );
+}
+
+function PrimaryRiskBlock({ payload, pressures }: { payload: DashboardPayload; pressures: PressureItem[] }) {
+  return (
+    <article className="border-y border-white/10 py-4">
+      <div className="flex items-start gap-3">
+        <ShieldAlert className="mt-0.5 shrink-0 text-amber-200" size={18} aria-hidden />
+        <div className="min-w-0">
+          <p className="text-xs font-black text-amber-100">가장 중요한 리스크</p>
+          <h3 className="mt-1 text-sm font-black text-white">{payload.topRisk}</h3>
+          <p className="mt-2 text-xs font-bold leading-5 text-slate-400 [word-break:keep-all]">
+            아래 조건이 이어지면 관망 또는 재확인이 우선입니다.
+          </p>
+        </div>
+      </div>
+      {pressures.length ? (
+        <div className="mt-3 grid divide-y divide-white/10 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          {pressures.map((pressure) => (
+            <div key={`${pressure.title}-${pressure.detail}`} className="px-3 py-3 first:pt-0 sm:py-2">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-xs font-black text-white">{pressure.title}</p>
+                {itemToneBadge({ tone: pressure.tone })}
+              </div>
+              <p className="mt-2 text-[11px] font-bold leading-5 opacity-80 [word-break:keep-all]">{pressure.detail}</p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
 function MarketThermometerBlock({ items }: { items: ThermometerAxis[] }) {
   return (
     <article className="border-y border-white/10 py-4">
@@ -308,33 +393,6 @@ function MarketThermometerBlock({ items }: { items: ThermometerAxis[] }) {
             </div>
             <p className="mt-2 text-[11px] font-bold leading-5 opacity-80 [word-break:keep-all]">{item.detail}</p>
             <p className="mt-2 text-[10px] font-bold text-slate-500">{item.symbols.join(" · ")}</p>
-          </div>
-        ))}
-      </div>
-    </article>
-  );
-}
-
-function FocusAssetsBlock({ items }: { items: FocusAsset[] }) {
-  return (
-    <article className="border-y border-white/10 py-4">
-      <div className="flex items-start gap-3">
-        <Sparkles className="mt-0.5 shrink-0 text-cyan-300" size={18} aria-hidden />
-        <div>
-          <h3 className="text-sm font-black text-white">오늘 먼저 볼 글로벌 자산 TOP 3</h3>
-          <p className="mt-1 text-xs font-bold leading-5 text-slate-400 [word-break:keep-all]">흐름을 좁혀 보기 위한 우선 확인 자산입니다.</p>
-        </div>
-      </div>
-      <div className="mt-3 grid divide-y divide-white/10 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-        {items.map((item, index) => (
-          <div key={`${item.symbol}-${index}`} className="px-3 py-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[10px] font-black text-slate-400">TOP {index + 1}</span>
-              {itemToneBadge({ tone: item.tone })}
-            </div>
-            <p className="mt-3 text-lg font-black text-white">{item.symbol}</p>
-            <p className="mt-1 text-[11px] font-bold text-slate-400">{item.label}</p>
-            <p className="mt-2 text-xs font-bold leading-5 text-slate-200 [word-break:keep-all]">{item.reason}</p>
           </div>
         ))}
       </div>
@@ -538,6 +596,7 @@ export function GlobalMarketPulse() {
 
   const payload = state.status === "ready" ? state.payload : null;
   const corePressures = useMemo(() => payload?.corePressures.slice(0, 3) ?? [], [payload]);
+  const focusAssets = useMemo(() => (payload ? focusAssetsForPayload(payload) : []), [payload]);
 
   return (
     <section className="min-w-0 overflow-hidden border-y border-white/10 py-5 sm:py-6">
@@ -597,18 +656,18 @@ export function GlobalMarketPulse() {
         </div>
       ) : payload ? (
         <>
-          <div className="mt-4 grid gap-3 lg:grid-cols-[1.15fr_1.85fr]">
+          <div className="mt-4 grid gap-3 lg:grid-cols-[1.1fr_1fr]">
             <article className="border-y border-white/10 py-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-black opacity-80">오늘의 글로벌 레이더 결론</p>
+                  <p className="text-xs font-black text-cyan-200">미국장 30초 체크</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-2 border-b border-white/20 px-1 py-1.5 text-lg font-black text-white">
+                    <span className={`inline-flex items-center gap-2 border px-2 py-1.5 text-lg font-black ${modeClass(payload.marketMode)}`}>
                       {modeIcon(payload.marketMode)}
-                      {payload.decisionLabel ?? payload.marketMode}
+                      {modeDecisionLabel(payload)}
                     </span>
                     <span className="border-b border-white/15 px-1 py-1.5 text-xs font-black">
-                      {payload.marketMode}
+                      시장 상태 {payload.marketMode}
                     </span>
                     <span className="border-b border-white/15 px-1 py-1.5 text-xs font-black">
                       판단 강도 {payload.strengthLabel ?? "중간"} · {payload.strength}/100
@@ -622,29 +681,14 @@ export function GlobalMarketPulse() {
               {payload.dataWarning ? (
                 <p className="mt-3 border-y border-amber-400/20 py-2 text-xs font-bold leading-5 text-amber-100 [word-break:keep-all]">{payload.dataWarning}</p>
               ) : null}
-              <div className="mt-4 border-t border-white/10 pt-3">
-                <div className="flex items-start gap-2">
-                  <ShieldAlert className="mt-0.5 shrink-0 text-amber-200" size={16} aria-hidden />
-                  <div>
-                    <p className="text-xs font-black text-white">오늘 가장 중요한 리스크</p>
-                    <p className="mt-1 text-xs font-bold leading-5 text-slate-300 [word-break:keep-all]">{payload.topRisk}</p>
-                  </div>
-                </div>
-              </div>
               <p className="mt-3 text-[11px] font-bold text-slate-400">최근 업데이트. {formatTime(payload.updatedAt)} KST</p>
             </article>
 
-            <div className="grid gap-2 sm:grid-cols-3">
-              {corePressures.map((pressure) => (
-                <article key={`${pressure.title}-${pressure.detail}`} className="border-t border-white/10 py-3 first:border-t-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-xs font-black text-white">{pressure.title}</p>
-                    {itemToneBadge({ tone: pressure.tone })}
-                  </div>
-                  <p className="mt-2 text-[11px] font-bold leading-5 opacity-80 [word-break:keep-all]">{pressure.detail}</p>
-                </article>
-              ))}
-            </div>
+            <FocusAssetStrip items={focusAssets} />
+          </div>
+
+          <div className="mt-3">
+            <PrimaryRiskBlock payload={payload} pressures={corePressures} />
           </div>
 
           {!isPaid ? (
@@ -658,10 +702,17 @@ export function GlobalMarketPulse() {
             </div>
           ) : null}
 
+          <div className="mt-4 border-y border-white/10 py-4">
+            <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">세부 근거</p>
+            <h3 className="mt-1 text-base font-black text-white">왜 이 결론인지 확인</h3>
+            <p className="mt-2 text-xs font-bold leading-5 text-slate-400 [word-break:keep-all]">
+              시장 온도계, 자산 관계성, 지수선물, 매크로, 섹터, 대장주, 일정/뉴스 압력을 아래에서 나눠 확인합니다.
+            </p>
+          </div>
+
           {payload.marketThermometer?.length || payload.focusAssets?.length || payload.relationshipChecks?.length ? (
             <div className="mt-4 grid gap-3">
               {payload.marketThermometer?.length ? <MarketThermometerBlock items={payload.marketThermometer} /> : null}
-              {payload.focusAssets?.length ? <FocusAssetsBlock items={payload.focusAssets} /> : null}
               {payload.relationshipChecks?.length ? <RelationshipChecksBlock items={payload.relationshipChecks} /> : null}
             </div>
           ) : null}

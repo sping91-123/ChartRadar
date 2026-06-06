@@ -51,6 +51,7 @@ export interface SpotChartSummary {
   symbol: string;
   timeframe: "1h";
   structureLabel: string;
+  currentPrice: number | null;
   rangePositionPercent: number | null;
   changePercent: number | null;
   volumeRatio: number | null;

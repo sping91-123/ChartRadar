@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 import { BarChart3, History } from "lucide-react";
 
 const pageLinks = [
-  { href: "/crypto", label: "BTC/ETH", icon: BarChart3 },
-  { href: "/news?market=crypto", label: "뉴스", icon: BarChart3 },
-  { href: "/journal?market=crypto", label: "복기", icon: History }
+  { href: "/crypto/perpetual", label: "BTC/ETH", icon: BarChart3 },
+  { href: "/crypto/news", label: "뉴스", icon: BarChart3 },
+  { href: "/crypto/review", label: "복기", icon: History }
 ] as const;
 
 export function TabMenu() {
@@ -18,7 +18,7 @@ export function TabMenu() {
       <div className="grid grid-cols-3 gap-2">
         {pageLinks.map(({ href, label, icon: Icon }) => {
           const hrefPath = href.split("?")[0];
-          const isActive = pathname === hrefPath || (pathname === "/" && hrefPath === "/crypto");
+          const isActive = pathname === hrefPath || (pathname === "/" && hrefPath === "/crypto/home");
 
           return (
             <Link

@@ -1,6 +1,6 @@
 "use client";
 // 시장 뉴스 브리핑과 참고 뉴스 목록을 카드형 레이더로 보여주는 패널입니다.
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -14,7 +14,6 @@ import {
   ListChecks,
   Newspaper,
   RefreshCcw,
-  ShieldAlert,
   Sparkles,
   Target,
   TrendingDown,
@@ -53,48 +52,44 @@ type BriefingCard = {
   relatedItems: RadarNewsItem[];
 };
 
+const NEWS_CARD_LIMIT = 3;
+
 const marketCopy = {
   crypto: {
     eyebrow: "시장 뉴스 리포트",
     title: "뉴스 레이더",
-    description: "가격 변동성, 청산·거래량, ETF·규제·거시 이벤트를 중심으로 시장 흐름을 점검합니다.",
     marketLabel: "코인 시장",
     radarTitle: "오늘의 시장 레이더",
     directionLabel: "BTC 방향성",
     subMarketLabel: "알트코인 분위기",
-    cadenceLine: "뉴스 레이더는 1시간 단위로 갱신되며, 짧은 제목보다 공개 뉴스의 공통 흐름을 먼저 정리합니다.",
     emptyState:
-      "현재 코인 시장 전체를 흔들 만한 강한 매크로 뉴스는 잡히지 않았습니다. 개별 알트·프로젝트 뉴스는 제외하고, BTC·ETH·ETF·금리·달러·물가·고용·규제·청산 흐름에 영향을 주는 이슈가 잡히면 이곳에 표시됩니다."
+      "현재 코인 시장 전체를 흔들 만한 강한 공개 뉴스는 잡히지 않았습니다. 개별 알트·프로젝트 뉴스는 제외하고, BTC·ETH·ETF·금리·달러·규제·청산 흐름에 영향을 주는 뉴스가 잡히면 이곳에 표시됩니다."
   },
   stocks: {
-    eyebrow: "글로벌 이벤트 리포트",
+    eyebrow: "글로벌 뉴스 리포트",
     title: "뉴스 레이더",
-    description: "중요 일정과 공개 뉴스가 지수·금리·달러 흐름에 미칠 영향을 정리합니다.",
     marketLabel: "글로벌 시장",
     radarTitle: "오늘의 시장 레이더",
     directionLabel: "지수 방향성",
     subMarketLabel: "섹터 분위기",
-    cadenceLine: "뉴스 레이더는 1시간 단위로 갱신되며, CPI, FOMC, 고용, 금리, 원자재와 공개 뉴스의 공통 흐름을 먼저 정리합니다.",
     emptyState:
-      "현재 글로벌 시장을 흔들 만한 강한 일정·뉴스는 잡히지 않았습니다. 개별 종목성 뉴스는 제외하고, 금리·물가·고용·달러·VIX·원자재·주요 지수에 영향을 주는 일정이나 이슈가 잡히면 이곳에 표시됩니다."
+      "현재 글로벌 시장을 흔들 만한 강한 공개 뉴스는 잡히지 않았습니다. 개별 종목성 뉴스는 제외하고, 금리·물가·고용·달러·VIX·원자재·주요 지수에 영향을 주는 뉴스가 잡히면 이곳에 표시됩니다."
   }
 } satisfies Record<
   RadarNewsMarket,
   {
     eyebrow: string;
     title: string;
-    description: string;
     marketLabel: string;
     radarTitle: string;
     directionLabel: string;
     subMarketLabel: string;
-    cadenceLine: string;
     emptyState: string;
   }
 >;
 
 function newsCacheKey(market: RadarNewsMarket) {
-  return `chart-radar.news.${market}.v14`;
+  return `chart-radar.news.${market}.v17`;
 }
 
 function canUseStorage() {
@@ -128,9 +123,11 @@ function stripMarkdown(value: string) {
     .replace(/\*(.*?)\*/g, "$1")
     .replace(/`([^`]+)`/g, "$1")
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/[가-힣A-Za-z0-9,·ㆍ\s]{0,120}기사 묶음에서 확인되는 흐름입니다\.?/g, "공개 뉴스와 시장 반응을 함께 보면")
-    .replace(/상방 우호 \d+개,\s*하방 주의 \d+개,\s*중립 확인 \d+개로 정리됩니다\./g, "상방과 하방 재료가 함께 정리됩니다.")
+    .replace(/[가-힣A-Za-z0-9,·ㆍ\s]{0,120}기사 묶음에서 확인되는 흐름입니다\.?/g, "")
+    .replace(/상방 우호 \d+개,\s*하방 주의 \d+개,\s*중립 확인 \d+개로 정리됩니다\./g, "상승 재료와 하락 재료가 함께 정리됩니다.")
     .replace(/상방 \d+\s*[·ㆍ]\s*하방 \d+\s*[·ㆍ]\s*중립 \d+/g, "")
+    .replace(/상방/g, "상승")
+    .replace(/하방/g, "하락")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -151,16 +148,23 @@ function timeLabel(value: string | number | undefined) {
   }).format(date);
 }
 
-function reportTimeLabel(value: string | number | undefined) {
-  const date = new Date(value ?? Date.now());
-  if (Number.isNaN(date.getTime())) return "업데이트 확인 중";
-  const pad = (next: number) => String(next).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+function updatedAtLabel(value: string | number | undefined) {
+  if (!value) return "최근 갱신 확인 중";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "최근 갱신 확인 중";
+  const label = new Intl.DateTimeFormat("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(date);
+  return `최근 갱신 ${label}`;
 }
 
-function refreshLabel(refreshIntervalMs?: number) {
-  const minutes = Math.max(1, Math.round((refreshIntervalMs ?? 60 * 60 * 1000) / 60000));
-  return `${minutes}분 단위 갱신`;
+function refreshIntervalLabel(value: number | undefined) {
+  if (!value) return "";
+  const minutes = Math.max(1, Math.round(value / 60_000));
+  if (minutes === 60) return "1시간 단위 자동 갱신";
+  if (minutes > 60 && minutes % 60 === 0) return `${minutes / 60}시간 단위 자동 갱신`;
+  return `${minutes}분 단위 자동 갱신`;
 }
 
 function itemTitle(item: RadarNewsItem, market: RadarNewsMarket) {
@@ -214,7 +218,7 @@ function sourceReferenceItems(items: RadarNewsItem[]) {
 function directionBadge(direction: RadarNewsDirection) {
   if (direction === "bullish") {
     return {
-      label: "상방 우세",
+      label: "상승 재료",
       caption: "",
       icon: TrendingUp,
       badge: "border-signal-success/30 bg-signal-success/10 text-signal-success",
@@ -223,7 +227,7 @@ function directionBadge(direction: RadarNewsDirection) {
   }
   if (direction === "bearish") {
     return {
-      label: "하방 주의",
+      label: "하락 재료",
       caption: "",
       icon: TrendingDown,
       badge: "border-signal-danger/30 bg-signal-danger/10 text-signal-danger",
@@ -231,7 +235,7 @@ function directionBadge(direction: RadarNewsDirection) {
     };
   }
   return {
-    label: "혼조",
+    label: "혼재 / 확인 필요",
     caption: "",
     icon: Target,
     badge: "border-signal-warning/30 bg-signal-warning/10 text-signal-warning",
@@ -255,25 +259,25 @@ function moodTone(mood: Mood): "long" | "short" | "watch" | "risk" {
 function moodCopy(mood: Mood) {
   if (mood === "up") {
     return {
-      label: "상방 우세",
+      label: "상승 재료 우세",
       caption: "",
       icon: TrendingUp,
       badge: "border-signal-success/30 bg-signal-success/10 text-signal-success",
       panel: "border-signal-success/20 bg-signal-success/10",
       risk: "위험자산 심리 개선",
-      chartTone: "상방 재료 우세",
+      chartTone: "상승 재료 우세",
       subTone: "선별 강세"
     };
   }
   if (mood === "down") {
     return {
-      label: "하방 주의",
+      label: "하락 재료 주의",
       caption: "",
       icon: TrendingDown,
       badge: "border-signal-danger/30 bg-signal-danger/10 text-signal-danger",
       panel: "border-signal-danger/20 bg-signal-danger/10",
       risk: "위험자산 심리 약화",
-      chartTone: "하방 압력 점검",
+      chartTone: "하락 압력 점검",
       subTone: "동반 약세 주의"
     };
   }
@@ -324,7 +328,7 @@ function inferMood(digest: { bullish: number; bearish: number; neutral: number; 
 function mergeTags(items: RadarNewsItem[], fallback: string[], market: RadarNewsMarket) {
   const tags = items.flatMap((item) => [...item.assets, ...item.tags]);
   const next = Array.from(new Set([...tags, ...fallback].map((tag) => cleanDisplayText(tag)).filter(Boolean)));
-  if (next.length) return next.slice(0, 5);
+  if (next.length) return next.slice(0, 4);
   return market === "stocks" ? ["금리", "나스닥", "실적"] : ["BTC", "ETH", "금리"];
 }
 
@@ -358,13 +362,13 @@ function buildBriefingCards(briefing: RadarNewsBriefing | undefined, items: Rada
   if (items.length === 0) return [];
   const issues = briefing.keyIssues ?? [];
   if (issues.length > 0) {
-    return issues.slice(0, 5).map((issue, index) => {
-      const relatedItems = items.filter((item) => item.direction === issue.tone).slice(0, 3);
+    return issues.slice(0, NEWS_CARD_LIMIT).map((issue, index) => {
+      const relatedItems = items.filter((item) => item.direction === issue.tone).slice(0, 2);
       return {
         id: `issue-${index}-${issue.tone}`,
         title: cleanDisplayText(issue.title, market === "stocks" ? "글로벌 시장 흐름 점검" : "코인 시장 흐름 점검"),
         tone: issue.tone,
-        summary: sectionText(issue.detail, briefing.overview, 2),
+        summary: sectionText(issue.detail, briefing.overview, 1),
         tags: mergeTags(relatedItems, [market === "stocks" ? "나스닥" : "BTC", "금리", "변동성"], market),
         issue,
         relatedItems
@@ -372,7 +376,7 @@ function buildBriefingCards(briefing: RadarNewsBriefing | undefined, items: Rada
     });
   }
 
-  return items.slice(0, 5).map((item, index) => ({
+  return items.slice(0, NEWS_CARD_LIMIT).map((item, index) => ({
     id: `news-${index}-${item.id}`,
     title: itemTitle(item, market),
     tone: item.direction,
@@ -385,24 +389,38 @@ function buildBriefingCards(briefing: RadarNewsBriefing | undefined, items: Rada
 function leadSummary(briefing: RadarNewsBriefing | undefined, mood: Mood, market: RadarNewsMarket) {
   const fallback =
     market === "stocks"
-      ? "글로벌 시장의 주요 뉴스와 매크로 흐름을 확인하는 중입니다. 강한 공개 이슈가 잡히면 시장 해석과 체크포인트를 정리합니다."
-      : "코인 시장의 주요 뉴스와 매크로 흐름을 확인하는 중입니다. 강한 공개 이슈가 잡히면 시장 해석과 체크포인트를 정리합니다.";
+      ? "글로벌 시장의 주요 뉴스 흐름을 확인하는 중입니다. 강한 공개 이슈가 잡히면 시장 해석과 체크포인트를 정리합니다."
+      : "코인 시장의 주요 뉴스 흐름을 확인하는 중입니다. 강한 공개 이슈가 잡히면 시장 해석과 체크포인트를 정리합니다.";
   const overview = cleanDisplayText(briefing?.overview, fallback);
   if (mood === "pending") return fallback;
-  return overview;
+  return sectionText(overview, fallback, 1);
+}
+
+function compactCheckpoint(value: string | undefined, mood: Mood, market: RadarNewsMarket) {
+  const text = cleanDisplayText(value);
+  if (mood === "pending") return "새 뉴스 유입 대기";
+
+  if (market === "stocks") {
+    if (mood === "up") return "지수선물·섹터 반응 확인";
+    if (mood === "down" || mood === "risk") return "금리·달러 부담 확인";
+    return "지수선물·달러 방향 확인";
+  }
+
+  if (mood === "up") return "BTC·ETH 동반 반응 확인";
+  if (mood === "down" || mood === "risk") return "BTC 지지선 이탈 확인";
+  if (/거래량|volume/i.test(text)) return "거래량 동반 여부 확인";
+  return "BTC·ETH 방향 확인";
 }
 
 function MarketRadarCard({
   briefing,
   digest,
   market,
-  updatedAt,
   hasBriefing
 }: {
   briefing?: RadarNewsBriefing;
   digest: { bullish: number; bearish: number; neutral: number; urgent: number };
   market: RadarNewsMarket;
-  updatedAt?: number;
   hasBriefing: boolean;
 }) {
   const mood = inferMood(digest, hasBriefing);
@@ -410,11 +428,10 @@ function MarketRadarCard({
   const MoodIcon = moodStyle.icon;
   const copy = marketCopy[market];
   const summary = leadSummary(briefing, mood, market);
-  const checkpoint = cleanDisplayText(
+  const checkpoint = compactCheckpoint(
     briefing?.strategyNotes?.[0],
-    market === "stocks"
-      ? "금리, 달러, 지수선물과 주요 섹터 반응을 함께 확인하세요."
-      : "BTC와 ETH의 지지·저항 반응, 금리와 달러 흐름을 함께 확인하세요."
+    mood,
+    market
   );
 
   return (
@@ -434,16 +451,15 @@ function MarketRadarCard({
         <MetricRow label="위험자산 심리" value={moodStyle.risk} />
         <MetricRow label={copy.directionLabel} value={moodStyle.chartTone} />
         <MetricRow label={copy.subMarketLabel} value={moodStyle.subTone} />
-        <MetricRow label="업데이트" value={reportTimeLabel(updatedAt)} />
       </div>
 
       <AppSurface tone="inset" variant="flat" padding="none" className="border-t border-ui-line pt-3">
-        <div className="flex items-start gap-2">
-          <ListChecks size={15} className="mt-0.5 shrink-0 text-ui-brand" aria-hidden />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-ui-text">오늘 체크포인트</p>
-            <p className="mt-1 text-sm leading-6 text-ui-muted [word-break:keep-all]">{checkpoint}</p>
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <div className="flex items-center gap-2">
+            <ListChecks size={15} className="shrink-0 text-ui-brand" aria-hidden />
+            <p className="text-sm font-semibold text-ui-muted">다음 확인</p>
           </div>
+          <p className="text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{checkpoint}</p>
         </div>
       </AppSurface>
     </PanelCard>
@@ -574,13 +590,11 @@ function BriefingDetail({
 function BriefingCardView({
   card,
   briefing,
-  updatedAt,
   expanded,
   onToggle
 }: {
   card: BriefingCard;
   briefing: RadarNewsBriefing;
-  updatedAt?: number;
   expanded: boolean;
   onToggle: () => void;
 }) {
@@ -588,31 +602,29 @@ function BriefingCardView({
   const Icon = style.icon;
 
   return (
-    <PanelCard variant="flat" padding="none" className="space-y-3 border-t border-ui-line py-5">
+    <PanelCard variant="flat" padding="none" className="space-y-2.5 border-t border-ui-line py-4">
       <div className="flex flex-wrap items-center gap-2">
         <StatusPill tone={directionTone(card.tone)} icon={Icon}>
           {style.label}
         </StatusPill>
-        <StatusPill tone="info" icon={Clock3}>
-          {timeLabel(updatedAt)}
-        </StatusPill>
       </div>
 
       <h3 className="text-base font-semibold leading-6 text-ui-text [word-break:keep-all] sm:text-lg">{card.title}</h3>
-      <p className="line-clamp-2 text-sm leading-6 text-ui-muted [word-break:keep-all]">{card.summary}</p>
 
-      <div className="flex flex-wrap gap-1.5">
-        {card.tags.slice(0, 3).map((tag) => (
-          <span key={tag} className="rounded-ui-sm border border-ui-line bg-ui-inset px-2 py-1 text-[11px] font-semibold text-ui-muted">
-            {tag}
-          </span>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-1.5">
+          {card.tags.slice(0, 2).map((tag) => (
+            <span key={tag} className="rounded-ui-sm border border-ui-line bg-ui-inset px-2 py-1 text-[11px] font-semibold text-ui-muted">
+              {tag}
+            </span>
+          ))}
+        </div>
+
+        <ActionButton tone={expanded ? "ghost" : "secondary"} onClick={onToggle} aria-expanded={expanded} className="w-fit">
+          {expanded ? "접기" : "내용 보기"}
+          {expanded ? <ChevronUp size={15} aria-hidden /> : <ChevronDown size={15} aria-hidden />}
+        </ActionButton>
       </div>
-
-      <ActionButton tone={expanded ? "ghost" : "secondary"} onClick={onToggle} aria-expanded={expanded} className="w-full sm:w-auto">
-        {expanded ? "상세 접기" : "자세히 보기"}
-        {expanded ? <ChevronUp size={15} aria-hidden /> : <ChevronDown size={15} aria-hidden />}
-      </ActionButton>
 
       {expanded ? <BriefingDetail card={card} briefing={briefing} /> : null}
     </PanelCard>
@@ -637,6 +649,7 @@ function SourceReferenceList({ items }: { items: RadarNewsItem[] }) {
         {references.slice(0, 12).map((item) => {
           const style = directionBadge(item.direction);
           const sourceName = displayNewsSource(item.source) || sourceDomain(item.link);
+          const title = sourceReferenceTitle(item);
           return (
             <article key={item.id} className="border-t border-ui-line pt-3 first:border-t-0 first:pt-0">
               <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-ui-subtle">
@@ -652,13 +665,12 @@ function SourceReferenceList({ items }: { items: RadarNewsItem[] }) {
                 rel="noreferrer"
                 className="mt-2 flex items-start justify-between gap-3 text-sm font-semibold leading-5 text-ui-text transition hover:text-ui-brand [word-break:keep-all]"
               >
-                <span className="line-clamp-2">{sourceReferenceTitle(item)}</span>
+                <span className="line-clamp-2">{title}</span>
                 <ExternalLink size={13} className="mt-1 shrink-0 text-ui-brand" aria-hidden />
               </a>
-              {item.originalTitle && item.originalTitle !== sourceReferenceTitle(item) ? (
-                <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-ui-subtle [word-break:break-word]">원문: {item.originalTitle}</p>
+              {item.originalTitle && item.originalTitle !== title ? (
+                <p className="mt-1 line-clamp-1 text-[11px] leading-4 text-ui-subtle [word-break:break-word]">원문: {item.originalTitle}</p>
               ) : null}
-              <p className="mt-2 line-clamp-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{cleanDisplayText(item.summary)}</p>
             </article>
           );
         })}
@@ -667,7 +679,7 @@ function SourceReferenceList({ items }: { items: RadarNewsItem[] }) {
   );
 }
 
-export function RadarNewsPanel({ market = "crypto", afterBriefing }: { market?: RadarNewsMarket; afterBriefing?: ReactNode } = {}) {
+export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket } = {}) {
   const copy = marketCopy[market];
   const [payload, setPayload] = useState<NewsPayload | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -722,24 +734,25 @@ export function RadarNewsPanel({ market = "crypto", afterBriefing }: { market?: 
   const cards = useMemo(() => buildBriefingCards(briefing, payload?.items ?? [], market), [briefing, market, payload?.items]);
   const isInitialLoading = status === "loading" && !payload;
   const hasBriefing = Boolean(briefing && (payload?.items ?? []).length > 0 && cards.length);
+  const refreshLabel = refreshIntervalLabel(payload?.refreshIntervalMs);
 
   return (
-    <section className="space-y-5">
-      <PanelCard variant="report">
-        <SectionHeader
-          eyebrow={copy.eyebrow}
-          title={copy.title}
-          description={copy.description}
-          action={
-            <div className="flex flex-col gap-1 sm:items-end">
-              <ActionButton tone="secondary" onClick={loadNews} disabled={status === "loading"}>
-                <RefreshCcw className={status === "loading" ? "animate-spin" : ""} size={16} aria-hidden />
-                다시 정리
-              </ActionButton>
-              <p className="text-[11px] font-semibold text-ui-subtle">{payload?.cached ? "저장된 1시간 리포트" : refreshLabel(payload?.refreshIntervalMs)}</p>
+    <section className="space-y-4">
+      <PanelCard variant="report" padding="none" className="border-b border-ui-line pb-3">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">{copy.eyebrow}</p>
+            <h2 className="text-ui-heading font-semibold tracking-tight text-ui-text">{copy.title}</h2>
+            <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[11px] font-semibold text-ui-muted">
+              <span>{updatedAtLabel(payload?.updatedAt)}</span>
+              {refreshLabel ? <span>{refreshLabel}</span> : null}
             </div>
-          }
-        />
+          </div>
+          <ActionButton tone="secondary" onClick={loadNews} disabled={status === "loading"} className="shrink-0 px-2 sm:px-3">
+            <RefreshCcw className={status === "loading" ? "animate-spin" : ""} size={16} aria-hidden />
+            다시 정리
+          </ActionButton>
+        </div>
       </PanelCard>
 
       {error ? (
@@ -750,22 +763,16 @@ export function RadarNewsPanel({ market = "crypto", afterBriefing }: { market?: 
 
       {isInitialLoading ? (
         <AppSurface variant="flat" tone="inset" padding="none" className="border-t border-ui-line py-3 text-sm font-semibold leading-6 text-ui-brand shadow-none">
-          리포트 준비 중입니다. 공개 뉴스와 매크로 흐름을 읽어 시장 해석과 체크포인트를 정리하고 있습니다.
+          리포트 준비 중입니다. 공개 뉴스를 읽어 시장 해석과 체크포인트를 정리하고 있습니다.
         </AppSurface>
       ) : null}
 
-      <MarketRadarCard briefing={briefing} digest={digest} market={market} updatedAt={payload?.updatedAt} hasBriefing={hasBriefing} />
+      <MarketRadarCard briefing={briefing} digest={digest} market={market} hasBriefing={hasBriefing} />
 
       <section className="space-y-3">
         <SectionHeader
-          eyebrow={market === "stocks" ? "이벤트 리포트" : "시장 구조 리포트"}
-          title="오늘의 AI 브리핑"
-          description={market === "stocks" ? "지수, 금리, 달러와 연결되는 공개 일정과 뉴스 흐름입니다." : "가격 변동성, 주요 코인 흐름, 규제·ETF·거시 재료를 중심으로 정리합니다."}
-          action={
-            <StatusPill tone="info" icon={Clock3}>
-              {refreshLabel(payload?.refreshIntervalMs)}
-            </StatusPill>
-          }
+          eyebrow="뉴스 브리핑"
+          title="오늘 볼 뉴스"
         />
 
         {cards.length ? (
@@ -775,7 +782,6 @@ export function RadarNewsPanel({ market = "crypto", afterBriefing }: { market?: 
                 key={card.id}
                 card={card}
                 briefing={briefing as RadarNewsBriefing}
-                updatedAt={payload?.updatedAt}
                 expanded={expandedCardId === card.id}
                 onToggle={() => setExpandedCardId((current) => (current === card.id ? "" : card.id))}
               />
@@ -787,19 +793,6 @@ export function RadarNewsPanel({ market = "crypto", afterBriefing }: { market?: 
 
         <SourceReferenceList items={payload?.items ?? []} />
       </section>
-
-      {afterBriefing}
-
-      <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
-        <div className="flex items-start gap-2">
-          <ShieldAlert size={15} className="mt-0.5 shrink-0 text-ui-brand" aria-hidden />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-ui-text">시장 해석 기준</p>
-            <p className="mt-2 text-sm leading-6 text-ui-muted [word-break:keep-all]">{copy.cadenceLine}</p>
-          </div>
-        </div>
-      </PanelCard>
-
     </section>
   );
 }

@@ -1,6 +1,6 @@
 // 앱에서 RevenueCat 구독 결제와 서버 권한 동기화를 처리합니다.
 import { Capacitor } from "@capacitor/core";
-import type { PurchasesStoreProduct, SubscriptionOption } from "@revenuecat/purchases-capacitor";
+import { Purchases, type PurchasesOfferings, type PurchasesPackage, type PurchasesStoreProduct, type SubscriptionOption } from "@revenuecat/purchases-capacitor";
 import { getStoreProductIdentifier, hasStoreEntitlementForPlan, type BillingPlan, type BillingPlanId } from "@/lib/billing";
 import { supabaseAuthRefreshEvent } from "@/lib/supabase";
 
@@ -10,6 +10,7 @@ interface NativePurchaseParams {
   plan: BillingPlan;
   userId: string;
   accessToken: string;
+  onStage?: (stage: NativePurchaseStageEvent) => void;
 }
 
 interface NativeRestoreParams {
@@ -30,12 +31,52 @@ type RevenueCatCustomerInfo = {
   };
 };
 
-let configuredUserId: string | null = null;
+export type NativePurchaseErrorCode =
+  | "native_unavailable"
+  | "config_missing"
+  | "configure_timeout"
+  | "offering_load_failed"
+  | "package_not_found"
+  | "product_load_failed"
+  | "product_not_found"
+  | "base_plan_not_found"
+  | "purchase_cancelled"
+  | "purchase_failed"
+  | "entitlement_missing";
 
-async function getRevenueCatPurchases() {
-  const { Purchases } = await import("@revenuecat/purchases-capacitor");
-  return Purchases;
+export type NativePurchaseStage =
+  | "native_start"
+  | "configure_start"
+  | "configure_success"
+  | "configure_cached"
+  | "get_products_start"
+  | "get_products_success"
+  | "product_matched"
+  | "base_plan_matched"
+  | "purchase_start"
+  | "purchase_success"
+  | "purchase_cancel"
+  | "purchase_error";
+
+export interface NativePurchaseStageEvent {
+  stage: NativePurchaseStage;
+  details?: Record<string, string | number | boolean | null>;
 }
+
+export class NativePurchaseError extends Error {
+  code: NativePurchaseErrorCode;
+
+  constructor(code: NativePurchaseErrorCode, message: string) {
+    super(message);
+    this.name = "NativePurchaseError";
+    this.code = code;
+  }
+}
+
+let configuredUserId: string | null = null;
+let configurePromise: Promise<void> | null = null;
+let configurePromiseUserId: string | null = null;
+const CONFIGURE_TIMEOUT_MS = 20_000;
 
 export function getNativePurchasePlatform(): NativePurchasePlatform | null {
   if (!Capacitor.isNativePlatform()) return null;
@@ -47,22 +88,64 @@ export function isNativePurchaseAvailable() {
   return getNativePurchasePlatform() !== null;
 }
 
+function logNativePurchase(event: string, details: Record<string, string | number | boolean | null> = {}) {
+  console.info(`[ChartRadar billing] ${event}`, details);
+}
+
+function warnNativePurchase(event: string, details: Record<string, string | number | boolean | null> = {}) {
+  console.warn(`[ChartRadar billing] ${event}`, details);
+}
+
+function emitNativePurchaseStage(params: Pick<NativePurchaseParams, "onStage">, stage: NativePurchaseStage, details: Record<string, string | number | boolean | null> = {}) {
+  params.onStage?.({ stage, details });
+}
+
+function withNativePurchaseTimeout<T>(promise: Promise<T>, timeoutMs: number, error: NativePurchaseError) {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<T>((_, reject) => {
+    timeoutId = setTimeout(() => reject(error), timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timeoutId) clearTimeout(timeoutId);
+  });
+}
+
 function getRevenueCatApiKey(platform: NativePurchasePlatform) {
   return platform === "android"
     ? process.env.NEXT_PUBLIC_REVENUECAT_ANDROID_API_KEY
     : process.env.NEXT_PUBLIC_REVENUECAT_IOS_API_KEY;
 }
 
-async function configurePurchases(platform: NativePurchasePlatform, userId: string) {
-  if (configuredUserId === userId) return;
+async function configurePurchases(platform: NativePurchasePlatform, userId: string, onStage?: NativePurchaseParams["onStage"]) {
+  if (configuredUserId === userId) {
+    onStage?.({ stage: "configure_cached", details: { platform } });
+    return;
+  }
   const apiKey = getRevenueCatApiKey(platform);
   if (!apiKey) {
-    throw new Error("앱 결제를 잠시 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.");
+    throw new NativePurchaseError("config_missing", "RevenueCat API key is missing.");
   }
 
-  const Purchases = await getRevenueCatPurchases();
-  await Purchases.configure({ apiKey, appUserID: userId });
-  configuredUserId = userId;
+  onStage?.({ stage: "configure_start", details: { platform } });
+  if (!configurePromise || configurePromiseUserId !== userId) {
+    configurePromiseUserId = userId;
+    configurePromise = withNativePurchaseTimeout(
+      Purchases.configure({ apiKey, appUserID: userId }),
+      CONFIGURE_TIMEOUT_MS,
+      new NativePurchaseError("configure_timeout", "Native purchase configuration timed out.")
+    );
+  }
+
+  try {
+    await configurePromise;
+    configuredUserId = userId;
+    onStage?.({ stage: "configure_success", details: { platform } });
+  } finally {
+    if (configurePromiseUserId === userId) {
+      configurePromise = null;
+      configurePromiseUserId = null;
+    }
+  }
 }
 
 function hasActivePlan(customerInfo: RevenueCatCustomerInfo, plan: BillingPlan) {
@@ -70,8 +153,8 @@ function hasActivePlan(customerInfo: RevenueCatCustomerInfo, plan: BillingPlan) 
 }
 
 function getNativeStoreProductIds(plan: BillingPlan) {
-  if (!plan.appStoreProductId) throw new Error("현재 앱에서는 이 요금제를 결제할 수 없습니다. 다른 요금제를 선택해 주세요.");
-  if (!plan.appStoreBasePlanId) throw new Error("앱 구독 기본 요금제 연결을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+  if (!plan.appStoreProductId) throw new NativePurchaseError("product_not_found", "Missing app store product id for plan.");
+  if (!plan.appStoreBasePlanId) throw new NativePurchaseError("base_plan_not_found", "Missing app store base plan id for plan.");
 
   return {
     productId: plan.appStoreProductId,
@@ -80,9 +163,26 @@ function getNativeStoreProductIds(plan: BillingPlan) {
   };
 }
 
+function getRevenueCatPackageId(plan: BillingPlan) {
+  return plan.id === "bundle_yearly" ? "bundle_6month" : plan.id;
+}
+
 function findStoreProduct(products: PurchasesStoreProduct[], plan: BillingPlan) {
   const { productId, storeProductId } = getNativeStoreProductIds(plan);
   return products.find((product) => product.identifier === productId || product.identifier === storeProductId) ?? null;
+}
+
+function findOfferingPackage(offerings: PurchasesOfferings, plan: BillingPlan): PurchasesPackage | null {
+  const packageId = getRevenueCatPackageId(plan);
+  const { productId, storeProductId } = getNativeStoreProductIds(plan);
+  const offering = offerings.current ?? offerings.all.default ?? Object.values(offerings.all)[0] ?? null;
+  const packages = offering?.availablePackages ?? [];
+
+  return (
+    packages.find((candidate) => candidate.identifier === packageId) ??
+    packages.find((candidate) => candidate.product.identifier === productId || candidate.product.identifier === storeProductId) ??
+    null
+  );
 }
 
 function findSubscriptionOption(product: PurchasesStoreProduct, plan: BillingPlan): SubscriptionOption | null {
@@ -165,47 +265,202 @@ function normalizePurchaseError(error: unknown) {
     "userCancelled" in error &&
     (error as { userCancelled?: boolean }).userCancelled
   ) {
-    return new Error("결제가 취소되었습니다. 필요하실 때 다시 시작하시면 됩니다.");
+    return new NativePurchaseError("purchase_cancelled", "Purchase was cancelled by the user.");
   }
 
+  if (error instanceof NativePurchaseError) return error;
   if (error instanceof Error) return error;
-  return new Error("앱 결제 진행 중 오류가 발생했습니다.");
+  return new NativePurchaseError("purchase_failed", "Native purchase failed.");
+}
+
+async function purchaseMatchedProduct(params: NativePurchaseParams & { platform: NativePurchasePlatform; product: PurchasesStoreProduct; aPackage?: PurchasesPackage | null }) {
+  const { productId, basePlanId } = getNativeStoreProductIds(params.plan);
+  const subscriptionOption = params.platform === "android" ? findSubscriptionOption(params.product, params.plan) : null;
+  logNativePurchase("matched base plan id", {
+    planId: params.plan.id,
+    basePlanId,
+    matched: params.platform !== "android" || Boolean(subscriptionOption),
+    optionCount: params.product.subscriptionOptions?.length ?? 0
+  });
+  emitNativePurchaseStage(params, "base_plan_matched", {
+    planId: params.plan.id,
+    basePlanId,
+    matched: params.platform !== "android" || Boolean(subscriptionOption),
+    optionCount: params.product.subscriptionOptions?.length ?? 0
+  });
+  if (params.platform === "android" && !subscriptionOption) {
+    throw new NativePurchaseError("base_plan_not_found", "Requested Google Play base plan was not found in RevenueCat subscription options.");
+  }
+
+  logNativePurchase(subscriptionOption ? "purchaseSubscriptionOption start" : params.aPackage ? "purchasePackage start" : "purchaseStoreProduct start", {
+    planId: params.plan.id,
+    productId,
+    basePlanId
+  });
+  emitNativePurchaseStage(params, "purchase_start", { planId: params.plan.id, productId, basePlanId });
+  return subscriptionOption
+    ? Purchases.purchaseSubscriptionOption({ subscriptionOption })
+    : params.aPackage
+      ? Purchases.purchasePackage({ aPackage: params.aPackage })
+      : Purchases.purchaseStoreProduct({ product: params.product });
+}
+
+async function purchaseOfferingPackage(params: NativePurchaseParams & { platform: NativePurchasePlatform; aPackage: PurchasesPackage }) {
+  const { productId, basePlanId } = getNativeStoreProductIds(params.plan);
+  const subscriptionOption = params.platform === "android" ? findSubscriptionOption(params.aPackage.product, params.plan) : null;
+  logNativePurchase("matched base plan id", {
+    planId: params.plan.id,
+    basePlanId,
+    matched: params.platform !== "android" || Boolean(subscriptionOption),
+    optionCount: params.aPackage.product.subscriptionOptions?.length ?? 0
+  });
+  emitNativePurchaseStage(params, "base_plan_matched", {
+    planId: params.plan.id,
+    basePlanId,
+    matched: params.platform !== "android" || Boolean(subscriptionOption),
+    optionCount: params.aPackage.product.subscriptionOptions?.length ?? 0
+  });
+  logNativePurchase("purchasePackage start", {
+    planId: params.plan.id,
+    productId,
+    basePlanId,
+    packageId: params.aPackage.identifier
+  });
+  emitNativePurchaseStage(params, "purchase_start", { planId: params.plan.id, productId, basePlanId });
+  return Purchases.purchasePackage({ aPackage: params.aPackage });
+}
+
+async function purchaseAndroidStoreProduct(params: NativePurchaseParams & { product: PurchasesStoreProduct }) {
+  const { productId, basePlanId } = getNativeStoreProductIds(params.plan);
+  const subscriptionOption = findSubscriptionOption(params.product, params.plan);
+  logNativePurchase("matched base plan id", {
+    planId: params.plan.id,
+    basePlanId,
+    matched: Boolean(subscriptionOption),
+    optionCount: params.product.subscriptionOptions?.length ?? 0
+  });
+  emitNativePurchaseStage(params, "base_plan_matched", {
+    planId: params.plan.id,
+    basePlanId,
+    matched: Boolean(subscriptionOption),
+    optionCount: params.product.subscriptionOptions?.length ?? 0
+  });
+  if (!subscriptionOption) {
+    throw new NativePurchaseError("base_plan_not_found", "Requested Google Play base plan was not found in RevenueCat subscription options.");
+  }
+
+  logNativePurchase("purchaseSubscriptionOption start", {
+    planId: params.plan.id,
+    productId,
+    basePlanId
+  });
+  emitNativePurchaseStage(params, "purchase_start", { planId: params.plan.id, productId, basePlanId });
+  return Purchases.purchaseSubscriptionOption({ subscriptionOption });
 }
 
 export async function purchaseNativePlan(params: NativePurchaseParams) {
   const platform = getNativePurchasePlatform();
-  if (!platform) throw new Error("앱 결제는 Android 또는 iOS 앱에서만 사용할 수 있습니다.");
+  if (!platform) throw new NativePurchaseError("native_unavailable", "Native purchases are not available on this platform.");
   const { productId, basePlanId } = getNativeStoreProductIds(params.plan);
 
   try {
-    await configurePurchases(platform, params.userId);
-    const Purchases = await getRevenueCatPurchases();
-    const { products } = await Purchases.getProducts({
-      productIdentifiers: [productId]
-    });
+    logNativePurchase("native purchase start", { platform, planId: params.plan.id, productId, basePlanId });
+    emitNativePurchaseStage(params, "native_start", { platform, planId: params.plan.id, productId, basePlanId });
+    await configurePurchases(platform, params.userId, params.onStage);
+    let result;
+    if (platform === "android") {
+      logNativePurchase("getProducts start", { planId: params.plan.id, productId });
+      emitNativePurchaseStage(params, "get_products_start", { planId: params.plan.id, productId });
+      const { products } = await Purchases.getProducts({
+        productIdentifiers: [productId]
+      });
+      logNativePurchase("getProducts success", { planId: params.plan.id, productId, productCount: products.length });
+      emitNativePurchaseStage(params, "get_products_success", { planId: params.plan.id, productId, productCount: products.length });
 
-    const product = findStoreProduct(products, params.plan);
-    if (!product) throw new Error("스토어에서 구독 상품을 찾지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      if (products.length === 0) {
+        throw new NativePurchaseError("product_load_failed", "RevenueCat returned no products for the requested product id.");
+      }
 
-    const subscriptionOption = platform === "android" ? findSubscriptionOption(product, params.plan) : null;
-    if (platform === "android" && !subscriptionOption && product.subscriptionOptions?.length) {
-      throw new Error(`${params.plan.displayName}의 Google Play 기본 요금제 ${basePlanId}를 찾지 못했습니다.`);
+      const product = findStoreProduct(products, params.plan);
+      logNativePurchase("matched product id", { planId: params.plan.id, productId, matched: Boolean(product) });
+      emitNativePurchaseStage(params, "product_matched", { planId: params.plan.id, productId, matched: Boolean(product) });
+      if (!product) throw new NativePurchaseError("product_not_found", "Requested app store product was not found in RevenueCat products.");
+      result = await purchaseAndroidStoreProduct({ ...params, product });
+    } else {
+      logNativePurchase("getOfferings start", { planId: params.plan.id, productId, packageId: getRevenueCatPackageId(params.plan) });
+      const offerings = await Purchases.getOfferings().catch((error) => {
+        warnNativePurchase("getOfferings error", { planId: params.plan.id, productId });
+        throw error;
+      });
+      const offeringPackage = findOfferingPackage(offerings, params.plan);
+      logNativePurchase("getOfferings success", {
+        planId: params.plan.id,
+        productId,
+        packageId: getRevenueCatPackageId(params.plan),
+        offeringCount: Object.keys(offerings.all).length,
+        packageCount: (offerings.current ?? offerings.all.default)?.availablePackages.length ?? 0,
+        matched: Boolean(offeringPackage)
+      });
+
+      if (offeringPackage) {
+        logNativePurchase("matched offering package", {
+          planId: params.plan.id,
+          productId,
+          basePlanId,
+          packageId: offeringPackage.identifier
+        });
+        result = await purchaseOfferingPackage({ ...params, platform, aPackage: offeringPackage });
+      } else {
+        warnNativePurchase("offering package not found, falling back to getProducts", {
+          planId: params.plan.id,
+          productId,
+          packageId: getRevenueCatPackageId(params.plan)
+        });
+      logNativePurchase("getProducts start", { planId: params.plan.id, productId });
+        emitNativePurchaseStage(params, "get_products_start", { planId: params.plan.id, productId });
+        const { products } = await Purchases.getProducts({
+          productIdentifiers: [productId]
+        });
+        logNativePurchase("getProducts success", { planId: params.plan.id, productId, productCount: products.length });
+        emitNativePurchaseStage(params, "get_products_success", { planId: params.plan.id, productId, productCount: products.length });
+
+        if (products.length === 0) {
+          throw new NativePurchaseError("product_load_failed", "RevenueCat returned no products for the requested product id.");
+        }
+
+        const product = findStoreProduct(products, params.plan);
+        logNativePurchase("matched product id", { planId: params.plan.id, productId, matched: Boolean(product) });
+        emitNativePurchaseStage(params, "product_matched", { planId: params.plan.id, productId, matched: Boolean(product) });
+        if (!product) throw new NativePurchaseError("product_not_found", "Requested app store product was not found in RevenueCat products.");
+        result = await purchaseMatchedProduct({ ...params, platform, product });
+      }
     }
-
-    const result = subscriptionOption
-      ? await Purchases.purchaseSubscriptionOption({ subscriptionOption })
-      : await Purchases.purchaseStoreProduct({ product });
+    logNativePurchase("purchase success", { planId: params.plan.id, productId, basePlanId });
+    emitNativePurchaseStage(params, "purchase_success", { planId: params.plan.id, productId, basePlanId });
     if (!hasActivePlan(result.customerInfo, params.plan)) {
       const { customerInfo } = await Purchases.getCustomerInfo();
       if (!hasActivePlan(customerInfo, params.plan)) {
-        throw new Error("결제는 완료되었지만 활성 구독 권한을 확인하지 못했습니다. 구독 권한 불러오기를 눌러 다시 연결해 주세요.");
+        throw new NativePurchaseError("entitlement_missing", "Purchase finished, but matching entitlement was not active.");
       }
     }
 
     await syncAppStoreEntitlement({ ...params, platform });
     return { message: "구독이 확인되어 Pro 권한이 열렸습니다." };
   } catch (error) {
-    throw normalizePurchaseError(error);
+    const normalized = normalizePurchaseError(error);
+    warnNativePurchase(normalized instanceof NativePurchaseError && normalized.code === "purchase_cancelled" ? "purchase cancel" : "purchase error", {
+      planId: params.plan.id,
+      productId,
+      basePlanId,
+      errorCode: normalized instanceof NativePurchaseError ? normalized.code : "unknown"
+    });
+    emitNativePurchaseStage(params, normalized instanceof NativePurchaseError && normalized.code === "purchase_cancelled" ? "purchase_cancel" : "purchase_error", {
+      planId: params.plan.id,
+      productId,
+      basePlanId,
+      errorCode: normalized instanceof NativePurchaseError ? normalized.code : "unknown"
+    });
+    throw normalized;
   }
 }
 
@@ -214,15 +469,35 @@ export async function fetchNativePlanPriceLabels(plans: BillingPlan[], userId: s
   if (!platform) return {};
 
   await configurePurchases(platform, userId);
-  const Purchases = await getRevenueCatPurchases();
   const paidPlans = plans.filter((plan) => plan.appStoreProductId);
   const productIdentifiers = Array.from(new Set(paidPlans.map((plan) => plan.appStoreProductId).filter(Boolean))) as string[];
-  if (productIdentifiers.length === 0) return {};
-
-  const { products } = await Purchases.getProducts({ productIdentifiers });
   const priceLabels: Partial<Record<BillingPlanId, string>> = {};
 
+  const offerings = await Purchases.getOfferings().catch(() => null);
+  if (offerings) {
+    for (const plan of paidPlans) {
+      const offeringPackage = findOfferingPackage(offerings, plan);
+      if (offeringPackage?.product.priceString) {
+        priceLabels[plan.id] = plan.periodLabel === "6개월 구독" ? `${offeringPackage.product.priceString} / 6개월` : offeringPackage.product.priceString;
+      }
+    }
+  }
+
+  const missingProductIdentifiers = Array.from(
+    new Set(
+      paidPlans
+        .filter((plan) => !priceLabels[plan.id])
+        .map((plan) => plan.appStoreProductId)
+        .filter(Boolean)
+    )
+  ) as string[];
+  if (missingProductIdentifiers.length === 0) return priceLabels;
+  if (productIdentifiers.length === 0) return priceLabels;
+
+  const { products } = await Purchases.getProducts({ productIdentifiers: missingProductIdentifiers });
+
   for (const plan of paidPlans) {
+    if (priceLabels[plan.id]) continue;
     const product = findStoreProduct(products, plan);
     if (product?.priceString) {
       priceLabels[plan.id] = plan.periodLabel === "6개월 구독" ? `${product.priceString} / 6개월` : product.priceString;
@@ -237,7 +512,6 @@ export async function restoreNativePurchases(params: NativePurchaseParams) {
   if (!platform) throw new Error("구독 권한 불러오기는 Android 또는 iOS 앱에서만 사용할 수 있습니다.");
 
   await configurePurchases(platform, params.userId);
-  const Purchases = await getRevenueCatPurchases();
   const { customerInfo } = await Purchases.restorePurchases();
   if (!hasActivePlan(customerInfo, params.plan)) {
     throw new Error("불러올 수 있는 활성 구독 권한을 찾지 못했습니다.");
@@ -252,7 +526,6 @@ export async function restoreNativeEntitlement(params: NativeRestoreParams) {
   if (!platform) throw new Error("구독 권한 불러오기는 Android 또는 iOS 앱에서만 사용할 수 있습니다.");
 
   await configurePurchases(platform, params.userId);
-  const Purchases = await getRevenueCatPurchases();
   await Purchases.restorePurchases();
   await syncAnyAppStoreEntitlement({ ...params, platform });
   return { message: "구독 권한을 확인하고 Pro 권한을 다시 연결했습니다." };

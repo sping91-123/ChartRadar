@@ -272,7 +272,7 @@ function compactSymbol(symbol: string) {
 
 function presetSideLabel(side: SetupAlertPreset["side"], market: AlertMarket = "crypto") {
   if (market === "stocks") return side === "long" ? "상승 우세" : "하락 우세";
-  return side === "long" ? "롱 우세" : "숏 우세";
+  return side === "long" ? "상방 우세" : "하방 우세";
 }
 
 function formatSavedAt(ms: number) {
@@ -462,7 +462,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
   const isAndroidAppPush = appPushState.supported && appPushState.platform === "android";
   const isAdmin = profile?.plan === "admin" || user?.app_metadata?.role === "admin" || user?.app_metadata?.plan === "admin";
   const alertsMarketParam = market === "stocks" ? "global" : "crypto";
-  const loginHref = `/login?returnTo=${encodeURIComponent(`/alerts?market=${alertsMarketParam}`)}`;
+  const loginHref = `/login?returnTo=${encodeURIComponent(market === "stocks" ? `/alerts?market=${alertsMarketParam}` : "/crypto/alert")}`;
   const isAppPushConnecting =
     isRequesting ||
     appPushState.registrationStage === "checking_permission" ||
@@ -473,7 +473,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
     isAndroidAppPush && appPushState.permission === "granted" && Boolean(appPushState.token) && appPushState.synced && appPushState.registrationStage === "enabled";
   const isCurrentMarketPushEnabled = appPushState.synced && appPushState.markets.includes(market);
   const otherMarket = market === "stocks" ? "crypto" : "stocks";
-  const otherMarketHref = market === "stocks" ? "/alerts?market=crypto" : "/alerts?market=global";
+  const otherMarketHref = market === "stocks" ? "/crypto/alert" : "/alerts?market=global";
 
   function toggleRule(ruleId: RadarAlertRuleId) {
     if (!enabledRuleIds.includes(ruleId)) {
@@ -996,7 +996,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
 
       {compact ? (
         <ActionButton
-          href={market === "stocks" ? "/alerts?market=global" : "/alerts?market=crypto"}
+          href={market === "stocks" ? "/alerts?market=global" : "/crypto/alert"}
           tone="secondary"
           className="min-h-10 w-full text-sm"
         >

@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 const futuresTabs = [
-  { id: "major", label: "메이저", detail: "BTC / ETH", href: "/crypto" },
-  { id: "alts", label: "알트", detail: "Alt Coin", href: "/alts" }
+  { id: "major", label: "메이저", detail: "BTC / ETH", href: "/crypto/perpetual" },
+  { id: "alts", label: "알트", detail: "Alt Coin", href: "/crypto/perpetual/alts" }
 ] as const;
 
 export function CoinFuturesSwitch({ active }: { active: "major" | "alts" }) {

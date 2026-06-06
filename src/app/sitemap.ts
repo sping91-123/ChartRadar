@@ -6,21 +6,29 @@ const siteUrl = getSiteUrlWithLocalFallback();
 
 const routes = [
   "",
-  "/crypto",
-  "/alts",
+  "/crypto/home",
+  "/crypto/spot",
+  "/crypto/perpetual",
+  "/crypto/perpetual/alts",
+  "/crypto/news",
+  "/crypto/review",
+  "/crypto/alert",
+  "/schedule",
+  "/menu",
+  "/account",
+  "/learn",
+  "/faq",
   "/global",
   "/stocks",
-  "/news",
   "/alerts",
   "/pro",
-  "/journal",
   "/terms",
   "/privacy",
   "/account/delete",
   "/refund"
 ];
 
-const dailyCoreRoutes = new Set(["", "/crypto", "/global", "/stocks"]);
+const dailyCoreRoutes = new Set(["", "/crypto/home", "/crypto/spot", "/crypto/perpetual", "/global", "/stocks"]);
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();
@@ -29,6 +37,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     url: `${siteUrl}${route}`,
     lastModified,
     changeFrequency: dailyCoreRoutes.has(route) ? "daily" : "weekly",
-    priority: route === "" ? 1 : route === "/crypto" || route === "/global" ? 0.9 : route === "/stocks" ? 0.8 : 0.6
+    priority: route === "" ? 1 : route === "/crypto/home" || route === "/global" ? 0.9 : route === "/stocks" ? 0.8 : 0.6
   }));
 }

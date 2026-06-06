@@ -65,8 +65,8 @@ export async function scanMacroCalendarEvent(origin: string): Promise<PushAlertE
       alert_kind: "macro",
       alertKind: "macro",
       signal: "시장 이벤트 리마인더",
-      target: "/news?market=global",
-      targetPath: "/news?market=global",
+      target: "/schedule",
+      targetPath: "/schedule",
       eventLabel: nextEvent.label,
       releaseAt: nextEvent.releaseAt
     },

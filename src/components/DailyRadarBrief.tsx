@@ -195,7 +195,7 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
                   return (
                     <Link
                       key={`${setup.symbol}-${setup.timeframe}`}
-                      href={scope === "alts" ? "/alts" : "/crypto"}
+                      href={scope === "alts" ? "/crypto/perpetual/alts" : "/crypto/perpetual"}
                       className="flex items-center justify-between gap-3 border-t border-surface-line py-3 transition hover:text-accent-blue first:border-t-0"
                     >
                       <div>

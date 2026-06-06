@@ -14,6 +14,7 @@ android/app/*.jks
 android/app/*.keystore
 .tools
 .codex-remote-attachments/
+.codex-next-*.log
 .next-dev*.log
 dev-server*.log
 prod-server*.log

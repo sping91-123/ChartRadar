@@ -6,13 +6,13 @@
 
 Chart Radar는 코인과 글로벌 시장을 별도 판단 도구로 운영합니다.
 
-| 상품 | 월간 가격 | 장기 구독 가격 | 권한 범위 |
+| 상품 | 월간 출시가 | 장기권 출시가 | 권한 범위 |
 | --- | --- | --- | --- |
-| Coin Pro | 39,000원 | 390,000원 / 1년 | BTC/ETH 판단, 알트 기회/위험 필터, 코인 상세 조건, 무효화 기준, 상세 리스크 |
-| Global Pro | 39,000원 | 390,000원 / 1년 | 미국장 30초 체크, 지수선물 판단, 매크로 압력, 이벤트 리스크, 섹터 로테이션, 대장주 레이더 |
-| All Market Pro | 69,000원 | 390,000원 / 6개월 | Coin Pro + Global Pro 통합, 코인과 글로벌 전체 시장 판단 |
+| Coin Pro | 29,000원 | 290,000원 / 1년 | BTC/ETH 판단, 알트 기회/위험 필터, 코인 상세 조건, 무효화 기준, 상세 리스크 |
+| Global Pro | 19,000원 | 190,000원 / 1년 | 미국장 30초 체크, 지수선물 판단, 매크로 압력, 이벤트 리스크, 섹터 로테이션, 대장주 레이더 |
+| All Market Pro | 39,000원 | 199,000원 / 6개월 | Coin Pro + Global Pro 통합, 코인과 글로벌 전체 시장 판단 |
 
-Coin Pro와 Global Pro의 연간 가격은 월 10개월치 기준입니다. All Market Pro 6개월 구독은 6개월마다 자동 갱신됩니다. All Market Pro의 내부 legacy plan id가 `bundle_yearly`로 남아 있을 수 있지만, 사용자 화면과 Store 상품은 All Market Pro 6개월 구독 기준으로 설명합니다.
+위 금액은 대표 확정 출시가 기준입니다. 앱 내부 `billingAmount`, 웹 결제 링크 금액, Google Play Console 기본 요금제 가격, RevenueCat 상품 표시 가격은 같은 금액으로 맞춰야 합니다. All Market Pro의 내부 legacy plan id가 `bundle_yearly`로 남아 있을 수 있지만, 사용자 화면과 Store 상품은 All Market Pro 6개월 구독 기준으로 설명합니다.
 
 ## 2. 웹 결제 환경변수
 

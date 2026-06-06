@@ -1,7 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#0b0b0f"/>
-  <rect x="92" y="92" width="328" height="328" rx="72" fill="#111113" stroke="#2f3137" stroke-width="8"/>
-  <path d="M176 322h160" stroke="#f8fafc" stroke-width="28" stroke-linecap="round"/>
-  <path d="M176 258h118" stroke="#f8fafc" stroke-width="28" stroke-linecap="round"/>
-  <path d="M176 194h160" stroke="#4f7cff" stroke-width="28" stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="radarBlue" x1="118" y1="394" x2="398" y2="118" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563ff"/>
+      <stop offset="1" stop-color="#21e6ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="#0b0b0f"/>
+  <path d="M140 334a154 154 0 0 1 242-180" fill="none" stroke="url(#radarBlue)" stroke-width="34" stroke-linecap="round"/>
+  <path d="M382 358A154 154 0 0 1 139 178" fill="none" stroke="url(#radarBlue)" stroke-width="34" stroke-linecap="round"/>
+  <path d="M194 320l70-70 45 45 91-91" fill="none" stroke="url(#radarBlue)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M371 183l58-16-15 59z" fill="url(#radarBlue)"/>
+  <path d="M242 247l118-118" fill="none" stroke="url(#radarBlue)" stroke-width="20" stroke-linecap="round"/>
+  <circle cx="242" cy="247" r="18" fill="#22c7ff"/>
+  <path d="M190 306a92 92 0 0 1 102-147" fill="none" stroke="url(#radarBlue)" stroke-width="12" stroke-linecap="round" opacity=".75"/>
 </svg>

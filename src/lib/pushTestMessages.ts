@@ -61,8 +61,8 @@ export const pushTestMessages: PushTestMessage[] = [
     label: "매크로 일정 알림 예시",
     title: "중요 일정 임박",
     body: "시장 영향 가능성이 큰 일정이 예정되어 있습니다.",
-    target: "/news?market=global",
-    targetPath: "/news?market=global",
+    target: "/schedule",
+    targetPath: "/schedule",
     market: "stocks",
     alertKind: "macro"
   }

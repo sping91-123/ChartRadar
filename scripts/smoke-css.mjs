@@ -1,6 +1,6 @@
 ﻿// 媛쒕컻 ?쒕쾭媛 ?ㅼ젣 ?붾㈃ ?ㅽ????뚯씪???뺤긽 ?쒓났?섎뒗吏 ?뺤씤?⑸땲??
 const baseUrl = (process.env.SMOKE_BASE_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
-const pageUrl = `${baseUrl}/crypto`;
+const pageUrl = `${baseUrl}/crypto/home`;
 
 function fail(message) {
   console.error(`FAIL ${message}`);

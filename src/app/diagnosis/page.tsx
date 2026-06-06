@@ -2,5 +2,5 @@
 import { redirect } from "next/navigation";
 
 export default function DiagnosisRedirectPage() {
-  redirect("/crypto");
+  redirect("/crypto/home");
 }

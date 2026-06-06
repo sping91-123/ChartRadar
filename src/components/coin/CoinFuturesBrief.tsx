@@ -1,5 +1,6 @@
-import { AlertTriangle, BarChart3, Clock3, Gauge, GitCompareArrows, LockKeyhole, Radar } from "lucide-react";
-import { PanelCard, StatusPill } from "@/components/ui/DesignPrimitives";
+import { AlertTriangle, Gauge, GitCompareArrows, Radar } from "lucide-react";
+import { PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
+import { CompactHelp } from "@/components/ui/CompactHelp";
 
 type FuturesBriefMode = "major" | "alts";
 type BriefTone = "risk" | "watch" | "info" | "long";
@@ -16,135 +17,143 @@ const briefItems: Record<
 > = {
   major: [
     {
-      label: "1. 위험 먼저",
-      title: "청산 압력·펀딩비·롱숏 쏠림",
-      detail: "방향보다 과열과 강제청산 압력을 먼저 봅니다. 쏠림이 크면 변동성 기준이 우선입니다.",
+      label: "앱 감지 신호 1",
+      title: "BTC/ETH 포지션 쏠림",
+      detail: "BTC와 ETH의 펀딩비, 미결제약정, 상방·하방 포지션 비율이 한쪽으로 몰리는지 앱이 감지합니다.",
       tone: "risk",
       icon: AlertTriangle
     },
     {
-      label: "2. 구조 확인",
-      title: "MSB·CHoCH·OB·FVG·POC",
-      detail: "차트 구조는 진입 지시가 아니라 상단 판단을 검증하는 근거로만 사용합니다.",
+      label: "앱 감지 신호 2",
+      title: "BTC/ETH 큰 체결 흐름",
+      detail: "BTC와 ETH에서 큰 유입·이탈 체결이 반복되는지 봅니다. 반복 체결은 방향보다 변동성 리스크로 먼저 해석합니다.",
       tone: "info",
-      icon: BarChart3
+      icon: Radar
     },
     {
-      label: "3. 추적 조건",
-      title: "눌림 유지 또는 반등 실패",
-      detail: "눌림 후 추세 유지, 반등 실패, 하방 구조 유지를 분리해 봅니다.",
+      label: "앱 감지 신호 3",
+      title: "BTC/ETH 구조·변동성",
+      detail: "BTC와 ETH의 차트 구조, ATR 변동성, 거래량 상태가 선물 리스크와 같은 방향으로 커지는지 확인합니다.",
       tone: "watch",
       icon: Gauge
-    },
-    {
-      label: "4. 충돌 처리",
-      title: "롱 신호 + 과열이면 위험 우선",
-      detail: "상방 근거와 청산·펀딩 과열이 같이 보이면 진입 판단보다 무효화와 변동성 기준을 먼저 확인합니다.",
-      tone: "risk",
-      icon: GitCompareArrows
-    },
-    {
-      label: "5. 데이터 확인",
-      title: "차트·파생·AI 갱신 시각 분리",
-      detail: "캔들, 청산 압력, AI 브리핑은 갱신 주기가 다를 수 있어 같은 방향 신호라도 최신 시각을 먼저 확인합니다.",
-      tone: "info",
-      icon: Clock3
-    },
-    {
-      label: "6. 상세 판단",
-      title: "무효화 기준·세부 리스크",
-      detail: "구체 조건, 무효화 기준, AI 브리핑은 Pro 영역에서 전체 맥락으로 확인합니다.",
-      tone: "long",
-      icon: LockKeyhole
     }
   ],
   alts: [
     {
-      label: "1. 고위험 필터",
-      title: "급등 추격·저유동성·BTC 의존",
-      detail: "알트는 좋은 후보를 찾기 전에 피할 후보를 먼저 걸러야 합니다.",
+      label: "앱 감지 신호 1",
+      title: "알트 포지션 쏠림",
+      detail: "SOL, XRP, DOGE, BNB 같은 알트 선물에서 상방·하방 포지션이 한쪽으로 몰리는지 앱이 감지합니다.",
       tone: "risk",
       icon: AlertTriangle
     },
     {
-      label: "2. 후보 분류",
-      title: "추적 후보·관망·고위험",
-      detail: "알트 기회/위험 필터에서 현재 후보가 어느 묶음인지 먼저 확인합니다.",
+      label: "앱 감지 신호 2",
+      title: "알트 큰 체결 흐름",
+      detail: "알트 큰 체결이 한쪽으로 반복되면 후보 신호보다 변동성 확대 여부를 먼저 확인합니다.",
       tone: "watch",
       icon: Radar
     },
     {
-      label: "3. 구조 확인",
-      title: "BTC 방향성·거래량·변동성",
-      detail: "알트 단독 신호보다 BTC 방향과 거래량 동반 여부를 함께 봅니다.",
+      label: "앱 감지 신호 3",
+      title: "언락·변동성 압력",
+      detail: "언락 부담과 BTC 변동성이 겹치는지 봅니다. 시장 전체 유동성은 하단 환경 참고로 분리합니다.",
       tone: "info",
-      icon: BarChart3
-    },
-    {
-      label: "4. 충돌 처리",
-      title: "급등 후보 + 저유동성이면 회피 우선",
-      detail: "알트는 좋은 후보처럼 보여도 변동성·저유동성·BTC 약세가 겹치면 고위험으로 먼저 분류합니다.",
-      tone: "risk",
-      icon: GitCompareArrows
-    },
-    {
-      label: "5. 데이터 확인",
-      title: "시세·거래대금·BTC 기준 분리",
-      detail: "알트 후보의 가격 시각, 거래대금 변화, BTC 방향 기준이 서로 어긋나면 추적 후보로 바로 보지 않습니다.",
-      tone: "info",
-      icon: Clock3
-    },
-    {
-      label: "6. 상세 판단",
-      title: "추적 조건·무효화 기준",
-      detail: "Basic은 방향 요약 중심이며, 세부 가격 조건과 리스크는 Pro에서 확인합니다.",
-      tone: "long",
-      icon: LockKeyhole
+      icon: Gauge
     }
   ]
 };
 
 export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
   const isAltMode = mode === "alts";
-  const keySignals = briefItems[mode].slice(0, 3);
-  const consoleSummary = isAltMode
-    ? "알트는 회피 조건을 먼저 걸러봅니다. BTC 방향, 유동성, 변동성이 동시에 맞을 때만 추적 후보로 올립니다."
-    : "메이저 선물은 청산 압력과 파생 쏠림을 먼저 봅니다. 차트 구조는 상단 판단의 검증 근거로 둡니다.";
+  const cautionItems = isAltMode
+    ? ["BTC 약세와 같이 밀리는지 확인", "알트만 과열되는지 확인", "큰 이탈 체결이나 언락 부담이 반복되는지 확인", "유동성 부족 구간인지 확인"]
+    : ["BTC/ETH 쏠림이 풀리는지 확인", "큰 유입·이탈 체결이 반복되는지 확인", "구조와 변동성이 같은 방향으로 커지는지 확인"];
 
   return (
-    <PanelCard variant="flat" padding="none" className="space-y-4 rounded-ui-lg border border-ui-line/25 bg-ui-panel/60 p-4 sm:p-5">
-      <div className="flex min-w-0 items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">{isAltMode ? "Alt Futures" : "Major Futures"}</p>
-          <h2 className="mt-1 text-[1.35rem] font-semibold leading-8 tracking-tight text-ui-text sm:text-2xl">선물 시장 결론</h2>
-          <p className="mt-2 max-w-3xl text-ui-body text-ui-muted [word-break:keep-all]">{consoleSummary}</p>
-        </div>
-        <StatusPill tone="risk" icon={AlertTriangle} className="shrink-0">
-          리스크 먼저
-        </StatusPill>
-      </div>
+    <PanelCard variant="report" padding="md" className="space-y-4 rounded-ui-lg border border-ui-line/25 bg-ui-panel/45">
+      <SectionHeader
+        title={isAltMode ? "알트 선물 리스크 결론" : "선물 시장 결론"}
+        description={
+          isAltMode
+            ? "알트 선물은 추적 후보보다 쏠림, 유동성, 언락 리스크를 먼저 확인합니다."
+            : "오늘 선물은 방향보다 쏠림과 변동성 리스크를 먼저 확인합니다."
+        }
+      />
 
-      <div>
-        <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">핵심 신호 3개</p>
-        <div className="mt-3 grid gap-3 md:grid-cols-3">
-          {keySignals.map((item) => {
+      <article className="rounded-ui-md bg-ui-inset/30 p-3">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">선물 리스크 결론</p>
+            <p className="mt-1 text-base font-semibold leading-6 text-ui-text [word-break:keep-all]">
+              {isAltMode ? "알트 변동성 주의 · 리스크 우선" : "리스크 우선 · 확인 대기"}
+            </p>
+          </div>
+          <StatusPill tone="risk" icon={GitCompareArrows} className="shrink-0">
+            리스크
+          </StatusPill>
+        </div>
+        <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">
+          {isAltMode
+            ? "알트 포지션 쏠림, 큰 이탈 체결, 언락 부담이 겹치면 추적 후보를 제한하고 세부 근거를 다시 확인합니다."
+            : "BTC/ETH 포지션 쏠림과 큰 체결이 함께 커질 때는 추적보다 변동성 확대 여부를 먼저 봅니다."}
+        </p>
+      </article>
+
+      <section className="pt-1">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">앱이 감지한 핵심 신호</p>
+            <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">
+              {isAltMode ? "알트 선물의 직접 리스크 신호만 먼저 봅니다." : "BTC/ETH 선물의 직접 리스크 신호만 먼저 봅니다."}
+            </p>
+          </div>
+          <StatusPill tone="info" className="shrink-0">
+            감지
+          </StatusPill>
+        </div>
+        <div className="mt-3 grid gap-2 md:grid-cols-3">
+          {briefItems[mode].map((item, index) => {
             const Icon = item.icon;
 
             return (
-              <article key={item.label} className="min-w-0 rounded-ui-sm bg-ui-inset/35 p-3">
+              <article
+                key={item.label}
+                className="min-w-0 rounded-ui-sm bg-ui-inset/30 p-3"
+              >
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{item.label}</p>
                     <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{item.title}</p>
                   </div>
                   <StatusPill tone={item.tone} icon={Icon} className="shrink-0">
-                    {item.tone === "risk" ? "주의" : item.tone === "long" ? "Pro" : "기준"}
+                    {item.tone === "risk" ? "주의" : "확인"}
                   </StatusPill>
                 </div>
-                <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{item.detail}</p>
+                <div className="mt-2">
+                  <CompactHelp label={item.label}>{item.detail}</CompactHelp>
+                </div>
               </article>
             );
           })}
+        </div>
+      </section>
+
+      <div className="rounded-ui-md bg-ui-inset/25 p-3">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">추가 확인 조건</p>
+            <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">상단 결론이 바뀌는 조건을 먼저 확인합니다.</p>
+          </div>
+          <StatusPill tone="watch" className="shrink-0">
+            확인 필요
+          </StatusPill>
+        </div>
+        <div className="mt-3 grid gap-2 md:grid-cols-3">
+          {cautionItems.map((item, index) => (
+            <p key={item} className="rounded-ui-sm bg-ui-panel/35 px-3 py-2 text-xs font-semibold leading-5 text-ui-muted [word-break:keep-all]">
+              {item}
+            </p>
+          ))}
         </div>
       </div>
     </PanelCard>

@@ -75,6 +75,8 @@ Google Play Console에는 아래 상품 ID를 그대로 만듭니다. 코드의 
 | All Market Pro 월간 | `chart_radar_bundle_monthly` | `monthly` | All Market Pro 월간 구독 |
 | All Market Pro 6개월 | `chart_radar_bundle_6month` | `month-6` | All Market Pro 6개월 구독 |
 
+출시가 기준으로 Coin Pro 월간은 29,000원, Coin Pro 연간은 290,000원, Global Pro 월간은 19,000원, Global Pro 연간은 190,000원, All Market Pro 월간은 39,000원, All Market Pro 6개월은 199,000원으로 등록합니다. Google Play Console의 실제 가격은 앱 내부 `src/lib/billing.ts`의 `billingAmount`와 일치해야 합니다.
+
 ## 7. RevenueCat 연결 순서
 
 1. RevenueCat 프로젝트 이름은 `Chart Radar`로 둡니다.

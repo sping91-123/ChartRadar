@@ -22,6 +22,11 @@ function expectIncludes(source, needle, label, file) {
   else fail(label, `${file}에 ${needle} 값이 없습니다.`);
 }
 
+function expectNotIncludes(source, needle, label, file) {
+  if (!source.includes(needle)) pass(label, `${file} 확인.`);
+  else fail(label, `${file}에 ${needle} 값이 남아 있습니다.`);
+}
+
 function walk(dir, extensions = [".ts"]) {
   const full = path.join(root, dir);
   if (!existsSync(full)) return [];
@@ -117,12 +122,35 @@ const pushTokensRoute = read("src/app/api/push-tokens/route.ts");
 const pushCronRoute = read("src/app/api/push-cron/route.ts");
 const pushAlertScanner = read("src/lib/server/pushAlertScanner.ts");
 const pushSendHelper = read("src/lib/server/push/sendPush.ts");
+const macroPushScanner = read("src/lib/server/push/scanners/macroScanner.ts");
+const pushTestMessages = read("src/lib/pushTestMessages.ts");
+const pushTargetPath = read("src/lib/pushTargetPath.ts");
 const pushPlatformGuard = read("supabase/migrations/20260519_android_push_platform_guard.sql");
 const vercelConfig = read("vercel.json");
 const usageMeterPanel = read("src/components/UsageMeterPanel.tsx");
 const stockRadarApp = read("src/components/StockRadarApp.tsx");
+const spotRadarPanel = read("src/components/spot/SpotRadarPanel.tsx");
 const setupScoutPanel = read("src/components/SetupScoutPanel.tsx");
 const watchlistPanel = read("src/components/WatchlistPanel.tsx");
+const majorsApp = read("src/components/MajorsApp.tsx");
+const altsPage = read("src/app/crypto/perpetual/alts/page.tsx");
+const altFuturesSignalSection = read("src/components/coin/AltFuturesSignalSection.tsx");
+const coinRadarHomePanel = read("src/components/coin/CoinRadarHomePanel.tsx");
+const coinHomeDecisionModel = read("src/components/coin/coinHomeDecisionModel.ts");
+const coinSignalPressurePanel = read("src/components/coin/CoinSignalPressurePanel.tsx");
+const coinOptionsMarketPanel = read("src/components/coin/CoinOptionsMarketPanel.tsx");
+const optionsMarketRoute = read("src/app/api/options-market/route.ts");
+const coinLargeTradeFlowPanel = read("src/components/coin/CoinLargeTradeFlowPanel.tsx");
+const largeTradeFlowRoute = read("src/app/api/large-trade-flow/route.ts");
+const coinOnchainPulsePanel = read("src/components/coin/CoinOnchainPulsePanel.tsx");
+const onchainMetricsRoute = read("src/app/api/onchain-metrics/route.ts");
+const onchainMetricsLib = read("src/lib/onchainMetrics.ts");
+const coinStablecoinLiquidityPanel = read("src/components/coin/CoinStablecoinLiquidityPanel.tsx");
+const stablecoinLiquidityRoute = read("src/app/api/stablecoin-liquidity/route.ts");
+const stablecoinLiquidityLib = read("src/lib/stablecoinLiquidity.ts");
+const coinUnlockPressurePanel = read("src/components/coin/CoinUnlockPressurePanel.tsx");
+const tokenUnlocksRoute = read("src/app/api/token-unlocks/route.ts");
+const tokenUnlocksLib = read("src/lib/tokenUnlocks.ts");
 const apiRoutes = walk("src/app/api", [".ts"]);
 
 expectIncludes(rateLimit, "UPSTASH_REDIS_REST_URL", "Upstash rate limit URL", "src/lib/server/rateLimit.ts");
@@ -163,7 +191,7 @@ expectIncludes(macroTicker, "BLS 공식 통계", "매크로 출처명 한글 표
 expectIncludes(radarNewsApi, "GROQ_API_KEY", "뉴스 Groq 우선 연결", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsApi, "USE_GEMINI_NEWS_FALLBACK", "뉴스 Gemini fallback 옵션", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsApi, "ensureKoreanText", "뉴스 브리핑 한국어 보정", "src/app/api/radar-news/route.ts");
-expectIncludes(radarNewsApi, "오늘 확인할 주요 시장 이슈", "뉴스 기본 브리핑 문구", "src/app/api/radar-news/route.ts");
+expectIncludes(radarNewsApi, "지난 1시간 뉴스 흐름", "뉴스 기본 브리핑 문구", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsApi, "미국 물가 이슈", "뉴스 물가 표현 보강", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsApi, "correctDollarToWonDrift", "뉴스 달러 금액 원화 오역 보정", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsApi, "원문의 달러 금액", "뉴스 달러 단위 보존 프롬프트", "src/app/api/radar-news/route.ts");
@@ -174,22 +202,26 @@ expectIncludes(radarNewsApi, "PERSONAL_FINANCE_NOISE_KEYWORDS", "뉴스 개인�
 expectIncludes(radarNewsApi, "GLOBAL_MARKET_CONFIRMATION_KEYWORDS", "뉴스 매크로 문맥 확인", "src/app/api/radar-news/route.ts");
 expectIncludes(radarNewsPanel, "뉴스 레이더", "코인 뉴스 요약 화면", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "오늘의 시장 레이더", "시장 레이더 요약 카드", "src/components/RadarNewsPanel.tsx");
-expectIncludes(radarNewsPanel, "자세히 보기", "뉴스 상세 브리핑 버튼", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "compactCheckpoint", "뉴스 상단 체크포인트 압축", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "다음 확인", "뉴스 상단 체크포인트 라벨", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "최근 갱신", "뉴스 상단 갱신 시각 표시", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "1시간 단위 자동 갱신", "뉴스 상단 갱신 주기 표시", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "혼재 / 확인 필요", "뉴스 neutral 라벨 보강", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "NEWS_CARD_LIMIT = 3", "뉴스 카드 노출 수 제한", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "내용 보기", "뉴스 상세 브리핑 버튼", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "참고 뉴스", "참고 뉴스 목록 화면", "src/components/RadarNewsPanel.tsx");
-expectIncludes(radarNewsPanel, "chart-radar.news.${market}.v14", "뉴스 캐시 버전 갱신", "src/components/RadarNewsPanel.tsx");
-expectIncludes(newsPage, "이번 주 주요 매크로 일정", "매크로 일정 보조 섹션", "src/app/news/page.tsx");
-{
-  const reportIndex = newsPage.indexOf("<RadarNewsPanel");
-  const macroIndex = newsPage.indexOf("<MacroTicker compact market={market} />");
-  const briefingIndex = radarNewsPanel.indexOf("오늘의 AI 브리핑");
-  const macroSlotIndex = radarNewsPanel.indexOf("{afterBriefing}");
-  const criteriaIndex = radarNewsPanel.indexOf("시장 해석 기준");
-  if (reportIndex >= 0 && macroIndex > reportIndex && briefingIndex >= 0 && macroSlotIndex > briefingIndex && criteriaIndex > macroSlotIndex) {
-    pass("뉴스 리포트 우선 배치", "뉴스 브리핑 다음에 매크로 일정을 보조 섹션으로 표시합니다.");
-  } else {
-    fail("뉴스 리포트 우선 배치", "오늘의 AI 브리핑 다음에 매크로 일정, 그 다음에 시장 해석 기준이 와야 합니다.");
-  }
-}
+expectNotIncludes(radarNewsPanel, "mt-2 line-clamp-2 text-xs leading-5 text-ui-muted", "참고 뉴스 요약 숨김", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "chart-radar.news.${market}.v17", "뉴스 캐시 버전 갱신", "src/components/RadarNewsPanel.tsx");
+expectNotIncludes(newsPage, "MacroTicker", "뉴스 페이지 일정 분리", "src/app/news/page.tsx");
+expectNotIncludes(newsPage, "이번 주 주요 매크로 일정", "뉴스 페이지 매크로 일정 제거", "src/app/news/page.tsx");
+expectNotIncludes(radarNewsPanel, "afterBriefing", "뉴스 패널 일정 슬롯 제거", "src/components/RadarNewsPanel.tsx");
+expectNotIncludes(radarNewsPanel, "뉴스 선별 기준", "뉴스 하단 선별 기준 문구 제거", "src/components/RadarNewsPanel.tsx");
+expectNotIncludes(radarNewsPanel, "뉴스 레이더는 1시간 단위", "뉴스 하단 갱신 안내 문구 제거", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsApi, "CRYPTO_MEDICAL_NOISE_KEYWORDS", "코인 뉴스 바이오/임상 노이즈 차단", "src/app/api/radar-news/route.ts");
+expectIncludes(radarNewsApi, "cryptoMarketNewsScore(record.title, record.excerpt)", "코인 뉴스 title 중심 관련성 점수", "src/app/api/radar-news/route.ts");
+expectIncludes(radarNewsLib, "hasCryptoOutflowSofteningContext", "뉴스 outflow 완화 문맥 보정", "src/lib/radarNews.ts");
+expectIncludes(radarNewsLib, "hasCryptoInflowWeakeningContext", "뉴스 inflow 감소 문맥 보정", "src/lib/radarNews.ts");
+expectIncludes(radarNewsLib, "hasTreasuryYieldContext", "뉴스 Treasury yield 문맥 분리", "src/lib/radarNews.ts");
 expectIncludes(radarNewsLib, "미국 증시 뉴스", "뉴스 출처명 한국어 표시", "src/lib/radarNews.ts");
 expectIncludes(radarNewsLib, "net loss", "뉴스 실적 손실 분류", "src/lib/radarNews.ts");
 expectIncludes(radarNewsLib, "digitized finance", "뉴스 토큰화 금융 분류", "src/lib/radarNews.ts");
@@ -211,6 +243,9 @@ expectIncludes(pushCronRoute, "CRON_SECRET", "푸시 크론 인증", "src/app/ap
 expectIncludes(pushAlertScanner, "runPushAlertScan", "푸시 자동 감시 스캐너", "src/lib/server/pushAlertScanner.ts");
 expectIncludes(pushSendHelper, "sendFcmMessage", "푸시 자동 FCM 발송", "src/lib/server/push/sendPush.ts");
 expectIncludes(pushAlertScanner, "platform=eq.android&provider=eq.fcm", "푸시 크론 Android FCM 대상 제한", "src/lib/server/pushAlertScanner.ts");
+expectIncludes(macroPushScanner, 'targetPath: "/schedule"', "Macro calendar push target route", "src/lib/server/push/scanners/macroScanner.ts");
+expectIncludes(pushTestMessages, 'targetPath: "/schedule"', "Macro test push target route", "src/lib/pushTestMessages.ts");
+expectIncludes(pushTargetPath, '"/schedule"', "Android push schedule target allowlist", "src/lib/pushTargetPath.ts");
 expectIncludes(pushPlatformGuard, "push_tokens_provider_platform_check", "push_tokens platform/provider 제약", "supabase/migrations/20260519_android_push_platform_guard.sql");
 expectIncludes(vercelConfig, '"/api/push-cron"', "Vercel 푸시 크론 경로", "vercel.json");
 expectIncludes(usageMeterPanel, "hasScopedEntitlement(profile?.plan, marketScope)", "사용량 패널 시장별 권한", "src/components/UsageMeterPanel.tsx");
@@ -218,6 +253,66 @@ expectIncludes(setupScoutPanel, 'hasMarketEntitlement(profile?.plan, "crypto")',
 expectIncludes(watchlistPanel, 'hasMarketEntitlement(profile?.plan, "crypto")', "관심코인 권한", "src/components/WatchlistPanel.tsx");
 expectIncludes(scoutRoute, "entitlement.isPaid ? 120 : 20", "코인 일일 레이더 권한", "src/app/api/scout/route.ts");
 expectIncludes(stockRadarApp, 'hasMarketEntitlement(profile?.plan, "stocks")', "글로벌 레이더 권한", "src/components/StockRadarApp.tsx");
+expectIncludes(spotRadarPanel, "1차 확인가", "현물 1차 확인가 표시", "src/components/spot/SpotRadarPanel.tsx");
+expectIncludes(spotRadarPanel, "저항까지", "현물 저항 여유 표시", "src/components/spot/SpotRadarPanel.tsx");
+expectIncludes(spotRadarPanel, "무효화 기준", "현물 무효화 기준 표시", "src/components/spot/SpotRadarPanel.tsx");
+expectIncludes(coinRadarHomePanel, "/api/stablecoin-liquidity", "Home stablecoin liquidity API source", "src/components/coin/CoinRadarHomePanel.tsx");
+expectIncludes(coinRadarHomePanel, "스테이블코인 유동성", "Home stablecoin liquidity copy", "src/components/coin/CoinRadarHomePanel.tsx");
+expectIncludes(coinRadarHomePanel, "/api/large-trade-flow?symbol=BTCUSDT", "Home large trade flow API source", "src/components/coin/CoinRadarHomePanel.tsx");
+expectIncludes(coinRadarHomePanel, "큰 체결 흐름", "Home large trade flow copy", "src/components/coin/CoinRadarHomePanel.tsx");
+expectIncludes(coinRadarHomePanel, "/api/options-market?currency=BTC", "Home options market API source", "src/components/coin/CoinRadarHomePanel.tsx");
+expectIncludes(coinRadarHomePanel, "옵션 예상 변동", "Home options expected move copy", "src/components/coin/CoinRadarHomePanel.tsx");
+expectIncludes(coinHomeDecisionModel, "stablecoinLiquidity", "Home decision uses stablecoin liquidity", "src/components/coin/coinHomeDecisionModel.ts");
+expectIncludes(coinHomeDecisionModel, "스테이블코인 유출", "Home decision stablecoin risk label", "src/components/coin/coinHomeDecisionModel.ts");
+expectIncludes(coinHomeDecisionModel, "largeTradeFlow", "Home decision uses large trade flow", "src/components/coin/coinHomeDecisionModel.ts");
+expectIncludes(coinHomeDecisionModel, "큰 이탈 체결", "Home decision large trade risk label", "src/components/coin/coinHomeDecisionModel.ts");
+expectIncludes(coinHomeDecisionModel, "optionsMarket", "Home decision uses options market", "src/components/coin/coinHomeDecisionModel.ts");
+expectIncludes(coinHomeDecisionModel, "옵션 변동성 큼", "Home decision options risk label", "src/components/coin/coinHomeDecisionModel.ts");
+expectIncludes(majorsApp, "CoinFuturesSignalPressurePanel", "Futures pressure panel on majors", "src/components/MajorsApp.tsx");
+expectIncludes(majorsApp, "CoinStablecoinLiquidityPanel", "Stablecoin liquidity panel on majors", "src/components/MajorsApp.tsx");
+expectIncludes(majorsApp, "CoinOnchainPulsePanel", "On-chain pulse panel on majors", "src/components/MajorsApp.tsx");
+expectIncludes(majorsApp, "CoinOptionsMarketPanel", "Options market panel on majors", "src/components/MajorsApp.tsx");
+expectIncludes(majorsApp, "CoinLargeTradeFlowPanel", "Large trade flow panel on majors", "src/components/MajorsApp.tsx");
+expectIncludes(altsPage, "AltFuturesSignalSection", "Alt futures selected signal section", "src/app/crypto/perpetual/alts/page.tsx");
+expectIncludes(altsPage, "CoinStablecoinLiquidityPanel", "Stablecoin liquidity panel on alts", "src/app/crypto/perpetual/alts/page.tsx");
+expectIncludes(altFuturesSignalSection, "CoinFuturesSignalPressurePanel", "Futures pressure panel on alts", "src/components/coin/AltFuturesSignalSection.tsx");
+expectIncludes(altFuturesSignalSection, "CoinLargeTradeFlowPanel", "Large trade flow panel on alts", "src/components/coin/AltFuturesSignalSection.tsx");
+expectIncludes(altFuturesSignalSection, "chartRadar.altFuturesSymbols.v1", "Alt futures localStorage key", "src/components/coin/AltFuturesSignalSection.tsx");
+expectIncludes(altsPage, "CoinUnlockPressurePanel", "Token unlock pressure panel on alts", "src/app/crypto/perpetual/alts/page.tsx");
+expectIncludes(coinSignalPressurePanel, "/api/liquidation-pressure?symbol=", "Futures pressure live API source", "src/components/coin/CoinSignalPressurePanel.tsx");
+expectIncludes(coinSignalPressurePanel, "Binance 공개 선물 데이터", "Futures pressure public data label", "src/components/coin/CoinSignalPressurePanel.tsx");
+expectIncludes(coinSignalPressurePanel, "BTC/ETH 선물 쏠림", "Major futures pressure scan copy", "src/components/coin/CoinSignalPressurePanel.tsx");
+expectIncludes(coinSignalPressurePanel, "알트 선물 쏠림", "Alt futures pressure scan copy", "src/components/coin/CoinSignalPressurePanel.tsx");
+expectIncludes(coinSignalPressurePanel, "하방 압력", "Futures downside pressure score copy", "src/components/coin/CoinSignalPressurePanel.tsx");
+expectIncludes(coinSignalPressurePanel, "상방 압력", "Futures upside pressure score copy", "src/components/coin/CoinSignalPressurePanel.tsx");
+expectIncludes(onchainMetricsRoute, "fetchBitcoinOnchainMetricReport", "On-chain metrics API source", "src/app/api/onchain-metrics/route.ts");
+expectIncludes(onchainMetricsLib, "mempoolVsizeMb", "On-chain mempool pressure field", "src/lib/onchainMetrics.ts");
+expectIncludes(coinOnchainPulsePanel, "/api/onchain-metrics?network=btc", "On-chain live API source", "src/components/coin/CoinOnchainPulsePanel.tsx");
+expectIncludes(coinOnchainPulsePanel, "mempool.space 공개 온체인 데이터", "On-chain public data label", "src/components/coin/CoinOnchainPulsePanel.tsx");
+expectIncludes(coinOnchainPulsePanel, "BTC 온체인 체온", "On-chain panel copy", "src/components/coin/CoinOnchainPulsePanel.tsx");
+expectIncludes(stablecoinLiquidityRoute, "fetchStablecoinLiquidityReport", "Stablecoin liquidity API source", "src/app/api/stablecoin-liquidity/route.ts");
+expectIncludes(stablecoinLiquidityLib, "change7dPercent", "Stablecoin liquidity 7d change field", "src/lib/stablecoinLiquidity.ts");
+expectIncludes(coinStablecoinLiquidityPanel, "/api/stablecoin-liquidity", "Stablecoin liquidity live API source", "src/components/coin/CoinStablecoinLiquidityPanel.tsx");
+expectIncludes(coinStablecoinLiquidityPanel, "DeFiLlama 공개 스테이블코인 데이터", "Stablecoin liquidity public data label", "src/components/coin/CoinStablecoinLiquidityPanel.tsx");
+expectIncludes(coinStablecoinLiquidityPanel, "스테이블코인 유동성", "Stablecoin liquidity panel copy", "src/components/coin/CoinStablecoinLiquidityPanel.tsx");
+expectIncludes(optionsMarketRoute, "fetchOptionsMarketReport", "Options market API source", "src/app/api/options-market/route.ts");
+expectIncludes(read("src/lib/optionsMarket.ts"), "expectedMovePercent", "Options expected move field", "src/lib/optionsMarket.ts");
+expectIncludes(coinOptionsMarketPanel, "/api/options-market?currency=", "Options market live API source", "src/components/coin/CoinOptionsMarketPanel.tsx");
+expectIncludes(coinOptionsMarketPanel, "Deribit 공개 옵션 데이터", "Options market public data label", "src/components/coin/CoinOptionsMarketPanel.tsx");
+expectIncludes(coinOptionsMarketPanel, "옵션 시장 온도", "Options market panel copy", "src/components/coin/CoinOptionsMarketPanel.tsx");
+expectIncludes(coinOptionsMarketPanel, "예상 변동", "Options expected move copy", "src/components/coin/CoinOptionsMarketPanel.tsx");
+expectIncludes(largeTradeFlowRoute, "fetchLargeTradeFlowReport", "Large trade flow API source", "src/app/api/large-trade-flow/route.ts");
+expectIncludes(read("src/lib/largeTradeFlow.ts"), "anomalyScore", "Large trade repeated-flow score", "src/lib/largeTradeFlow.ts");
+expectIncludes(coinLargeTradeFlowPanel, "/api/large-trade-flow?symbol=", "Large trade flow live API source", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
+expectIncludes(coinLargeTradeFlowPanel, "Binance 공개 선물 체결", "Large trade flow public data label", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
+expectIncludes(coinLargeTradeFlowPanel, "BTC/ETH 큰 체결 흐름", "Major large trade flow copy", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
+expectIncludes(coinLargeTradeFlowPanel, "알트 큰 체결 흐름", "Alt large trade flow copy", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
+expectIncludes(coinLargeTradeFlowPanel, "반복 체결", "Large trade repeated-flow copy", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
+expectIncludes(tokenUnlocksRoute, "fetchTokenUnlockReport", "Token unlock API source", "src/app/api/token-unlocks/route.ts");
+expectIncludes(tokenUnlocksLib, "percentOfMarketCap", "Token unlock market-cap pressure field", "src/lib/tokenUnlocks.ts");
+expectIncludes(coinUnlockPressurePanel, "/api/token-unlocks?limit=", "Token unlock live API source", "src/components/coin/CoinUnlockPressurePanel.tsx");
+expectIncludes(coinUnlockPressurePanel, "Tokenomics 공개 언락 페이지", "Token unlock public data label", "src/components/coin/CoinUnlockPressurePanel.tsx");
+expectIncludes(coinUnlockPressurePanel, "알트 언락 부담", "Token unlock panel copy", "src/components/coin/CoinUnlockPressurePanel.tsx");
 
 const macroHealth = await fetchMacroCalendarHealth();
 if (macroHealth.reachable && macroHealth.ok) {

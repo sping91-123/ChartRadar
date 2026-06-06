@@ -111,7 +111,7 @@ function buildAltRiskSignals(setup: ScoutSetup) {
 
   if (setup.status === "active" || setup.proximity === "ready") signals.push("급등 추격 주의");
   if (setup.watchKind === "counter" || active?.condition.regime === "mixed") {
-    signals.push("상방/하방 근거 혼재");
+    signals.push("상승/하락 근거 혼재");
     signals.push("BTC 방향성 의존");
   }
   if (active?.condition.volatilityState === "expanded") {
@@ -170,7 +170,7 @@ function classifyAltSetup(setup: ScoutSetup): AltFilterMeta {
 function altJudgmentLabel(setup: ScoutSetup, meta: AltFilterMeta) {
   if (meta.bucket === "danger") return "고위험";
   if (meta.bucket === "watch") return "관망 우위";
-  return setup.plan.side === "long" ? "롱 우위" : "숏 우위";
+  return setup.plan.side === "long" ? "상방 환경" : "하방 환경";
 }
 
 function buildAltBtcInfluence(setup: ScoutSetup) {
@@ -401,10 +401,10 @@ function buildEvidence(setup: ScoutSetup) {
   if (active?.inFvg) evidence.push("FVG 내부");
   if (active?.volumeProfile?.position === "near") evidence.push("POC 근접");
   if (active?.volumeProfile?.position === "above" && setup.plan.side === "long") {
-    evidence.push("POC 위 롱 우위");
+    evidence.push("POC 위 상방 우위");
   }
   if (active?.volumeProfile?.position === "below" && setup.plan.side === "short") {
-    evidence.push("POC 아래 숏 우위");
+    evidence.push("POC 아래 하방 우위");
   }
 
   return evidence;
@@ -463,7 +463,7 @@ function buildJournalNote(setup: ScoutSetup) {
     "추적 후보:",
     ...(opportunities.length ? opportunities.map((item) => `- ${item}`) : ["- 별도 추적 후보 없음"]),
     "",
-    "주의: 이 기록은 매수·매도 추천이 아니라, 시장 구조 관찰 기록입니다."
+    "주의: 이 기록은 투자 권유가 아니라, 시장 구조 관찰 기록입니다."
   ].join("\n");
 }
 
@@ -574,7 +574,7 @@ function SetupCard({
             </span>
             <SideIcon className={sideColor} size={16} aria-hidden />
             <span className={`whitespace-nowrap text-xs font-bold ${isAltFilterMode && altMeta?.bucket !== "candidate" ? "text-slate-300" : sideColor}`}>
-              {isAltFilterMode && altMeta ? altJudgmentLabel(setup, altMeta) : isLong ? "롱 우세" : "숏 우세"}
+              {isAltFilterMode && altMeta ? altJudgmentLabel(setup, altMeta) : isLong ? "상방 환경" : "하방 환경"}
             </span>
             {shouldShowProDetails ? (
               <span className={`whitespace-nowrap text-xs font-bold ${modeBadgeClass.replace(/bg-[^ ]+/g, "").replace(/border-[^ ]+/g, "")}`}>
@@ -745,19 +745,27 @@ function SetupCard({
 function EmptyState({
   excludeMajor,
   riskProfile,
-  onUseRadar
+  onUseRadar,
+  hiddenDangerCount = 0
 }: {
   excludeMajor: boolean;
   riskProfile: ScoutRiskProfile;
   onUseRadar: () => void;
+  hiddenDangerCount?: number;
 }) {
   const marketLabel = excludeMajor ? "알트코인" : "코인";
+  const dangerOnly = excludeMajor && hiddenDangerCount > 0;
 
   return (
     <div className="border-y border-signal-warning/25 py-5">
-      <p className="text-sm font-black text-signal-warning">현재 강하게 감지된 {marketLabel}이 없습니다.</p>
+      <p className="text-sm font-black text-signal-warning">
+        {dangerOnly ? "지금은 고위험 알트만 감지됐습니다." : `현재 강하게 감지된 ${marketLabel}이 없습니다.`}
+      </p>
       <p className="mt-2 text-xs leading-5 text-slate-300">
-        지금은 구조가 애매하거나 관찰 구간에서 너무 멀어진 상태입니다.
+        {dangerOnly
+          ? `급등 추격, 저유동성, 변동성 확대가 겹친 후보 ${hiddenDangerCount}개는 목록에서 제외했습니다.`
+          : "지금은 구조가 애매하거나 관찰 구간에서 너무 멀어진 상태입니다."}
+        {" "}
         무리해서 자리를 찾기보다 다음 레이더 판독을 기다리는 편이 낫습니다.
       </p>
       {riskProfile === "guard" ? (
@@ -781,11 +789,13 @@ function EmptyState({
 function ScanSummary({
   setups,
   riskProfile,
-  excludeMajor
+  excludeMajor,
+  hiddenDangerCount = 0
 }: {
   setups: ScoutSetup[];
   riskProfile: ScoutRiskProfile;
   excludeMajor: boolean;
+  hiddenDangerCount?: number;
 }) {
   const entryCount = setups.filter((setup) => setup.status === "entry").length;
   const activeCount = setups.filter((setup) => setup.status === "active").length;
@@ -805,10 +815,10 @@ function ScanSummary({
     return (
       <div className="mb-3 border-y border-accent-blue/25 py-3">
         <p className="text-sm font-black text-accent-blue">
-          오늘의 알트 필터 · 추적 후보 {summary.candidate}개 · 관망 {summary.watch}개 · 고위험 {summary.danger}개
+          오늘의 알트 필터 · 추적 후보 {summary.candidate}개 · 관망 {summary.watch}개 · 고위험 제외 {hiddenDangerCount}개
         </p>
         <p className="mt-1 text-xs leading-5 text-slate-300 [word-break:keep-all]">
-          알트는 좋은 후보를 찾는 것보다 위험한 후보를 먼저 걸러야 합니다. 급등 추격, 저유동성, 변동성 확대, BTC 방향성 의존을 먼저 확인합니다.
+          급등 추격, 저유동성, 변동성 확대가 겹친 코인은 목록에서 빼고 볼 만한 후보만 남깁니다.
         </p>
       </div>
     );
@@ -971,7 +981,17 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
   }, [state]);
 
   const visibleLimit = getVisibleSetupLimit(excludeMajor, riskProfile, isPaid);
-  const visibleSetups = state.status === "ready" ? uniqueTopSetupsBySymbol(state.setups, visibleLimit) : [];
+  const displayableSetups =
+    state.status === "ready" && excludeMajor
+      ? state.setups.filter((setup) => classifyAltSetup(setup).bucket !== "danger")
+      : state.status === "ready"
+        ? state.setups
+        : [];
+  const hiddenDangerCount =
+    state.status === "ready" && excludeMajor
+      ? uniqueTopSetupsBySymbol(state.setups.filter((setup) => classifyAltSetup(setup).bucket === "danger"), state.setups.length).length
+      : 0;
+  const visibleSetups = state.status === "ready" ? uniqueTopSetupsBySymbol(displayableSetups, visibleLimit) : [];
   const isAltFilterMode = excludeMajor;
   const canShowAltProDetails = !isAltFilterMode || isPaid;
 
@@ -991,7 +1011,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
             </div>
             <p className="mt-1 text-sm leading-6 text-slate-400 [word-break:keep-all]">
               {excludeMajor
-                ? "알트를 추적 후보, 관망, 고위험으로 먼저 나눕니다. 급등 추격과 유동성 리스크를 먼저 걸러내는 레이더입니다."
+                ? "알트를 추적 후보와 관망으로 나누고, 고위험 후보는 목록에서 제외합니다."
                 : "전체 타임프레임에서 구조 변화가 선명한 코인을 먼저 추립니다. 오늘 무엇부터 볼지 줄여주는 레이더입니다."}
             </p>
             <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold text-slate-300">
@@ -999,7 +1019,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
                 {excludeMajor ? "리스크 우선 필터" : "확인 순서 정리"}
               </span>
               <span className="whitespace-nowrap border-b border-surface-line px-0 py-1">
-                {excludeMajor ? "추적 후보 / 관망 / 고위험" : "관찰 구간 표시"}
+                {excludeMajor ? "추적 후보 / 관망 / 고위험 제외" : "관찰 구간 표시"}
               </span>
               <span className="whitespace-nowrap text-orange-200">
                 {excludeMajor ? "BTC 방향성 의존 확인" : "확장 감지는 더 넓게 확인"}
@@ -1060,6 +1080,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
             <EmptyState
               excludeMajor={excludeMajor}
               riskProfile={riskProfile}
+              hiddenDangerCount={hiddenDangerCount}
               onUseRadar={() => {
                 setRiskProfile("radar");
                 setState({ status: "idle" });
@@ -1067,7 +1088,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
             />
           ) : (
             <>
-              <ScanSummary setups={visibleSetups} riskProfile={riskProfile} excludeMajor={excludeMajor} />
+              <ScanSummary setups={visibleSetups} riskProfile={riskProfile} excludeMajor={excludeMajor} hiddenDangerCount={hiddenDangerCount} />
               <div className={isAltFilterMode ? "divide-y divide-ui-line" : "grid gap-3 sm:grid-cols-3"}>
                 {visibleSetups.map((setup, idx) => (
                   <SetupCard

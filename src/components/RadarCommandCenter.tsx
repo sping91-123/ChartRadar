@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Activity, ArrowDownRight, ArrowUpRight, Loader2, Radar, RefreshCw, ShieldAlert } from "lucide-react";
+import { RadarScanLoader } from "@/components/RadarScanLoader";
 import type { TradingMode } from "@/lib/marketAnalysis";
 import type { ScoutSetup } from "@/lib/setupScout";
 import { withSupabaseAuth } from "@/lib/authFetch";
@@ -188,7 +189,7 @@ export function RadarCommandCenter() {
       <div className="relative border-b border-surface-line py-4 sm:py-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
-            <div className="radar-mark-lg h-16 w-16 shrink-0 border border-accent-blue/30" />
+            <RadarScanLoader size="md" className="shrink-0" />
             <div>
               <p className="text-xs font-black uppercase tracking-widest text-accent-blue">Market Radar Live</p>
               <h2 className="mt-1 text-2xl font-black text-white">오늘 먼저 볼 시장</h2>

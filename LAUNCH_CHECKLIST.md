@@ -99,6 +99,7 @@ CAPACITOR_SERVER_URL=https://chartradar.kr
 3. Android 앱에서는 Google Play 구독과 RevenueCat 동기화 흐름을 확인합니다.
 4. 웹 결제는 `/api/billing/checkout`, `/checkout/success`, `/api/billing/confirm` 흐름을 확인합니다.
 5. `SUPABASE_SERVICE_ROLE_KEY`가 없으면 결제 후 Pro 권한 자동 반영이 보류됩니다.
+6. Google Play Console, RevenueCat, 웹 결제 링크의 실제 가격이 `src/lib/billing.ts`의 출시가 `billingAmount`와 같은지 확인합니다.
 
 ## 7. Android 앱 제출 전 확인
 

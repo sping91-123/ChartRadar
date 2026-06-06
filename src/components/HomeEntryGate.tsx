@@ -16,7 +16,7 @@ const marketEntries = [
   {
     title: "코인 레이더",
     scope: "홈 · 현물 · 선물 · 뉴스 · 복기",
-    href: "/coin",
+    href: "/crypto/home",
     icon: Bitcoin,
     accent: "text-blue-300"
   },
@@ -127,7 +127,7 @@ export function HomeEntryGate() {
     if (!preferredMarketLoaded || !preferredMarket) return;
     const canEnterApp = Boolean(user || basicBrowse || (isLoading && (skipSplashAfterAuth || hasStoredSession)));
     if (!canEnterApp) return;
-    router.replace(preferredMarket === "global" ? "/global" : "/coin");
+    router.replace(preferredMarket === "global" ? "/global" : "/crypto/home");
   }, [basicBrowse, hasStoredSession, isLoading, preferredMarket, preferredMarketLoaded, router, skipSplashAfterAuth, user]);
 
   const startBasicBrowse = () => {

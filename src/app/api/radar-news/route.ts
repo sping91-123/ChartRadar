@@ -399,6 +399,55 @@ const CRYPTO_EQUITY_NOISE_KEYWORDS = [
   "cloud growth",
   "salaried jobs"
 ];
+const CRYPTO_DIRECT_TITLE_KEYWORDS = [
+  "bitcoin",
+  "btc",
+  "ethereum",
+  "ether",
+  "eth",
+  "crypto",
+  "cryptocurrency",
+  "digital asset",
+  "digital assets",
+  "blockchain",
+  "stablecoin",
+  "stablecoins",
+  "usdt",
+  "usdc",
+  "defi",
+  "token",
+  "tokens",
+  "exchange",
+  "binance",
+  "coinbase",
+  "gemini crypto",
+  "crypto exchange",
+  "bitcoin etf",
+  "spot bitcoin etf",
+  "ether etf",
+  "crypto etf",
+  "mining",
+  "miner",
+  "miners"
+];
+const CRYPTO_MEDICAL_NOISE_KEYWORDS = [
+  "clinical trial",
+  "trial data",
+  "drug",
+  "medicine",
+  "pharma",
+  "pharmaceutical",
+  "biotech",
+  "fda",
+  "therapy",
+  "therapeutic",
+  "treatment",
+  "patient",
+  "patients",
+  "cancer cases",
+  "bowel disease",
+  "vaccine"
+];
 
 function keywordInText(text: string, keyword: string) {
   if (/^[a-z0-9]+$/i.test(keyword)) {
@@ -413,6 +462,22 @@ function hasKeyword(text: string, keywords: readonly string[]) {
 
 function hasPersonalFinanceNoise(text: string) {
   return hasKeyword(text, PERSONAL_FINANCE_NOISE_KEYWORDS);
+}
+
+function hasCryptoDirectTitleContext(text: string) {
+  return (
+    hasKeyword(text, CRYPTO_DIRECT_TITLE_KEYWORDS) ||
+    /(?:bitcoin|btc|ether|ethereum|crypto|digital asset).{0,32}treasur/.test(text) ||
+    /treasur.{0,32}(?:bitcoin|btc|ether|ethereum|crypto|digital asset)/.test(text)
+  );
+}
+
+function hasCryptoMacroTitleContext(text: string) {
+  return hasKeyword(text, CRYPTO_STRONG_MACRO_KEYWORDS) && !hasKeyword(text, CRYPTO_EQUITY_NOISE_KEYWORDS);
+}
+
+function hasCryptoMedicalNoise(text: string) {
+  return hasKeyword(text, CRYPTO_MEDICAL_NOISE_KEYWORDS);
 }
 
 function isMarketMovingGlobalNews(title: string) {
@@ -432,25 +497,37 @@ function isMarketMovingGlobalNews(title: string) {
   return hasMajorAsset && hasContext;
 }
 
-function cryptoMarketNewsScore(title: string) {
-  const lower = title.toLowerCase();
-  if (hasPersonalFinanceNoise(lower)) return -10;
+function cryptoMarketNewsScore(title: string, excerpt = "") {
+  const titleLower = title.toLowerCase();
+  const combinedLower = `${title} ${excerpt}`.toLowerCase();
+  if (hasPersonalFinanceNoise(combinedLower)) return -10;
+  if (hasCryptoMedicalNoise(titleLower) && !hasCryptoDirectTitleContext(titleLower)) return -20;
 
-  const majorHits = CRYPTO_MAJOR_MARKET_KEYWORDS.filter((keyword) => keywordInText(lower, keyword)).length;
-  const macroHits = CRYPTO_MACRO_KEYWORDS.filter((keyword) => keywordInText(lower, keyword)).length;
-  const policyHits = CRYPTO_POLICY_KEYWORDS.filter((keyword) => keywordInText(lower, keyword)).length;
-  const altOnlyHits = CRYPTO_ALT_ONLY_KEYWORDS.filter((keyword) => keywordInText(lower, keyword)).length;
-  const projectNoiseHits = CRYPTO_PROJECT_NOISE_KEYWORDS.filter((keyword) => keywordInText(lower, keyword)).length;
-  const strongMacroHit = CRYPTO_STRONG_MACRO_KEYWORDS.some((keyword) => keywordInText(lower, keyword));
-  const systemicContextHit = CRYPTO_SYSTEMIC_CONTEXT_KEYWORDS.some((keyword) => keywordInText(lower, keyword));
-  const equityNoiseHit = CRYPTO_EQUITY_NOISE_KEYWORDS.some((keyword) => keywordInText(lower, keyword));
+  const titleMajorHits = CRYPTO_MAJOR_MARKET_KEYWORDS.filter((keyword) => keywordInText(titleLower, keyword)).length;
+  const titleMacroHits = CRYPTO_MACRO_KEYWORDS.filter((keyword) => keywordInText(titleLower, keyword)).length;
+  const titlePolicyHits = CRYPTO_POLICY_KEYWORDS.filter((keyword) => keywordInText(titleLower, keyword)).length;
+  const titleAltOnlyHits = CRYPTO_ALT_ONLY_KEYWORDS.filter((keyword) => keywordInText(titleLower, keyword)).length;
+  const titleSystemicHits = titleMajorHits + titleMacroHits + titlePolicyHits;
+  const directTitleHit = hasCryptoDirectTitleContext(titleLower);
+  const titleRelevant = titleSystemicHits > 0 || directTitleHit || hasCryptoMacroTitleContext(titleLower);
+
+  if (!titleRelevant) return -6 - titleAltOnlyHits;
+
+  const majorHits = CRYPTO_MAJOR_MARKET_KEYWORDS.filter((keyword) => keywordInText(combinedLower, keyword)).length;
+  const macroHits = CRYPTO_MACRO_KEYWORDS.filter((keyword) => keywordInText(combinedLower, keyword)).length;
+  const policyHits = CRYPTO_POLICY_KEYWORDS.filter((keyword) => keywordInText(combinedLower, keyword)).length;
+  const altOnlyHits = CRYPTO_ALT_ONLY_KEYWORDS.filter((keyword) => keywordInText(combinedLower, keyword)).length;
+  const projectNoiseHits = CRYPTO_PROJECT_NOISE_KEYWORDS.filter((keyword) => keywordInText(combinedLower, keyword)).length;
+  const strongMacroHit = CRYPTO_STRONG_MACRO_KEYWORDS.some((keyword) => keywordInText(combinedLower, keyword));
+  const systemicContextHit = CRYPTO_SYSTEMIC_CONTEXT_KEYWORDS.some((keyword) => keywordInText(combinedLower, keyword));
+  const equityNoiseHit = CRYPTO_EQUITY_NOISE_KEYWORDS.some((keyword) => keywordInText(combinedLower, keyword));
   const systemicHits = majorHits + macroHits + policyHits;
 
-  if (systemicHits === 0) return -6 - altOnlyHits - projectNoiseHits;
+  if (systemicHits === 0) return directTitleHit ? 3 - projectNoiseHits : -6 - altOnlyHits - projectNoiseHits;
   if (equityNoiseHit && majorHits === 0 && policyHits === 0) return -5;
   if (majorHits === 0 && policyHits === 0 && !strongMacroHit) return -4 - altOnlyHits - projectNoiseHits;
   if (majorHits > 0 && policyHits === 0 && macroHits === 0 && !systemicContextHit) return -2 - altOnlyHits - projectNoiseHits;
-  if (altOnlyHits > 0 && majorHits === 0 && !keywordInText(lower, "crypto market") && !keywordInText(lower, "stablecoin")) return -3;
+  if (altOnlyHits > 0 && majorHits === 0 && !keywordInText(combinedLower, "crypto market") && !keywordInText(combinedLower, "stablecoin")) return -3;
 
   return majorHits * 4 + macroHits * 3 + policyHits * 3 - altOnlyHits * 2 - projectNoiseHits * 3;
 }
@@ -458,7 +535,7 @@ function cryptoMarketNewsScore(title: string) {
 function selectFeedRecords(records: Array<{ title: string; link: string; publishedAt: string; excerpt: string }>, market: RadarNewsMarket) {
   if (market !== "stocks") {
     return records
-      .map((record) => ({ record, score: cryptoMarketNewsScore(`${record.title} ${record.excerpt}`) }))
+      .map((record) => ({ record, score: cryptoMarketNewsScore(record.title, record.excerpt) }))
       .filter((item) => item.score >= 2)
       .sort((a, b) => b.score - a.score || new Date(b.record.publishedAt).getTime() - new Date(a.record.publishedAt).getTime())
       .slice(0, 8)
@@ -547,6 +624,12 @@ function correctBriefingCurrencyDrift(items: RadarNewsItem[], value: string) {
 function polishBriefingCopy(items: RadarNewsItem[], value: string) {
   return correctBriefingCurrencyDrift(items, value)
     .replace(/기름값/g, "유가")
+    .replace(/예정된?\s*(?:매크로\s*)?일정/g, "새 뉴스")
+    .replace(/예정\s*발표/g, "새 뉴스")
+    .replace(/예정\s*이벤트/g, "새 뉴스")
+    .replace(/다음\s*이벤트/g, "다음 뉴스")
+    .replace(/이벤트\s*일정/g, "새 뉴스")
+    .replace(/발표\s*전후/g, "뉴스 직후")
     .replace(/투자자들은\s*이러한\s*변동성에\s*대응하기\s*위한\s*전략을\s*수립해야\s*합니다\.?/g, "시장에서는 변동성 확대 가능성을 함께 점검해야 합니다.")
     .replace(/투자자들은/g, "시장 참여자들은")
     .replace(/전략 수립/g, "변동성 대응 여부 점검")
@@ -683,9 +766,9 @@ async function loadFeed(feed: NewsFeed, market: RadarNewsMarket) {
 }
 
 function toneLabel(tone: RadarNewsDirection) {
-  if (tone === "bullish") return "상방 우호";
-  if (tone === "bearish") return "하방 주의";
-  return "중립 확인";
+  if (tone === "bullish") return "상승 재료";
+  if (tone === "bearish") return "하락 재료";
+  return "혼재 / 확인 필요";
 }
 
 function itemTitle(item: RadarNewsItem, market: RadarNewsMarket) {
@@ -739,7 +822,7 @@ function buildFallbackIssues(items: RadarNewsItem[], market: RadarNewsMarket): R
           {
             title: "규제와 제도권 수급 기대 점검",
             patterns: [/clarity|genius|regulation|regulatory|sec|cftc|congress|senate|stablecoin|market structure|etf/i],
-            detail: "규제 명확화와 ETF, 스테이블코인 관련 뉴스는 단기 가격보다 제도권 자금의 접근성에 영향을 줍니다. 기대감이 가격에 이미 반영됐는지와 후속 입법 일정을 확인해야 합니다."
+            detail: "규제 명확화와 ETF, 스테이블코인 관련 뉴스는 단기 가격보다 제도권 자금의 접근성에 영향을 줍니다. 기대감이 가격에 이미 반영됐는지와 실제 수급 반응을 확인해야 합니다."
           },
           {
             title: "BTC·ETH 주도권과 시장 체력 점검",
@@ -756,11 +839,10 @@ function buildFallbackIssues(items: RadarNewsItem[], market: RadarNewsMarket): R
   const issues = candidates.flatMap((candidate) => {
     const matched = matchIssueItems(items, candidate.patterns);
     if (!matched.length) return [];
-    const sources = Array.from(new Set(matched.slice(0, 3).map((item) => displayNewsSource(item.source)))).join(", ");
     return [
       {
         title: candidate.title,
-        detail: `${sources} 기사 묶음에서 확인되는 흐름입니다. ${candidate.detail}`,
+        detail: candidate.detail,
         tone: issueTone(matched)
       }
     ];
@@ -777,20 +859,25 @@ function buildFallbackIssues(items: RadarNewsItem[], market: RadarNewsMarket): R
 function fallbackNewsBriefing(items: RadarNewsItem[], model = "rules", market: RadarNewsMarket = "crypto"): RadarNewsBriefing {
   const bullish = items.filter((item) => item.direction === "bullish").length;
   const bearish = items.filter((item) => item.direction === "bearish").length;
-  const neutral = Math.max(0, items.length - bullish - bearish);
   const marketLabel = market === "stocks" ? "글로벌 시장" : "코인 시장";
+  const newsBalance =
+    bullish > bearish
+      ? "상승 쪽 뉴스가 조금 더 많습니다."
+      : bearish > bullish
+        ? "하락 쪽 뉴스가 조금 더 많습니다."
+        : "상승·하락 뉴스가 엇갈립니다.";
   const briefingFocus =
     market === "stocks"
       ? "금리, 달러, 실적, 섹터 흐름, 지수선물 중심으로 봅니다."
-      : "BTC/ETH, ETF 수급, 금리, 달러, 물가, 고용, 유동성, 규제, 청산 흐름 중심으로 봅니다.";
+      : "BTC/ETH, ETF 수급, 금리, 달러, 유동성, 규제, 청산 흐름 중심으로 봅니다.";
   const followUpFocus =
     market === "stocks"
       ? "지금은 개별 종목 뉴스보다 금리, 달러, 실적, 섹터 흐름, 지수선물이 같은 방향으로 움직이는지 확인하는 편이 더 중요합니다."
       : "지금은 개별 알트 뉴스보다 금리, 달러, 규제, ETF 수급, BTC와 ETH 가격 반응이 같은 방향으로 움직이는지 확인하는 편이 더 중요합니다.";
   const emptyFocus =
     market === "stocks"
-      ? "금리, 달러, VIX, 주요 지수선물과 예정된 매크로 일정을 함께 확인하세요."
-      : "BTC와 ETH 가격 반응, 도미넌스, 거래량, 예정된 매크로 일정을 함께 확인하세요.";
+      ? "금리, 달러, VIX, 주요 지수선물의 현재 반응을 확인하세요."
+      : "BTC와 ETH 가격 반응, 도미넌스, 거래량을 확인하세요.";
   const fallbackIssues = buildFallbackIssues(items, market);
   const emptyKeyIssues: RadarNewsBriefing["keyIssues"] = [
     {
@@ -805,15 +892,15 @@ function fallbackNewsBriefing(items: RadarNewsItem[], model = "rules", market: R
     model,
     overview:
       items.length === 0
-        ? `${marketLabel}에 즉시 방향을 정할 만큼 강한 뉴스는 아직 확인되지 않습니다. 뉴스가 비어 있는 상태가 아니라, 시장 영향이 큰 이슈만 추려 보는 중입니다. 예정 이벤트와 가격 반응을 함께 확인하세요.`
-        : `지난 1시간 기준으로 오늘 확인할 주요 시장 이슈와 ${marketLabel} 전체 흐름에 영향을 줄 만한 기사, 매크로 재료를 묶어 보면 상방 우호 ${bullish}개, 하방 주의 ${bearish}개, 중립 확인 ${neutral}개로 정리됩니다. ${briefingFocus} ${followUpFocus}`,
+        ? `${marketLabel}에 즉시 방향을 정할 만큼 강한 뉴스는 아직 확인되지 않습니다. 시장 영향이 큰 공개 뉴스만 추려 보는 중입니다. ${emptyFocus}`
+        : `지난 1시간 뉴스 흐름은 ${newsBalance} ${briefingFocus} ${followUpFocus}`,
     keyIssues: items.length === 0 ? emptyKeyIssues : fallbackIssues,
     marketImpact:
       items.length === 0
         ? [
             "현재 뉴스만으로는 시장 방향을 단정하기 어렵습니다.",
             market === "stocks" ? "금리, 달러, VIX, 지수선물이 같은 방향으로 움직이는지 확인하세요." : "BTC, ETH, 도미넌스, 거래량 반응이 함께 움직이는지 확인하세요.",
-            "뉴스 공백 구간에는 예정된 CPI, FOMC, 고용, PMI 같은 이벤트 일정이 더 중요해질 수 있습니다."
+            "강한 뉴스가 없을 때는 가격 반응이 더 중요한 구간입니다."
           ]
         : [
             bullish > bearish
@@ -829,25 +916,25 @@ function fallbackNewsBriefing(items: RadarNewsItem[], model = "rules", market: R
     strategyNotes:
       items.length === 0
         ? [
-            "현재 강한 뉴스가 없을 때는 예정 이벤트 시간과 예상치를 먼저 확인하세요.",
-            "가격이 조용하다가 발표 전후로 거래량이 커지는지 관찰하세요.",
-            "새 뉴스가 들어오면 알림 조건과 함께 다시 확인하는 흐름이 좋습니다."
+            "새 뉴스 유입 시 가격 반응 확인",
+            "거래량 동반 여부 확인",
+            "알림 조건 재확인"
           ]
         : market === "stocks"
           ? [
-              "속보 직후보다 1시간 단위로 금리, 달러, 지수선물, 주요 섹터 반응이 같은 방향인지 확인하세요.",
-              "상방 재료와 하방 재료가 동시에 나오면 한쪽 결론보다 변동성 확대 가능성을 먼저 봐야 합니다.",
-              "가장 강하게 반응하는 축이 지수, 반도체·AI, 원자재, 달러 중 어디인지 확인하세요."
+              "지수선물·섹터 반응 확인",
+              "금리·달러 부담 확인",
+              "강한 반응 축 확인"
             ]
           : [
-              "속보 직후보다 1시간 단위로 금리, 달러, BTC, ETH 반응이 같은 방향인지 확인하세요.",
-              "상방 재료와 하방 재료가 동시에 나오면 한쪽 결론보다 변동성 확대 가능성을 먼저 봐야 합니다.",
-              "가장 강하게 반응하는 자산이 BTC인지 ETH인지, 아니면 도미넌스와 스테이블코인 흐름인지 확인하세요."
+              "BTC·ETH 동반 반응 확인",
+              "금리·달러 부담 확인",
+              "거래량 동반 여부 확인"
             ],
     finalSummary:
       items.length === 0
-        ? "현재 강한 뉴스는 없습니다. 다음 이벤트와 가격 반응을 기준으로 다시 확인하세요."
-        : bullish > bearish ? "뉴스 흐름은 우호적입니다. 다만 차트가 따라붙는지 확인하세요." : bearish > bullish ? "뉴스 흐름은 방어적입니다. 반등보다 리스크 관리가 먼저입니다." : "뉴스 흐름은 중립입니다. 방향이 확인될 때까지 서두르지 않는 편이 좋습니다."
+        ? "현재 강한 뉴스는 없습니다. 가격 반응이 먼저입니다."
+        : bullish > bearish ? "뉴스는 상승 쪽이 조금 우세합니다. 가격 반응 확인이 우선입니다." : bearish > bullish ? "뉴스는 하락 쪽이 조금 우세합니다. 리스크 확인이 우선입니다." : "뉴스 흐름은 중립입니다. 방향 확인이 먼저입니다."
   };
 }
 
@@ -856,7 +943,7 @@ function buildNewsBriefingPrompt(items: RadarNewsItem[], market: RadarNewsMarket
   const focusRule =
     market === "stocks"
       ? "- 글로벌 시장은 금리, 달러, 지수선물, 실적, 섹터 흐름, 원자재 중심으로 씁니다."
-      : "- 코인 시장은 개별 알트코인보다 BTC/ETH, ETF 수급, 금리, 달러, CPI/FOMC/고용/PMI, 유동성, 규제, 스테이블코인, 청산, 도미넌스 중심으로 씁니다.\n- 토르체인, 밈코인, 개별 프로젝트 업데이트처럼 전체 시장 영향이 약한 뉴스는 핵심 이슈로 다루지 않습니다.";
+      : "- 코인 시장은 개별 알트코인보다 BTC/ETH, ETF 수급, 금리, 달러, 유동성, 규제, 스테이블코인, 청산, 도미넌스 중심으로 씁니다.\n- 토르체인, 밈코인, 개별 프로젝트 업데이트처럼 전체 시장 영향이 약한 뉴스는 핵심 이슈로 다루지 않습니다.";
   const headlines = items
     .slice(0, 10)
     .map(
@@ -869,10 +956,10 @@ function buildNewsBriefingPrompt(items: RadarNewsItem[], market: RadarNewsMarket
 
   return `아래 ${marketLabel} 기사 묶음을 바탕으로 한국어 시장 현황 리포트를 작성해 주세요. JSON 하나만 반환하세요.
 {
-  "overview": "지난 1시간 시장 흐름을 4~6문장으로 설명",
-  "keyIssues": [{ "title": "한국어 핵심 이슈 제목", "detail": "기사들을 묶어서 왜 중요한지 2~4문장으로 설명", "tone": "bullish|bearish|neutral" }],
-  "marketImpact": ["시장 영향 3개"],
-  "strategyNotes": ["사용자가 확인할 것 3개"],
+  "overview": "지난 1시간 뉴스 흐름을 2~3문장으로 설명",
+  "keyIssues": [{ "title": "한국어 핵심 뉴스 제목", "detail": "왜 중요한지 1~2문장으로 설명", "tone": "bullish|bearish|neutral" }],
+  "marketImpact": ["시장 영향 한 줄 3개"],
+  "strategyNotes": ["확인할 가격 반응 한 줄 3개"],
   "finalSummary": "마지막 한 줄 정리"
 }
 
@@ -884,7 +971,9 @@ function buildNewsBriefingPrompt(items: RadarNewsItem[], market: RadarNewsMarket
 - 직접적인 매수·매도 지시는 금지합니다.
 - 과격한 급등락 표현, 매수 유도, 수익 암시, 단정적 신호 표현은 쓰지 않습니다.
 - 과장하지 말고 시장 영향과 확인 사인을 중심으로 씁니다.
-- 읽을거리 있는 리포트처럼 현황, 배경, 시장 영향, 확인할 지표를 연결해서 씁니다.
+- 화면에 바로 보일 짧은 문장으로 씁니다.
+- 뉴스 화면 전용입니다. 일정, 캘린더, 예정 발표, 다음 이벤트 안내는 쓰지 않습니다.
+- "발표 전후", "예정 이벤트", "일정 확인" 같은 표현은 쓰지 않습니다.
 - 단순 제목 요약이 아니라 여러 기사의 공통 흐름을 묶어 설명합니다.
 - 원문의 달러 금액은 원화, 만원, 억원으로 환산하지 말고 달러 단위로 유지합니다. 예: "$77,000"은 "77,000달러" 또는 "7만 7,000달러"로 씁니다.
 - BTC, ETH, 나스닥, S&P500 같은 가격·지수 단위는 원문 단위를 유지합니다.
@@ -945,7 +1034,7 @@ async function generateNewsBriefing(items: RadarNewsItem[], market: RadarNewsMar
         model: process.env.GROQ_MODEL || GROQ_DEFAULT_MODEL,
         messages: [{ role: "user", content: buildNewsBriefingPrompt(items, market) }],
         temperature: 0.2,
-        max_tokens: 1800
+        max_tokens: 1200
       })
     });
 

@@ -3,14 +3,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, RefreshCw, TrendingUp, X } from "lucide-react";
-import { ActionButton, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
-import { CoinSignalConflictPanel, type CoinSignalConflictItem } from "@/components/coin/CoinSignalConflictPanel";
-import { CoinDataFreshnessPanel, dataFreshnessTone, formatDataAge, type CoinDataFreshnessItem } from "@/components/coin/CoinDataFreshnessPanel";
-import { CoinEvidenceGradePanel, type CoinEvidenceGradeItem } from "@/components/coin/CoinEvidenceGradePanel";
-import { CoinSignalPressurePanel, type CoinSignalPressureItem } from "@/components/coin/CoinSignalPressurePanel";
+import { ActionButton, PanelCard, StatusPill } from "@/components/ui/DesignPrimitives";
 import type { CoinMarketMetricsPayload } from "@/lib/coinMarketMetrics";
 import type { Candle } from "@/lib/marketAnalysis";
+import type { LargeTradeFlowReport } from "@/lib/largeTradeFlow";
 import type { LiquidationPressureReport } from "@/lib/liquidationPressure";
+import type { OptionsMarketReport } from "@/lib/optionsMarket";
+import type { StablecoinLiquidityReport } from "@/lib/stablecoinLiquidity";
 import { analyzeTechnicalRadar, type IndicatorReading, type TechnicalRadarReport } from "@/lib/technicalRadar";
 import { buildCoinHomeDecision, type CoinHomeDecisionSummary } from "@/components/coin/coinHomeDecisionModel";
 
@@ -36,16 +35,20 @@ interface CoinHomeData {
   funding: Partial<Record<RepresentativeSymbol, LiquidationPressureReport>>;
   fundingMeta: Partial<Record<RepresentativeSymbol, CoinHomeResponseMeta>>;
   marketMetrics: CoinMarketMetricsPayload | null;
+  stablecoinLiquidity: StablecoinLiquidityReport | null;
+  largeTradeFlow: LargeTradeFlowReport | null;
+  optionsMarket: OptionsMarketReport | null;
   analysisUpdatedAt: number;
 }
 
-type CoinHomeState = { status: "loading" } | { status: "ready"; data: CoinHomeData } | { status: "error"; message: string };
+type CoinHomeState =
+  | { status: "loading" }
+  | { status: "ready"; data: CoinHomeData }
+  | { status: "error"; message: string };
 
 const tileSymbols = ["BTC", "ETH", "XRP", "SOL", "DOGE", "BNB"] as const;
 
 type RepresentativeSymbol = (typeof tileSymbols)[number];
-type ConclusionSegment = { text: string; tone?: "up" | "down" };
-type DirectionTone = "up" | "down";
 type VisualTone = "long" | "short" | "watch" | "risk" | "info";
 
 const tradingViewLogoIds: Record<RepresentativeSymbol, string> = {
@@ -105,10 +108,65 @@ function toneFromPercent(value: number | null | undefined) {
   return "watch" as const;
 }
 
+function toneFromFearGreed(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "info" as const;
+  if (value < 50) return "short" as const;
+  if (value > 50) return "long" as const;
+  return "info" as const;
+}
+
 function toneFromPremium(value: number | null | undefined) {
   if (value === null || value === undefined || !Number.isFinite(value)) return "info" as const;
   if (Math.abs(value) < 0.5) return "watch" as const;
-  return value > 0 ? ("risk" as const) : ("info" as const);
+  return value > 0 ? "risk" as const : "info" as const;
+}
+
+function toneFromLiquidity(report: StablecoinLiquidityReport | null | undefined) {
+  if (!report) return "info" as const;
+  if (report.grade === "strong") return "long" as const;
+  if (report.grade === "building") return "info" as const;
+  if (report.grade === "drying") return "risk" as const;
+  return "watch" as const;
+}
+
+function largeTradeTone(report: LargeTradeFlowReport | null | undefined, decision?: CoinHomeDecisionSummary | null) {
+  if (!report) return "info" as const;
+  if (report.anomalyLevel === "high") return "risk" as const;
+  if (report.dominantSide === "buy") {
+    return decision?.state === "하락 위험 큼" || decision?.state === "크게 흔들림" ? "watch" as const : "long" as const;
+  }
+  if (report.dominantSide === "sell") return "short" as const;
+  return "watch" as const;
+}
+
+function largeTradeGaugeValue(report: LargeTradeFlowReport | null | undefined) {
+  if (!report) return null;
+  if (report.largeTradeCount <= 0 || report.totalLargeNotionalUsd <= 0) return null;
+  return clamp(50 + report.imbalancePercent * 0.45, 0, 100);
+}
+
+function largeTradeDisplay(report: LargeTradeFlowReport | null | undefined) {
+  if (!report) return "미확인";
+  if (report.largeTradeCount <= 0 || report.totalLargeNotionalUsd <= 0) return "특이 신호 없음";
+  if (report.dominantSide === "buy") return "유입 우세";
+  if (report.dominantSide === "sell") return "이탈 우세";
+  return "균형";
+}
+
+function optionsTone(report: OptionsMarketReport | null | undefined) {
+  if (!report) return "info" as const;
+  if (report.expectedMovePercent !== null && report.expectedMovePercent >= 9) return "risk" as const;
+  return "watch" as const;
+}
+
+function optionsGaugeValue(report: OptionsMarketReport | null | undefined) {
+  if (!report?.expectedMovePercent || !Number.isFinite(report.expectedMovePercent)) return null;
+  return clamp(report.expectedMovePercent * 5, 0, 100);
+}
+
+function optionsDisplay(report: OptionsMarketReport | null | undefined) {
+  if (!report?.expectedMovePercent || !Number.isFinite(report.expectedMovePercent)) return "미확인";
+  return `±${report.expectedMovePercent.toFixed(report.expectedMovePercent >= 10 ? 0 : 1)}%`;
 }
 
 const visualToneClass: Record<VisualTone, { text: string; bar: string }> = {
@@ -118,15 +176,6 @@ const visualToneClass: Record<VisualTone, { text: string; bar: string }> = {
   risk: { text: "text-ui-risk", bar: "bg-ui-risk" },
   info: { text: "text-ui-brand", bar: "bg-ui-brand" }
 };
-
-function formatAnalysisUpdatedAt(ms: number) {
-  const date = new Date(ms);
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const hour = date.getHours().toString().padStart(2, "0");
-  const minute = date.getMinutes().toString().padStart(2, "0");
-  return `${month}월 ${day}일 ${hour}:${minute} 갱신`;
-}
 
 function symbolLogoUrl(symbol: RepresentativeSymbol) {
   return `https://s3-symbol-logo.tradingview.com/crypto/${tradingViewLogoIds[symbol]}.svg`;
@@ -145,9 +194,9 @@ function responseMeta(payload: { cachedAt?: number; cached?: boolean; stale?: bo
 }
 
 function directionFor(changePercent: number) {
-  if (changePercent >= 2.5) return { label: "상방 우세", tone: "long" as const, icon: ArrowUpRight };
-  if (changePercent <= -2.5) return { label: "하방 압력", tone: "short" as const, icon: ArrowDownRight };
-  return { label: "관망", tone: "watch" as const, icon: TrendingUp };
+  if (changePercent >= 2.5) return { label: "위쪽 확인", tone: "long" as const, icon: ArrowUpRight };
+  if (changePercent <= -2.5) return { label: "아래쪽 확인", tone: "short" as const, icon: ArrowDownRight };
+  return { label: "변화 작음", tone: "watch" as const, icon: TrendingUp };
 }
 
 function scoreFor(changePercent: number, marketScore: number | null) {
@@ -155,81 +204,147 @@ function scoreFor(changePercent: number, marketScore: number | null) {
   return Math.round(clamp(50 + changePercent * 4.5 + marketBias, 8, 92));
 }
 
+function tileToneClass(changePercent: number) {
+  if (changePercent >= 3) return "bg-emerald-500 text-white";
+  if (changePercent >= 2) return "bg-emerald-600 text-white";
+  if (changePercent >= 1) return "bg-emerald-700 text-white";
+  if (changePercent >= 0) return "bg-emerald-950 text-emerald-50";
+  if (changePercent <= -3) return "bg-red-600 text-white";
+  if (changePercent <= -2) return "bg-red-700 text-white";
+  if (changePercent <= -1) return "bg-red-800 text-red-50";
+  return "bg-red-950 text-red-50";
+}
+
 function tileAccentClass(changePercent: number) {
-  if (changePercent >= 0) return "text-emerald-300";
-  return "text-rose-300";
+  if (changePercent >= 0) return changePercent >= 3 ? "text-white" : "text-emerald-100";
+  return changePercent <= -3 ? "text-white" : "text-red-100";
 }
 
 function scoreToneClass(score: number) {
-  if (score >= 70) return "bg-emerald-400/15 text-emerald-300";
-  if (score >= 50) return "bg-slate-400/10 text-slate-300";
-  if (score >= 35) return "bg-rose-400/15 text-rose-300";
-  return "bg-rose-500/15 text-rose-200";
+  if (score >= 80) return "bg-emerald-300 text-emerald-950";
+  if (score >= 70) return "bg-emerald-500 text-white";
+  if (score >= 60) return "bg-emerald-800 text-emerald-50";
+  if (score >= 50) return "bg-slate-600 text-slate-50";
+  if (score >= 40) return "bg-red-900 text-red-50";
+  if (score >= 30) return "bg-red-700 text-white";
+  return "bg-red-500 text-white";
 }
 
 function riskFor(changePercent: number) {
-  if (changePercent >= 6) return "추격 주의";
-  if (changePercent <= -6) return "변동성 확대";
-  if (changePercent >= 2.5) return "눌림 확인";
-  if (changePercent <= -2.5) return "지지 반응 확인";
-  return "방향 확인 대기";
+  if (changePercent >= 6) return "너무 많이 오름";
+  if (changePercent <= -6) return "크게 흔들림";
+  if (changePercent >= 2.5) return "잠깐 쉬는지 보기";
+  if (changePercent <= -2.5) return "가격이 버티는지 보기";
+  return "아직 방향 약함";
 }
 
 function checkFor(changePercent: number) {
-  if (changePercent >= 2.5) return "상방 추세 유지와 거래대금 동반 여부를 확인합니다.";
-  if (changePercent <= -2.5) return "하방 추세가 이어지는지, 반등 실패 여부를 확인합니다.";
-  return "BTC 1시간 추세와 주요 이벤트 전후 변동성을 함께 봅니다.";
+  if (changePercent >= 2.5) return "오른 뒤에도 거래대금이 붙는지 봅니다.";
+  if (changePercent <= -2.5) return "가격이 저점권을 유지하는지 확인합니다.";
+  return "BTC 흐름과 큰 뉴스 전후 움직임을 봅니다.";
 }
 
-function conclusionSegments(decision: CoinHomeDecisionSummary | undefined): ConclusionSegment[] {
-  if (!decision) return [{ text: "시장 데이터를 확인하는 중입니다." }];
-  if (decision.state === "하방 압력 우세") {
-    return [
-      { text: "하방 압력", tone: "down" },
-      {
-        text: "이 우세합니다. 숏 관점은 반등 실패와 추세 유지 확인이 먼저입니다."
-      }
-    ];
+function conclusionText(decision: CoinHomeDecisionSummary | undefined) {
+  if (!decision) return "시장 데이터를 확인하는 중입니다.";
+  if (decision.state === "하락 위험 큼") return "오늘은 회복 확인 모드입니다. 하락 우위가 줄어들기 전까지는 관망 쪽으로 봅니다.";
+  if (decision.state === "크게 흔들림") {
+    return "변동성 관리가 우선입니다. 방향 단정보다 쏠림 완화 여부를 확인합니다.";
   }
-  if (decision.state === "변동성 경계") {
-    return [{ text: "변동성이 커져 롱/숏 모두 기준선 확인이 우선입니다." }];
+  if (decision.state === "추적 우세") {
+    return "추적 근거가 우세합니다. 흐름 유지 조건을 함께 확인합니다.";
   }
-  if (decision.state === "상방 추적 가능") {
-    return [{ text: "상방 조건", tone: "up" }, { text: "이 우세합니다. 롱 관점은 눌림 후 추세 유지 확인이 먼저입니다." }];
+  if (decision.state === "확인 필요") {
+    return "확인 대기 모드입니다. BTC와 알트 흐름이 더 정렬되는지 봅니다.";
   }
-  if (decision.state === "조건 대기") {
-    return [{ text: "방향은 열렸지만 BTC 추세와 알트 참여 확인이 더 필요합니다." }];
-  }
-  return [{ text: "방향 근거가 부족해 관망이 우선입니다." }];
+  return "관망 우선 모드입니다. 한쪽 방향이 뚜렷해질 때까지 확인을 앞에 둡니다.";
 }
 
-function conclusionToneClass(tone?: DirectionTone) {
-  if (tone === "up") return "text-emerald-400";
-  if (tone === "down") return "text-rose-400";
-  return "";
+function invalidationText(decision: CoinHomeDecisionSummary | undefined) {
+  if (!decision) return "시장 데이터 확인 필요";
+  if (decision.state === "하락 위험 큼") return "BTC 약세가 이어지면 관망 우선으로 둡니다.";
+  if (decision.state === "크게 흔들림") return "쏠림과 변동성이 잦아들기 전까지 방향 단정은 피합니다.";
+  if (decision.state === "추적 우세") return "BTC가 버티지 못하거나 알트 거래대금이 끊기면 다시 확인합니다.";
+  if (decision.topRisk !== "큰 경고 없음") return `${decision.topRisk}이 커지면 관망 쪽으로 낮춰 봅니다.`;
+  return "큰 경고가 새로 생기면 다시 확인합니다.";
 }
 
-function directionalTone(value: string): DirectionTone | null {
-  if (/상승|상방|반등|회복|돌파|롱/.test(value)) return "up";
-  if (/하락|하방|약세|이탈|실패|숏/.test(value)) return "down";
-  return null;
+function volatilityWatchText(report: OptionsMarketReport | null | undefined) {
+  if (!report) return "옵션 변동성 확인 필요";
+  if (report.expectedMovePercent !== null && report.expectedMovePercent >= 14) return "방향성 호재가 아니라 큰 변동성 주의로 봅니다.";
+  if (report.expectedMovePercent !== null && report.expectedMovePercent >= 9) return "예상 변동 폭이 커지는지 확인합니다.";
+  return "방향보다 변동성 범위 확인용 지표입니다.";
 }
 
-function HighlightDirectionalText({ text }: { text: string | undefined }) {
-  if (!text) return null;
-  const parts = text.split(/(상승|상방|반등|회복|돌파|롱|하락|하방|약세|이탈|실패|숏)/g);
-  return (
-    <>
-      {parts.map((part, index) => {
-        const tone = directionalTone(part);
-        return (
-          <span key={`${part}-${index}`} className={tone ? conclusionToneClass(tone) : undefined}>
-            {part}
-          </span>
-        );
-      })}
-    </>
-  );
+function readinessDisplay(decision: CoinHomeDecisionSummary | undefined) {
+  if (!decision) return { label: "오늘 대응 모드", value: "확인 중", detail: "시장 데이터 확인 중" };
+  const score = `${decision.readinessScore}/100`;
+  if (decision.state === "하락 위험 큼" || decision.readinessScore <= 20) {
+    return { label: "오늘 대응 모드", value: `리스크 우선 · ${score}`, detail: "추적보다 회복 조건 확인이 먼저입니다." };
+  }
+  if (decision.state === "크게 흔들림") {
+    return { label: "오늘 대응 모드", value: `변동성 주의 · ${score}`, detail: "쏠림이 줄어드는지 먼저 봅니다." };
+  }
+  if (decision.state === "관망하기" || decision.readinessScore < 45) {
+    return { label: "오늘 대응 모드", value: `관망 우선 · ${score}`, detail: "방향보다 확인 조건을 앞에 둡니다." };
+  }
+  if (decision.state === "확인 필요") {
+    return { label: "오늘 대응 모드", value: `확인 대기 · ${score}`, detail: "흐름 정렬 여부를 한 번 더 봅니다." };
+  }
+  return { label: "오늘 대응 모드", value: `추적 우세 · ${score}`, detail: "흐름 유지 조건을 같이 봅니다." };
+}
+
+function marketModeDisplay(decision: CoinHomeDecisionSummary | undefined) {
+  if (!decision) return { label: "시장 상태", value: "확인 중", detail: "시장 데이터 확인 중" };
+  if (decision.leadership === "리스크 우선" || decision.state === "하락 위험 큼") {
+    return { label: "회복 조건", value: "BTC 약세 완화 확인", detail: "관망을 유지하되 하락 우위가 줄어드는지 봅니다." };
+  }
+  if (decision.state === "크게 흔들림") {
+    return { label: "확인 조건", value: "쏠림 완화 대기", detail: "가격보다 쏠림 완화 여부를 먼저 봅니다." };
+  }
+  if (decision.leadership === "섞임") {
+    return { label: "시장 상태", value: "혼재", detail: decision.reason };
+  }
+  return { label: "시장 주도", value: decision.leadership, detail: decision.reason };
+}
+
+function focusSectionTitle(decision: CoinHomeDecisionSummary | undefined) {
+  if (!decision) return "확인할 조건";
+  if (decision.state === "하락 위험 큼") return "회복 확인 조건";
+  if (decision.state === "크게 흔들림") return "변동성 확인 조건";
+  if (decision.state === "관망하기" || decision.state === "확인 필요") return "확인할 조건";
+  return "먼저 볼 것";
+}
+
+function recheckConditionText(decision: CoinHomeDecisionSummary | undefined) {
+  if (!decision) return "시장 데이터 확인 필요";
+  if (decision.state === "하락 위험 큼") return "BTC가 1H/4H 하락 우위를 줄일 때 다시 봅니다.";
+  if (decision.state === "크게 흔들림") return "선물 쏠림이나 옵션 예상 변동 폭이 낮아질 때 다시 봅니다.";
+  if (decision.state === "관망하기") return "BTC와 알트 방향이 같은 쪽으로 정렬될 때 다시 봅니다.";
+  if (decision.state === "추적 우세") return "쉬어가는 구간에도 거래대금이 유지되는지 다시 봅니다.";
+  return decision.nextCondition;
+}
+
+function confirmationMetricText(decision: CoinHomeDecisionSummary | undefined) {
+  if (!decision) return "시장 데이터 확인 필요";
+  if (decision.state === "하락 위험 큼") return "저점권 유지와 BTC 4H 약세 완화 여부를 확인합니다.";
+  if (decision.state === "크게 흔들림") return "쏠림 지표와 예상 변동 폭이 낮아지는지 확인합니다.";
+  if (decision.state === "추적 우세") return "BTC가 버티는 동안 알트 거래대금이 유지되는지 확인합니다.";
+  return "BTC 흐름과 큰 뉴스 전후 움직임을 확인합니다.";
+}
+
+function largeTradeDetail(
+  report: LargeTradeFlowReport | null | undefined,
+  decision: CoinHomeDecisionSummary | undefined,
+  technical: TechnicalRadarReport | null | undefined,
+  technical4h: TechnicalRadarReport | null | undefined
+) {
+  if (!report) return undefined;
+  if (report.largeTradeCount <= 0 || report.totalLargeNotionalUsd <= 0) return "최근 큰 유입/이탈 신호는 제한적입니다.";
+  const weakBtc = technical?.trendLabel.includes("하락") || technical4h?.trendLabel.includes("하락") || decision?.state === "하락 위험 큼";
+  if (report.dominantSide === "buy" && weakBtc) return "유입은 있으나 BTC 추세 확인 전까지 관망 우선입니다.";
+  if (report.dominantSide === "buy") return "유입이 유지되는지 추적합니다.";
+  if (report.dominantSide === "sell") return "이탈 체결이 커지면 리스크 확인을 우선합니다.";
+  return report.summary;
 }
 
 function MarketStrengthGauge({
@@ -243,6 +358,8 @@ function MarketStrengthGauge({
   leftLabel,
   rightLabel,
   showCenter = false,
+  centerValue = 0,
+  centerLabel,
   showBar = true
 }: {
   label: string;
@@ -255,15 +372,17 @@ function MarketStrengthGauge({
   leftLabel?: string;
   rightLabel?: string;
   showCenter?: boolean;
+  centerValue?: number;
+  centerLabel?: string;
   showBar?: boolean;
 }) {
   const hasValue = value !== null && value !== undefined && Number.isFinite(value);
   const percent = hasValue ? clamp(((value - min) / (max - min)) * 100) : 0;
-  const centerPercent = clamp(((0 - min) / (max - min)) * 100);
+  const centerPercent = clamp(((centerValue - min) / (max - min)) * 100);
   const toneClass = visualToneClass[tone];
 
   return (
-    <article className="min-w-0 rounded-ui-sm bg-ui-inset/35 p-3">
+    <article className="min-w-0 rounded-ui-sm bg-ui-inset/30 p-3">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{label}</p>
@@ -278,8 +397,13 @@ function MarketStrengthGauge({
         </div>
       ) : null}
       {showBar && (leftLabel || rightLabel) ? (
-        <div className="mt-1.5 flex justify-between gap-3 text-[10px] font-semibold text-ui-subtle">
+        <div className="relative mt-1.5 flex justify-between gap-3 text-[10px] font-semibold text-ui-subtle">
           <span>{leftLabel}</span>
+          {showCenter && centerLabel ? (
+            <span className="absolute -translate-x-1/2 whitespace-nowrap" style={{ left: `${centerPercent}%` }}>
+              {centerLabel}
+            </span>
+          ) : null}
           <span>{rightLabel}</span>
         </div>
       ) : null}
@@ -287,7 +411,15 @@ function MarketStrengthGauge({
   );
 }
 
-function TrendBreadthVisual({ report, label = "BTC 트렌드" }: { report: TechnicalRadarReport | null | undefined; label?: string }) {
+function TrendBreadthVisual({
+  report,
+  label = "BTC 트렌드",
+  mergeWithPrevious = false
+}: {
+  report: TechnicalRadarReport | null | undefined;
+  label?: string;
+  mergeWithPrevious?: boolean;
+}) {
   const bullish = report?.bullishCount ?? 0;
   const bearish = report?.bearishCount ?? 0;
   const neutral = report?.neutralCount ?? 0;
@@ -297,7 +429,7 @@ function TrendBreadthVisual({ report, label = "BTC 트렌드" }: { report: Techn
   const bearishWidth = total ? (bearish / total) * 100 : 0;
 
   return (
-    <article className="min-w-0 rounded-ui-sm bg-ui-inset/35 p-3">
+    <article className="min-w-0 rounded-ui-sm bg-ui-inset/30 p-3">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{label}</p>
@@ -326,10 +458,10 @@ function LongShortVisual({ report }: { report: LiquidationPressureReport | null 
   const shortWidth = shortPercent !== null && Number.isFinite(shortPercent) ? clamp(shortPercent) : 50;
 
   return (
-    <article className="min-w-0 rounded-ui-sm bg-ui-inset/35 p-3">
+    <article className="min-w-0 rounded-ui-sm bg-ui-inset/30 p-3">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">롱숏비율</p>
+          <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">선물 포지션</p>
         </div>
         <p className="shrink-0 text-right text-base font-semibold leading-5 text-ui-text">{formatRatio(ratio)}</p>
       </div>
@@ -338,8 +470,8 @@ function LongShortVisual({ report }: { report: LiquidationPressureReport | null 
         <span className="h-full bg-ui-short" style={{ width: `${shortWidth}%` }} aria-hidden />
       </div>
       <div className="mt-2 flex justify-between gap-3 text-[10px] font-semibold">
-        <span className="text-ui-long">롱 {formatPlainPercent(longPercent, 1)}</span>
-        <span className="text-ui-short">숏 {formatPlainPercent(shortPercent, 1)}</span>
+        <span className="text-ui-long">상방 포지션 {formatPlainPercent(longPercent, 1)}</span>
+        <span className="text-ui-short">하방 포지션 {formatPlainPercent(shortPercent, 1)}</span>
       </div>
     </article>
   );
@@ -354,326 +486,24 @@ function fundingToneClass(value: number | null | undefined) {
 
 function fundingSkewDescription(value: number | null | undefined) {
   if (value === null || value === undefined || !Number.isFinite(value)) return "펀딩비 확인 중";
-  if (value > 0.001) return "롱 포지션 쏠림";
-  if (value < -0.001) return "숏 포지션 쏠림";
+  if (value > 0.001) return "상방 포지션 쏠림";
+  if (value < -0.001) return "하방 포지션 쏠림";
   return "쏠림 낮음";
 }
 
 function FundingRateRow({ symbol, report }: { symbol: RepresentativeSymbol; report: LiquidationPressureReport | null | undefined }) {
   return (
-    <article className="py-3">
+    <article className="rounded-ui-sm bg-ui-inset/30 p-3">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <p className="min-w-0 text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{symbol} 펀딩비</p>
-        <p className={`shrink-0 text-right text-sm font-semibold leading-5 ${fundingToneClass(report?.fundingRatePercent)}`}>{formatPercent(report?.fundingRatePercent, 4)}</p>
+        <p className={`shrink-0 text-right text-sm font-semibold leading-5 ${fundingToneClass(report?.fundingRatePercent)}`}>
+          {formatPercent(report?.fundingRatePercent, 4)}
+        </p>
       </div>
-      <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{fundingSkewDescription(report?.fundingRatePercent)}</p>
+      <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">
+        {fundingSkewDescription(report?.fundingRatePercent)}
+      </p>
     </article>
-  );
-}
-
-function buildHomeConflictItems({
-  decision,
-  btc,
-  btcFunding,
-  kimchiPremium
-}: {
-  decision: CoinHomeDecisionSummary | undefined;
-  btc: MarketBoardItem | null | undefined;
-  btcFunding: LiquidationPressureReport | null | undefined;
-  kimchiPremium: number | null | undefined;
-}): CoinSignalConflictItem[] {
-  const btcChange = btc?.changePercent ?? null;
-  const funding = btcFunding?.fundingRatePercent ?? null;
-  const longShortRatio = btcFunding?.globalLongShort.ratio ?? null;
-  const riskIsActive = Boolean(decision?.topRisk && decision.topRisk !== "확인 조건 대기");
-  const priceWeakButLongCrowded = (btcChange ?? 0) < 0 && (funding ?? 0) > 0.001;
-  const priceStrongButCrowded = (btcChange ?? 0) > 1 && ((funding ?? 0) > 0.01 || (longShortRatio ?? 1) >= 1.35);
-  const kimchiSkew = Math.abs(kimchiPremium ?? 0) >= 1.5;
-
-  return [
-    {
-      label: "방향 vs 리스크",
-      title: riskIsActive ? `${decision?.direction ?? "방향 확인"} · ${decision?.topRisk}` : (decision?.direction ?? "방향 확인 중"),
-      detail: riskIsActive ? "추적 조건이 있더라도 회피 조건이 먼저 풀리는지 확인합니다." : "뚜렷한 충돌은 약하지만, 확인 조건 없이 추격하지 않습니다.",
-      tone: riskIsActive ? "risk" : "info"
-    },
-    {
-      label: "가격 vs 파생",
-      title: priceWeakButLongCrowded ? "가격 약세인데 롱 쏠림" : priceStrongButCrowded ? "상승 중 파생 쏠림" : fundingSkewDescription(funding),
-      detail: `BTC 등락 ${formatPercent(btcChange)} · 펀딩비 ${formatPercent(funding, 4)} · 롱숏비율 ${formatRatio(longShortRatio)}.`,
-      tone: priceWeakButLongCrowded || priceStrongButCrowded ? "risk" : "watch"
-    },
-    {
-      label: "시장 주도",
-      title: decision?.leadership ?? "주도 흐름 확인 중",
-      detail: decision?.reason ?? "BTC와 알트 참여가 같은 방향으로 정렬되는지 확인합니다.",
-      tone: decision?.leadership === "알트 순환" || decision?.leadership === "BTC 우세" ? "long" : decision?.leadership === "위험 회피" ? "risk" : "watch"
-    },
-    {
-      label: "국내 vs 글로벌",
-      title: kimchiSkew ? `김프 괴리 ${formatPercent(kimchiPremium)}` : `김프 ${formatPercent(kimchiPremium)}`,
-      detail: kimchiSkew ? "국내 현물 체감과 글로벌 선물 흐름이 다를 수 있어 같은 신호로 해석하지 않습니다." : "국내 프리미엄 괴리는 제한적입니다.",
-      tone: kimchiSkew ? "watch" : "info"
-    }
-  ];
-}
-
-function buildHomeFreshnessItems({
-  data,
-  report,
-  report4h,
-  btcFunding,
-  marketMetrics
-}: {
-  data: CoinHomeData;
-  report: TechnicalRadarReport | null | undefined;
-  report4h: TechnicalRadarReport | null | undefined;
-  btcFunding: LiquidationPressureReport | null | undefined;
-  marketMetrics: CoinMarketMetricsPayload | null | undefined;
-}): CoinDataFreshnessItem[] {
-  const boardTimestamp = data.boardMeta.cachedAt ?? data.analysisUpdatedAt;
-  const btcFundingMeta = data.fundingMeta.BTC;
-  const fundingTimestamp = btcFundingMeta?.cachedAt ?? data.analysisUpdatedAt;
-  const metricsTimestamp = marketMetrics?.cachedAt ?? data.analysisUpdatedAt;
-  const metricsWarningCount = marketMetrics?.warnings.length ?? 0;
-
-  return [
-    {
-      label: "대표 시세",
-      title: data.board.length > 0 ? `${data.board.length}개 대표 코인` : "확인 중",
-      detail: `${formatDataAge(boardTimestamp)} · ${data.boardMeta.cached ? "최근 저장본" : "실시간 응답"} 기준입니다.`,
-      tone: dataFreshnessTone({
-        timestamp: boardTimestamp,
-        cached: data.boardMeta.cached,
-        stale: data.boardMeta.stale,
-        warningMs: 5 * 60 * 1000,
-        staleMs: 15 * 60 * 1000
-      })
-    },
-    {
-      label: "BTC 구조",
-      title: `1H ${report?.trendLabel ?? "확인 중"} · 4H ${report4h?.trendLabel ?? "확인 중"}`,
-      detail: `${formatDataAge(data.analysisUpdatedAt)} · RSI, 추세, 변동성 점수를 같은 시각에 재계산했습니다.`,
-      tone: report && report4h ? "long" : "watch"
-    },
-    {
-      label: "파생 쏠림",
-      title: btcFunding ? `펀딩 ${formatPercent(btcFunding.fundingRatePercent, 4)} · 롱숏 ${formatRatio(btcFunding.globalLongShort.ratio)}` : "확인 중",
-      detail: `${formatDataAge(fundingTimestamp)} · ${btcFundingMeta?.cached ? "최근 저장본" : "실시간 응답"} 기준으로 청산 압력과 롱숏 비율을 봅니다.`,
-      tone: dataFreshnessTone({
-        timestamp: fundingTimestamp,
-        cached: btcFundingMeta?.cached,
-        stale: btcFundingMeta?.stale,
-        warningMs: 2 * 60 * 1000,
-        staleMs: 10 * 60 * 1000
-      })
-    },
-    {
-      label: "보조 지표",
-      title: `김프 ${formatPercent(marketMetrics?.kimchiPremiumPercent)} · BTC.D ${formatPlainPercent(marketMetrics?.btcDominancePercent)}`,
-      detail:
-        metricsWarningCount > 0
-          ? `${formatDataAge(metricsTimestamp)} · ${metricsWarningCount}개 공개 소스가 제한되어 보조값으로만 봅니다.`
-          : `${formatDataAge(metricsTimestamp)} · 도미넌스, 환율, 김프 보조값을 함께 확인했습니다.`,
-      tone: dataFreshnessTone({
-        timestamp: metricsTimestamp,
-        cached: marketMetrics?.cached,
-        stale: marketMetrics?.stale,
-        warningMs: 5 * 60 * 1000,
-        staleMs: 20 * 60 * 1000
-      })
-    }
-  ];
-}
-
-function reportPressure(report: TechnicalRadarReport | null | undefined) {
-  if (!report) return { percent: 0, tone: "watch" as const };
-  const total = report.bullishCount + report.bearishCount + report.neutralCount;
-  const dominant = Math.max(report.bullishCount, report.bearishCount, report.neutralCount);
-  const percent = total > 0 ? clamp((dominant / total) * 100, 12, 92) : 0;
-  const tone = report.bearishCount > report.bullishCount ? ("short" as const) : report.bullishCount > report.bearishCount ? ("long" as const) : ("watch" as const);
-  return { percent, tone };
-}
-
-function buildHomePressureItems({
-  report,
-  report4h,
-  btc,
-  btcFunding,
-  marketMetrics
-}: {
-  report: TechnicalRadarReport | null | undefined;
-  report4h: TechnicalRadarReport | null | undefined;
-  btc: MarketBoardItem | null | undefined;
-  btcFunding: LiquidationPressureReport | null | undefined;
-  marketMetrics: CoinMarketMetricsPayload | null | undefined;
-}): CoinSignalPressureItem[] {
-  const btcChange = btc?.changePercent ?? 0;
-  const priceTone = btcChange >= 1 ? "long" : btcChange <= -1 ? "short" : "watch";
-  const structure = reportPressure(report);
-  const fundingRate = btcFunding?.fundingRatePercent ?? 0;
-  const longShortRatio = btcFunding?.globalLongShort.ratio ?? 1;
-  const derivativePercent = clamp(20 + Math.abs(fundingRate) * 1200 + Math.abs(longShortRatio - 1) * 35, 10, 95);
-  const derivativeTone = btcFunding?.grade === "extreme" || btcFunding?.grade === "heated" || Math.abs(fundingRate) >= 0.01 || Math.abs(longShortRatio - 1) >= 0.35 ? "risk" : "watch";
-  const kimchiPremium = marketMetrics?.kimchiPremiumPercent ?? 0;
-  const dominance = marketMetrics?.btcDominancePercent ?? null;
-  const marketPercent = clamp(18 + Math.abs(kimchiPremium) * 18 + (dominance === null ? 0 : Math.abs(dominance - 50) * 1.4), 8, 90);
-  const marketTone = Math.abs(kimchiPremium) >= 3 ? "risk" : Math.abs(kimchiPremium) >= 1 ? "watch" : "info";
-
-  return [
-    {
-      label: "가격 흐름",
-      title: btc ? `BTC ${formatPercent(btc.changePercent)}` : "BTC 확인 중",
-      detail: "대표 코인의 단기 등락이 전체 판단에 어느 정도 영향을 주는지 봅니다.",
-      tone: priceTone,
-      percent: clamp(22 + Math.abs(btcChange) * 12, 8, 92)
-    },
-    {
-      label: "구조 신호",
-      title: `1H ${report?.trendLabel ?? "확인 중"} · 4H ${report4h?.trendLabel ?? "확인 중"}`,
-      detail: "기술 구조는 단기 가격 신호를 검증하는 보조 압력으로 분리합니다.",
-      tone: structure.tone,
-      percent: structure.percent
-    },
-    {
-      label: "파생 압력",
-      title: `펀딩 ${formatPercent(btcFunding?.fundingRatePercent, 4)} · 롱숏 ${formatRatio(btcFunding?.globalLongShort.ratio)}`,
-      detail: "펀딩비, 롱숏 비율, 청산 등급이 과열 쪽으로 기울면 방향보다 위험을 먼저 봅니다.",
-      tone: derivativeTone,
-      percent: derivativePercent
-    },
-    {
-      label: "시장 보조",
-      title: `김프 ${formatPercent(kimchiPremium)} · BTC.D ${formatPlainPercent(dominance)}`,
-      detail: "국내 프리미엄과 BTC 도미넌스는 같은 방향 신호로 합치지 않고 보조 압력으로 둡니다.",
-      tone: marketTone,
-      percent: marketPercent
-    }
-  ];
-}
-
-function buildHomeEvidenceGradeItems({
-  data,
-  report,
-  report4h,
-  btcFunding,
-  marketMetrics
-}: {
-  data: CoinHomeData;
-  report: TechnicalRadarReport | null | undefined;
-  report4h: TechnicalRadarReport | null | undefined;
-  btcFunding: LiquidationPressureReport | null | undefined;
-  marketMetrics: CoinMarketMetricsPayload | null | undefined;
-}): CoinEvidenceGradeItem[] {
-  const hasCoreStructure = data.board.length > 0 && Boolean(report) && Boolean(report4h);
-  const hasDerivatives = Boolean(btcFunding);
-  const metricsWarningCount = marketMetrics?.warnings.length ?? 0;
-  const metricsGrade = marketMetrics && metricsWarningCount === 0 ? "B" : "검증중";
-
-  return [
-    {
-      grade: hasCoreStructure ? "S" : "검증중",
-      label: "핵심 근거",
-      title: hasCoreStructure ? `대표 시세 ${data.board.length}개 · BTC 1H/4H` : "대표 시세와 BTC 구조 확인 중",
-      detail: hasCoreStructure ? "가격, RSI, 추세, 변동성 데이터를 같은 판단 묶음에서 확인합니다." : "핵심 가격 또는 BTC 구조 데이터가 부족하면 방향 판단 강도를 낮춥니다.",
-      tone: hasCoreStructure ? "long" : "watch"
-    },
-    {
-      grade: hasDerivatives ? "A" : "검증중",
-      label: "확인 근거",
-      title: hasDerivatives ? `펀딩 ${formatPercent(btcFunding?.fundingRatePercent, 4)} · 롱숏 ${formatRatio(btcFunding?.globalLongShort.ratio)}` : "파생 쏠림 확인 중",
-      detail: "파생 데이터는 핵심 방향을 보강하기보다 과열과 변동성 위험을 따로 확인하는 근거입니다.",
-      tone: hasDerivatives ? "watch" : "info"
-    },
-    {
-      grade: metricsGrade,
-      label: "보조 근거",
-      title: `김프 ${formatPercent(marketMetrics?.kimchiPremiumPercent)} · BTC.D ${formatPlainPercent(marketMetrics?.btcDominancePercent)}`,
-      detail: metricsWarningCount > 0 ? "보조 소스 일부가 제한되어 있어 최종 판단보다 참고값으로만 둡니다." : "도미넌스, 환율, 국내 프리미엄은 방향 판단과 분리해 보조 근거로 사용합니다.",
-      tone: metricsWarningCount > 0 ? "info" : "watch"
-    },
-    {
-      grade: "검증중",
-      label: "표본 상태",
-      title: "실제 이후 흐름은 누적 관찰 중",
-      detail: "충분한 표본이 없는 상태에서 확정 적중률처럼 보이는 표현은 쓰지 않습니다.",
-      tone: "info"
-    }
-  ];
-}
-
-function HomeRiskChecklist({
-  decision,
-  btcFunding,
-  kimchiPremium
-}: {
-  decision: CoinHomeDecisionSummary | undefined;
-  btcFunding: LiquidationPressureReport | null | undefined;
-  kimchiPremium: number | null | undefined;
-}) {
-  const fundingText = fundingSkewDescription(btcFunding?.fundingRatePercent);
-  const longShortRatio = formatRatio(btcFunding?.globalLongShort.ratio);
-  const kimchiText = formatPercent(kimchiPremium);
-  const riskTone = decision?.topRisk && decision.topRisk !== "확인 조건 대기" ? "risk" : "watch";
-  const fundingTone = btcFunding?.grade === "extreme" || btcFunding?.grade === "heated" || Math.abs(btcFunding?.fundingRatePercent ?? 0) >= 0.01 ? "risk" : "watch";
-  const kimchiTone = Math.abs(kimchiPremium ?? 0) >= 3 ? "risk" : Math.abs(kimchiPremium ?? 0) >= 1 ? "watch" : "info";
-
-  const checks: Array<{
-    label: string;
-    title: string;
-    detail: string;
-    tone: "risk" | "watch" | "info" | "long" | "short";
-  }> = [
-    {
-      label: "무효화",
-      title: decision?.topRisk ?? "리스크 확인 중",
-      detail: decision?.topRisk && decision.topRisk !== "확인 조건 대기" ? "이 조건이 먼저 풀리기 전에는 추격보다 관찰이 우선입니다." : "뚜렷한 회피 신호가 약해도 바로 추격하지 않습니다.",
-      tone: riskTone
-    },
-    {
-      label: "대응 모드",
-      title: decision?.direction ?? "방향 확인 중",
-      detail: decision?.nextCondition ?? "BTC 추세와 알트 참여 확산 여부를 먼저 봅니다.",
-      tone: decision?.direction === "상방 우세" ? "long" : decision?.direction === "하방 압력" ? "short" : "watch"
-    },
-    {
-      label: "파생 쏠림",
-      title: fundingText,
-      detail: `BTC 롱숏비율 ${longShortRatio} · 펀딩비 ${formatPercent(btcFunding?.fundingRatePercent, 4)}. 쏠림이 커질수록 변동성 기준이 우선입니다.`,
-      tone: fundingTone
-    },
-    {
-      label: "프리미엄",
-      title: kimchiText,
-      detail: "김프가 커지면 해외 시세와 국내 현물 체감 흐름이 어긋날 수 있습니다.",
-      tone: kimchiTone
-    }
-  ];
-
-  return (
-    <PanelCard variant="flat" padding="none" className="space-y-3 rounded-ui-lg border border-ui-line/25 bg-ui-panel/55 p-4 sm:p-5">
-      <SectionHeader eyebrow="Risk First" title="먼저 걸러볼 조건" description="회피 조건을 먼저 본 뒤 대응 모드와 파생 쏠림을 봅니다." />
-      <div className="grid gap-3 md:grid-cols-2">
-        {checks.map((check) => (
-          <article key={check.label} className="min-w-0 rounded-ui-sm bg-ui-inset/35 p-3">
-            <div className="flex min-w-0 items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{check.label}</p>
-                <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">
-                  <HighlightDirectionalText text={check.title} />
-                </p>
-              </div>
-              <StatusPill tone={check.tone} className="shrink-0">
-                {check.tone === "risk" ? "주의" : check.tone === "long" ? "상방" : check.tone === "short" ? "하방" : "대기"}
-              </StatusPill>
-            </div>
-            <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">
-              <HighlightDirectionalText text={check.detail} />
-            </p>
-          </article>
-        ))}
-      </div>
-    </PanelCard>
   );
 }
 
@@ -681,44 +511,53 @@ function CoinStatusTile({
   symbol,
   item,
   score,
+  primary,
+  emphasis,
   onClick
 }: {
   symbol: RepresentativeSymbol;
   item: MarketBoardItem | null;
   score: number;
+  primary?: boolean;
+  emphasis?: boolean;
   onClick: () => void;
 }) {
   const changePercent = item?.changePercent ?? 0;
-  const direction = directionFor(changePercent);
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-[4.25rem] w-full items-center justify-between gap-3 rounded-ui-sm bg-ui-inset/35 px-3 py-2 text-left transition hover:bg-ui-inset/60 active:scale-[0.99]"
+      className={`relative flex h-full min-h-0 w-full flex-col items-center justify-center gap-1 overflow-hidden border border-ui-canvas px-1.5 py-2 text-center transition hover:brightness-110 active:scale-[0.99] ${tileToneClass(
+        changePercent
+      )}`}
       aria-label={`${symbol} 상세 보기`}
     >
-      <div className="min-w-0">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="text-base font-semibold tracking-tight text-ui-text">{symbol}</span>
-          <span className={`text-xs font-semibold ${tileAccentClass(changePercent)}`}>{formatPercent(item?.changePercent)}</span>
-        </div>
-        <p className="mt-1 truncate text-xs font-medium text-ui-muted">{item ? `$${formatPrice(item.price)}` : "가격 확인 중"}</p>
-      </div>
-      <div className="shrink-0 text-right">
-        <StatusPill tone={direction.tone} className="justify-center">
-          {direction.label}
-        </StatusPill>
-        <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${scoreToneClass(score)}`}>정렬 {score}</span>
-      </div>
+      <span
+        className={`block max-w-full truncate font-black leading-none tracking-tight ${
+          primary ? "text-[2.55rem] sm:text-5xl" : emphasis ? "text-[1.7rem] sm:text-3xl" : "text-[1.35rem] sm:text-xl"
+        }`}
+      >
+        {symbol}
+      </span>
+      <span className={`max-w-full truncate font-semibold leading-none ${primary ? "block text-[1.7rem] sm:text-3xl" : "hidden"}`}>
+        {item ? `$${formatPrice(item.price)}` : "-"}
+      </span>
+      <span
+        className={`block max-w-full truncate font-black leading-none ${
+          primary ? "text-[1.65rem] sm:text-3xl" : emphasis ? "text-[1.05rem] sm:text-xl" : "text-[0.95rem] sm:text-base"
+        } ${tileAccentClass(changePercent)}`}
+      >
+        {formatPercent(item?.changePercent)}
+      </span>
+      <span
+        className={`inline-flex max-w-full items-center justify-center truncate px-1.5 py-0.5 font-black leading-none ${
+          primary ? "text-[1.45rem] sm:text-3xl" : emphasis ? "text-[0.95rem] sm:text-xl" : "text-[0.85rem] sm:text-base"
+        } ${scoreToneClass(score)}`}
+      >
+        {score}점
+      </span>
     </button>
   );
-}
-
-function toneForMarket(score: number | null) {
-  if (score === null) return { label: "확인 대기", tone: "info" as const };
-  if (score >= 62) return { label: "추적 가능", tone: "long" as const };
-  if (score <= 38) return { label: "리스크 우위", tone: "risk" as const };
-  return { label: "관망 우위", tone: "watch" as const };
 }
 
 function findReading(report: TechnicalRadarReport | null, label: string): IndicatorReading | null {
@@ -745,6 +584,9 @@ export function CoinRadarHomePanel() {
         candlesPayload,
         candles4hPayload,
         marketMetricsPayload,
+        stablecoinLiquidityPayload,
+        largeTradeFlowPayload,
+        optionsMarketPayload,
         btcFundingPayload,
         ethFundingPayload,
         xrpFundingPayload,
@@ -756,6 +598,9 @@ export function CoinRadarHomePanel() {
         jsonOrNull<{ candles?: Candle[] }>("/api/crypto-candles?symbol=BTCUSDT&timeframe=1h&limit=180"),
         jsonOrNull<{ candles?: Candle[] }>("/api/crypto-candles?symbol=BTCUSDT&timeframe=4h&limit=180"),
         jsonOrNull<CoinMarketMetricsPayload>("/api/coin-market-metrics"),
+        jsonOrNull<{ report?: StablecoinLiquidityReport }>("/api/stablecoin-liquidity"),
+        jsonOrNull<{ report?: LargeTradeFlowReport }>("/api/large-trade-flow?symbol=BTCUSDT"),
+        jsonOrNull<{ report?: OptionsMarketReport }>("/api/options-market?currency=BTC"),
         jsonOrNull<{ report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean }>("/api/liquidation-pressure?symbol=BTCUSDT&period=1h"),
         jsonOrNull<{ report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean }>("/api/liquidation-pressure?symbol=ETHUSDT&period=1h"),
         jsonOrNull<{ report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean }>("/api/liquidation-pressure?symbol=XRPUSDT&period=1h"),
@@ -800,14 +645,14 @@ export function CoinRadarHomePanel() {
           funding,
           fundingMeta,
           marketMetrics: marketMetricsPayload,
+          stablecoinLiquidity: stablecoinLiquidityPayload?.report ?? null,
+          largeTradeFlow: largeTradeFlowPayload?.report ?? null,
+          optionsMarket: optionsMarketPayload?.report ?? null,
           analysisUpdatedAt: Date.now()
         }
       });
     } catch (error) {
-      setState({
-        status: "error",
-        message: error instanceof Error ? error.message : "코인 홈 데이터를 확인하지 못했습니다."
-      });
+      setState({ status: "error", message: error instanceof Error ? error.message : "코인 홈 데이터를 확인하지 못했습니다." });
     }
   }
 
@@ -820,31 +665,26 @@ export function CoinRadarHomePanel() {
     const report = state.data.technical;
     const report4h = state.data.technical4h;
     const fearGreed = report?.fearGreed ?? null;
-    const tone = toneForMarket(fearGreed?.score ?? null);
     const btc = boardItem(state.data.board, "BTC");
     const rsi = findReading(report, "RSI 14");
     const stochastic = findReading(report, "Stochastic");
     const btcFunding = state.data.funding.BTC ?? null;
     const marketMetrics = state.data.marketMetrics;
+    const stablecoinLiquidity = state.data.stablecoinLiquidity;
+    const largeTradeFlow = state.data.largeTradeFlow;
+    const optionsMarket = state.data.optionsMarket;
     const decision = buildCoinHomeDecision({
       board: state.data.board,
       technical: report,
+      technical4h: report4h,
       marketMetrics,
-      btcFunding
+      btcFunding,
+      stablecoinLiquidity,
+      largeTradeFlow,
+      optionsMarket
     });
 
-    return {
-      report,
-      report4h,
-      fearGreed,
-      tone,
-      btc,
-      rsi,
-      stochastic,
-      btcFunding,
-      marketMetrics,
-      decision
-    };
+    return { report, report4h, fearGreed, btc, rsi, stochastic, btcFunding, marketMetrics, stablecoinLiquidity, largeTradeFlow, optionsMarket, decision };
   }, [state]);
 
   if (state.status === "loading") {
@@ -868,121 +708,85 @@ export function CoinRadarHomePanel() {
     );
   }
 
-  const responseTone = summary?.decision.direction === "상방 우세" ? "long" : summary?.decision.direction === "하방 압력" ? "short" : summary?.decision.direction === "변동성 주의" ? "risk" : "watch";
-  const readinessDisplay = summary?.decision.readinessScore === undefined ? "-" : `${summary.decision.readinessScore}/100`;
+  const decision = summary?.decision;
+  const readiness = readinessDisplay(decision);
+  const marketMode = marketModeDisplay(decision);
+  const focusTitle = focusSectionTitle(decision);
+  const recheckCondition = recheckConditionText(decision);
+  const confirmationMetric = confirmationMetricText(decision);
 
   return (
     <div className="flex flex-col gap-3 sm:gap-4">
-      <div className="flex items-center justify-between gap-2 px-1 text-[11px] font-semibold text-ui-muted">
-        <span className="min-w-0 truncate">{formatAnalysisUpdatedAt(state.data.analysisUpdatedAt)}</span>
-        <ActionButton tone="ghost" className="min-h-7 shrink-0 px-0" onClick={() => void load()}>
-          <RefreshCw size={12} aria-hidden />
-          새로고침
-        </ActionButton>
-      </div>
-
-      <PanelCard variant="flat" padding="none" className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/60 p-4 sm:p-5">
-        <div className="grid gap-0 divide-y divide-ui-line/35 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,1fr)] lg:divide-x lg:divide-y-0">
-          <div className="min-w-0 pb-3 lg:pb-0 lg:pr-4">
+      <PanelCard variant="flat" padding="none" className="space-y-5">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2">
+          <div className="min-w-0">
             <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">오늘 결론</p>
-            <h2 className="mt-1 text-[1.35rem] font-semibold leading-8 tracking-tight text-ui-text sm:text-2xl">{summary?.decision.state}</h2>
-            <p className="mt-2 max-w-3xl text-ui-body text-ui-muted [word-break:keep-all]">
-              {conclusionSegments(summary?.decision).map((part, index) => (
-                <span key={`${part.text}-${index}`} className={conclusionToneClass(part.tone)}>
-                  {part.text}
-                </span>
-              ))}
-            </p>
+            <h2 className="text-ui-heading font-semibold tracking-tight text-ui-text">{summary?.decision.state}</h2>
           </div>
-
-          <div className="min-w-0 py-3 lg:px-4 lg:py-0">
-            <div className="flex min-w-0 items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">대응 모드</p>
-                <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{summary?.decision.direction}</p>
-              </div>
-              <StatusPill tone={responseTone} className="shrink-0">
-                {responseTone === "risk" ? "주의" : responseTone === "long" ? "상방" : responseTone === "short" ? "하방" : "대기"}
-              </StatusPill>
+          <ActionButton tone="ghost" className="min-h-7 shrink-0 px-0" onClick={() => void load()}>
+            <RefreshCw size={12} aria-hidden />
+            새로고침
+          </ActionButton>
+          <p className="col-span-2 min-w-0 text-ui-body text-ui-muted [word-break:keep-all]">
+            {conclusionText(summary?.decision)}
+          </p>
+          <div className="col-span-2 grid gap-2 border-t border-ui-line pt-3 sm:grid-cols-3">
+            <div className="min-w-0">
+              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{readiness.label}</p>
+              <p className="mt-1 text-xl font-semibold tracking-tight text-ui-text sm:text-2xl">{readiness.value}</p>
+              <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{readiness.detail}</p>
             </div>
-            <div className="mt-3">
-              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">추적 준비도</p>
-              <p className="mt-1 text-2xl font-semibold tracking-tight text-ui-text">{readinessDisplay}</p>
-              <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">추적 전 변동성 기준을 먼저 확인하세요.</p>
+            <div className="min-w-0">
+              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{marketMode.label}</p>
+              <p className="mt-1 text-base font-semibold text-ui-text">{marketMode.value}</p>
+              <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{marketMode.detail}</p>
             </div>
-          </div>
-
-          <div className="min-w-0 pt-3 lg:pl-4 lg:pt-0">
-            <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">다시 볼 조건</p>
-            <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">
-              <HighlightDirectionalText text={summary?.decision.nextCondition} />
-            </p>
-            <p className="mt-3 text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">리스크</p>
-            <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">
-              <HighlightDirectionalText text={summary?.decision.topRisk} />
-            </p>
+            <div className="min-w-0">
+              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">다시 볼 조건</p>
+              <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{recheckCondition}</p>
+            </div>
           </div>
         </div>
-      </PanelCard>
 
-      <HomeRiskChecklist decision={summary?.decision} btcFunding={summary?.btcFunding} kimchiPremium={summary?.marketMetrics?.kimchiPremiumPercent} />
+        <section className="border-t border-ui-line pt-4">
+          <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">{focusTitle}</p>
+          <div className="mt-3 grid gap-3 md:grid-cols-3">
+            <article className="min-w-0">
+              <p className="text-xs font-semibold text-ui-muted">BTC 흐름</p>
+              <p className="mt-1 text-base font-semibold text-ui-text">{summary?.report?.trendLabel ?? "미확인"}</p>
+              <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">4H {summary?.report4h?.trendLabel ?? "미확인"}까지 같이 확인합니다.</p>
+            </article>
+            <article className="min-w-0">
+              <p className="text-xs font-semibold text-ui-muted">{marketMode.label}</p>
+              <p className="mt-1 text-base font-semibold text-ui-text">{marketMode.value}</p>
+              <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{marketMode.detail}</p>
+            </article>
+            <article className="min-w-0">
+              <p className="text-xs font-semibold text-ui-muted">추가 확인 지표</p>
+              <p className="mt-1 text-base font-semibold leading-6 text-ui-text [word-break:keep-all]">{confirmationMetric}</p>
+            </article>
+          </div>
+        </section>
 
-      <CoinEvidenceGradePanel
-        title="근거 신뢰도"
-        description="강한 근거와 보조 근거를 분리합니다."
-        items={buildHomeEvidenceGradeItems({
-          data: state.data,
-          report: summary?.report,
-          report4h: summary?.report4h,
-          btcFunding: summary?.btcFunding,
-          marketMetrics: summary?.marketMetrics
-        })}
-      />
-
-      <CoinDataFreshnessPanel
-        title="데이터 상태"
-        description="가격, 구조, 파생, 보조 지표의 갱신 시각을 분리합니다."
-        items={buildHomeFreshnessItems({
-          data: state.data,
-          report: summary?.report,
-          report4h: summary?.report4h,
-          btcFunding: summary?.btcFunding,
-          marketMetrics: summary?.marketMetrics
-        })}
-      />
-
-      <CoinSignalConflictPanel
-        title="상세 신호 충돌"
-        description="방향, 파생, 국내 프리미엄이 엇갈리는지 봅니다."
-        items={buildHomeConflictItems({
-          decision: summary?.decision,
-          btc: summary?.btc,
-          btcFunding: summary?.btcFunding,
-          kimchiPremium: summary?.marketMetrics?.kimchiPremiumPercent
-        })}
-      />
-
-      <CoinSignalPressurePanel
-        title="상세 압력 분해"
-        description="가격, 구조, 파생, 보조 지표를 나눠 봅니다."
-        items={buildHomePressureItems({
-          report: summary?.report,
-          report4h: summary?.report4h,
-          btc: summary?.btc,
-          btcFunding: summary?.btcFunding,
-          marketMetrics: summary?.marketMetrics
-        })}
-      />
-
-      <PanelCard variant="flat" padding="none" className="space-y-3">
-        <SectionHeader eyebrow="Representative Coins" title="대표 코인 상태" />
-        <div className="grid gap-2 sm:grid-cols-2">
-          {tileSymbols.map((symbol) => {
-            const item = boardItem(state.data.board, symbol);
-            const score = scoreFor(item?.changePercent ?? 0, summary?.fearGreed?.score ?? null);
-            return <CoinStatusTile key={symbol} symbol={symbol} item={item} score={score} onClick={() => setSelectedSymbol(symbol)} />;
-          })}
-        </div>
+        <section className="border-t border-ui-line pt-4">
+          <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">조심할 것</p>
+          <div className="mt-3 grid gap-3 md:grid-cols-3">
+            <article className="min-w-0">
+              <p className="text-xs font-semibold text-ui-muted">리스크</p>
+              <p className="mt-1 text-base font-semibold text-ui-text">{summary?.decision.topRisk}</p>
+              <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">리스크가 해소되기 전에는 확인 우선으로 봅니다.</p>
+            </article>
+            <article className="min-w-0">
+              <p className="text-xs font-semibold text-ui-muted">무효화 기준</p>
+              <p className="mt-1 text-base font-semibold leading-6 text-ui-text [word-break:keep-all]">{invalidationText(summary?.decision)}</p>
+            </article>
+            <article className="min-w-0">
+              <p className="text-xs font-semibold text-ui-muted">변동성 주의</p>
+              <p className="mt-1 text-base font-semibold text-ui-text">{optionsDisplay(summary?.optionsMarket)}</p>
+              <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{volatilityWatchText(summary?.optionsMarket)}</p>
+            </article>
+          </div>
+        </section>
       </PanelCard>
 
       {selectedSymbol ? (
@@ -1004,7 +808,12 @@ export function CoinRadarHomePanel() {
                   <X size={15} aria-hidden />
                 </button>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={symbolLogoUrl(selectedSymbol)} alt={`${selectedSymbol} symbol`} className="absolute right-4 top-3 h-10 w-10 rounded-full bg-white/95 p-1" loading="lazy" />
+                <img
+                  src={symbolLogoUrl(selectedSymbol)}
+                  alt={`${selectedSymbol} symbol`}
+                  className="absolute right-4 top-3 h-10 w-10 rounded-full bg-white/95 p-1"
+                  loading="lazy"
+                />
                 <div className="pl-7 pr-14">
                   <p className="text-3xl font-semibold tracking-tight">{selectedSymbol}</p>
                   <p className="mt-1 text-sm font-medium text-ui-muted">{item ? `$${formatPrice(item.price)} · ${formatPercent(item.changePercent)}` : "가격 확인 중"}</p>
@@ -1018,20 +827,20 @@ export function CoinRadarHomePanel() {
                     <p className="text-2xl font-semibold">{score}점</p>
                   </div>
                 </div>
-                <div className="mt-4 rounded-ui-sm bg-ui-inset/45 px-3">
+                <div className="mt-4 divide-y divide-ui-line/60 rounded-ui-md bg-ui-inset/25">
                   <FundingRateRow symbol={selectedSymbol} report={state.data.funding[selectedSymbol] ?? null} />
                 </div>
                 <div className="mt-4 space-y-3 text-sm leading-6 text-ui-muted">
                   <div>
                     <p className="font-semibold text-ui-text">리스크</p>
                     <p className="mt-1">
-                      <HighlightDirectionalText text={riskFor(item?.changePercent ?? 0)} />
+                      {riskFor(item?.changePercent ?? 0)}
                     </p>
                   </div>
                   <div>
-                    <p className="font-semibold text-ui-text">다음 기준</p>
+                    <p className="font-semibold text-ui-text">확인</p>
                     <p className="mt-1">
-                      <HighlightDirectionalText text={checkFor(item?.changePercent ?? 0)} />
+                      {checkFor(item?.changePercent ?? 0)}
                     </p>
                   </div>
                 </div>
@@ -1041,63 +850,149 @@ export function CoinRadarHomePanel() {
         </div>
       ) : null}
 
-      <PanelCard variant="flat" padding="none" className="space-y-4 rounded-ui-lg border border-ui-line/25 bg-ui-panel/55 p-4 sm:p-5">
-        <SectionHeader eyebrow="BTC Market Strength" title="BTC 기준 시장 체력" description="선택 코인과 분리해 BTC 기준 과열, 추세, 파생 쏠림을 확인합니다." />
-        <div className="grid gap-3 md:grid-cols-2">
-          <MarketStrengthGauge
-            label="공포탐욕"
-            value={summary?.fearGreed?.score}
-            display={summary?.fearGreed ? `${summary.fearGreed.score} · ${summary.fearGreed.label}` : "미확인"}
-            tone={toneFromPercent(summary?.fearGreed?.score)}
-            leftLabel="공포"
-            rightLabel="탐욕"
-          />
-          <MarketStrengthGauge
-            label="BTC RSI"
-            value={parseReadingNumber(summary?.rsi?.value)}
-            display={summary?.rsi?.value ?? "미확인"}
-            tone={summary?.rsi?.tone === "warning" ? "risk" : toneFromPercent(parseReadingNumber(summary?.rsi?.value))}
-            leftLabel="과매도"
-            rightLabel="과열"
-          />
-          <MarketStrengthGauge
-            label="BTC 스토캐스틱"
-            value={parseReadingNumber(summary?.stochastic?.value)}
-            display={summary?.stochastic?.value ?? "미확인"}
-            tone={summary?.stochastic?.tone === "warning" ? "risk" : toneFromPercent(parseReadingNumber(summary?.stochastic?.value))}
-            leftLabel="하방 과열"
-            rightLabel="상방 과열"
-          />
-          <TrendBreadthVisual report={summary?.report} label="BTC 1H 트렌드" />
-          <TrendBreadthVisual report={summary?.report4h} label="BTC 4H 트렌드" />
-          <MarketStrengthGauge
-            label="BTC 도미넌스"
-            value={summary?.marketMetrics?.btcDominancePercent}
-            display={formatPlainPercent(summary?.marketMetrics?.btcDominancePercent)}
-            tone="info"
-            leftLabel="낮음"
-            rightLabel="높음"
-          />
-          <LongShortVisual report={summary?.btcFunding} />
-          <MarketStrengthGauge
-            label="김프"
-            value={summary?.marketMetrics?.kimchiPremiumPercent}
-            display={formatPercent(summary?.marketMetrics?.kimchiPremiumPercent)}
-            min={-5}
-            max={5}
-            tone={toneFromPremium(summary?.marketMetrics?.kimchiPremiumPercent)}
-            showBar={false}
-          />
-          <article className="min-w-0 rounded-ui-sm bg-ui-inset/35 p-3">
-            <div className="flex min-w-0 items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">환율</p>
-              </div>
-              <p className="shrink-0 text-right text-base font-semibold leading-5 text-ui-text">{formatKrwRate(summary?.marketMetrics?.usdKrw)}</p>
+      <PanelCard variant="flat" padding="none">
+        <details className="group">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-ui-text">왜 이 결론인지 보기</p>
             </div>
-          </article>
-        </div>
+            <span className="shrink-0 text-xs font-semibold text-ui-muted group-open:hidden">펼치기</span>
+            <span className="hidden shrink-0 text-xs font-semibold text-ui-muted group-open:inline">판단 근거 접기</span>
+          </summary>
+
+          <div className="mt-4 space-y-5 border-t border-ui-line pt-4">
+            <section className="space-y-2">
+              <div className="flex items-end justify-between gap-3">
+                <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">대표 코인별 확인 근거</p>
+                <p className="text-right text-[11px] font-semibold leading-4 text-ui-subtle">코인별 상세 확인</p>
+              </div>
+              <div className="mx-auto w-full max-w-2xl overflow-hidden rounded-ui-sm bg-ui-line p-px">
+                <div className="grid h-[clamp(10.5rem,42vw,18rem)] grid-cols-[minmax(0,1fr)_minmax(5.6rem,34%)] items-stretch gap-px">
+                  {(() => {
+                    const symbol = tileSymbols[0];
+                    const item = boardItem(state.data.board, symbol);
+                    const score = scoreFor(item?.changePercent ?? 0, summary?.fearGreed?.score ?? null);
+                    return (
+                      <div className="min-w-0">
+                        <CoinStatusTile symbol={symbol} item={item} score={score} primary onClick={() => setSelectedSymbol(symbol)} />
+                      </div>
+                    );
+                  })()}
+                  <div className="grid min-w-0 grid-rows-2 gap-px self-stretch">
+                    {tileSymbols.slice(1, 3).map((symbol) => {
+                      const item = boardItem(state.data.board, symbol);
+                      const score = scoreFor(item?.changePercent ?? 0, summary?.fearGreed?.score ?? null);
+                      return <CoinStatusTile key={symbol} symbol={symbol} item={item} score={score} emphasis onClick={() => setSelectedSymbol(symbol)} />;
+                    })}
+                  </div>
+                </div>
+                <div className="mt-px grid h-[clamp(5.5rem,22vw,8rem)] grid-cols-[minmax(0,1fr)_minmax(5.6rem,34%)] gap-px">
+                  <div className="grid min-w-0 grid-cols-2 gap-px">
+                    {tileSymbols.slice(3, 5).map((symbol) => {
+                      const item = boardItem(state.data.board, symbol);
+                      const score = scoreFor(item?.changePercent ?? 0, summary?.fearGreed?.score ?? null);
+                      return <CoinStatusTile key={symbol} symbol={symbol} item={item} score={score} onClick={() => setSelectedSymbol(symbol)} />;
+                    })}
+                  </div>
+                  {(() => {
+                    const symbol = tileSymbols[5];
+                    const item = boardItem(state.data.board, symbol);
+                    const score = scoreFor(item?.changePercent ?? 0, summary?.fearGreed?.score ?? null);
+                    return <CoinStatusTile symbol={symbol} item={item} score={score} onClick={() => setSelectedSymbol(symbol)} />;
+                  })()}
+                </div>
+              </div>
+            </section>
+
+            <section className="border-t border-ui-line pt-4">
+              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">결론에 반영한 BTC 지표</p>
+              <div className="mt-1 grid gap-3 md:grid-cols-2">
+                <MarketStrengthGauge
+                  label="공포탐욕"
+                  value={summary?.fearGreed?.score}
+                  display={summary?.fearGreed ? `${summary.fearGreed.score} · ${summary.fearGreed.label}` : "미확인"}
+                  tone={toneFromFearGreed(summary?.fearGreed?.score)}
+                  leftLabel="공포"
+                  rightLabel="탐욕"
+                />
+                <MarketStrengthGauge
+                  label="스테이블코인 유동성"
+                  value={summary?.stablecoinLiquidity?.flowScore}
+                  display={summary?.stablecoinLiquidity ? `${summary.stablecoinLiquidity.flowScore}점` : "미확인"}
+                  detail={summary?.stablecoinLiquidity?.summary}
+                  tone={toneFromLiquidity(summary?.stablecoinLiquidity)}
+                />
+                <MarketStrengthGauge
+                  label="큰 체결 흐름"
+                  value={largeTradeGaugeValue(summary?.largeTradeFlow)}
+                  display={largeTradeDisplay(summary?.largeTradeFlow)}
+                  detail={largeTradeDetail(summary?.largeTradeFlow, decision, summary?.report, summary?.report4h)}
+                  tone={largeTradeTone(summary?.largeTradeFlow, decision)}
+                  leftLabel="이탈"
+                  rightLabel="유입"
+                />
+                <MarketStrengthGauge
+                  label="옵션 예상 변동"
+                  value={optionsGaugeValue(summary?.optionsMarket)}
+                  display={optionsDisplay(summary?.optionsMarket)}
+                  detail={volatilityWatchText(summary?.optionsMarket)}
+                  tone={optionsTone(summary?.optionsMarket)}
+                  leftLabel="낮음"
+                  rightLabel="높음"
+                />
+                <MarketStrengthGauge
+                  label="BTC RSI"
+                  value={parseReadingNumber(summary?.rsi?.value)}
+                  display={summary?.rsi?.value ?? "미확인"}
+                  tone={summary?.rsi?.tone === "warning" ? "risk" : toneFromPercent(parseReadingNumber(summary?.rsi?.value))}
+                  leftLabel="낮음"
+                  rightLabel="과열"
+                />
+                <MarketStrengthGauge
+                  label="BTC 스토캐스틱"
+                  value={parseReadingNumber(summary?.stochastic?.value)}
+                  display={summary?.stochastic?.value ?? "미확인"}
+                  tone={summary?.stochastic?.tone === "warning" ? "risk" : toneFromPercent(parseReadingNumber(summary?.stochastic?.value))}
+                  leftLabel="하락 과열"
+                  rightLabel="상승 과열"
+                />
+                <TrendBreadthVisual report={summary?.report} label="BTC 1H 트렌드" />
+                <TrendBreadthVisual report={summary?.report4h} label="BTC 4H 트렌드" mergeWithPrevious />
+                <MarketStrengthGauge
+                  label="BTC 도미넌스 (비트코인 시장 점유율)"
+                  value={summary?.marketMetrics?.btcDominancePercent}
+                  display={formatPlainPercent(summary?.marketMetrics?.btcDominancePercent)}
+                  tone="info"
+                  leftLabel="0%"
+                  rightLabel="100%"
+                  showCenter
+                  centerValue={50}
+                  centerLabel="50%"
+                />
+                <LongShortVisual report={summary?.btcFunding} />
+                <MarketStrengthGauge
+                  label="김치 프리미엄"
+                  value={summary?.marketMetrics?.kimchiPremiumPercent}
+                  display={formatPercent(summary?.marketMetrics?.kimchiPremiumPercent)}
+                  min={-5}
+                  max={5}
+                  tone={toneFromPremium(summary?.marketMetrics?.kimchiPremiumPercent)}
+                  showBar={false}
+                />
+                <article className="min-w-0 border-t border-ui-line py-3">
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">환율</p>
+                    </div>
+                    <p className="shrink-0 text-right text-base font-semibold leading-5 text-ui-text">{formatKrwRate(summary?.marketMetrics?.usdKrw)}</p>
+                  </div>
+                </article>
+              </div>
+            </section>
+          </div>
+        </details>
       </PanelCard>
+
     </div>
   );
 }

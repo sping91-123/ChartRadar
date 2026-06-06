@@ -5,7 +5,7 @@ import type { TechnicalRadarReport } from "@/lib/technicalRadar";
 
 export type RadarInsightMarket = "crypto" | "global";
 export type RadarFinalView = "long_bias" | "short_bias" | "watch" | "high_risk";
-export type RadarFinalViewLabel = "롱 우위" | "숏 우위" | "관망 우위" | "고위험";
+export type RadarFinalViewLabel = "상방 우위" | "하방 우위" | "관망 우위" | "고위험";
 export type RadarStrengthLabel = "약함" | "보통" | "강함";
 
 export interface RadarInsight {
@@ -38,8 +38,8 @@ interface TechnicalInsightOptions {
 }
 
 const finalViewLabels: Record<RadarFinalView, RadarFinalViewLabel> = {
-  long_bias: "롱 우위",
-  short_bias: "숏 우위",
+  long_bias: "상방 우위",
+  short_bias: "하방 우위",
   watch: "관망 우위",
   high_risk: "고위험"
 };
@@ -55,8 +55,8 @@ export function radarStrengthLabel(strength: number): RadarStrengthLabel {
 }
 
 function basicSummary(finalView: RadarFinalView) {
-  if (finalView === "long_bias") return "롱 시나리오가 상대적으로 우위입니다. 다만 추격보다 추가 확인이 필요한 구간입니다.";
-  if (finalView === "short_bias") return "숏 시나리오가 상대적으로 우위입니다. 다만 추격보다 추가 확인이 필요한 구간입니다.";
+  if (finalView === "long_bias") return "상방 시나리오가 상대적으로 우위입니다. 다만 추격보다 추가 확인이 필요한 구간입니다.";
+  if (finalView === "short_bias") return "하방 시나리오가 상대적으로 우위입니다. 다만 추격보다 추가 확인이 필요한 구간입니다.";
   if (finalView === "high_risk") return "리스크 확대 구간입니다. 신규 판단보다 리스크 점검이 우선입니다.";
   return "관망 우위입니다. 상방/하방 근거가 혼재되어 방향 확정 전 확인이 필요한 구간입니다.";
 }
@@ -98,6 +98,8 @@ function compact(values: Array<string | null | undefined>, fallback: string) {
 
 function sanitizeDecisionCopy(value: string | null | undefined) {
   return (value ?? "")
+    .replace(/롱/g, "상방")
+    .replace(/숏/g, "하방")
     .replace(/매수/g, "상방")
     .replace(/매도/g, "하방")
     .replace(/진입하세요/g, "확인하세요")
@@ -187,7 +189,7 @@ function directionCondition(active: TimeframeAnalysis | undefined, side: "long" 
     return side === "long" ? "상방은 FVG/iFVG 지지 반응이 유지될 때 강화됩니다." : "하방은 FVG/iFVG 저항 반응이 유지될 때 강화됩니다.";
   }
   if (active.oteZone === side) {
-    return side === "long" ? "상방은 롱 OTE 구간의 지지 반응 이후 추적 조건이 생깁니다." : "하방은 숏 OTE 구간의 저항 반응 이후 추적 조건이 생깁니다.";
+    return side === "long" ? "상방은 상방 OTE 구간의 지지 반응 이후 추적 조건이 생깁니다." : "하방은 하방 OTE 구간의 저항 반응 이후 추적 조건이 생깁니다.";
   }
   if (side === "long" && active.volumeProfile?.position === "above") return "상방은 POC 위 유지와 거래량 회복이 함께 필요합니다.";
   if (side === "short" && active.volumeProfile?.position === "below") return "하방은 POC 아래 유지와 되돌림 실패가 함께 필요합니다.";
@@ -208,10 +210,10 @@ function marketSummary(analysis: MarketAnalysis, finalView: RadarFinalView, acti
   }
 
   if (finalView === "long_bias") {
-    return "롱 시나리오 강화입니다. 방향 근거가 상대적으로 우위지만 추격보다 추가 확인과 리스크 점검이 먼저입니다.";
+    return "상방 시나리오 강화입니다. 방향 근거가 상대적으로 우위지만 추격보다 추가 확인과 리스크 점검이 먼저입니다.";
   }
 
-  return "숏 시나리오 강화입니다. 방향 근거가 상대적으로 우위지만 추격보다 추가 확인과 리스크 점검이 먼저입니다.";
+  return "하방 시나리오 강화입니다. 방향 근거가 상대적으로 우위지만 추격보다 추가 확인과 리스크 점검이 먼저입니다.";
 }
 
 function reasonCopy(value: string | null | undefined, active: TimeframeAnalysis | undefined) {
@@ -276,7 +278,7 @@ function conditionCopy(value: string | null | undefined, side: "long" | "short")
   if (!text) return null;
   if (text.includes("OB")) return side === "long" ? "상승 OB 지지 반응이 유지되는지 확인하세요." : "하락 OB 저항 반응이 유지되는지 확인하세요.";
   if (text.includes("FVG") || text.includes("iFVG")) return side === "long" ? "FVG/iFVG 지지 반응 이후 상방 유지가 필요합니다." : "FVG/iFVG 저항 반응 이후 하방 유지가 필요합니다.";
-  if (text.includes("OTE")) return side === "long" ? "롱 OTE 구간에서 지지 반응이 확인되어야 합니다." : "숏 OTE 구간에서 저항 반응이 확인되어야 합니다.";
+  if (text.includes("OTE")) return side === "long" ? "상방 OTE 구간에서 지지 반응이 확인되어야 합니다." : "하방 OTE 구간에서 저항 반응이 확인되어야 합니다.";
   if (text.includes("프리미엄") || text.includes("디스카운트")) return side === "long" ? "상방은 디스카운트 또는 눌림 확인 이후 추적 조건이 좋아집니다." : "하방은 프리미엄 또는 되돌림 확인 이후 추적 조건이 좋아집니다.";
   return text;
 }
@@ -291,17 +293,17 @@ function marketNextAction(analysis: MarketAnalysis, finalView: RadarFinalView, a
   }
 
   if (finalView === "long_bias") {
-    return "롱 시나리오는 고점 돌파 후 유지 또는 지지선 재확인 이후 강화됩니다. 무효화 조건과 리스크 점검을 먼저 확인하세요.";
+    return "상방 시나리오는 고점 돌파 후 유지 또는 지지선 재확인 이후 강화됩니다. 무효화 조건과 리스크 점검을 먼저 확인하세요.";
   }
 
-  return "숏 시나리오는 주요 지지선 이탈 또는 되돌림 실패 이후 강화됩니다. 무효화 조건과 리스크 점검을 먼저 확인하세요.";
+  return "하방 시나리오는 주요 지지선 이탈 또는 되돌림 실패 이후 강화됩니다. 무효화 조건과 리스크 점검을 먼저 확인하세요.";
 }
 
 function invalidationLine(proPlan: TradePlanCandidate | null) {
   if (!proPlan) return null;
   const level = proPlan.invalidation.toLocaleString("ko-KR");
-  if (proPlan.side === "long") return `${level} 기준선 이탈 시 기존 롱 시나리오 강도를 낮추고 재평가합니다.`;
-  if (proPlan.side === "short") return `${level} 기준선 회복 시 기존 숏 시나리오 강도를 낮추고 재평가합니다.`;
+  if (proPlan.side === "long") return `${level} 기준선 이탈 시 기존 상방 시나리오 강도를 낮추고 재평가합니다.`;
+  if (proPlan.side === "short") return `${level} 기준선 회복 시 기존 하방 시나리오 강도를 낮추고 재평가합니다.`;
   return `${level} 기준선 반대편 안착 시 기존 시나리오 강도를 낮추고 재평가합니다.`;
 }
 
@@ -317,7 +319,7 @@ export function marketAnalysisToRadarInsight(analysis: MarketAnalysis): RadarIns
       proPlan?.side === "long" ? conditionCopy(proPlan.entryLabel, "long") : null,
       conditionCopy(analysis.checkpoints.find((item) => /롱|상승|지지|discount|OTE|OB|FVG/i.test(item)), "long")
     ],
-    "롱 추적은 상위 구조와 지지 반응이 함께 유지되는지 확인하는 흐름입니다."
+    "상방 추적은 상위 구조와 지지 반응이 함께 유지되는지 확인하는 흐름입니다."
   );
   const shortConditions = compact(
     [
@@ -326,7 +328,7 @@ export function marketAnalysisToRadarInsight(analysis: MarketAnalysis): RadarIns
       proPlan?.side === "short" ? conditionCopy(proPlan.entryLabel, "short") : null,
       conditionCopy(analysis.checkpoints.find((item) => /숏|하락|저항|premium|OTE|OB|FVG/i.test(item)), "short")
     ],
-    "숏 추적은 상위 구조와 저항 반응이 함께 유지되는지 확인하는 흐름입니다."
+    "하방 추적은 상위 구조와 저항 반응이 함께 유지되는지 확인하는 흐름입니다."
   );
   const invalidationConditions = compact(
     [

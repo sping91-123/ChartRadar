@@ -16,7 +16,7 @@ const maxGlobalAssetEventsPerScan = 1;
 
 export function sideLabel(side: "long" | "short", market: SetupAlertMarket) {
   if (market === "stocks") return side === "long" ? "상승 우세" : "하락 우세";
-  return side === "long" ? "롱 우세" : "숏 우세";
+  return side === "long" ? "상방 우세" : "하방 우세";
 }
 
 export function stockSignalLabel(symbol: string) {

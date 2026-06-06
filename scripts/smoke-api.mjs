@@ -81,6 +81,34 @@ const checks = [
     expectedText: "기간"
   },
   {
+    label: "옵션 시장 비정상 통화 차단",
+    path: "/api/options-market?currency=XRP",
+    method: "GET",
+    expectedStatus: [400],
+    expectedText: "옵션 통화"
+  },
+  {
+    label: "큰 체결 비정상 심볼 차단",
+    path: "/api/large-trade-flow?symbol=NOTREAL",
+    method: "GET",
+    expectedStatus: [400],
+    expectedText: "큰 체결 심볼"
+  },
+  {
+    label: "온체인 비정상 네트워크 차단",
+    path: "/api/onchain-metrics?network=eth",
+    method: "GET",
+    expectedStatus: [400],
+    expectedText: "network"
+  },
+  {
+    label: "언락 데이터 비정상 limit 차단",
+    path: "/api/token-unlocks?limit=bad",
+    method: "GET",
+    expectedStatus: [400],
+    expectedText: "limit"
+  },
+  {
     label: "관심코인 스캔 비정상 심볼 차단",
     path: "/api/watchlist-scan",
     method: "POST",
