@@ -382,7 +382,7 @@ function MarketStrengthGauge({
   const toneClass = visualToneClass[tone];
 
   return (
-    <article className="min-w-0 border-t border-ui-line py-3 first:border-t-0 md:[&:nth-child(-n+2)]:border-t-0">
+    <article className="min-w-0 rounded-ui-sm bg-ui-inset/30 p-3">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{label}</p>
@@ -429,7 +429,7 @@ function TrendBreadthVisual({
   const bearishWidth = total ? (bearish / total) * 100 : 0;
 
   return (
-    <article className={`min-w-0 py-3 md:[&:nth-child(-n+2)]:border-t-0 ${mergeWithPrevious ? "" : "border-t border-ui-line"}`}>
+    <article className="min-w-0 rounded-ui-sm bg-ui-inset/30 p-3">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{label}</p>
@@ -458,7 +458,7 @@ function LongShortVisual({ report }: { report: LiquidationPressureReport | null 
   const shortWidth = shortPercent !== null && Number.isFinite(shortPercent) ? clamp(shortPercent) : 50;
 
   return (
-    <article className="min-w-0 border-t border-ui-line py-3 md:[&:nth-child(-n+2)]:border-t-0">
+    <article className="min-w-0 rounded-ui-sm bg-ui-inset/30 p-3">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">선물 포지션</p>
@@ -493,7 +493,7 @@ function fundingSkewDescription(value: number | null | undefined) {
 
 function FundingRateRow({ symbol, report }: { symbol: RepresentativeSymbol; report: LiquidationPressureReport | null | undefined }) {
   return (
-    <article className="border-t border-ui-line py-3 first:border-t-0">
+    <article className="rounded-ui-sm bg-ui-inset/30 p-3">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <p className="min-w-0 text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{symbol} 펀딩비</p>
         <p className={`shrink-0 text-right text-sm font-semibold leading-5 ${fundingToneClass(report?.fundingRatePercent)}`}>
@@ -827,7 +827,7 @@ export function CoinRadarHomePanel() {
                     <p className="text-2xl font-semibold">{score}점</p>
                   </div>
                 </div>
-                <div className="mt-4 border-y border-ui-line">
+                <div className="mt-4 divide-y divide-ui-line/60 rounded-ui-md bg-ui-inset/25">
                   <FundingRateRow symbol={selectedSymbol} report={state.data.funding[selectedSymbol] ?? null} />
                 </div>
                 <div className="mt-4 space-y-3 text-sm leading-6 text-ui-muted">

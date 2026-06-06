@@ -15,11 +15,7 @@ export function CryptoTimeframeTabs({ timeframes, activeTimeframe, onChange }: C
           key={timeframe}
           type="button"
           onClick={() => onChange(timeframe)}
-          className={`min-h-8 border-b-2 px-2 text-xs font-black transition sm:min-h-10 sm:text-sm ${
-            activeTimeframe === timeframe
-              ? "border-accent-blue bg-transparent text-accent-blue"
-              : "border-transparent bg-transparent text-slate-400 hover:text-slate-200"
-          }`}
+          className={`min-h-8 rounded-ui-sm px-2 text-xs font-semibold transition sm:min-h-9 sm:text-sm ${activeTimeframe === timeframe ? "bg-ui-active text-ui-text" : "text-ui-muted hover:bg-ui-inset/60 hover:text-ui-text"}`}
         >
           {timeframe}
         </button>

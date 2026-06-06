@@ -176,7 +176,7 @@ function CompactRadarInsightPanel({
   ];
 
   return (
-    <section className={`overflow-hidden border-y border-ui-line py-4 ${className}`}>
+    <section className={`overflow-hidden rounded-ui-lg border border-ui-line/25 bg-ui-panel/45 p-4 ${className}`}>
       <SectionHeader
         eyebrow="오늘 먼저 볼 판단"
         title={insight.symbol}
@@ -205,11 +205,11 @@ function CompactRadarInsightPanel({
               <p className="text-ui-label font-semibold text-ui-subtle">판단 강도</p>
               {strengthHelpText ? (
                 <span
-                  className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-ui-lineStrong bg-ui-panel text-[11px] font-semibold text-ui-muted"
+                  className="inline-flex shrink-0 rounded-ui-sm border border-ui-line/45 bg-ui-inset/50 px-2 py-0.5 text-[10px] font-semibold text-ui-muted"
                   title={strengthHelpText}
                   aria-label={`판단 강도 도움말: ${strengthHelpText}`}
                 >
-                  ?
+                  기준 보기
                 </span>
               ) : null}
             </div>
@@ -334,11 +334,11 @@ export function RadarInsightPanel({
               <p className="text-xs font-black text-slate-200">판단 강도</p>
               {strengthHelpText ? (
                 <span
-                  className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-300/10 text-[11px] font-black text-cyan-100"
+                  className="inline-flex rounded-md border border-cyan-300/20 bg-cyan-300/10 px-2 py-0.5 text-[10px] font-black text-cyan-100"
                   title={strengthHelpText}
                   aria-label={`판단 강도 도움말: ${strengthHelpText}`}
                 >
-                  ?
+                  기준 보기
                 </span>
               ) : null}
             </div>

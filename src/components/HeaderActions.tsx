@@ -39,7 +39,7 @@ function SettingsLink({
   description: string;
 }) {
   return (
-    <Link href={href} className="flex items-start gap-3 border-t border-white/10 px-0 py-2.5 text-left transition first:border-t-0 hover:text-white">
+    <Link href={href} className="flex items-start gap-3 rounded-ui-sm px-0 py-2.5 text-left transition hover:text-white">
       <Icon className="mt-0.5 shrink-0 text-cyan-300" size={16} aria-hidden />
       <span className="min-w-0">
         <span className="block text-sm font-black text-white">{label}</span>
@@ -51,7 +51,7 @@ function SettingsLink({
 
 function SettingsSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="border-t border-white/10 px-3 py-3 first:border-t-0">
+    <section className="rounded-ui-lg border border-white/10 bg-white/[0.035] px-3 py-3">
       <p className="mb-2 text-sm font-black text-white">{title}</p>
       {children}
     </section>
@@ -71,7 +71,7 @@ function AccountSettingsSection({
     <SettingsSection title="계정">
       <div className="grid gap-1">
         {isLoading ? (
-          <button type="button" disabled className="flex w-full cursor-not-allowed items-start gap-3 border-t border-white/10 px-0 py-2.5 text-left opacity-55">
+          <button type="button" disabled className="flex w-full cursor-not-allowed items-start gap-3 rounded-ui-sm px-0 py-2.5 text-left opacity-55">
             <UserCircle className="mt-0.5 shrink-0 text-cyan-300" size={16} aria-hidden />
             <span className="min-w-0">
               <span className="block text-sm font-black text-white">회원정보관리</span>
@@ -83,7 +83,7 @@ function AccountSettingsSection({
         ) : (
           <Link
             href={loginHref}
-            className="flex items-start gap-3 border-t border-cyan-300/25 px-0 py-2.5 text-left transition hover:text-white"
+            className="flex items-start gap-3 rounded-ui-sm px-0 py-2.5 text-left transition hover:text-white"
           >
             <LogIn className="mt-0.5 shrink-0 text-cyan-200" size={16} aria-hidden />
             <span className="min-w-0">
@@ -124,7 +124,7 @@ function DisplaySettingsSection() {
             <span className="block text-sm font-black text-white">시작 화면</span>
             <span className="mt-0.5 block text-xs leading-5 text-slate-400">처음에는 시장을 선택하고, 이후에는 마지막으로 사용한 시장으로 바로 들어갑니다.</span>
           </span>
-          <div className="border-y border-white/10 py-2">
+          <div className="rounded-ui-sm bg-white/[0.04] px-3 py-2">
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-bold text-slate-400">현재 기억된 시장</span>
               <span className="text-xs font-black text-white">{preferredMarket === "global" ? "Global Radar" : preferredMarket === "coin" ? "Coin Radar" : "선택 전"}</span>
@@ -145,7 +145,7 @@ function DisplaySettingsSection() {
 
 function AppInfoSection() {
   return (
-    <section className="border-t border-white/10 px-3 pb-2.5 pt-3">
+    <section className="rounded-ui-lg border border-white/10 bg-white/[0.035] px-3 pb-2.5 pt-3">
       <p className="text-sm font-black text-white">Chart Radar</p>
       <p className="mt-1 text-xs font-semibold text-slate-500">{APP_VERSION_DISPLAY}</p>
     </section>
@@ -208,7 +208,7 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
       </div>
       <Link
         href={alertHref}
-        className="relative grid min-h-10 min-w-10 place-items-center rounded-full border border-transparent bg-transparent text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+        className="relative grid min-h-9 min-w-9 place-items-center rounded-full bg-transparent text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
         aria-label="알림 설정"
         title="알림 설정"
       >
@@ -222,7 +222,7 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
       <button
         type="button"
         onClick={() => setIsSettingsOpen(true)}
-        className="grid min-h-10 min-w-10 place-items-center rounded-full border border-transparent bg-transparent text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+        className="grid min-h-9 min-w-9 place-items-center rounded-full bg-transparent text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
         aria-label="설정 열기"
         title="설정"
       >

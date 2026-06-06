@@ -70,7 +70,7 @@ export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
     : ["BTC/ETH 쏠림이 풀리는지 확인", "큰 유입·이탈 체결이 반복되는지 확인", "구조와 변동성이 같은 방향으로 커지는지 확인"];
 
   return (
-    <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
+    <PanelCard variant="report" padding="md" className="space-y-4 rounded-ui-lg border border-ui-line/25 bg-ui-panel/45">
       <SectionHeader
         title={isAltMode ? "알트 선물 리스크 결론" : "선물 시장 결론"}
         description={
@@ -80,7 +80,7 @@ export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
         }
       />
 
-      <article className="border-t border-ui-line py-3">
+      <article className="rounded-ui-md bg-ui-inset/30 p-3">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">선물 리스크 결론</p>
@@ -99,7 +99,7 @@ export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
         </p>
       </article>
 
-      <section className="border-t border-ui-line pt-3">
+      <section className="pt-1">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">앱이 감지한 핵심 신호</p>
@@ -111,14 +111,14 @@ export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
             감지
           </StatusPill>
         </div>
-        <div className="mt-3 grid gap-0 md:grid-cols-3">
+        <div className="mt-3 grid gap-2 md:grid-cols-3">
           {briefItems[mode].map((item, index) => {
             const Icon = item.icon;
 
             return (
               <article
                 key={item.label}
-                className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-l md:border-t-0" : ""}`}
+                className="min-w-0 rounded-ui-sm bg-ui-inset/30 p-3"
               >
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -138,7 +138,7 @@ export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
         </div>
       </section>
 
-      <div className="border-t border-ui-line pt-3">
+      <div className="rounded-ui-md bg-ui-inset/25 p-3">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">추가 확인 조건</p>
@@ -148,9 +148,9 @@ export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
             확인 필요
           </StatusPill>
         </div>
-        <div className="mt-3 grid gap-0 md:grid-cols-3">
+        <div className="mt-3 grid gap-2 md:grid-cols-3">
           {cautionItems.map((item, index) => (
-            <p key={item} className={`py-2 text-xs font-semibold leading-5 text-ui-muted [word-break:keep-all] md:px-3 ${index > 0 ? "border-t border-ui-line md:border-l md:border-t-0" : ""}`}>
+            <p key={item} className="rounded-ui-sm bg-ui-panel/35 px-3 py-2 text-xs font-semibold leading-5 text-ui-muted [word-break:keep-all]">
               {item}
             </p>
           ))}

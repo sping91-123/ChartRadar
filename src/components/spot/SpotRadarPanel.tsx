@@ -539,7 +539,7 @@ function SpotPriorityPanel({
   const invalidationItems = groups.flatMap((group) => group.items).slice(0, 3);
 
   return (
-    <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
+    <PanelCard variant="report" padding="md" className="space-y-4 rounded-ui-lg border border-ui-line/25 bg-ui-panel/45">
       <SectionHeader title="오늘 현물 후보" action={action} />
 
       {loading ? (
@@ -556,7 +556,7 @@ function SpotPriorityPanel({
         <>
           <div className="grid gap-0 lg:grid-cols-2">
             {groups.map((group, index) => (
-              <article key={group.label} className={`min-w-0 py-3 lg:px-3 ${index > 0 ? "border-t border-ui-line lg:border-l lg:border-t-0" : ""}`}>
+              <article key={group.label} className="min-w-0 rounded-ui-sm bg-ui-inset/30 p-3">
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{group.label}</p>
@@ -605,7 +605,7 @@ function SpotPriorityPanel({
                 invalidationItems.map(({ item, chart }, index) => {
                   const plan = buildSpotPricePlan(item, chart);
                   return (
-                    <article key={`risk-${item.market}`} className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-l md:border-t-0" : ""}`}>
+                    <article key={`risk-${item.market}`} className="min-w-0 rounded-ui-sm bg-ui-inset/30 p-3">
                       <div className="flex min-w-0 items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-ui-text">{item.symbol}</p>
@@ -685,7 +685,7 @@ function PersonalSpotPanel({
   const selectedItem = payload?.items.find((item) => item.market === selectedMarket) ?? null;
 
   return (
-    <PanelCard variant="report" padding="md" className="space-y-2 border-y border-ui-line">
+    <PanelCard variant="report" padding="md" className="space-y-2 rounded-ui-lg border border-ui-line/25 bg-ui-panel/45">
       <div className="flex min-w-0 items-center justify-between gap-3">
         <SectionHeader title="내 관심 알트" className="min-w-0 flex-1" />
         <ActionButton tone={selectedMarket ? "ghost" : "primary"} className={`shrink-0 ${selectedMarket ? "min-h-8 px-0" : "min-h-8 px-2"}`} onClick={onOpenPicker}>
@@ -1133,7 +1133,7 @@ export function SpotRadarPanel() {
               type="button"
               onClick={() => setFilter(item.id)}
               className={`min-h-8 border-b px-2 text-xs font-semibold transition ${
-                filter === item.id ? "border-b border-ui-brand text-ui-text" : "text-ui-muted hover:text-ui-text"
+                filter === item.id ? "rounded-ui-sm bg-ui-active text-ui-text" : "text-ui-muted hover:bg-ui-inset/60 hover:text-ui-text"
               }`}
             >
               <span>{item.label}</span>
