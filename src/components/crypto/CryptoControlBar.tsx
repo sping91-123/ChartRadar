@@ -28,11 +28,8 @@ export function CryptoControlBar({
   onModeChange
 }: CryptoControlBarProps) {
   return (
-    <div
-      data-testid="crypto-control-bar"
-      className="sticky top-0 z-40 border-b border-ui-line bg-ui-canvas py-2 shadow-none backdrop-blur"
-    >
-      <div className="mx-auto max-w-5xl">
+    <div data-testid="crypto-control-bar" className="sticky top-0 z-40 bg-ui-canvas/95 py-2 backdrop-blur">
+      <div className="mx-auto max-w-5xl rounded-ui-lg border border-ui-line/25 bg-ui-panel/45 p-1.5">
         <CryptoRadarControlTabs
           timeframes={timeframes}
           activeTimeframe={activeTimeframe}

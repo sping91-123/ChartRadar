@@ -4,20 +4,7 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import {
-  ArrowLeft,
-  Bell,
-  BookOpen,
-  Crown,
-  HelpCircle,
-  LifeBuoy,
-  LogIn,
-  Menu,
-  ReceiptText,
-  Sparkles,
-  UserCircle,
-  type LucideIcon
-} from "lucide-react";
+import { ArrowLeft, Bell, BookOpen, Crown, HelpCircle, LifeBuoy, LogIn, Menu, ReceiptText, Sparkles, UserCircle, type LucideIcon } from "lucide-react";
 import { AuthStatus } from "@/components/AuthStatus";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { APP_VERSION_DISPLAY } from "@/lib/appVersion";
@@ -38,19 +25,9 @@ function marketProHref(market?: HeaderMarket) {
   return "/pro";
 }
 
-function SettingsLink({
-  href,
-  icon: Icon,
-  label,
-  description
-}: {
-  href: string;
-  icon: LucideIcon;
-  label: string;
-  description: string;
-}) {
+function SettingsLink({ href, icon: Icon, label, description }: { href: string; icon: LucideIcon; label: string; description: string }) {
   return (
-    <Link href={href} className="flex items-start gap-3 border-t border-white/10 px-0 py-2.5 text-left transition first:border-t-0 hover:text-white">
+    <Link href={href} className="flex items-start gap-3 rounded-ui-sm px-0 py-2.5 text-left transition hover:text-white">
       <Icon className="mt-0.5 shrink-0 text-cyan-300" size={16} aria-hidden />
       <span className="min-w-0">
         <span className="block text-sm font-black text-white">{label}</span>
@@ -60,17 +37,9 @@ function SettingsLink({
   );
 }
 
-function SettingsPlaceholder({
-  icon: Icon,
-  label,
-  description
-}: {
-  icon: LucideIcon;
-  label: string;
-  description: string;
-}) {
+function SettingsPlaceholder({ icon: Icon, label, description }: { icon: LucideIcon; label: string; description: string }) {
   return (
-    <button type="button" disabled className="flex w-full cursor-not-allowed items-start gap-3 border-t border-white/10 px-0 py-2.5 text-left opacity-55">
+    <button type="button" disabled className="flex w-full cursor-not-allowed items-start gap-3 rounded-ui-sm px-0 py-2.5 text-left opacity-55">
       <Icon className="mt-0.5 shrink-0 text-cyan-300" size={16} aria-hidden />
       <span className="min-w-0">
         <span className="block text-sm font-black text-white">{label}</span>
@@ -82,22 +51,18 @@ function SettingsPlaceholder({
 
 function SettingsFaqNotice() {
   return (
-    <div className="flex items-start gap-3 border-t border-white/10 px-0 py-2.5 text-left">
+    <div className="flex items-start gap-3 rounded-ui-sm px-0 py-2.5 text-left">
       <HelpCircle className="mt-0.5 shrink-0 text-cyan-300" size={16} aria-hidden />
       <div className="min-w-0">
         <p className="text-sm font-black text-white">자주 묻는 질문</p>
         <div className="mt-2 space-y-2 text-xs leading-5 text-slate-400">
           <div>
             <p className="font-black text-slate-200">Chart Radar는 투자 조언인가요?</p>
-            <p className="mt-0.5">
-              아닙니다. 홈과 각 탭은 시장 흐름, 리스크, 확인 조건을 정리하는 판단 보조용 요약이며 매수·매도 지시나 성과 약속을 제공하지 않습니다.
-            </p>
+            <p className="mt-0.5">아닙니다. 홈과 각 탭은 시장 흐름, 리스크, 확인 조건을 정리하는 판단 보조용 요약이며 매수·매도 지시나 성과 약속을 제공하지 않습니다.</p>
           </div>
           <div>
             <p className="font-black text-slate-200">가격과 지표는 어디 기준인가요?</p>
-            <p className="mt-0.5">
-              공개 데이터 제공처 기준으로 자동 집계됩니다. 갱신 주기와 거래소별 차이가 있을 수 있으므로 최종 주문 전에는 실제 거래 화면에서 다시 확인해야 합니다.
-            </p>
+            <p className="mt-0.5">공개 데이터 제공처 기준으로 자동 집계됩니다. 갱신 주기와 거래소별 차이가 있을 수 있으므로 최종 주문 전에는 실제 거래 화면에서 다시 확인해야 합니다.</p>
           </div>
         </div>
         <nav className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold text-slate-300" aria-label="정책 안내">
@@ -121,7 +86,7 @@ function SettingsFaqNotice() {
 
 function SettingsSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="border-t border-white/10 px-3 py-3 first:border-t-0">
+    <section className="rounded-ui-lg border border-white/10 bg-white/[0.035] px-3 py-3">
       <p className="mb-2 text-sm font-black text-white">{title}</p>
       {children}
     </section>
@@ -148,11 +113,7 @@ function MyAccountSection({
       <div className="py-1">
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs font-bold text-slate-400">구독 플랜</span>
-          <span
-            className={`inline-flex shrink-0 items-center gap-1.5 text-xs font-black ${
-              isPaid ? "text-amber-200" : "text-cyan-200"
-            }`}
-          >
+          <span className={`inline-flex shrink-0 items-center gap-1.5 text-xs font-black ${isPaid ? "text-amber-200" : "text-cyan-200"}`}>
             <Crown size={13} aria-hidden />
             {planLabel}
           </span>
@@ -169,10 +130,7 @@ function MyAccountSection({
                 </li>
               ))}
             </ul>
-            <Link
-              href={proHref}
-              className="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-2 bg-cyan-300 px-3 py-2 text-xs font-black text-slate-950 transition hover:bg-cyan-200"
-            >
+            <Link href={proHref} className="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-2 bg-cyan-300 px-3 py-2 text-xs font-black text-slate-950 transition hover:bg-cyan-200">
               <Sparkles size={14} aria-hidden />
               Pro 업그레이드
             </Link>
@@ -183,20 +141,14 @@ function MyAccountSection({
   );
 }
 
-function AccountSettingsSection({
-  auth,
-  loginHref
-}: {
-  auth: AuthState;
-  loginHref: string;
-}) {
+function AccountSettingsSection({ auth, loginHref }: { auth: AuthState; loginHref: string }) {
   const { user, isLoading } = auth;
 
   return (
     <SettingsSection title="계정">
       <div className="grid gap-1">
         {isLoading ? (
-          <button type="button" disabled className="flex w-full cursor-not-allowed items-start gap-3 border-t border-white/10 px-0 py-2.5 text-left opacity-55">
+          <button type="button" disabled className="flex w-full cursor-not-allowed items-start gap-3 rounded-ui-sm px-0 py-2.5 text-left opacity-55">
             <UserCircle className="mt-0.5 shrink-0 text-cyan-300" size={16} aria-hidden />
             <span className="min-w-0">
               <span className="block text-sm font-black text-white">회원정보관리</span>
@@ -206,10 +158,7 @@ function AccountSettingsSection({
         ) : user ? (
           <SettingsLink href="/account" icon={UserCircle} label="회원정보관리" description="로그인 상태, 이메일, Pro 권한, 회원탈퇴 안내를 확인합니다." />
         ) : (
-          <Link
-            href={loginHref}
-            className="flex items-start gap-3 border-t border-cyan-300/25 px-0 py-2.5 text-left transition hover:text-white"
-          >
+          <Link href={loginHref} className="flex items-start gap-3 rounded-ui-sm px-0 py-2.5 text-left transition hover:text-white">
             <LogIn className="mt-0.5 shrink-0 text-cyan-200" size={16} aria-hidden />
             <span className="min-w-0">
               <span className="block text-sm font-black text-white">로그인하기</span>
@@ -249,7 +198,7 @@ function DisplaySettingsSection() {
             <span className="block text-sm font-black text-white">시작 화면</span>
             <span className="mt-0.5 block text-xs leading-5 text-slate-400">처음에는 시장을 선택하고, 이후에는 마지막으로 사용한 시장으로 바로 들어갑니다.</span>
           </span>
-          <div className="border-y border-white/10 py-2">
+          <div className="rounded-ui-sm bg-white/[0.04] px-3 py-2">
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-bold text-slate-400">현재 기억된 시장</span>
               <span className="text-xs font-black text-white">{preferredMarket === "global" ? "Global Radar" : preferredMarket === "coin" ? "Coin Radar" : "선택 전"}</span>
@@ -270,7 +219,7 @@ function DisplaySettingsSection() {
 
 function AppInfoSection() {
   return (
-    <section className="border-t border-white/10 px-3 pb-2.5 pt-3">
+    <section className="rounded-ui-lg border border-white/10 bg-white/[0.035] px-3 pb-2.5 pt-3">
       <p className="text-sm font-black text-white">Chart Radar</p>
       <p className="mt-1 text-xs font-semibold text-slate-500">{APP_VERSION_DISPLAY}</p>
     </section>
@@ -337,7 +286,7 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
       </div>
       <Link
         href={alertHref}
-        className="relative grid min-h-10 min-w-10 place-items-center rounded-full border border-transparent bg-transparent text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+        className="relative grid min-h-9 min-w-9 place-items-center rounded-full bg-transparent text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
         aria-label="알림 설정"
         title="알림 설정"
       >
@@ -351,55 +300,51 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
       <button
         type="button"
         onClick={() => setIsSettingsOpen(true)}
-        className="grid min-h-10 min-w-10 place-items-center rounded-full border border-transparent bg-transparent text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+        className="grid min-h-9 min-w-9 place-items-center rounded-full bg-transparent text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
         aria-label="설정 열기"
         title="설정"
       >
         <Menu size={20} aria-hidden />
       </button>
-      {isSettingsOpen ? createPortal(
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="settings-panel-title"
-          className="settings-fullscreen-panel settings-slide-panel fixed inset-0 z-[100] overflow-y-auto overflow-x-hidden px-3 pb-3 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-5 sm:pb-5 sm:pt-[calc(env(safe-area-inset-top)+1.25rem)]"
-        >
-          <div className="mx-auto flex min-h-full w-full max-w-md flex-col">
-            <header className="sticky top-0 z-10 -mx-3 flex items-center gap-3 border-b border-white/10 bg-inherit px-3 py-3 sm:-mx-5 sm:px-5">
-              <button
-                type="button"
-                onClick={closeSettings}
-                className="grid min-h-10 min-w-10 place-items-center text-slate-300 transition hover:text-white"
-                aria-label="설정 닫기"
-                title="뒤로"
-              >
-                <ArrowLeft size={18} aria-hidden />
-              </button>
-              <div className="min-w-0">
-                <p id="settings-panel-title" className="text-base font-black text-white">
-                  설정
-                </p>
-                <p className="text-xs font-semibold text-slate-500">Chart Radar</p>
+      {isSettingsOpen
+        ? createPortal(
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="settings-panel-title"
+              className="settings-fullscreen-panel settings-slide-panel fixed inset-0 z-[100] overflow-y-auto overflow-x-hidden px-3 pb-3 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-5 sm:pb-5 sm:pt-[calc(env(safe-area-inset-top)+1.25rem)]"
+            >
+              <div className="mx-auto flex min-h-full w-full max-w-md flex-col">
+                <header className="sticky top-0 z-10 -mx-3 flex items-center gap-3 border-b border-white/10 bg-inherit px-3 py-3 sm:-mx-5 sm:px-5">
+                  <button type="button" onClick={closeSettings} className="grid min-h-10 min-w-10 place-items-center text-slate-300 transition hover:text-white" aria-label="설정 닫기" title="뒤로">
+                    <ArrowLeft size={18} aria-hidden />
+                  </button>
+                  <div className="min-w-0">
+                    <p id="settings-panel-title" className="text-base font-black text-white">
+                      설정
+                    </p>
+                    <p className="text-xs font-semibold text-slate-500">Chart Radar</p>
+                  </div>
+                </header>
+                <main className="grid gap-2 py-3">
+                  <MyAccountSection planLabel={planLabel} isPaid={isPaid} proHref={proHref} />
+                  <AccountSettingsSection auth={auth} loginHref={loginHref} />
+                  <DisplaySettingsSection />
+                  <SettingsSection title="고객지원">
+                    <div className="grid gap-1">
+                      <SettingsLink href="/learn" icon={BookOpen} label="지표 안내" description="판단 강도와 시장별 용어를 카테고리별로 확인합니다." />
+                      <SettingsPlaceholder icon={LifeBuoy} label="고객센터" description="문의 접수 방식과 답변 기준을 준비 중입니다." />
+                      <SettingsFaqNotice />
+                      <SettingsPlaceholder icon={ReceiptText} label="정기결제 현황" description="결제 시스템 구축 후 구독 상태와 갱신일을 연결합니다." />
+                    </div>
+                  </SettingsSection>
+                  <AppInfoSection />
+                </main>
               </div>
-            </header>
-            <main className="grid gap-2 py-3">
-              <MyAccountSection planLabel={planLabel} isPaid={isPaid} proHref={proHref} />
-              <AccountSettingsSection auth={auth} loginHref={loginHref} />
-              <DisplaySettingsSection />
-              <SettingsSection title="고객지원">
-                <div className="grid gap-1">
-                  <SettingsLink href="/learn" icon={BookOpen} label="지표 안내" description="판단 강도와 시장별 용어를 카테고리별로 확인합니다." />
-                  <SettingsPlaceholder icon={LifeBuoy} label="고객센터" description="문의 접수 방식과 답변 기준을 준비 중입니다." />
-                  <SettingsFaqNotice />
-                  <SettingsPlaceholder icon={ReceiptText} label="정기결제 현황" description="결제 시스템 구축 후 구독 상태와 갱신일을 연결합니다." />
-                </div>
-              </SettingsSection>
-              <AppInfoSection />
-            </main>
-          </div>
-        </div>,
-        document.body
-      ) : null}
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }

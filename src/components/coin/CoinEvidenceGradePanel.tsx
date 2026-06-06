@@ -111,18 +111,16 @@ export function CoinEvidenceGradePanel({
   items: CoinEvidenceGradeItem[];
 }) {
   return (
-    <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
+    <PanelCard variant="report" padding="md" className="space-y-4 rounded-ui-lg border border-ui-line/25 bg-ui-panel/45">
       <SectionHeader eyebrow="Evidence Grade" title={title} description={description} />
-      <div className="grid gap-0 md:grid-cols-2">
-        {items.map((item, index) => {
+      <div className="grid gap-2 md:grid-cols-2">
+        {items.map((item) => {
           const Icon = item.icon ?? BadgeCheck;
 
           return (
             <article
               key={`${item.grade}-${item.label}`}
-              className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0" : ""} ${
-                index % 2 === 1 ? "md:border-l md:border-ui-line" : ""
-              } ${index > 1 ? "md:border-t md:border-ui-line" : ""}`}
+              className="min-w-0 rounded-ui-sm bg-ui-inset/30 p-3"
             >
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0">

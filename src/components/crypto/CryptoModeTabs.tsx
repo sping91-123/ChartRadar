@@ -15,17 +15,13 @@ interface CryptoModeTabsProps {
 
 export function CryptoModeTabs({ options, activeMode, onChange }: CryptoModeTabsProps) {
   return (
-    <div className="mt-2 grid grid-cols-3 gap-1">
+    <div className="mt-1.5 grid grid-cols-3 gap-1">
       {options.map((item) => (
         <button
           key={item.key}
           type="button"
           onClick={() => onChange(item.key)}
-          className={`min-h-8 border-b-2 px-2 text-[11px] font-black transition sm:min-h-9 sm:text-xs ${
-            activeMode === item.key
-              ? "border-white bg-transparent text-white"
-              : "border-transparent bg-transparent text-slate-400 hover:text-slate-200"
-          }`}
+          className={`min-h-8 rounded-ui-sm px-2 text-[11px] font-semibold transition sm:min-h-9 sm:text-xs ${activeMode === item.key ? "bg-ui-active text-ui-text" : "text-ui-muted hover:bg-ui-inset/60 hover:text-ui-text"}`}
           title={item.description}
         >
           {item.label}

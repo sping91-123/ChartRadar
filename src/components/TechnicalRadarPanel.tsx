@@ -1,7 +1,6 @@
 "use client";
 // 기술지표 레이더 결과를 모바일 카드 형태로 보여주는 패널입니다.
 import { useMemo } from "react";
-import { HelpCircle } from "lucide-react";
 import type { Candle, ChartTimeframe } from "@/lib/marketAnalysis";
 import { analyzeTechnicalRadar, type IndicatorReading, type TechnicalTone } from "@/lib/technicalRadar";
 
@@ -31,8 +30,8 @@ function formatPercent(value: number | null) {
 
 function HelpTip({ text }: { text: string }) {
   return (
-    <span className="group relative inline-flex align-middle" tabIndex={0} aria-label="설명 보기">
-      <HelpCircle size={14} className="text-cyan-200" aria-hidden />
+    <span className="group relative inline-flex align-middle" tabIndex={0} aria-label="상세 기준">
+      <span className="rounded-md border border-cyan-300/20 bg-cyan-300/10 px-2 py-0.5 text-[10px] font-black text-cyan-100">상세 기준</span>
       <span className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 hidden w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 rounded-md border border-white/10 bg-slate-950 px-3 py-2 text-[11px] font-bold leading-5 text-slate-300 shadow-xl group-hover:block group-focus:block">
         {text}
       </span>
@@ -60,7 +59,7 @@ function IndicatorRow({ item }: { item: IndicatorReading }) {
 
 function IndicatorSection({ title, items }: { title: string; items: IndicatorReading[] }) {
   return (
-    <section className="border-y border-surface-line py-4">
+    <section className="rounded-lg border border-surface-line/60 bg-surface-cardSoft/45 p-3">
       <h4 className="text-base font-black text-white">{title}</h4>
       <div className="mt-3 grid gap-3 md:grid-cols-2">
         {items.map((item) => (
@@ -85,7 +84,7 @@ export function TechnicalRadarPanel({
   const report = useMemo(() => analyzeTechnicalRadar(candles), [candles]);
 
   return (
-    <div id="technical-radar" className="scroll-mt-24 border-y border-surface-line py-4">
+    <div id="technical-radar" className="scroll-mt-24 rounded-lg border border-surface-line/60 bg-surface-cardSoft/45 p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-accent-blue">Technical Evidence</p>
@@ -101,7 +100,7 @@ export function TechnicalRadarPanel({
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        <div className="border-y border-accent-blue/20 py-4 lg:col-span-2">
+        <div className="rounded-lg border border-accent-blue/20 bg-black/15 p-4 lg:col-span-2">
           <p className="text-xs font-bold text-slate-400">현재 추세</p>
           <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -126,7 +125,7 @@ export function TechnicalRadarPanel({
           </div>
         </div>
 
-        <div className="border-y border-white/10 py-4">
+        <div className="rounded-lg border border-white/10 bg-black/15 p-4">
           <p className="flex items-center gap-1.5 text-xs font-bold text-slate-400">
             심리 참고값
             <HelpTip text="캔들 흐름을 기준으로 과열과 침체 정도를 숫자로 읽는 값입니다. 높으면 추세가 강할 수 있지만 추격 위험도 같이 봐야 합니다." />
@@ -149,7 +148,7 @@ export function TechnicalRadarPanel({
         </div>
       </div>
 
-      <div className="mt-4 border-y border-white/10 py-4">
+      <div className="mt-4 rounded-lg border border-white/10 bg-black/15 p-4">
         <h4 className="flex items-center gap-2 text-base font-black text-white">
           차트 기준선
           <HelpTip text="현재가와 가까운 지지선, 저항선을 보여줍니다. 초보자는 방향보다 먼저 가격이 어느 기준선에 가까운지 확인하는 편이 안전합니다." />
@@ -168,7 +167,7 @@ export function TechnicalRadarPanel({
         </div>
       </div>
 
-      <div className="mt-4 border-y border-white/10 py-4">
+      <div className="mt-4 rounded-lg border border-white/10 bg-black/15 p-4">
         <h4 className="text-base font-black text-white">캔들스틱 패턴</h4>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {report.candlestickPatterns.length ? (
@@ -194,7 +193,7 @@ export function TechnicalRadarPanel({
         <IndicatorSection title="거래량지표" items={report.volumeIndicators} />
       </div>
 
-      <div className="mt-4 border-y border-white/10 py-4">
+      <div className="mt-4 rounded-lg border border-white/10 bg-black/15 p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h4 className="text-base font-black text-white">피보나치 되돌림</h4>

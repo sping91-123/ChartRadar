@@ -1,5 +1,5 @@
 import { AlertTriangle, BarChart3, Clock3, Gauge, GitCompareArrows, LockKeyhole, Radar } from "lucide-react";
-import { PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
+import { PanelCard, StatusPill } from "@/components/ui/DesignPrimitives";
 
 type FuturesBriefMode = "major" | "alts";
 type BriefTone = "risk" | "watch" | "info" | "long";
@@ -18,7 +18,7 @@ const briefItems: Record<
     {
       label: "1. 위험 먼저",
       title: "청산 압력·펀딩비·롱숏 쏠림",
-      detail: "방향보다 과열과 강제청산 위험을 먼저 봅니다. 쏠림이 크면 추격보다 반대 변동성 확인이 우선입니다.",
+      detail: "방향보다 과열과 강제청산 압력을 먼저 봅니다. 쏠림이 크면 변동성 기준이 우선입니다.",
       tone: "risk",
       icon: AlertTriangle
     },
@@ -32,7 +32,7 @@ const briefItems: Record<
     {
       label: "3. 추적 조건",
       title: "눌림 유지 또는 반등 실패",
-      detail: "롱 관점은 눌림 후 추세 유지, 숏 관점은 반등 실패와 하방 구조 유지를 확인합니다.",
+      detail: "눌림 후 추세 유지, 반등 실패, 하방 구조 유지를 분리해 봅니다.",
       tone: "watch",
       icon: Gauge
     },
@@ -106,42 +106,46 @@ const briefItems: Record<
 
 export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
   const isAltMode = mode === "alts";
+  const keySignals = briefItems[mode].slice(0, 3);
+  const consoleSummary = isAltMode
+    ? "알트는 회피 조건을 먼저 걸러봅니다. BTC 방향, 유동성, 변동성이 동시에 맞을 때만 추적 후보로 올립니다."
+    : "메이저 선물은 청산 압력과 파생 쏠림을 먼저 봅니다. 차트 구조는 상단 판단의 검증 근거로 둡니다.";
 
   return (
-    <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
-      <SectionHeader
-        eyebrow={isAltMode ? "Alt Futures" : "Major Futures"}
-        title={isAltMode ? "알트 선물 판단 순서" : "메이저 선물 판단 순서"}
-        description={
-          isAltMode
-            ? "알트는 추적 후보보다 회피 후보를 먼저 거르고, BTC 방향성과 변동성을 함께 확인합니다."
-            : "BTC/ETH 선물은 방향보다 청산 압력과 파생 쏠림을 먼저 확인한 뒤 차트 구조로 근거를 검증합니다."
-        }
-      />
-      <div className="grid gap-0 md:grid-cols-2">
-        {briefItems[mode].map((item, index) => {
-          const Icon = item.icon;
+    <PanelCard variant="flat" padding="none" className="space-y-4 rounded-ui-lg border border-ui-line/25 bg-ui-panel/60 p-4 sm:p-5">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">{isAltMode ? "Alt Futures" : "Major Futures"}</p>
+          <h2 className="mt-1 text-[1.35rem] font-semibold leading-8 tracking-tight text-ui-text sm:text-2xl">선물 시장 결론</h2>
+          <p className="mt-2 max-w-3xl text-ui-body text-ui-muted [word-break:keep-all]">{consoleSummary}</p>
+        </div>
+        <StatusPill tone="risk" icon={AlertTriangle} className="shrink-0">
+          리스크 먼저
+        </StatusPill>
+      </div>
 
-          return (
-            <article
-              key={item.label}
-              className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0" : ""} ${
-                index % 2 === 1 ? "md:border-l md:border-ui-line" : ""
-              } ${index > 1 ? "md:border-t md:border-ui-line" : ""}`}
-            >
-              <div className="flex min-w-0 items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{item.label}</p>
-                  <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{item.title}</p>
+      <div>
+        <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">핵심 신호 3개</p>
+        <div className="mt-3 grid gap-3 md:grid-cols-3">
+          {keySignals.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <article key={item.label} className="min-w-0 rounded-ui-sm bg-ui-inset/35 p-3">
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{item.label}</p>
+                    <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{item.title}</p>
+                  </div>
+                  <StatusPill tone={item.tone} icon={Icon} className="shrink-0">
+                    {item.tone === "risk" ? "주의" : item.tone === "long" ? "Pro" : "기준"}
+                  </StatusPill>
                 </div>
-                <StatusPill tone={item.tone} icon={Icon} className="shrink-0">
-                  {item.tone === "risk" ? "주의" : item.tone === "long" ? "Pro" : "확인"}
-                </StatusPill>
-              </div>
-              <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{item.detail}</p>
-            </article>
-          );
-        })}
+                <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{item.detail}</p>
+              </article>
+            );
+          })}
+        </div>
       </div>
     </PanelCard>
   );

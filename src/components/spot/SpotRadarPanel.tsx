@@ -4,12 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, LineChart, RefreshCw, Search, ShieldCheck } from "lucide-react";
 import { ActionButton, DataRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import { CoinSignalConflictPanel, type CoinSignalConflictItem } from "@/components/coin/CoinSignalConflictPanel";
-import {
-  CoinDataFreshnessPanel,
-  dataFreshnessTone,
-  formatDataAge,
-  type CoinDataFreshnessItem
-} from "@/components/coin/CoinDataFreshnessPanel";
+import { CoinDataFreshnessPanel, dataFreshnessTone, formatDataAge, type CoinDataFreshnessItem } from "@/components/coin/CoinDataFreshnessPanel";
 import { CoinEvidenceGradePanel, type CoinEvidenceGradeItem } from "@/components/coin/CoinEvidenceGradePanel";
 import { CoinSignalPressurePanel, type CoinSignalPressureItem } from "@/components/coin/CoinSignalPressurePanel";
 import type { SpotChartRadarPayload, SpotChartSummary, SpotChartTone, SpotExchange, SpotRadarCategory, SpotRadarItem, SpotRadarPayload } from "@/lib/spotRadarTypes";
@@ -108,33 +103,32 @@ function describeSpotItem(item: SpotRadarItem | null) {
 
 function SpotMarketChecklist({ payload }: { payload: SpotRadarPayload }) {
   const riskItems = payload.items.filter((item) => item.category === "overheat" || item.category === "pressure");
-  const avoidItem =
-    riskItems.find((item) => item.category === "overheat") ??
-    riskItems.find((item) => item.category === "pressure") ??
-    null;
+  const avoidItem = riskItems.find((item) => item.category === "overheat") ?? riskItems.find((item) => item.category === "pressure") ?? null;
   const followItem =
-    payload.items.find((item) => item.category === "pullback") ??
-    payload.items.find((item) => item.category === "volume") ??
-    payload.items.find((item) => item.category === "gainer") ??
-    null;
+    payload.items.find((item) => item.category === "pullback") ?? payload.items.find((item) => item.category === "volume") ?? payload.items.find((item) => item.category === "gainer") ?? null;
   const marketTone = payload.summary.averageChangePercent > 0.3 ? "long" : payload.summary.averageChangePercent < -0.3 ? "short" : "watch";
   const riskTone = riskItems.length > 0 ? "risk" : "watch";
 
-  const checks: Array<{ label: string; title: string; detail: string; tone: "risk" | "watch" | "info" | "long" | "short" }> = [
+  const checks: Array<{
+    label: string;
+    title: string;
+    detail: string;
+    tone: "risk" | "watch" | "info" | "long" | "short";
+  }> = [
     {
-      label: "피할 후보",
+      label: "회피 그룹",
       title: avoidItem ? describeSpotItem(avoidItem) : "강한 회피 후보 없음",
-      detail: avoidItem ? `${avoidItem.risk} ${avoidItem.check}` : "과열·하락압력 후보가 약하면 거래대금과 눌림 확인으로 넘어갑니다.",
+      detail: avoidItem ? `${avoidItem.risk} ${avoidItem.check}` : "과열·하락압력 후보가 약하면 거래대금과 눌림 반응으로 넘어갑니다.",
       tone: riskTone
     },
     {
-      label: "추적 후보",
+      label: "추적 그룹",
       title: followItem ? describeSpotItem(followItem) : "추적 후보 대기",
       detail: followItem ? `${followItem.check}` : "거래대금이 붙거나 눌림 후 지지 반응이 보일 때 후보로 올립니다.",
       tone: followItem?.category === "gainer" || followItem?.category === "volume" ? "long" : "watch"
     },
     {
-      label: "시장 폭",
+      label: "무효화 요약",
       title: `상승 ${payload.summary.gainers} / 하락 ${payload.summary.losers}`,
       detail: `평균 등락 ${formatPercent(payload.summary.averageChangePercent)} · 거래대금 1위 ${payload.summary.leaderSymbol}.`,
       tone: marketTone
@@ -142,19 +136,16 @@ function SpotMarketChecklist({ payload }: { payload: SpotRadarPayload }) {
   ];
 
   return (
-    <div className="grid gap-0 border-t border-ui-line md:grid-cols-3">
-      {checks.map((check, index) => (
-        <article
-          key={check.label}
-          className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0 md:border-l" : ""}`}
-        >
+    <div className="grid gap-3 md:grid-cols-3">
+      {checks.map((check) => (
+        <article key={check.label} className="min-w-0 rounded-ui-sm bg-ui-inset/35 p-3">
           <div className="flex min-w-0 items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{check.label}</p>
               <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{check.title}</p>
             </div>
             <StatusPill tone={check.tone} className="shrink-0">
-              {check.tone === "risk" ? "주의" : check.tone === "long" ? "추적" : check.tone === "short" ? "압력" : "확인"}
+              {check.tone === "risk" ? "주의" : check.tone === "long" ? "추적" : check.tone === "short" ? "압력" : "대기"}
             </StatusPill>
           </div>
           <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{check.detail}</p>
@@ -324,40 +315,19 @@ function SpotSparkline({ item }: { item: SpotChartSummary }) {
   );
 }
 
-function SpotChartEvidencePanel({
-  payload,
-  loading,
-  error
-}: {
-  payload: SpotChartRadarPayload | null;
-  loading: boolean;
-  error: string | null;
-}) {
+function SpotChartEvidencePanel({ payload, loading, error }: { payload: SpotChartRadarPayload | null; loading: boolean; error: string | null }) {
   return (
-    <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
-      <SectionHeader
-        eyebrow="Spot Chart"
-        title="현물 차트 근거"
-        description="상위 현물 후보를 1시간봉 공개 캔들로 확인해 범위 위치, 평균선, 거래대금 변화를 분리해서 봅니다."
-      />
+    <PanelCard variant="flat" padding="none" className="space-y-4 rounded-ui-lg border border-ui-line/70 bg-ui-panel/55 p-4 sm:p-5">
+      <SectionHeader eyebrow="Spot Chart" title="현물 차트 근거" description="상위 현물 후보를 1시간봉 공개 캔들로 확인해 범위 위치, 평균선, 거래대금 변화를 분리해서 봅니다." />
 
       {loading ? (
-        <div className="flex min-h-24 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
-          현물 차트 근거를 확인하는 중입니다.
-        </div>
+        <div className="rounded-ui-sm bg-ui-inset/35 px-3 py-3 text-sm font-semibold text-ui-muted">현물 차트 근거를 확인하는 중입니다.</div>
       ) : error ? (
-        <div className="flex min-h-24 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
-          {error}
-        </div>
+        <div className="rounded-ui-sm bg-ui-inset/35 px-3 py-3 text-sm font-semibold text-ui-muted">{error}</div>
       ) : payload && payload.items.length > 0 ? (
-        <div className="grid gap-0 md:grid-cols-2">
-          {payload.items.map((item, index) => (
-            <article
-              key={`${item.exchange}-${item.market}`}
-              className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0" : ""} ${
-                index % 2 === 1 ? "md:border-l md:border-ui-line" : ""
-              } ${index > 1 ? "md:border-t md:border-ui-line" : ""}`}
-            >
+        <div className="grid gap-3 md:grid-cols-2">
+          {payload.items.map((item) => (
+            <article key={`${item.exchange}-${item.market}`} className="min-w-0 rounded-ui-sm bg-ui-inset/35 p-3">
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{item.symbol} · 1H</p>
@@ -380,9 +350,7 @@ function SpotChartEvidencePanel({
           ))}
         </div>
       ) : (
-        <div className="flex min-h-24 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
-          차트 근거를 표시할 후보가 아직 없습니다.
-        </div>
+        <div className="rounded-ui-sm bg-ui-inset/35 px-3 py-3 text-sm font-semibold text-ui-muted">차트 후보 없음 · 시장 요약과 다음 조건을 먼저 봅니다.</div>
       )}
     </PanelCard>
   );
@@ -446,19 +414,37 @@ function buildSpotPriorityGroups(payload: SpotRadarPayload, chartPayload: SpotCh
     .filter(({ item, chart }) => item.category === "overheat" || item.category === "pressure" || chart?.tone === "risk" || chart?.tone === "short")
     .sort((left, right) => right.riskScore - left.riskScore)
     .slice(0, 3)
-    .map(({ item, chart, riskScore, reason }) => ({ item, chart, score: riskScore, reason, tone: chart?.tone === "short" ? ("short" as const) : ("risk" as const) }));
+    .map(({ item, chart, riskScore, reason }) => ({
+      item,
+      chart,
+      score: riskScore,
+      reason,
+      tone: chart?.tone === "short" ? ("short" as const) : ("risk" as const)
+    }));
 
   const followItems = enriched
     .filter(({ item, chart }) => item.category === "volume" || item.category === "gainer" || item.category === "pullback" || chart?.tone === "long")
     .sort((left, right) => right.followScore - left.followScore)
     .slice(0, 3)
-    .map(({ item, chart, followScore, reason }) => ({ item, chart, score: followScore, reason, tone: chart?.tone === "long" ? ("long" as const) : ("watch" as const) }));
+    .map(({ item, chart, followScore, reason }) => ({
+      item,
+      chart,
+      score: followScore,
+      reason,
+      tone: chart?.tone === "long" ? ("long" as const) : ("watch" as const)
+    }));
 
   const watchItems = enriched
     .filter(({ item, chart }) => item.category === "watch" || chart?.tone === "watch" || chart === null)
     .sort((left, right) => right.watchScore - left.watchScore)
     .slice(0, 3)
-    .map(({ item, chart, watchScore, reason }) => ({ item, chart, score: watchScore, reason, tone: "watch" as const }));
+    .map(({ item, chart, watchScore, reason }) => ({
+      item,
+      chart,
+      score: watchScore,
+      reason,
+      tone: "watch" as const
+    }));
 
   return [
     {
@@ -486,15 +472,11 @@ function SpotPriorityPanel({ payload, chartPayload }: { payload: SpotRadarPayloa
   const groups = buildSpotPriorityGroups(payload, chartPayload);
 
   return (
-    <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
-      <SectionHeader
-        eyebrow="Priority"
-        title="현물 우선순위 Top"
-        description="후보 분류와 1시간봉 차트 근거를 합쳐 위험, 추적, 관망 후보를 따로 정렬합니다."
-      />
-      <div className="grid gap-0 lg:grid-cols-3">
-        {groups.map((group, index) => (
-          <article key={group.label} className={`min-w-0 py-3 lg:px-3 ${index > 0 ? "border-t border-ui-line lg:border-l lg:border-t-0" : ""}`}>
+    <PanelCard variant="flat" padding="none" className="space-y-4 rounded-ui-lg border border-ui-line/70 bg-ui-panel/55 p-4 sm:p-5">
+      <SectionHeader eyebrow="Priority" title="현물 우선순위 Top" description="후보 분류와 1시간봉 차트 근거를 합쳐 위험, 추적, 관망 후보를 따로 정렬합니다." />
+      <div className="grid gap-3 lg:grid-cols-3">
+        {groups.map((group) => (
+          <article key={group.label} className="min-w-0 rounded-ui-sm bg-ui-inset/35 p-3">
             <div className="flex min-w-0 items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{group.label}</p>
@@ -507,7 +489,7 @@ function SpotPriorityPanel({ payload, chartPayload }: { payload: SpotRadarPayloa
             <div className="mt-3 space-y-3">
               {group.items.length > 0 ? (
                 group.items.map(({ item, reason, score, tone }) => (
-                  <div key={`${group.label}-${item.market}`} className="border-t border-ui-line pt-3 first:border-t-0 first:pt-0">
+                  <div key={`${group.label}-${item.market}`} className="border-t border-ui-line/60 pt-3 first:border-t-0 first:pt-0">
                     <div className="flex min-w-0 items-center justify-between gap-3">
                       <p className="truncate text-sm font-semibold text-ui-text">{item.symbol}</p>
                       <span className={`shrink-0 text-xs font-semibold ${chartToneClass[tone]}`}>{Math.round(score)}점</span>
@@ -516,7 +498,7 @@ function SpotPriorityPanel({ payload, chartPayload }: { payload: SpotRadarPayloa
                   </div>
                 ))
               ) : (
-                <p className="border-t border-ui-line pt-3 text-xs leading-5 text-ui-muted">해당 묶음에 우선 표시할 후보가 아직 없습니다.</p>
+                <p className="text-xs leading-5 text-ui-muted">우선 표시할 후보 없음.</p>
               )}
             </div>
           </article>
@@ -530,7 +512,7 @@ function SpotRow({ item }: { item: SpotRadarItem }) {
   const DirectionIcon = item.changePercent >= 0 ? ArrowUpRight : ArrowDownRight;
 
   return (
-    <article className="grid gap-3 border-t border-ui-line py-4 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_11rem] sm:items-start sm:gap-5">
+    <article className="grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_11rem] sm:items-start sm:gap-5">
       <div className="min-w-0">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0">
@@ -538,7 +520,9 @@ function SpotRow({ item }: { item: SpotRadarItem }) {
               <h3 className="truncate text-lg font-semibold tracking-tight text-ui-text">{item.symbol}</h3>
               <span className="truncate text-xs font-medium text-ui-muted">{item.koreanName}</span>
             </div>
-            <p className="mt-1 text-xs leading-5 text-ui-muted">{item.market} · {formatTime(item.updatedAt)} 갱신</p>
+            <p className="mt-1 text-xs leading-5 text-ui-muted">
+              {item.market} · {formatTime(item.updatedAt)} 갱신
+            </p>
           </div>
           <StatusPill tone={categoryTone(item.category)}>{item.categoryLabel}</StatusPill>
         </div>
@@ -548,7 +532,7 @@ function SpotRow({ item }: { item: SpotRadarItem }) {
             <span className="font-semibold text-ui-text">리스크</span> {item.risk}
           </p>
           <p>
-            <span className="font-semibold text-ui-text">확인</span> {item.check}
+            <span className="font-semibold text-ui-text">다음 기준</span> {item.check}
           </p>
         </div>
       </div>
@@ -592,7 +576,9 @@ export function SpotRadarPanel() {
       setError(null);
       try {
         const response = await fetch(`/api/spot-radar?exchange=${exchange}`, { cache: "no-store" });
-        const nextPayload = (await response.json()) as SpotRadarPayload & { error?: string };
+        const nextPayload = (await response.json()) as SpotRadarPayload & {
+          error?: string;
+        };
         if (!response.ok) throw new Error(nextPayload.error || "현물 데이터를 확인하지 못했습니다.");
         if (!cancelled) setPayload(nextPayload);
       } catch (loadError) {
@@ -630,7 +616,9 @@ export function SpotRadarPanel() {
           limit: "80"
         });
         const response = await fetch(`/api/spot-chart-radar?${params.toString()}`, { cache: "no-store" });
-        const nextPayload = (await response.json()) as SpotChartRadarPayload & { error?: string };
+        const nextPayload = (await response.json()) as SpotChartRadarPayload & {
+          error?: string;
+        };
         if (!response.ok) throw new Error(nextPayload.error || "현물 차트 근거를 확인하지 못했습니다.");
         if (!cancelled) setChartPayload(nextPayload);
       } catch (loadError) {
@@ -674,21 +662,19 @@ export function SpotRadarPanel() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PanelCard variant="report" padding="lg" className="space-y-5">
+      <PanelCard variant="flat" padding="none" className="space-y-4 rounded-ui-lg border border-ui-line/25 bg-ui-panel/60 p-4 sm:p-5">
         <SectionHeader
           eyebrow="Coin Spot"
-          title="현물 레이더"
-          description="업비트와 빗썸 KRW 시장에서 거래대금, 등락률, 과열·눌림 후보를 읽기 전용으로 정리합니다."
+          title="오늘 현물 후보"
+          description="거래대금, 등락률, 과열·눌림 후보를 판단 보조용으로 압축합니다."
           action={
-            <div className="inline-flex items-center gap-1 border-b border-ui-line pb-1">
+            <div className="inline-flex items-center gap-1 rounded-ui-sm bg-ui-inset/60 p-1">
               {exchanges.map((item) => (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => setExchange(item.id)}
-                  className={`min-h-9 px-2 text-xs font-semibold transition ${
-                    exchange === item.id ? "text-ui-brand" : "text-ui-muted hover:text-ui-text"
-                  }`}
+                  className={`min-h-8 rounded-ui-sm px-2.5 text-xs font-semibold transition ${exchange === item.id ? "bg-ui-active text-ui-text" : "text-ui-muted hover:text-ui-text"}`}
                 >
                   {item.label}
                 </button>
@@ -697,24 +683,22 @@ export function SpotRadarPanel() {
           }
         />
 
-        <div className="grid gap-0 border-t border-ui-line sm:grid-cols-4">
+        {payload ? <SpotMarketChecklist payload={payload} /> : null}
+
+        <div className="grid gap-x-4 rounded-ui-sm bg-ui-inset/35 px-3 py-1 sm:grid-cols-4">
           <DataRow label="거래소" value={payload?.exchangeLabel ?? exchanges.find((item) => item.id === exchange)?.label ?? "-"} />
           <DataRow label="표시 종목" value={payload ? `${payload.summary.displayedMarkets}개` : "-"} />
           <DataRow label="상승/하락" value={payload ? `${payload.summary.gainers}/${payload.summary.losers}` : "-"} />
           <DataRow label="평균 등락" value={payload ? formatPercent(payload.summary.averageChangePercent) : "-"} />
         </div>
 
-        {payload ? <SpotMarketChecklist payload={payload} /> : null}
-
-        <div className="flex flex-wrap gap-1.5 border-t border-ui-line py-1">
+        <div className="flex flex-wrap gap-1.5">
           {categoryFilters.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => setFilter(item.id)}
-              className={`min-h-8 border-b px-2 text-xs font-semibold transition ${
-                filter === item.id ? "border-b border-ui-brand text-ui-text" : "text-ui-muted hover:text-ui-text"
-              }`}
+              className={`min-h-8 rounded-ui-sm px-2.5 text-xs font-semibold transition ${filter === item.id ? "bg-ui-active text-ui-text" : "text-ui-muted hover:bg-ui-inset/60 hover:text-ui-text"}`}
             >
               <span>{item.label}</span>
               <span className="ml-1 text-[10px] text-ui-subtle">{categoryCounts[item.id]}</span>
@@ -732,11 +716,7 @@ export function SpotRadarPanel() {
       ) : null}
 
       {payload ? (
-        <CoinEvidenceGradePanel
-          title="현물 근거 등급"
-          description="후보를 만든 근거를 핵심 시세, 분류 확인, 리스크 근거, 검증 상태로 분리합니다."
-          items={buildSpotEvidenceGradeItems(payload)}
-        />
+        <CoinEvidenceGradePanel title="현물 근거 등급" description="후보를 만든 근거를 핵심 시세, 분류 확인, 리스크 근거, 검증 상태로 분리합니다." items={buildSpotEvidenceGradeItems(payload)} />
       ) : null}
 
       {payload ? <SpotChartEvidencePanel payload={chartPayload} loading={isChartLoading} error={chartError} /> : null}
@@ -753,7 +733,7 @@ export function SpotRadarPanel() {
 
       {payload ? <CoinSignalConflictPanel title="현물 신호 충돌 체크" description="거래대금, 급등, 하락압력, 시장 폭이 서로 맞는지 먼저 비교합니다." items={buildSpotConflictItems(payload)} /> : null}
 
-      <PanelCard variant="report" padding="lg" className="space-y-4">
+      <PanelCard variant="flat" padding="none" className="space-y-4 rounded-ui-lg border border-ui-line/25 bg-ui-panel/55 p-4 sm:p-5">
         <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
           <SectionHeader eyebrow="Watchlist Candidates" title="현물 관찰 후보" description="표시는 판단 보조용입니다. 매수 추천이나 진입 지시가 아닙니다." />
           <ActionButton tone="ghost" className="whitespace-nowrap px-0" onClick={() => setExchange((current) => (current === "upbit" ? "bithumb" : "upbit"))}>
@@ -763,26 +743,23 @@ export function SpotRadarPanel() {
         </div>
 
         {isLoading ? (
-          <div className="flex min-h-44 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
-            현물 시장을 확인하는 중입니다.
-          </div>
+          <div className="rounded-ui-sm bg-ui-inset/35 px-3 py-3 text-sm font-semibold text-ui-muted">현물 시장을 확인하는 중입니다.</div>
         ) : error ? (
-          <div className="flex min-h-44 flex-col items-center justify-center gap-3 border-t border-ui-line text-center">
+          <div className="flex flex-col gap-2 rounded-ui-sm bg-ui-inset/35 px-3 py-3">
             <AlertTriangle size={22} className="text-ui-risk" aria-hidden />
             <p className="text-sm font-semibold text-ui-text">{error}</p>
             <p className="text-xs text-ui-muted">거래소 public API 응답이 늦거나 제한될 수 있습니다.</p>
           </div>
         ) : filteredItems.length > 0 ? (
-          <div>
+          <div className="divide-y divide-ui-line/60">
             {filteredItems.map((item) => (
               <SpotRow key={`${item.exchange}-${item.market}`} item={item} />
             ))}
           </div>
         ) : (
-          <div className="flex min-h-44 flex-col items-center justify-center gap-3 border-t border-ui-line text-center">
-            <Search size={22} className="text-ui-muted" aria-hidden />
-            <p className="text-sm font-semibold text-ui-text">해당 조건의 후보가 아직 없습니다.</p>
-            <p className="text-xs text-ui-muted">필터를 전체로 바꾸거나 다른 거래소를 확인해 주세요.</p>
+          <div className="flex items-start gap-2 rounded-ui-sm bg-ui-inset/35 px-3 py-3 text-left">
+            <Search size={16} className="mt-0.5 shrink-0 text-ui-muted" aria-hidden />
+            <p className="text-sm font-semibold leading-5 text-ui-muted [word-break:keep-all]">이 필터의 후보 없음 · 시장 요약과 다음 기준을 먼저 봅니다.</p>
           </div>
         )}
       </PanelCard>
@@ -790,10 +767,7 @@ export function SpotRadarPanel() {
       <PanelCard variant="report" padding="md">
         <div className="flex items-start gap-3 text-sm text-ui-muted">
           <ShieldCheck size={18} className="mt-0.5 shrink-0 text-ui-brand" aria-hidden />
-          <p>
-            현물 레이더는 public 시세만 사용합니다. 주문, 계정 연동, API key, 보유 자산 조회는 포함하지 않으며
-            관심 후보, 과열 주의, 눌림 대기, 확인 조건 중심으로 표시합니다.
-          </p>
+          <p>현물 레이더는 public 시세만 사용합니다. 주문, 계정 연동, API key, 보유 자산 조회는 포함하지 않으며 관심 후보, 과열 주의, 눌림 대기, 확인 조건 중심으로 표시합니다.</p>
         </div>
       </PanelCard>
     </div>

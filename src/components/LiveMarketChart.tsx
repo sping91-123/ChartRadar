@@ -20,8 +20,7 @@ import {
   Bug,
   Copy,
   History,
-  HelpCircle,
-  Settings2,
+  Settings2
 } from "lucide-react";
 import {
   analyzeTimeframe,
@@ -1441,10 +1440,10 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
       id="basic-coins"
       className={
         isMajorScreen
-          ? "scroll-mt-24 border-y border-ui-line px-0 py-4 pb-6 text-ui-text sm:py-5"
+          ? "scroll-mt-24 px-0 py-3 pb-6 text-ui-text sm:py-4"
           : altOnly
-            ? "scroll-mt-24 border-y border-ui-line px-0 py-4 pb-6 text-ui-text sm:py-5"
-          : "scroll-mt-24 border-y border-ui-line px-0 py-4 pb-6 sm:py-5"
+            ? "scroll-mt-24 px-0 py-3 pb-6 text-ui-text sm:py-4"
+          : "scroll-mt-24 px-0 py-3 pb-6 sm:py-4"
       }
     >
       <CryptoControlBar
@@ -1502,9 +1501,9 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
       <div
         className={
           isMajorScreen
-            ? "relative mt-3 grid grid-cols-2 border-b border-ui-line"
+            ? "relative mt-3 grid grid-cols-2 gap-1 rounded-ui-lg border border-ui-line/25 bg-ui-panel/45 p-1"
             : altOnly
-              ? "relative mt-4 grid grid-cols-3 gap-0 border-b border-ui-line sm:grid-cols-6"
+              ? "relative mt-4 grid grid-cols-3 gap-1 rounded-lg border border-surface-line/60 bg-surface-cardSoft/70 p-1 sm:grid-cols-6"
             : `relative mt-4 grid gap-2 ${majorOnly ? "grid-cols-2" : altOnly ? "grid-cols-3 sm:grid-cols-6" : "grid-cols-3"}`
         }
       >
@@ -1515,17 +1514,17 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             onClick={() => selectSymbol(item, { userSelected: true })}
             className={
               isMajorScreen
-                ? `min-h-11 whitespace-nowrap border-b-2 px-3 text-sm font-semibold transition ${
-                    symbol === item ? "border-ui-brand text-ui-text" : "border-transparent text-ui-muted hover:text-ui-text"
+                ? `min-h-9 whitespace-nowrap rounded-ui-sm px-3 text-sm font-semibold transition ${
+                    symbol === item ? "bg-ui-active text-ui-text" : "text-ui-muted hover:bg-ui-inset/60 hover:text-ui-text"
                   }`
                 : altOnly
-                  ? `min-h-10 whitespace-nowrap border-b-2 px-2 text-sm font-black transition ${
-                      symbol === item ? "border-accent-blue bg-transparent text-accent-blue" : "border-transparent bg-transparent text-slate-400 hover:text-slate-200"
+                  ? `min-h-9 whitespace-nowrap rounded-md px-2 text-sm font-bold transition ${
+                      symbol === item ? "bg-accent-blue/15 text-accent-blue" : "text-slate-400 hover:bg-black/20 hover:text-slate-200"
                     }`
-                : `min-h-10 whitespace-nowrap border-b-2 px-3 text-sm font-black transition ${
+                : `min-h-9 whitespace-nowrap rounded-md px-3 text-sm font-bold transition ${
                     symbol === item
-                      ? "border-accent-blue bg-transparent text-accent-blue"
-                      : "border-transparent bg-transparent text-slate-400 hover:text-slate-200"
+                      ? "bg-accent-blue/15 text-accent-blue"
+                      : "text-slate-400 hover:bg-black/20 hover:text-slate-200"
                   }`
             }
           >
@@ -1541,10 +1540,10 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 return !value;
               });
             }}
-            className={`min-h-10 whitespace-nowrap border-b-2 px-3 text-sm font-black transition ${
+            className={`min-h-9 whitespace-nowrap rounded-md px-3 text-sm font-bold transition ${
               isOtherSymbolActive || showOtherSymbols
-                ? "border-accent-blue bg-transparent text-accent-blue"
-                : "border-transparent bg-transparent text-slate-400 hover:text-slate-200"
+                ? "bg-accent-blue/15 text-accent-blue"
+                : "text-slate-400 hover:bg-black/20 hover:text-slate-200"
             }`}
           >
             {isOtherSymbolActive ? symbolLabel(symbol) : "그 외"}
@@ -1594,7 +1593,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
       ) : null}
 
       {!isMajorScreen ? (
-        <div className="mt-3 border-y border-ui-line py-3">
+        <div className="mt-3 rounded-lg border border-surface-line/60 bg-surface-cardSoft/45 p-3">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-black text-white">구조 감지 기준</p>
@@ -1614,10 +1613,10 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   key={item.value}
                   type="button"
                   onClick={() => applyStructurePreset(item)}
-                  className={`min-h-16 border-t px-0 py-3 text-left transition ${
+                  className={`min-h-16 rounded-md px-3 py-3 text-left transition ${
                     active
-                      ? "border-accent-blue text-accent-blue"
-                      : "border-surface-line text-slate-300 hover:border-accent-blue/60"
+                      ? "bg-accent-blue/15 text-accent-blue"
+                      : "text-slate-300 hover:bg-black/20 hover:text-slate-100"
                   }`}
                 >
                   <span className="block text-sm font-black">{item.label}</span>
@@ -1648,7 +1647,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             dataStatusLabel={isMajorScreen ? `${isUsingCachedData ? "최근 저장본" : "실시간 확인"} · ${formatUpdatedAt(analysis.updatedAt)}` : undefined}
             summaryMetrics={isMajorScreen ? buildMajorSummaryMetrics(analysis, activeAnalysis, visibleRadarInsight) : undefined}
           />
-          <div className="border-t border-ui-line pt-4">
+          <div className="pt-2">
             <BeginnerActionGuide
               title={isMajorScreen ? "화면은 이 순서로 읽습니다" : "지금은 이 순서로 보면 됩니다"}
               summary={
@@ -1700,7 +1699,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
             />
           </div>
           {isMajorScreen ? (
-            <div className="border-t border-ui-line pt-3">
+            <div className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/45 p-3">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">구조 감지 기준</p>
@@ -1718,10 +1717,10 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                       key={item.value}
                       type="button"
                       onClick={() => applyStructurePreset(item)}
-                      className={`min-h-14 border-b-2 px-3 py-2 text-left transition ${
+                      className={`min-h-14 rounded-ui-sm px-3 py-2 text-left transition ${
                         active
-                          ? "border-ui-brand bg-transparent text-ui-text"
-                          : "border-transparent bg-transparent text-ui-muted hover:text-ui-text"
+                          ? "bg-ui-active text-ui-text"
+                          : "text-ui-muted hover:bg-ui-inset/60 hover:text-ui-text"
                       }`}
                     >
                       <span className="block text-sm font-semibold">{item.label}</span>
@@ -1734,7 +1733,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           ) : null}
         </CryptoSummarySection>
       ) : (
-        <div className="mt-4 min-h-56 animate-pulse border-y border-ui-line py-4">
+        <div className="mt-4 min-h-56 animate-pulse rounded-ui-lg border border-ui-line/25 bg-ui-panel/45 p-4">
           <p className="text-xs font-semibold text-slate-500">{symbolLabel(symbol)} · {activeTimeframe} 레이더 결론</p>
           <div className="mt-4 h-8 w-40 rounded bg-white/10" />
           <div className="mt-4 h-4 w-full max-w-lg rounded bg-white/10" />
@@ -1760,8 +1759,8 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
       ) : null}
 
       {showAdvancedControls && canShowDetailedAnalysis ? (
-        <div className="mt-3 border-y border-ui-line py-3">
-          <div className="border-y border-white/10 py-3">
+        <div className="mt-3 rounded-ui-lg border border-ui-line/25 bg-ui-panel/45 p-3">
+          <div>
             <p className="text-xs font-semibold text-slate-400">차트 표시 설정</p>
             <p className="mt-1 text-[11px] leading-5 text-slate-500">
               차트 위에 표시할 보조 표시만 고릅니다. 최종 판독은 위의 구조 감지 기준을 따릅니다.
@@ -1847,14 +1846,14 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
       ) : null}
 
       <div className="mt-4 grid gap-4">
-        <div className="overflow-hidden border-y border-ui-line bg-transparent">
+        <div className="overflow-hidden rounded-ui-lg border border-ui-line/25 bg-ui-panel/40">
           <div className="flex items-center justify-between border-b border-surface-line px-4 py-3">
             <div>
               <p className="text-xs font-semibold text-slate-500">현재가</p>
               <p className="text-lg font-black text-white">{analysis ? formatPrice(analysis.price) : "-"}</p>
             </div>
             {analysis ? (
-              <span className={`px-0 py-1.5 text-sm font-black ${isMajorScreen ? "border-b border-white/10 text-slate-300" : `border-b ${biasClasses(analysis.bias)}`}`}>
+              <span className={`rounded-md px-2 py-1.5 text-sm font-black ${isMajorScreen ? "bg-white/5 text-slate-300" : biasClasses(analysis.bias).replace(/border-[^ ]+/g, "")}`}>
                 {isMajorScreen ? "판단 근거 차트" : analysis.verdict}
               </span>
             ) : null}
@@ -1914,7 +1913,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
         <div className="space-y-4">
           {error ? <CryptoErrorState message={error} /> : null}
 
-          <div className={`border-t border-ui-line pt-4 text-slate-200 ${isMajorScreen || altOnly ? "" : isBasicAltView ? altAnalysisFilterClass(altFilterLabel).replace(/bg-[^ ]+/g, "").replace(/border-[^ ]+/g, "") : biasClasses(analysis?.bias).replace(/bg-[^ ]+/g, "").replace(/border-[^ ]+/g, "")}`}>
+          <div className={`rounded-ui-lg border border-ui-line/25 bg-ui-panel/45 p-4 text-slate-200 ${isMajorScreen || altOnly ? "" : isBasicAltView ? altAnalysisFilterClass(altFilterLabel).replace(/bg-[^ ]+/g, "").replace(/border-[^ ]+/g, "") : biasClasses(analysis?.bias).replace(/bg-[^ ]+/g, "").replace(/border-[^ ]+/g, "")}`}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold opacity-80">{isBasicAltView ? "알트 리스크 요약" : isMajorScreen ? "상단 판단의 근거 요약" : "레이더 판독"}</p>
@@ -1942,12 +1941,12 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 {isMajorScreen ? (
                   <CryptoDetailScopeNotice hasCoinPro={hasCoinPro} />
                 ) : isBasicAltView ? (
-                  <div className="border-t border-white/10 py-3 text-sm leading-6 text-slate-100">
+                  <div className="rounded-md bg-black/15 p-3 text-sm leading-6 text-slate-100">
                     <span className="block text-xs font-semibold text-slate-400">공개 리스크</span>
                     <span className="mt-1 block">{altRiskSignals[0] ?? "리스크 점검"}</span>
                   </div>
                 ) : (
-                  <div className="border-t border-white/10 py-3 text-sm leading-6 text-slate-100">
+                  <div className="rounded-md bg-black/15 p-3 text-sm leading-6 text-slate-100">
                     <span className="block text-xs font-semibold text-slate-400">행동 가이드</span>
                     <span className="mt-1 block">{analysis.actionGuide}</span>
                   </div>
@@ -1987,8 +1986,8 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               id="ai-briefing"
               className={
                 isMajorScreen
-                  ? "scroll-mt-24 border-y border-ui-line py-4"
-                  : "scroll-mt-24 border-y border-accent-blue/25 py-4"
+                  ? "scroll-mt-24 rounded-ui-lg border border-ui-line/25 bg-ui-panel/45 p-4"
+                  : "scroll-mt-24 rounded-lg border border-accent-blue/25 bg-surface-cardSoft/45 p-4"
               }
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -2034,7 +2033,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 </div>
               ) : null}
 
-              <div className="mt-4 border-t border-ui-line pt-4">
+              <div className="mt-4 border-t border-ui-line/45 pt-4">
                 {marketBriefing.status === "idle" ? (
                   <p className="text-sm leading-6 text-slate-400">
                     버튼을 누르면 현재 차트와 레이더 값을 한 번에 읽어 핵심 방향, 위험 요인, 다음 확인 구간을 정리합니다.
@@ -2044,20 +2043,20 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   <>
                     {!isMajorScreen ? (
                       <div className="mb-4 grid gap-2 sm:grid-cols-3">
-                          <div className={`border-t px-0 py-2 ${biasClasses(analysis.bias)}`}>
+                          <div className={`rounded-md bg-black/15 px-3 py-2 ${biasClasses(analysis.bias).replace(/border-[^ ]+/g, "")}`}>
                           <p className="text-[11px] font-bold opacity-80">방향 결론</p>
                           <p className="mt-1 text-base font-black">
                             {analysis.bias === "long" ? "롱 우세" : analysis.bias === "short" ? "숏 우세" : "횡보 관찰"}
                           </p>
                         </div>
-                        <div className="border-t border-white/10 py-2">
+                        <div className="rounded-md bg-black/15 px-3 py-2">
                           <p className="text-[11px] font-bold text-slate-400">종합 점수</p>
                           <p className="mt-1 text-base font-black text-white">
                             {analysis.biasScore}
                             {combinedScoreLimit ? ` / -${combinedScoreLimit}~+${combinedScoreLimit}` : ""}
                           </p>
                         </div>
-                        <div className={`border-t px-0 py-2 ${readinessClasses(analysis.readiness)}`}>
+                        <div className={`rounded-md bg-black/15 px-3 py-2 ${readinessClasses(analysis.readiness).replace(/border-[^ ]+/g, "")}`}>
                           <p className="text-[11px] font-bold opacity-80">데이터 신뢰도</p>
                           <p className="mt-1 text-base font-black">{readinessLabel(analysis.readiness)}</p>
                         </div>
@@ -2081,8 +2080,8 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               id="ict-radar"
               className={
                 isMajorScreen
-                  ? "scroll-mt-24 border-y border-ui-line py-4"
-                  : "scroll-mt-24 border-y border-ui-line py-4"
+                  ? "scroll-mt-24 rounded-ui-lg border border-ui-line/25 bg-ui-panel/45 p-4"
+                  : "scroll-mt-24 rounded-lg border border-surface-line/60 bg-surface-cardSoft/45 p-4"
               }
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -2093,7 +2092,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                     이 화면은 기술지표를 섞지 않고 MSB, CHoCH, OB, FVG, Sweep, CISD, PD, POC만 따로 봅니다.
                   </p>
                 </div>
-                <span className="inline-flex w-fit border-b border-white/10 px-0 py-1.5 text-xs font-bold text-slate-300">
+                <span className="inline-flex w-fit rounded-md border border-white/10 bg-black/15 px-3 py-1.5 text-xs font-bold text-slate-300">
                   {activeTimeframe} 기준
                 </span>
               </div>
@@ -2152,11 +2151,11 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               </div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div className="border-t border-ui-line py-3">
+                <div className="rounded-lg border border-ui-line/25 bg-black/15 p-3">
                   <h4 className="text-base font-black text-white">핵심 해석</h4>
                   <p className="mt-2 text-sm leading-6 text-slate-300">{analysis.summaryLine}</p>
                 </div>
-                <div className="border-t border-ui-line py-3">
+                <div className="rounded-lg border border-ui-line/25 bg-black/15 p-3">
                   <h4 className="text-base font-black text-white">구조 감지 기준</h4>
                   <p className="mt-2 text-sm leading-6 text-slate-300">
                     현재는 {structureSensitivityLabel(structureSensitivity)} 기준입니다. 빠른 변화와 큰 구조 중 무엇을 더 중요하게 볼지 정합니다.
@@ -2173,8 +2172,8 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               id="radar-dashboard"
               className={
                 isMajorScreen
-                  ? "scroll-mt-24 border-y border-ui-line py-4"
-                  : "scroll-mt-24 border-y border-ui-line py-4"
+                  ? "scroll-mt-24 rounded-ui-lg border border-ui-line/25 bg-ui-panel/45 p-4"
+                  : "scroll-mt-24 rounded-lg border border-surface-line/60 bg-surface-cardSoft/45 p-4"
               }
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -2182,13 +2181,13 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   <p className="text-xs font-bold uppercase tracking-widest text-accent-blue">판독 체계</p>
                   <h3 className="mt-1 text-lg font-black text-white">구조와 지표를 함께 확인합니다.</h3>
                 </div>
-                <span className="inline-flex w-fit border-b border-white/10 px-0 py-1.5 text-xs font-bold text-slate-300">
+                <span className="inline-flex w-fit rounded-md border border-white/10 bg-black/15 px-3 py-1.5 text-xs font-bold text-slate-300">
                   {activeTimeframe} 기준
                 </span>
               </div>
 
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                <div className="border-t border-ui-line py-3">
+                <div className="rounded-lg border border-ui-line/25 bg-black/15 p-3">
                   <p className="text-xs font-bold text-accent-blue">상단 판단의 구조 근거</p>
                   <h4 className="mt-1 text-base font-black text-white">ICT 구조 근거</h4>
                   <div className="mt-3 grid grid-cols-2 gap-2">
@@ -2315,7 +2314,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           ) : null}
 
           {analysis && canShowDetailedAnalysis && radarProfile !== "technical" ? (
-            <div className="border-y border-ui-line py-4">
+            <div className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/45 p-4">
               <h3 className="text-sm font-bold text-white">지금 볼 구간</h3>
               <div className="mt-3 space-y-2">
                 {analysis.checkpoints.map((item) => (
@@ -2329,7 +2328,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
 
           {analysis && canShowDetailedAnalysis && radarProfile !== "technical" ? (
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="border-y border-ui-line py-4">
+              <div className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/45 p-4">
                 <h3 className="text-sm font-bold text-white">현재 위치 판단</h3>
                 <p
                   className={
@@ -2341,7 +2340,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   {analysis.currentLocationLabel}
                 </p>
               </div>
-              <div className="border-y border-ui-line py-4">
+              <div className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/45 p-4">
                 <h3 className="text-sm font-bold text-white">현재 결론</h3>
                 <p className="mt-3 text-sm leading-6 text-slate-300">
                   지금은 {analysis.verdict} 쪽입니다. 다만 실제 판단은 현재 위치, 무효 기준, 포지션 크기를 같이 확인해야 합니다.
@@ -2351,7 +2350,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           ) : null}
 
           {analysis?.proPlan && canShowDetailedAnalysis && radarProfile !== "technical" ? (
-            <div className="border-y border-accent-blue/25 py-4">
+            <div className="rounded-ui-lg border border-accent-blue/25 bg-ui-panel/45 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-xs font-semibold text-accent-blue">분석 시나리오</p>
@@ -2380,7 +2379,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               </div>
             </div>
           ) : analysis && canShowDetailedAnalysis && radarProfile !== "technical" ? (
-            <div className="border-y border-signal-warning/25 py-4">
+            <div className="rounded-ui-lg border border-signal-warning/25 bg-signal-warning/10 p-4">
               <p className="text-sm font-bold text-signal-warning">분석 시나리오 대기</p>
               <p className="mt-2 text-sm leading-6 text-slate-300">
                 지금은 방향 우세가 충분히 또렷하지 않아 관찰 구간과 무효 기준을 계산하지 않았습니다. 이 상태에서 억지로 자리를 만들지 않는 것이 더 좋은 판독입니다.
