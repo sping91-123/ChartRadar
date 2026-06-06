@@ -275,12 +275,16 @@ async function purchaseAndroidStoreProduct(params: NativePurchaseParams & { prod
     matched: Boolean(subscriptionOption),
     optionCount: params.product.subscriptionOptions?.length ?? 0
   });
-  logNativePurchase("purchaseStoreProduct start", {
+  if (!subscriptionOption) {
+    throw new NativePurchaseError("base_plan_not_found", "Requested Google Play base plan was not found in RevenueCat subscription options.");
+  }
+
+  logNativePurchase("purchaseSubscriptionOption start", {
     planId: params.plan.id,
     productId,
     basePlanId
   });
-  return Purchases.purchaseStoreProduct({ product: params.product });
+  return Purchases.purchaseSubscriptionOption({ subscriptionOption });
 }
 
 export async function purchaseNativePlan(params: NativePurchaseParams) {
