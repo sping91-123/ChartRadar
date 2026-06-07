@@ -13,14 +13,14 @@ export function GlobalAssetChecklist({ selectedInfo }: { selectedInfo: StockSymb
   ];
 
   return (
-    <div className="mt-3 grid divide-y divide-white/10 md:grid-cols-3 md:divide-x md:divide-y-0">
+    <div className="mt-3 grid divide-y divide-ui-line/60 md:grid-cols-3 md:divide-x md:divide-y-0">
       {items.map(({ icon: Icon, title, body }) => (
         <article key={title} className="px-3 py-3">
           <div className="flex items-center gap-2">
-            <Icon className="text-cyan-300" size={15} aria-hidden />
-            <p className="text-xs font-black text-white">{title}</p>
+            <Icon className="text-ui-brand" size={15} aria-hidden />
+            <p className="text-xs font-semibold text-ui-text">{title}</p>
           </div>
-          <p className="mt-2 text-[11px] font-bold leading-5 text-slate-400 [word-break:keep-all]">{body}</p>
+          <p className="mt-2 text-[11px] font-medium leading-5 text-ui-muted [word-break:keep-all]">{body}</p>
         </article>
       ))}
     </div>
@@ -59,34 +59,34 @@ export function GlobalPlaybook({
 
   return (
     <div className="mt-5 grid gap-3 lg:grid-cols-4">
-      <article className="border-t border-white/10 py-4 first:border-t-0">
+      <article className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3">
         <Clock3 size={20} aria-hidden />
-        <p className="mt-3 text-xs font-black opacity-80">미국장 구간</p>
-        <h3 className="mt-2 text-base font-black text-white">{sessionState?.title ?? "미국장 시간 확인 중"}</h3>
-        <p className="mt-2 text-xs leading-5 text-slate-300">{sessionState?.detail ?? "현재 한국 시간 기준 미국장 구간을 확인하고 있습니다."}</p>
+        <p className="mt-3 text-xs font-semibold text-ui-subtle">미국장 구간</p>
+        <h3 className="mt-2 text-base font-semibold text-ui-text">{sessionState?.title ?? "미국장 시간 확인 중"}</h3>
+        <p className="mt-2 text-xs leading-5 text-ui-muted">{sessionState?.detail ?? "현재 한국 시간 기준 미국장 구간을 확인하고 있습니다."}</p>
       </article>
 
-      <article className="border-t border-white/10 py-4 first:border-t-0">
+      <article className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3">
         <Compass size={20} aria-hidden />
-        <p className="mt-3 text-xs font-black opacity-80">먼저 볼 것</p>
-        <h3 className="mt-2 text-base font-black text-white">{focus}</h3>
-        <p className="mt-2 text-xs leading-5 text-slate-300">
+        <p className="mt-3 text-xs font-semibold text-ui-subtle">먼저 볼 것</p>
+        <h3 className="mt-2 text-base font-semibold text-ui-text">{focus}</h3>
+        <p className="mt-2 text-xs leading-5 text-ui-muted">
           {selectedInfo?.symbol ?? "선택 자산"} {latest ? formatPrice(latest.close) : "가격 확인 중"} · {formatPercent(changePercent)}
         </p>
       </article>
 
-      <article className="border-t border-white/10 py-4 first:border-t-0">
-        <Target className="text-cyan-300" size={20} aria-hidden />
-        <p className="mt-3 text-xs font-black text-slate-400">기준선</p>
-        <h3 className="mt-2 text-base font-black text-white">기준선 행동</h3>
-        <p className="mt-2 text-xs leading-5 text-slate-300">{basis}</p>
+      <article className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3">
+        <Target className="text-ui-brand" size={20} aria-hidden />
+        <p className="mt-3 text-xs font-semibold text-ui-subtle">기준선</p>
+        <h3 className="mt-2 text-base font-semibold text-ui-text">기준선 행동</h3>
+        <p className="mt-2 text-xs leading-5 text-ui-muted">{basis}</p>
       </article>
 
-      <article className="border-t border-white/10 py-4 first:border-t-0">
-        <Shield className="text-cyan-300" size={20} aria-hidden />
-        <p className="mt-3 text-xs font-black text-slate-400">위험 메모</p>
-        <h3 className="mt-2 text-base font-black text-white">위험도 {riskScore === null ? "확인 중" : `${Math.round(riskScore)}%`}</h3>
-        <p className="mt-2 text-xs leading-5 text-slate-300">{groupPlaybook(selectedInfo?.group)}</p>
+      <article className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3">
+        <Shield className="text-ui-brand" size={20} aria-hidden />
+        <p className="mt-3 text-xs font-semibold text-ui-subtle">위험 메모</p>
+        <h3 className="mt-2 text-base font-semibold text-ui-text">위험도 {riskScore === null ? "확인 중" : `${Math.round(riskScore)}%`}</h3>
+        <p className="mt-2 text-xs leading-5 text-ui-muted">{groupPlaybook(selectedInfo?.group)}</p>
       </article>
     </div>
   );

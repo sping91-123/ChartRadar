@@ -792,7 +792,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
           </div>
         ) : (
           <AppSurface variant="flat" tone="inset" padding="none" className="mt-4 border-t border-ui-line pt-3 text-xs leading-5 text-ui-muted">
-            알림 화면을 열면 저장한 조건을 다시 확인하고 마지막 확인 상태를 표시합니다.
+            저장한 조건의 마지막 상태가 여기에 표시됩니다.
           </AppSurface>
         )}
 
@@ -820,7 +820,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
           </AppSurface>
         ) : (
           <AppSurface variant="flat" tone="inset" padding="none" className="mt-4 border-t border-ui-line pt-3 text-xs leading-5 text-ui-muted">
-            저장 조건이 현재 레이더 결과와 다시 맞아떨어지면 최근 일치 감지로 표시합니다.
+            저장 조건과 레이더 결과가 맞으면 최근 일치로 표시합니다.
           </AppSurface>
         )}
 
@@ -850,7 +850,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
           </div>
         ) : (
           <AppSurface variant="flat" tone="inset" padding="none" className="mt-4 border-t border-ui-line pt-3 text-xs leading-5 text-ui-muted">
-            아직 저장한 감시 조건이 없습니다. 레이더 감지 카드에서 감시 저장을 누르면 여기에 모입니다.
+            감시 저장을 누르면 조건이 여기에 모입니다.
           </AppSurface>
         )}
       </PanelCard>

@@ -23,10 +23,10 @@ export function GlobalRadarControlDock({
             key={item}
             type="button"
             onClick={() => onTimeframeChange(item)}
-            className={`min-h-9 rounded-ui-sm px-2 text-xs font-black transition ${
+            className={`min-h-9 rounded-ui-sm px-2 text-xs font-semibold transition ${
               timeframe === item
-                ? "bg-accent-blue/15 text-accent-blue"
-                : "bg-transparent text-slate-300 hover:bg-ui-inset/60 hover:text-white"
+                ? "bg-ui-brand/15 text-ui-brand"
+                : "bg-transparent text-ui-muted hover:bg-ui-inset/60 hover:text-ui-text"
             }`}
           >
             {item}
@@ -39,10 +39,10 @@ export function GlobalRadarControlDock({
             key={item.value}
             type="button"
             onClick={() => onRadarModeChange(item.value)}
-            className={`min-h-9 rounded-ui-sm px-2 text-xs font-black transition ${
+            className={`min-h-9 rounded-ui-sm px-2 text-xs font-semibold transition ${
               radarMode === item.value
-                ? "bg-ui-text/10 text-white"
-                : "bg-transparent text-slate-300 hover:bg-ui-inset/60 hover:text-white"
+                ? "bg-ui-text/10 text-ui-text"
+                : "bg-transparent text-ui-muted hover:bg-ui-inset/60 hover:text-ui-text"
             }`}
             title={item.caption}
           >

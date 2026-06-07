@@ -62,8 +62,7 @@ const marketCopy = {
     radarTitle: "오늘의 시장 레이더",
     directionLabel: "BTC 방향성",
     subMarketLabel: "알트코인 분위기",
-    emptyState:
-      "현재 코인 시장 전체를 흔들 만한 강한 공개 뉴스는 잡히지 않았습니다. 개별 알트·프로젝트 뉴스는 제외하고, BTC·ETH·ETF·금리·달러·규제·청산 흐름에 영향을 주는 뉴스가 잡히면 이곳에 표시됩니다."
+    emptyState: "강한 공개 뉴스는 아직 잡히지 않았습니다. BTC·ETH·금리·달러 이슈가 커지면 여기에 표시합니다."
   },
   stocks: {
     eyebrow: "글로벌 뉴스 리포트",
@@ -72,8 +71,7 @@ const marketCopy = {
     radarTitle: "오늘의 시장 레이더",
     directionLabel: "지수 방향성",
     subMarketLabel: "섹터 분위기",
-    emptyState:
-      "현재 글로벌 시장을 흔들 만한 강한 공개 뉴스는 잡히지 않았습니다. 개별 종목성 뉴스는 제외하고, 금리·물가·고용·달러·VIX·원자재·주요 지수에 영향을 주는 뉴스가 잡히면 이곳에 표시됩니다."
+    emptyState: "강한 공개 뉴스는 아직 잡히지 않았습니다. 금리·달러·VIX·주요 지수 이슈가 커지면 표시합니다."
   }
 } satisfies Record<
   RadarNewsMarket,
@@ -468,14 +466,14 @@ function MarketRadarCard({
 
 function EmptyBriefingCard({ copy }: { copy: (typeof marketCopy)[RadarNewsMarket] }) {
   return (
-    <PanelCard variant="report">
+    <PanelCard variant="flat" padding="md" className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/45">
       <div className="flex items-start gap-3">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-ui-sm border border-ui-line bg-ui-inset text-ui-brand">
-          <Clock3 size={18} aria-hidden />
+        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-ui-sm bg-ui-inset/45 text-ui-brand">
+          <Clock3 size={16} aria-hidden />
         </div>
         <div>
-          <h3 className="text-base font-semibold text-ui-text">리포트 준비 중</h3>
-          <p className="mt-2 text-sm leading-6 text-ui-muted [word-break:keep-all]">{copy.emptyState}</p>
+          <h3 className="text-sm font-medium text-ui-text">강한 뉴스 대기</h3>
+          <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{copy.emptyState}</p>
         </div>
       </div>
     </PanelCard>
@@ -763,7 +761,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
 
       {isInitialLoading ? (
         <AppSurface variant="flat" tone="inset" padding="none" className="border-t border-ui-line py-3 text-sm font-semibold leading-6 text-ui-brand shadow-none">
-          리포트 준비 중입니다. 공개 뉴스를 읽어 시장 해석과 체크포인트를 정리하고 있습니다.
+          공개 뉴스를 읽고 있습니다. 강한 이슈가 잡히면 바로 정리합니다.
         </AppSurface>
       ) : null}
 

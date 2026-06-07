@@ -231,7 +231,7 @@ export function StockRadarApp() {
   return (
     <section
       id="asset-radar"
-      className="scroll-mt-24 border-y border-surface-line py-5 pb-8 sm:py-6 sm:pb-10"
+      className="scroll-mt-24 pb-8 sm:pb-10"
     >
       <GlobalAssetSelectionPanel
         symbol={symbol}
@@ -278,7 +278,7 @@ export function StockRadarApp() {
 
       {state.status === "ready" ? (
         <>
-          <p className="mt-3 text-xs leading-5 text-slate-500">
+          <p className="mt-3 text-xs leading-5 text-ui-subtle">
             현재 화면은 {state.dataSource} 가격 흐름을 한국 시간 기준으로 정리합니다.
           </p>
           {radarMode !== "technical" && ictAnalysis ? (

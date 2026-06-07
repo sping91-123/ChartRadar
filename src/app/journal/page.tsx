@@ -637,8 +637,8 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                   })}
                 </div>
               ) : (
-                <AppSurface tone="inset" variant="report" padding="md" className="mt-4">
-                  <p className="text-sm font-semibold text-ui-text">저장한 레이더가 없습니다.</p>
+                <AppSurface tone="inset" variant="flat" padding="sm" className="mt-4">
+                  <p className="text-xs font-medium leading-5 text-ui-muted">저장한 레이더가 생기면 여기서 바로 복기합니다.</p>
                 </AppSurface>
               )}
             </PanelCard>
@@ -911,15 +911,13 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                     );
                   })
                 ) : (
-                  <AppSurface tone="inset" variant="report" padding="md">
-                    <p className="text-sm font-semibold text-ui-text">아직 저장된 복기가 없습니다.</p>
-                    <p className="mt-2 text-ui-body text-ui-muted">
-                      첫 복기는 짧아도 됩니다. 들어간 이유와 깨진 원칙만 남겨도 다음 판단이 선명해집니다.
-                    </p>
+                  <AppSurface tone="inset" variant="flat" padding="sm">
+                    <p className="text-sm font-medium text-ui-text">복기 대기</p>
+                    <p className="mt-1 text-xs leading-5 text-ui-muted">이유와 다음 기준만 짧게 남겨도 충분합니다.</p>
                     <ActionButton
                       tone="primary"
                       onClick={scrollToForm}
-                      className="mt-4 min-h-10"
+                      className="mt-3 min-h-9"
                     >
                       첫 복기 남기기
                     </ActionButton>

@@ -66,8 +66,8 @@ const briefItems: Record<
 export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
   const isAltMode = mode === "alts";
   const cautionItems = isAltMode
-    ? ["BTC 약세와 같이 밀리는지 확인", "알트만 과열되는지 확인", "큰 이탈 체결이나 언락 부담이 반복되는지 확인", "유동성 부족 구간인지 확인"]
-    : ["BTC/ETH 쏠림이 풀리는지 확인", "큰 유입·이탈 체결이 반복되는지 확인", "구조와 변동성이 같은 방향으로 커지는지 확인"];
+    ? ["BTC 약세 동반 여부", "알트 단독 과열 여부", "큰 이탈 체결·언락 반복", "유동성 부족 구간"]
+    : ["BTC/ETH 쏠림 완화", "큰 유입·이탈 체결 반복", "구조와 변동성 동시 확대"];
 
   return (
     <PanelCard variant="report" padding="md" className="space-y-4 rounded-ui-lg border border-ui-line/25 bg-ui-panel/45">
@@ -75,8 +75,8 @@ export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
         title={isAltMode ? "알트 선물 리스크 결론" : "선물 시장 결론"}
         description={
           isAltMode
-            ? "알트 선물은 추적 후보보다 쏠림, 유동성, 언락 리스크를 먼저 확인합니다."
-            : "오늘 선물은 방향보다 쏠림과 변동성 리스크를 먼저 확인합니다."
+            ? "알트 선물은 추적 후보보다 쏠림, 유동성, 언락 부담을 먼저 봅니다."
+            : "오늘 선물은 방향보다 쏠림과 변동성 부담을 먼저 봅니다."
         }
       />
 
@@ -85,7 +85,7 @@ export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
           <div className="min-w-0">
             <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">선물 리스크 결론</p>
             <p className="mt-1 text-base font-semibold leading-6 text-ui-text [word-break:keep-all]">
-              {isAltMode ? "알트 변동성 주의 · 리스크 우선" : "리스크 우선 · 확인 대기"}
+              {isAltMode ? "알트 변동성 주의 · 리스크 우선" : "리스크 우선 · 대기"}
             </p>
           </div>
           <StatusPill tone="risk" icon={GitCompareArrows} className="shrink-0">
@@ -100,19 +100,25 @@ export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
       </article>
 
       <section className="pt-1">
-        <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">앱이 감지한 핵심 신호</p>
             <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">
               {isAltMode ? "알트 선물의 직접 리스크 신호만 먼저 봅니다." : "BTC/ETH 선물의 직접 리스크 신호만 먼저 봅니다."}
             </p>
           </div>
-          <StatusPill tone="info" className="shrink-0">
-            감지
-          </StatusPill>
+          <CompactHelp label="판단 기준">
+            <div className="space-y-2">
+              {briefItems[mode].map((item) => (
+                <p key={`criteria-${item.label}`}>
+                  <span className="font-semibold text-ui-text">{item.title}</span>: {item.detail}
+                </p>
+              ))}
+            </div>
+          </CompactHelp>
         </div>
         <div className="mt-3 grid gap-2 md:grid-cols-3">
-          {briefItems[mode].map((item, index) => {
+          {briefItems[mode].map((item) => {
             const Icon = item.icon;
 
             return (
@@ -126,12 +132,10 @@ export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
                     <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{item.title}</p>
                   </div>
                   <StatusPill tone={item.tone} icon={Icon} className="shrink-0">
-                    {item.tone === "risk" ? "주의" : "확인"}
+                    {item.tone === "risk" ? "주의" : "관찰"}
                   </StatusPill>
                 </div>
-                <div className="mt-2">
-                  <CompactHelp label={item.label}>{item.detail}</CompactHelp>
-                </div>
+                <p className="mt-2 line-clamp-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{item.detail}</p>
               </article>
             );
           })}
@@ -141,11 +145,11 @@ export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
       <div className="rounded-ui-md bg-ui-inset/25 p-3">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">추가 확인 조건</p>
-            <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">상단 결론이 바뀌는 조건을 먼저 확인합니다.</p>
+            <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">전환 기준</p>
+            <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">상단 결론이 바뀌는 신호만 봅니다.</p>
           </div>
           <StatusPill tone="watch" className="shrink-0">
-            확인 필요
+            대기
           </StatusPill>
         </div>
         <div className="mt-3 grid gap-2 md:grid-cols-3">

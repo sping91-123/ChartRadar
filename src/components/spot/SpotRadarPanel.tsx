@@ -315,6 +315,33 @@ function SpotSparkline({ item }: { item: SpotChartSummary }) {
   );
 }
 
+function CompactSpotState({
+  icon,
+  title,
+  body,
+  action
+}: {
+  icon?: ReactNode;
+  title: string;
+  body?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="rounded-ui-sm bg-ui-inset/25 px-3 py-3">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-2">
+          {icon ? <span className="mt-0.5 shrink-0 text-ui-muted">{icon}</span> : null}
+          <div className="min-w-0">
+            <p className="text-sm font-medium leading-5 text-ui-text [word-break:keep-all]">{title}</p>
+            {body ? <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{body}</p> : null}
+          </div>
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
+      </div>
+    </div>
+  );
+}
+
 function SpotChartEvidencePanel({
   payload,
   loading,
@@ -372,13 +399,9 @@ function SpotChartEvidencePanel({
       ) : null}
 
       {loading ? (
-        <div className="flex min-h-24 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
-          선택한 후보 차트를 확인하는 중입니다.
-        </div>
+        <CompactSpotState title="차트 로딩 중" body="선택 후보의 1H 흐름을 불러옵니다." />
       ) : error ? (
-        <div className="flex min-h-24 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
-          {error}
-        </div>
+        <CompactSpotState icon={<AlertTriangle size={15} aria-hidden />} title="차트 대기" body={error} />
       ) : visibleItems.length > 0 ? (
         <div className="grid gap-0 md:grid-cols-2">
           {visibleItems.map((item, index) => {
@@ -415,9 +438,7 @@ function SpotChartEvidencePanel({
           })}
         </div>
       ) : (
-        <div className="flex min-h-24 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
-          차트를 표시할 후보가 아직 없습니다.
-        </div>
+        <CompactSpotState title="차트 후보 대기" body="시장 요약을 먼저 보고 전체 필터로 넓혀보세요." />
       )}
     </section>
   );
@@ -543,15 +564,9 @@ function SpotPriorityPanel({
       <SectionHeader title="오늘 현물 후보" action={action} />
 
       {loading ? (
-        <div className="flex min-h-28 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
-          오늘 추적 후보를 확인하는 중입니다.
-        </div>
+        <CompactSpotState title="후보 로딩 중" body="거래대금과 1H 구조를 함께 정리합니다." />
       ) : error ? (
-        <div className="flex min-h-28 flex-col items-center justify-center gap-3 border-t border-ui-line text-center">
-          <AlertTriangle size={22} className="text-ui-risk" aria-hidden />
-          <p className="text-sm font-semibold text-ui-text">{error}</p>
-          <p className="text-xs text-ui-muted">거래소 public API 응답이 늦거나 제한될 수 있습니다.</p>
-        </div>
+        <CompactSpotState icon={<AlertTriangle size={15} aria-hidden />} title={error} body="거래소 public API 응답이 늦거나 제한될 수 있습니다." />
       ) : (
         <>
           <div className="grid gap-0 lg:grid-cols-2">
@@ -576,14 +591,14 @@ function SpotPriorityPanel({
                             <p className="truncate text-sm font-semibold text-ui-text">{item.symbol}</p>
                             <span className={`shrink-0 text-xs font-semibold ${chartToneClass[tone]}`}>{Math.round(score)}점</span>
                           </div>
-                          <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{reason}</p>
-                          <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">다시 볼 조건: {plan.summaryLabel}</p>
-                          <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">확인 필요: {item.check}</p>
+                          <p className="mt-1 text-xs leading-5 text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]">{reason}</p>
+                          <p className="mt-1 text-xs leading-5 text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]">다시 볼 조건: {plan.summaryLabel}</p>
+                          <p className="mt-1 text-xs leading-5 text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]">확인 필요: {item.check}</p>
                         </div>
                       );
                     })
                   ) : (
-                    <p className="border-t border-ui-line pt-3 text-xs leading-5 text-ui-muted">해당 묶음에 우선 표시할 후보가 아직 없습니다.</p>
+                    <p className="border-t border-ui-line pt-3 text-xs leading-5 text-ui-muted">표시할 후보 대기 중입니다.</p>
                   )}
                 </div>
               </article>
@@ -615,12 +630,12 @@ function SpotPriorityPanel({
                           확인
                         </StatusPill>
                       </div>
-                      <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{item.risk}</p>
+                      <p className="mt-2 text-xs leading-5 text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]">{item.risk}</p>
                     </article>
                   );
                 })
               ) : (
-                <p className="border-t border-ui-line pt-3 text-xs leading-5 text-ui-muted">무효화 기준을 표시할 후보가 아직 없습니다.</p>
+                <p className="border-t border-ui-line pt-3 text-xs leading-5 text-ui-muted">무효화 요약은 후보가 잡히면 표시합니다.</p>
               )}
             </div>
           </div>
@@ -746,23 +761,20 @@ function PersonalSpotPanel({
 
       <div className="border-t border-ui-line pt-2">
         {!selectedMarket ? (
-          <div className="flex min-h-32 flex-col items-center justify-center gap-3 text-center">
-            <p className="text-sm font-semibold text-ui-text">관심 알트가 비어 있습니다.</p>
-            <p className="max-w-sm text-xs leading-5 text-ui-muted">계속 확인할 알트 하나를 등록해두면 관심 알트 영역에서 따로 추적합니다.</p>
-            <ActionButton tone="primary" onClick={onOpenPicker}>
-              <Search size={14} aria-hidden />
-              관심 알트 등록
-            </ActionButton>
-          </div>
+          <CompactSpotState
+            title="관심 알트 대기"
+            body="계속 볼 코인 하나를 등록하면 이 영역에서 따로 추적합니다."
+            action={
+              <ActionButton tone="primary" className="min-h-8 px-2 text-xs" onClick={onOpenPicker}>
+                <Search size={14} aria-hidden />
+                등록
+              </ActionButton>
+            }
+          />
         ) : loading ? (
-          <div className="flex min-h-28 items-center justify-center text-sm font-semibold text-ui-muted">
-            {personalSpotTitle(selectedMarket)} 차트를 확인하는 중입니다.
-          </div>
+          <CompactSpotState title={`${personalSpotTitle(selectedMarket)} 차트 로딩`} body="관심 알트의 1H 흐름을 불러옵니다." />
         ) : error ? (
-          <div className="flex min-h-28 flex-col items-center justify-center gap-2 text-center">
-            <AlertTriangle size={20} className="text-ui-risk" aria-hidden />
-            <p className="text-sm font-semibold text-ui-text">{error}</p>
-          </div>
+          <CompactSpotState icon={<AlertTriangle size={15} aria-hidden />} title="관심 알트 대기" body={error} />
         ) : chart ? (
           <article className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_12rem] sm:items-start">
             <div className="min-w-0">
@@ -794,9 +806,7 @@ function PersonalSpotPanel({
             </div>
           </article>
         ) : (
-          <div className="flex min-h-28 items-center justify-center text-sm font-semibold text-ui-muted">
-            {personalSpotTitle(selectedMarket)} 차트를 아직 표시할 수 없습니다.
-          </div>
+          <CompactSpotState title="차트 대기" body={`${personalSpotTitle(selectedMarket)} 흐름은 아직 표시할 수 없습니다.`} />
         )}
       </div>
     </PanelCard>
@@ -825,7 +835,7 @@ function SpotRow({ item, chart }: { item: SpotRadarItem; chart: SpotChartSummary
             <div className="flex min-w-0 items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">차트</p>
-                <p className="mt-1 text-xs font-semibold leading-5 text-ui-text [word-break:keep-all]">
+                <p className="mt-1 text-xs font-semibold leading-5 text-ui-text [overflow-wrap:anywhere] [word-break:keep-all]">
                   {chart.structureLabel} · {formatRangePosition(chart.rangePositionPercent)} · {formatVolumeRatio(chart.volumeRatio)}
                 </p>
               </div>
@@ -1149,15 +1159,9 @@ export function SpotRadarPanel() {
         {payload ? <SpotChartEvidencePanel payload={chartPayload} loading={isChartLoading} error={chartError} itemsByMarket={spotItemsByMarket} /> : null}
 
         {isLoading ? (
-          <div className="flex min-h-44 items-center justify-center border-t border-ui-line text-sm font-semibold text-ui-muted">
-            현물 시장을 확인하는 중입니다.
-          </div>
+          <CompactSpotState title="현물 시장 로딩" body="후보와 차트 근거를 함께 정리합니다." />
         ) : error ? (
-          <div className="flex min-h-44 flex-col items-center justify-center gap-3 border-t border-ui-line text-center">
-            <AlertTriangle size={22} className="text-ui-risk" aria-hidden />
-            <p className="text-sm font-semibold text-ui-text">{error}</p>
-            <p className="text-xs text-ui-muted">거래소 public API 응답이 늦거나 제한될 수 있습니다.</p>
-          </div>
+          <CompactSpotState icon={<AlertTriangle size={15} aria-hidden />} title={error} body="거래소 public API 응답이 늦거나 제한될 수 있습니다." />
         ) : visibleFilteredItems.length > 0 ? (
           <div>
             {visibleFilteredItems.map((item) => (
@@ -1165,11 +1169,11 @@ export function SpotRadarPanel() {
             ))}
           </div>
         ) : (
-          <div className="flex min-h-44 flex-col items-center justify-center gap-3 border-t border-ui-line text-center">
-            <Search size={22} className="text-ui-muted" aria-hidden />
-            <p className="text-sm font-semibold text-ui-text">해당 조건의 후보가 아직 없습니다.</p>
-            <p className="text-xs text-ui-muted">필터를 전체로 바꾸거나 관심 알트를 등록해 보세요.</p>
-          </div>
+          <CompactSpotState
+            icon={<Search size={15} aria-hidden />}
+            title="후보 대기"
+            body="전체 필터로 넓히거나 관심 알트를 등록해 따로 보세요."
+          />
         )}
       </PanelCard>
 

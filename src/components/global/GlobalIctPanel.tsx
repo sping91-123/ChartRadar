@@ -36,10 +36,10 @@ function IctStatusCard({
   tone?: DirectionState;
 }) {
   return (
-    <article className="border-t border-white/10 py-3 first:border-t-0">
-      <p className="text-[11px] font-black uppercase tracking-[0.16em] opacity-75">{title}</p>
-      <h4 className="mt-2 text-base font-black text-white">{value}</h4>
-      <p className="mt-2 text-xs leading-5 text-slate-300">{detail}</p>
+    <article className="rounded-ui-sm bg-ui-inset/25 p-3">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ui-subtle">{title}</p>
+      <h4 className="mt-2 text-base font-semibold text-ui-text">{value}</h4>
+      <p className="mt-2 text-xs leading-5 text-ui-muted">{detail}</p>
     </article>
   );
 }
@@ -54,13 +54,13 @@ export function GlobalIctPanel({ analysis, timeframe, candlesLength }: { analysi
   const latestDisplacement = analysis.latestDisplacement;
 
   return (
-    <section className="border-y border-surface-line py-4">
+    <section className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3 sm:p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-accent-blue">ICT Radar</p>
-          <h3 className="mt-1 text-xl font-black text-white">{timeframe} 구조 판독</h3>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ui-brand">ICT Radar</p>
+          <h3 className="mt-1 text-xl font-semibold text-ui-text">{timeframe} 구조 판독</h3>
         </div>
-        <span className={`inline-flex min-h-8 items-center text-xs font-black ${directionClass(scoreTone).replace(/bg-[^ ]+/g, "").replace(/border-[^ ]+/g, "")}`}>
+        <span className={`inline-flex min-h-8 items-center text-xs font-semibold ${directionClass(scoreTone).replace(/bg-[^ ]+/g, "").replace(/border-[^ ]+/g, "")}`}>
           {scoreLabel} · {analysis.score > 0 ? "+" : ""}
           {analysis.score.toFixed(2)}
         </span>

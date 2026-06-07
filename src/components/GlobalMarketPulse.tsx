@@ -185,7 +185,7 @@ function modeDecisionLabel(payload: DashboardPayload) {
 function toneClass(tone: PressureTone) {
   if (tone === "supportive") return "border-emerald-300/20 bg-emerald-400/10 text-emerald-100";
   if (tone === "burden") return "border-rose-300/20 bg-rose-400/10 text-rose-100";
-  return "border-slate-300/15 bg-white/[0.04] text-slate-200";
+  return "border-ui-line/25 bg-ui-inset/30 text-ui-muted";
 }
 
 function toneLabel(tone: PressureTone) {
@@ -203,7 +203,7 @@ function modeIcon(mode: MarketMode) {
 function itemToneBadge(item: { pressure?: PressureTone; tone?: PressureTone }) {
   const tone = item.pressure ?? item.tone ?? "mixed";
   return (
-    <span className={`shrink-0 text-[10px] font-black ${toneClass(tone).replace(/bg-[^ ]+/g, "").replace(/border-[^ ]+/g, "")}`}>
+    <span className={`shrink-0 text-[10px] font-semibold ${toneClass(tone).replace(/bg-[^ ]+/g, "").replace(/border-[^ ]+/g, "")}`}>
       {toneLabel(tone)}
     </span>
   );
@@ -213,7 +213,7 @@ function ProCta({ compact = false }: { compact?: boolean }) {
   return (
     <Link
       href="/pro?market=stocks"
-      className={`inline-flex items-center justify-center gap-2 border-b border-cyan-300/40 bg-transparent text-center font-black leading-4 text-cyan-100 transition hover:text-cyan-50 ${
+      className={`inline-flex items-center justify-center gap-2 border-b border-ui-brand/40 bg-transparent text-center font-semibold leading-4 text-ui-brand transition hover:text-ui-text ${
         compact ? "min-h-8 px-2.5 text-[11px]" : "min-h-10 px-3 text-xs"
       }`}
     >
@@ -225,12 +225,12 @@ function ProCta({ compact = false }: { compact?: boolean }) {
 
 function LockedDetail({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="border-t border-cyan-300/20 pt-3">
+    <div className="border-t border-ui-line/60 pt-3">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-black text-cyan-100">{title}</p>
-        <Lock size={14} className="shrink-0 text-cyan-200" aria-hidden />
+        <p className="text-xs font-semibold text-ui-brand">{title}</p>
+        <Lock size={14} className="shrink-0 text-ui-brand" aria-hidden />
       </div>
-      <p className="mt-2 text-[11px] font-bold leading-5 text-slate-400 [word-break:keep-all]">{children}</p>
+      <p className="mt-2 text-[11px] font-medium leading-5 text-ui-muted [word-break:keep-all]">{children}</p>
       <div className="mt-3">
         <ProCta compact />
       </div>
@@ -240,18 +240,18 @@ function LockedDetail({ title, children }: { title: string; children: ReactNode 
 
 function MiniItem({ item }: { item: DashboardItem }) {
   return (
-    <article className="border-t border-white/10 py-3 first:border-t-0">
+    <article className="border-t border-ui-line/60 py-3 first:border-t-0">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-sm font-black text-white">{item.symbol}</p>
-          <p className="mt-1 truncate text-[11px] font-bold opacity-75">{item.label}</p>
+          <p className="text-sm font-semibold text-ui-text">{item.symbol}</p>
+          <p className="mt-1 truncate text-[11px] font-medium text-ui-muted">{item.label}</p>
         </div>
-        <span className="shrink-0 text-xs font-black text-slate-300">
+        <span className="shrink-0 text-xs font-semibold text-ui-text">
           {formatPercent(item.changePercent)}
         </span>
       </div>
-      <p className="mt-2 text-[11px] font-bold leading-5 opacity-80 [word-break:keep-all]">{item.interpretation}</p>
-      {item.proxyNote ? <p className="mt-2 text-[10px] font-bold leading-4 opacity-70 [word-break:keep-all]">{item.proxyNote}</p> : null}
+      <p className="mt-2 text-[11px] font-medium leading-5 text-ui-muted [word-break:keep-all]">{item.interpretation}</p>
+      {item.proxyNote ? <p className="mt-2 text-[10px] font-medium leading-4 text-ui-subtle [word-break:keep-all]">{item.proxyNote}</p> : null}
     </article>
   );
 }
@@ -268,12 +268,12 @@ function SectionShell({
   children: ReactNode;
 }) {
   return (
-    <article className="border-y border-white/10 py-4">
+    <article className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3">
       <div className="flex items-start gap-3">
-        <Icon className="mt-0.5 shrink-0 text-cyan-300" size={18} aria-hidden />
+        <Icon className="mt-0.5 shrink-0 text-ui-brand" size={18} aria-hidden />
         <div className="min-w-0">
-          <h3 className="text-sm font-black text-white">{title}</h3>
-          <p className="mt-1 text-xs font-bold leading-5 text-slate-400 [word-break:keep-all]">{summary}</p>
+          <h3 className="text-sm font-semibold text-ui-text">{title}</h3>
+          <p className="mt-1 text-xs font-medium leading-5 text-ui-muted [word-break:keep-all]">{summary}</p>
         </div>
       </div>
       <div className="mt-3">{children}</div>
@@ -284,10 +284,10 @@ function SectionShell({
 function FallbackChecklist({ compact = false }: { compact?: boolean }) {
   return (
     <div className={compact ? "py-3" : "py-4"}>
-      <p className="text-xs font-black text-white">기본 체크리스트</p>
-      <div className="mt-3 grid divide-y divide-white/10 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
+      <p className="text-xs font-semibold text-ui-text">기본 체크리스트</p>
+      <div className="mt-3 grid divide-y divide-ui-line/60 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
         {fallbackChecklist.map((item) => (
-          <div key={item} className="px-3 py-2 text-[11px] font-bold leading-5 text-slate-300 [word-break:keep-all]">
+          <div key={item} className="px-3 py-2 text-[11px] font-medium leading-5 text-ui-muted [word-break:keep-all]">
             {item}
           </div>
         ))}
@@ -313,25 +313,25 @@ function focusAssetsForPayload(payload: DashboardPayload): FocusAsset[] {
 
 function FocusAssetStrip({ items }: { items: FocusAsset[] }) {
   return (
-    <article className="border-y border-white/10 py-4">
+    <article className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3">
       <div className="flex items-start gap-3">
-        <Sparkles className="mt-0.5 shrink-0 text-cyan-300" size={18} aria-hidden />
+        <Sparkles className="mt-0.5 shrink-0 text-ui-brand" size={18} aria-hidden />
         <div className="min-w-0">
-          <p className="text-xs font-black text-cyan-200">오늘 먼저 볼 자산</p>
-          <h3 className="mt-1 text-sm font-black text-white">핵심 1~3개만 먼저 확인</h3>
+          <p className="text-xs font-semibold text-ui-brand">오늘 먼저 볼 자산</p>
+          <h3 className="mt-1 text-sm font-semibold text-ui-text">핵심 1~3개만 먼저 보기</h3>
         </div>
       </div>
       {items.length ? (
-        <div className="mt-3 grid divide-y divide-white/10 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div className="mt-3 grid divide-y divide-ui-line/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           {items.map((item, index) => (
             <div key={`${item.symbol}-${index}`} className="px-3 py-3 first:pt-0 sm:py-2">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-black text-slate-400">확인 {index + 1}</span>
+                <span className="text-[10px] font-medium text-ui-subtle">순서 {index + 1}</span>
                 {itemToneBadge({ tone: item.tone })}
               </div>
-              <p className="mt-2 text-base font-black text-white">{item.symbol}</p>
-              <p className="mt-1 text-[11px] font-bold text-slate-400">{item.label}</p>
-              <p className="mt-2 text-xs font-bold leading-5 text-slate-200 [word-break:keep-all]">{item.reason}</p>
+              <p className="mt-2 text-base font-semibold text-ui-text">{item.symbol}</p>
+              <p className="mt-1 text-[11px] font-medium text-ui-muted">{item.label}</p>
+              <p className="mt-2 text-xs font-medium leading-5 text-ui-muted [word-break:keep-all]">{item.reason}</p>
             </div>
           ))}
         </div>
@@ -346,26 +346,26 @@ function FocusAssetStrip({ items }: { items: FocusAsset[] }) {
 
 function PrimaryRiskBlock({ payload, pressures }: { payload: DashboardPayload; pressures: PressureItem[] }) {
   return (
-    <article className="border-y border-white/10 py-4">
+    <article className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3">
       <div className="flex items-start gap-3">
         <ShieldAlert className="mt-0.5 shrink-0 text-amber-200" size={18} aria-hidden />
         <div className="min-w-0">
-          <p className="text-xs font-black text-amber-100">가장 중요한 리스크</p>
-          <h3 className="mt-1 text-sm font-black text-white">{payload.topRisk}</h3>
-          <p className="mt-2 text-xs font-bold leading-5 text-slate-400 [word-break:keep-all]">
-            아래 조건이 이어지면 관망 또는 재확인이 우선입니다.
+          <p className="text-xs font-semibold text-amber-100">가장 중요한 부담</p>
+          <h3 className="mt-1 text-sm font-semibold text-ui-text">{payload.topRisk}</h3>
+          <p className="mt-2 text-xs font-medium leading-5 text-ui-muted [word-break:keep-all]">
+            아래 압력이 이어지면 관망 우선입니다.
           </p>
         </div>
       </div>
       {pressures.length ? (
-        <div className="mt-3 grid divide-y divide-white/10 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div className="mt-3 grid divide-y divide-ui-line/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           {pressures.map((pressure) => (
             <div key={`${pressure.title}-${pressure.detail}`} className="px-3 py-3 first:pt-0 sm:py-2">
               <div className="flex items-start justify-between gap-2">
-                <p className="text-xs font-black text-white">{pressure.title}</p>
+                <p className="text-xs font-semibold text-ui-text">{pressure.title}</p>
                 {itemToneBadge({ tone: pressure.tone })}
               </div>
-              <p className="mt-2 text-[11px] font-bold leading-5 opacity-80 [word-break:keep-all]">{pressure.detail}</p>
+              <p className="mt-2 text-[11px] font-medium leading-5 text-ui-muted [word-break:keep-all]">{pressure.detail}</p>
             </div>
           ))}
         </div>
@@ -376,23 +376,23 @@ function PrimaryRiskBlock({ payload, pressures }: { payload: DashboardPayload; p
 
 function MarketThermometerBlock({ items }: { items: ThermometerAxis[] }) {
   return (
-    <article className="border-y border-white/10 py-4">
+    <article className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3">
       <div className="flex items-start gap-3">
-        <Gauge className="mt-0.5 shrink-0 text-cyan-300" size={18} aria-hidden />
+        <Gauge className="mt-0.5 shrink-0 text-ui-brand" size={18} aria-hidden />
         <div>
-          <h3 className="text-sm font-black text-white">시장 온도계</h3>
-          <p className="mt-1 text-xs font-bold leading-5 text-slate-400 [word-break:keep-all]">지수, 변동성, 반도체, 원자재, 금리/달러 축이 같은 방향인지 먼저 점검합니다.</p>
+          <h3 className="text-sm font-semibold text-ui-text">시장 온도계</h3>
+          <p className="mt-1 text-xs font-medium leading-5 text-ui-muted [word-break:keep-all]">지수, 변동성, 반도체, 원자재, 금리/달러 축을 함께 봅니다.</p>
         </div>
       </div>
-      <div className="mt-3 grid divide-y divide-white/10 sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-5">
+      <div className="mt-3 grid divide-y divide-ui-line/60 sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-5">
         {items.map((item) => (
           <div key={item.key} className="px-3 py-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-black text-white">{item.label}</p>
-              <span className="shrink-0 text-[10px] font-black text-slate-300">{item.status}</span>
+              <p className="text-xs font-semibold text-ui-text">{item.label}</p>
+              <span className="shrink-0 text-[10px] font-semibold text-ui-muted">{item.status}</span>
             </div>
-            <p className="mt-2 text-[11px] font-bold leading-5 opacity-80 [word-break:keep-all]">{item.detail}</p>
-            <p className="mt-2 text-[10px] font-bold text-slate-500">{item.symbols.join(" · ")}</p>
+            <p className="mt-2 text-[11px] font-medium leading-5 text-ui-muted [word-break:keep-all]">{item.detail}</p>
+            <p className="mt-2 text-[10px] font-medium text-ui-subtle">{item.symbols.join(" · ")}</p>
           </div>
         ))}
       </div>
@@ -402,23 +402,23 @@ function MarketThermometerBlock({ items }: { items: ThermometerAxis[] }) {
 
 function RelationshipChecksBlock({ items }: { items: RelationshipCheck[] }) {
   return (
-    <article className="border-y border-white/10 py-4">
+    <article className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3">
       <div className="flex items-start gap-3">
-        <LineChart className="mt-0.5 shrink-0 text-cyan-300" size={18} aria-hidden />
+        <LineChart className="mt-0.5 shrink-0 text-ui-brand" size={18} aria-hidden />
         <div>
-          <h3 className="text-sm font-black text-white">자산 간 관계성 체크</h3>
-          <p className="mt-1 text-xs font-bold leading-5 text-slate-400 [word-break:keep-all]">개별 자산보다 지수, VIX, 반도체, 원자재가 서로 맞물리는지 확인합니다.</p>
+          <h3 className="text-sm font-semibold text-ui-text">자산 간 관계성</h3>
+          <p className="mt-1 text-xs font-medium leading-5 text-ui-muted [word-break:keep-all]">지수, VIX, 반도체, 원자재가 맞물리는지 봅니다.</p>
         </div>
       </div>
-      <div className="mt-3 grid divide-y divide-white/10 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+      <div className="mt-3 grid divide-y divide-ui-line/60 lg:grid-cols-2 lg:divide-x lg:divide-y-0">
         {items.map((item) => (
           <div key={item.title} className="px-3 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs font-black text-white">{item.title}</p>
-              <span className="text-[10px] font-black text-slate-300">{item.status}</span>
+              <p className="text-xs font-semibold text-ui-text">{item.title}</p>
+              <span className="text-[10px] font-semibold text-ui-muted">{item.status}</span>
             </div>
-            <p className="mt-2 text-[11px] font-bold leading-5 opacity-80 [word-break:keep-all]">{item.detail}</p>
-            <p className="mt-2 text-[10px] font-bold text-slate-500">{item.symbols.join(" · ")}</p>
+            <p className="mt-2 text-[11px] font-medium leading-5 text-ui-muted [word-break:keep-all]">{item.detail}</p>
+            <p className="mt-2 text-[10px] font-medium text-ui-subtle">{item.symbols.join(" · ")}</p>
           </div>
         ))}
       </div>
@@ -434,20 +434,20 @@ function EventRiskBlock({ payload, isPaid }: { payload: DashboardPayload; isPaid
       {items.length ? (
         <div className="space-y-2">
           {items.map((item) => (
-            <div key={`${item.label}-${item.releaseAt}`} className="border-t border-white/10 py-3 first:border-t-0">
+            <div key={`${item.label}-${item.releaseAt}`} className="border-t border-ui-line/60 py-3 first:border-t-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded border border-amber-300/20 bg-amber-300/10 px-2 py-1 text-[10px] font-black text-amber-100">
+                <span className="rounded border border-amber-300/20 bg-amber-300/10 px-2 py-1 text-[10px] font-semibold text-amber-100">
                   {item.importance >= 3 ? "중요" : "참고"}
                 </span>
-                <p className="text-xs font-black text-white">{item.label}</p>
+                <p className="text-xs font-semibold text-ui-text">{item.label}</p>
               </div>
-              <p className="mt-1 text-[11px] font-bold text-slate-500">한국시간 {item.dateKst}</p>
-              {isPaid ? <p className="mt-2 text-[11px] leading-5 text-slate-400 [word-break:keep-all]">{item.marketImpact}</p> : null}
+              <p className="mt-1 text-[11px] font-medium text-ui-subtle">한국시간 {item.dateKst}</p>
+              {isPaid ? <p className="mt-2 text-[11px] leading-5 text-ui-muted [word-break:keep-all]">{item.marketImpact}</p> : null}
             </div>
           ))}
         </div>
       ) : (
-        <p className="border-t border-white/10 py-3 text-xs font-bold text-slate-500">이벤트 데이터 일부 확인 제한입니다.</p>
+        <p className="border-t border-ui-line/60 py-3 text-xs font-medium text-ui-subtle">이벤트 데이터 일부 확인 제한입니다.</p>
       )}
       {!isPaid ? <LockedDetail title="이벤트 리스크 상세">Global Pro에서는 이벤트 타임라인과 관련 자산 영향을 함께 확인합니다.</LockedDetail> : null}
     </SectionShell>
@@ -462,18 +462,18 @@ function FuturesBlock({ payload, isPaid }: { payload: DashboardPayload; isPaid: 
           {payload.futures.items.map((item) => <MiniItem key={item.symbol} item={item} />)}
         </div>
       ) : payload.basicIndexSummary ? (
-        <div className="border-t border-white/10 py-3">
+        <div className="border-t border-ui-line/60 py-3">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <p className="text-xs font-black text-white">{payload.basicIndexSummary.label}</p>
-              <p className="mt-1 text-lg font-black text-white">{formatPercent(payload.basicIndexSummary.changePercent)}</p>
+              <p className="text-xs font-semibold text-ui-text">{payload.basicIndexSummary.label}</p>
+              <p className="mt-1 text-lg font-semibold text-ui-text">{formatPercent(payload.basicIndexSummary.changePercent)}</p>
             </div>
             {itemToneBadge({ tone: payload.basicIndexSummary.tone })}
           </div>
-          <p className="mt-2 text-[11px] font-bold leading-5 text-slate-300 [word-break:keep-all]">{payload.basicIndexSummary.interpretation}</p>
+          <p className="mt-2 text-[11px] font-medium leading-5 text-ui-muted [word-break:keep-all]">{payload.basicIndexSummary.interpretation}</p>
         </div>
       ) : (
-        <p className="border-t border-white/10 py-3 text-xs font-bold text-slate-500">지수선물 데이터 일부 확인 제한입니다.</p>
+        <p className="border-t border-ui-line/60 py-3 text-xs font-medium text-ui-subtle">지수선물 데이터 일부 확인 제한입니다.</p>
       )}
       {!isPaid ? <LockedDetail title="NQ / ES / YM / RTY 상세">Global Pro에서는 지수선물 전체, 지수선물 엇갈림, 조건과 무효화 기준을 확인합니다.</LockedDetail> : null}
     </SectionShell>
@@ -488,7 +488,7 @@ function MacroBlock({ payload, isPaid }: { payload: DashboardPayload; isPaid: bo
       <div className="grid gap-2 sm:grid-cols-2">
         {visibleItems.map((item) => <MiniItem key={item.symbol} item={item} />)}
       </div>
-      <p className="mt-3 border-t border-white/10 pt-3 text-[11px] font-bold leading-5 text-slate-500 [word-break:keep-all]">
+      <p className="mt-3 border-t border-ui-line/60 pt-3 text-[11px] font-medium leading-5 text-ui-subtle [word-break:keep-all]">
         {payload.proxyDisclosure}
       </p>
       {!isPaid ? <LockedDetail title="매크로 압력 전체">Global Pro에서는 VIX, UUP 달러 프록시, TLT/ZN=F/IEF/SHY 금리 프록시, 유가와 금 압력을 함께 봅니다.</LockedDetail> : null}
@@ -508,8 +508,8 @@ function SectorBlock({ payload, isPaid }: { payload: DashboardPayload; isPaid: b
         </div>
       ) : (
         <div className="grid gap-2 sm:grid-cols-2">
-          {strong ? <MiniItem item={strong} /> : <p className="border-t border-white/10 py-3 text-xs font-bold text-slate-500">강한 섹터 확인 제한</p>}
-          {weak ? <MiniItem item={weak} /> : <p className="border-t border-white/10 py-3 text-xs font-bold text-slate-500">약한 섹터 확인 제한</p>}
+          {strong ? <MiniItem item={strong} /> : <p className="border-t border-ui-line/60 py-3 text-xs font-medium text-ui-subtle">강한 섹터 확인 제한</p>}
+          {weak ? <MiniItem item={weak} /> : <p className="border-t border-ui-line/60 py-3 text-xs font-medium text-ui-subtle">약한 섹터 확인 제한</p>}
         </div>
       )}
       {!isPaid ? <LockedDetail title="섹터 전체 로테이션">Global Pro에서는 성장, 방어, 금융, 에너지, 반도체 전체 로테이션과 시장 폭 해석을 봅니다.</LockedDetail> : null}
@@ -523,7 +523,7 @@ function LeaderBlock({ payload, isPaid }: { payload: DashboardPayload; isPaid: b
   return (
     <SectionShell icon={Sparkles} title="대장주 레이더" summary={payload.leaders.summary}>
       <div className="grid gap-2 sm:grid-cols-2">
-        {visibleItems.length ? visibleItems.map((item) => <MiniItem key={item.symbol} item={item} />) : <p className="border-t border-white/10 py-3 text-xs font-bold text-slate-500">대장주 데이터 일부 확인 제한입니다.</p>}
+        {visibleItems.length ? visibleItems.map((item) => <MiniItem key={item.symbol} item={item} />) : <p className="border-t border-ui-line/60 py-3 text-xs font-medium text-ui-subtle">대장주 데이터 일부 확인 제한입니다.</p>}
       </div>
       {!isPaid ? <LockedDetail title="대장주 레이더 상세">Global Pro에서는 NVDA, TSLA, AAPL, MSFT, AMZN, META, GOOGL, AVGO가 지수를 지지하는지 방해하는지 확인합니다.</LockedDetail> : null}
     </SectionShell>
@@ -538,21 +538,21 @@ function NewsBlock({ payload, isPaid }: { payload: DashboardPayload; isPaid: boo
       {items.length ? (
         <div className="space-y-2">
           {items.map((item) => (
-            <div key={`${item.source}-${item.title}`} className="border-t border-white/10 py-3 first:border-t-0">
+            <div key={`${item.source}-${item.title}`} className="border-t border-ui-line/60 py-3 first:border-t-0">
               <div className="flex items-start justify-between gap-2">
-                <p className="min-w-0 text-xs font-black text-white">{item.title}</p>
+                <p className="min-w-0 text-xs font-semibold text-ui-text">{item.title}</p>
                 {itemToneBadge({ tone: item.tone })}
               </div>
-              <p className="mt-1 text-[11px] font-bold opacity-75">{item.source}</p>
+              <p className="mt-1 text-[11px] font-medium text-ui-muted">{item.source}</p>
               {isPaid && item.originalTitle && item.originalTitle !== item.title ? (
-                <p className="mt-1 text-[10px] font-bold leading-4 text-slate-500 [word-break:break-word]">원문: {item.originalTitle}</p>
+                <p className="mt-1 text-[10px] font-medium leading-4 text-ui-subtle [word-break:break-word]">원문: {item.originalTitle}</p>
               ) : null}
-              {isPaid ? <p className="mt-2 text-[11px] font-bold leading-5 opacity-80 [word-break:keep-all]">{item.summary}</p> : null}
+              {isPaid ? <p className="mt-2 text-[11px] font-medium leading-5 text-ui-muted [word-break:keep-all]">{item.summary}</p> : null}
             </div>
           ))}
         </div>
       ) : (
-        <p className="border-t border-white/10 py-3 text-xs font-bold text-slate-500">강한 이벤트 압력은 아직 제한적입니다.</p>
+        <p className="border-t border-ui-line/60 py-3 text-xs font-medium text-ui-subtle">강한 이벤트 압력은 아직 제한적입니다.</p>
       )}
       {!isPaid ? <LockedDetail title="이벤트 압력 상세">Global Pro에서는 핵심 일정과 뉴스 1~3개를 Risk-On, Risk-Off, 변동성 확대 요인으로 나눠 봅니다.</LockedDetail> : null}
     </SectionShell>
@@ -599,16 +599,16 @@ export function GlobalMarketPulse() {
   const focusAssets = useMemo(() => (payload ? focusAssetsForPayload(payload) : []), [payload]);
 
   return (
-    <section className="min-w-0 overflow-hidden border-y border-white/10 py-5 sm:py-6">
+    <section className="min-w-0 overflow-hidden rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-4 sm:p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center text-cyan-300">
+          <div className="grid h-10 w-10 shrink-0 place-items-center text-ui-brand">
             <Activity size={20} aria-hidden />
           </div>
           <div>
-            <p className="text-xs font-black text-cyan-300">미국장 30초 체크 · 장전/장중 판단 루틴</p>
-            <h2 className="mt-1 text-xl font-black text-white">오늘의 글로벌 레이더</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400 [word-break:keep-all]">
+            <p className="text-xs font-semibold text-ui-brand">미국장 30초 체크 · 장전/장중 판단 루틴</p>
+            <h2 className="mt-1 text-xl font-semibold text-ui-text">오늘의 글로벌 레이더</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-ui-muted [word-break:keep-all]">
               오늘의 판정, 시장 온도계, 먼저 볼 자산, 관계성 체크를 한 화면에서 판단 보조 자료로 정리합니다.
             </p>
           </div>
@@ -616,7 +616,7 @@ export function GlobalMarketPulse() {
         <div className="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
           <Link
             href="/global/assets"
-            className="inline-flex min-h-10 items-center justify-center gap-2 border-b border-cyan-300/40 bg-transparent px-1 text-xs font-black text-cyan-100 transition hover:border-cyan-300 hover:text-cyan-200"
+            className="inline-flex min-h-10 items-center justify-center gap-2 border-b border-ui-brand/40 bg-transparent px-1 text-xs font-semibold text-ui-brand transition hover:border-ui-brand hover:text-ui-text"
           >
             <BarChart3 size={13} aria-hidden />
             자산레이더 보기
@@ -625,7 +625,7 @@ export function GlobalMarketPulse() {
           <button
             type="button"
             onClick={() => load()}
-            className="inline-flex min-h-10 items-center justify-center gap-2 border-b border-white/15 bg-transparent px-1 text-xs font-black text-slate-200 transition hover:border-cyan-300/50 hover:text-cyan-200"
+            className="inline-flex min-h-10 items-center justify-center gap-2 border-b border-ui-line bg-transparent px-1 text-xs font-semibold text-ui-muted transition hover:border-ui-brand/50 hover:text-ui-text"
           >
             <RefreshCw size={13} aria-hidden />
             다시 확인
@@ -634,8 +634,8 @@ export function GlobalMarketPulse() {
       </div>
 
       {state.status === "loading" ? (
-        <div className="mt-4 border-y border-white/10 py-4">
-          <div className="flex items-center text-sm text-slate-400">
+        <div className="mt-4 rounded-ui-lg border border-ui-line/25 bg-ui-inset/25 p-3">
+          <div className="flex items-center text-sm text-ui-muted">
             <Loader2 className="mr-2 animate-spin" size={16} aria-hidden />
             글로벌 시장 흐름을 불러오는 중입니다. 지연되면 아래 기본 체크리스트부터 확인하세요.
           </div>
@@ -644,8 +644,8 @@ export function GlobalMarketPulse() {
           </div>
         </div>
       ) : state.status === "error" ? (
-        <div className="mt-4 border-y border-amber-300/25 py-4 text-sm leading-6 text-amber-100">
-          <div className="flex items-center gap-2 font-black">
+        <div className="mt-4 rounded-ui-lg border border-amber-300/25 bg-amber-300/10 p-3 text-sm leading-6 text-amber-100">
+          <div className="flex items-center gap-2 font-semibold">
             <AlertTriangle size={16} aria-hidden />
             시장 흐름을 불러오지 못했습니다.
           </div>
@@ -657,31 +657,31 @@ export function GlobalMarketPulse() {
       ) : payload ? (
         <>
           <div className="mt-4 grid gap-3 lg:grid-cols-[1.1fr_1fr]">
-            <article className="border-y border-white/10 py-4">
+            <article className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/45 p-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-black text-cyan-200">미국장 30초 체크</p>
+                  <p className="text-xs font-semibold text-ui-brand">미국장 30초 체크</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className={`inline-flex items-center gap-2 border px-2 py-1.5 text-lg font-black ${modeClass(payload.marketMode)}`}>
+                    <span className={`inline-flex items-center gap-2 border px-2 py-1.5 text-lg font-semibold ${modeClass(payload.marketMode)}`}>
                       {modeIcon(payload.marketMode)}
                       {modeDecisionLabel(payload)}
                     </span>
-                    <span className="border-b border-white/15 px-1 py-1.5 text-xs font-black">
+                    <span className="border-b border-ui-line px-1 py-1.5 text-xs font-semibold text-ui-muted">
                       시장 상태 {payload.marketMode}
                     </span>
-                    <span className="border-b border-white/15 px-1 py-1.5 text-xs font-black">
+                    <span className="border-b border-ui-line px-1 py-1.5 text-xs font-semibold text-ui-muted">
                       판단 강도 {payload.strengthLabel ?? "중간"} · {payload.strength}/100
                     </span>
                   </div>
                 </div>
                 <Gauge size={24} aria-hidden />
               </div>
-              <p className="mt-4 text-sm font-bold leading-6 text-slate-100 [word-break:keep-all]">{payload.headline}</p>
-              {payload.chaseWarning ? <p className="mt-2 text-xs font-bold leading-5 text-slate-200 [word-break:keep-all]">{payload.chaseWarning}</p> : null}
+              <p className="mt-4 text-sm font-semibold leading-6 text-ui-text [word-break:keep-all]">{payload.headline}</p>
+              {payload.chaseWarning ? <p className="mt-2 text-xs font-medium leading-5 text-ui-muted [word-break:keep-all]">{payload.chaseWarning}</p> : null}
               {payload.dataWarning ? (
-                <p className="mt-3 border-y border-amber-400/20 py-2 text-xs font-bold leading-5 text-amber-100 [word-break:keep-all]">{payload.dataWarning}</p>
+                <p className="mt-3 rounded-ui-sm bg-amber-400/10 px-3 py-2 text-xs font-medium leading-5 text-amber-100 [word-break:keep-all]">{payload.dataWarning}</p>
               ) : null}
-              <p className="mt-3 text-[11px] font-bold text-slate-400">최근 업데이트. {formatTime(payload.updatedAt)} KST</p>
+              <p className="mt-3 text-[11px] font-medium text-ui-muted">최근 업데이트. {formatTime(payload.updatedAt)} KST</p>
             </article>
 
             <FocusAssetStrip items={focusAssets} />
@@ -692,8 +692,8 @@ export function GlobalMarketPulse() {
           </div>
 
           {!isPaid ? (
-            <div className="mt-3 border-y border-cyan-300/20 py-3 sm:flex sm:items-center sm:justify-between sm:gap-4">
-              <p className="text-xs font-bold leading-5 text-cyan-100 [word-break:keep-all]">
+            <div className="mt-3 rounded-ui-lg border border-ui-brand/20 bg-ui-brand/10 p-3 sm:flex sm:items-center sm:justify-between sm:gap-4">
+              <p className="text-xs font-medium leading-5 text-ui-brand [word-break:keep-all]">
                 Basic에서는 방향 요약만 제공합니다. 상세 조건, 무효화 기준, 세부 리스크는 Global Pro에서 확인할 수 있습니다. 이 정보는 투자 권유가 아니라 판단 보조용입니다.
               </p>
               <div className="mt-3 shrink-0 sm:mt-0">
@@ -702,11 +702,11 @@ export function GlobalMarketPulse() {
             </div>
           ) : null}
 
-          <div className="mt-4 border-y border-white/10 py-4">
-            <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">세부 근거</p>
-            <h3 className="mt-1 text-base font-black text-white">왜 이 결론인지 확인</h3>
-            <p className="mt-2 text-xs font-bold leading-5 text-slate-400 [word-break:keep-all]">
-              시장 온도계, 자산 관계성, 지수선물, 매크로, 섹터, 대장주, 일정/뉴스 압력을 아래에서 나눠 확인합니다.
+          <div className="mt-4 rounded-ui-lg border border-ui-line/25 bg-ui-inset/20 p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ui-subtle">세부 근거</p>
+            <h3 className="mt-1 text-base font-semibold text-ui-text">판정 근거</h3>
+            <p className="mt-2 text-xs font-medium leading-5 text-ui-muted [word-break:keep-all]">
+              시장 온도계, 자산 관계성, 지수선물, 매크로, 섹터, 일정/뉴스 압력을 나눠 봅니다.
             </p>
           </div>
 
