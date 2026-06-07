@@ -764,8 +764,8 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
 
       <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
         <SectionHeader
-          title="저장 조건"
-          description="관심 있는 자산과 조건을 모아두고 다시 맞아떨어지는 순간을 확인합니다."
+          title="매수가/무효화 알림"
+          description="관심 있는 자산과 판단 기준을 모아두고 다시 맞아떨어지는 순간을 확인합니다."
           action={<StatusPill tone="info">{setupPresets.length}개 저장</StatusPill>}
         />
         <div className="mt-4">
@@ -776,7 +776,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             className="min-h-10 w-full text-sm"
           >
             {isManualChecking ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Radar size={16} aria-hidden />}
-            저장 조건 다시 확인
+            매수가/무효화 알림 다시 확인
           </ActionButton>
         </div>
 
@@ -820,7 +820,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
           </AppSurface>
         ) : (
           <AppSurface variant="flat" tone="inset" padding="none" className="mt-4 border-t border-ui-line pt-3 text-xs leading-5 text-ui-muted">
-            저장 조건과 레이더 결과가 맞으면 최근 일치로 표시합니다.
+            저장한 판단 기준과 레이더 결과가 맞으면 최근 일치로 표시합니다.
           </AppSurface>
         )}
 
@@ -949,7 +949,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
                     <MetricRow label="발송 대상" value={`${pushDiagnostics.diagnostics.sendTargetTokenCount}개`} />
                   </PanelCard>
                   <PanelCard variant="list" className="p-3 shadow-none">
-                    <MetricRow label="저장 조건" value={`${pushDiagnostics.diagnostics.presetCount}개`} />
+                    <MetricRow label="저장 알림" value={`${pushDiagnostics.diagnostics.presetCount}개`} />
                   </PanelCard>
                   <PanelCard variant="list" className="p-3 shadow-none">
                     <MetricRow label="자동 후보" value={`${pushDiagnostics.diagnostics.genericEventCount}개`} />

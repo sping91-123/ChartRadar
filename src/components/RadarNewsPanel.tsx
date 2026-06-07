@@ -446,7 +446,7 @@ function MarketRadarCard({
       />
 
       <div className="grid gap-x-5 sm:grid-cols-2">
-        <MetricRow label="위험자산 심리" value={moodStyle.risk} />
+        <MetricRow label="위험자산 매수 심리" value={moodStyle.risk} />
         <MetricRow label={copy.directionLabel} value={moodStyle.chartTone} />
         <MetricRow label={copy.subMarketLabel} value={moodStyle.subTone} />
       </div>
@@ -455,7 +455,7 @@ function MarketRadarCard({
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
           <div className="flex items-center gap-2">
             <ListChecks size={15} className="shrink-0 text-ui-brand" aria-hidden />
-            <p className="text-sm font-semibold text-ui-muted">다음 확인</p>
+            <p className="text-sm font-semibold text-ui-muted">다음 판단</p>
           </div>
           <p className="text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{checkpoint}</p>
         </div>

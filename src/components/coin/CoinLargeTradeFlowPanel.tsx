@@ -57,8 +57,8 @@ function sideTone(side: LargeTradeSide) {
 }
 
 function sideLabel(side: LargeTradeSide) {
-  if (side === "buy") return "큰 유입 우세";
-  if (side === "sell") return "큰 이탈 우세";
+  if (side === "buy") return "큰 매수 체결 우세";
+  if (side === "sell") return "큰 매도 체결 우세";
   return "큰 체결 균형";
 }
 
@@ -68,7 +68,7 @@ function flowTitle(report: LargeTradeFlowReport) {
 }
 
 function displayTrigger(value: string) {
-  return value.replace(/\uB9E4\uC218/g, "유입").replace(/\uB9E4\uB3C4/g, "이탈");
+  return value.replace(/\uB9E4\uC218/g, "큰 매수").replace(/\uB9E4\uB3C4/g, "큰 매도");
 }
 
 function gradeLabel(report: LargeTradeFlowReport) {
@@ -97,7 +97,7 @@ function flowScore(report: LargeTradeFlowReport) {
 async function fetchLargeTradeFlow(symbol: string) {
   const response = await fetch(`/api/large-trade-flow?symbol=${encodeURIComponent(symbol)}`, { cache: "no-store" });
   const payload = (await response.json()) as LargeTradePayload;
-  if (!response.ok || !payload.report) throw new Error(payload.error ?? "큰 체결 흐름 확인 실패");
+  if (!response.ok || !payload.report) throw new Error(payload.error ?? "큰 매수/매도 체결 확인 실패");
   return payload.report;
 }
 
@@ -123,7 +123,7 @@ export function CoinLargeTradeFlowPanel({ mode, symbols: customSymbols }: { mode
     }
 
     setStatus("error");
-    setError("큰 체결 데이터 응답 지연입니다. 추가 확인 조건으로 남겨 둡니다.");
+    setError("큰 매수/매도 체결 데이터 응답 지연입니다. 추가 판단 기준으로 남겨 둡니다.");
   }, [symbols]);
 
   useEffect(() => {
@@ -144,14 +144,14 @@ export function CoinLargeTradeFlowPanel({ mode, symbols: customSymbols }: { mode
   const topSummary = topCard
     ? `${topCard.label} ${flowTitle(topCard.report)} · ${formatFlowNotional(topCard.report.totalLargeNotionalUsd)}`
     : isAltMode
-      ? "알트 큰 체결 신호 확인 중입니다."
-      : "BTC/ETH 큰 체결 신호 확인 중입니다.";
+      ? "알트 큰 매수/매도 체결 판단 중입니다."
+      : "BTC/ETH 큰 매수/매도 체결 판단 중입니다.";
 
   return (
     <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
       <SectionHeader
         eyebrow="Binance 공개 선물 체결"
-        title={isAltMode ? "알트 큰 체결 흐름" : "BTC/ETH 큰 체결 흐름"}
+        title={isAltMode ? "알트 큰 매수/매도 체결" : "BTC/ETH 큰 매수/매도 체결"}
         description={topSummary}
         action={
           <ActionButton tone="secondary" onClick={loadReports} disabled={status === "loading"}>
@@ -169,7 +169,7 @@ export function CoinLargeTradeFlowPanel({ mode, symbols: customSymbols }: { mode
 
       {status === "loading" && !cards.length ? (
         <AppSurface variant="flat" tone="inset" padding="none" className="border-t border-ui-line py-3 text-sm font-semibold text-ui-muted">
-          큰 체결 신호 확인 중
+          큰 매수/매도 체결 판단 중
         </AppSurface>
       ) : null}
 
@@ -196,9 +196,9 @@ export function CoinLargeTradeFlowPanel({ mode, symbols: customSymbols }: { mode
                 <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs font-semibold leading-5 text-ui-muted">
                   <span>큰 체결 {report.largeTradeCount}건</span>
                   <span className="text-right text-ui-text">{displayTrigger(report.trigger)}</span>
-                  <span>유입 {formatUsd(report.buyNotionalUsd, "신호 제한적")}</span>
-                  <span className="text-right">이탈 {formatUsd(report.sellNotionalUsd, "신호 제한적")}</span>
-                  <span>쏠림 {formatPercent(report.imbalancePercent)}</span>
+                  <span>큰 매수 {formatUsd(report.buyNotionalUsd, "신호 제한적")}</span>
+                  <span className="text-right">큰 매도 {formatUsd(report.sellNotionalUsd, "신호 제한적")}</span>
+                  <span>매수/매도 쏠림 {formatPercent(report.imbalancePercent)}</span>
                   <span className="text-right">{report.windowMinutes ? `${report.windowMinutes}분 범위` : "최근 체결"}</span>
                   <span>반복 체결</span>
                   <span className={`text-right ${anomalyClass(report.anomalyLevel)}`}>{anomalyLabel(report.anomalyLevel)}</span>
@@ -209,7 +209,7 @@ export function CoinLargeTradeFlowPanel({ mode, symbols: customSymbols }: { mode
         </div>
       ) : status !== "loading" ? (
         <AppSurface variant="flat" tone="inset" padding="none" className="border-t border-ui-line py-3 text-sm font-semibold text-ui-muted">
-          공개 체결 데이터 응답이 지연되고 있습니다. 최근 특이 신호는 추가 확인 조건으로 남겨 둡니다.
+          공개 체결 데이터 응답이 지연되고 있습니다. 최근 특이 신호는 추가 판단 기준으로 남겨 둡니다.
         </AppSurface>
       ) : null}
 

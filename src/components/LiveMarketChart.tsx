@@ -146,16 +146,16 @@ function userFacingRiskPercent(analysis: MarketAnalysis | null) {
 function userFacingRiskLabel(analysis: MarketAnalysis | null) {
   if (!analysis) return "대기 중";
   const risk = userFacingRiskPercent(analysis);
-  if (risk >= 70) return "위험 높음";
-  if (risk >= 45) return "주의 구간";
-  return "검토 가능";
+  if (risk >= 70) return "진입 위험 높음";
+  if (risk >= 45) return "진입 대기";
+  return "진입 검토 가능";
 }
 
 function userFacingNextStep(analysis: MarketAnalysis | null) {
   if (!analysis) return "레이더가 차트 데이터를 감지하는 중";
-  if (analysis.bias === "neutral") return "신규 판단보다 구조 확인";
-  if (analysis.readiness === "high") return "손절/수량 먼저 확인";
-  return "반응 확인 후 판단";
+  if (analysis.bias === "neutral") return "진입 대기 · 구조 판단";
+  if (analysis.readiness === "high") return "손절/무효화 기준 먼저 확인";
+  return "확인가 반응 후 판단";
 }
 
 function uniqueText(items: string[]) {
@@ -170,10 +170,10 @@ function buildAltAnalysisRiskSignals(analysis: MarketAnalysis, active?: Timefram
     active?.condition.keltnerPosition === "outsideUpper" ||
     active?.condition.bollingerPosition === "outsideUpper"
   ) {
-    signals.push("급등 추격 주의");
+    signals.push("추격 매수 금지");
   }
   if (active?.condition.volatilityState === "expanded") {
-    signals.push("변동성 확대");
+    signals.push("진입 위험 증가");
     signals.push("BTC 방향성 의존");
   }
   if (active?.condition.volumeState === "low") {
@@ -190,33 +190,33 @@ function buildAltAnalysisRiskSignals(analysis: MarketAnalysis, active?: Timefram
 
 function altAnalysisFilterLabel(analysis: MarketAnalysis, active?: TimeframeAnalysis) {
   const risks = buildAltAnalysisRiskSignals(analysis, active);
-  if (risks.includes("급등 추격 주의") || risks.includes("변동성 확대") || risks.length >= 3) return "고위험 구간";
-  if (analysis.bias === "neutral" || analysis.readiness === "low") return "관망 우위";
-  return "추적 후보";
+  if (risks.includes("추격 매수 금지") || risks.includes("진입 위험 증가") || risks.length >= 3) return "진입 위험 구간";
+  if (analysis.bias === "neutral" || analysis.readiness === "low") return "진입 대기";
+  return "롱/숏 후보";
 }
 
 function altAnalysisFilterClass(label: string) {
-  if (label === "고위험 구간") return "border-signal-danger/30 bg-signal-danger/10 text-signal-danger";
-  if (label === "관망 우위") return "border-signal-warning/30 bg-signal-warning/10 text-signal-warning";
+  if (label === "진입 위험 구간") return "border-signal-danger/30 bg-signal-danger/10 text-signal-danger";
+  if (label === "진입 대기") return "border-signal-warning/30 bg-signal-warning/10 text-signal-warning";
   return "border-accent-blue/30 bg-accent-blue/10 text-accent-blue";
 }
 
 function buildRadarPulse(analysis: MarketAnalysis, active?: TimeframeAnalysis): RadarPulseItem[] {
   const directionTitle =
-    analysis.bias === "long" ? "상방 환경" : analysis.bias === "short" ? "하방 환경" : "관망";
+    analysis.bias === "long" ? "롱 우세" : analysis.bias === "short" ? "숏 우세" : "진입 대기";
   const directionTone: RadarPulseTone =
     analysis.bias === "long" ? "long" : analysis.bias === "short" ? "short" : "warn";
   const riskText =
     analysis.riskFlags[0] ??
     (active?.condition.rsiState === "overbought"
-      ? "과열권에 가까워 추격 판단은 피하는 편이 좋습니다."
+      ? "과열권에 가까워 추격 매수 금지 기준을 먼저 봅니다."
       : active?.condition.volatilityState === "expanded"
-        ? "변동성이 커져 손절폭과 포지션 크기를 먼저 줄여야 합니다."
-        : "뚜렷한 위험 플래그는 적지만, 손절 기준 없이 들어가면 판독 의미가 없습니다.");
+        ? "진입 위험이 커져 손절/무효화 기준을 먼저 봅니다."
+        : "뚜렷한 위험 플래그는 적지만, 손절/무효화 기준 없이는 판단 의미가 약합니다.");
   const nextText =
     analysis.checkpoints[0] ??
     (analysis.bias === "neutral"
-      ? "MSB와 CHoCH가 같은 방향으로 다시 정렬되는지 확인하세요."
+      ? "MSB와 CHoCH가 같은 방향으로 다시 정렬되는지 판단합니다."
       : analysis.actionGuide);
 
   return [
@@ -233,7 +233,7 @@ function buildRadarPulse(analysis: MarketAnalysis, active?: TimeframeAnalysis): 
       tone: analysis.riskFlags.length > 0 ? "warn" : "neutral"
     },
     {
-      label: "다음 확인",
+      label: "다음 판단",
       title: userFacingNextStep(analysis),
       text: nextText,
       tone: "neutral"
@@ -310,11 +310,11 @@ function SignalMetric({
 
 function parityHint(row: ParityRow) {
   if (row.label.includes("MSB") || row.label.includes("CHoCH")) {
-    return "구조 방향 차이는 봉 확정 여부, MSB 종가/윅 기준, ZigZag length를 먼저 맞춰보세요.";
+    return "구조 방향 차이는 봉 마감 여부, MSB 종가/윅 기준, ZigZag length를 먼저 맞춰보세요.";
   }
 
   if (row.label === "h0" || row.label === "h1" || row.label === "l0" || row.label === "l1") {
-    return "스윙 포인트 차이는 보통 피벗 확정 시점이나 ZigZag 계산 기준에서 납니다.";
+    return "스윙 포인트 차이는 보통 피벗 마감 시점이나 ZigZag 계산 기준에서 납니다.";
   }
 
   if (row.label.includes("OB") || row.label.includes("FVG")) {
@@ -1662,7 +1662,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               summary={
                 hasCoinPro
                   ? "방향, 현재 위치, 위험 조건을 한 줄 행동 순서로 압축했습니다. 초보자는 아래 3가지를 먼저 확인한 뒤 세부 지표로 내려가면 됩니다."
-                  : "Basic에서는 방향 요약만 제공합니다. 공개된 근거와 일반 리스크까지만 확인하고, 세부 추적 조건과 다음 확인 기준은 Pro 판단 보조 영역에서 분리합니다."
+                  : "Basic에서는 방향 요약만 제공합니다. 공개된 근거와 일반 리스크까지만 확인하고, 세부 진입 대기 조건과 다음 판단 기준은 Pro 판단 보조 영역에서 분리합니다."
               }
               steps={
                 hasCoinPro
@@ -1679,13 +1679,13 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                   : [
                       "최종 판단과 판단 강도를 먼저 확인",
                       "공개된 핵심 내용과 리스크 1개만 확인",
-                      "추적 조건, 무효화 기준, 다음 확인 기준은 잠금 영역으로 분리"
+                      "진입 대기 조건, 손절/무효화 기준, 다음 판단 기준은 잠금 영역으로 분리"
                     ]
               }
               help={
                 hasCoinPro
                   ? "판단 엔진은 차트 구조, 현재 위치, 위험 플래그, 데이터 신뢰도를 합쳐 행동 순서를 정리합니다. 점수가 좋아도 손절과 수량을 정하지 않았다면 아직 준비가 끝난 상태가 아닙니다."
-                  : "Basic 안내는 판단 보조 요약입니다. 실제 판단에 필요한 조건, 무효화 기준, 상세 리스크는 Pro에서 전체 맥락으로 확인합니다."
+                  : "Basic 안내는 판단 보조 요약입니다. 실제 판단에 필요한 조건, 손절/무효화 기준, 상세 리스크는 Pro에서 전체 맥락으로 확인합니다."
               }
             />
           </div>
@@ -1984,7 +1984,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
               <div className="mt-4 border-t border-ui-line pt-4">
                 {marketBriefing.status === "idle" ? (
                   <p className="text-sm leading-6 text-slate-400">
-                    버튼을 누르면 현재 차트와 레이더 값을 한 번에 읽어 핵심 방향, 위험 요인, 다음 확인 구간을 정리합니다.
+                    버튼을 누르면 현재 차트와 레이더 값을 한 번에 읽어 롱/숏 방향, 위험 요인, 다음 판단 구간을 정리합니다.
                   </p>
                 ) : null}
                 {marketBriefing.status === "ready" ? (
@@ -1994,7 +1994,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                           <div className={`border-t px-0 py-2 ${biasClasses(analysis.bias)}`}>
                           <p className="text-[11px] font-bold opacity-80">방향 결론</p>
                           <p className="mt-1 text-base font-black">
-                            {analysis.bias === "long" ? "상방 환경" : analysis.bias === "short" ? "하방 환경" : "관망"}
+                            {analysis.bias === "long" ? "롱 우세" : analysis.bias === "short" ? "숏 우세" : "진입 대기"}
                           </p>
                         </div>
                         <div className="border-t border-white/10 py-2">
@@ -2533,7 +2533,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
           {analysis ? (
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="border-y border-emerald-500/20 py-4">
-                <h3 className="text-sm font-bold text-emerald-300">추적 후보</h3>
+                <h3 className="text-sm font-bold text-emerald-300">롱/숏 후보</h3>
                 <div className="mt-3 space-y-2">
                   {analysis.opportunityFlags.length > 0 ? (
                     analysis.opportunityFlags.map((item) => (
@@ -2695,7 +2695,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
                 <MiniMetric label="OTE 기준" value="4시간 20봉 범위" />
                 <MiniMetric label="PD 기준" value="4시간 프리미엄/디스카운트" />
                 <MiniMetric label="POC 기준" value="현재 시간대 최근 거래량 분포" />
-                <MiniMetric label="스윕 기준" value="스윙 고점·저점 확정 이후" />
+                <MiniMetric label="스윕 기준" value="스윙 고점·저점 마감 이후" />
                 <MiniMetric label="레이더 기준" value={`${activeTimeframe} 타임프레임`} />
                 <MiniMetric label="판독 모드" value={analysisMode === "confirmed" ? "닫힌 봉 기준" : "진행 중 봉 포함"} />
                 <MiniMetric label="4H EMA200" value={fourHourAnalysis ? stateLabel(fourHourAnalysis.ema200Side) : "-"} />

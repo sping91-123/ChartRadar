@@ -40,15 +40,15 @@ function formatUsd(value: number | null | undefined) {
 }
 
 function sideLabel(side: LiquidationPressureSide) {
-  if (side === "upsideShorts") return "상방 변동성 압력";
-  if (side === "downsideLongs") return "하방 변동성 압력";
-  return "변동성 압력 균형";
+  if (side === "upsideShorts") return "롱 우세 압력";
+  if (side === "downsideLongs") return "숏 우세 압력";
+  return "롱/숏 압력 균형";
 }
 
 function sideDescription(side: LiquidationPressureSide) {
-  if (side === "upsideShorts") return "상방으로 가격이 급변하면 포지션 쏠림이 풀리며 변동성이 커질 수 있다는 뜻입니다.";
-  if (side === "downsideLongs") return "하방으로 가격이 급변하면 포지션 쏠림이 풀리며 변동성이 커질 수 있다는 뜻입니다.";
-  return "한쪽 변동성 압력이 압도적이지 않습니다. 방향보다 구조 반응을 먼저 확인하는 편이 좋습니다.";
+  if (side === "upsideShorts") return "상방 급변 시 숏 포지션 정리가 겹쳐 롱 우세 압력이 커질 수 있다는 뜻입니다.";
+  if (side === "downsideLongs") return "하방 급변 시 롱 포지션 정리가 겹쳐 숏 우세 압력이 커질 수 있다는 뜻입니다.";
+  return "한쪽 압력이 압도적이지 않습니다. 롱/숏 방향보다 구조 반응을 먼저 봅니다.";
 }
 
 function gradeLabel(grade: LiquidationPressureReport["grade"]) {
@@ -74,19 +74,19 @@ function dominantClasses(side: LiquidationPressureSide) {
 function oiInterpretation(report: LiquidationPressureReport) {
   const change = report.openInterestChangePercent;
   if (change === null) return "미결제약정 흐름은 아직 확인되지 않았습니다.";
-  if (change > 2) return "미결제약정이 빠르게 늘고 있어 새 포지션이 들어오는 장입니다. 방향이 맞아도 흔들림이 커질 수 있습니다.";
-  if (change > 0.3) return "미결제약정이 소폭 늘고 있습니다. 추세가 이어지는지 체결 쏠림과 함께 보세요.";
-  if (change < -1) return "미결제약정이 줄고 있어 포지션 정리가 진행 중입니다. 추격보다는 다음 구조 형성을 기다리는 편이 좋습니다.";
-  return "미결제약정 변화가 크지 않아 포지션 쏠림은 제한적입니다.";
+  if (change > 2) return "미결제약정이 빠르게 늘어 롱/숏 진입 위험이 커진 구간입니다.";
+  if (change > 0.3) return "미결제약정이 소폭 늘고 있습니다. 롱/숏 체결 쏠림을 같이 봅니다.";
+  if (change < -1) return "미결제약정이 줄어 포지션 정리가 진행 중입니다. 추격 매수보다 진입 대기 쪽입니다.";
+  return "미결제약정 변화가 크지 않아 롱/숏 쏠림은 제한적입니다.";
 }
 
 function takerInterpretation(report: LiquidationPressureReport) {
   const buy = report.takerFlow.buyPercent;
   const sell = report.takerFlow.sellPercent;
-  if (buy === null || sell === null) return "체결 쏠림은 아직 확인되지 않았습니다.";
-  if (buy >= sell + 8) return "시장가 유입이 더 우세합니다. 다만 과열 구간에서는 유입 쏠림이 오히려 추격 위험이 될 수 있습니다.";
-  if (sell >= buy + 8) return "시장가 이탈이 더 우세합니다. 다만 지지 구간 근처에서는 이탈 쏠림 후 반등도 조심해야 합니다.";
-  return "유입과 이탈 체결이 크게 한쪽으로 기울지 않았습니다.";
+  if (buy === null || sell === null) return "큰 매수/매도 체결 쏠림은 아직 확인되지 않았습니다.";
+  if (buy >= sell + 8) return "큰 매수 체결이 우세합니다. 과열 구간에서는 추격 매수 금지 기준도 같이 봅니다.";
+  if (sell >= buy + 8) return "큰 매도 체결이 우세합니다. 지지 구간 근처에서는 손절/무효화 기준을 먼저 봅니다.";
+  return "큰 매수/매도 체결이 한쪽으로 크게 기울지 않았습니다.";
 }
 
 function Metric({ label, value, sub }: { label: string; value: string; sub?: string }) {
@@ -157,8 +157,8 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
         <div className="flex items-center gap-3">
           <RadarScanLoader size="sm" />
           <div>
-            <p className="text-xs font-black tracking-widest text-accent-blue">변동성 압력</p>
-            <h3 className="mt-1 text-lg font-black text-white">변동성 압력 확인 중</h3>
+            <p className="text-xs font-black tracking-widest text-accent-blue">롱/숏 압력</p>
+            <h3 className="mt-1 text-lg font-black text-white">롱/숏 위험 판단 중</h3>
           </div>
           <Loader2 className="ml-auto animate-spin text-accent-blue" size={18} aria-hidden />
         </div>
@@ -172,7 +172,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
         <div className="flex items-start gap-3">
           <AlertTriangle size={18} aria-hidden />
           <div>
-            <p className="text-sm font-black">변동성 압력 흐름을 잠시 확인하지 못했습니다.</p>
+            <p className="text-sm font-black">롱/숏 압력 흐름을 잠시 판단하지 못했습니다.</p>
             <p className="mt-1 text-xs leading-5 opacity-80">{state.message}</p>
           </div>
         </div>
@@ -192,10 +192,10 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
         <div className="flex items-start gap-3">
           <RadarScanLoader size="sm" className="shrink-0" />
           <div>
-            <p className="text-xs font-black tracking-widest text-accent-blue">변동성 압력</p>
+            <p className="text-xs font-black tracking-widest text-accent-blue">롱/숏 압력</p>
             <div className="mt-1 flex items-center gap-2">
-              <h3 className="text-lg font-black text-white">{compactSymbol(symbol)} 변동성 압력 레이더</h3>
-              <CompactHelp label="변동성 압력">{sideDescription(report.dominantSide)}</CompactHelp>
+              <h3 className="text-lg font-black text-white">{compactSymbol(symbol)} 롱/숏 위험 레이더</h3>
+              <CompactHelp label="롱/숏 압력">{sideDescription(report.dominantSide)}</CompactHelp>
             </div>
           </div>
         </div>
@@ -215,8 +215,8 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
 
       <div className="mt-4 border-y border-white/10 py-4">
         <div className="flex items-center justify-between gap-3 text-xs font-bold">
-          <span className="text-signal-success">상방 압력 {report.upsideShortPressure}점</span>
-          <span className="text-signal-danger">하방 압력 {report.downsideLongPressure}점</span>
+          <span className="text-signal-success">롱 우세 압력 {report.upsideShortPressure}점</span>
+          <span className="text-signal-danger">숏 우세 압력 {report.downsideLongPressure}점</span>
         </div>
         <div className="mt-2 grid h-4 grid-cols-2 overflow-hidden rounded-full bg-black/35 ring-1 ring-white/10">
           <div className="flex justify-end bg-signal-success/20">
@@ -227,7 +227,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
           </div>
         </div>
         <div className="mt-3">
-          <CompactHelp label="압력 점수">공개 시장 데이터로 위아래 변동성 압력을 추정합니다. 한쪽 압력이 높을수록 급격한 흔들림에 대비해야 합니다.</CompactHelp>
+          <CompactHelp label="압력 점수">공개 시장 데이터로 롱/숏 압력을 추정합니다. 한쪽 압력이 높을수록 진입 위험이 커집니다.</CompactHelp>
         </div>
       </div>
 
@@ -241,13 +241,13 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
       <div className="mt-3 grid gap-3 lg:grid-cols-[0.95fr_1.05fr]">
         <div className="border-y border-white/10 py-4">
           <div className="flex items-center justify-between gap-2">
-            <h4 className="text-sm font-black text-white">글로벌 포지션 비율</h4>
-            <CompactHelp label="포지션 비율">Binance 기준 상방과 하방 포지션 비율입니다. 한쪽으로 몰릴수록 반대 방향 변동성도 같이 커질 수 있습니다.</CompactHelp>
+            <h4 className="text-sm font-black text-white">글로벌 롱/숏 비율</h4>
+            <CompactHelp label="롱/숏 비율">Binance 기준 롱과 숏 포지션 비율입니다. 한쪽으로 몰릴수록 반대 방향 변동성도 같이 커질 수 있습니다.</CompactHelp>
           </div>
           <div className="mt-3">
             <div className="flex items-center justify-between text-xs font-black">
-              <span className="text-signal-success">상방 {formatPercent(report.globalLongShort.longPercent, 1)}</span>
-              <span className="text-signal-danger">하방 {formatPercent(report.globalLongShort.shortPercent, 1)}</span>
+              <span className="text-signal-success">롱 {formatPercent(report.globalLongShort.longPercent, 1)}</span>
+              <span className="text-signal-danger">숏 {formatPercent(report.globalLongShort.shortPercent, 1)}</span>
             </div>
             <div className="mt-2 flex h-3 overflow-hidden rounded-full bg-white/10 ring-1 ring-white/10">
               <div
@@ -264,8 +264,8 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
 
         <div className="border-y border-white/10 py-4">
           <div className="flex items-center justify-between gap-2">
-            <h4 className="text-sm font-black text-white">체결 쏠림</h4>
-            <CompactHelp label="체결 쏠림">최근 시장가 유입과 시장가 이탈 중 어느 쪽 체결이 더 강했는지 보는 값입니다. 한쪽으로 치우치면 단기 변동성이 커질 수 있습니다.</CompactHelp>
+            <h4 className="text-sm font-black text-white">큰 매수/매도 체결</h4>
+            <CompactHelp label="큰 체결">최근 시장가 매수와 시장가 매도 중 어느 쪽 체결이 더 강했는지 보는 값입니다. 한쪽으로 치우치면 진입 위험이 커질 수 있습니다.</CompactHelp>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Metric label="시장가 유입" value={formatPercent(report.takerFlow.buyPercent, 1)} sub={report.takerFlow.buyVolume === null ? "-" : report.takerFlow.buyVolume.toLocaleString("ko-KR", { maximumFractionDigits: 2 })} />

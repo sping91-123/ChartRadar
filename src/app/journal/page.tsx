@@ -614,7 +614,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                   {pendingRadarEntries.map((entry) => {
                     const checkpoint =
                       entry.scoutSnapshot
-                        ? `무효화 기준 ${entry.scoutSnapshot.invalidation.toLocaleString()} 확인`
+                          ? `손절/무효화 기준 ${entry.scoutSnapshot.invalidation.toLocaleString()} 확인`
                         : entry.verdict || "저장 당시 근거와 결과를 확인하세요.";
                     return (
                       <AppSurface as="article" key={entry.id} tone="inset" variant="flat" padding="none" radius="none" className="py-4 lg:px-4 lg:first:pl-0 lg:last:pr-0">

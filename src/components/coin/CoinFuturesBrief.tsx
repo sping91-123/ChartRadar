@@ -18,22 +18,22 @@ const briefItems: Record<
   major: [
     {
       label: "앱 감지 신호 1",
-      title: "BTC/ETH 포지션 쏠림",
-      detail: "BTC와 ETH의 펀딩비, 미결제약정, 상방·하방 포지션 비율이 한쪽으로 몰리는지 앱이 감지합니다.",
+      title: "BTC/ETH 롱·숏 포지션 쏠림",
+      detail: "BTC와 ETH의 펀딩비, 미결제약정, 롱·숏 포지션 비율이 한쪽으로 몰리는지 앱이 감지합니다.",
       tone: "risk",
       icon: AlertTriangle
     },
     {
       label: "앱 감지 신호 2",
-      title: "BTC/ETH 큰 체결 흐름",
-      detail: "BTC와 ETH에서 큰 유입·이탈 체결이 반복되는지 봅니다. 반복 체결은 방향보다 변동성 리스크로 먼저 해석합니다.",
+      title: "BTC/ETH 큰 매수/매도 체결",
+      detail: "BTC와 ETH에서 큰 매수·매도 체결이 반복되는지 봅니다. 반복 체결은 진입 위험 신호로 먼저 해석합니다.",
       tone: "info",
       icon: Radar
     },
     {
       label: "앱 감지 신호 3",
-      title: "BTC/ETH 구조·변동성",
-      detail: "BTC와 ETH의 차트 구조, ATR 변동성, 거래량 상태가 선물 리스크와 같은 방향으로 커지는지 확인합니다.",
+      title: "BTC/ETH 롱/숏 방향 확인",
+      detail: "BTC와 ETH의 차트 구조, ATR, 거래량 상태가 롱 우세 또는 숏 우세 쪽으로 커지는지 봅니다.",
       tone: "watch",
       icon: Gauge
     }
@@ -41,21 +41,21 @@ const briefItems: Record<
   alts: [
     {
       label: "앱 감지 신호 1",
-      title: "알트 포지션 쏠림",
-      detail: "SOL, XRP, DOGE, BNB 같은 알트 선물에서 상방·하방 포지션이 한쪽으로 몰리는지 앱이 감지합니다.",
+      title: "알트 롱·숏 포지션 쏠림",
+      detail: "SOL, XRP, DOGE, BNB 같은 알트 선물에서 롱·숏 포지션이 한쪽으로 몰리는지 앱이 감지합니다.",
       tone: "risk",
       icon: AlertTriangle
     },
     {
       label: "앱 감지 신호 2",
-      title: "알트 큰 체결 흐름",
-      detail: "알트 큰 체결이 한쪽으로 반복되면 후보 신호보다 변동성 확대 여부를 먼저 확인합니다.",
+      title: "알트 큰 매수/매도 체결",
+      detail: "알트 큰 체결이 한쪽으로 반복되면 방향 판단보다 진입 위험 증가 여부를 먼저 봅니다.",
       tone: "watch",
       icon: Radar
     },
     {
       label: "앱 감지 신호 3",
-      title: "언락·변동성 압력",
+      title: "언락·롱/숏 위험",
       detail: "언락 부담과 BTC 변동성이 겹치는지 봅니다. 시장 전체 유동성은 하단 환경 참고로 분리합니다.",
       tone: "info",
       icon: Gauge
@@ -66,36 +66,36 @@ const briefItems: Record<
 export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
   const isAltMode = mode === "alts";
   const cautionItems = isAltMode
-    ? ["BTC 약세 동반 여부", "알트 단독 과열 여부", "큰 이탈 체결·언락 반복", "유동성 부족 구간"]
-    : ["BTC/ETH 쏠림 완화", "큰 유입·이탈 체결 반복", "구조와 변동성 동시 확대"];
+    ? ["BTC 약세 동반 여부", "알트 단독 과열 여부", "큰 매도 체결·언락 반복", "유동성 부족 구간"]
+    : ["BTC/ETH 롱·숏 쏠림 완화", "큰 매수/매도 체결 반복", "롱/숏 방향과 진입 위험 동시 확대"];
 
   return (
     <PanelCard variant="report" padding="md" className="space-y-4 rounded-ui-lg border border-ui-line/25 bg-ui-panel/45">
       <SectionHeader
-        title={isAltMode ? "알트 선물 리스크 결론" : "선물 시장 결론"}
+        title={isAltMode ? "알트 롱/숏 위험 결론" : "선물 롱/숏 판단"}
         description={
           isAltMode
-            ? "알트 선물은 추적 후보보다 쏠림, 유동성, 언락 부담을 먼저 봅니다."
-            : "오늘 선물은 방향보다 쏠림과 변동성 부담을 먼저 봅니다."
+            ? "알트 선물은 방향보다 롱/숏 쏠림, 유동성, 언락 부담을 먼저 봅니다."
+            : "오늘 선물은 롱/숏 방향보다 진입 위험을 먼저 봅니다."
         }
       />
 
       <article className="rounded-ui-md bg-ui-inset/30 p-3">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">선물 리스크 결론</p>
+            <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">롱/숏 위험 결론</p>
             <p className="mt-1 text-base font-semibold leading-6 text-ui-text [word-break:keep-all]">
-              {isAltMode ? "알트 변동성 주의 · 리스크 우선" : "리스크 우선 · 대기"}
+              {isAltMode ? "알트 진입 대기 · 롱/숏 위험" : "진입 대기 · 롱/숏 위험"}
             </p>
           </div>
           <StatusPill tone="risk" icon={GitCompareArrows} className="shrink-0">
-            리스크
+            진입 대기
           </StatusPill>
         </div>
         <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">
           {isAltMode
-            ? "알트 포지션 쏠림, 큰 이탈 체결, 언락 부담이 겹치면 추적 후보를 제한하고 세부 근거를 다시 확인합니다."
-            : "BTC/ETH 포지션 쏠림과 큰 체결이 함께 커질 때는 추적보다 변동성 확대 여부를 먼저 봅니다."}
+            ? "알트 롱·숏 쏠림, 큰 매도 체결, 언락 부담이 겹치면 방향 판단보다 위험 회피를 우선합니다."
+            : "BTC/ETH 롱·숏 쏠림과 큰 체결이 함께 커질 때는 진입보다 위험 회피를 우선합니다."}
         </p>
       </article>
 
@@ -104,7 +104,7 @@ export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
           <div className="min-w-0">
             <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">앱이 감지한 핵심 신호</p>
             <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">
-              {isAltMode ? "알트 선물의 직접 리스크 신호만 먼저 봅니다." : "BTC/ETH 선물의 직접 리스크 신호만 먼저 봅니다."}
+              {isAltMode ? "알트 선물의 롱/숏 위험 신호만 먼저 봅니다." : "BTC/ETH 선물의 롱/숏 위험 신호만 먼저 봅니다."}
             </p>
           </div>
           <CompactHelp label="판단 기준">
@@ -132,7 +132,7 @@ export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
                     <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{item.title}</p>
                   </div>
                   <StatusPill tone={item.tone} icon={Icon} className="shrink-0">
-                    {item.tone === "risk" ? "주의" : "관찰"}
+                    {item.tone === "risk" ? "진입 대기" : "판단"}
                   </StatusPill>
                 </div>
                 <p className="mt-2 line-clamp-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{item.detail}</p>
@@ -146,10 +146,10 @@ export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">전환 기준</p>
-            <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">상단 결론이 바뀌는 신호만 봅니다.</p>
+            <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">진입 대기에서 롱 우세/숏 우세로 바뀌는 신호만 봅니다.</p>
           </div>
           <StatusPill tone="watch" className="shrink-0">
-            대기
+            진입 대기
           </StatusPill>
         </div>
         <div className="mt-3 grid gap-2 md:grid-cols-3">

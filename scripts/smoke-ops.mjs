@@ -203,7 +203,7 @@ expectIncludes(radarNewsApi, "GLOBAL_MARKET_CONFIRMATION_KEYWORDS", "뉴스 매�
 expectIncludes(radarNewsPanel, "뉴스 레이더", "코인 뉴스 요약 화면", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "오늘의 시장 레이더", "시장 레이더 요약 카드", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "compactCheckpoint", "뉴스 상단 체크포인트 압축", "src/components/RadarNewsPanel.tsx");
-expectIncludes(radarNewsPanel, "다음 확인", "뉴스 상단 체크포인트 라벨", "src/components/RadarNewsPanel.tsx");
+expectIncludes(radarNewsPanel, "다음 판단", "뉴스 상단 체크포인트 라벨", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "최근 갱신", "뉴스 상단 갱신 시각 표시", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "1시간 단위 자동 갱신", "뉴스 상단 갱신 주기 표시", "src/components/RadarNewsPanel.tsx");
 expectIncludes(radarNewsPanel, "혼재 / 확인 필요", "뉴스 neutral 라벨 보강", "src/components/RadarNewsPanel.tsx");
@@ -259,7 +259,7 @@ expectIncludes(spotRadarPanel, "무효화 기준", "현물 무효화 기준 표�
 expectIncludes(coinRadarHomePanel, "/api/stablecoin-liquidity", "Home stablecoin liquidity API source", "src/components/coin/CoinRadarHomePanel.tsx");
 expectIncludes(coinRadarHomePanel, "스테이블코인 유동성", "Home stablecoin liquidity copy", "src/components/coin/CoinRadarHomePanel.tsx");
 expectIncludes(coinRadarHomePanel, "/api/large-trade-flow?symbol=BTCUSDT", "Home large trade flow API source", "src/components/coin/CoinRadarHomePanel.tsx");
-expectIncludes(coinRadarHomePanel, "큰 체결 흐름", "Home large trade flow copy", "src/components/coin/CoinRadarHomePanel.tsx");
+expectIncludes(coinRadarHomePanel, "큰 매수/매도 체결", "Home large trade flow copy", "src/components/coin/CoinRadarHomePanel.tsx");
 expectIncludes(coinRadarHomePanel, "/api/options-market?currency=BTC", "Home options market API source", "src/components/coin/CoinRadarHomePanel.tsx");
 expectIncludes(coinRadarHomePanel, "옵션 예상 변동", "Home options expected move copy", "src/components/coin/CoinRadarHomePanel.tsx");
 expectIncludes(coinHomeDecisionModel, "stablecoinLiquidity", "Home decision uses stablecoin liquidity", "src/components/coin/coinHomeDecisionModel.ts");
@@ -281,10 +281,10 @@ expectIncludes(altFuturesSignalSection, "chartRadar.altFuturesSymbols.v1", "Alt 
 expectIncludes(altsPage, "CoinUnlockPressurePanel", "Token unlock pressure panel on alts", "src/app/crypto/perpetual/alts/page.tsx");
 expectIncludes(coinSignalPressurePanel, "/api/liquidation-pressure?symbol=", "Futures pressure live API source", "src/components/coin/CoinSignalPressurePanel.tsx");
 expectIncludes(coinSignalPressurePanel, "Binance 공개 선물 데이터", "Futures pressure public data label", "src/components/coin/CoinSignalPressurePanel.tsx");
-expectIncludes(coinSignalPressurePanel, "BTC/ETH 선물 쏠림", "Major futures pressure scan copy", "src/components/coin/CoinSignalPressurePanel.tsx");
-expectIncludes(coinSignalPressurePanel, "알트 선물 쏠림", "Alt futures pressure scan copy", "src/components/coin/CoinSignalPressurePanel.tsx");
-expectIncludes(coinSignalPressurePanel, "하방 압력", "Futures downside pressure score copy", "src/components/coin/CoinSignalPressurePanel.tsx");
-expectIncludes(coinSignalPressurePanel, "상방 압력", "Futures upside pressure score copy", "src/components/coin/CoinSignalPressurePanel.tsx");
+expectIncludes(coinSignalPressurePanel, "BTC/ETH 롱/숏 쏠림", "Major futures pressure scan copy", "src/components/coin/CoinSignalPressurePanel.tsx");
+expectIncludes(coinSignalPressurePanel, "알트 롱/숏 쏠림", "Alt futures pressure scan copy", "src/components/coin/CoinSignalPressurePanel.tsx");
+expectIncludes(coinSignalPressurePanel, "숏 우세 압력", "Futures downside pressure score copy", "src/components/coin/CoinSignalPressurePanel.tsx");
+expectIncludes(coinSignalPressurePanel, "롱 우세 압력", "Futures upside pressure score copy", "src/components/coin/CoinSignalPressurePanel.tsx");
 expectIncludes(onchainMetricsRoute, "fetchBitcoinOnchainMetricReport", "On-chain metrics API source", "src/app/api/onchain-metrics/route.ts");
 expectIncludes(onchainMetricsLib, "mempoolVsizeMb", "On-chain mempool pressure field", "src/lib/onchainMetrics.ts");
 expectIncludes(coinOnchainPulsePanel, "/api/onchain-metrics?network=btc", "On-chain live API source", "src/components/coin/CoinOnchainPulsePanel.tsx");
@@ -305,8 +305,8 @@ expectIncludes(largeTradeFlowRoute, "fetchLargeTradeFlowReport", "Large trade fl
 expectIncludes(read("src/lib/largeTradeFlow.ts"), "anomalyScore", "Large trade repeated-flow score", "src/lib/largeTradeFlow.ts");
 expectIncludes(coinLargeTradeFlowPanel, "/api/large-trade-flow?symbol=", "Large trade flow live API source", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
 expectIncludes(coinLargeTradeFlowPanel, "Binance 공개 선물 체결", "Large trade flow public data label", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
-expectIncludes(coinLargeTradeFlowPanel, "BTC/ETH 큰 체결 흐름", "Major large trade flow copy", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
-expectIncludes(coinLargeTradeFlowPanel, "알트 큰 체결 흐름", "Alt large trade flow copy", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
+expectIncludes(coinLargeTradeFlowPanel, "BTC/ETH 큰 매수/매도 체결", "Major large trade flow copy", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
+expectIncludes(coinLargeTradeFlowPanel, "알트 큰 매수/매도 체결", "Alt large trade flow copy", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
 expectIncludes(coinLargeTradeFlowPanel, "반복 체결", "Large trade repeated-flow copy", "src/components/coin/CoinLargeTradeFlowPanel.tsx");
 expectIncludes(tokenUnlocksRoute, "fetchTokenUnlockReport", "Token unlock API source", "src/app/api/token-unlocks/route.ts");
 expectIncludes(tokenUnlocksLib, "percentOfMarketCap", "Token unlock market-cap pressure field", "src/lib/tokenUnlocks.ts");

@@ -86,22 +86,22 @@ function pressureTone(report: LiquidationPressureReport): CoinSignalPressureTone
 }
 
 function sideTitle(side: LiquidationPressureSide) {
-  if (side === "upsideShorts") return "상방 변동성 압력";
-  if (side === "downsideLongs") return "하방 변동성 압력";
-  return "쏠림 약함";
+  if (side === "upsideShorts") return "롱 우세 압력";
+  if (side === "downsideLongs") return "숏 우세 압력";
+  return "롱/숏 쏠림 약함";
 }
 
 function sideAction(side: LiquidationPressureSide) {
-  if (side === "upsideShorts") return "상방 급변 가능성 확인";
-  if (side === "downsideLongs") return "하방 급변 가능성 확인";
-  return "방향 확인";
+  if (side === "upsideShorts") return "롱 우세 급변 주의";
+  if (side === "downsideLongs") return "숏 우세 급변 주의";
+  return "진입 대기";
 }
 
 function gradeLabel(report: LiquidationPressureReport) {
-  if (report.grade === "extreme") return "쏠림 매우 강함";
-  if (report.grade === "heated") return "쏠림 강함";
-  if (report.grade === "normal") return "쏠림 보통";
-  return "쏠림 약함";
+  if (report.grade === "extreme") return "롱/숏 쏠림 매우 강함";
+  if (report.grade === "heated") return "롱/숏 쏠림 강함";
+  if (report.grade === "normal") return "롱/숏 쏠림 보통";
+  return "롱/숏 쏠림 약함";
 }
 
 function mainTrigger(report: LiquidationPressureReport) {
@@ -117,9 +117,9 @@ function mainTrigger(report: LiquidationPressureReport) {
   if (funding !== null && funding !== undefined && Math.abs(funding) >= 0.03) return `펀딩비 ${formatPercent(funding, 4)}`;
   if (takerBuy !== null && takerBuy >= 55) return `시장가 유입 ${formatPlainPercent(takerBuy)}`;
   if (takerSell !== null && takerSell >= 55) return `시장가 이탈 ${formatPlainPercent(takerSell)}`;
-  if (globalLong !== null && globalLong !== undefined && globalLong >= 56) return `상방 포지션 ${formatPlainPercent(globalLong)}`;
-  if (globalShort !== null && globalShort !== undefined && globalShort >= 56) return `하방 포지션 ${formatPlainPercent(globalShort)}`;
-  return "쏠림 크지 않음";
+  if (globalLong !== null && globalLong !== undefined && globalLong >= 56) return `롱 포지션 ${formatPlainPercent(globalLong)}`;
+  if (globalShort !== null && globalShort !== undefined && globalShort >= 56) return `숏 포지션 ${formatPlainPercent(globalShort)}`;
+  return "롱/숏 쏠림 낮음";
 }
 
 async function fetchPressure(symbol: string) {
@@ -132,40 +132,40 @@ async function fetchPressure(symbol: string) {
 const futuresPressureItems: Record<FuturesPressureMode, CoinSignalPressureItem[]> = {
   major: [
     {
-      label: "파생 쏠림",
+      label: "롱/숏 쏠림",
       title: "레버리지·펀딩·포지션",
-      detail: "방향보다 과열과 강제 변동성 위험을 먼저 분리합니다.",
+      detail: "방향보다 롱/숏 과열과 진입 위험을 먼저 분리합니다.",
       tone: "risk",
       percent: 88,
       value: "우선"
     },
     {
-      label: "차트 구조",
+      label: "롱/숏 구조",
       title: "MSB·CHoCH·OB·FVG",
-      detail: "구조 신호는 상단 판단을 확인하는 보조값으로만 둡니다.",
+      detail: "구조 신호는 롱 우세/숏 우세 판단을 보조하는 값으로만 둡니다.",
       tone: "info",
       percent: 68
     },
     {
-      label: "볼 조건",
+      label: "진입 대기 기준",
       title: "가격 조정 후 재상승·반등 실패",
-      detail: "가격이 같은 방향을 유지하는지 확인할 조건만 남깁니다.",
+      detail: "롱 또는 숏 방향을 유지하는지 볼 기준만 남깁니다.",
       tone: "watch",
       percent: 56
     },
     {
       label: "충돌",
       title: "상승 신호와 과열 동시 발생",
-      detail: "신호가 충돌하면 방향보다 기준 이탈과 가격 흔들림부터 봅니다.",
+      detail: "신호가 충돌하면 롱/숏 판단보다 기준 이탈과 가격 흔들림부터 봅니다.",
       tone: "risk",
       percent: 74
     }
   ],
   alts: [
     {
-      label: "고위험 필터",
+      label: "진입 위험 필터",
       title: "급등·저유동성·언락",
-      detail: "좋은 후보를 찾기 전에 회피 후보를 먼저 분리합니다.",
+      detail: "롱/숏 후보를 보기 전에 위험 회피 후보를 먼저 분리합니다.",
       tone: "risk",
       percent: 86,
       value: "우선"
@@ -173,21 +173,21 @@ const futuresPressureItems: Record<FuturesPressureMode, CoinSignalPressureItem[]
     {
       label: "유동성",
       title: "거래대금·가격 흔들림",
-      detail: "알트 단독 움직임보다 실제 거래가 붙었는지 확인합니다.",
+      detail: "알트 단독 움직임보다 실제 거래가 붙었는지 판단합니다.",
       tone: "watch",
       percent: 72
     },
     {
       label: "BTC 기준",
       title: "방향 동조·분리",
-      detail: "BTC 약세와 알트 급등이 겹치면 관심 후보로 바로 보지 않습니다.",
+      detail: "BTC 약세와 알트 급등이 겹치면 진입 대기로 낮춥니다.",
       tone: "info",
       percent: 64
     },
     {
       label: "충돌",
       title: "기회 신호와 회피 조건",
-      detail: "상승 후보처럼 보여도 위험 신호가 겹치면 관망하기로 낮춥니다.",
+      detail: "롱 우세처럼 보여도 위험 신호가 겹치면 진입 대기로 낮춥니다.",
       tone: "risk",
       percent: 78
     }
@@ -259,7 +259,7 @@ export function CoinFuturesSignalPressurePanel({ mode, symbols: customSymbols }:
     }
 
     setStatus("error");
-    setError("선물 쏠림 데이터 응답 지연입니다. 추가 확인 조건으로 남겨 둡니다.");
+    setError("롱/숏 쏠림 데이터 응답 지연입니다. 추가 판단 기준으로 남겨 둡니다.");
   }, [symbols]);
 
   useEffect(() => {
@@ -280,14 +280,14 @@ export function CoinFuturesSignalPressurePanel({ mode, symbols: customSymbols }:
   const topSummary = topCard
     ? `${topCard.label} ${sideTitle(topCard.report.dominantSide)} · ${mainTrigger(topCard.report)}`
     : isAltMode
-      ? "알트 선물 쏠림을 확인하는 중입니다."
-      : "BTC/ETH 선물 쏠림을 확인하는 중입니다.";
+      ? "알트 롱/숏 쏠림을 판단하는 중입니다."
+      : "BTC/ETH 롱/숏 쏠림을 판단하는 중입니다.";
 
   return (
     <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
       <SectionHeader
         eyebrow="Binance 공개 선물 데이터"
-        title={isAltMode ? "알트 선물 쏠림" : "BTC/ETH 선물 쏠림"}
+        title={isAltMode ? "알트 롱/숏 쏠림" : "BTC/ETH 롱/숏 쏠림"}
         description={topSummary}
         action={
           <ActionButton tone="secondary" onClick={loadReports} disabled={status === "loading"}>
@@ -305,7 +305,7 @@ export function CoinFuturesSignalPressurePanel({ mode, symbols: customSymbols }:
 
       {status === "loading" && !cards.length ? (
         <AppSurface variant="flat" tone="inset" padding="none" className="border-t border-ui-line py-3 text-sm font-semibold text-ui-muted">
-          선물 쏠림 확인 중
+          롱/숏 쏠림 판단 중
         </AppSurface>
       ) : null}
 
@@ -336,10 +336,10 @@ export function CoinFuturesSignalPressurePanel({ mode, symbols: customSymbols }:
                 <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs font-semibold leading-5 text-ui-muted">
                   <span>{sideAction(report.dominantSide)}</span>
                   <span className="text-right text-ui-text">{mainTrigger(report)}</span>
-                  <span>상방 포지션 {formatPlainPercent(report.globalLongShort.longPercent)}</span>
+                  <span>롱 포지션 {formatPlainPercent(report.globalLongShort.longPercent)}</span>
                   <span className="text-right">계약 변화 {formatPercent(report.openInterestChangePercent)}</span>
-                  <span>하방 압력 {report.downsideLongPressure}점</span>
-                  <span className="text-right">상방 압력 {report.upsideShortPressure}점</span>
+                  <span>숏 우세 압력 {report.downsideLongPressure}점</span>
+                  <span className="text-right">롱 우세 압력 {report.upsideShortPressure}점</span>
                 </div>
               </article>
             );
@@ -347,14 +347,14 @@ export function CoinFuturesSignalPressurePanel({ mode, symbols: customSymbols }:
         </div>
       ) : status !== "loading" ? (
         <AppSurface variant="flat" tone="inset" padding="none" className="border-t border-ui-line py-3 text-sm font-semibold text-ui-muted">
-          공개 선물 데이터 응답이 지연되고 있습니다. 쏠림은 추가 확인 조건으로 남겨 둡니다.
+          공개 선물 데이터 응답이 지연되고 있습니다. 롱/숏 쏠림은 추가 판단 기준으로 남겨 둡니다.
         </AppSurface>
       ) : null}
 
       <CompactHelp label="데이터 기준">
         {isAltMode
-          ? `Binance 공개 선물 데이터에서 ${symbolLabelText}의 미결제약정, 펀딩비, 상방·하방 포지션 비율, 시장가 유입·이탈 쏠림을 묶어 과열과 흔들림 위험만 빠르게 보여줍니다.`
-          : "Binance 공개 선물 데이터에서 BTC와 ETH의 미결제약정, 펀딩비, 상방·하방 포지션 비율, 시장가 유입·이탈 쏠림을 묶어 과열과 흔들림 위험만 빠르게 보여줍니다."}
+          ? `Binance 공개 선물 데이터에서 ${symbolLabelText}의 미결제약정, 펀딩비, 롱·숏 포지션 비율, 큰 매수/매도 체결을 묶어 진입 위험만 빠르게 보여줍니다.`
+          : "Binance 공개 선물 데이터에서 BTC와 ETH의 미결제약정, 펀딩비, 롱·숏 포지션 비율, 큰 매수/매도 체결을 묶어 진입 위험만 빠르게 보여줍니다."}
       </CompactHelp>
     </PanelCard>
   );

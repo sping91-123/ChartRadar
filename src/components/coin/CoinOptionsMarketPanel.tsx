@@ -56,15 +56,15 @@ function sideTone(side: OptionsMarketSide) {
 }
 
 function sideLabel(side: OptionsMarketSide) {
-  if (side === "call") return "콜 우세";
-  if (side === "put") return "풋 우세";
+  if (side === "call") return "롱 우세 참고";
+  if (side === "put") return "숏 우세 참고";
   return "균형";
 }
 
 function sideAction(side: OptionsMarketSide) {
-  if (side === "call") return "위쪽 변동성 대비";
-  if (side === "put") return "아래쪽 방어 수요";
-  return "방향 쏠림 약함";
+  if (side === "call") return "롱 방향 변동성 대비";
+  if (side === "put") return "숏 방향 방어 수요";
+  return "롱/숏 쏠림 약함";
 }
 
 function gradeLabel(report: OptionsMarketReport) {
@@ -113,8 +113,8 @@ export function CoinOptionsMarketPanel() {
   }, [reports]);
 
   const topSummary = topReport
-    ? `${topReport.currency} ${topReport.summary} 방향 결론이 아니라 변동성 참고값으로만 봅니다.`
-    : "BTC/ETH 옵션 쏠림을 변동성 참고값으로 확인하는 중입니다.";
+    ? `${topReport.currency} ${topReport.summary} 방향 결론이 아니라 롱/숏 위험 참고값으로만 봅니다.`
+    : "BTC/ETH 옵션 쏠림을 롱/숏 위험 참고값으로 판단하는 중입니다.";
 
   return (
     <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
@@ -138,7 +138,7 @@ export function CoinOptionsMarketPanel() {
 
       {status === "loading" && !reports.length ? (
         <AppSurface variant="flat" tone="inset" padding="none" className="border-t border-ui-line py-3 text-sm font-semibold text-ui-muted">
-          옵션 쏠림 확인 중
+          옵션 롱/숏 쏠림 판단 중
         </AppSurface>
       ) : null}
 

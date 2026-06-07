@@ -120,7 +120,7 @@ export function AltFuturesSignalSection() {
             <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">내 알트 선물 목록</p>
             <h2 className="mt-1 text-ui-heading font-semibold tracking-tight text-ui-text">{selectedLabelText}</h2>
             <p className="mt-1 text-ui-body text-ui-muted [word-break:keep-all]">
-              선택한 알트 기준으로 쏠림과 큰 체결 흐름을 확인합니다.
+              선택한 알트 기준으로 롱/숏 쏠림과 큰 매수/매도 체결을 판단합니다.
             </p>
           </div>
           <ActionButton tone="secondary" onClick={restoreDefaults} disabled={defaultSelected} className="self-start">
@@ -165,9 +165,9 @@ export function AltFuturesSignalSection() {
         <>
           <section className="pt-1">
             <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">앱이 감지한 알트 직접 신호</p>
-            <h2 className="mt-1 text-ui-heading font-semibold tracking-tight text-ui-text">선택 알트의 쏠림과 큰 체결을 먼저 확인합니다</h2>
+            <h2 className="mt-1 text-ui-heading font-semibold tracking-tight text-ui-text">선택 알트의 롱/숏 위험을 먼저 판단합니다</h2>
             <p className="mt-1 text-ui-body text-ui-muted [word-break:keep-all]">
-              알트 선물 화면은 {selectedLabelText} 기준의 포지션 쏠림과 큰 체결 흐름을 우선 분리하고, 언락·변동성 부담은 이어서 확인합니다.
+              알트 선물 화면은 {selectedLabelText} 기준의 롱/숏 포지션 쏠림과 큰 매수/매도 체결을 우선 분리하고, 언락·진입 위험은 이어서 판단합니다.
             </p>
           </section>
           <CoinFuturesSignalPressurePanel mode="alts" symbols={selectedSymbols} />
