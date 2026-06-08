@@ -2,192 +2,155 @@
 
 ## Run Title
 
-- `android-production-qa-execution-run`
+- `android-production-auto-smoke-run`
 
 ## Run State
 
-- Status: `DONE`
+- Status: `ACTIVE`
 - Setup date: 2026-06-09
-- Previous run prerequisite: `android-production-stability-qa-run` was confirmed `DONE` before this setup.
-- Current phase: All six QA execution preparation tasks completed; results template is ready for the next actual QA run.
+- Previous run prerequisite: `android-production-qa-execution-run` was confirmed `DONE` before this setup.
+- Current phase: Task 1 is the next `TODO`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
-- This setup registers the run and does not execute production QA, payment, restore, account deletion, or push-delivery checks.
+- This setup registers the run only. No smoke, typecheck, build, lint, Android, billing, push, DB, or external-console command was executed during setup.
 
 ## Purpose
 
-- Move the documented Android production QA checklist into an executable smoke and QA flow.
-- Reuse existing browser smoke, mobile-adjacent smoke, and npm smoke commands where they are safe and non-mutating.
-- Separate Google Play production install, login, billing, notification permission, and Play Console health checks into manual QA tables.
-- Keep implementation fixes out of this run. Any failure should be documented first and moved into a separate bug-fix run.
+- Execute only safe automatic smoke and static verification commands that do not mutate production data.
+- Record each result in `docs/qa/android-production-qa-results.md` as `PASS`, `FAIL`, or `BLOCKED`.
+- Keep this run focused on automatic QA execution and result recording, not implementation fixes.
+- Defer Android device QA, billing, auth, notification delivery, Play Console action, and production data work to separate runs.
 
 ## Background
 
-- The completed `android-production-stability-qa-run` documented Android production QA scope, core screen smoke scenarios, login/account/settings QA, billing/subscription QA, notification QA, and first execution candidates.
-- That completed run recommended `android-production-qa-execution-run` as the next active run.
-- This run prepares and records the actual execution sequence while preserving release, billing, auth, Supabase, FCM, and Android guardrails.
+- `android-production-qa-execution-run` is complete.
+- It prepared:
+  - `docs/android-production-qa-execution.md`
+  - `docs/qa/android-production-manual-qa.md`
+  - `docs/qa/android-production-qa-results.md`
+- This run uses the safe candidates documented there and executes only commands that have no intended production data mutation.
 
 ## High-Risk Guardrails
 
-- Do not modify app code.
-- Do not modify smoke scripts unless a separate approved implementation task is opened.
-- Do not edit auth, Google sign-in, Supabase, sessions, account deletion, or policy logic.
+- Do not modify app code, UI code, `package.json`, or `scripts/`.
+- Do not run Android native or release commands.
+- Do not run broad or protected smoke commands unless a later approved run explicitly opens them.
+- Do not run actual Google Play purchase, purchase restore, account deletion, real push delivery, production DB/token lookup or mutation, Android native/release commands, or external console changes.
 - Do not edit billing, RevenueCat, Google Play product IDs, base plan IDs, plan IDs, entitlements, prices, checkout, restore, or plan-display logic.
+- Do not edit auth, Google sign-in, Supabase, sessions, RLS, account deletion, or policy logic.
 - Do not edit FCM, push token handling, push-cron, alert scanner, targetPath handling, cooldown, or notification routing logic.
 - Do not edit Android native files, Android release settings, Play Console configuration, app signing, AAB generation, or versioning.
 - Do not touch production data, production config, secrets, tokens, keys, or external service settings.
-- Do not perform actual purchase, purchase restore, account deletion, production DB mutation, or real push send inside this run.
-- Do not add iOS scope.
-- Do not add new features.
-- Record failures and follow-up candidates instead of fixing them inside this run.
+- If a command fails, record the failure and stop widening scope. Do not fix it in this run.
 
 ## Scope
 
 - Primary planning file:
   - `docs/automation-runs/active-run.md`
-- Execution planning document:
+- Results file:
+  - `docs/qa/android-production-qa-results.md`
+- Reference execution plan:
   - `docs/android-production-qa-execution.md`
-- Manual QA checklist:
-  - `docs/qa/android-production-manual-qa.md`
-- Completed source checklist:
-  - `docs/android-production-stability-qa.md`
 
-## QA Coverage Lanes
+## Allowed Commands
 
-Automatic or script-supported lane:
+This run may execute only the following commands, one task at a time:
 
-- Existing npm smoke command audit.
-- Existing route reachability smoke where it only checks local HTTP responses and expected guard responses.
-- Existing static mobile/PWA/Android asset smoke.
-- Existing static billing, copy, launch, ops, API, and CSS smoke only when the command is non-mutating and its service assumptions are explicit.
-- Documentation safety checks: `git diff --check`, docs-only diff confirmation, and sensitive-value pattern checks.
+- `git status --short`
+- `git diff --check`
+- `cmd /c npx tsc --noEmit`
+- `npm.cmd run build`
+- `npm.cmd run lint`
+- `npm.cmd run smoke:copy`
+- `npm.cmd run smoke:mobile`
+- `npm.cmd run smoke:launch`
 
-Manual QA lane:
+## Forbidden Commands
 
-- Google Play production install and first launch.
-- Android navigation, back behavior, refresh, force-close, and relaunch.
-- Google login, account picker, cancel path, successful login, session persistence, and logout with a dedicated QA account.
-- `/pro` pre-checkout review before entering any paid flow.
-- Notification permission and settings review without real push send or token exposure.
-- Play Console crash, ANR, vitals, and warnings as read-only review only.
+Do not run:
 
-Separate approval lane:
-
-- Actual Google Play purchase.
-- Purchase restore.
-- Actual account deletion.
-- Real push delivery or push-click validation.
-- Production DB, push token, Supabase, FCM, RevenueCat, Google Play Console, Android release, or production configuration changes.
+- `npm.cmd run smoke:all`
+- `npm.cmd run smoke:billing`
+- `npm.cmd run smoke:api`
+- `npm.cmd run smoke:routes`
+- `npm.cmd run smoke:css`
+- `npm.cmd run smoke:ops`
+- `npm.cmd run check:app-billing`
+- `npm.cmd run app:sync`
+- `npm.cmd run app:sync:prod`
+- `npm.cmd run app:add:android`
+- `npm.cmd run app:android`
+- `npm.cmd run app:doctor`
+- `npm.cmd run app:android:debug`
+- `npm.cmd run app:android:release`
+- `scripts/set-app-billing-env.ps1`
+- `scripts/set-owner-admin.sql`
+- Any actual payment, restore, account deletion, push send, production DB/token lookup or mutation, external service setting change, Play Console change, or Android release action.
 
 ## Start Conditions
 
 - Confirm `git status --short --branch`.
 - Confirm `git rev-list --left-right --count HEAD...origin/main`.
-- If local and `origin/main` diverge, stop before editing and report.
-- If the worktree is dirty, identify existing changes before editing.
+- If local and `origin/main` diverge, stop before editing or running smoke and report.
+- If the worktree is dirty, identify existing changes before running smoke.
 - For `AUTO RUN ACTIVE PLAN`, process exactly one `TODO` item per turn.
-- Confirm each command candidate does not violate the forbidden scope before running it.
+- Before running each command, confirm it is in the allowed-command list and not in the forbidden-command list.
 
 ## Stop Conditions
 
-- A task requires app code changes, production data changes, deploys, release submissions, Play Console changes, or external service settings changes.
-- A task requires modifying billing, auth, Supabase, FCM, Android release, or production configuration.
-- A smoke command would perform production mutation, actual payment, restore, account deletion, or real push send.
-- QA uncovers an implementation issue. Record it as a work-item candidate or follow-up run instead of fixing it here.
-- Sensitive values appear in docs, logs, smoke output, or diffs.
-- The requested QA scope expands into iOS release work, new feature work, or production operations.
+- Any task requires code, UI, `package.json`, script, Android native/release, billing, auth, Supabase, FCM, Play Console, production config, or production data changes.
+- Any task requires a forbidden command.
+- Any command output includes sensitive values, raw tokens, credentials, service keys, or private account identifiers.
+- A smoke/build/type/lint failure appears. Record the failure summary and recommended follow-up; do not fix.
+- Build output or temporary files would be staged or committed.
 
 ## Task List
 
-| Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | DONE | Existing smoke command audit | Smoke Audit | LOW | Review `package.json` and `scripts/` smoke commands, then document which commands can be reused for Android production QA. | No app code edits. No smoke script edits. | `git diff --check` |
-| 2 | DONE | Mobile viewport smoke scope check | Mobile Smoke Scope | LOW | Check whether 360px core-screen review is already supported and document missing smoke coverage. | No UI code edits. No new smoke script. | Existing smoke command or documentation review, then `git diff --check` |
-| 3 | DONE | Production QA execution table | QA Execution Plan | MEDIUM | Write an execution table that separates automatic checks from manual checks. | No billing, auth, FCM code edits. No production data changes. | `git diff --check` |
-| 4 | DONE | Safe smoke command execution candidate selection | Smoke Candidate | MEDIUM | Select at least one smoke command that is safe to run in the current repository and confirm it does not hit forbidden scope before execution. | No production purchase. No real push send. No account deletion. No production DB mutation. | Document selection rationale, then `git diff --check` |
-| 5 | DONE | Manual QA checklist separation | Manual QA | MEDIUM | Split actual Android-device checks into a manual QA checklist, including Play Store install, navigation/back/relaunch, Google login, `/pro` pre-checkout review, notification permission/settings, and Play Console crash/ANR read-only review. | No real payment. No purchase restore. No real account deletion. No real push send. | `git diff --check` |
-| 6 | DONE | QA result recording template | QA Evidence | LOW | Create a template for later QA execution results using `NOT_RUN`, `PASS`, `FAIL`, `BLOCKED`, and `NEEDS_RUN`. | No code edits. | `git diff --check` |
+| Order | Status | Task | Area | Risk | Goal | Command(s) | Forbidden | Validation |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | TODO | Auto smoke preflight safety check | Safety | LOW | Confirm worktree, branch, and docs guardrails before smoke execution. | `git status --short`; `git diff --check` | No code changes. No production data changes. | Record result in `docs/qa/android-production-qa-results.md` |
+| 2 | TODO | TypeScript static check | Typecheck | LOW | Confirm TypeScript has no no-emit errors. | `cmd /c npx tsc --noEmit` | No code changes. | Record `PASS`/`FAIL`/`BLOCKED` |
+| 3 | TODO | Build check | Build | LOW | Confirm production build succeeds locally. | `npm.cmd run build` | No code changes. Do not stage build output. | Record `PASS`/`FAIL`/`BLOCKED` |
+| 4 | TODO | Lint check | Lint | LOW | Confirm lint passes without auto-fix. | `npm.cmd run lint` | No lint auto-fix. No code changes. | Record `PASS`/`FAIL`/`BLOCKED` |
+| 5 | TODO | Safe smoke commands | Smoke | MEDIUM | Run only safe smoke commands from the execution plan. | `npm.cmd run smoke:copy`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:launch` | No `smoke:all`, `smoke:billing`, `smoke:api`, `check:app-billing`, payment, push, or DB mutation. | Record `PASS`/`FAIL`/`BLOCKED` |
+| 6 | TODO | QA results document update | Results | LOW | Summarize execution time, target commit, command status, failure log summary, and follow-up need. | Documentation only | No failure fixes. | `git diff --check` |
+| 7 | TODO | Next run recommendation | Follow-up | LOW | Recommend next run based on auto smoke results. | Documentation only | No implementation changes. | Active-run status update |
 
-## Documentation Policy
+## Result Recording Rules
 
-- Keep this run focused on QA execution preparation and safe command selection.
-- Mark unexecuted automatic and manual QA items as `NOT_RUN`; use `NEEDS_RUN` for separate-approval or not-currently-runnable items.
-- Do not imply 360px browser screenshot coverage exists unless a real screenshot/browser workflow has been confirmed.
-- Keep manual QA checklists separate from automatic smoke candidates.
-- Keep high-risk checks explicitly read-only or separate-approval.
-- Keep ChartRadar framed as judgment support. Do not add buy, sell, long, short, guaranteed return, or investment-advice wording.
+- Record each executed command in `docs/qa/android-production-qa-results.md`.
+- Use `PASS` only when the command was executed and matched the expected result.
+- Use `FAIL` when the command was executed and returned an error or mismatched expectation.
+- Use `BLOCKED` when a prerequisite or guardrail prevented execution.
+- Leave unexecuted commands as `NOT_RUN`.
+- Keep separate-approval items as `NEEDS_RUN`.
+- Summarize logs. Do not paste large logs, secrets, tokens, credentials, or private account identifiers.
+
+## Next Run Recommendation Rules
+
+- If all allowed automatic checks pass, recommend `android-production-manual-qa-run`.
+- If any LOW/MEDIUM automatic check fails, recommend `android-production-bugfix-triage-run`.
+- If a failure implicates billing, auth, Supabase, FCM, notification delivery, production DB/token handling, Play Console, or Android release, recommend a separate high-risk triage run for that surface.
 
 ## Verification Policy
 
-- Always run `git diff --check`.
+- Always run `git diff --check` before commit.
 - Confirm changed files stay inside `docs/`.
+- Confirm `package.json`, `scripts/`, app/UI code, Android files, Supabase files, `mobile-shell`, and `public` are unchanged unless explicitly approved.
 - Run a sensitive-value pattern check before commit.
-- Docs-only setup and checklist tasks do not require TypeScript, production build, or smoke execution.
-- If a smoke command is selected for a later task, confirm its service target and mutation risk before running it.
-- If app code changes appear necessary, stop and report instead of changing code.
+- Confirm no build output or temporary files are staged.
 
 ## Commit And Push Policy
 
-- Setup commit message: `Define Android production QA execution run`.
-- Docs-only setup may be committed and pushed to `main` when verification passes and the branch is in sync with `origin/main`.
+- Commit message: `Run Android production auto smoke checks`.
+- Docs-only setup or result-recording changes may be committed and pushed to `main` when verification passes and the branch is in sync with `origin/main`.
 - Do not release, deploy, submit Play Console changes, alter production configuration, or run production-mutating operations during this run.
-
-## Task 1 Completion Note
-
-- Completed: 2026-06-09
-- Scope: audited `package.json` scripts and `scripts/` smoke-related files by source inspection only.
-- Output: `docs/android-production-qa-execution.md` now classifies reusable smoke commands, caution commands, and separate-approval commands for Android production QA.
-- No smoke commands were executed.
-- No app code, `package.json`, smoke script, billing, auth, Supabase, FCM, Android release, Play Console, or production-data changes were made.
-
-## Task 2 Completion Note
-
-- Completed: 2026-06-09
-- Scope: checked current mobile viewport smoke coverage from docs and script/source inspection only.
-- Output: `docs/android-production-qa-execution.md` now documents 360px coverage for `/coin`, `/crypto`, `/alts`, `/global`, `/alerts`, `/journal`, `/pro`, and settings/account screens.
-- Result: existing smoke commands can support route/static preconditions, but no existing command was confirmed to capture 360px screenshots, inspect DOM overflow, verify bottom navigation/safe-area overlap, or validate Android WebView behavior.
-- No smoke commands were executed.
-- No app code, UI code, `package.json`, smoke script, billing, auth, Supabase, FCM, Android release, Play Console, or production-data changes were made.
-
-## Task 3 Completion Note
-
-- Completed: 2026-06-09
-- Scope: wrote the production QA execution table from `docs/android-production-stability-qa.md` and `docs/android-production-qa-execution.md`.
-- Output: `docs/android-production-qa-execution.md` now separates `AUTO`, `MANUAL`, and `APPROVAL_REQUIRED` QA items with QA IDs, execution methods, expected results, failure-recording fields, suspect areas, risk, runnable timing, and default status.
-- Result: all automatic and manual execution items remain `NOT_RUN`; separate-approval items are marked `NEEDS_RUN`.
-- No smoke commands were executed.
-- No app code, UI code, `package.json`, smoke script, billing, auth, Supabase, FCM, Android release, Play Console, or production-data changes were made.
-
-## Task 4 Completion Note
-
-- Completed: 2026-06-09
-- Scope: selected safe one-time and sequential smoke command candidates from the existing smoke audit and production QA execution table.
-- Output: `docs/android-production-qa-execution.md` now identifies `git diff --check` as the first one-time execution candidate, separates follow-on candidates, caution candidates, run-forbidden candidates, and separate-approval candidates, and defines the smoke execution report format for a later task.
-- Result: no smoke/typecheck/build/lint candidate was executed as QA evidence in Task 4; required docs validation ran separately and all execution candidates remain planned only.
-- No app code, UI code, `package.json`, smoke script, billing, auth, Supabase, FCM, Android release, Play Console, or production-data changes were made.
-
-## Task 5 Completion Note
-
-- Completed: 2026-06-09
-- Scope: separated Android actual-device manual QA into `docs/qa/android-production-manual-qa.md`.
-- Output: the manual checklist now covers Play Store production install and first launch, Android navigation/back/relaunch, 360px visual review, Google login/logout, `/pro` pre-checkout review, notification permission/settings, settings/account, and Play Console read-only review.
-- Result: all manual checks remain `NOT_RUN`; separate-approval items remain `NEEDS_RUN`.
-- No manual QA, smoke command, payment, restore, account deletion, push send, production DB/token lookup, Play Console change, or external service change was executed.
-- No app code, UI code, `package.json`, smoke script, billing, auth, Supabase, FCM, Android release, Play Console, or production-data changes were made.
-
-## Task 6 Completion Note
-
-- Completed: 2026-06-09
-- Scope: created the Android production QA results template in `docs/qa/android-production-qa-results.md`.
-- Output: the template can record automatic smoke results, manual Android QA results, separate-approval items, failure details, and next active-run recommendations.
-- Result: `android-production-qa-execution-run` is now complete. No actual QA evidence was generated in this task.
-- No smoke command, manual QA, payment, restore, account deletion, push send, production DB/token lookup, Play Console change, or external service change was executed.
-- No app code, UI code, `package.json`, smoke script, billing, auth, Supabase, FCM, Android release, Play Console, or production-data changes were made.
 
 ## Completion Report Format
 
 - New active-run name.
 - Registered task list.
-- Whether automatic smoke, manual QA, and separate approval items are separated.
+- Actual commands to be run.
+- Whether forbidden commands are reflected.
 - Whether high-risk forbidden scope is reflected.
 - Verification results.
 - Commit hash.

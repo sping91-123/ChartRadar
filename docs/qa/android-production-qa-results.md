@@ -2,13 +2,26 @@
 
 ## Scope
 
-- Active run source: `android-production-qa-execution-run`
+- Active run source: `android-production-auto-smoke-run`
+- Prepared by: `android-production-qa-execution-run`
 - Execution plan: [Android Production QA Execution](../android-production-qa-execution.md)
 - Manual checklist: [Android Production Manual QA Checklist](android-production-manual-qa.md)
 - Stability checklist: [Android Production Stability QA](../android-production-stability-qa.md)
-- Template status: prepared only; no QA execution evidence is recorded yet.
+- Template status: auto smoke run registered; no automatic smoke command result is recorded yet.
 
 This template records results after Android production QA is actually executed. It does not authorize app code changes, UI changes, smoke script changes, production data changes, actual payment, purchase restore, account deletion, real push send, production DB/token lookup or mutation, Android native/release commands, or external console changes.
+
+## Active Auto Smoke Run Setup
+
+| Field | Value |
+| --- | --- |
+| Active run | `android-production-auto-smoke-run` |
+| Setup date | `2026-06-09` |
+| Planned safe commands | `git status --short`; `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run lint`; `npm.cmd run smoke:copy`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:launch` |
+| Forbidden smoke commands | `npm.cmd run smoke:all`; `npm.cmd run smoke:billing`; `npm.cmd run smoke:api`; `npm.cmd run smoke:routes`; `npm.cmd run smoke:css`; `npm.cmd run smoke:ops`; `npm.cmd run check:app-billing` |
+| Forbidden Android/release commands | `npm.cmd run app:sync`; `npm.cmd run app:sync:prod`; `npm.cmd run app:add:android`; `npm.cmd run app:android`; `npm.cmd run app:doctor`; `npm.cmd run app:android:debug`; `npm.cmd run app:android:release` |
+| Forbidden external actions | Actual payment, purchase restore, account deletion, real push send, production DB/token lookup or mutation, Supabase/FCM/RevenueCat/Google Play Console/Android release setting changes. |
+| Setup result | `NOT_RUN` for all command evidence until each task executes. |
 
 ## Status Definitions
 
