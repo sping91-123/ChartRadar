@@ -3,7 +3,7 @@
 ## Scope Status
 
 - Active run: `android-production-stability-qa-run`
-- Latest completed task: `Login/account/settings QA checklist`
+- Latest completed task: `Billing/subscription QA checklist`
 - Task status: `DONE`
 - Prepared date: 2026-06-09
 - Purpose: define what must be checked after Android production launch before iOS production work or new feature work.
@@ -270,6 +270,125 @@ Use this checklist for Android production account QA with a dedicated QA account
 - Stop before any real payment attempt, purchase confirmation, product change, or entitlement modification.
 - Stop before any real push send, push diagnostics send, push-cron call, or FCM configuration change.
 - If a bug appears to require auth, Supabase, RLS, billing, RevenueCat, FCM, Android release, or production config changes, record it as a follow-up candidate and stop.
+
+## Billing And Subscription QA Checklist
+
+Use this checklist for Android production billing QA planning only. This run does not execute a real purchase, does not execute a purchase restore, and does not change RevenueCat, Google Play Console, Supabase, RLS, auth, Android release settings, product IDs, plan IDs, entitlements, or prices.
+
+### Billing Smoke Boundaries
+
+| Boundary | Allowed in this run | Requires separate approved run |
+| --- | --- | --- |
+| `/pro` visibility | Open `/pro`, inspect product cards, current plan panel, CTA wording, Basic/Pro comparison, 360px layout. | None. |
+| Logged-out purchase CTA | Document expected login guidance; click only in a future QA execution if the operator confirms it cannot open a real payment sheet. | Any click that can enter Google Play checkout. |
+| Logged-in purchase CTA | Inspect button presence and wording only. | Opening Google Play payment sheet, completing purchase, cancelling inside the sheet, or validating billing callbacks. |
+| Google Play purchase flow | Document prerequisites and failure suspects. | Tester account, license tester setup, approved payment test path, and separate run. |
+| Purchase restore | Document entry path and expected states. | Any restore attempt, especially after reinstall or device change. |
+| Entitlement verification | Compare visible plan labels if a known QA account already has state. | Editing Supabase, RevenueCat, entitlements, product mapping, or console settings. |
+
+### Product And Price Display Reference
+
+The operator should compare `/pro` against the current published product structure without changing any identifiers or prices.
+
+| Product | Periods to verify on `/pro` | Current price expectation | Notes |
+| --- | --- | --- | --- |
+| Basic Radar | Free baseline | Free | Basic should remain useful and should not look broken. |
+| Coin Pro | Monthly, yearly | 29,000 KRW monthly; 290,000 KRW yearly | Crypto criteria, risk, invalidation, alerts, repeated checks, and review continuity. |
+| Global Pro | Monthly, yearly | 19,000 KRW monthly; 190,000 KRW yearly | Macro, asset, event, sector, index futures, and global-market context. |
+| All Market Pro | Monthly, 6-month | 39,000 KRW monthly; 199,000 KRW for 6 months | Cross-market risk comparison, mixed alerts, and unified review. |
+
+Hard rule: if price, product ID, plan ID, entitlement, renewal period, or displayed product family looks wrong, record the mismatch. Do not edit `billing.ts`, `mobilePurchases`, RevenueCat, Google Play Console, product IDs, plan IDs, entitlements, prices, checkout, sync, or grant logic inside this run.
+
+### `/pro` Price And Product Display
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `/pro` route opens | Direct route `/pro`, plan CTA from gated areas, account current-plan link if present. | Pricing surface loads without fatal render error or blank state. | Pro page shell, pricing panel render, auth/profile loading, native purchase availability state. | Route reachability can be automated. | Required. | HIGH | No `/pro` code edits. |
+| Basic versus Pro explanation is visible | `/pro`, `/pro?market=crypto`, `/pro?market=stocks`. | Basic is described as useful first-read support; Pro adds criteria, risk context, alerts, and review depth. | Pricing copy, plan comparison section, product filter state. | Screenshot support can help. | Required. | HIGH | No Basic/Pro gating or copy implementation changes in this task. |
+| Product families are distinguishable | `/pro` all-market view and market-filtered views. | Coin Pro, Global Pro, and All Market Pro are visibly different and scoped to the right market workflow. | Plan filter, product card copy, display labels, plan ordering. | Screenshot support can help. | Required. | HIGH | No product ID, plan ID, or entitlement edits. |
+| Current operating prices are visible | `/pro` product cards. | Monthly, yearly, and 6-month prices match the current published structure and do not contradict renewal text. | Billing model display, RevenueCat price label override, local display fallback, product card rendering. | Screenshot support can help. | Required. | HIGH | No price edits. No Google Play Console product edits. |
+| CTA wording stays judgment-support oriented | `/pro` product cards and comparison panels. | CTA copy does not read as investment instruction, return guarantee, buy/sell signal, long/short prompt, or urgent market action. | CTA copy, product-card copy, trust notes. | No. | Required. | HIGH | No CTA code/copy edits in this checklist task. |
+| Product identifiers are not exposed to users | `/pro`, account/settings plan display. | User-facing UI shows product names and plan scope, not internal IDs or legacy IDs. | Pricing panel display, current plan label, fallback error copy. | Screenshot support can help. | Required. | HIGH | No product ID, plan ID, entitlement, or label logic edits. |
+
+### Purchase Button Visibility
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Purchase buttons appear on plan cards | `/pro` while signed out and signed in. | Each paid plan card has a clear action, or a clear unavailable/loading state if native billing cannot be used. | Pricing panel state, native purchase availability, product load state, login state. | Screenshot support can help. | Required. | HIGH | No purchase code edits. |
+| Logged-out purchase path guides login | Signed-out `/pro`; observe or, in a later execution task, test only the login-gate behavior before any payment sheet. | User is asked to log in before purchase entitlement can be attached to an account. | Login gate, checkout state, account/session readiness. | No. | Required. | HIGH | No auth, checkout, billing, or Supabase edits. |
+| Logged-in button wording is clear | Signed-in `/pro`. | Buttons say what product or market scope the user is choosing and do not imply market action. | Product-card CTA copy, market filter, current plan state. | Screenshot support can help. | Required. | HIGH | No CTA or pricing implementation changes. |
+| Safe smoke stop point is explicit | `/pro` during QA execution. | Tester stops before opening a real Google Play payment sheet unless a separate billing test run approves it. | QA process control. | Not applicable. | Required. | HIGH | No actual purchase attempt in this run. |
+| Current-plan product button state is sensible | Known Basic and known Pro accounts if available. | Current plan is identified; unavailable or duplicate purchase states are explained without hiding other useful product context. | Current entitlement state, plan label mapping, product-card state. | Screenshot support can help. | Required with suitable account. | HIGH | No entitlement or RevenueCat edits. |
+
+### Google Play Subscription Purchase Flow
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Purchase prerequisites are known | Before any live billing QA. | Operator confirms production app install, signed-in QA account, Play Store account, approved tester status if testing purchase, and network state. | QA setup, tester enrollment, Play account mismatch. | No. | Required. | HIGH | No Google Play Console or tester changes in this run. |
+| Google Play sheet entry condition is documented | Signed-in Android production app on `/pro`. | Payment sheet should only be opened in a separate approved run with test account and tester setup. | Billing client, RevenueCat configuration, Android package/signing, login/session. | No. | Required as checklist only. | HIGH | No real production checkout here. |
+| Payment sheet missing failure suspects are clear | If future billing QA cannot open Google Play sheet. | Suspects include Play Console product status, RevenueCat product/offering/package mapping, Android package/signing, billing client state, login/session state, network, and product not available to account/region. | External product setup, native purchase bridge, session, network. | No. | Required if issue appears later. | HIGH | Do not fix by editing console/config/code in this run. |
+| Cancel/back behavior is scoped | Future separate tester run only. | Cancelling from Google Play should return to `/pro` with a non-destructive message and no entitlement granted. | Native purchase error normalization, purchase cancel state, UI feedback. | No. | Separate run only. | HIGH | No purchase attempt or cancellation test in this run. |
+| Purchase completion is out of scope | Future separate tester run only. | Real or tester purchase completion needs explicit approval, evidence capture, and entitlement verification plan. | RevenueCat, app-store sync, Supabase entitlement grant. | No. | Separate run only. | HIGH | No actual payment. No purchase completion. |
+
+### Post-Purchase Plan Reflection
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Success state expectation is documented | Future approved purchase test. | After successful purchase, `/pro` and `/account` should show the purchased plan scope or an understandable sync-in-progress state. | RevenueCat customer info, app-store sync API, entitlement refresh, profile cache. | No. | Separate run only. | HIGH | No RevenueCat, Supabase, RLS, or entitlement edits. |
+| Basic to Pro transition is visible | Known test purchase or pre-provisioned test account. | Basic indicators update to Coin Pro, Global Pro, or All Market Pro where applicable. | Entitlement resolver, current-plan label, profile refresh, market-scope gating. | Screenshot support can help with pre-existing state. | Required only with suitable account. | HIGH | No entitlement mutation. |
+| `/pro` and account/settings agree | `/pro`, `/account`, header/auth status, settings panel. | Same account shows consistent plan labels across surfaces after refresh/relaunch. | Current-plan display, profile cache, entitlement refresh event, local storage. | Screenshot support can help. | Required. | HIGH | No billing/profile writes. |
+| Relaunch preserves entitlement | Future approved purchase or known Pro account. | After app force close/reopen, plan state remains consistent or clearly refreshes. | WebView storage, auth session, entitlement refresh, RevenueCat sync. | No. | Required with suitable account. | HIGH | No auth/session or entitlement code edits. |
+| Delayed sync state is understandable | If plan does not immediately update after purchase in future run. | User sees a retry/restore/check state rather than contradictory Basic and Pro labels. | Sync endpoint, network, RevenueCat delay, profile refresh. | No. | Separate run only. | HIGH | Do not manually edit Supabase or RevenueCat to force state. |
+
+### Purchase Restore
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Restore entry is visible if supported | `/pro`, account/settings billing surfaces if present. | User can find restore purchase or entitlement refresh wording where appropriate. | Pricing panel restore control, native purchase availability, signed-in state. | Screenshot support can help. | Required. | HIGH | No restore code edits. |
+| Restore success expectation is documented | Future approved restore test. | Existing Google Play subscription should reconnect to the signed-in account and update `/pro` and `/account`. | RevenueCat restore, app-store sync, account mismatch, entitlement resolver. | No. | Separate run only. | HIGH | No actual restore in this run. No RevenueCat/Supabase edits. |
+| No-purchase restore state is understandable | Future approved restore test with account lacking purchases. | User sees a clear "no active subscription found" style state and remains on a safe screen. | Restore error copy, native bridge, sync API. | No. | Separate run only. | HIGH | No test restore execution now. |
+| Device change or reinstall is considered | Future approved restore test after reinstall or different Android device. | Restore path should recover entitlement for the same Play account and app account, or explain mismatch. | Play account, RevenueCat app user ID, login account, sync endpoint. | No. | Separate run only. | HIGH | No reinstall/restore execution in this run. |
+| Restore does not expose internal IDs | `/pro` restore result if observed later. | User-facing result names product scope, not product IDs, plan IDs, or entitlement IDs. | Error/result copy, mapping fallback. | No. | Required if restore is tested later. | HIGH | No identifier mapping edits. |
+
+### Basic And Pro Gating Display
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Basic gating remains useful | Basic account on `/coin`, `/crypto`, `/alts`, `/global`, `/alerts`, `/journal`, `/pro`. | Basic users can still understand the app, see first-read value, and know what Pro adds. | Route copy, usage gates, entitlement state, CTA placement. | Route and screenshot smoke can help. | Required. | HIGH | No gating rule changes. |
+| Coin Pro gates match crypto context | Crypto and alt routes, crypto alert surfaces, `/pro?market=crypto`. | Locked/limited crypto details point to Coin Pro or All Market Pro in context. | Crypto entitlement mapping, route CTA copy, usage limits. | Limited screenshot support. | Required. | HIGH | No entitlement or billing edits. |
+| Global Pro gates match global context | `/global`, `/global/assets`, global alert surfaces, `/pro?market=stocks`. | Locked/limited global details point to Global Pro or All Market Pro in context. | Global entitlement mapping, route CTA copy, usage limits. | Limited screenshot support. | Required. | HIGH | No stock/global entitlement edits. |
+| All Market Pro reads as combined workflow | `/pro`, mixed-market alert/review contexts if visible. | All Market Pro is presented as cross-market risk comparison, mixed alerts, and unified review, not only a discount. | Bundle copy, plan card presentation, CTA placement. | Screenshot support can help. | Required. | MEDIUM | No bundle product/plan/entitlement edits. |
+| Pro CTA is contextual, not coercive | Gated surfaces and `/pro`. | CTA appears near missing depth and avoids urgency, profit, loss-avoidance, buy/sell, long/short, or asset-pick wording. | CTA copy, gate copy, plan-card copy. | No. | Required. | HIGH | No copy implementation changes in this checklist task. |
+| Gating does not make app unusable | Basic account on primary routes. | User can still navigate, read available context, and understand next checks without paying. | Over-gating, blank states, missing Basic fallback. | Route smoke can help. | Required. | HIGH | No gating weakening or strengthening in this run. |
+
+### Subscription State Exceptions
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Expired subscription state | Known expired tester account, future separate run. | App shows Basic or restore-needed state clearly without pretending Pro is active. | RevenueCat expiration, profile stale state, sync endpoint, entitlement resolver. | No. | Separate run only. | HIGH | No manual entitlement edits. |
+| Purchase cancelled state | Future approved purchase-cancel test. | App stays on `/pro`, no entitlement is granted, and message is not alarming. | Native purchase cancel handling, checkout state. | No. | Separate run only. | HIGH | No purchase/cancel test in this run. |
+| Payment failed or interrupted state | Future approved tester run or naturally observed failure. | User gets retryable guidance and no false Pro access. | RevenueCat purchase error, billing client, network, sync endpoint. | No. | Separate run only. | HIGH | No real payment attempt. |
+| Network failure during product load | `/pro` under naturally poor network or future controlled QA. | Product loading delay or failure copy explains retry/network/Play account context without crashing. | RevenueCat product fetch, timeout handling, pricing fallback. | Route smoke may catch fatal errors only. | Required if safely reproducible. | HIGH | No config edits to simulate. |
+| RevenueCat response delay | `/pro` Android production app. | User sees understandable loading or delayed product state; buttons do not enter broken purchase path. | RevenueCat SDK, product fetch timeout, native purchase availability. | No. | Required if observed. | HIGH | No RevenueCat config edits. |
+| Relaunch mismatch | After login, known plan state, or future approved purchase/restore. | App resolves to one consistent plan state after refresh/relaunch, or gives a clear sync/restore path. | Auth session, profile cache, RevenueCat, app-store sync. | No. | Required with suitable account. | HIGH | No Supabase/RevenueCat edits. |
+| Play Store and app plan mismatch | Future approved billing QA with Play subscription evidence. | Mismatch is recorded with screenshots and not "fixed" by direct production mutation. | Play subscription status, RevenueCat mapping, sync endpoint, account mismatch. | No. | Separate run only. | HIGH | No console, product, entitlement, or database changes. |
+
+### Billing And Subscription 360px Mobile Check
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Price cards are not clipped | `/pro` at 360px and market-filtered variants. | Product cards fit width, scroll vertically, and do not create horizontal overflow. | Plan card layout, price row width, badge/chip wrapping. | Screenshot support can help. | Required. | MEDIUM | No UI code edits in this checklist task. |
+| Long product descriptions stay readable | `/pro` plan cards and comparison sections. | Descriptions wrap cleanly and do not push buttons into unsafe or hidden positions. | Card typography, line length, section spacing. | Screenshot support can help. | Required. | MEDIUM | No copy/layout edits here. |
+| CTA buttons avoid bottom overlap | `/pro` on Android production app. | Purchase and restore buttons are tappable and not covered by bottom navigation or safe area. | Safe-area padding, bottom nav overlap, sticky controls. | Screenshot support can help. | Required. | HIGH | No safe-area/native edits. |
+| Monthly/yearly/6-month pricing is unambiguous | `/pro` plan cards. | Period labels and renewal text do not make monthly, yearly, or 6-month products look interchangeable. | Price label rendering, period label, renewal copy. | Screenshot support can help. | Required. | HIGH | No price/period edits. |
+| Restore and caution text are readable | `/pro` lower sections and any restore state. | Restore link/button and subscription cautions are visible, readable, and tappable at 360px. | Restore control placement, trust notes, mobile spacing. | Screenshot support can help. | Required. | HIGH | No restore logic edits. |
+
+### Billing QA Hard Stops
+
+- Do not execute a real payment, real Google Play checkout, real purchase restore, or real subscription cancellation inside this run.
+- Do not change `src/lib/billing.ts`, `src/lib/mobilePurchases.ts`, RevenueCat, Google Play Console products, product IDs, plan IDs, entitlements, prices, auth, Supabase, RLS, Android release settings, checkout, sync, grant, or entitlement-resolution logic.
+- If actual purchase or restore validation is required, create a separate run with an approved test account, license tester setup, evidence plan, and explicit stop conditions.
+- If a mismatch appears between Google Play, RevenueCat, Supabase, and app UI, record evidence and stop before mutating any external system.
 
 ## Risk Grouping
 
