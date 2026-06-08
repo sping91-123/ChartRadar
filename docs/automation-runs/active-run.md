@@ -79,7 +79,7 @@
 
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TODO | Current pricing/access structure audit | Pricing / Access Audit | LOW | Document current Pro products, plan IDs, entitlements, route gating, and Pro CTA locations. | No code edits. No `billing.ts` edits. No RevenueCat edits. No product ID, plan ID, entitlement, or price edits. | `git diff --check` |
+| 1 | DONE | Current pricing/access structure audit | Pricing / Access Audit | LOW | Document current Pro products, plan IDs, entitlements, route gating, and Pro CTA locations. | No code edits. No `billing.ts` edits. No RevenueCat edits. No product ID, plan ID, entitlement, or price edits. | `git diff --check` |
 | 2 | TODO | Basic/Pro value re-definition | Product / Monetization | MEDIUM | Define what Coin Basic, Coin Pro, Global Pro, and All Market Pro should each provide. | No code edits. No price changes. No billing logic changes. | `git diff --check` |
 | 3 | TODO | Route-level free/paid exposure matrix | Product / Route Policy | MEDIUM | Document Basic and Pro exposure for `/coin`, `/crypto`, `/alts`, spot candidate, `/global`, `/global/assets`, `/news`, `/alerts`, `/journal`, and `/pro`. | No code edits. | `git diff --check` |
 | 4 | TODO | Pro CTA wording principles | Copy / Compliance | LOW | Define CTA wording rules that explain Pro value without implying guaranteed returns or entry instructions. | No code edits. No entry-instruction phrasing. | `git diff --check` |
