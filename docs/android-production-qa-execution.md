@@ -6,7 +6,7 @@
 - Setup date: 2026-06-09
 - Source checklist: [Android Production Stability QA](android-production-stability-qa.md)
 - Manual checklist: [Android Production Manual QA](qa/android-production-manual-qa.md)
-- Current task state: Tasks 1-2 `DONE`; Task 3 is the next `TODO`.
+- Current task state: Tasks 1-3 `DONE`; Task 4 is the next `TODO`.
 
 This document turns the completed Android production stability checklist into an execution plan. It is not an implementation plan and does not authorize code, service, release, or production-data changes.
 
@@ -14,7 +14,7 @@ This document turns the completed Android production stability checklist into an
 
 - Execute one active-run task at a time.
 - Treat every smoke result as evidence only. Do not fix failures inside this run.
-- Use `NEEDS-RUN` until a command or manual step is actually executed.
+- Use `NOT_RUN` for automatic and manual items until they are actually executed; use `NEEDS_RUN` for separate-approval or not-currently-runnable items.
 - Use a dedicated QA account for account, login, plan, alert, and settings checks.
 - Do not expose credentials, tokens, raw push tokens, service keys, payment keys, or private account identifiers in QA notes.
 - Do not perform actual purchase, purchase restore, account deletion, production DB mutation, or real push send.
@@ -130,23 +130,69 @@ Separate approval remains required for:
 - Real push delivery, push-click targetPath validation, or raw token inspection.
 - Production DB changes or Supabase/FCM/RevenueCat/Google Play Console/Android release configuration changes.
 
-## Execution Table
+## Production QA Execution Table
 
-Task 3 should promote this draft table into the final execution table.
+Task 3 created the execution table only. No command, smoke, browser check, Android device check, payment, restore, account deletion, push send, production DB query, token inspection, or external console change was executed in this task.
 
-| Order | QA item | Evidence type | Automation status | Manual status | Risk | Hard stop |
-| --- | --- | --- | --- | --- | --- | --- |
-| 1 | Worktree and docs safety | `git status`, `git diff --check`, docs-only diff, sensitive-value scan | Candidate automatic | Not needed | LOW | Stop if non-doc changes or sensitive values appear. |
-| 2 | Static copy guard | `npm.cmd run smoke:copy` output | Candidate automatic | Not needed | LOW | Stop if command scope expands beyond static scan. |
-| 3 | Static mobile readiness guard | `npm.cmd run smoke:mobile` output | Candidate automatic | Manual review still required for visual viewport | LOW | Stop if command requires code/config changes. |
-| 4 | Route reachability | `npm.cmd run smoke:routes` output against local dev server | Candidate automatic | Manual navigation still required for Android WebView | LOW-MEDIUM | Use local `SMOKE_BASE_URL` only; do not point at production unless separately approved. |
-| 5 | API guard smoke | `npm.cmd run smoke:api` output against local dev server | Candidate automatic | Not required for first device pass | MEDIUM | Use local `SMOKE_BASE_URL` only; no production mutation. |
-| 6 | Android production first launch | Device notes, screenshots, app version | No | Required | LOW-MEDIUM | No Play Console/release changes. |
-| 7 | Navigation/back/relaunch | Device notes or recording | No | Required | LOW-MEDIUM | No code changes inside this run. |
-| 8 | Google login/logout | Device notes or screenshots without credentials | No | Required | MEDIUM-HIGH | Dedicated QA account only; no auth/Supabase changes. |
-| 9 | `/pro` pre-checkout | Screenshots and stop-point notes | Route/static support only | Required | MEDIUM-HIGH | Stop before actual Google Play checkout, purchase, or restore. |
-| 10 | Notification permission/settings | Screenshots and permission-state notes | Route/static support only | Required | MEDIUM-HIGH | No real push, token exposure, FCM/Supabase changes, or push-cron send mode. |
-| 11 | Play Console health read-only | Read-only console notes/screenshots | No | Required | MEDIUM-HIGH | No rollout, listing, tester, country/region, product, warning, or release edits. |
+Default status policy:
+
+- `NOT_RUN`: planned automatic or manual item that has not been executed.
+- `PASS`: executed and met the expected result.
+- `FAIL`: executed and did not meet the expected result.
+- `BLOCKED`: could not run because a prerequisite or guardrail stopped it.
+- `NEEDS_RUN`: requires a separate approved run or is not currently runnable inside this active-run task.
+
+### AUTO Items
+
+| QA ID | Category | Execution item | Target route or feature | Method | Expected result | Failure record | Failure suspect area | Risk | Runnable timing | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A-001 | AUTO | Worktree whitespace safety | Documentation diff. | Run `git diff --check`. | No whitespace or patch-format errors. | Command output, affected file, line, and whether the issue is docs-only. | Markdown trailing whitespace, malformed table rows, line ending drift. | LOW | Before every docs commit. | `NOT_RUN` |
+| A-002 | AUTO | Docs-only and worktree safety | Changed files and untracked files. | Check `git status --short --branch`, `git diff --name-only`, and untracked files. | Only approved `docs/` paths are changed. | Any non-doc path, staged/untracked state, and whether it touches protected areas. | Accidental app, UI, `package.json`, `scripts/`, Android, billing, auth, Supabase, or FCM changes. | LOW | Before commit and before push. | `NOT_RUN` |
+| A-003 | AUTO | Sensitive-value diff scan | Documentation diff only. | Scan staged/unstaged docs diff for key, token, secret, password, private key, and JWT-like patterns. | No sensitive value pattern appears in QA notes or diffs. | Matched line without exposing additional context, file path, and stop decision. | Credential leakage, copied token, raw push token, service key, payment key. | HIGH | Before commit. | `NOT_RUN` |
+| A-004 | AUTO | TypeScript no-emit check | TypeScript project. | Run `cmd /c npx tsc --noEmit`. | Typecheck completes without errors. | First error block, affected file, whether it predates this docs-only task. | Type drift, stale declarations, unsafe imports, existing app compile issue. | LOW-MEDIUM | After static safety checks, if automatic checks are selected. | `NOT_RUN` |
+| A-005 | AUTO | Production build check | Next.js app build. | Run `npm.cmd run build`. | Build completes locally without deploy or release action. | First build error, route/module involved, whether protected runtime assumptions appear. | Next build config, route compile error, server/client import issue, static generation assumption. | LOW-MEDIUM | After typecheck or as selected by Task 4. | `NOT_RUN` |
+| A-006 | AUTO | Lint check | App source lint quality. | Run `npm.cmd run lint`. | Lint completes without new failures. | Rule, file, first failure, whether it is unrelated existing debt. | ESLint config, source lint issue, generated output drift. | LOW | After static safety checks, if selected. | `NOT_RUN` |
+| A-007 | AUTO | Static copy guard | User-facing source copy and alert copy. | Run `npm.cmd run smoke:copy`. | No blocked advisory wording, broken text, or copy guard failure. | Failing phrase/rule, file, and whether wording looks like investment instruction. | Judgment-support copy, encoded text drift, alert/pro copy regression. | LOW | Good first smoke candidate for Task 4. | `NOT_RUN` |
+| A-008 | AUTO | Static mobile readiness guard | Mobile shell, PWA assets, Capacitor config, Android notification asset references. | Run `npm.cmd run smoke:mobile`. | Static mobile readiness checks pass without running Android release tooling. | Failing assertion, file/asset, and whether it touches Android/FCM protected scope. | PWA assets, mobile shell, Capacitor config, notification icon, push migration references. | LOW-MEDIUM | After copy guard or as selected by Task 4. | `NOT_RUN` |
+| A-009 | AUTO | Launch-readiness static guard | High-level launch source markers. | Run `npm.cmd run smoke:launch`. | Launch-readiness score/check completes as advisory evidence. | Missing marker, score, and affected source/doc path. | Launch source marker drift, macro/news/alert/mobile/visual readiness marker, stale docs. | LOW | After static safety checks, if selected. | `NOT_RUN` |
+| A-010 | AUTO | Route reachability precondition | Core routes and local guard responses. | Run `npm.cmd run smoke:routes` only with local `SMOKE_BASE_URL` and local dev server. | Core routes return expected local statuses and guarded billing endpoints remain blocked. | Base URL, failed route/status, response summary, and confirmation target was local. | Route registration, redirects, local dev server, health endpoint, local billing guard behavior. | MEDIUM | Only after Task 4 confirms local target and dev server conditions. | `NOT_RUN` |
+| A-011 | AUTO | CSS/static route precondition | `/crypto/home` CSS asset availability. | Run `npm.cmd run smoke:css` only against local dev server. | CSS assets referenced by `/crypto/home` respond locally and are non-empty. | Base URL, missing CSS href/status/size, and local target confirmation. | CSS chunk generation, `/crypto/home` response, static asset serving. | LOW-MEDIUM | After local server target is confirmed. | `NOT_RUN` |
+| A-012 | AUTO | Local API guard precondition | API validation and blocked-response behavior. | Run `npm.cmd run smoke:api` only with local `SMOKE_BASE_URL`. | Invalid/oversized local requests are rejected safely; no production mutation. | Base URL, endpoint, status, response summary, and mutation-risk assessment. | API validation, body-size guards, local billing guard, local service availability. | MEDIUM | Only after Task 4 confirms local target and no production endpoint. | `NOT_RUN` |
+
+### MANUAL Items
+
+| QA ID | Category | Execution item | Target route or feature | Method | Expected result | Failure record | Failure suspect area | Risk | Runnable timing | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| M-001 | MANUAL | Play Store production first launch | Google Play installed Android app. | Install/open production app on an approved Android QA device. | App opens production build and lands on a safe first route without blank screen or crash. | Device, Android version, app version, install source, first route, screenshot/recording. | Production install state, WebView shell, initial route, app startup, network. | LOW-MEDIUM | After at least one safe automatic smoke candidate is selected or recorded. | `NOT_RUN` |
+| M-002 | MANUAL | Android navigation smoke | Top/bottom navigation, `/coin`, `/crypto`, `/alts`, `/global`, `/alerts`, `/journal`, `/pro`, settings/account. | Tap primary navigation paths on device. | Each primary screen opens and user can move away without trap. | Route, tap path, actual result, screenshot/recording. | Route shell, navigation state, redirects, bottom nav, account gating. | LOW-MEDIUM | After first launch. | `NOT_RUN` |
+| M-003 | MANUAL | Android back button smoke | Primary routes and nested/settings routes. | Use Android hardware/software back after visiting core screens. | Back behavior returns to prior safe screen or exits predictably without stale account data. | Start route, target route, back result, any loop or stale screen. | Client router, WebView history, auth/gating redirects, modal state. | MEDIUM | After navigation smoke. | `NOT_RUN` |
+| M-004 | MANUAL | App close and relaunch smoke | Android app lifecycle. | Force close or exit app, then relaunch. | App relaunches into a stable route and preserves only expected session/settings state. | Pre-close route/account state, relaunch route, visible session state. | WebView storage, auth session restore, route persistence, loading state. | MEDIUM | After navigation/back smoke. | `NOT_RUN` |
+| M-005 | MANUAL | Google login CTA visibility | Signed-out app, settings/account, `/pro`, gated surfaces if visible. | Observe signed-out state and login button/access path. | Login CTA is visible and does not block Basic browsing unnecessarily. | Entry route, CTA text/location, screenshot, any missing path. | Auth UI, settings/account links, gating copy, route-specific login state. | MEDIUM | After navigation smoke with signed-out state. | `NOT_RUN` |
+| M-006 | MANUAL | Google login cancel stability | Google account picker or browser/native sign-in flow. | Start login and cancel before success. | App returns to a stable signed-out state without blank screen or loop. | Cancel step, return route, visible error/copy, screenshot/recording. | OAuth redirect, native/WebView bridge, auth error handling, route recovery. | MEDIUM | After login CTA visibility. | `NOT_RUN` |
+| M-007 | MANUAL | Google login success and session | Dedicated QA Google account. | Complete login, observe user state, relaunch app. | User state is reflected and session persists after relaunch. | Account type without private identifier, route after login, relaunch state, screenshots. | Auth callback, Supabase session, profile load, WebView storage. | MEDIUM-HIGH | After cancel stability and with dedicated QA account. | `NOT_RUN` |
+| M-008 | MANUAL | Logout smoke | Signed-in account/settings path. | Tap logout and revisit account/protected surfaces. | User returns to signed-out state; back/relaunch does not expose prior account screen. | Logout path, resulting route, back behavior, relaunch state. | Auth sign-out, cached profile state, route history, protected UI gating. | MEDIUM | After login success smoke. | `NOT_RUN` |
+| M-009 | MANUAL | `/coin` 360px visual review | `/coin`. | Review on Android device or 360px browser screenshot if later approved. | Decision summary, readiness, direction, market label, risk, and next conditions fit without overlap. | Screenshot, viewport/device, text clipping, blank/loading/error state. | Coin home decision model, top layout, copy length, safe-area/bottom nav spacing. | MEDIUM | After route smoke or first device navigation. | `NOT_RUN` |
+| M-010 | MANUAL | `/crypto` 360px visual review | `/crypto`, `/crypto/home`, crypto market surfaces. | Review screen state at 360px/device. | Core signals, Basic/Pro exposure, empty/loading/error states, and chart/card layout remain usable. | Screenshot, route, account state, broken element. | Crypto route shell, market data, chart rendering, Basic/Pro gating, copy density. | MEDIUM | After route smoke or first device navigation. | `NOT_RUN` |
+| M-011 | MANUAL | `/alts` 360px visual review | `/alts`, `/crypto/perpetual/alts`. | Review screen state at 360px/device. | Alt strength/risk, gating, long symbols, and cards/lists do not break layout. | Screenshot, route, account state, overflow/clipping details. | Alt data, gating, list/card layout, symbol width, redirect mapping. | MEDIUM | After route smoke or first device navigation. | `NOT_RUN` |
+| M-012 | MANUAL | `/global` 360px visual review | `/global`, related global entry paths. | Review screen state at 360px/device. | First assets/risk context, Global Pro CTA, and loading/empty states are readable. | Screenshot, route, data state, CTA placement issue. | Global data pipeline, CTA placement, asset labels, safe-area spacing. | MEDIUM | After route smoke or first device navigation. | `NOT_RUN` |
+| M-013 | MANUAL | `/alerts` 360px visual review | `/alerts`, `/crypto/alert`, global alert entry. | Review alert list/settings entry at 360px/device. | Empty/list state, settings entry, long alert copy, and Pro limits remain readable. | Screenshot, permission state, plan state, clipping/overlap details. | Alert UI, permission bridge, Pro alert gating, text wrapping, bottom nav. | HIGH | After navigation smoke; before any push-delivery work. | `NOT_RUN` |
+| M-014 | MANUAL | `/journal` 360px visual review | `/journal`, market variants. | Review empty/list/write/detail entry paths without creating production data unless separately approved. | Empty/list state and action paths are readable without safe-area overlap. | Screenshot, account state, route, whether data creation was avoided. | Journal persistence, list/form layout, auth state, empty-state copy. | MEDIUM | After login state is known if account-specific. | `NOT_RUN` |
+| M-015 | MANUAL | `/pro` 360px and pre-checkout smoke | `/pro`, `/pro?market=crypto`, `/pro?market=stocks`. | Review cards, prices, CTAs, current-plan state, and stop before Google Play checkout. | Basic/Pro value, Coin/Global/All Market plans, prices, and buttons are visible without entering checkout. | Screenshot, account state, plan card, CTA, exact stop point. | Pricing panel, product display, current-plan state, mobile CTA layout. | MEDIUM-HIGH | After navigation smoke; before any billing test. | `NOT_RUN` |
+| M-016 | MANUAL | Settings/account 360px smoke | `/settings`, `/account`, `/account/delete`, `/privacy`, `/terms`, `/refund`, settings panel. | Review account state, plan, notification settings, policy links, logout, deletion access boundary. | Controls are visible; deletion is not executed; long email/nickname and modals fit. | Screenshot, signed-in/out state, hidden/clipped control, deletion stop point. | Settings route, account session, policy links, modal layout, deletion-warning UI. | HIGH | After login/logout smoke as appropriate. | `NOT_RUN` |
+| M-017 | MANUAL | Alert permission/settings smoke | Android notification permission, `/alerts`, alert settings. | Observe permission allowed/denied/pending state and settings entry; do not send push or expose token. | Permission guidance and Pro alert limits are understandable. | Device permission state, app status copy, screenshot, any mismatch. | Permission bridge, app push state, alert settings, Pro alert gating. | MEDIUM-HIGH | After device navigation; with QA device permission state known. | `NOT_RUN` |
+| M-018 | MANUAL | Play Console crash/ANR read-only review | Production crash rate, ANR rate, Android vitals, warnings. | Open Play Console only for read-only observation. | Health signals and warnings are captured without changing release or listing state. | Screenshot/notes, concrete metric/warning text, date/time observed. | Production stability, Android vitals, release warnings, store metadata. | MEDIUM-HIGH | After user-path smoke; read-only only. | `NOT_RUN` |
+
+### APPROVAL_REQUIRED Items
+
+| QA ID | Category | Execution item | Target route or feature | Method | Expected result | Failure record | Failure suspect area | Risk | Runnable timing | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| R-001 | APPROVAL_REQUIRED | Actual Google Play purchase test | Google Play checkout and subscription activation. | Separate approved billing run with tester account and explicit stop points. | Purchase flow and entitlement update are validated without real customer impact. | Tester setup, product, checkout step, entitlement result, screenshots. | Google Play product state, RevenueCat mapping, billing client, account/session. | HIGH | Separate approved run only. | `NEEDS_RUN` |
+| R-002 | APPROVAL_REQUIRED | Purchase restore test | Restore purchase path and entitlement sync. | Separate approved restore run with known purchase history. | Existing purchase restores to the intended account or explains no-purchase state. | Account/setup, restore path, result state, screenshots. | RevenueCat restore, Play account mismatch, app-store sync, Supabase entitlement state. | HIGH | Separate approved run only. | `NEEDS_RUN` |
+| R-003 | APPROVAL_REQUIRED | Actual account deletion test | Account deletion flow. | Separate approved destructive test with disposable QA account. | Disposable account deletion behavior is validated and recorded. | Account type, confirmation step, result, policy evidence. | Account deletion route, Supabase data deletion, auth cleanup, policy flow. | HIGH | Separate approved run only. | `NEEDS_RUN` |
+| R-004 | APPROVAL_REQUIRED | Real push delivery or push-click test | FCM delivery, notification tap, `targetPath`. | Separate approved notification delivery run with QA device/account and no-secret evidence plan. | Push arrives, tap opens expected route or safe fallback. | Device/account state, payload summary without token, target route, screenshots. | FCM delivery, push token, push-cron, alert scanner, targetPath routing, app push listener. | HIGH | Separate approved run only. | `NEEDS_RUN` |
+| R-005 | APPROVAL_REQUIRED | Production DB or push token lookup/mutation | Supabase production DB, token records, account state. | Separate approved data-access run with read/minimize plan. | Any lookup is justified, minimized, and does not expose secrets in notes. | Query purpose, table/scope, redacted evidence, mutation approval if any. | Supabase policy, token storage, account binding, production data integrity. | HIGH | Separate approved run only. | `NEEDS_RUN` |
+| R-006 | APPROVAL_REQUIRED | External service or release settings change | Supabase, FCM, RevenueCat, Google Play Console, Android release settings. | Separate release-ops or implementation run with rollback/verification plan. | Change is explicitly approved, bounded, and verified. | Exact setting, before/after evidence, rollback plan, approval note. | External console state, product mapping, release track, FCM config, Android signing/versioning. | HIGH | Separate approved run only. | `NEEDS_RUN` |
+| R-007 | APPROVAL_REQUIRED | Android native/release commands | `app:sync`, `app:sync:prod`, `app:add:android`, `app:android`, `app:android:debug`, `app:android:release`, release scripts. | Separate Android release/device run only. | Native/release artifact changes happen only under approved Android scope. | Command, output path, generated/changed files, release risk. | Capacitor sync, Android native project, signing, AAB generation, Play Console release state. | HIGH | Separate approved run only. | `NEEDS_RUN` |
 
 ## Safe Smoke Candidate Draft
 
@@ -154,9 +200,9 @@ Task 4 should select the final command candidate before execution. Based on setu
 
 | Candidate | Why it is safe to consider first | Conditions before running | Result status |
 | --- | --- | --- | --- |
-| `npm.cmd run smoke:copy` | Static source scan only; supports judgment-support and blocked-copy guardrails. | Confirm no app code changes are intended and failures will be documented only. | `NEEDS-RUN` |
-| `npm.cmd run smoke:mobile` | Static mobile/PWA/Android asset guard; no browser viewport or production mutation. | Confirm failures will be documented only and no Android native edits will follow in this run. | `NEEDS-RUN` |
-| `npm.cmd run smoke:routes` | Useful route/API guard evidence once a local dev server is available. | Confirm `SMOKE_BASE_URL` is local, dev server is running, and billing POST checks remain blocked-response tests. | `NEEDS-RUN` |
+| `npm.cmd run smoke:copy` | Static source scan only; supports judgment-support and blocked-copy guardrails. | Confirm no app code changes are intended and failures will be documented only. | `NOT_RUN` |
+| `npm.cmd run smoke:mobile` | Static mobile/PWA/Android asset guard; no browser viewport or production mutation. | Confirm failures will be documented only and no Android native edits will follow in this run. | `NOT_RUN` |
+| `npm.cmd run smoke:routes` | Useful route/API guard evidence once a local dev server is available. | Confirm `SMOKE_BASE_URL` is local, dev server is running, and billing POST checks remain blocked-response tests. | `NOT_RUN` |
 
 Commands that need more caution:
 
@@ -182,14 +228,15 @@ Use this shape for later task evidence:
 
 | Check | Status | Evidence | Notes | Protected area touched? | Follow-up |
 | --- | --- | --- | --- | --- | --- |
-| Example check | `NEEDS-RUN` | Command/manual evidence pending. | None. | No. | None. |
+| Example check | `NOT_RUN` | Command/manual evidence pending. | None. | No. | None. |
 
 Allowed statuses:
 
+- `NOT_RUN`: planned automatic or manual check that has not been executed.
 - `PASS`: executed and met expected result.
 - `FAIL`: executed and did not meet expected result.
 - `BLOCKED`: could not run because a prerequisite or guardrail stopped it.
-- `NEEDS-RUN`: planned but not executed yet.
+- `NEEDS_RUN`: separate-approval or not-currently-runnable item that needs a later approved run.
 
 ## Current Setup Evidence
 
