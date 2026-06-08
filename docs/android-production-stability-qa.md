@@ -3,7 +3,7 @@
 ## Scope Status
 
 - Active run: `android-production-stability-qa-run`
-- Latest completed task: `Billing/subscription QA checklist`
+- Latest completed task: `Notification QA checklist`
 - Task status: `DONE`
 - Prepared date: 2026-06-09
 - Purpose: define what must be checked after Android production launch before iOS production work or new feature work.
@@ -389,6 +389,118 @@ Hard rule: if price, product ID, plan ID, entitlement, renewal period, or displa
 - Do not change `src/lib/billing.ts`, `src/lib/mobilePurchases.ts`, RevenueCat, Google Play Console products, product IDs, plan IDs, entitlements, prices, auth, Supabase, RLS, Android release settings, checkout, sync, grant, or entitlement-resolution logic.
 - If actual purchase or restore validation is required, create a separate run with an approved test account, license tester setup, evidence plan, and explicit stop conditions.
 - If a mismatch appears between Google Play, RevenueCat, Supabase, and app UI, record evidence and stop before mutating any external system.
+
+## Notification QA Checklist
+
+Use this checklist for Android production notification QA planning only. This run does not send real push notifications, does not call production push-cron in send mode, does not manually insert or delete push tokens, and does not change FCM, Supabase, RLS, auth, entitlement, RevenueCat, billing, Android release settings, or production DB state.
+
+### Notification Smoke Boundaries
+
+| Boundary | Safe in this run | Requires separate approved run |
+| --- | --- | --- |
+| Permission and settings review | Inspect Android permission prompts, denied/granted states, in-app status rows, alert settings, Pro limits, `/alerts` entry, and 360px layout. | Reset device permission state only when the QA device and account are approved for that manual pass. |
+| Push token readiness | Observe user-facing readiness or approved non-sensitive diagnostics without printing raw token values. | Any direct production DB query, token inspection, token insertion, token deletion, or server-side mutation. |
+| Push delivery and click routing | Document expected `targetPath` behavior and inspect list-item navigation where visible. | Real push send, test push send, push notification tap test, or production `push-cron` send-mode invocation. |
+| Duplicate and cooldown review | Review visible alert repetition risk and record suspected quality issues. | Any change to scanner thresholds, duplicate guards, cooldown rules, targetPath payloads, FCM, Supabase, or push-cron. |
+
+### Notification Permission Request
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Permission prompt appears from a relevant user path | First Android app entry if notification onboarding appears, `/alerts`, `/crypto/alert`, global alert entry, settings/account notification entry. | User can reach a permission request or a clear state explaining why alerts need permission. | Android permission bridge, app notification onboarding, alert settings shell, route state. | Route reachability can help only. | Required. | HIGH | No Android permission config, FCM, or app code edits. |
+| Permission allowed state is understandable | Android OS prompt, then return to alert settings or current route. | App shows notification-ready or enabled state without requiring another unclear action. | Permission state sync, WebView/native bridge, push registration state, UI refresh. | No. | Required. | HIGH | No real push send. No token edits. |
+| Permission denied state gives recovery path | Deny the OS prompt on an approved QA device or observe existing denied state. | App explains that alerts are blocked and points to settings or a retry path when available. | Denied-state copy, Android app settings deep link, permission-state cache. | No. | Required. | HIGH | No native setting edits. No forced permission changes in code. |
+| OS permission and in-app status agree | Android app notification settings and in-app notification status. | OS-level blocked/allowed state does not contradict the app's displayed alert state. | Native bridge, cached permission state, WebView reload timing, OS notification state. | No. | Required. | HIGH | No production config or Android release edits. |
+| Real push remains out of scope | Any permission review path. | QA stops after permission and state display checks; no notification is sent to prove delivery. | QA process control. | Not applicable. | Required. | HIGH | No FCM send, test push, or production push-cron send-mode call. |
+
+### Push Token Storage
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Logged-out token expectation is clear | Signed-out app, alert settings, `/alerts`. | App does not imply account-attached alert delivery is ready before login; login requirement is understandable if token/account binding is needed. | Session state, account gate, push registration copy, alert settings state. | No. | Required. | HIGH | No auth, Supabase, or token handling edits. |
+| Logged-in token readiness is visible without exposing token value | Signed-in QA account with permission allowed, alert settings or approved diagnostics surface. | User-facing state indicates alerts are ready, pending, denied, or unavailable without printing raw token strings. | FCM initialization, Supabase save, session state, Android permission state, network. | Existing non-mutating diagnostics may support only if already safe and approved. | Required. | HIGH | No raw token logging. No direct production DB token inspection. |
+| Token save failure suspects are recorded | If alert readiness stays failed or pending. | Suspects are narrowed to FCM initialization, Supabase storage, login/session state, Android permission state, or network state. | FCM, Supabase, auth session, Android permission, network. | No. | Required if failure appears. | HIGH | No FCM/Supabase/code changes in this run. |
+| Token values are not mutated manually | Any token-related investigation. | Operator records visible symptoms and stops before token insertion, deletion, or direct production mutation. | QA process control. | Not applicable. | Required. | HIGH | No production DB edits. No token insert/delete. |
+| Token renewal is considered as a later case | App reinstall, device change, force-close/relaunch, long-lived session. | Checklist records that token refresh or rebinding may need a separate approved execution pass. | Token refresh listener, session binding, Supabase save, network delay. | No. | Separate run if needed. | HIGH | No manual token rotation or backend mutation. |
+
+### Notification Settings Screen
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Alert settings are reachable | `/alerts`, `/crypto/alert`, global alert entry, header or settings/account notification link. | User can find alert settings without relying on hidden admin-only paths. | Route mapping, settings panel links, market-specific alert page, navigation shell. | Route reachability can help. | Required. | HIGH | No route or navigation code edits. |
+| Permission state is displayed | Alert settings screen after allowed, denied, or not-yet-requested state. | The screen clearly distinguishes allowed, denied, pending, and unavailable notification states. | Permission bridge, copy, cached app push state. | No. | Required. | HIGH | No permission logic edits. |
+| Alert on/off state is visible | Alert settings screen for a known QA account. | User can tell whether alerts are enabled, disabled, or blocked by plan/permission. | Alert preference state, profile/session load, save feedback. | Screenshot support can help. | Required. | HIGH | No production preference mutation unless separately approved. |
+| Market or type settings are understandable if present | Crypto, global, mixed-market alert settings if visible. | Market/type choices are labeled clearly and do not expose internal IDs or scanner names. | Alert rule display, market filter, product scope copy. | Screenshot support can help. | Required. | MEDIUM | No scanner, threshold, or alert-rule edits. |
+| Settings-change persistence is scoped | Any toggle or selector on alert settings. | If a setting change would persist to production, the test is either observation-only or moved to a separate approved run with a QA account. | QA process control, preference save API, Supabase state. | Not applicable. | Required. | HIGH | No unapproved production settings changes. |
+
+### Pro Notification Limits
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Basic alert limits are clear | Basic account on `/alerts`, `/crypto/alert`, global alert surfaces, settings notification entry. | Basic users understand which alerts are available, limited, or Pro-only. | Entitlement state, alert limit copy, settings gate, plan label mapping. | Screenshot support can help. | Required. | HIGH | No entitlement, RevenueCat, Supabase, or billing edits. |
+| Coin Pro alert scope is contextual | Crypto alert surfaces and `/pro?market=crypto` links if present. | Crypto alert limits point to Coin Pro or All Market Pro where appropriate. | Crypto entitlement mapping, CTA target, product-family copy. | Limited screenshot support. | Required. | HIGH | No plan ID, entitlement, or gating changes. |
+| Global Pro alert scope is contextual | Global alert surfaces and `/pro?market=stocks` links if present. | Global alert limits point to Global Pro or All Market Pro where appropriate. | Global entitlement mapping, CTA target, product-family copy. | Limited screenshot support. | Required. | HIGH | No product or entitlement edits. |
+| All Market Pro alert scope is understandable | Mixed-market or cross-market alert surfaces if visible. | All Market Pro reads as combined market alert coverage, not a vague upgrade. | Bundle copy, plan mapping, mixed alert gate. | Screenshot support can help. | Required if visible. | MEDIUM | No billing or gating implementation changes. |
+| Basic users can still use the app | Basic account on alert and primary routes. | Alert limitations do not make ChartRadar feel unusable; available context remains understandable. | Over-gating, empty-state copy, CTA placement, disabled controls. | Route and screenshot smoke can help. | Required. | HIGH | No gating weakening or strengthening in this checklist task. |
+
+### Notification List Display
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `/alerts` route opens | Direct route `/alerts`, bottom/top navigation, notification settings entry. | Alerts surface loads without a blank screen or fatal route error. | Route shell, market redirect, alert center render, auth state. | Route reachability can be automated. | Required. | HIGH | No route code edits. |
+| Empty list state is useful | QA account with no visible alerts or no recent matches. | Empty state explains whether alerts are unavailable, not configured, permission-blocked, or simply quiet. | Empty-state copy, alert data load, permission state, plan gate. | Screenshot support can help. | Required. | HIGH | No data or push generation changes. |
+| Existing alert or recent-match rows are readable | Account/state where alert rows, preset rows, diagnostics, or recent matches are visible. | Title, body, time, market/type, and status labels are readable and scoped to the right market. | Alert list rendering, market label mapping, timestamp formatting, server response. | Screenshot support can help. | Required if rows exist. | HIGH | No production data edits. No token or push send. |
+| Notification copy remains judgment-support oriented | Alert title/body, list rows, preview copy, Pro limit copy. | Copy avoids buy, sell, long, short, guaranteed return, urgent entry, or profit-guarantee framing. | Alert template copy, scanner labels, UI display copy. | No. | Required. | HIGH | No copy or scanner edits in this run. |
+| Long alert text works at 360px | `/alerts` and market-specific alert pages at 360px. | Long titles and bodies wrap without clipping controls or hiding timestamps. | Alert card layout, line clamp, badge width, safe-area spacing. | Screenshot support can help. | Required. | MEDIUM | No UI code edits in this checklist task. |
+
+### Notification targetPath Navigation
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| List-item navigation expectation is documented | Alert rows or recent-match rows where a route link is visible. | Tapping a visible item opens the intended in-app route or a safe detail/fallback route. | Route mapping, target path construction, market-specific navigation, client router. | Route smoke may support destination reachability. | Required if clickable rows exist. | HIGH | No targetPath or routing logic edits. |
+| Push notification tap expectation is documented | Future approved push-click QA only. | Tapping a received notification should open the Android app and route to its `targetPath` when present. | App push listener, payload `targetPath`, WebView routing, notification payload construction. | No. | Separate run if real push is needed. | HIGH | No real push send in this run. No payload code edits. |
+| Missing targetPath fallback is defined | Future notification payload or visible alert lacking a path. | App should open a safe default alerts or market screen instead of crashing or landing on a blank route. | Fallback routing, payload normalization, default route selection. | No. | Separate run or observation only. | HIGH | No fallback logic edits here. |
+| Login-required target is handled safely | Future notification path to account-gated or Pro-gated screen. | User is guided through login or gating and then lands on a safe route; previous account data is not exposed. | Auth gate, redirect state, entitlement gate, cached route state. | No. | Separate run with QA account. | HIGH | No auth or entitlement edits. |
+| Unknown or stale targetPath does not trap the user | Future payload or manually observed stale route link. | App shows a safe fallback, navigation recovery, or route-not-found state without a loop. | Route registry, redirect logic, payload versioning, client router. | Route smoke can test known routes only. | Separate run if needed. | HIGH | No targetPath mutation or route edits in this checklist task. |
+
+### Duplicate And Cooldown Review
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Repeated same-signal risk is reviewed | `/alerts`, visible recent matches, approved no-send diagnostics if separately allowed. | Same signal does not appear to spam the user in the visible list or operator evidence. | Duplicate guard, alert event key, cooldown window, scanner family grouping. | Existing dry-run diagnostics may support in a separate approved no-send check. | Required if repeated rows appear. | HIGH | No duplicate guard or cooldown logic edits. |
+| Same market/type repetition is understandable | Market-specific alert surfaces and recent activity. | Repeated market/type alerts have clear time separation, status, or reason. | Scanner grouping, market/type labels, cooldown criteria, event timestamps. | No. | Required if visible. | HIGH | No threshold, scanner, or push-cron edits. |
+| User fatigue criteria are recorded | Any alert review evidence. | Excessive frequency or low-value repetition is logged as a quality issue, not fixed in this run. | Alert thresholds, cooldown policy, message templates, market volatility handling. | No. | Required. | HIGH | No alert-quality logic edits here. |
+| Follow-up run boundary is explicit | If duplicate/cooldown issue is suspected. | Create or propose an `alert-quality-operations-run` candidate with evidence and no production mutation. | Run planning and issue triage. | Not applicable. | Required if issue appears. | MEDIUM | No production push, DB, scanner, or FCM changes. |
+
+### Notification Exception Cases
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Network failure or slow response | Alert settings, `/alerts`, permission or token readiness state under naturally poor network. | App shows pending, retry, or unavailable state without crashing or implying alerts are active when they are not. | Network timeout, Supabase response, FCM initialization, UI loading state. | Route smoke catches fatal render only. | Required if safely observable. | HIGH | No network/config changes to force production state. |
+| Permission denied | Android denied notification state. | Alert UI explains the block and gives a recovery path if available. | Permission bridge, denied-state copy, settings deep link. | No. | Required. | HIGH | No permission code edits. |
+| Logged-out state | Signed-out `/alerts` and alert settings entry. | User sees login requirement or limited state without account-specific alert data exposure. | Auth state, alert query gating, cached account state. | Route reachability can help. | Required. | HIGH | No auth, Supabase, or cached-session edits. |
+| App reinstall or device change | Future approved device pass only. | App should require login, permission, and token refresh as needed, without stale device assumptions. | Token refresh, session restore, permission state, account binding. | No. | Separate run if needed. | HIGH | No token mutation or backend edits. |
+| Force close and relaunch | Android app after permission/settings observation. | Notification settings and displayed readiness return to a consistent state after relaunch. | Local cache, session restore, permission refresh, app push state refresh. | No. | Required if safe to execute. | HIGH | No app lifecycle or native code edits. |
+| Token expiry or renewal need | Long-lived account or future device pass. | Renewal need is logged as a follow-up if readiness becomes stale. | FCM token refresh, Supabase save, session binding. | No. | Separate run if needed. | HIGH | No manual token rotation, insertion, or deletion. |
+| Supabase or FCM delay | Alert readiness remains pending or delayed. | User-facing UI remains stable and issue evidence is recorded without forcing state. | Supabase latency, FCM latency, retry timing, network. | No. | Required if observed. | HIGH | No Supabase/FCM console or DB changes. |
+
+### Notification 360px Mobile Check
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Alert cards and lists fit width | `/alerts`, `/crypto/alert`, global alert pages at 360px. | Cards, rows, badges, and timestamps do not create horizontal overflow or clipped controls. | Alert card layout, badge width, timestamp text, list container. | Screenshot support can help. | Required. | MEDIUM | No UI code edits in this checklist task. |
+| Long title and body wrap cleanly | Visible alert rows, preset rows, permission copy, Pro limit copy. | Long Korean or English text wraps without overlapping buttons or hiding market labels. | Typography, line clamp, card spacing, chip wrapping. | Screenshot support can help. | Required. | MEDIUM | No copy/layout edits here. |
+| Settings actions avoid bottom navigation overlap | Alert settings lower area and sticky/bottom controls. | Toggle rows, save buttons, permission buttons, and Pro CTAs remain tappable above bottom navigation and safe area. | Safe-area padding, sticky controls, bottom nav, scroll container height. | Screenshot support can help. | Required. | HIGH | No safe-area/native edits. |
+| Permission guidance is readable | Denied, unavailable, pending, and allowed states at 360px. | Guidance can be read without opening a hidden panel or rotating the device. | Status-row copy, icon/button alignment, alert settings layout. | Screenshot support can help. | Required. | HIGH | No permission UI implementation changes. |
+| Pro CTA does not crowd the alert workflow | Basic account with Pro alert limits at 360px. | CTA is visible and contextual but does not push the available alert state out of view. | Gate layout, CTA placement, plan-card copy, scroll spacing. | Screenshot support can help. | Required. | HIGH | No Pro gating or CTA implementation changes. |
+
+### Notification QA Hard Stops
+
+- Do not send real push notifications, admin test pushes, or production push-cron send-mode requests inside this run.
+- Do not manually insert, delete, rotate, copy, print, or expose push tokens.
+- Do not edit FCM, push-cron, push alert scanner, targetPath construction, duplicate guards, cooldown rules, Supabase, RLS, production DB records, auth, entitlement, RevenueCat, billing, or Android release settings.
+- If delivery, token storage, duplicate prevention, cooldown behavior, or targetPath routing requires live validation, create a separate approved run with a dedicated QA account, no-secret evidence plan, and explicit stop conditions.
+- If alert quality issues appear, record evidence and split them into an `alert-quality-operations-run` candidate instead of fixing notification logic here.
 
 ## Risk Grouping
 

@@ -8,7 +8,7 @@
 
 - Status: `TODO`
 - Setup date: 2026-06-08
-- Current phase: Billing/subscription QA checklist completed; notification QA checklist pending.
+- Current phase: Notification QA checklist completed; first actual QA batch selection pending.
 - Execution mode: QA preparation and checklist documentation first. `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 
 ## Purpose
@@ -84,7 +84,7 @@
 | 2 | DONE | Core route smoke scenario outline | Smoke Scenarios | LOW | Define QA scenarios for `/coin`, `/crypto`, `/alts`, `/global`, `/alerts`, `/journal`, `/pro`, and settings/account screens. | No code edits. | `git diff --check` |
 | 3 | DONE | Login/account/settings QA checklist | Account QA | MEDIUM | Create checklist items for Google login, logout, account deletion, current plan, notification settings, app version, contact, and policy access. | No auth code edits. No Supabase edits. | `git diff --check` |
 | 4 | DONE | Billing/subscription QA checklist | Billing QA | HIGH | Create checklist items for Google Play subscription, Pro purchase, restore purchase, current plan display, and Basic/Pro gating display. | No `billing.ts` edits. No RevenueCat edits. No product ID, plan ID, entitlement, or price edits. | `git diff --check` |
-| 5 | TODO | Notification QA checklist | Notification QA | HIGH | Create checklist items for notification permission, push token, alert settings, Pro notification limits, targetPath navigation, duplicates, and cooldown. | No FCM edits. No push-cron edits. No Supabase edits. | `git diff --check` |
+| 5 | DONE | Notification QA checklist | Notification QA | HIGH | Create checklist items for notification permission, push token, alert settings, Pro notification limits, targetPath navigation, duplicates, and cooldown. | No FCM edits. No push-cron edits. No Supabase edits. | `git diff --check` |
 | 6 | TODO | First actual QA batch selection | QA Execution Planning | LOW | Select the first QA bundle to run on an actual device or browser. | No code edits. | `git diff --check` |
 
 ## QA Documentation Policy
