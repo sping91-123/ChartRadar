@@ -9,7 +9,7 @@
 - Status: `ACTIVE`
 - Setup date: 2026-06-09
 - Previous run prerequisite: `android-production-qa-execution-run` was confirmed `DONE` before this setup.
-- Current phase: Task 3 completed; Task 4 is the next `TODO`.
+- Current phase: Task 4 completed; Task 5 is the next `TODO`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No smoke, typecheck, build, lint, Android, billing, push, DB, or external-console command was executed during setup.
 
@@ -113,7 +113,7 @@ Do not run:
 | 1 | DONE | Auto smoke preflight safety check | Safety | LOW | Confirm worktree, branch, upstream, ahead/behind, and docs guardrails before smoke execution. | `git status --short`; `git branch --show-current`; `git rev-parse --abbrev-ref --symbolic-full-name @{u}`; `git rev-list --left-right --count HEAD...@{u}`; `git diff --check` | No code changes. No production data changes. | Record result in `docs/qa/android-production-qa-results.md` |
 | 2 | DONE | TypeScript static check | Typecheck | LOW | Confirm TypeScript has no no-emit errors. | `cmd /c npx tsc --noEmit` | No code changes. | Record `PASS`/`FAIL`/`BLOCKED` |
 | 3 | DONE | Build check | Build | LOW | Confirm production build succeeds locally. | `npm.cmd run build` | No code changes. Do not stage build output. | Record `PASS`/`FAIL`/`BLOCKED` |
-| 4 | TODO | Lint check | Lint | LOW | Confirm lint passes without auto-fix. | `npm.cmd run lint` | No lint auto-fix. No code changes. | Record `PASS`/`FAIL`/`BLOCKED` |
+| 4 | DONE | Lint check | Lint | LOW | Confirm lint passes without auto-fix. | `npm.cmd run lint` | No lint auto-fix. No code changes. | Record `PASS`/`FAIL`/`BLOCKED` |
 | 5 | TODO | Safe smoke commands | Smoke | MEDIUM | Run only safe smoke commands from the execution plan. | `npm.cmd run smoke:copy`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:launch` | No `smoke:all`, `smoke:billing`, `smoke:api`, `check:app-billing`, payment, push, or DB mutation. | Record `PASS`/`FAIL`/`BLOCKED` |
 | 6 | TODO | QA results document update | Results | LOW | Summarize execution time, target commit, command status, failure log summary, and follow-up need. | Documentation only | No failure fixes. | `git diff --check` |
 | 7 | TODO | Next run recommendation | Follow-up | LOW | Recommend next run based on auto smoke results. | Documentation only | No implementation changes. | Active-run status update |
@@ -155,6 +155,16 @@ Do not run:
 - QA result recorded as `AUTO-BUILD-001` with status `PASS` in `docs/qa/android-production-qa-results.md`.
 - `git status --short` after build showed no tracked or untracked build output to stage.
 - No TypeScript no-emit, lint, smoke, Android native/release, billing, auth, Supabase, FCM, Play Console, production DB/token, payment, restore, account deletion, or push command was executed.
+
+## Task 4 Completion Note
+
+- Completed: 2026-06-09 01:27:13 +09:00.
+- Scope: ran only `npm.cmd run lint` for the lint check.
+- Target commit: `71eb795f35361ceef7ac0bc67481d93052fece52`.
+- Result: command exited with code `0`; `next lint` reported no ESLint warnings or errors.
+- QA result recorded as `AUTO-LINT-001` with status `PASS` in `docs/qa/android-production-qa-results.md`.
+- `git status --short` after lint showed no file changes, confirming no lint auto-fix or code modification occurred.
+- No TypeScript no-emit, build, smoke, Android native/release, billing, auth, Supabase, FCM, Play Console, production DB/token, payment, restore, account deletion, or push command was executed.
 
 ## Next Run Recommendation Rules
 
