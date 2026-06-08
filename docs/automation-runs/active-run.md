@@ -6,9 +6,9 @@
 
 ## Run State
 
-- Status: `ACTIVE`
+- Status: `DONE`
 - Setup date: 2026-06-08
-- Current phase: pricing/access structure design before iOS production release.
+- Current phase: pricing/access structure design completed before iOS production release.
 - Execution mode: planning and documentation first.
 
 ## Purpose
@@ -83,7 +83,7 @@
 | 2 | DONE | Basic/Pro value re-definition | Product / Monetization | MEDIUM | Define what Coin Basic, Coin Pro, Global Pro, and All Market Pro should each provide. | No code edits. No price changes. No billing logic changes. | `git diff --check` |
 | 3 | DONE | Route-level free/paid exposure matrix | Product / Route Policy | MEDIUM | Document Basic and Pro exposure for `/coin`, `/crypto`, `/alts`, spot candidate, `/global`, `/global/assets`, `/news`, `/alerts`, `/journal`, and `/pro`. | No code edits. | `git diff --check` |
 | 4 | DONE | Pro CTA wording principles | Copy / Compliance | LOW | Define CTA wording rules that explain Pro value without implying guaranteed returns or entry instructions. | No code edits. No entry-instruction phrasing. | `git diff --check` |
-| 5 | TODO | First implementation candidate selection | Planning / Next Step | LOW | Select the first implementation candidate from Pro page copy cleanup, Coin Radar home Basic/Pro exposure cleanup, alerts Pro gating cleanup, or Global Pro placement adjustment. | No code edits. | `git diff --check` |
+| 5 | DONE | First implementation candidate selection | Planning / Next Step | LOW | Select the first implementation candidate from Pro page copy cleanup, Coin Radar home Basic/Pro exposure cleanup, alerts Pro gating cleanup, or Global Pro placement adjustment. | No code edits. | `git diff --check` |
 
 ## Route Coverage For Task 3
 

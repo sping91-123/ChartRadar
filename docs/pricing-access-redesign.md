@@ -589,14 +589,17 @@ Safer review posture:
 
 ## Task 5 - First Implementation Candidate Selection
 
-Status: `TODO`
+Status: `DONE`
+
+Selection date: 2026-06-08
 
 Candidate options:
 
 - Pro page copy cleanup.
 - Coin Radar home Basic/Pro exposure cleanup.
-- Alerts Pro gating cleanup.
-- Global Pro placement adjustment.
+- Alerts Pro gating/CTA cleanup.
+- Global Pro placement/CTA adjustment.
+- All Market Pro bundle value copy cleanup.
 
 Selection criteria:
 
@@ -607,4 +610,75 @@ Selection criteria:
 - Verification clarity.
 - Small commit size.
 
-Selected first implementation candidate: `TBD`
+### Candidate Comparison
+
+| Candidate | Advantages | Risk | Implementation scope | Verification standard |
+| --- | --- | --- | --- | --- |
+| Pro page copy cleanup | Directly aligns product names, CTA tone, Basic/Pro boundary, and All Market Pro bundle story in the main pricing surface. Does not need billing, RevenueCat, product id, plan id, entitlement, or price changes. Reduces iOS review wording risk before launch. | LOW if limited to presentation copy and layout text. Billing-adjacent surface requires strict no-logic-diff discipline. | `src/app/pro/page.tsx` shell copy if needed, `src/components/ProPricingPanel.tsx` user-facing copy, optional docs note after implementation. | `git diff --check`, `cmd /c npx tsc --noEmit`, `npm.cmd run build`, `npm.cmd run smoke:billing`, mobile screenshot for `/pro` and `/pro?market=crypto` / `/pro?market=stocks`. |
+| Coin Radar home Basic/Pro exposure cleanup | Makes the primary paid conversion route clearer and reinforces Coin Pro as the main product. Strong user-facing value. | MEDIUM because it may touch route presentation, Basic/Pro exposure, and current home information architecture. Must avoid accidental gating changes. | Coin Radar home presentation and copy only; possible locked-detail placeholders if explicitly approved later. | `git diff --check`, typecheck, build, smoke:mobile, route screenshot for `/crypto/home` and redirect paths. |
+| Alerts Pro gating/CTA cleanup | Clarifies Pro delivery rules where value is naturally tied to monitoring. Strong monetization clarity for repeated usage. | MEDIUM because alert delivery and entitlement semantics are sensitive. Copy-only changes are safe; logic changes are forbidden without a separate scoped task. | Alert rule card copy, Pro badge explanation, usage-limit wording, no server/push entitlement changes. | `git diff --check`, typecheck, build, smoke:ops or alert smoke if touched, screenshots for `/alerts?market=crypto` and `/alerts?market=global`. |
+| Global Pro placement/CTA adjustment | Addresses the weakest standalone product narrative and improves Global Pro visibility. | MEDIUM because `/global/assets` currently mixes usage, insight visibility, and watchlist behavior. | CTA placement and copy near global locked detail or usage-limit states only; no entitlement or stock API changes. | `git diff --check`, typecheck, build, smoke:mobile, screenshots for `/global` and `/global/assets`. |
+| All Market Pro bundle value copy cleanup | Helps the bundle read as cross-market workflow rather than only a discount or combined access. Strong strategic value for pricing structure. | LOW to MEDIUM depending on whether it stays on `/pro` copy or expands into route-level workflow. | Prefer `/pro` copy first; defer cross-route workflow implementation. | Same as Pro page cleanup if limited to `/pro`; broader route checks if expanded later. |
+
+### Selected First Implementation Candidate
+
+Selected candidate: `Pro page copy cleanup`
+
+Reason:
+
+- It is the smallest implementation that directly uses the output of Tasks 1-4.
+- It clarifies Basic Radar, Coin Pro, Global Pro, and All Market Pro where users already compare plans.
+- It can reduce iOS/App Review wording risk without changing billing logic.
+- It can make All Market Pro's bundle value visible before deeper route changes.
+- It is easy to screenshot and review on mobile and desktop.
+- It has the best risk/reward balance because it can stay presentation-only.
+
+### Suggested PR Branch
+
+- `codex/pro-pricing-copy-cleanup`
+
+### Candidate Implementation Files
+
+- `src/components/ProPricingPanel.tsx`
+- `src/app/pro/page.tsx` only if shell text or safe-area framing copy needs a narrow update.
+- Optional post-implementation doc note in `docs/pricing-access-redesign.md`.
+
+### Forbidden Scope For First Implementation
+
+- Do not edit `src/lib/billing.ts`.
+- Do not edit RevenueCat integration or app-store sync code.
+- Do not change product ids, plan ids, entitlement names, or prices.
+- Do not change checkout, confirm, subscription grant, or entitlement resolution logic.
+- Do not change Basic/Pro gating behavior.
+- Do not expose legacy ids such as `bundle_yearly` in user-facing copy.
+- Do not add investment-advice, profit, loss-avoidance, buy/sell, long/short, or asset-recommendation wording.
+- Do not redesign unrelated routes in the same PR.
+
+### Screenshot Review Targets
+
+- `/pro`
+- `/pro?market=crypto`
+- `/pro?market=stocks`
+- Mobile width around 360px.
+- Desktop width.
+- Light and dark theme if the route supports both through the app shell.
+- Native WebView safe-area check if the implementation changes page shell spacing.
+
+### Draft Next PR Instruction
+
+Implement only the `/pro` page copy cleanup from `pricing-access-redesign-run`.
+
+Scope:
+
+- Update user-facing copy in `ProPricingPanel` so Basic Radar, Coin Pro, Global Pro, and All Market Pro match the definitions in `docs/pricing-access-redesign.md`.
+- Make All Market Pro read as a cross-market workflow bundle: combined risk context, mixed alerts, and unified review.
+- Replace any outcome-, signal-, or urgency-oriented CTA wording with judgment-support wording based on criteria, risk, invalidation, alert conditions, and review.
+- Preserve the existing plan list, prices, checkout flow, entitlement behavior, RevenueCat behavior, product ids, plan ids, and gating.
+
+Expected verification:
+
+- `git diff --check`
+- `cmd /c npx tsc --noEmit`
+- `npm.cmd run build`
+- `npm.cmd run smoke:billing`
+- Screenshots for `/pro`, `/pro?market=crypto`, and `/pro?market=stocks` on mobile and desktop.
