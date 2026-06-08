@@ -9,7 +9,7 @@
 - Status: `ACTIVE`
 - Setup date: 2026-06-09
 - Previous run prerequisite: `android-production-stability-qa-run` was confirmed `DONE` before this setup.
-- Current phase: Task 1 is the next `TODO`.
+- Current phase: Task 1 completed; Task 2 is the next `TODO`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run and does not execute production QA, payment, restore, account deletion, or push-delivery checks.
 
@@ -100,7 +100,7 @@ Separate approval lane:
 
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TODO | Existing smoke command audit | Smoke Audit | LOW | Review `package.json` and `scripts/` smoke commands, then document which commands can be reused for Android production QA. | No app code edits. No smoke script edits. | `git diff --check` |
+| 1 | DONE | Existing smoke command audit | Smoke Audit | LOW | Review `package.json` and `scripts/` smoke commands, then document which commands can be reused for Android production QA. | No app code edits. No smoke script edits. | `git diff --check` |
 | 2 | TODO | Mobile viewport smoke scope check | Mobile Smoke Scope | LOW | Check whether 360px core-screen review is already supported and document missing smoke coverage. | No UI code edits. No new smoke script. | Existing smoke command or documentation review, then `git diff --check` |
 | 3 | TODO | Production QA execution table | QA Execution Plan | MEDIUM | Write an execution table that separates automatic checks from manual checks. | No billing, auth, FCM code edits. No production data changes. | `git diff --check` |
 | 4 | TODO | Safe smoke command execution candidate selection | Smoke Candidate | MEDIUM | Select at least one smoke command that is safe to run in the current repository and confirm it does not hit forbidden scope before execution. | No production purchase. No real push send. No account deletion. No production DB mutation. | Document selection rationale, then `git diff --check` |
@@ -130,6 +130,14 @@ Separate approval lane:
 - Setup commit message: `Define Android production QA execution run`.
 - Docs-only setup may be committed and pushed to `main` when verification passes and the branch is in sync with `origin/main`.
 - Do not release, deploy, submit Play Console changes, alter production configuration, or run production-mutating operations during this run.
+
+## Task 1 Completion Note
+
+- Completed: 2026-06-09
+- Scope: audited `package.json` scripts and `scripts/` smoke-related files by source inspection only.
+- Output: `docs/android-production-qa-execution.md` now classifies reusable smoke commands, caution commands, and separate-approval commands for Android production QA.
+- No smoke commands were executed.
+- No app code, `package.json`, smoke script, billing, auth, Supabase, FCM, Android release, Play Console, or production-data changes were made.
 
 ## Completion Report Format
 
