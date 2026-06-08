@@ -3,7 +3,7 @@
 ## Scope Status
 
 - Active run: `android-production-stability-qa-run`
-- Latest completed task: `Core route smoke scenario outline`
+- Latest completed task: `Login/account/settings QA checklist`
 - Task status: `DONE`
 - Prepared date: 2026-06-09
 - Purpose: define what must be checked after Android production launch before iOS production work or new feature work.
@@ -181,6 +181,95 @@ These scenarios define what to check when the actual Android production QA pass 
 - For every Pro CTA, confirm it explains access without pressuring an immediate action.
 - For every permission-limited state, confirm the screen says what permission/account/plan state is missing.
 - Do not use smoke testing to mutate account data, complete purchases, send push notifications, edit alerts, or change production configuration unless a later approved task explicitly permits it.
+
+## Login, Account, And Settings QA Checklist
+
+Use this checklist for Android production account QA with a dedicated QA account. These checks are observation and navigation checks only. They do not permit auth code changes, Supabase changes, RLS changes, billing changes, RevenueCat changes, FCM changes, push sends, Android release changes, or production data edits.
+
+### Google Login
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Signed-out login CTA is visible | Fresh app launch while signed out, header/settings panel, `/login`, gated account surfaces. | User can clearly find a Google login path without losing the screen context. | Header account state, login route, settings panel state, gated copy. | Route reachability only. | Required. | MEDIUM | No auth UI/code edits inside this run. |
+| Google login button is clickable | `/login` or settings login entry. | Button responds once, shows pending feedback if available, and does not double-submit visually. | Google login component, disabled/loading state, WebView event handling. | Not reliable. | Required. | MEDIUM | No OAuth config, auth code, or Supabase edits. |
+| Google account picker opens | Tap Google login in Android production app. | Android/WebView opens a Google account selection or login step and can return to the app. | Native browser handoff, Capacitor/WebView redirect, OAuth provider settings, popup blocking. | No. | Required. | HIGH | No OAuth console changes. No native Android release edits. |
+| Login cancel is safe | Cancel from account picker or back out before authorizing. | App returns to `/login`, previous route, or a safe default without blank screen, broken overlay, or stuck loading. | Auth callback handling, returnTo state, WebView history, error state. | No. | Required. | MEDIUM | No auth/session code edits. |
+| Login failure or slow network is understandable | Use poor network or observe timeout/error if it occurs naturally. | User sees a retryable state or clear error; app remains navigable. | Auth request timeout, callback error copy, network handling, login route. | Limited via route smoke only. | Required if reproducible safely. | MEDIUM | Do not simulate by changing production config. |
+| Login success updates user state | Complete Google login with dedicated QA account. | Header/account surface changes to signed-in state; `/account` shows account identity and current plan; gated surfaces refresh appropriately. | Session storage, profile fetch, `useSupabaseAuth`, entitlement refresh, callback rescue. | No. | Required. | HIGH | No Supabase, RLS, entitlement, or auth code edits. |
+| Return destination is safe | Start login from `/account`, `/pro`, `/alerts`, and one core route if feasible. | After login, user returns to the original route or a safe default; no open redirect or broken blank route. | `returnTo` handling, callback route, WebView history. | Limited route-only support. | Required. | MEDIUM | No redirect/auth code edits. |
+| App relaunch keeps session | Force close and reopen after successful login. | User remains signed in when expected, or sees a deliberate signed-out state with clear login path. | Session persistence, Android WebView storage, custom session helpers, profile refresh. | No. | Required. | HIGH | No local/session storage logic edits. |
+| WebView redirect does not trap user | Complete or cancel login inside Android production WebView context. | No permanent external browser trap, blank WebView, repeated account picker, or lost back stack. | Capacitor redirect, OAuth callback, Android WebView history. | No. | Required. | HIGH | No Android native or OAuth setting edits. |
+
+### Logout
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Logout entry is discoverable | Signed-in header/auth status, settings panel, `/account`. | User can find a clearly labeled logout control. | Header account state, `/account` signed-in branch, settings panel. | Route reachability only. | Required. | MEDIUM | No account UI code edits. |
+| Logout button wording is safe | `/account` or header account control. | Label clearly means logout and does not imply account deletion or subscription cancellation. | Account copy, header auth control. | No. | Required. | LOW | No copy edits in this task unless separately approved. |
+| Logout switches to signed-out state | Tap logout with dedicated QA account. | User sees signed-out state; login CTA is available; account-only surfaces no longer show identity. | `signOut`, auth state refresh, profile cache, header state. | No. | Required. | HIGH | No auth code, Supabase, or storage logic edits. |
+| Pro/account-only surfaces are limited | After logout, visit `/account`, `/pro`, `/alerts`, and a gated area if available. | Account identity is hidden; Pro access is not displayed as active unless public Basic state is expected. | Entitlement cache, profile state, Basic/Pro gating. | Limited route smoke support. | Required. | HIGH | No gating, entitlement, billing, or profile edits. |
+| Back button does not reveal private state | Logout from `/account`, then use Android back. | Previous account details, email, and plan state are not shown as active private state. | Browser history, client cache, auth state invalidation. | No. | Required. | HIGH | No storage/session code edits. |
+| Relaunch keeps logged-out state | Force close and reopen after logout. | App does not silently restore the signed-in QA account unless login is intentionally persistent. | Session clearing, WebView storage, auth refresh. | No. | Required. | HIGH | No auth/session code edits. |
+
+### Account Deletion Access
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Account deletion entry is reachable | `/account`, settings/menu policy links, `/account/delete`. | User can find account and data deletion guidance from account/settings surfaces. | Account page link, policy footer/menu links, route availability. | Route reachability can be automated. | Required. | MEDIUM | No account deletion implementation edits. |
+| Mistake-prevention copy is visible | `/account` deletion section and `/account/delete`. | Copy distinguishes account deletion from Google Play subscription cancellation and warns about saved data. | Account deletion copy, policy page content. | No. | Required. | HIGH | No production account deletion. No legal/policy changes without approval. |
+| Confirmation boundary is clear | `/account` deletion section. | If a checkbox, link, form, or destructive button appears, tester knows where to stop before irreversible action. | Account page state, deletion request UX. | No. | Required. | HIGH | Do not submit a real deletion request. Do not click any destructive final action. |
+| Privacy/policy accessibility is intact | `/privacy`, `/terms`, `/account/delete`, `/refund`. | User can read deletion, privacy, terms, and refund guidance from Android app without broken navigation. | Policy routes, internal links, WebView navigation. | Route reachability can be automated. | Required. | MEDIUM | No policy route edits in this task. |
+| Separate destructive QA is deferred | Any need to verify actual deletion. | Actual deletion testing is moved to a separate run with disposable account, explicit approval, and production-data risk review. | QA process control. | Not applicable. | Required decision. | HIGH | No real production account deletion in this run. No Supabase or RLS edits. |
+
+### Current Plan Display
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Basic state is visible | Signed-out state and known Basic QA account on `/account`, header/auth status, `/pro`. | Basic appears as useful baseline, not broken or unknown, and does not expose Pro-only access. | Profile plan mapping, header auth status, pricing panel current-plan row. | Route screenshot support only. | Required. | HIGH | No entitlement, billing, RevenueCat, or Supabase edits. |
+| Pro state location is visible | Known Pro QA account on `/account`, header/auth status, `/pro`. | Current plan appears in predictable places and does not require digging through checkout. | Profile fetch, plan label mapping, entitlement refresh. | No. | Required with known Pro account. | HIGH | No plan or entitlement edits. |
+| Coin/Global/All Market labels are distinguishable | `/account` and `/pro`. | Coin Pro, Global Pro, and All Market Pro labels do not collapse into ambiguous generic Pro when specific scope is known. | Plan label helper, market entitlement display, pricing panel copy. | No. | Required. | HIGH | No product ID, plan ID, entitlement, price, or `billing.ts` edits. |
+| Expired or restore-needed state is handled | Use account state only if already available. | If entitlement cannot be confirmed, user sees a safe refresh/restore/login-needed path rather than conflicting active Pro. | RevenueCat sync state, entitlement refresh, profile stale state. | No. | Required only with suitable test account. | HIGH | No RevenueCat dashboard edits. No entitlement mutation. |
+| `/pro` and account plan labels are consistent | Compare `/account`, header/auth status, `/pro`. | Same account does not show Basic in one place and paid plan in another, except during a clearly labeled loading state. | Profile cache, entitlement refresh interval, pricing panel state. | Screenshot support only. | Required. | HIGH | No billing, profile, or entitlement writes. |
+
+### Notification Settings Access
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Notification settings entry is reachable | Header bell, settings panel alert link, `/alerts`, market-specific alert routes. | User can reach alert settings from common Android app paths. | Header alert link, settings panel, alert route mapping. | Route reachability can be automated. | Required. | MEDIUM | No FCM, push-cron, or alert route edits. |
+| Permission pre-request state is clear | Fresh install or reset notification permission state. | Screen explains that app push requires permission and account/device connection where applicable. | Permission bridge, alert copy, platform detection. | No. | Required. | HIGH | No Android permission config edits. |
+| Permission denied state is understandable | Deny permission if safe on QA device. | User sees blocked/denied state and knows Android settings may be needed; page remains usable. | Permission state handling, toast/copy, settings fallback. | No. | Required if permission can be reset. | HIGH | No FCM or native permission code edits. |
+| Pro alert limits are visible | Basic and Pro account states on alert surfaces. | Basic limits and Pro value are visible without weakening gating. | Alert limit copy, entitlement state, gating. | Limited screenshot support. | Required. | HIGH | No entitlement, gating, or billing edits. |
+| Market/type settings are visible if supported | `/alerts`, `/alerts?market=global`, `/crypto/alert`. | Market-specific or type-specific controls appear in expected market context and do not conflict. | Alert route mapping, market preference, settings panel link. | Route reachability can be automated. | Required. | MEDIUM | No alert persistence or Supabase edits. |
+| No real push is sent | Any alert settings or diagnostic area. | QA stops before test push or production push send unless a later approved notification task explicitly allows it. | QA process control, admin-only controls. | Not applicable. | Required. | HIGH | No actual push send. No push-cron call. No FCM changes. |
+
+### App Version, Contact, And Policy Access
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| App version is visible if exposed | Settings panel app info, app menu, Android app info if needed. | Operator can record app version or note that in-app version is not visible. | Settings app info, version display constant, package metadata. | Screenshot support only. | Required. | MEDIUM | No version or release setting edits. |
+| Contact path is visible | `/privacy`, `/refund`, menu/policy pages, account deletion guidance. | User can find a support/contact route without copying hidden internal values from logs. | Policy copy, menu links, footer links. | Route reachability can be automated. | Required. | MEDIUM | Do not edit contact/policy content in this task. |
+| Privacy policy opens | `/privacy` and links from footer/menu/settings where available. | Privacy page opens inside app WebView or safe in-app browser flow without losing navigation. | Policy route, WebView link handling, footer/menu links. | Route reachability can be automated. | Required. | MEDIUM | No policy route edits. |
+| Terms open | `/terms` and links from footer/menu/settings where available. | Terms page opens cleanly and Android back returns to the previous app context. | Policy route, WebView history, footer/menu links. | Route reachability can be automated. | Required. | MEDIUM | No terms edits. |
+| Refund/subscription policy opens | `/refund` and links from `/pro` or policy surfaces. | User can find Google Play subscription cancellation/refund guidance. | Refund route, pricing page links, WebView navigation. | Route reachability can be automated. | Required. | MEDIUM | No billing or policy edits. |
+| Developer/business info need is identified | Settings/menu/policy surfaces. | If required information is missing or hard to find, record as follow-up candidate instead of editing now. | Store compliance content, policy copy, footer. | No. | Required judgment. | MEDIUM | No store listing, Play Console, or legal copy changes in this task. |
+| External links are safe | Any mail, store, or external policy link if present. | Link opens predictably and Android back can return, or the limitation is recorded. | WebView external link handling, mail intent, browser handoff. | No. | Required if external link exists. | MEDIUM | No Android intent or native config edits. |
+
+### Account And Settings 360px Mobile Check
+
+| Check item | Entry path | Expected result | Failure suspect area | Automatic check | Manual check | Risk | Forbidden area |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Buttons are not clipped | Settings panel, `/account`, `/login`, `/account/delete`, `/privacy`, `/terms`, `/refund`. | Primary actions fit within 360px width and are not hidden by safe area or bottom navigation. | Responsive spacing, fixed widths, safe-area padding. | Screenshot support can help. | Required. | MEDIUM | No UI code edits in this checklist task. |
+| Long email or nickname wraps safely | `/account`, header/auth status, settings account section. | Long identity text truncates or wraps without pushing buttons offscreen. | Account row layout, header auth chip, settings panel width. | Screenshot support with seeded account only. | Required with suitable account. | MEDIUM | No account data edits. |
+| Policy/contact links are tappable | Settings/menu and policy pages. | Links have enough touch area and are not overlapped by navigation or sticky controls. | Link spacing, footer/menu layout, safe-area spacing. | Screenshot support can help. | Required. | MEDIUM | No policy UI edits in this task. |
+| Modal or full-screen panel stays inside viewport | Header settings panel and any account confirmation panel. | Close/back controls remain reachable; content scrolls; no horizontal overflow. | Settings portal, safe-area CSS, sticky header. | Screenshot support can help. | Required. | MEDIUM | No app shell or CSS edits. |
+| Back navigation remains predictable | Settings panel, `/account`, `/login`, policy pages. | Android back closes panel or returns to previous route without showing stale private state. | History state, auth state, WebView back stack. | No. | Required. | HIGH after login/logout. | No routing/auth code edits. |
+
+### Account QA Hard Stops
+
+- Stop before any real account deletion request, destructive submit, or production data mutation.
+- Stop before any real payment attempt, purchase confirmation, product change, or entitlement modification.
+- Stop before any real push send, push diagnostics send, push-cron call, or FCM configuration change.
+- If a bug appears to require auth, Supabase, RLS, billing, RevenueCat, FCM, Android release, or production config changes, record it as a follow-up candidate and stop.
 
 ## Risk Grouping
 
