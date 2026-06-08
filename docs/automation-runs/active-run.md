@@ -9,7 +9,7 @@
 - Status: `ACTIVE`
 - Setup date: 2026-06-09
 - Previous run prerequisite: `android-production-stability-qa-run` was confirmed `DONE` before this setup.
-- Current phase: Tasks 1-4 completed; Task 5 is the next `TODO`.
+- Current phase: Tasks 1-5 completed; Task 6 is the next `TODO`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run and does not execute production QA, payment, restore, account deletion, or push-delivery checks.
 
@@ -104,7 +104,7 @@ Separate approval lane:
 | 2 | DONE | Mobile viewport smoke scope check | Mobile Smoke Scope | LOW | Check whether 360px core-screen review is already supported and document missing smoke coverage. | No UI code edits. No new smoke script. | Existing smoke command or documentation review, then `git diff --check` |
 | 3 | DONE | Production QA execution table | QA Execution Plan | MEDIUM | Write an execution table that separates automatic checks from manual checks. | No billing, auth, FCM code edits. No production data changes. | `git diff --check` |
 | 4 | DONE | Safe smoke command execution candidate selection | Smoke Candidate | MEDIUM | Select at least one smoke command that is safe to run in the current repository and confirm it does not hit forbidden scope before execution. | No production purchase. No real push send. No account deletion. No production DB mutation. | Document selection rationale, then `git diff --check` |
-| 5 | TODO | Manual QA checklist separation | Manual QA | MEDIUM | Split actual Android-device checks into a manual QA checklist, including Play Store install, navigation/back/relaunch, Google login, `/pro` pre-checkout review, notification permission/settings, and Play Console crash/ANR read-only review. | No real payment. No purchase restore. No real account deletion. No real push send. | `git diff --check` |
+| 5 | DONE | Manual QA checklist separation | Manual QA | MEDIUM | Split actual Android-device checks into a manual QA checklist, including Play Store install, navigation/back/relaunch, Google login, `/pro` pre-checkout review, notification permission/settings, and Play Console crash/ANR read-only review. | No real payment. No purchase restore. No real account deletion. No real push send. | `git diff --check` |
 | 6 | TODO | QA result recording template | QA Evidence | LOW | Create a template for later QA execution results using `NOT_RUN`, `PASS`, `FAIL`, `BLOCKED`, and `NEEDS_RUN`. | No code edits. | `git diff --check` |
 
 ## Documentation Policy
@@ -163,6 +163,15 @@ Separate approval lane:
 - Scope: selected safe one-time and sequential smoke command candidates from the existing smoke audit and production QA execution table.
 - Output: `docs/android-production-qa-execution.md` now identifies `git diff --check` as the first one-time execution candidate, separates follow-on candidates, caution candidates, run-forbidden candidates, and separate-approval candidates, and defines the smoke execution report format for a later task.
 - Result: no smoke/typecheck/build/lint candidate was executed as QA evidence in Task 4; required docs validation ran separately and all execution candidates remain planned only.
+- No app code, UI code, `package.json`, smoke script, billing, auth, Supabase, FCM, Android release, Play Console, or production-data changes were made.
+
+## Task 5 Completion Note
+
+- Completed: 2026-06-09
+- Scope: separated Android actual-device manual QA into `docs/qa/android-production-manual-qa.md`.
+- Output: the manual checklist now covers Play Store production install and first launch, Android navigation/back/relaunch, 360px visual review, Google login/logout, `/pro` pre-checkout review, notification permission/settings, settings/account, and Play Console read-only review.
+- Result: all manual checks remain `NOT_RUN`; separate-approval items remain `NEEDS_RUN`.
+- No manual QA, smoke command, payment, restore, account deletion, push send, production DB/token lookup, Play Console change, or external service change was executed.
 - No app code, UI code, `package.json`, smoke script, billing, auth, Supabase, FCM, Android release, Play Console, or production-data changes were made.
 
 ## Completion Report Format

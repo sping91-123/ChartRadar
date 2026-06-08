@@ -6,7 +6,7 @@
 - Setup date: 2026-06-09
 - Source checklist: [Android Production Stability QA](android-production-stability-qa.md)
 - Manual checklist: [Android Production Manual QA](qa/android-production-manual-qa.md)
-- Current task state: Tasks 1-4 `DONE`; Task 5 is the next `TODO`.
+- Current task state: Tasks 1-5 `DONE`; Task 6 is the next `TODO`.
 
 This document turns the completed Android production stability checklist into an execution plan. It is not an implementation plan and does not authorize code, service, release, or production-data changes.
 
@@ -181,6 +181,15 @@ Default status policy:
 | M-016 | MANUAL | Settings/account 360px smoke | `/settings`, `/account`, `/account/delete`, `/privacy`, `/terms`, `/refund`, settings panel. | Review account state, plan, notification settings, policy links, logout, deletion access boundary. | Controls are visible; deletion is not executed; long email/nickname and modals fit. | Screenshot, signed-in/out state, hidden/clipped control, deletion stop point. | Settings route, account session, policy links, modal layout, deletion-warning UI. | HIGH | After login/logout smoke as appropriate. | `NOT_RUN` |
 | M-017 | MANUAL | Alert permission/settings smoke | Android notification permission, `/alerts`, alert settings. | Observe permission allowed/denied/pending state and settings entry; do not send push or expose token. | Permission guidance and Pro alert limits are understandable. | Device permission state, app status copy, screenshot, any mismatch. | Permission bridge, app push state, alert settings, Pro alert gating. | MEDIUM-HIGH | After device navigation; with QA device permission state known. | `NOT_RUN` |
 | M-018 | MANUAL | Play Console crash/ANR read-only review | Production crash rate, ANR rate, Android vitals, warnings. | Open Play Console only for read-only observation. | Health signals and warnings are captured without changing release or listing state. | Screenshot/notes, concrete metric/warning text, date/time observed. | Production stability, Android vitals, release warnings, store metadata. | MEDIUM-HIGH | After user-path smoke; read-only only. | `NOT_RUN` |
+
+### Manual QA Checklist Separation
+
+Task 5 separated the Android actual-device checklist into [Android Production Manual QA Checklist](qa/android-production-manual-qa.md). That document is the operator-facing checklist for the production app on a real Android phone.
+
+- Manual QA was not executed in Task 5.
+- All manual checklist items default to `NOT_RUN`.
+- Real payment, purchase restore, account deletion, real push send, production DB/token lookup or mutation, Android native/release commands, and external service or console changes remain separate-approval items with `NEEDS_RUN`.
+- If a manual check fails, record evidence and suspect area first. Do not fix app code or external settings inside this QA execution run.
 
 ### APPROVAL_REQUIRED Items
 
