@@ -117,31 +117,31 @@ function scopeCopy(scope: BillingPageScope) {
   if (scope === "crypto") {
     return {
       eyebrow: "COIN PRO",
-      title: "Coin Pro에서 열리는 판단 근거",
-      body: "Basic은 오늘 결론과 핵심 리스크를 먼저 보여주고, Coin Pro는 코인 홈·현물·선물의 추적 조건, 무효화 기준, 세부 리스크까지 엽니다."
+      title: "Coin Pro에서 확인할 코인 기준",
+      body: "Basic은 오늘 결론과 핵심 리스크를 먼저 보여주고, Coin Pro는 코인 홈·현물·선물의 조건, 무효화 기준, 알림·복기 연결까지 엽니다."
     };
   }
 
   if (scope === "stocks") {
     return {
       eyebrow: "GLOBAL PRO",
-      title: "Global Pro에서 열리는 판단 근거",
-      body: "Basic은 미국장 30초 체크와 핵심 리스크를 보여주고, Global Pro는 먼저 볼 자산, 세부 근거, 지수선물·매크로·섹터 해석까지 엽니다."
+      title: "Global Pro에서 확인할 글로벌 맥락",
+      body: "Basic은 미국장 30초 체크와 핵심 리스크를 보여주고, Global Pro는 먼저 볼 자산, 지수선물·매크로·섹터·이벤트 맥락까지 엽니다."
     };
   }
 
   return {
     eyebrow: "ALL MARKET PRO",
-    title: "Pro에서 열리는 판단 근거",
-    body: "Basic은 오늘 결론과 핵심 리스크를 확인하는 흐름입니다. Pro는 추적 조건, 무효화 기준, 세부 근거를 열어 코인과 미국장을 함께 판단하도록 돕습니다."
+    title: "Pro에서 확인할 시장 기준",
+    body: "Basic은 오늘 결론과 핵심 리스크를 확인하는 흐름입니다. Pro는 조건, 무효화 기준, 알림·복기 맥락을 열어 코인과 글로벌 리스크를 함께 비교하도록 돕습니다."
   };
 }
 
 function checkoutCtaLabel(plan: BillingPlan, nativePurchaseAvailable: boolean) {
   if (!nativePurchaseAvailable) return "Android 앱에서 결제 가능";
-  if (plan.marketScope === "crypto") return "Coin Pro로 코인 상세 판단 열기";
-  if (plan.marketScope === "stocks") return "Global Pro로 미국장 상세 판단 열기";
-  if (plan.marketScope === "bundle") return "All Market Pro로 전체 시장 판단 열기";
+  if (plan.marketScope === "crypto") return "Coin Pro로 코인 기준 보기";
+  if (plan.marketScope === "stocks") return "Global Pro로 글로벌 맥락 보기";
+  if (plan.marketScope === "bundle") return "All Market Pro로 시장 간 리스크 보기";
   return "Pro 시작하기";
 }
 
@@ -165,26 +165,26 @@ function AccessValue({ open }: { open: boolean }) {
 const planDepthRows: Array<{ label: string; value: string; detail: string; tone: ValueCardTone }> = [
   {
     label: "Basic",
-    value: "오늘 결론",
-    detail: "오늘 시장 상태, 핵심 리스크, 일부 후보를 먼저 확인합니다.",
+    value: "첫 판단 요약",
+    detail: "오늘 시장 상태와 핵심 리스크를 먼저 확인합니다.",
     tone: "locked"
   },
   {
     label: "Coin Pro",
-    value: "코인 상세 판단",
-    detail: "코인 홈, 현물, 메이저 선물, 알트 선물의 추적 조건과 무효화 기준을 엽니다.",
+    value: "코인 기준과 리스크",
+    detail: "코인 홈, 현물, 메이저 선물, 알트 선물의 조건과 무효화 기준을 엽니다.",
     tone: "info"
   },
   {
     label: "Global Pro",
-    value: "미국장 상세 판단",
-    detail: "미국장 30초 체크 이후 먼저 볼 자산, 리스크 해석, 세부 근거를 엽니다.",
+    value: "글로벌 리스크 맥락",
+    detail: "미국장 30초 체크 이후 먼저 볼 자산, 매크로 압력, 이벤트 맥락을 엽니다.",
     tone: "info"
   },
   {
     label: "All Market Pro",
-    value: "통합 판단 흐름",
-    detail: "코인 리스크와 미국장 리스크를 함께 보는 가장 넓은 Pro 범위입니다.",
+    value: "시장 간 리스크 흐름",
+    detail: "코인과 글로벌 리스크를 비교하고 알림·복기 흐름으로 이어 봅니다.",
     tone: "watch"
   }
 ];
@@ -218,6 +218,41 @@ const preSubscriptionNotes = [
   "가격과 시장 데이터는 제공처, 갱신 주기, 실제 거래 화면에 따라 차이가 날 수 있습니다.",
   "최종 판단과 책임은 사용자 본인에게 있습니다."
 ];
+
+const planDisplayCopy: Partial<Record<BillingPlanId, { description: string; highlights: string[] }>> = {
+  free: {
+    description: "Basic은 방향 요약과 핵심 리스크를 먼저 확인하는 첫 판단 흐름입니다.",
+    highlights: ["첫 판단 요약", "핵심 리스크 확인", "판단 보조용 기본 알림"]
+  },
+  crypto_monthly: {
+    description: "BTC/ETH, 알트, 현물·선물의 조건과 리스크를 기준 중심으로 확인합니다.",
+    highlights: ["BTC/ETH·알트 조건과 리스크 확인", "무효화 기준과 세부 근거", "코인 알림과 복기 흐름 연결"]
+  },
+  crypto_yearly: {
+    description: "코인 조건과 리스크를 반복 점검하는 사용자를 위한 연간 플랜입니다.",
+    highlights: ["Coin Pro 전체 기준과 리스크", "반복 점검에 맞춘 연간 플랜", "코인 알림과 복기 흐름 연결"]
+  },
+  stocks_monthly: {
+    description: "미국장 30초 체크 이후 지수선물, 매크로, 이벤트, 섹터·대장주 맥락을 확인합니다.",
+    highlights: ["지수선물·매크로 리스크 맥락", "이벤트와 섹터 흐름 확인", "글로벌 알림과 복기 흐름 연결"]
+  },
+  stocks_yearly: {
+    description: "미국장과 매크로 흐름을 꾸준히 점검하는 사용자를 위한 연간 플랜입니다.",
+    highlights: ["Global Pro 전체 맥락", "반복 점검에 맞춘 연간 플랜", "이벤트와 자산 흐름 확인"]
+  },
+  bundle_monthly: {
+    description: "Coin Pro와 Global Pro 범위를 함께 열어 코인·글로벌 리스크를 비교하고 혼합 알림·리뷰로 이어갑니다.",
+    highlights: ["코인·글로벌 리스크 비교", "복수 시장 알림 조건", "통합 리뷰 흐름"]
+  },
+  bundle_yearly: {
+    description: "코인과 글로벌 리스크를 6개월 단위로 함께 추적하는 자동 갱신 통합 구독입니다.",
+    highlights: ["All Market Pro 전체 기준", "시장 간 리스크 비교", "복수 시장 알림과 통합 리뷰"]
+  }
+};
+
+function getPlanDisplayCopy(plan: BillingPlan) {
+  return planDisplayCopy[plan.id] ?? { description: plan.description, highlights: plan.highlights };
+}
 
 function ValueCard({
   label,
@@ -283,6 +318,7 @@ function PlanCard({
   onCheckout: (plan: BillingPlan) => void;
 }) {
   const hasMonthlyValue = plan.monthlyValue > 0 && plan.billingPeriodMonths > 1;
+  const displayCopy = getPlanDisplayCopy(plan);
 
   return (
     <AppSurface
@@ -307,11 +343,11 @@ function PlanCard({
       {hasMonthlyValue ? (
         <p className="mt-1 text-ui-label font-semibold text-ui-muted">월 환산 {formatKrw(plan.monthlyValue)}</p>
       ) : null}
-      <p className="mt-3 text-ui-body text-ui-muted [word-break:keep-all]">{plan.description}</p>
+      <p className="mt-3 text-ui-body text-ui-muted [word-break:keep-all]">{displayCopy.description}</p>
       <p className="mt-3 text-xs font-semibold leading-5 text-ui-subtle [word-break:keep-all]">{plan.renewalText}</p>
 
       <ul className="mt-4 space-y-2 text-sm text-ui-muted">
-        {plan.highlights.map((item) => (
+        {displayCopy.highlights.map((item) => (
           <li key={item} className="flex gap-2 [word-break:keep-all]">
             <CheckCircle2 className="mt-0.5 shrink-0 text-ui-long" size={15} aria-hidden />
             <span>{item}</span>
@@ -366,7 +402,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
   const hasCryptoAccess = hasMarketEntitlement(currentPlanId, "crypto");
   const hasGlobalAccess = hasMarketEntitlement(currentPlanId, "stocks");
   const plansDescription = nativePurchaseAvailable
-    ? "표시된 가격과 결제 버튼은 기존 플랜 정보를 그대로 사용합니다. 필요한 시장 범위만 선택하세요."
+    ? "표시된 가격과 결제 버튼은 기존 플랜 정보를 그대로 사용합니다. 필요한 시장 기준과 리뷰 흐름만 선택하세요."
     : "표시된 가격은 앱 구독 기준입니다. 웹 결제는 준비 중이며 Android 앱에서 Google Play 구독으로 결제할 수 있습니다.";
 
   useEffect(() => {
@@ -531,13 +567,13 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
         <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
           <SectionHeader
             eyebrow="WHY ALL MARKET"
-            title="All Market Pro가 자연스러운 경우"
-            description="코인만 보거나 미국장만 보는 날도 있지만, 리스크가 커지는 날에는 두 시장을 같이 확인하는 편이 판단 흐름이 더 끊기지 않습니다."
+            title="All Market Pro가 필요한 흐름"
+            description="코인만 보거나 미국장만 보는 날도 있지만, 리스크가 커지는 날에는 두 시장의 조건과 알림, 복기를 한 흐름으로 확인하는 편이 끊기지 않습니다."
           />
           <div className="mt-4">
             <DataRow label="코인 리스크" value="Coin Pro" detail="코인 홈, 현물, 메이저 선물, 알트 선물의 세부 조건을 확인합니다." />
-            <DataRow label="미국장 리스크" value="Global Pro" detail="지수선물, 달러·금리, 섹터와 대장주 흐름을 확인합니다." />
-            <DataRow label="통합 판단" value="All Market" detail="두 시장이 같은 방향으로 리스크를 키우는지 함께 확인합니다." />
+            <DataRow label="글로벌 맥락" value="Global Pro" detail="지수선물, 달러·금리, 섹터와 대장주 흐름을 확인합니다." />
+            <DataRow label="통합 리뷰" value="All Market" detail="두 시장의 리스크, 알림 조건, 복기 흐름을 한곳에서 이어 봅니다." />
           </div>
         </PanelCard>
       </div>
