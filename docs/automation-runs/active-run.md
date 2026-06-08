@@ -2,95 +2,123 @@
 
 ## Run Title
 
-- `coin-home-decision-polish-run`
+- `pricing-access-redesign-run`
 
 ## Run State
 
-- Status: `DEFERRED`
-- Decision date: 2026-05-29
-- Reason: PR #2 already completed the first `/coin` home decision summary implementation. The remaining polish items are not required for the current release and are deferred to backlog.
-- Implementation status: `/coin` home decision summary first implementation is complete.
-- Current run handling: closed without additional app implementation.
-
-## Deferred Backlog
-
-- Mobile sentence length adjustment.
-- Reduce duplicate feeling between the top decision summary and the existing `Coin Home` section.
-- Clean up desktop right-side spacing.
-- Polish the priority order of readiness, leadership, risk, and next confirmation condition.
-
-## Closure Notes
-
-- App code changes are intentionally forbidden for this closure.
-- Additional polish should be reopened as a separate backlog item or future active run.
-- High-risk areas remain untouched: billing, auth, Supabase, Android, FCM, push-cron, production migration.
+- Status: `ACTIVE`
+- Setup date: 2026-06-08
+- Current phase: pricing/access structure design before iOS production release.
+- Execution mode: planning and documentation first.
 
 ## Purpose
 
-- PR #2로 반영된 `/coin` 홈 decision summary를 1차 적용 상태에서 끝내지 않고, 모바일/데스크톱 시각 문제와 중복 문구를 정리한다.
-- `/coin` 홈이 "정보 대시보드"보다 "매매 전 10초 판단 화면"처럼 읽히도록 우선순위, 문장 길이, 섹션 중복감을 다듬는다.
+- Re-define the value boundary between Coin Basic, Coin Pro, Global Pro, and All Market Pro after Android production launch.
+- Clarify where each product is exposed across major ChartRadar routes.
+- Make Pro CTA standards consistent without implying guaranteed returns, investment advice, or entry instructions.
+- Treat Coin Radar as the primary paid conversion surface while re-checking whether Global Radar has enough standalone product value.
+- Confirm whether All Market Pro has a strong bundle story before iOS production release.
 
 ## Background
 
-- PR #2 `Add coin home decision summary`는 merge 완료됐다.
-- 현재 `/coin` 홈에는 오늘의 결론, 준비도 점수, 방향성, 시장 주도, 리스크, 다음 확인 조건이 추가됐다.
-- 스크린샷 기준으로 아래 보정이 필요하다.
-  - 모바일 문장 길이.
-  - 상단 결론과 기존 `코인 홈` 섹션의 중복감.
-  - 데스크톱 우측 공백.
-  - 준비도, 주도, 리스크, 다음 확인 조건의 정보 우선순위.
+- Android production launch is complete, but the free/paid boundary became less clear as Coin Radar and Global Radar evolved.
+- Remaining product concerns:
+  - Coin Radar and Global Radar product differentiation.
+  - Blurred Basic and Pro feature boundaries.
+  - Unclear Pro CTA placement and wording.
+  - Global Pro standalone sales strength.
+  - Coin Radar home, alerts, spot, and futures structure changes affecting monetization.
+  - Need to settle product structure before iOS production release.
+
+## High-Risk Guardrails
+
+- Do not edit app code during this run unless a later explicit task reopens implementation.
+- Do not edit `src/lib/billing.ts`.
+- Do not edit RevenueCat integration code or configuration.
+- Do not change product IDs, plan IDs, entitlement names, or prices.
+- Do not weaken Basic/Pro exposure policy through implementation side effects.
+- Do not use wording that looks like investment advice, guaranteed returns, or entry instructions.
+- Keep payment, auth, Supabase, Android release, FCM, and production deployment out of scope.
 
 ## Scope
 
-- 이번 run은 `/coin` decision summary polish만 다룬다.
-- 대표 코인 개인화, 현물/선물 모드, 신규 API, Upbit/Bithumb breadth, ETH/BTC fetch는 별도 run으로 분리한다.
-- 실제 UI 변경 작업은 PR 기반으로 진행한다.
+- Primary files:
+  - `docs/automation-runs/active-run.md`
+  - `docs/pricing-access-redesign.md`
+- Allowed work:
+  - Audit notes.
+  - Product value definitions.
+  - Route exposure matrix.
+  - CTA copy principles.
+  - First implementation candidate selection.
+- Forbidden work:
+  - App code edits.
+  - Billing logic edits.
+  - RevenueCat edits.
+  - Price edits.
+  - Product ID, plan ID, or entitlement edits.
+  - Push, release, deploy, or Play Console changes outside docs-only auto push.
 
 ## Start Conditions
 
-- 작업 전 `git status --short --branch`와 `git rev-list --left-right --count HEAD...origin/main`을 확인한다.
-- local과 `origin/main`이 불일치하면 새 작업을 시작하지 않고 보고한다.
-- 대표가 `AUTO RUN ACTIVE PLAN - one small step only`라고 입력하면 첫 `TODO` 하나만 처리한다.
+- Confirm `git status --short --branch`.
+- Confirm `git rev-list --left-right --count HEAD...origin/main`.
+- If local and `origin/main` diverge, stop before making implementation changes and report.
+- If the worktree is dirty, identify existing changes before editing.
+- For `AUTO RUN ACTIVE PLAN`, process exactly one `TODO` item per turn.
 
 ## Stop Conditions
 
-- 작업트리가 dirty이고 기존 변경의 정체가 불명확함.
-- local과 `origin/main`이 불일치함.
-- 신규 API, route 변경, Supabase/auth/billing/Android/FCM 변경이 필요해짐.
-- 대표 코인 선택 UI, Upbit/Bithumb breadth, ETH/BTC fetch가 필요해짐.
-- 매수/매도/롱/숏 지시 문구가 필요해짐.
-- 스크린샷 확인 전 UI 변경을 main에 merge/push해야 하는 상황.
+- Any task requires editing billing, RevenueCat, entitlement, product ID, plan ID, price, auth, Supabase, Android, FCM, or production code.
+- Any task requires adding a new app feature rather than documenting the pricing/access decision.
+- Route exposure decisions require representative approval because they change monetization policy.
+- Existing user changes overlap the target docs in a way that cannot be safely merged.
+- Sensitive values appear in docs, logs, or diffs.
 
 ## Task List
 
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | DONE | `/coin` decision summary post-merge QA | Coin Home / QA | LOW | PR #2 반영 후 `/coin` 홈 화면의 모바일/데스크톱 문제를 문서화한다. | 코드 수정 금지. 앱 코드 변경 금지. | `git diff --check` |
-| 2 | DEFERRED | `/coin` decision summary polish 적용 | Coin Home / UI Polish | MEDIUM | 모바일 문장 길이, 상단 결론과 기존 `코인 홈` 섹션 중복감, 데스크톱 공백, 준비도/주도/리스크/다음 확인 조건 우선순위를 정리한다. | 신규 API 금지. route 변경 금지. Supabase/auth/billing/Android/FCM 변경 금지. 대표 코인 선택 UI 구현 금지. Upbit/Bithumb breadth 구현 금지. ETH/BTC 신규 fetch 금지. 매수/매도/롱/숏 지시 문구 금지. main 직접 push 금지. | Backlog |
-| 3 | DEFERRED | polish 결과 문서화 | Coin Home / Docs | LOW | `/coin` decision summary polish 결과와 다음 후보를 문서화한다. | 앱 코드 수정 금지. | Backlog |
+| 1 | TODO | Current pricing/access structure audit | Pricing / Access Audit | LOW | Document current Pro products, plan IDs, entitlements, route gating, and Pro CTA locations. | No code edits. No `billing.ts` edits. No RevenueCat edits. No product ID, plan ID, entitlement, or price edits. | `git diff --check` |
+| 2 | TODO | Basic/Pro value re-definition | Product / Monetization | MEDIUM | Define what Coin Basic, Coin Pro, Global Pro, and All Market Pro should each provide. | No code edits. No price changes. No billing logic changes. | `git diff --check` |
+| 3 | TODO | Route-level free/paid exposure matrix | Product / Route Policy | MEDIUM | Document Basic and Pro exposure for `/coin`, `/crypto`, `/alts`, spot candidate, `/global`, `/global/assets`, `/news`, `/alerts`, `/journal`, and `/pro`. | No code edits. | `git diff --check` |
+| 4 | TODO | Pro CTA wording principles | Copy / Compliance | LOW | Define CTA wording rules that explain Pro value without implying guaranteed returns or entry instructions. | No code edits. No entry-instruction phrasing. | `git diff --check` |
+| 5 | TODO | First implementation candidate selection | Planning / Next Step | LOW | Select the first implementation candidate from Pro page copy cleanup, Coin Radar home Basic/Pro exposure cleanup, alerts Pro gating cleanup, or Global Pro placement adjustment. | No code edits. | `git diff --check` |
 
-## Push / PR Policy
+## Route Coverage For Task 3
 
-- 실제 UI 변경인 2번은 PR 기반으로 진행한다.
-- 스크린샷 확인 전 merge 금지.
-- main 직접 push 금지.
-- docs-only safe 작업만 대표 승인 또는 요청 범위 안에서 자동 push 가능하다.
+- `/coin`
+- `/crypto`
+- `/alts`
+- Spot candidate route or surface.
+- `/global`
+- `/global/assets`
+- `/news`
+- `/alerts`
+- `/journal`
+- `/pro`
+
+## Verification Policy
+
+- Always run `git diff --check`.
+- Confirm changed files stay inside the docs scope.
+- Run a sensitive-value pattern check before commit.
+- For this setup task, app build and TypeScript checks are not required because app code is not changed.
+- If future implementation starts, add checks appropriate to the touched surface, especially `npm.cmd run smoke:billing` for Pro or billing-adjacent UI work.
+
+## Commit And Push Policy
+
+- Commit after verification passes.
+- Commit message for setup: `Define pricing access redesign run`.
+- Docs-only safe changes may be pushed automatically when verification passes and the branch is in sync with `origin/main`.
+- Do not release, deploy, submit Play Console changes, or alter production configuration during this run.
 
 ## Completion Report Format
 
-- 선택한 작업.
-- 수정 파일.
-- 변경 내용.
-- 금지 범위 준수 여부.
-- 검증 결과.
-- 스크린샷 경로, UI 작업인 경우.
-- 커밋 해시.
-- push/PR 여부.
-- 다음 추천 작업.
-
-## Completion Criteria
-
-- post-merge QA가 문서화됨.
-- decision summary polish가 PR 기반으로 적용되고 스크린샷 검수가 가능함.
-- polish 결과와 남은 후보가 문서화됨.
-- 신규 API, route, 결제, 인증, Supabase, Android, FCM 변경이 없음.
+- New active-run name.
+- Registered task list.
+- Whether high-risk forbidden scope is reflected.
+- Verification results.
+- Commit hash.
+- Automatic push status.
+- Final git status.
