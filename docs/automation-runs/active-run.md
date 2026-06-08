@@ -9,7 +9,7 @@
 - Status: `ACTIVE`
 - Setup date: 2026-06-09
 - Previous run prerequisite: `android-production-qa-execution-run` was confirmed `DONE` before this setup.
-- Current phase: Task 4 completed; Task 5 is the next `TODO`.
+- Current phase: Task 5 completed; Task 6 is the next `TODO`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No smoke, typecheck, build, lint, Android, billing, push, DB, or external-console command was executed during setup.
 
@@ -114,7 +114,7 @@ Do not run:
 | 2 | DONE | TypeScript static check | Typecheck | LOW | Confirm TypeScript has no no-emit errors. | `cmd /c npx tsc --noEmit` | No code changes. | Record `PASS`/`FAIL`/`BLOCKED` |
 | 3 | DONE | Build check | Build | LOW | Confirm production build succeeds locally. | `npm.cmd run build` | No code changes. Do not stage build output. | Record `PASS`/`FAIL`/`BLOCKED` |
 | 4 | DONE | Lint check | Lint | LOW | Confirm lint passes without auto-fix. | `npm.cmd run lint` | No lint auto-fix. No code changes. | Record `PASS`/`FAIL`/`BLOCKED` |
-| 5 | TODO | Safe smoke commands | Smoke | MEDIUM | Run only safe smoke commands from the execution plan. | `npm.cmd run smoke:copy`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:launch` | No `smoke:all`, `smoke:billing`, `smoke:api`, `check:app-billing`, payment, push, or DB mutation. | Record `PASS`/`FAIL`/`BLOCKED` |
+| 5 | DONE | Safe smoke commands | Smoke | MEDIUM | Run only safe smoke commands from the execution plan. | `npm.cmd run smoke:copy`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:launch` | No `smoke:all`, `smoke:billing`, `smoke:api`, `check:app-billing`, payment, push, or DB mutation. | Record `PASS`/`FAIL`/`BLOCKED` |
 | 6 | TODO | QA results document update | Results | LOW | Summarize execution time, target commit, command status, failure log summary, and follow-up need. | Documentation only | No failure fixes. | `git diff --check` |
 | 7 | TODO | Next run recommendation | Follow-up | LOW | Recommend next run based on auto smoke results. | Documentation only | No implementation changes. | Active-run status update |
 
@@ -165,6 +165,19 @@ Do not run:
 - QA result recorded as `AUTO-LINT-001` with status `PASS` in `docs/qa/android-production-qa-results.md`.
 - `git status --short` after lint showed no file changes, confirming no lint auto-fix or code modification occurred.
 - No TypeScript no-emit, build, smoke, Android native/release, billing, auth, Supabase, FCM, Play Console, production DB/token, payment, restore, account deletion, or push command was executed.
+
+## Task 5 Completion Note
+
+- Completed: 2026-06-09 01:31:31 +09:00.
+- Scope: ran only the safe smoke commands: `npm.cmd run smoke:copy`, `npm.cmd run smoke:mobile`, and `npm.cmd run smoke:launch`.
+- Target commit: `a9147159c0fab3e5b7e9993a4caf0a6cde78972c`.
+- Result: all three safe smoke commands exited with code `0`.
+- `smoke:copy` reported no forbidden user-facing copy or broken characters.
+- `smoke:mobile` reported the mobile/PWA packaging checks passed, including app assets, offline/service worker files, Capacitor shell/config, Android push icon, push migrations, Google sign-in dependency, and Android manifest guards.
+- `smoke:launch` reported launch review score `92/100`; one advisory `WARN Macro` was present, but the script met the pass threshold and exited successfully.
+- QA results recorded as `AUTO-SMOKE-COPY-001`, `AUTO-SMOKE-MOBILE-001`, and `AUTO-SMOKE-LAUNCH-001` with status `PASS` in `docs/qa/android-production-qa-results.md`.
+- `git status --short` after the smoke commands showed no tracked or untracked smoke output to stage.
+- No TypeScript no-emit, build, lint, broad/protected smoke, Android native/release, billing, auth, Supabase, FCM, Play Console, production DB/token, payment, restore, account deletion, or push command was executed.
 
 ## Next Run Recommendation Rules
 

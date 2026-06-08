@@ -7,7 +7,7 @@
 - Execution plan: [Android Production QA Execution](../android-production-qa-execution.md)
 - Manual checklist: [Android Production Manual QA Checklist](android-production-manual-qa.md)
 - Stability checklist: [Android Production Stability QA](../android-production-stability-qa.md)
-- Template status: auto smoke preflight safety, TypeScript static-check, production build, and lint results recorded; smoke commands have not been executed yet.
+- Template status: auto smoke preflight safety, TypeScript static-check, production build, lint, and safe smoke command results recorded.
 
 This template records results after Android production QA is actually executed. It does not authorize app code changes, UI changes, smoke script changes, production data changes, actual payment, purchase restore, account deletion, real push send, production DB/token lookup or mutation, Android native/release commands, or external console changes.
 
@@ -21,7 +21,7 @@ This template records results after Android production QA is actually executed. 
 | Forbidden smoke commands | `npm.cmd run smoke:all`; `npm.cmd run smoke:billing`; `npm.cmd run smoke:api`; `npm.cmd run smoke:routes`; `npm.cmd run smoke:css`; `npm.cmd run smoke:ops`; `npm.cmd run check:app-billing` |
 | Forbidden Android/release commands | `npm.cmd run app:sync`; `npm.cmd run app:sync:prod`; `npm.cmd run app:add:android`; `npm.cmd run app:android`; `npm.cmd run app:doctor`; `npm.cmd run app:android:debug`; `npm.cmd run app:android:release` |
 | Forbidden external actions | Actual payment, purchase restore, account deletion, real push send, production DB/token lookup or mutation, Supabase/FCM/RevenueCat/Google Play Console/Android release setting changes. |
-| Setup result | `AUTO-SAFE-001`, `AUTO-TS-001`, `AUTO-BUILD-001`, and `AUTO-LINT-001` are `PASS`; remaining command evidence stays `NOT_RUN` until each task executes. |
+| Setup result | `AUTO-SAFE-001`, `AUTO-TS-001`, `AUTO-BUILD-001`, `AUTO-LINT-001`, `AUTO-SMOKE-COPY-001`, `AUTO-SMOKE-MOBILE-001`, and `AUTO-SMOKE-LAUNCH-001` are `PASS`; remaining command evidence stays `NOT_RUN` until each task executes. |
 
 ## Status Definitions
 
@@ -39,19 +39,19 @@ Fill this section once per actual QA pass.
 
 | Field | Value |
 | --- | --- |
-| Execution date | `2026-06-09 01:27:13 +09:00` |
+| Execution date | `2026-06-09 01:31:31 +09:00` |
 | Executor | `Codex` |
 | Target app version | `TBD` - not checked in preflight safety task. |
-| Target commit | `71eb795f35361ceef7ac0bc67481d93052fece52` |
+| Target commit | `a9147159c0fab3e5b7e9993a4caf0a6cde78972c` |
 | Test device | `N/A` - automatic local preflight only. |
 | Android OS version | `N/A` - automatic local preflight only. |
 | Install path | `N/A` - local repository preflight only. |
 | QA account state | `N/A` - no account flow executed. |
-| QA scope | Auto smoke preflight safety check, TypeScript static check, production build check, and lint check only. Smoke, manual device QA, and Play Console review were not executed. |
-| Overall result | `PASS` for `AUTO-SAFE-001`, `AUTO-TS-001`, `AUTO-BUILD-001`, and `AUTO-LINT-001`; broader auto smoke run still in progress. |
-| Summary counts | PASS: `4`; FAIL: `0`; BLOCKED: `0`; NOT_RUN: remaining planned checks; NEEDS_RUN: separate-approval items unchanged. |
+| QA scope | Auto smoke preflight safety check, TypeScript static check, production build check, lint check, and safe smoke commands only. Manual device QA and Play Console review were not executed. |
+| Overall result | `PASS` for `AUTO-SAFE-001`, `AUTO-TS-001`, `AUTO-BUILD-001`, `AUTO-LINT-001`, `AUTO-SMOKE-COPY-001`, `AUTO-SMOKE-MOBILE-001`, and `AUTO-SMOKE-LAUNCH-001`; broader auto smoke run still in progress. |
+| Summary counts | PASS: `7`; FAIL: `0`; BLOCKED: `0`; NOT_RUN: remaining planned documentation/follow-up checks; NEEDS_RUN: separate-approval items unchanged. |
 | Protected areas touched? | `No`. |
-| Notes | Branch/upstream/worktree safety was previously confirmed; `cmd /c npx tsc --noEmit` passed with no output; `npm.cmd run build` completed successfully with no staged build output; `npm.cmd run lint` passed without warnings, errors, auto-fix, or file changes. |
+| Notes | Branch/upstream/worktree safety was previously confirmed; static checks, build, lint, and the safe smoke commands passed. `smoke:launch` reported launch score `92/100` with one advisory `WARN Macro`, but exited successfully and met its pass threshold. |
 
 ## 2. Automatic Smoke Results
 
@@ -63,10 +63,10 @@ Record command results only after a command is actually executed. Do not paste s
 | A-001 | AUTO | Worktree whitespace safety | `TBD` | `TBD` | Local repo | `git diff --check` | No whitespace or patch-format errors. | `TBD` | `NOT_RUN` | screenshot/log/commit/link: `TBD` | Markdown whitespace, malformed table rows, line endings. | `TBD` | `No` |
 | AUTO-TS-001 | AUTO | TypeScript static check | `2026-06-09 01:19:59 +09:00` | `Codex` | `X:\Chart-Radar`; branch `main`; target commit `49732b2e0b1c3fae1716666c8e1dfdf3660d9b85`. | `cmd /c npx tsc --noEmit` | TypeScript compile/type check passes without emitting files. | Command exited with code `0`; no stdout/stderr output; no emitted files reported. | `PASS` | Command output summarized in this row; no secrets or tokens present. | Type mismatch, stale type definitions, route/component prop mismatch, environment type mismatch, generated type mismatch. | Completed; production build check recorded separately as `AUTO-BUILD-001`. | `No` |
 | AUTO-BUILD-001 | AUTO | Production build check | `2026-06-09 01:23:45 +09:00` | `Codex` | `X:\Chart-Radar`; branch `main`; target commit `af29a1e763a2c428e23150a9beab838c0266dc87`. | `npm.cmd run build` | Production build completes successfully without committing generated output. | Command exited with code `0`; Next.js `14.2.35` build compiled successfully, generated static pages `57/57`, finalized page optimization, and collected build traces. | `PASS` | Command output summarized in this row; no secrets or tokens present; `git status --short` after build showed no tracked or untracked changes. | Next.js build error, route generation issue, environment variable requirement, static rendering error, dependency issue, type generation issue. | Completed; lint check recorded separately as `AUTO-LINT-001`. | `No` |
-| AUTO-LINT-001 | AUTO | Lint check | `2026-06-09 01:27:13 +09:00` | `Codex` | `X:\Chart-Radar`; branch `main`; target commit `71eb795f35361ceef7ac0bc67481d93052fece52`. | `npm.cmd run lint` | Lint check completes successfully without modifying files. | Command exited with code `0`; `next lint` reported no ESLint warnings or errors; `git status --short` after lint showed no file changes. | `PASS` | Command output summarized in this row; no secrets or tokens present; no auto-fix option was used. | ESLint rule violation, unused variable/import, React hook dependency issue, formatting/lint config mismatch, Next.js lint configuration issue. | Proceed to TODO 5, safe smoke commands, only when requested. | `No` |
-| A-007 | AUTO | Static copy guard | `TBD` | `TBD` | Local repo | `npm.cmd run smoke:copy` | No blocked advisory wording, broken text, or copy guard failure. | `TBD` | `NOT_RUN` | screenshot/log/commit/link: `TBD` | Judgment-support copy, blocked phrasing, alert/pro copy drift. | `TBD` | `No` |
-| A-008 | AUTO | Static mobile readiness guard | `TBD` | `TBD` | Local repo | `npm.cmd run smoke:mobile` | Static mobile readiness checks pass without Android release tooling. | `TBD` | `NOT_RUN` | screenshot/log/commit/link: `TBD` | PWA assets, mobile shell, Capacitor config, notification icon, push references. | `TBD` | `No` |
-| A-009 | AUTO | Launch-readiness static guard | `TBD` | `TBD` | Local repo | `npm.cmd run smoke:launch` | Launch-readiness check completes as advisory evidence. | `TBD` | `NOT_RUN` | screenshot/log/commit/link: `TBD` | Launch markers, macro/news/alert/mobile readiness markers. | `TBD` | `No` |
+| AUTO-LINT-001 | AUTO | Lint check | `2026-06-09 01:27:13 +09:00` | `Codex` | `X:\Chart-Radar`; branch `main`; target commit `71eb795f35361ceef7ac0bc67481d93052fece52`. | `npm.cmd run lint` | Lint check completes successfully without modifying files. | Command exited with code `0`; `next lint` reported no ESLint warnings or errors; `git status --short` after lint showed no file changes. | `PASS` | Command output summarized in this row; no secrets or tokens present; no auto-fix option was used. | ESLint rule violation, unused variable/import, React hook dependency issue, formatting/lint config mismatch, Next.js lint configuration issue. | Completed; safe smoke commands recorded separately. | `No` |
+| AUTO-SMOKE-COPY-001 | AUTO | Copy smoke check | `2026-06-09 01:31:31 +09:00` | `Codex` | `X:\Chart-Radar`; branch `main`; target commit `a9147159c0fab3e5b7e9993a4caf0a6cde78972c`. | `npm.cmd run smoke:copy` | Copy/static text smoke completes without errors. | Command exited with code `0`; copy guard reported no forbidden user-facing copy or broken characters. | `PASS` | Command output summarized in this row; no secrets or tokens present. | User-facing copy mismatch, changed static wording, stale expectation, route text change. | Completed. | `No` |
+| AUTO-SMOKE-MOBILE-001 | AUTO | Mobile smoke check | `2026-06-09 01:31:31 +09:00` | `Codex` | `X:\Chart-Radar`; branch `main`; target commit `a9147159c0fab3e5b7e9993a4caf0a6cde78972c`. | `npm.cmd run smoke:mobile` | Mobile smoke completes without errors. | Command exited with code `0`; mobile/PWA packaging checks passed for app assets, offline/service worker files, Capacitor shell/config, Android push icon, push migrations, Google sign-in dependency, and Android manifest guards. | `PASS` | Command output summarized in this row; no secrets or tokens present. | Mobile route smoke failure, viewport assumption mismatch, missing selector/text, responsive layout precondition mismatch. | Completed. | `No` |
+| AUTO-SMOKE-LAUNCH-001 | AUTO | Launch smoke check | `2026-06-09 01:31:31 +09:00` | `Codex` | `X:\Chart-Radar`; branch `main`; target commit `a9147159c0fab3e5b7e9993a4caf0a6cde78972c`. | `npm.cmd run smoke:launch` | Launch smoke completes without errors. | Command exited with code `0`; launch review score was `92/100`; launch threshold passed; one advisory `WARN Macro` was reported while the script still ended in PASS. | `PASS` | Command output summarized in this row; no secrets or tokens present. | App launch precondition failure, route availability, local server/start assumption, environment mismatch. | Proceed to TODO 6, QA results document update, only when requested. | `No` |
 
 ### Caution Smoke Notes
 
