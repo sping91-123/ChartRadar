@@ -222,16 +222,203 @@ All Market Pro currently opens:
 
 ## Task 2 - Basic/Pro Value Re-Definition
 
-Status: `TODO`
+Status: `DONE`
 
-Expected output:
+Definition date: 2026-06-08
 
 | Tier | Intended value | Should include | Should not include | Open questions |
 | --- | --- | --- | --- | --- |
-| Coin Basic | TBD | TBD | TBD | TBD |
-| Coin Pro | TBD | TBD | TBD | TBD |
-| Global Pro | TBD | TBD | TBD | TBD |
-| All Market Pro | TBD | TBD | TBD | TBD |
+| Basic Radar | Let users understand ChartRadar's judgment-support value quickly and safely without payment. | First-read market state, top risk, simple watch/recheck cues, limited route access, limited refresh/usage, enough news/journal/alert experience to build trust. | Deep evidence chains, repeated high-frequency scanning, full candidate detail, multi-market synthesis, large watchlists, advanced alert delivery, performance-like promises. | Which surfaces stay fully Basic vs Basic summary plus Pro detail: `/crypto/home`, `/crypto/spot`, `/news`, `/journal`. |
+| Coin Pro | Primary paid product for crypto judgment support. | Coin Radar home depth, futures/alt details, spot candidate depth, risk and invalidation criteria, condition tracking, alert rules, watchlist capacity, AI/scan depth, journal handoff from coin workflows. | Trade-direction instructions, guaranteed outcomes, unlimited access language, price/plan/id changes, Global-only features as the main selling point. | How much of Coin Radar home remains Basic, and whether spot candidates become a Pro-enhanced surface. |
+| Global Pro | Independent global-market radar for users who care about overseas equities, index futures, macro pressure, sectors, and leaders. | Global 30-second check depth, full macro proxies, event risk detail, sector/leader rotation, asset radar insight, global alerts, global watchlist capacity. | Being sold only as a weaker copy of Coin Pro, or relying only on generic market news. | Its standalone value is currently weaker than Coin Pro; it needs a sharper daily workflow and clearer CTA placement. |
+| All Market Pro | Bundle for users who need one connected read across crypto and global risk. | Coin Pro + Global Pro access, cross-market risk transition, combined alert coverage, market-regime context, journal/review across both markets, one account-level operating view. | Only saying "Coin Pro + Global Pro" or only offering a discount-style bundle story. | What cross-market workflow appears on screen before implementation: shared risk tape, combined alerts, combined journal, or route-level synthesis. |
+
+### Product Direction Decision
+
+Coin Radar should be the first paid conversion core.
+
+Reasons:
+
+- Coin routes have the strongest current usage loop: home, futures/alts, spot candidates, alerts, watchlist, AI briefing, and journal handoff.
+- The Coin Pro value can be explained as depth, recurrence, and risk traceability rather than a new feature promise.
+- The current blurred boundary is most visible in Coin Radar, especially `/crypto/home`, `/crypto/spot`, `/alts`, and `/crypto/alert`.
+- Coin Radar is better suited to a Basic-to-Pro ladder: Basic shows state and risk; Coin Pro opens conditions, invalidation, repeated scanning, and alert follow-through.
+
+Global Pro should remain an independent product, but it needs a stronger standalone narrative before heavy implementation.
+
+All Market Pro should remain a bundle product only if the next route-level matrix gives it visible cross-market value. Without that, it reads as simple combined access.
+
+### Basic Radar Value Definition
+
+Basic Radar should answer: "Is this app useful enough to trust before I pay?"
+
+Basic should provide:
+
+- A fast first read of the current market state.
+- The most important risk or caution in plain terms.
+- A small number of watch/recheck cues.
+- Limited scans, limited alert setup, limited AI/news interpretation, and limited watchlist capacity.
+- Access to journal basics so users can understand the review workflow.
+- Enough crypto and global visibility to understand the product, not enough depth to replace Pro.
+
+Basic should not provide:
+
+- Complete evidence chains for every route.
+- Full candidate detail across many symbols.
+- Repeated high-frequency checks as the default experience.
+- Full alert delivery for Pro-category rules.
+- Large watchlists or cross-market operating views.
+- Copy that makes Basic feel broken or intentionally useless.
+
+Basic copy principle:
+
+- Use "summary", "first read", "top risk", "next check", "limited depth", and "judgment support".
+- Avoid framing Basic as a teaser with no practical value.
+
+### Coin Pro Value Definition
+
+Coin Pro should answer: "What do I need to track in crypto, and what would make the current read invalid?"
+
+Coin Pro should provide:
+
+- Coin Radar home detail beyond the Basic first read.
+- BTC/ETH and alt evidence depth.
+- Futures/alt candidate detail and broader scan volume.
+- Spot candidate detail if the spot route becomes part of the paid ladder.
+- Risk, invalidation, confirmation, and revisit criteria.
+- Alerts for crypto Pro rules and monitored conditions.
+- Larger coin watchlist capacity.
+- AI briefing and commentary depth where it supports interpretation.
+- Journal handoff from chart/scout/alert workflows so the same criteria can be reviewed later.
+
+Coin Pro should be described as:
+
+- Better context.
+- More repeated checks.
+- More traceable criteria.
+- More risk visibility.
+- More continuity from scan to alert to review.
+
+Coin Pro should not be described as:
+
+- A promise of profit.
+- A prediction product.
+- A direct action instruction product.
+- A replacement for user judgment.
+
+### Global Pro Value Definition
+
+Global Pro should answer: "What is the overseas-market backdrop, and which risk axis matters first?"
+
+Global Pro should provide:
+
+- Full Global Market Pulse detail.
+- Index futures breadth and divergence context.
+- Macro proxies such as volatility, dollar, rates, commodities, and defensive assets.
+- Sector and leader rotation.
+- Event risk and news pressure depth.
+- Global asset radar detail and larger watchlist capacity.
+- Global alert rules and follow-up conditions.
+
+Current weak points:
+
+- Global Pro has less obvious daily urgency than Coin Pro.
+- `/global/assets` has entitlement-based depth but weak visible upgrade pressure.
+- The Global Pro CTA is clearer on `/global` than on `/global/assets`.
+- Global Pro can look like a secondary dashboard unless it shows why global risk changes the user's market read.
+
+Reinforcement direction:
+
+- Make the daily global workflow sharper: first state, first risk axis, first assets to watch, next event.
+- Show how global risk affects crypto and all-market interpretation without making Global Pro dependent on Coin Pro.
+- Put Global Pro CTA near locked global detail, not only on `/pro`.
+- Keep Global Pro independent, but make its best value "macro and asset context for the day" rather than broad market data.
+
+### All Market Pro Value Definition
+
+All Market Pro should answer: "How do crypto and global risks interact today?"
+
+All Market Pro should provide:
+
+- Access to both Coin Pro and Global Pro scopes.
+- Cross-market risk transition: when global macro pressure changes crypto conditions, or crypto volatility changes risk appetite.
+- Combined alert coverage across crypto and global rules.
+- A unified journal/review path across both markets.
+- A shared market regime view that helps users compare whether coin and global conditions agree or conflict.
+- One operating flow for users who monitor both markets rather than switching products mentally.
+
+All Market Pro needs more than:
+
+- "Coin Pro + Global Pro".
+- A price comparison.
+- Two separate route groups with no visible connection.
+
+Minimum bundle story for the next matrix:
+
+- Basic: sees separate first reads.
+- Single-market Pro: sees depth for one market.
+- All Market Pro: sees combined risk, combined follow-up, and combined review.
+
+### Basic/Pro Boundary Principles
+
+1. Basic shows the conclusion layer; Pro opens the evidence and follow-up layer.
+2. Basic shows a small number of cues; Pro supports repeated checks and broader symbol coverage.
+3. Basic identifies risk; Pro explains why the risk matters and what condition changes the read.
+4. Basic can show a candidate category; Pro shows traceable criteria, invalidation, and follow-up context.
+5. Basic can use journal and news as product trust builders; Pro should connect them to alerts, scans, and review continuity.
+6. Basic should never feel empty; Pro should clearly feel more operational.
+7. Pro value should be placed near the moment where the user needs more depth, not only on `/pro`.
+8. All gating changes in future implementation must preserve current plan ids, product ids, entitlements, billing amounts, and RevenueCat behavior.
+
+### Pro Value Wording Principles
+
+Use wording based on:
+
+- More context.
+- More evidence.
+- More follow-up criteria.
+- More risk visibility.
+- More repeatability.
+- More continuity from scan to alert to journal.
+
+Avoid wording based on:
+
+- Guaranteed results.
+- Certainty.
+- Profit claims.
+- Future price promises.
+- Direct position instructions.
+- Language that sounds like ChartRadar is making the final decision for the user.
+
+Preferred phrase patterns:
+
+- "Open the detailed criteria."
+- "Check the invalidation and follow-up context."
+- "Track the risk and revisit cues."
+- "Review the evidence behind the first read."
+- "Connect scan, alert, and journal into one workflow."
+
+### Standards To Hand Off To Task 3
+
+Route-level exposure matrix should use these standards:
+
+| Standard | Basic route exposure | Pro route exposure |
+| --- | --- | --- |
+| First read | Always available on core routes. | Same first read plus explanation depth. |
+| Evidence detail | Limited to top-level support. | Full criteria, invalidation, and risk context. |
+| Repeated usage | Limited by daily/local usage gates. | Higher limits using existing entitlement checks. |
+| Alerts | Basic/free rules and limited setup. | Market-specific Pro rules and delivery eligibility. |
+| News | Basic market read can remain visible. | Pro value should be deeper interpretation or connection to alerts/journal if gated. |
+| Journal | Basic review can remain visible. | Pro value should be workflow continuity and richer review context if gated. |
+| Cross-market view | Separate Basic reads. | All Market Pro should show combined risk and review value. |
+
+Task 3 should decide the route-level status for:
+
+- Keep fully Basic.
+- Basic summary plus Pro detail.
+- Pro-enhanced but not fully gated.
+- Pro-only detail.
+- CTA-only copy cleanup.
 
 ## Task 3 - Route-Level Free/Paid Exposure Matrix
 
