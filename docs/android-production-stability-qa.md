@@ -3,7 +3,7 @@
 ## Scope Status
 
 - Active run: `android-production-stability-qa-run`
-- Latest completed task: `Notification QA checklist`
+- Latest completed task: `First actual QA batch selection`
 - Task status: `DONE`
 - Prepared date: 2026-06-09
 - Purpose: define what must be checked after Android production launch before iOS production work or new feature work.
@@ -501,6 +501,64 @@ Use this checklist for Android production notification QA planning only. This ru
 - Do not edit FCM, push-cron, push alert scanner, targetPath construction, duplicate guards, cooldown rules, Supabase, RLS, production DB records, auth, entitlement, RevenueCat, billing, or Android release settings.
 - If delivery, token storage, duplicate prevention, cooldown behavior, or targetPath routing requires live validation, create a separate approved run with a dedicated QA account, no-secret evidence plan, and explicit stop conditions.
 - If alert quality issues appear, record evidence and split them into an `alert-quality-operations-run` candidate instead of fixing notification logic here.
+
+## First Actual QA Execution Candidates
+
+Recommended next active-run: `android-production-qa-execution-run`.
+
+The first execution run should begin with non-mutating checks that have high user impact and low recovery risk. It should not include real payment, purchase restore, account deletion, push delivery, push token mutation, production DB inspection/mutation, or external console configuration changes.
+
+### Recommended Execution Order
+
+| Order | QA bundle | Main scope | Check type | Risk | Why first | Hard stop |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Browser/mobile viewport smoke | `/coin`, `/crypto`, `/alts`, `/global`, `/alerts`, `/journal`, `/pro`, settings/account screens, 360px viewport. | Automatic smoke plus manual screenshot review. | LOW | Finds broken routes, layout overflow, blank states, loading/error regressions, navigation traps, and first-viewport issues without touching production data. | No app code edits, no production data changes, no destructive account/billing/push actions. |
+| 2 | Android actual-device first-entry smoke | Google Play production install, first app launch, first visible route, top/bottom navigation, key screen moves, Android back, app relaunch. | Manual device check. | LOW-MEDIUM | Confirms the shipped Android production app is usable on a real device before testing account, billing, or notification state. | No Play Console release edits, no Android native edits, no production config changes. |
+| 3 | Login smoke | Google login CTA, account picker entry, cancel stability, successful login state, post-login return path, session after relaunch, logout state. | Manual device check. | MEDIUM | Login affects plan display, alerts, journal, and settings, but can be checked with a dedicated QA account without production data mutation. | No auth code edits, no Supabase edits, no account deletion. |
+| 4 | `/pro` pre-purchase smoke | `/pro` entry, Basic/Pro comparison, Coin Pro/Global Pro/All Market Pro cards, prices, CTA copy, login before purchase, purchase button visibility before checkout. | Manual device check with screenshot support. | MEDIUM-HIGH | Verifies monetization presentation before any billing action and catches product-copy or mobile layout issues early. | Do not enter Google Play checkout, do not execute purchase, do not restore purchase, do not edit billing/RevenueCat/Google Play. |
+| 5 | Notification permission/settings smoke | `/alerts`, `/crypto/alert`, global alert entry, empty/existing list state, notification settings entry, permission status, Pro alert limits, 360px alert layout. | Manual device check with route/screenshot support. | MEDIUM-HIGH | Alerts are user-visible and high-risk, but screen/permission/status review can run without sending push or touching tokens. | No real push send, no admin test push, no push-cron send-mode, no token insert/delete, no Supabase/FCM console edits. |
+| 6 | Play Console health read-only review | Production crash rate, ANR rate, Android vitals, recent release warnings, user-visible issue alerts. | Manual console review only. | MEDIUM-HIGH | Confirms production health signals after user-path smoke without changing release state. | Read-only only; no rollout, release, store listing, country/region, tester, product, or policy changes. |
+
+### Automatic Smoke Candidates
+
+| Candidate | Scope | Expected evidence | Risk | Include in first run |
+| --- | --- | --- | --- | --- |
+| Route reachability smoke | `/coin`, `/crypto`, `/alts`, `/global`, `/alerts`, `/journal`, `/pro`, settings/account routes if existing scripts support them. | Command output or route list showing pass/fail without production mutation. | LOW | Yes. |
+| 360px mobile viewport smoke | Same core routes, especially first viewport, bottom navigation, Pro cards, alert settings, and account/settings panels. | Screenshot set or smoke output with noted overflow/blank-state findings. | LOW | Yes. |
+| Static docs/worktree safety checks | `git diff --check`, docs-only confirmation, sensitive-value pattern check for QA documentation commits. | Pass/fail command output. | LOW | Yes for documentation changes. |
+| Existing non-mutating diagnostics | Only diagnostics that are already known to avoid sends or writes, and only if separately approved for the execution run. | No-secret summary counts or safe UI-visible state. | MEDIUM | Optional; not required for the first browser/device smoke bundle. |
+
+### Manual Device Confirmation Candidates
+
+| Candidate | Scope | Expected evidence | Risk | Include in first run |
+| --- | --- | --- | --- | --- |
+| Android production first launch | Install/open from Google Play production app, first route, loading state, first navigation. | Device, Android version, app version, screenshots or screen recording. | LOW-MEDIUM | Yes. |
+| Navigation and relaunch | Top/bottom navigation, Android back, refresh/reopen, app force-close and relaunch where safe. | Screen recording or concise route result table. | LOW-MEDIUM | Yes. |
+| Google login cancel and success smoke | Login CTA, Google account picker, cancel path, successful login with QA account, session after relaunch, logout. | Screenshots/recording; no credentials or tokens. | MEDIUM | Yes, after route/device smoke. |
+| `/pro` pre-checkout review | Product cards, prices, plan labels, CTAs, signed-out versus signed-in button state before checkout. | Screenshots; no checkout sheet entry. | MEDIUM-HIGH | Yes, but stop before Google Play checkout. |
+| Alert permission/settings review | `/alerts`, settings entry, permission status, Pro limit copy, empty/list state, 360px layout. | Screenshots/recording; no push send and no raw token evidence. | MEDIUM-HIGH | Yes, after login smoke if account state is needed. |
+| Play Console health read-only | Crash, ANR, Android vitals, recent warnings, production issue alerts. | Read-only notes and screenshots without changing console state. | MEDIUM-HIGH | Yes, after user-path smoke. |
+
+### Separate Approval Required
+
+| Separate run candidate | Reason to separate | Required guardrails |
+| --- | --- | --- |
+| Actual Google Play purchase test | Opens or completes billing flow and can create real subscription/account state. | Dedicated tester account, license tester setup, evidence plan, explicit stop points, no product/config edits without approval. |
+| Purchase restore test | Can mutate entitlement/account state and may depend on historical Play purchases. | Dedicated account, known purchase history, restore-only plan, no RevenueCat/Supabase manual fixes. |
+| Actual account deletion test | Destructive account operation. | Disposable QA account, deletion evidence plan, explicit approval, no real customer account. |
+| Real push delivery or push-click test | Sends notification and can affect device/account state. | Dedicated QA device/account, no production push-cron send-mode unless explicitly approved, no token exposure. |
+| Production DB or push token inspection/mutation | High risk for secrets, privacy, account state, and production data integrity. | Separate approved run, read/minimize plan, no manual token insert/delete unless explicitly approved. |
+| RevenueCat, Google Play Console, FCM, Supabase, or Android release changes | External service or release configuration mutation. | Separate implementation or release-ops run with approval and rollback/verification plan. |
+
+### Proposed Next Active Runs
+
+| Candidate run | Purpose | First task suggestion | Risk |
+| --- | --- | --- | --- |
+| `android-production-qa-execution-run` | Execute the safe first QA sequence selected above. | Browser/mobile viewport smoke for core routes and 360px screenshots. | LOW |
+| `android-production-auth-device-qa-run` | Isolate Google login, session persistence, logout, and account settings if the first execution run finds account-state uncertainty. | Google login cancel/success smoke on Android production app. | MEDIUM |
+| `android-production-billing-test-run` | Separately validate Google Play purchase/restore with approved tester setup. | Confirm tester account, product availability, and strict stop conditions before opening checkout. | HIGH |
+| `android-production-notification-delivery-run` | Separately validate real push delivery, push-click `targetPath`, and token refresh if screen-only alert QA is insufficient. | Confirm QA device/account, no-secret evidence plan, and approved send path. | HIGH |
+| `alert-quality-operations-run` | Investigate duplicate/cooldown/frequency issues without changing signal definitions casually. | Review no-send diagnostics and visible alert repetition evidence. | HIGH |
 
 ## Risk Grouping
 
