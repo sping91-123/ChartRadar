@@ -9,7 +9,7 @@
 - Status: `ACTIVE`
 - Setup date: 2026-06-09
 - Previous run prerequisite: `android-production-stability-qa-run` was confirmed `DONE` before this setup.
-- Current phase: Task 1 completed; Task 2 is the next `TODO`.
+- Current phase: Tasks 1-2 completed; Task 3 is the next `TODO`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run and does not execute production QA, payment, restore, account deletion, or push-delivery checks.
 
@@ -101,7 +101,7 @@ Separate approval lane:
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | DONE | Existing smoke command audit | Smoke Audit | LOW | Review `package.json` and `scripts/` smoke commands, then document which commands can be reused for Android production QA. | No app code edits. No smoke script edits. | `git diff --check` |
-| 2 | TODO | Mobile viewport smoke scope check | Mobile Smoke Scope | LOW | Check whether 360px core-screen review is already supported and document missing smoke coverage. | No UI code edits. No new smoke script. | Existing smoke command or documentation review, then `git diff --check` |
+| 2 | DONE | Mobile viewport smoke scope check | Mobile Smoke Scope | LOW | Check whether 360px core-screen review is already supported and document missing smoke coverage. | No UI code edits. No new smoke script. | Existing smoke command or documentation review, then `git diff --check` |
 | 3 | TODO | Production QA execution table | QA Execution Plan | MEDIUM | Write an execution table that separates automatic checks from manual checks. | No billing, auth, FCM code edits. No production data changes. | `git diff --check` |
 | 4 | TODO | Safe smoke command execution candidate selection | Smoke Candidate | MEDIUM | Select at least one smoke command that is safe to run in the current repository and confirm it does not hit forbidden scope before execution. | No production purchase. No real push send. No account deletion. No production DB mutation. | Document selection rationale, then `git diff --check` |
 | 5 | TODO | Manual QA checklist separation | Manual QA | MEDIUM | Split actual Android-device checks into a manual QA checklist, including Play Store install, navigation/back/relaunch, Google login, `/pro` pre-checkout review, notification permission/settings, and Play Console crash/ANR read-only review. | No real payment. No purchase restore. No real account deletion. No real push send. | `git diff --check` |
@@ -138,6 +138,15 @@ Separate approval lane:
 - Output: `docs/android-production-qa-execution.md` now classifies reusable smoke commands, caution commands, and separate-approval commands for Android production QA.
 - No smoke commands were executed.
 - No app code, `package.json`, smoke script, billing, auth, Supabase, FCM, Android release, Play Console, or production-data changes were made.
+
+## Task 2 Completion Note
+
+- Completed: 2026-06-09
+- Scope: checked current mobile viewport smoke coverage from docs and script/source inspection only.
+- Output: `docs/android-production-qa-execution.md` now documents 360px coverage for `/coin`, `/crypto`, `/alts`, `/global`, `/alerts`, `/journal`, `/pro`, and settings/account screens.
+- Result: existing smoke commands can support route/static preconditions, but no existing command was confirmed to capture 360px screenshots, inspect DOM overflow, verify bottom navigation/safe-area overlap, or validate Android WebView behavior.
+- No smoke commands were executed.
+- No app code, UI code, `package.json`, smoke script, billing, auth, Supabase, FCM, Android release, Play Console, or production-data changes were made.
 
 ## Completion Report Format
 

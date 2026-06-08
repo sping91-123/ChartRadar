@@ -6,7 +6,7 @@
 - Setup date: 2026-06-09
 - Source checklist: [Android Production Stability QA](android-production-stability-qa.md)
 - Manual checklist: [Android Production Manual QA](qa/android-production-manual-qa.md)
-- Current task state: Task 1 `DONE`; Task 2 is the next `TODO`.
+- Current task state: Tasks 1-2 `DONE`; Task 3 is the next `TODO`.
 
 This document turns the completed Android production stability checklist into an execution plan. It is not an implementation plan and does not authorize code, service, release, or production-data changes.
 
@@ -73,17 +73,62 @@ These commands are not reusable smoke candidates for this active-run task.
 
 ## Mobile Viewport Coverage
 
-Current known coverage:
+Task 2 completed by inspecting existing docs, `package.json`, `scripts/`, and route files. No smoke command was executed and no UI code or smoke script was changed.
 
-- `smoke:mobile` checks mobile shell, PWA, Capacitor, Android push dependency/configuration, manifest, and static migration assets.
-- `smoke:routes` checks HTTP route reachability but does not render a browser viewport.
-- The completed stability QA checklist defines 360px watch items for `/coin`, `/crypto`, `/alts`, `/global`, `/alerts`, `/journal`, `/pro`, settings, and account screens.
+### Existing Mobile-Relevant Smoke Support
 
-Current gap to document in Task 2:
+| Existing command or source | 360px support level | What it can confirm | What it cannot confirm |
+| --- | --- | --- | --- |
+| `npm.cmd run smoke:mobile` | Static mobile readiness only. | Mobile shell, PWA assets, Capacitor config, Android notification asset references, manifest, static push migration expectations. | Browser viewport rendering, text wrapping, horizontal overflow, bottom navigation overlap, safe area, Android WebView behavior. |
+| `npm.cmd run smoke:routes` | Route reachability only. | Some core routes return an expected HTTP status when `SMOKE_BASE_URL` is local. | 360px layout, DOM section presence, visual hierarchy, long-text wrapping, Android WebView behavior. |
+| `npm.cmd run smoke:css` | CSS asset availability only for `/crypto/home`. | `/crypto/home` HTML references CSS assets and CSS files respond with enough content. | Whether the CSS produces a usable 360px layout or avoids overflow. |
+| `npm.cmd run smoke:copy` | Static copy guard only. | Some blocked advisory phrases or broken text patterns in source. | Whether copy fits inside mobile cards/buttons or overlaps UI. |
+| `npm.cmd run smoke:billing` | Static billing/source guard only. | `/pro` billing/product source consistency and RevenueCat-related source markers. | Product card visual layout, mobile CTA clipping, purchase button safe visual boundary. |
+| Route file inspection | Route existence only. | `src/app/coin/page.tsx`, `src/app/settings/page.tsx`, and other page files exist even when not covered by current route smoke. | Runtime render, data state, 360px viewport, Android WebView behavior. |
 
-- No existing smoke command has been confirmed to capture 360px screenshots.
-- No existing smoke command has been confirmed to inspect visual overflow, bottom navigation overlap, safe-area spacing, or first-viewport hierarchy.
-- Browser viewport checks should therefore be classified as manual screenshot review or separate browser-tool QA unless a local screenshot workflow is explicitly confirmed.
+Task 2 conclusion:
+
+- Existing smoke commands provide route/static preconditions, not a true 360px viewport smoke.
+- No existing command was confirmed to launch a browser, set `width=360`, capture screenshots, inspect DOM bounding boxes, or compare `document.documentElement.scrollWidth` with `window.innerWidth`.
+- 360px checks should be manual screenshot review or separate browser-tool QA until a dedicated viewport workflow is approved in a later run.
+
+### Route-Level 360px Coverage
+
+| Screen | Route | 360px elements to check | Existing smoke coverage | Manual check needed? | Automation gap | Failure suspect area | Risk |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Coin home | `/coin`; legacy/related coin home route `/crypto/home` | Today's conclusion, readiness score, direction, BTC-led versus alt-led market label, risk and next confirmation conditions, duplicate feeling between top conclusion and existing sections, long-sentence wrapping, bottom navigation overlap. | `/coin` exists by route-file inspection but is not covered by current `smoke:routes`. `/crypto/home` is covered by `smoke:routes`; `smoke:css` checks CSS asset availability for `/crypto/home`. No viewport coverage. | Yes. Required for first viewport, duplicate-feeling judgment, wrapping, and bottom-nav overlap. | Add or use separate 360px browser/screenshot/DOM overflow check; current scripts do not inspect text fit or layout. | Coin home route mapping, `CoinRadarHomePanel`, top decision model, route redirects, CSS/safe-area spacing, bottom navigation. | MEDIUM |
+| Crypto overview | `/crypto`, `/crypto/home`, `/crypto/spot`, `/crypto/perpetual` | Main coin screen entry, Basic/Pro exposure differences, core signal/risk copy, empty/loading/error states, advisory wording safety, long card/list wrapping. | `smoke:routes` covers `/crypto` redirects/status and `/crypto/home`, `/crypto/spot`, `/crypto/perpetual`; `smoke:css` covers `/crypto/home` CSS assets. No viewport coverage. | Yes. Required for Basic/Pro state interpretation, chart/card usability, loading/empty/error quality, and Android WebView feel. | No existing screenshot, chart-height, wrapping, or bottom-nav overlap detection. | Crypto route shell, market data fetches, chart rendering, Basic/Pro gating, copy density, CSS asset load. | MEDIUM |
+| Alts | `/alts`; detailed route `/crypto/perpetual/alts` | Alt screen entry, alt risk/strength wording, Basic/Pro restriction display, long coin names and symbols, card/list wrapping, mobile breakage. | `smoke:routes` covers `/alts` as redirect/status and `/crypto/perpetual/alts` route reachability. No viewport coverage. | Yes. Required for long symbol/name wrapping, gated-state clarity, and list/card usability. | No existing command detects horizontal overflow, clipped badges, crowded CTAs, or route-specific visual hierarchy. | Alt data availability, Pro gating, card/list layout, redirect mapping, dense labels. | MEDIUM |
+| Global | `/global`; related `/global/assets` route exists but is not in current route smoke | US/global market flow entry, today's first assets to review, most important risk, Global Pro CTA, empty/loading states, asset/sector name wrapping. | `smoke:routes` covers `/global`; route-file inspection shows `/global/assets`. No viewport coverage. | Yes. Required for first-read quality, CTA placement, asset/sector wrapping, and Android safe-area/bottom-nav behavior. | No current smoke covers `/global/assets`, viewport overflow, or manual judgment of today's priority/risk. | Global data pipeline, `/global` versus `/global/assets` boundary, CTA placement, asset label width, bottom navigation. | MEDIUM |
+| Alerts | `/alerts`, `/alerts?market=crypto`, `/alerts?market=global`, `/crypto/alert` | Alert list entry, empty-list state, long alert title/body wrapping, alert settings entry button, Basic/Pro alert limits, bottom navigation overlap. | `smoke:routes` covers `/alerts`, market query variants, and `/crypto/alert`; `smoke:ops` inspects push/alert source markers only. No viewport or permission dialog coverage. | Yes. Required for permission state, empty/list readability, Pro limits, settings entry, and Android notification UX. | No current smoke detects long alert text overflow, permission/status row wrapping, sticky-control overlap, OS dialog behavior, or targetPath tap behavior. | Alert UI state, permission bridge, Pro alert gating, push source assumptions, text wrapping, bottom navigation. | HIGH |
+| Journal | `/journal`, `/journal?market=crypto`, `/journal?market=global` | Journal entry, empty state, record list display, write/detail entry path, long review title/body wrapping, CTA/button overlap. | `smoke:routes` covers `/journal` and market query variants. No viewport coverage. | Yes. Required for empty versus populated state, safe no-data-change navigation, long text wrapping, and button/safe-area placement. | No current smoke detects list/form overflow, detail/write layout, bottom CTA clipping, or account-state differences. | Journal persistence state, route state, empty-state copy, form/list layout, auth/account state. | MEDIUM |
+| Pro | `/pro`, `/pro?market=crypto`, `/pro?market=stocks` | Basic versus Pro explanation, Coin Pro/Global Pro/All Market Pro cards, price display, CTA buttons, purchase-button visibility before checkout, long product/caution copy wrapping, no actual purchase. | `smoke:routes` covers `/pro` variants; `smoke:billing` statically audits product/billing source consistency. No viewport coverage. | Yes. Required for product-card layout, price/CTA fit, current-plan interpretation, and safe stop before checkout. | No current smoke verifies card height, price row wrapping, purchase button clipping, current-plan label fit, or Google Play sheet boundary. | Pro pricing panel, billing source mapping, current-plan state, product copy density, mobile CTA layout. | HIGH |
+| Settings/account | `/settings`, `/account`, `/account/delete`, `/login`, `/menu`, `/privacy`, `/terms`, `/refund` | Entry path, account state, current plan, notification settings, contact/policy links, logout, account deletion accessibility, app version, long email/nickname wrapping, modal/confirmation bounds. | `smoke:routes` covers `/account`, `/account/delete`, `/login`, `/menu`, `/privacy`, `/terms`, and `/refund`; route-file inspection shows `/settings`, but current `smoke:routes` does not include it. No viewport coverage. | Yes. Required for signed-in/out state, long identity text, logout, deletion warning boundary, modal fit, Android back behavior, and safe-area checks. | No current smoke covers `/settings`, account-state branches, modal bounds, Android back/relaunch, Google login, or long email overflow. | Settings route coverage gap, auth/session state, account panel layout, policy links, deletion-warning UI, safe-area spacing. | HIGH |
+
+### Coverage Classification
+
+Existing smoke can support:
+
+- Route reachability for most core routes when `SMOKE_BASE_URL` is local.
+- Static mobile readiness through `smoke:mobile`.
+- Static copy guardrails through `smoke:copy`.
+- CSS asset serving for `/crypto/home` through `smoke:css`.
+- Static `/pro` billing source consistency through `smoke:billing`.
+
+Manual confirmation remains required for:
+
+- Actual 360px screenshots or visual review of every listed route.
+- Android WebView behavior, back navigation, force-close/relaunch, and safe-area/navigation-bar overlap.
+- Google login, signed-in/out account states, current plan interpretation, and logout.
+- Notification permission OS dialogs, settings state, and alert permission recovery.
+- Empty/loading/error state quality and whether first-viewport judgment support is clear.
+
+Separate approval remains required for:
+
+- Actual Google Play purchase or purchase restore.
+- Account deletion execution.
+- Real push delivery, push-click targetPath validation, or raw token inspection.
+- Production DB changes or Supabase/FCM/RevenueCat/Google Play Console/Android release configuration changes.
 
 ## Execution Table
 
