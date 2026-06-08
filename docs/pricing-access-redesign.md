@@ -483,16 +483,109 @@ Task 4 should use the wording cautions above when defining CTA copy. Task 5 shou
 
 ## Task 4 - Pro CTA Wording Principles
 
-Status: `TODO`
+Status: `DONE`
 
-Expected output:
+Definition date: 2026-06-08
 
-- Explain Pro value through better context, traceability, risk visibility, and follow-up conditions.
-- Avoid promises about profit, hit rate, certainty, or future price movement.
-- Avoid wording that tells users to enter a position.
-- Prefer conditions, invalidation, risk, confirmation, and revisit cues.
-- Keep Basic useful enough to support trust.
-- Make Pro value concrete without making Basic feel broken.
+These principles define wording policy only. They do not change Pro gates, billing code, RevenueCat behavior, product ids, plan ids, entitlements, or prices.
+
+### Pro CTA Base Principles
+
+1. Explain Pro as more judgment context, not as a better outcome.
+2. Put the CTA next to the missing depth: criteria, invalidation, alerts, review history, or cross-market context.
+3. Keep Basic useful and calm. Basic copy should say what is visible now before explaining what Pro adds.
+4. Use neutral workflow verbs: view, check, review, track, connect, expand, compare.
+5. Avoid urgency, certainty, fear, or direction. CTA copy should not push the user toward a market action.
+6. Make the unlocked value concrete: more evidence, more condition tracking, more alert coverage, richer review continuity.
+7. Keep product names tied to scope: Coin Pro for crypto depth, Global Pro for global market depth, All Market Pro for combined workflow.
+
+### Forbidden Wording Patterns
+
+| Risk area | Do not use | Reason |
+| --- | --- | --- |
+| Return guarantee | "Increase returns", "Make profit with Pro", "Higher win rate", "Beat the market" | Sounds like guaranteed performance or financial advice. |
+| Loss avoidance guarantee | "Avoid losses", "Protect your money", "Never miss a drop", "Prevent bad trades" | Implies risk can be removed. |
+| Direction instruction | "Buy now", "Sell before it falls", "Take this signal", "Enter here" | Direct investment instruction. |
+| Long/short instruction | "Open long", "Open short", "Long setup", "Short now" | Position-entry guidance. |
+| Coin recommendation | "Recommended coin", "Best coin to buy", "Top pick", "This coin is the answer" | Can read as a specific asset recommendation. |
+| Certainty | "Confirmed breakout", "Guaranteed reversal", "Sure trend", "Safe entry" | Overstates market certainty. |
+| Fear pressure | "Upgrade before you lose", "You are exposed without Pro", "Do not miss this move" | Creates anxiety instead of informed judgment. |
+| App Review risk | "Financial advisor", "investment advice", "signal service", "profit prediction" | Can create regulatory or review concerns. |
+
+### Allowed Wording Patterns
+
+| Value area | Safe pattern | Example CTA text |
+| --- | --- | --- |
+| Judgment evidence | Ask the user to inspect the basis for the first read. | "View the detailed criteria." |
+| Risk conditions | Frame the unlock around risk visibility. | "Check the risk conditions." |
+| Invalidation | Show what would change the read. | "Open invalidation and revisit cues." |
+| Alert expansion | Describe monitoring, not action. | "Expand alert conditions." |
+| Journal continuity | Connect scan, alert, and review. | "Save this context for review." |
+| Market evidence | Offer more context behind the summary. | "See the deeper market evidence." |
+| Cross-market context | Compare conditions across markets. | "Compare coin and global risk context." |
+
+### Product-Specific CTA Standards
+
+| Product | CTA should emphasize | Safe CTA examples | Avoid |
+| --- | --- | --- | --- |
+| Coin Pro | Crypto evidence depth, invalidation criteria, repeated scans, alt/spot detail, crypto alerts, and journal handoff. | "Open Coin Pro criteria.", "Track crypto risk and revisit cues.", "Expand crypto alert conditions." | Coin picks, entry timing, long/short language, profit framing. |
+| Global Pro | Macro pressure, index futures, sector/leader rotation, event risk, asset radar depth, and global alerts. | "Open Global Pro market context.", "Review macro and asset risk details.", "Expand global alert coverage." | Claims that global context predicts market direction or removes uncertainty. |
+| All Market Pro | Combined coin/global workflow, mixed alerts, cross-market risk comparison, and unified review. | "Compare coin and global risk context.", "Connect mixed-market alerts and review.", "Open the all-market workflow." | Presenting the bundle only as a discount or implying one market gives certain direction for another. |
+
+### Route-Level CTA Tone
+
+| Route or surface | CTA tone | Preferred wording direction | Avoid |
+| --- | --- | --- | --- |
+| `/coin` | Light and post-redirect. | Coin first-read plus deeper criteria after landing. | Standalone redirect CTA or urgent crypto-action language. |
+| `/crypto` | Decision-support depth. | "Review the evidence behind this crypto read." | "Act on this signal" style copy. |
+| `/alts` | Careful and risk-first. | "Open detailed alt conditions and risk changes." | "Next alt winner" or momentum-chasing phrasing. |
+| `/global` | Context and pressure. | "Review the global risk axis and macro context." | Claims that the route predicts the next market move. |
+| `/global/assets` | Asset context and follow-up. | "Expand asset radar context and watch conditions." | Asset recommendations or trade-call phrasing. |
+| `/news` | Interpretation, not prediction. | "Connect this news to market risk context." | "This news means buy/sell" logic. |
+| `/alerts` | Monitoring and delivery. | "Enable monitoring for this condition." | "Get the next entry alert" or urgent action wording. |
+| `/journal` | Review and learning loop. | "Connect this context to your review notes." | Performance-score claims or guaranteed improvement. |
+| `/pro` | Comparison and scope clarity. | "Choose the coverage and workflow you need." | Legacy ids, return promises, or pressure-based plan copy. |
+
+### Basic User Anxiety Rules
+
+- State what Basic already provides before naming what Pro adds.
+- Avoid "locked because you are missing out" framing.
+- Prefer "Basic shows the first read; Pro opens the detailed criteria" over "Upgrade to unlock the real answer".
+- Do not imply Basic users are unsafe, uninformed, or exposed.
+- Avoid countdowns, market urgency, or loss-pressure copy.
+- Keep empty and limited states factual: "Daily Basic limit reached" plus a calm Pro option.
+
+### iOS And App Review Risk Wording
+
+Avoid wording that can make ChartRadar look like a regulated advisory, signal, or performance-guarantee product:
+
+- "Investment advice"
+- "Financial advisor"
+- "Guaranteed profit"
+- "Avoid losses"
+- "Buy signal"
+- "Sell signal"
+- "Long entry"
+- "Short entry"
+- "Best coin to buy"
+- "This will go up"
+- "This will fall"
+- "Pro predicts the market"
+
+Safer review posture:
+
+- ChartRadar provides market context, risk conditions, and review tools.
+- Users make their own decisions.
+- Pro expands context, monitoring, and review continuity.
+- CTA copy should stay consistent with judgment support, not portfolio advice.
+
+### First CTA Cleanup Candidates For Future Implementation
+
+1. `/pro` product cards: remove any wording that overstates outcomes and make All Market Pro read like a workflow bundle.
+2. `/alerts` Pro rule cards: add market-specific monitoring language near Pro delivery controls.
+3. Coin Radar home: add calm Coin Pro depth language near evidence or repeated-check sections.
+4. `/global/assets`: add Global Pro CTA near usage limits and locked insight depth.
+5. Spot candidate surface: if monetized later, use criteria and revisit language rather than candidate recommendation language.
 
 ## Task 5 - First Implementation Candidate Selection
 
