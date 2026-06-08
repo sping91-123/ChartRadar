@@ -6,9 +6,9 @@
 
 ## Run State
 
-- Status: `ACTIVE`
+- Status: `DONE`
 - Setup date: 2026-06-08
-- Current phase: `/pro` pricing copy cleanup before iOS production release.
+- Current phase: `/pro` pricing copy cleanup completed before iOS production release.
 - Execution mode: audit first, PR-based implementation for UI copy changes.
 
 ## Purpose
@@ -73,7 +73,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | DONE | `/pro` current copy audit | Pricing Copy Audit | LOW | Audit `/pro`, `ProPricingPanel`, and related CTA wording. | No code edits. | `git diff --check` |
 | 2 | DONE | `/pro` pricing copy cleanup implementation | Pricing UI Copy | MEDIUM | Align Coin Pro, Global Pro, All Market Pro value descriptions and CTA wording with `pricing-access-redesign-run`. | No `billing.ts` edits. No RevenueCat edits. No product ID, plan ID, entitlement, or price edits. No checkout/confirm/sync/grant edits. No investment-advice, return-guarantee, or entry-instruction wording. No direct push to `main`. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:billing`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:all`; `/pro` 360px screenshot; `/pro` desktop screenshot |
-| 3 | TODO | Result documentation | Documentation | LOW | Document `/pro` copy cleanup result and remaining pricing/access candidates. | No app code edits. | `git diff --check` |
+| 3 | DONE | Result documentation | Documentation | LOW | Document `/pro` copy cleanup result and remaining pricing/access candidates. | No app code edits. | `git diff --check` |
 
 ## Screenshot Policy
 

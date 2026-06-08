@@ -289,15 +289,86 @@ Verification result:
 
 ## Task 3 - Result Documentation
 
-Status: `TODO`
+Status: `DONE`
 
-Expected output:
+Documentation date: 2026-06-08
 
-- Summary of `/pro` copy changes.
-- Confirmation of preserved billing/product/entitlement scope.
-- Screenshot review notes.
-- Remaining pricing/access candidates:
-  - Coin Radar home Basic/Pro exposure cleanup.
-  - Alerts Pro gating/CTA cleanup.
-  - Global Pro placement/CTA adjustment.
-  - All Market Pro cross-market workflow follow-up.
+### `/pro` Copy Cleanup Result
+
+The `/pro` pricing surface now presents Pro value as judgment support rather than market action guidance.
+
+Applied result:
+
+- Basic is framed as a useful first-read flow with direction summary and core risk.
+- Pro is framed as criteria, risk context, invalidation, alerts, and review continuity.
+- Plan-card copy shown on `/pro` is presentation-only in `ProPricingPanel`.
+- Billing plan identifiers, pricing, renewal text, checkout behavior, and entitlement behavior remain sourced from the existing billing model.
+
+### Product Copy Result
+
+| Product | Result |
+| --- | --- |
+| Coin Pro | Reframed from "alt opportunity" and broad detailed judgment toward crypto criteria, risk, invalidation, repeated checks, alerts, and review continuity. |
+| Global Pro | Reframed from broad detailed judgment toward macro, asset, event, sector, index futures, and global-market context. |
+| All Market Pro | Reframed from whole-market judgment or simple bundle access toward cross-market risk comparison, multi-market alerts, and unified review. |
+
+### CTA Copy Result
+
+| Product | Previous direction | Result direction |
+| --- | --- | --- |
+| Coin Pro | Detailed crypto judgment | Coin criteria and risk basis. |
+| Global Pro | Detailed U.S. market judgment | Global context and risk backdrop. |
+| All Market Pro | Whole-market judgment | Cross-market risk context. |
+
+The implementation avoids investment-advice, return-guarantee, loss-avoidance, buy/sell, long/short, and specific-asset recommendation wording.
+
+### Preserved Billing / Product / Access Scope
+
+Confirmed preserved:
+
+- `src/lib/billing.ts`
+- `src/lib/mobilePurchases.ts`
+- RevenueCat integration and configuration
+- product ids
+- plan ids
+- entitlement names
+- prices and billing amounts
+- checkout / confirm / app-store sync / grant paths
+- entitlement-resolution behavior
+- Basic/Pro gating behavior
+
+### Verification Summary
+
+- `git diff --check`: PASS
+- `cmd /c npx tsc --noEmit`: PASS
+- `npm.cmd run build`: PASS
+- `npm.cmd run smoke:billing`: PASS
+- `npm.cmd run smoke:mobile`: PASS
+- `npm.cmd run smoke:all`: PASS
+- Sensitive-value pattern scan: PASS
+- Forbidden file change check: PASS
+
+Screenshot review artifacts:
+
+- `reports/verification/pro-pricing-copy-360.png`
+- `reports/verification/pro-pricing-copy-desktop.png`
+- `reports/verification/pro-pricing-copy-crypto.png`
+- `reports/verification/pro-pricing-copy-stocks.png`
+- `reports/verification/pro-pricing-copy-plan-cards.png`
+- `reports/verification/pro-pricing-copy-cta.png`
+
+### Merge Record
+
+- PR: `#5`
+- PR title: `Clean up Pro pricing copy`
+- Branch: `codex/pro-pricing-copy-cleanup`
+- Implementation commit: `4c0c4f3d2b42bf82cf7dd120da1f906909c999f2`
+- Merge commit on `main`: `848722d`
+- Merge status: merged into `origin/main`
+
+### Remaining Pricing / Access Candidates
+
+1. Coin Radar home Basic/Pro exposure cleanup.
+2. Alerts Pro gating/CTA cleanup.
+3. Global Pro placement/CTA adjustment.
+4. All Market Pro bundle value follow-up beyond `/pro`, especially cross-market workflow visibility.
