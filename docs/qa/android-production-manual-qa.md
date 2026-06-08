@@ -5,6 +5,7 @@
 - Active run: `android-production-qa-execution-run`
 - Source execution doc: [Android Production QA Execution](../android-production-qa-execution.md)
 - Source stability checklist: [Android Production Stability QA](../android-production-stability-qa.md)
+- Results template: [Android Production QA Results Template](android-production-qa-results.md)
 - Checklist status: prepared only; actual manual QA has not been executed.
 
 This checklist is for the Android production app installed from Google Play. It is designed for an operator to follow on a real phone. It does not authorize app code changes, UI changes, smoke script changes, production data changes, actual payment, purchase restore, account deletion, real push send, token lookup/mutation, Android release changes, or external console changes.
@@ -150,6 +151,8 @@ These items are intentionally not part of the manual phone checklist. They need 
 ## Evidence Record Shape
 
 Use this shape when manual QA is later executed:
+
+For a full run, copy results into [Android Production QA Results Template](android-production-qa-results.md) so automatic smoke, manual QA, and separate-approval outcomes stay in one place.
 
 | Field | Required content |
 | --- | --- |

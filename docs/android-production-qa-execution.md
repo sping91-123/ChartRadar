@@ -6,7 +6,7 @@
 - Setup date: 2026-06-09
 - Source checklist: [Android Production Stability QA](android-production-stability-qa.md)
 - Manual checklist: [Android Production Manual QA](qa/android-production-manual-qa.md)
-- Current task state: Tasks 1-5 `DONE`; Task 6 is the next `TODO`.
+- Current task state: Tasks 1-6 `DONE`; active run completed.
 
 This document turns the completed Android production stability checklist into an execution plan. It is not an implementation plan and does not authorize code, service, release, or production-data changes.
 
@@ -279,7 +279,9 @@ Use this report shape when a later task actually runs the selected command. Do n
 
 ## Result Template
 
-Use this shape for later task evidence:
+Task 6 created the full results workbook-style template at [Android Production QA Results Template](qa/android-production-qa-results.md).
+
+Use the dedicated results template for actual execution evidence. This inline shape remains a compact reference:
 
 | Check | Status | Evidence | Notes | Protected area touched? | Follow-up |
 | --- | --- | --- | --- | --- | --- |
@@ -292,6 +294,13 @@ Allowed statuses:
 - `FAIL`: executed and did not meet expected result.
 - `BLOCKED`: could not run because a prerequisite or guardrail stopped it.
 - `NEEDS_RUN`: separate-approval or not-currently-runnable item that needs a later approved run.
+
+## Completion State
+
+- `android-production-qa-execution-run` is complete.
+- Automatic smoke, manual QA, and separate-approval result recording are documented in [Android Production QA Results Template](qa/android-production-qa-results.md).
+- Actual QA execution should use the results template and the manual checklist together.
+- No smoke command or manual QA was executed while creating the template.
 
 ## Current Setup Evidence
 

@@ -6,10 +6,10 @@
 
 ## Run State
 
-- Status: `ACTIVE`
+- Status: `DONE`
 - Setup date: 2026-06-09
 - Previous run prerequisite: `android-production-stability-qa-run` was confirmed `DONE` before this setup.
-- Current phase: Tasks 1-5 completed; Task 6 is the next `TODO`.
+- Current phase: All six QA execution preparation tasks completed; results template is ready for the next actual QA run.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run and does not execute production QA, payment, restore, account deletion, or push-delivery checks.
 
@@ -105,7 +105,7 @@ Separate approval lane:
 | 3 | DONE | Production QA execution table | QA Execution Plan | MEDIUM | Write an execution table that separates automatic checks from manual checks. | No billing, auth, FCM code edits. No production data changes. | `git diff --check` |
 | 4 | DONE | Safe smoke command execution candidate selection | Smoke Candidate | MEDIUM | Select at least one smoke command that is safe to run in the current repository and confirm it does not hit forbidden scope before execution. | No production purchase. No real push send. No account deletion. No production DB mutation. | Document selection rationale, then `git diff --check` |
 | 5 | DONE | Manual QA checklist separation | Manual QA | MEDIUM | Split actual Android-device checks into a manual QA checklist, including Play Store install, navigation/back/relaunch, Google login, `/pro` pre-checkout review, notification permission/settings, and Play Console crash/ANR read-only review. | No real payment. No purchase restore. No real account deletion. No real push send. | `git diff --check` |
-| 6 | TODO | QA result recording template | QA Evidence | LOW | Create a template for later QA execution results using `NOT_RUN`, `PASS`, `FAIL`, `BLOCKED`, and `NEEDS_RUN`. | No code edits. | `git diff --check` |
+| 6 | DONE | QA result recording template | QA Evidence | LOW | Create a template for later QA execution results using `NOT_RUN`, `PASS`, `FAIL`, `BLOCKED`, and `NEEDS_RUN`. | No code edits. | `git diff --check` |
 
 ## Documentation Policy
 
@@ -172,6 +172,15 @@ Separate approval lane:
 - Output: the manual checklist now covers Play Store production install and first launch, Android navigation/back/relaunch, 360px visual review, Google login/logout, `/pro` pre-checkout review, notification permission/settings, settings/account, and Play Console read-only review.
 - Result: all manual checks remain `NOT_RUN`; separate-approval items remain `NEEDS_RUN`.
 - No manual QA, smoke command, payment, restore, account deletion, push send, production DB/token lookup, Play Console change, or external service change was executed.
+- No app code, UI code, `package.json`, smoke script, billing, auth, Supabase, FCM, Android release, Play Console, or production-data changes were made.
+
+## Task 6 Completion Note
+
+- Completed: 2026-06-09
+- Scope: created the Android production QA results template in `docs/qa/android-production-qa-results.md`.
+- Output: the template can record automatic smoke results, manual Android QA results, separate-approval items, failure details, and next active-run recommendations.
+- Result: `android-production-qa-execution-run` is now complete. No actual QA evidence was generated in this task.
+- No smoke command, manual QA, payment, restore, account deletion, push send, production DB/token lookup, Play Console change, or external service change was executed.
 - No app code, UI code, `package.json`, smoke script, billing, auth, Supabase, FCM, Android release, Play Console, or production-data changes were made.
 
 ## Completion Report Format
