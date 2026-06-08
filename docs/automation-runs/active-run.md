@@ -9,7 +9,7 @@
 - Status: `ACTIVE`
 - Setup date: 2026-06-09
 - Previous run prerequisite: `android-production-qa-execution-run` was confirmed `DONE` before this setup.
-- Current phase: Task 1 is the next `TODO`.
+- Current phase: Task 1 completed; Task 2 is the next `TODO`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No smoke, typecheck, build, lint, Android, billing, push, DB, or external-console command was executed during setup.
 
@@ -56,6 +56,9 @@
 This run may execute only the following commands, one task at a time:
 
 - `git status --short`
+- `git branch --show-current`
+- `git rev-parse --abbrev-ref --symbolic-full-name @{u}`
+- `git rev-list --left-right --count HEAD...@{u}`
 - `git diff --check`
 - `cmd /c npx tsc --noEmit`
 - `npm.cmd run build`
@@ -107,7 +110,7 @@ Do not run:
 
 | Order | Status | Task | Area | Risk | Goal | Command(s) | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TODO | Auto smoke preflight safety check | Safety | LOW | Confirm worktree, branch, and docs guardrails before smoke execution. | `git status --short`; `git diff --check` | No code changes. No production data changes. | Record result in `docs/qa/android-production-qa-results.md` |
+| 1 | DONE | Auto smoke preflight safety check | Safety | LOW | Confirm worktree, branch, upstream, ahead/behind, and docs guardrails before smoke execution. | `git status --short`; `git branch --show-current`; `git rev-parse --abbrev-ref --symbolic-full-name @{u}`; `git rev-list --left-right --count HEAD...@{u}`; `git diff --check` | No code changes. No production data changes. | Record result in `docs/qa/android-production-qa-results.md` |
 | 2 | TODO | TypeScript static check | Typecheck | LOW | Confirm TypeScript has no no-emit errors. | `cmd /c npx tsc --noEmit` | No code changes. | Record `PASS`/`FAIL`/`BLOCKED` |
 | 3 | TODO | Build check | Build | LOW | Confirm production build succeeds locally. | `npm.cmd run build` | No code changes. Do not stage build output. | Record `PASS`/`FAIL`/`BLOCKED` |
 | 4 | TODO | Lint check | Lint | LOW | Confirm lint passes without auto-fix. | `npm.cmd run lint` | No lint auto-fix. No code changes. | Record `PASS`/`FAIL`/`BLOCKED` |
@@ -124,6 +127,15 @@ Do not run:
 - Leave unexecuted commands as `NOT_RUN`.
 - Keep separate-approval items as `NEEDS_RUN`.
 - Summarize logs. Do not paste large logs, secrets, tokens, credentials, or private account identifiers.
+
+## Task 1 Completion Note
+
+- Completed: 2026-06-09 01:14:34 +09:00.
+- Scope: ran only preflight safety git commands before any TypeScript, build, lint, or smoke command.
+- Result: branch `main`, upstream `origin/main`, ahead/behind `0/0`, working tree clean, and `git diff --check` passed.
+- Active run name confirmed as `android-production-auto-smoke-run`.
+- Forbidden command list and high-risk guardrails are reflected in this active-run document.
+- No TypeScript, build, lint, smoke, Android native/release, billing, auth, Supabase, FCM, Play Console, production DB/token, payment, restore, account deletion, or push command was executed.
 
 ## Next Run Recommendation Rules
 
