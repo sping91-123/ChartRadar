@@ -53,6 +53,65 @@ Fill this section once per actual QA pass.
 | Protected areas touched? | `No`. |
 | Notes | Branch/upstream/worktree safety was previously confirmed; static checks, build, lint, and the safe smoke commands passed. `smoke:launch` reported launch score `92/100` with one advisory `WARN Macro`, but exited successfully and met its pass threshold. |
 
+## 1A. Auto Smoke Final Summary
+
+This section summarizes the automatic portion of `android-production-auto-smoke-run` after the safe command sequence was completed. It is a documentation-only summary and does not add another command execution.
+
+| Field | Result |
+| --- | --- |
+| Active run | `android-production-auto-smoke-run` |
+| Executed scope | Preflight safety check, TypeScript no-emit check, production build, lint, `smoke:copy`, `smoke:mobile`, and `smoke:launch`. |
+| Overall auto result | `PASS` |
+| Failed items | None |
+| Blocked items | None |
+| Advisory items | `smoke:launch` reported one advisory `WARN Macro`; the command exited with code `0`, launch score was `92/100`, and the script met its pass threshold. |
+| Current conclusion | Android production is passing the automatic static, build, lint, and basic safe-smoke checks recorded in this run. Manual Android device QA is still `NOT_RUN`. Actual purchase, restore, account deletion, real push, production DB/token access, and external service changes still require separate approval. |
+
+### Auto Result Table
+
+| QA ID | Status | Notes |
+| --- | --- | --- |
+| `AUTO-SAFE-001` | `PASS` | Branch, upstream, ahead/behind, clean worktree, active-run name, forbidden command list, and `git diff --check` were confirmed before automatic checks. |
+| `AUTO-TS-001` | `PASS` | `cmd /c npx tsc --noEmit` exited with code `0` and emitted no files. |
+| `AUTO-BUILD-001` | `PASS` | `npm.cmd run build` exited with code `0`; no build output was staged. |
+| `AUTO-LINT-001` | `PASS` | `npm.cmd run lint` exited with code `0`; no warnings, errors, auto-fix, or file changes were reported. |
+| `AUTO-SMOKE-COPY-001` | `PASS` | `npm.cmd run smoke:copy` found no forbidden user-facing copy or broken characters. |
+| `AUTO-SMOKE-MOBILE-001` | `PASS` | `npm.cmd run smoke:mobile` passed mobile/PWA/Capacitor/Android static packaging checks. |
+| `AUTO-SMOKE-LAUNCH-001` | `PASS` | `npm.cmd run smoke:launch` exited with code `0`; launch score was `92/100`; `WARN Macro` was advisory only. |
+
+### Commands Not Executed
+
+These commands were intentionally not run in this auto-smoke result pass:
+
+- `npm.cmd run smoke:all`
+- `npm.cmd run smoke:billing`
+- `npm.cmd run smoke:api`
+- `npm.cmd run smoke:routes`
+- `npm.cmd run smoke:css`
+- `npm.cmd run smoke:ops`
+- `npm.cmd run check:app-billing`
+- Android native/release commands such as `npm.cmd run app:sync`, `npm.cmd run app:sync:prod`, `npm.cmd run app:add:android`, `npm.cmd run app:android`, `npm.cmd run app:doctor`, `npm.cmd run app:android:debug`, and `npm.cmd run app:android:release`
+- Billing environment or SQL mutation helpers such as `scripts/set-app-billing-env.ps1` and `scripts/set-owner-admin.sql`
+
+### High-Risk QA Not Executed
+
+These high-risk checks remain separate-approval items and were not executed:
+
+- Actual Google Play purchase test
+- Purchase restore test
+- Actual account deletion test
+- Real push send or push-click delivery test
+- Production DB/token lookup, insertion, deletion, or mutation
+- RevenueCat, Google Play Console, FCM, Supabase, or Android release configuration changes
+
+### Code And Artifact Boundary
+
+- App/UI code changed: `No`
+- `package.json` changed: `No`
+- `scripts/` changed: `No`
+- Billing/auth/Supabase/FCM/Android release settings changed: `No`
+- Build/temp/smoke output staged: `No`
+
 ## 2. Automatic Smoke Results
 
 Record command results only after a command is actually executed. Do not paste secrets, raw tokens, credentials, or private account identifiers into output summaries.

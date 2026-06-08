@@ -9,7 +9,7 @@
 - Status: `ACTIVE`
 - Setup date: 2026-06-09
 - Previous run prerequisite: `android-production-qa-execution-run` was confirmed `DONE` before this setup.
-- Current phase: Task 5 completed; Task 6 is the next `TODO`.
+- Current phase: Task 6 completed; Task 7 is the next `TODO`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No smoke, typecheck, build, lint, Android, billing, push, DB, or external-console command was executed during setup.
 
@@ -115,7 +115,7 @@ Do not run:
 | 3 | DONE | Build check | Build | LOW | Confirm production build succeeds locally. | `npm.cmd run build` | No code changes. Do not stage build output. | Record `PASS`/`FAIL`/`BLOCKED` |
 | 4 | DONE | Lint check | Lint | LOW | Confirm lint passes without auto-fix. | `npm.cmd run lint` | No lint auto-fix. No code changes. | Record `PASS`/`FAIL`/`BLOCKED` |
 | 5 | DONE | Safe smoke commands | Smoke | MEDIUM | Run only safe smoke commands from the execution plan. | `npm.cmd run smoke:copy`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:launch` | No `smoke:all`, `smoke:billing`, `smoke:api`, `check:app-billing`, payment, push, or DB mutation. | Record `PASS`/`FAIL`/`BLOCKED` |
-| 6 | TODO | QA results document update | Results | LOW | Summarize execution time, target commit, command status, failure log summary, and follow-up need. | Documentation only | No failure fixes. | `git diff --check` |
+| 6 | DONE | QA results document update | Results | LOW | Summarize execution time, target commit, command status, failure log summary, and follow-up need. | Documentation only | No failure fixes. | `git diff --check` |
 | 7 | TODO | Next run recommendation | Follow-up | LOW | Recommend next run based on auto smoke results. | Documentation only | No implementation changes. | Active-run status update |
 
 ## Result Recording Rules
@@ -178,6 +178,15 @@ Do not run:
 - QA results recorded as `AUTO-SMOKE-COPY-001`, `AUTO-SMOKE-MOBILE-001`, and `AUTO-SMOKE-LAUNCH-001` with status `PASS` in `docs/qa/android-production-qa-results.md`.
 - `git status --short` after the smoke commands showed no tracked or untracked smoke output to stage.
 - No TypeScript no-emit, build, lint, broad/protected smoke, Android native/release, billing, auth, Supabase, FCM, Play Console, production DB/token, payment, restore, account deletion, or push command was executed.
+
+## Task 6 Completion Note
+
+- Completed: 2026-06-09.
+- Scope: documentation-only summary of already executed automatic QA results.
+- Result: `docs/qa/android-production-qa-results.md` now includes an auto-smoke final summary, result table, unexecuted command list, high-risk QA boundary, code/artifact boundary, and current conclusion.
+- Confirmed result set: `AUTO-SAFE-001`, `AUTO-TS-001`, `AUTO-BUILD-001`, `AUTO-LINT-001`, `AUTO-SMOKE-COPY-001`, `AUTO-SMOKE-MOBILE-001`, and `AUTO-SMOKE-LAUNCH-001` are all recorded as `PASS`.
+- `smoke:launch` advisory is documented as `WARN Macro`, exit code `0`, launch score `92/100`, and pass-threshold satisfied.
+- No TypeScript no-emit, build, lint, smoke, broad/protected smoke, Android native/release, billing, auth, Supabase, FCM, Play Console, production DB/token, payment, restore, account deletion, or push command was executed for this task.
 
 ## Next Run Recommendation Rules
 
