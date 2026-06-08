@@ -7,7 +7,7 @@
 - Execution plan: [Android Production QA Execution](../android-production-qa-execution.md)
 - Manual checklist: [Android Production Manual QA Checklist](android-production-manual-qa.md)
 - Stability checklist: [Android Production Stability QA](../android-production-stability-qa.md)
-- Template status: auto smoke preflight safety result recorded; TypeScript, build, lint, and smoke commands have not been executed yet.
+- Template status: auto smoke preflight safety and TypeScript static-check results recorded; build, lint, and smoke commands have not been executed yet.
 
 This template records results after Android production QA is actually executed. It does not authorize app code changes, UI changes, smoke script changes, production data changes, actual payment, purchase restore, account deletion, real push send, production DB/token lookup or mutation, Android native/release commands, or external console changes.
 
@@ -21,7 +21,7 @@ This template records results after Android production QA is actually executed. 
 | Forbidden smoke commands | `npm.cmd run smoke:all`; `npm.cmd run smoke:billing`; `npm.cmd run smoke:api`; `npm.cmd run smoke:routes`; `npm.cmd run smoke:css`; `npm.cmd run smoke:ops`; `npm.cmd run check:app-billing` |
 | Forbidden Android/release commands | `npm.cmd run app:sync`; `npm.cmd run app:sync:prod`; `npm.cmd run app:add:android`; `npm.cmd run app:android`; `npm.cmd run app:doctor`; `npm.cmd run app:android:debug`; `npm.cmd run app:android:release` |
 | Forbidden external actions | Actual payment, purchase restore, account deletion, real push send, production DB/token lookup or mutation, Supabase/FCM/RevenueCat/Google Play Console/Android release setting changes. |
-| Setup result | `AUTO-SAFE-001` is `PASS`; remaining command evidence stays `NOT_RUN` until each task executes. |
+| Setup result | `AUTO-SAFE-001` and `AUTO-TS-001` are `PASS`; remaining command evidence stays `NOT_RUN` until each task executes. |
 
 ## Status Definitions
 
@@ -39,19 +39,19 @@ Fill this section once per actual QA pass.
 
 | Field | Value |
 | --- | --- |
-| Execution date | `2026-06-09 01:14:34 +09:00` |
+| Execution date | `2026-06-09 01:19:59 +09:00` |
 | Executor | `Codex` |
 | Target app version | `TBD` - not checked in preflight safety task. |
-| Target commit | `d481bdc9f7e2a39bac489f0f501d0cdc2c755810` |
+| Target commit | `49732b2e0b1c3fae1716666c8e1dfdf3660d9b85` |
 | Test device | `N/A` - automatic local preflight only. |
 | Android OS version | `N/A` - automatic local preflight only. |
 | Install path | `N/A` - local repository preflight only. |
 | QA account state | `N/A` - no account flow executed. |
-| QA scope | Auto smoke preflight safety check only. TypeScript, build, lint, smoke, manual device QA, and Play Console review were not executed. |
-| Overall result | `PASS` for `AUTO-SAFE-001`; broader auto smoke run still in progress. |
-| Summary counts | PASS: `1`; FAIL: `0`; BLOCKED: `0`; NOT_RUN: remaining planned checks; NEEDS_RUN: separate-approval items unchanged. |
+| QA scope | Auto smoke preflight safety check and TypeScript static check only. Build, lint, smoke, manual device QA, and Play Console review were not executed. |
+| Overall result | `PASS` for `AUTO-SAFE-001` and `AUTO-TS-001`; broader auto smoke run still in progress. |
+| Summary counts | PASS: `2`; FAIL: `0`; BLOCKED: `0`; NOT_RUN: remaining planned checks; NEEDS_RUN: separate-approval items unchanged. |
 | Protected areas touched? | `No`. |
-| Notes | Branch/upstream/worktree safety confirmed before running any TypeScript/build/lint/smoke command. |
+| Notes | Branch/upstream/worktree safety was previously confirmed; `cmd /c npx tsc --noEmit` passed with no output and no emitted files. |
 
 ## 2. Automatic Smoke Results
 
@@ -59,9 +59,9 @@ Record command results only after a command is actually executed. Do not paste s
 
 | QA ID | Category | Execution item | Execution time | Executor | Environment | Command or steps | Expected result | Actual result | Status | Evidence | Failure suspect area | Follow-up | Bugfix run needed? |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| AUTO-SAFE-001 | AUTO | Auto smoke preflight safety check | `2026-06-09 01:14:34 +09:00` | `Codex` | `X:\Chart-Radar`; branch `main`; upstream `origin/main`; target commit `d481bdc9f7e2a39bac489f0f501d0cdc2c755810`. | `git status --short`; `git branch --show-current`; `git rev-parse --abbrev-ref --symbolic-full-name @{u}`; `git rev-list --left-right --count HEAD...@{u}`; `git diff --check`. | Branch is `main`; upstream is `origin/main`; ahead/behind is `0/0`; working tree is clean; `git diff --check` passes; active-run is `android-production-auto-smoke-run`; forbidden commands are reflected. | Branch `main`; upstream `origin/main`; ahead/behind `0/0`; working tree clean; `git diff --check` passed with no output; active-run title confirmed; forbidden command list present. | `PASS` | Command outputs summarized in this row; no secrets or tokens present. | Branch/upstream/worktree drift, active-run mismatch, forbidden-command policy drift, whitespace errors. | Proceed to TODO 2, TypeScript static check, only when requested. | `No` |
+| AUTO-SAFE-001 | AUTO | Auto smoke preflight safety check | `2026-06-09 01:14:34 +09:00` | `Codex` | `X:\Chart-Radar`; branch `main`; upstream `origin/main`; target commit `d481bdc9f7e2a39bac489f0f501d0cdc2c755810`. | `git status --short`; `git branch --show-current`; `git rev-parse --abbrev-ref --symbolic-full-name @{u}`; `git rev-list --left-right --count HEAD...@{u}`; `git diff --check`. | Branch is `main`; upstream is `origin/main`; ahead/behind is `0/0`; working tree is clean; `git diff --check` passes; active-run is `android-production-auto-smoke-run`; forbidden commands are reflected. | Branch `main`; upstream `origin/main`; ahead/behind `0/0`; working tree clean; `git diff --check` passed with no output; active-run title confirmed; forbidden command list present. | `PASS` | Command outputs summarized in this row; no secrets or tokens present. | Branch/upstream/worktree drift, active-run mismatch, forbidden-command policy drift, whitespace errors. | Completed; TypeScript static check recorded separately as `AUTO-TS-001`. | `No` |
 | A-001 | AUTO | Worktree whitespace safety | `TBD` | `TBD` | Local repo | `git diff --check` | No whitespace or patch-format errors. | `TBD` | `NOT_RUN` | screenshot/log/commit/link: `TBD` | Markdown whitespace, malformed table rows, line endings. | `TBD` | `No` |
-| A-004 | AUTO | TypeScript no-emit check | `TBD` | `TBD` | Local repo | `cmd /c npx tsc --noEmit` | Typecheck completes without errors. | `TBD` | `NOT_RUN` | screenshot/log/commit/link: `TBD` | Type errors, stale declarations, import drift. | `TBD` | `No` |
+| AUTO-TS-001 | AUTO | TypeScript static check | `2026-06-09 01:19:59 +09:00` | `Codex` | `X:\Chart-Radar`; branch `main`; target commit `49732b2e0b1c3fae1716666c8e1dfdf3660d9b85`. | `cmd /c npx tsc --noEmit` | TypeScript compile/type check passes without emitting files. | Command exited with code `0`; no stdout/stderr output; no emitted files reported. | `PASS` | Command output summarized in this row; no secrets or tokens present. | Type mismatch, stale type definitions, route/component prop mismatch, environment type mismatch, generated type mismatch. | Proceed to TODO 3, build check, only when requested. | `No` |
 | A-005 | AUTO | Production build check | `TBD` | `TBD` | Local repo | `npm.cmd run build` | Build completes locally without deploy or release action. | `TBD` | `NOT_RUN` | screenshot/log/commit/link: `TBD` | Next build config, route compile errors, server/client imports. | `TBD` | `No` |
 | A-006 | AUTO | Lint check | `TBD` | `TBD` | Local repo | `npm.cmd run lint` | Lint completes without new failures. | `TBD` | `NOT_RUN` | screenshot/log/commit/link: `TBD` | ESLint config, source lint issue, generated output drift. | `TBD` | `No` |
 | A-007 | AUTO | Static copy guard | `TBD` | `TBD` | Local repo | `npm.cmd run smoke:copy` | No blocked advisory wording, broken text, or copy guard failure. | `TBD` | `NOT_RUN` | screenshot/log/commit/link: `TBD` | Judgment-support copy, blocked phrasing, alert/pro copy drift. | `TBD` | `No` |
