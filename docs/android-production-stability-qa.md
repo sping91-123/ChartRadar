@@ -3,7 +3,7 @@
 ## Scope Status
 
 - Active run: `android-production-stability-qa-run`
-- Current task: `Android production QA scope definition`
+- Latest completed task: `Core route smoke scenario outline`
 - Task status: `DONE`
 - Prepared date: 2026-06-09
 - Purpose: define what must be checked after Android production launch before iOS production work or new feature work.
@@ -78,6 +78,109 @@ Manual checks are required for:
 - Notification permission prompts, device notification settings, push token readiness from the user's point of view, and notification tap routing.
 - Play Console crash, ANR, vitals, and warning review.
 - Any final judgment about whether a mobile WebView screen feels usable to a real user.
+
+## Screen Smoke Scenarios
+
+These scenarios define what to check when the actual Android production QA pass starts. They are safe to prepare now because they do not require code edits, real payments, real push sends, production data edits, or external service changes.
+
+### `/coin`
+
+- Entry path: launch app first-entry path if it lands on Coin, bottom/top navigation to Coin, and direct route `/coin`.
+- Check items: today's conclusion, readiness score, direction label, BTC-led versus alt-led market label, risk summary, next confirmation conditions, visible CTA to the next relevant check, loading/empty/error state, navigation away and back, Android back behavior, refresh behavior.
+- Expected result: the first viewport gives a clear judgment-support summary within a few seconds; score, direction, market leadership, risks, and next checks do not contradict each other; repeated lower sections add evidence instead of making the top conclusion feel duplicated.
+- Failure suspect area: Coin decision model, production market data freshness, route shell, top summary component, copy hierarchy, mobile safe-area spacing.
+- Automatic check: route reachability and basic 360px screenshot can be automated.
+- Manual check: required for conclusion quality, duplicate-feeling review, wording risk, and whether the first viewport is understandable to a real user.
+- Mobile 360px watch: long conclusion sentences, score and direction chips wrapping badly, leadership label overflow, CTA crowding, top summary pushing risks below the fold.
+- Risk: MEDIUM.
+
+### `/crypto`
+
+- Entry path: top/bottom navigation to Crypto, legacy or internal links that land on `/crypto`, and direct route `/crypto`.
+- Check items: main crypto market screen entry, chart or key panels load, Basic versus Pro differences are visible, core signals are framed as conditions and risks, data-empty state is readable, navigation to related crypto detail or alert flows works, Android back and refresh do not trap the user.
+- Expected result: Basic users still get useful high-level context; Pro-only sections explain the value boundary without weakening gating; no wording reads like a direct trade instruction or guaranteed outcome.
+- Failure suspect area: market data fetch, chart rendering, Basic/Pro gating, local cache state, crypto route navigation, production API freshness.
+- Automatic check: route reachability, no fatal render error, and screenshot smoke can be automated.
+- Manual check: required for Basic/Pro comparison, wording judgment, data-empty quality, and chart usability.
+- Mobile 360px watch: chart height collapse, horizontal overflow from tables or chips, Pro CTA covering content, dense signal copy becoming unreadable.
+- Risk: MEDIUM.
+
+### `/alts`
+
+- Entry path: navigation to Alts, crypto sub-navigation where available, and direct route `/alts`.
+- Check items: alt screen entry, alt strength/risk framing, Basic/Pro limit display, empty or low-data state, CTA to deeper Pro context if gated, back navigation to previous market screen, refresh behavior.
+- Expected result: the page communicates alt-market condition and risk without overclaiming; gated areas are understandable; no mobile layout break blocks the main list or summary.
+- Failure suspect area: alt data availability, gating rules, card/list layout, route mapping, copy density.
+- Automatic check: route reachability and mobile screenshot smoke can be automated.
+- Manual check: required for risk wording, gating clarity, and whether the alt list is usable on a phone.
+- Mobile 360px watch: multi-column card content compressing too tightly, long symbol labels, badges wrapping into controls, CTA overlap near the bottom.
+- Risk: MEDIUM.
+
+### `/global`
+
+- Entry path: navigation to Global, links from market selection or Pro surfaces, and direct route `/global`.
+- Check items: US/global market flow screen entry, today's first assets or market areas to review, most important risk, Global Pro CTA placement, loading/empty/error state, link to deeper global asset workflow if present, Android back and refresh behavior.
+- Expected result: `/global` works as a market-flow dashboard, not a dense asset radar; the first read identifies what matters today and why; Global Pro CTA feels contextual rather than disruptive.
+- Failure suspect area: global data pipeline, macro/event data freshness, `/global` versus `/global/assets` route boundary, CTA placement, mobile layout.
+- Automatic check: route reachability and screenshot smoke can be automated.
+- Manual check: required for "what to review first" judgment, risk priority, and CTA naturalness.
+- Mobile 360px watch: market summary blocks becoming too tall, risk text pushing CTA below useful context, asset labels overflowing, bottom navigation overlap.
+- Risk: MEDIUM.
+
+### `/alerts`
+
+- Entry path: notification/settings entry, market-specific alert links, top/bottom navigation, and direct route `/alerts`.
+- Check items: alert list or alert setup entry, empty-list state, notification settings entry, Basic/Pro alert limit display, disabled or permission-restricted state, safe expectation for notification targetPath after a received notification is tapped, back navigation and refresh behavior.
+- Expected result: users can understand whether alerts are available, empty, limited, or blocked by permission/login/plan state; no actual push needs to be sent for this smoke scenario; targetPath expectations are documented for later manual push QA.
+- Failure suspect area: alert page state, notification permission bridge, push token readiness, Basic/Pro alert limits, targetPath routing, auth state.
+- Automatic check: route reachability can be automated; actual targetPath validation cannot be completed without a manual notification event.
+- Manual check: required for permission state, empty-list quality, alert settings access, Pro limits, and targetPath navigation after a safe test notification in a later task.
+- Mobile 360px watch: permission/status rows wrapping badly, alert rule toggles too close together, empty-state CTA overflow, sticky controls covering list content.
+- Risk: HIGH.
+
+### `/journal`
+
+- Entry path: navigation to Journal, links from review/recap flows, and direct route `/journal`.
+- Check items: journal screen entry, empty state, record list visibility, write entry path, detail/review entry path, login-required or local fallback messaging if applicable, Android back behavior from write/detail, refresh behavior.
+- Expected result: a new or empty account sees a useful empty state; an account with entries can scan and open records; writing/detail entry paths are discoverable without changing saved data during smoke unless explicitly approved.
+- Failure suspect area: journal persistence state, Supabase-backed entries, local storage fallback, list rendering, route state, mobile form layout.
+- Automatic check: route reachability and screenshot smoke can be automated.
+- Manual check: required for empty versus populated account behavior, write/detail flow clarity, and safe no-data-change review.
+- Mobile 360px watch: text areas or cards exceeding viewport, action buttons below safe area, long entry titles, list controls crowding.
+- Risk: MEDIUM.
+
+### `/pro`
+
+- Entry path: top/bottom navigation to plan page, Pro CTA from gated surfaces, account page plan link if present, and direct route `/pro`.
+- Check items: Basic versus Pro explanation, Coin Pro copy, Global Pro copy, All Market Pro copy, price display, current plan display, CTA wording, purchase buttons visible, restore access if present, error/loading state for product information, navigation back to the previous page.
+- Expected result: users understand Basic usefulness and each paid plan boundary; prices are visible and not internally contradictory; CTA copy remains judgment-support oriented; purchase buttons are visible but the smoke pass stops before any real payment attempt.
+- Failure suspect area: pricing panel rendering, current-plan state, RevenueCat or Google Play product fetch state, billing copy, mobile button layout.
+- Automatic check: route reachability and screenshot smoke can be automated; billing smoke may support later verification if non-mutating.
+- Manual check: required for pricing copy, CTA safety, current-plan interpretation, Android product-loading state, and confirming the tester stops before payment.
+- Mobile 360px watch: plan cards too tall, price rows wrapping into CTA, purchase buttons clipped near safe area, current-plan label overflow, restore link too hard to find.
+- Risk: HIGH.
+- Hard stop: do not tap through to complete purchase, do not change products, do not edit billing or RevenueCat settings.
+
+### Settings and Account Screens
+
+- Entry path: header settings panel, `/settings`, `/account`, `/account/delete`, `/privacy`, `/terms`, `/refund`, and related menu links.
+- Check items: account state, current plan, notification settings access, app version if exposed, contact/policy access, logout control, account deletion guidance access, signed-out messaging, Android back behavior from policy/account pages.
+- Expected result: signed-out users can understand how to log in; signed-in users can see account and plan state; logout is accessible; account deletion is an information/request flow, not an accidental destructive action; policy and refund links open cleanly.
+- Failure suspect area: account session display, header settings panel, policy route links, logout control, account deletion page, plan label, app shell navigation.
+- Automatic check: route reachability for `/settings`, `/account`, `/account/delete`, `/privacy`, `/terms`, and `/refund` can be automated.
+- Manual check: required for signed-in versus signed-out account state, logout, deletion-accessibility wording, version visibility, and settings panel behavior.
+- Mobile 360px watch: full-screen settings panel overflow, close/back controls hidden by safe area, account rows wrapping awkwardly, policy links too low or clipped.
+- Risk: MEDIUM, with HIGH risk if any destructive account deletion path is exercised.
+
+## Navigation And State Smoke Rules
+
+- For every core route, check direct route entry and one in-app navigation path.
+- For every core route, use Android back once and confirm the app returns to the expected previous screen or exits only when expected.
+- For every core route, refresh or relaunch once if the screen has production data dependency.
+- For every empty/loading/error state encountered, capture whether the user has a next step.
+- For every Pro CTA, confirm it explains access without pressuring an immediate action.
+- For every permission-limited state, confirm the screen says what permission/account/plan state is missing.
+- Do not use smoke testing to mutate account data, complete purchases, send push notifications, edit alerts, or change production configuration unless a later approved task explicitly permits it.
 
 ## Risk Grouping
 
