@@ -219,7 +219,38 @@ Task 2 should consider only presentation copy and plan-card copy needed for `/pr
 
 ## Task 2 - `/pro` Pricing Copy Cleanup
 
-Status: `TODO`
+Status: `DONE`
+
+Implementation date: 2026-06-08
+
+Changed files:
+
+- `src/components/ProPricingPanel.tsx`
+- `docs/pro-pricing-copy-cleanup.md`
+- `docs/automation-runs/active-run.md`
+
+Implementation summary:
+
+- Reworded scope hero copy for Coin Pro, Global Pro, and All Market Pro around criteria, risk context, alert/review linkage, and cross-market comparison.
+- Replaced checkout CTA labels:
+  - Coin Pro: from detailed judgment wording to "코인 기준 보기".
+  - Global Pro: from detailed judgment wording to "글로벌 맥락 보기".
+  - All Market Pro: from whole-market judgment wording to "시장 간 리스크 보기".
+- Added presentation-only plan display copy inside `ProPricingPanel` so `/pro` can show safer descriptions and highlights without editing `src/lib/billing.ts`.
+- Reframed Coin Pro away from "알트 기회" and toward conditions, risk, invalidation, alerts, and review.
+- Reframed Global Pro around index futures, macro, event, sector, and asset context.
+- Reframed All Market Pro around cross-market risk comparison, multi-market alerts, and unified review.
+- Reframed Basic as a useful first-read summary instead of a weak teaser.
+
+Preserved:
+
+- Existing plan ids.
+- Existing product ids.
+- Existing base plan ids.
+- Existing entitlement names and resolution behavior.
+- Existing prices, billing amounts, renewal text, and checkout flow.
+- Existing RevenueCat and mobile purchase behavior.
+- Existing Basic/Pro gating behavior.
 
 Expected output:
 
@@ -240,6 +271,21 @@ Required verification:
 - `npm.cmd run smoke:all`
 - `/pro` 360px screenshot
 - `/pro` desktop screenshot
+
+Verification result:
+
+- `git diff --check`: PASS
+- `cmd /c npx tsc --noEmit`: PASS
+- `npm.cmd run build`: PASS
+- `npm.cmd run smoke:billing`: PASS
+- `npm.cmd run smoke:mobile`: PASS
+- `npm.cmd run smoke:all`: PASS
+- `/pro` 360px screenshot: `reports/verification/pro-pricing-copy-360.png`
+- `/pro` desktop screenshot: `reports/verification/pro-pricing-copy-desktop.png`
+- `/pro?market=crypto` screenshot: `reports/verification/pro-pricing-copy-crypto.png`
+- `/pro?market=stocks` screenshot: `reports/verification/pro-pricing-copy-stocks.png`
+- Additional plan-card review screenshot: `reports/verification/pro-pricing-copy-plan-cards.png`
+- Additional CTA area review screenshot: `reports/verification/pro-pricing-copy-cta.png`
 
 ## Task 3 - Result Documentation
 
