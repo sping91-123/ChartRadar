@@ -422,22 +422,64 @@ Task 3 should decide the route-level status for:
 
 ## Task 3 - Route-Level Free/Paid Exposure Matrix
 
-Status: `TODO`
+Status: `DONE`
 
-Expected output:
+Matrix date: 2026-06-08
 
-| Route or surface | Basic exposure | Coin Pro exposure | Global Pro exposure | All Market Pro exposure | CTA rule | Notes |
-| --- | --- | --- | --- | --- | --- | --- |
-| `/coin` | TBD | TBD | TBD | TBD | TBD | TBD |
-| `/crypto` | TBD | TBD | TBD | TBD | TBD | TBD |
-| `/alts` | TBD | TBD | TBD | TBD | TBD | TBD |
-| Spot candidate | TBD | TBD | TBD | TBD | TBD | TBD |
-| `/global` | TBD | TBD | TBD | TBD | TBD | TBD |
-| `/global/assets` | TBD | TBD | TBD | TBD | TBD | TBD |
-| `/news` | TBD | TBD | TBD | TBD | TBD | TBD |
-| `/alerts` | TBD | TBD | TBD | TBD | TBD | TBD |
-| `/journal` | TBD | TBD | TBD | TBD | TBD | TBD |
-| `/pro` | TBD | TBD | TBD | TBD | TBD | TBD |
+This matrix defines product-policy intent only. It does not change route code, existing gates, billing behavior, plan ids, product ids, entitlements, RevenueCat configuration, or prices.
+
+### Gating Strength Definitions
+
+| Gating strength | Meaning | Allowed use in this redesign |
+| --- | --- | --- |
+| None | The route or surface stays fully visible in Basic. | Use for acquisition, trust-building, or plan-comparison surfaces. |
+| Soft CTA | Basic stays useful, with an upgrade prompt near deeper interpretation. | Use when the current route has no hard gate but Pro value should be clearer. |
+| Partial lock | Basic shows the first read, while detailed criteria, repeated use, or full history is locked. | Preferred default for core Coin/Global product routes. |
+| Hard lock | Basic cannot use the main paid action or delivery path. | Use sparingly for Pro-only alert delivery, high-frequency usage, or paid plan checkout actions. |
+
+### Product Connection Rules
+
+| Route family | Primary product link | Secondary product link | Rationale |
+| --- | --- | --- | --- |
+| Coin Radar routes | Coin Pro | All Market Pro | Coin Radar is the primary paid conversion surface. |
+| Global Radar routes | Global Pro | All Market Pro | Global Pro remains independent, but All Market Pro can explain cross-market context. |
+| News | Coin Pro or Global Pro based on selected market | All Market Pro when both markets are visible | News is a context surface, not a standalone paywall. |
+| Alerts | Coin Pro or Global Pro based on rule market | All Market Pro for mixed rule sets | Alert value comes from repeated monitoring and delivery. |
+| Journal | Coin Pro or Global Pro based on saved market context | All Market Pro for cross-market review | Journal value comes from continuity from scan to alert to review. |
+| `/pro` | All products | None | The route should compare products and explain the bundle story. |
+
+### Route Exposure Matrix
+
+| Route or surface | Basic should show | Pro should open | Hide or limit | CTA position | Product link | Gating strength | Wording caution |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `/coin` | Redirect to the Coin Radar first-read experience and keep the Basic summary useful. | Same destination can expose Coin Pro detail: evidence depth, risk context, saved review, and alert handoff. | Do not hard-lock the redirect itself. Limit only deeper destination blocks. | No CTA on the redirect route; place CTA in the first locked or expandable detail block after landing. | Coin Pro primary; All Market Pro secondary if cross-market context is shown. | Soft CTA on route, partial lock in destination detail. | Say "open coin criteria and follow-up context", not outcome or action promises. |
+| `/crypto` | Redirect to Coin Radar home with market state, top risk, and next check cues. | Coin Pro opens more repeatable scans, detailed criteria, invalidation context, AI depth, and alert continuity. | Keep Basic first read visible. Limit deep evidence chains and repeated scan depth. | Near Coin Radar home evidence depth, risk details, and repeated scan controls. | Coin Pro primary; All Market Pro secondary. | Soft CTA on route, partial lock in destination detail. | Emphasize "risk and revisit cues"; avoid wording that tells the user what position to take. |
+| `/alts` | Show a small alt futures summary, limited candidates, top risk cues, and Basic scout/chart summaries. | Coin Pro opens broader candidate depth, chart overlays, plan/risk detail, AI briefing depth, and more scan volume. | Limit full alt candidate lists, detailed conditions, advanced chart readouts, and repeated analysis usage. | Beside locked candidate detail, advanced chart sections, AI briefing, and usage-limit messages. | Coin Pro primary; All Market Pro secondary. | Partial lock. | Use "review detailed alt conditions" and "track risk changes"; avoid certainty or momentum-chasing language. |
+| Spot candidate | Show a small spot candidate preview, exchange context, and simple watch cues so the surface can acquire Basic users. | Coin Pro should open full spot candidate criteria, price-plan context, invalidation/revisit cues, watchlist handoff, and journal save context if implemented. | Limit full candidate depth, repeated refresh, detailed price-plan grids, and saved workflow depth. | Above or beside the first detailed candidate section and near repeated refresh/save actions. | Coin Pro primary; All Market Pro secondary only when global context is added. | Partial lock if spot becomes paid; soft CTA if it remains acquisition-first. | Say "view criteria and recheck points"; do not frame spot candidates as instructions. |
+| `/global` | Show Global Market Pulse first read: broad state, first risk axis, trimmed macro/futures/event context. | Global Pro opens full futures detail, macro proxies, sector/leader rotation, event/news depth, and global alert follow-up. | Limit secondary futures, full macro lists, deeper sector/leader evidence, and event detail. | Already strongest near locked Global Market Pulse details; keep CTA adjacent to each hidden depth block. | Global Pro primary; All Market Pro secondary for cross-market risk comparison. | Partial lock. | Use "understand the global risk axis"; avoid implying a guaranteed market direction. |
+| `/global/assets` | Show Basic asset radar with usage limits, reduced insight depth, and enough watchlist context to understand the workflow. | Global Pro opens higher usage, deeper asset insight, larger watchlist capacity, and full global radar interpretation. | Limit repeated scans, full insight depth, large watchlists, and advanced asset comparisons. | Add or keep CTA near usage-limit states, locked insight panels, and watchlist-capacity moments. | Global Pro primary; All Market Pro secondary. | Partial lock. | Say "expand asset context and follow-up checks"; avoid turning asset reads into trade calls. |
+| `/news` | Show Basic market news briefing and a small set of context cards for the selected market. | Pro can open deeper interpretation, source grouping, impact history, alert handoff, and journal review context by market. | Do not make all news paid. Limit deeper interpretation, history, or workflow linkage if monetized. | After the Basic briefing and near "deeper context" or "connect to alert/journal" sections. | Coin Pro for crypto news, Global Pro for global news, All Market Pro when both markets are compared. | Soft CTA by default; partial lock only for deeper interpretation/history. | Use "connect this news to risk context"; avoid "this news means you should..." phrasing. |
+| `/alerts` | Show alert categories, Basic/free rules, limited setup, Pro badges, and current usage state. | Coin Pro opens crypto Pro rule delivery; Global Pro opens global Pro rule delivery; All Market Pro opens mixed-market alert workflow. | Hard-lock Pro rule delivery without matching entitlement. Limit active rule count and repeated monitoring by plan. | In each Pro rule card, near enable/delivery controls, and in usage-limit messages. | Market-specific Pro based on rule category; All Market Pro for mixed crypto/global rule sets. | Hard lock for Pro delivery, partial lock for expanded rule capacity, soft CTA for browsing. | Say "monitor this condition" and "enable delivery"; avoid urgent action or position language. |
+| `/journal` | Show basic journal capture, local review, market tags, and simple saved notes so users see the review habit. | Pro can open saved criteria from scans/alerts, richer review history, cross-market review, and outcome-neutral follow-up notes. | Do not hide basic journaling. Limit workflow continuity, advanced review filters, cross-market synthesis, and saved radar context if monetized. | Near saved radar entries, advanced filters, cross-market review, and scan/alert-to-journal handoff. | Coin Pro or Global Pro by saved market; All Market Pro for mixed-market review. | Soft CTA by default; partial lock for advanced review continuity. | Use "review your criteria and follow-up notes"; avoid performance-score or success-rate claims. |
+| `/pro` | Show Basic vs Pro comparison, product scopes, current plan status, trust notes, and safe product language. | Paid checkout/actions remain tied to the existing plan list and entitlement behavior. All Market Pro should explain combined workflow, not only combined access. | Do not expose legacy ids to users. Do not change prices, product ids, plan ids, or entitlement names. | Main product cards, comparison rows, and market-specific entry links such as crypto/global plan filters. | Coin Pro, Global Pro, and All Market Pro all visible with clear scope. | None for reading; hard lock only for checkout requirements such as login or native purchase availability. | Use "choose the coverage you need" and "compare workflows"; avoid return, certainty, or entry framing. |
+
+### CTA Placement Standards For Future Implementation
+
+1. Put Pro CTAs at the moment a Basic user asks for more depth, not at the top of every route.
+2. Prefer CTA placement near locked details, usage-limit states, Pro alert delivery controls, saved radar handoff, or advanced review filters.
+3. Keep redirect routes such as `/coin` and `/crypto` free of standalone CTA clutter; place CTAs after the user lands on the actual Coin Radar surface.
+4. For Global Pro, place CTAs beside locked macro, futures, asset, or event context so the standalone value is visible.
+5. For All Market Pro, place CTAs only where combined coin/global workflow is visible, such as mixed alerts, cross-market review, or risk comparison.
+
+### Matrix Hand-Off Criteria
+
+Task 4 should use the wording cautions above when defining CTA copy. Task 5 should prefer the first implementation candidate that clarifies one of these high-impact gaps without touching billing logic:
+
+- Coin Radar home Basic summary plus Coin Pro detail.
+- Spot candidate Basic preview plus Coin Pro detail.
+- Alerts Pro rule CTA and delivery explanation.
+- Global asset CTA placement.
+- All Market Pro cross-market workflow explanation on `/pro`.
 
 ## Task 4 - Pro CTA Wording Principles
 
