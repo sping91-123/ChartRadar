@@ -6,7 +6,7 @@
 - Setup date: 2026-06-09
 - Source checklist: [Android Production Stability QA](android-production-stability-qa.md)
 - Manual checklist: [Android Production Manual QA](qa/android-production-manual-qa.md)
-- Current task state: Tasks 1-3 `DONE`; Task 4 is the next `TODO`.
+- Current task state: Tasks 1-4 `DONE`; Task 5 is the next `TODO`.
 
 This document turns the completed Android production stability checklist into an execution plan. It is not an implementation plan and does not authorize code, service, release, or production-data changes.
 
@@ -194,33 +194,79 @@ Default status policy:
 | R-006 | APPROVAL_REQUIRED | External service or release settings change | Supabase, FCM, RevenueCat, Google Play Console, Android release settings. | Separate release-ops or implementation run with rollback/verification plan. | Change is explicitly approved, bounded, and verified. | Exact setting, before/after evidence, rollback plan, approval note. | External console state, product mapping, release track, FCM config, Android signing/versioning. | HIGH | Separate approved run only. | `NEEDS_RUN` |
 | R-007 | APPROVAL_REQUIRED | Android native/release commands | `app:sync`, `app:sync:prod`, `app:add:android`, `app:android`, `app:android:debug`, `app:android:release`, release scripts. | Separate Android release/device run only. | Native/release artifact changes happen only under approved Android scope. | Command, output path, generated/changed files, release risk. | Capacitor sync, Android native project, signing, AAB generation, Play Console release state. | HIGH | Separate approved run only. | `NEEDS_RUN` |
 
-## Safe Smoke Candidate Draft
+## Safe Smoke Command Candidate Selection
 
-Task 4 should select the final command candidate before execution. Based on setup review, the safest first candidates are:
+Task 4 selects candidates only. No smoke command, typecheck, build, lint, browser check, Android device check, payment, restore, account deletion, push send, production DB/token lookup, external console action, or Android release command was executed as QA evidence in this task. Required docs validation, such as `git diff --check`, may still run under the active-run verification policy and does not change the execution-table status.
 
-| Candidate | Why it is safe to consider first | Conditions before running | Result status |
-| --- | --- | --- | --- |
-| `npm.cmd run smoke:copy` | Static source scan only; supports judgment-support and blocked-copy guardrails. | Confirm no app code changes are intended and failures will be documented only. | `NOT_RUN` |
-| `npm.cmd run smoke:mobile` | Static mobile/PWA/Android asset guard; no browser viewport or production mutation. | Confirm failures will be documented only and no Android native edits will follow in this run. | `NOT_RUN` |
-| `npm.cmd run smoke:routes` | Useful route/API guard evidence once a local dev server is available. | Confirm `SMOKE_BASE_URL` is local, dev server is running, and billing POST checks remain blocked-response tests. | `NOT_RUN` |
+Windows command form: use `npm.cmd run ...` in this repository. When a task description says `npm run ...`, treat the equivalent Windows command as `npm.cmd run ...`.
 
-Commands that need more caution:
+### First One-Time Execution Candidate
 
-- `npm.cmd run smoke:billing`: read-only static audit, but protected billing domain. Use only when the task explicitly includes billing smoke evidence and no code/config changes.
-- `npm.cmd run smoke:api`: sends local invalid POST requests. Use local dev server only.
-- `npm.cmd run smoke:ops`: touches ops and push/cron source surfaces and may fetch local macro API. Use only after confirming no send mode or production target.
-- `npm.cmd run smoke:all`: chains multiple commands and restarts local dev server. Use only after individual commands are acceptable.
+| Rank | Command | Execution purpose | Can confirm | Production data mutation risk | External API or console access risk | Payment/restore/account deletion/push risk | Android production QA safety judgment | Conditions before running | Failure suspect area | Recommended order | Risk | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | `git diff --check` | Confirm the worktree diff has no whitespace or patch-format issues before any smoke evidence is trusted. | Whitespace safety for docs and code diffs. | None. Reads local diff only. | None. | None. | Safest first candidate. It is local, fast, non-mutating, and already required for every docs-only QA task. | Confirm the worktree is the intended active-run workspace. | Markdown whitespace, malformed table edits, line-ending or patch formatting issues. | Run first before any build or smoke command in the later execution task. | LOW | `NOT_RUN` |
 
-## Separate Approval Required
+### Sequential Safe Candidates
 
-| Item | Why separate | Required approval boundary |
-| --- | --- | --- |
-| Actual Google Play purchase | Can create subscription/account state. | Dedicated tester setup and explicit purchase-test approval. |
-| Purchase restore | Can mutate entitlement/account state. | Known test account history and explicit restore approval. |
-| Account deletion | Destructive account operation. | Disposable QA account and explicit deletion approval. |
-| Real push delivery or push-click | Sends notifications and can affect device/account state. | Dedicated QA device/account, no-secret evidence plan, and explicit send-path approval. |
-| Production DB or token inspection | Privacy and production-data risk. | Separate read/minimize plan and explicit approval. |
-| RevenueCat, Google Play Console, FCM, Supabase, Android release changes | External service or release mutation. | Separate release-ops or implementation run with rollback and verification plan. |
+These candidates can be run after `git diff --check` in a later task if the operator confirms failures will be recorded only and not fixed inside this QA execution run.
+
+| Rank | Command | Execution purpose | Can confirm | Production data mutation risk | External API or console access risk | Payment/restore/account deletion/push risk | Android production QA safety judgment | Conditions before running | Failure suspect area | Recommended order | Risk | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2 | `cmd /c npx tsc --noEmit` | TypeScript no-emit check. | Type safety across the configured project without writing build output. | None by command intent. | May resolve local tooling from installed dependencies; no app external console access by command intent. | None. | Safe after `git diff --check`; useful before build/smoke because it catches broad compile drift. | Run from repo root; do not edit app code in this run if failures appear. | Type errors, stale declarations, import drift, existing app compile debt. | Run second. | LOW-MEDIUM | `NOT_RUN` |
+| 3 | `npm.cmd run build` | Local production build check. | Build-time route/module readiness and asset compilation. | No production mutation; writes local build output. | Build-time code may evaluate configured app assumptions, but no deploy or console action occurs by command intent. | No actual payment, restore, account deletion, or push send by command intent. | Safe as local evidence, but slower and more environment-sensitive than typecheck. | Run locally only; do not deploy; stop and record if protected runtime assumptions appear. | Next build config, route compile errors, server/client import issues, static generation assumptions. | Run third if time/environment allows. | LOW-MEDIUM | `NOT_RUN` |
+| 4 | `npm.cmd run lint` | Static lint check. | ESLint quality and source consistency. | None by command intent; local cache/output only if tooling writes it. | None by command intent. | None. | Safe, but order after build/typecheck is acceptable because this run prioritizes production stability evidence. | Run from repo root; document unrelated existing failures rather than fixing them here. | ESLint config, source lint issues, generated output drift. | Run before or after build depending on desired feedback order. | LOW | `NOT_RUN` |
+| 5 | `npm.cmd run smoke:copy` | Static copy guard. | Blocked advisory wording, broken encoded text patterns, and user-facing copy drift in selected app/source files. | None. Static source reads only. | None by command intent. | None. | Best first actual smoke command because it is static, fast, non-mutating, and relevant to ChartRadar judgment-support positioning. | Confirm no app code/copy edits will be made in this run; record failures only. | Judgment-support copy, blocked advisory phrasing, alert/pro copy regression, encoding drift. | First smoke command after safety/type/build checks. | LOW | `NOT_RUN` |
+| 6 | `npm.cmd run smoke:mobile` | Static mobile/PWA/Android readiness guard. | Mobile shell, PWA assets, Capacitor config references, Android notification asset references, push migration markers. | None. Static file and image reads only. | None by command intent. | No push send; only static push/Android references are checked. | Safe as a static Android-adjacent guard; failures touching Android/FCM remain report-only in this run. | Confirm no Android native, FCM, or push asset edits will follow without separate approval. | PWA assets, mobile shell, Capacitor config, notification icon, push migration references. | Run after `smoke:copy`. | LOW-MEDIUM | `NOT_RUN` |
+| 7 | `npm.cmd run smoke:launch` | Static launch-readiness review. | Launch source markers across brand, billing presence, API guards, macro/news/alerts/mobile/visual/ops readiness. | None. Static source/doc reads by command intent. | None by command intent. | None by command intent. | Safe as advisory readiness evidence; not a release approval. | Treat score/check as evidence only; do not modify launch, billing, ops, or alert code in this run. | Missing launch markers, stale readiness docs, macro/news/alert/mobile source marker drift. | Run after copy/mobile smoke. | LOW | `NOT_RUN` |
+
+### Caution Candidates Not Selected For The First Run
+
+These commands are not selected as the first one-time candidate because they require local server target confirmation, protected-domain awareness, or can be slower/flakier. They may be considered in a later task only after the stated conditions are confirmed.
+
+| Command | Why not first | Production data mutation risk | External API or console access risk | Payment/restore/account deletion/push risk | Conditions before any later run | Failure suspect area | Risk | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `npm.cmd run smoke:routes` | Sends HTTP requests and includes local billing guard checks; useful only with confirmed local `SMOKE_BASE_URL`. | No intended mutation if local only. | Local HTTP target required; unsafe if accidentally pointed at production. | Includes local blocked-response billing POST checks; no real payment if local and guarded. | Confirm dev server is local, `SMOKE_BASE_URL` is local, and billing checks remain blocked-response tests. | Route registration, redirects, local billing guards, dev server availability. | MEDIUM | `NOT_RUN` |
+| `npm.cmd run smoke:api` | Sends invalid/oversized local API requests and should not be pointed at production. | No intended mutation if local only. | Local HTTP target required; production target is out of scope. | Includes local billing/watchlist validation requests only; no real payment/push by script intent. | Confirm local `SMOKE_BASE_URL`; do not run against production. | API validation, body-size guards, local service availability, local billing guards. | MEDIUM | `NOT_RUN` |
+| `npm.cmd run smoke:css` | Requires local server and only checks CSS asset availability, not visual 360px layout. | None if local only. | Local HTTP target required. | None. | Confirm local dev server and local `SMOKE_BASE_URL`. | CSS chunk generation, `/crypto/home` HTML/CSS asset serving. | LOW-MEDIUM | `NOT_RUN` |
+| `npm.cmd run smoke:ops` | Touches ops, macro, alert, and push-cron source assumptions; may fetch local macro API. | No intended mutation if local only. | Local HTTP target may be used; protected ops/push scope requires caution. | No real push by script intent, but it inspects push/cron source markers. | Confirm local target and no-send interpretation; failures are report-only. | Ops config, macro freshness, push source wiring, rate limit/news/alert markers. | MEDIUM | `NOT_RUN` |
+| `npm.cmd run smoke:billing` | Static and read-only, but directly audits protected billing/product/entitlement surfaces. | None by command intent. | Reads local source; no console access. | No purchase/restore by command intent, but billing domain is protected. | Run only when billing smoke evidence is explicitly selected; no billing edits in this run. | Product IDs, base plans, entitlement mapping, RevenueCat source wiring, `/pro` pricing copy. | MEDIUM | `NOT_RUN` |
+| `npm.cmd run smoke:all` | Chains multiple smoke commands and restarts local dev server; too broad for first execution. | No intended mutation if local only. | Inherits local HTTP target risks from route/API/CSS/ops commands. | Inherits local billing guard checks; no actual payment by script intent if local and guarded. | Confirm every included command is acceptable and local; confirm dev server restart is acceptable. | Any included smoke area, local server restart, route/API readiness. | MEDIUM | `NOT_RUN` |
+| `npm.cmd run check:app-billing` | Reads local secret-bearing env presence and protected billing setup. | None by command intent. | No console access, but local env presence is sensitive. | No purchase/restore by command intent. | Run only in a separate billing-readiness task; do not print or expose env values. | Missing env presence, billing product ID drift, RevenueCat/Supabase key presence. | MEDIUM | `NOT_RUN` |
+
+### Run-Forbidden Or Separate-Approval Candidates
+
+| Candidate | Classification | Why forbidden or separated | Required approval boundary | Risk | Status |
+| --- | --- | --- | --- | --- | --- |
+| `npm.cmd run app:sync` | APPROVAL_REQUIRED | Runs Android production sync and can mutate native project/package state. | Separate Android release/device run. | HIGH | `NEEDS_RUN` |
+| `npm.cmd run app:sync:prod` | APPROVAL_REQUIRED | Same production Android sync path as `app:sync`. | Separate Android release/device run. | HIGH | `NEEDS_RUN` |
+| `npm.cmd run app:add:android` | APPROVAL_REQUIRED | Adds or mutates Android platform structure; not QA smoke. | Separate Android implementation/release run. | HIGH | `NEEDS_RUN` |
+| `npm.cmd run app:android` | APPROVAL_REQUIRED | Opens Android tooling and belongs to native/device operations, not docs-only QA selection. | Separate Android device/release run. | MEDIUM-HIGH | `NEEDS_RUN` |
+| `npm.cmd run app:doctor` | APPROVAL_REQUIRED | Capacitor environment diagnostics can involve native setup and is outside this docs-only smoke selection. | Separate Android tooling run. | MEDIUM-HIGH | `NEEDS_RUN` |
+| `npm.cmd run app:android:debug` | APPROVAL_REQUIRED | Syncs Android production assets and builds native debug artifact. | Separate Android build run. | HIGH | `NEEDS_RUN` |
+| `npm.cmd run app:android:release` | APPROVAL_REQUIRED | Syncs Android production assets and generates release AAB. | Separate Android release run. | HIGH | `NEEDS_RUN` |
+| `scripts/set-app-billing-env.ps1` | APPROVAL_REQUIRED | Writes billing env keys and touches secret-bearing billing setup. | Separate billing environment run with secret-handling plan. | HIGH | `NEEDS_RUN` |
+| `scripts/set-owner-admin.sql` | APPROVAL_REQUIRED | Supabase SQL mutation for account/admin privileges. | Separate data/admin run with explicit approval. | HIGH | `NEEDS_RUN` |
+| Actual Google Play purchase test | APPROVAL_REQUIRED | Can create subscription/account state. | Dedicated tester account and explicit purchase-test approval. | HIGH | `NEEDS_RUN` |
+| Purchase restore test | APPROVAL_REQUIRED | Can mutate entitlement/account state. | Known test account history and explicit restore approval. | HIGH | `NEEDS_RUN` |
+| Actual account deletion test | APPROVAL_REQUIRED | Destructive account operation. | Disposable QA account and explicit deletion approval. | HIGH | `NEEDS_RUN` |
+| Real push delivery or push-click test | APPROVAL_REQUIRED | Sends notifications and can affect device/account state. | Dedicated QA device/account and explicit send-path approval. | HIGH | `NEEDS_RUN` |
+| Production DB or token lookup/mutation | APPROVAL_REQUIRED | Privacy, token, and production data integrity risk. | Separate read/minimize plan and explicit approval. | HIGH | `NEEDS_RUN` |
+| RevenueCat, Google Play Console, FCM, Supabase, or Android release changes | APPROVAL_REQUIRED | External service or release mutation. | Separate release-ops or implementation run with rollback and verification plan. | HIGH | `NEEDS_RUN` |
+
+### Smoke Execution Report Format
+
+Use this report shape when a later task actually runs the selected command. Do not use it to imply execution happened in Task 4.
+
+| Field | Required content |
+| --- | --- |
+| Command executed | Exact command, for example `git diff --check` or `npm.cmd run smoke:copy`. |
+| Execution time | Local date/time and approximate duration. |
+| Preconditions confirmed | Worktree state, local target if any, no production mutation path, and protected-scope guardrails. |
+| Status | `PASS`, `FAIL`, or `BLOCKED`. Planned-only candidates remain `NOT_RUN`; separate-approval items remain `NEEDS_RUN`. |
+| Output summary | Short summary of important output; do not paste secrets, tokens, raw push token values, or credentials. |
+| Protected scope touched? | Yes/No plus scope name if any protected domain was merely inspected. |
+| Failure suspect area | First credible suspect area from the execution table. |
+| Follow-up | Work-item or separate run candidate if needed; no implementation fix inside this QA execution run. |
 
 ## Result Template
 
