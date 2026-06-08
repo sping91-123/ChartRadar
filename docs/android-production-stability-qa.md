@@ -506,6 +506,8 @@ Use this checklist for Android production notification QA planning only. This ru
 
 Recommended next active-run: `android-production-qa-execution-run`.
 
+Setup document: [Android Production QA Execution](android-production-qa-execution.md).
+
 The first execution run should begin with non-mutating checks that have high user impact and low recovery risk. It should not include real payment, purchase restore, account deletion, push delivery, push token mutation, production DB inspection/mutation, or external console configuration changes.
 
 ### Recommended Execution Order
