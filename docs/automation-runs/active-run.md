@@ -11,7 +11,7 @@
 - Previous run context:
   - `ios-testflight-readiness-run` is `DONE`.
   - `ios-testflight-readiness-run` selected `ios-capacitor-platform-setup-run` as the first follow-up candidate.
-- Current phase: Task 4 complete; next TODO is `5. Generate iOS platform`.
+- Current phase: Task 5 complete; next TODO is `6. Audit generated iOS platform config`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No dependency install, iOS platform add, Capacitor sync, iOS build, Xcode, pod install, archive, upload, Apple Developer, App Store Connect, RevenueCat, Supabase, auth, billing, entitlement, Android release, or production action was executed during setup.
 
@@ -99,7 +99,7 @@
 | 2 | DONE | Confirm `@capacitor/ios` install need and command | Dependency Plan | MEDIUM | Confirmed matching Capacitor version and selected the exact install command without installing yet. | No install. No unrelated package changes. | `git diff --check` |
 | 3 | DONE | Add `@capacitor/ios` dependency | Dependency Change | MEDIUM | Added `@capacitor/ios` matching the existing Capacitor major/version in the appropriate dependency section. | No arbitrary upgrades. No package manager change. No Android dependency change. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build` |
 | 4 | DONE | Confirm iOS platform generation prerequisites | Platform Preflight | MEDIUM | Confirmed `npx cap add ios` prerequisites, `webDir`/mobile-shell state, and expected generated file scope before running platform generation. | No cap add. No Xcode. No sync/build. | `git diff --check` |
-| 5 | TODO | Generate iOS platform | Native Generation | HIGH | Run the controlled Capacitor iOS platform generation step. | No Xcode. No manual pod install. No build/archive/upload. No Apple Developer/App Store Connect changes. | `git diff --check`; generated file list review |
+| 5 | DONE | Generate iOS platform | Native Generation | HIGH | Ran the controlled Capacitor iOS platform generation step. | No Xcode. No manual pod install. No build/archive/upload. No Apple Developer/App Store Connect changes. | `git diff --check`; generated file list review |
 | 6 | TODO | Audit generated iOS platform config | Native Audit | MEDIUM | Inspect generated native project Bundle ID/appName/webDir linkage and document needed follow-up edits. | No native config edits. No signing changes. | `git diff --check` |
 | 7 | TODO | Safe validation and result documentation | Verification | LOW | Document generated results and remaining risks; run safe checks. | No iOS build/upload. No Xcode. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:copy` |
 | 8 | TODO | Select next iOS follow-up run | Prioritization | LOW | Select exactly one next follow-up candidate after platform setup. | No next run auto-creation. | active-run overall status check |
@@ -157,6 +157,20 @@
 | Output document | `docs/ios-testflight-readiness.md` |
 | Package/native/config changed? | `No` |
 | Next TODO | `5. Generate iOS platform` |
+
+## Task 5 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `5. Generate iOS platform` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Command executed | `npx cap add ios` |
+| Result | Capacitor created the native `ios/` project, copied `mobile-shell` assets into the generated iOS public directory, created generated Capacitor config files, and wrote Swift Package Manager plugin setup in `ios/App/CapApp-SPM/Package.swift`. |
+| Generated scope | New `ios/` native project files only, plus documentation updates. `package.json`, `package-lock.json`, `capacitor.config.ts`, Android files, app/source files, auth/Supabase/billing/RevenueCat/entitlement files were not changed by this task. |
+| Not generated / not executed | No top-level `App.xcworkspace`, no `Podfile`, and no `.entitlements` file were generated. No `npx cap sync ios`, Xcode, manual `pod install`, `xcodebuild`, fastlane, archive, upload, or external console commands were run. |
+| Output document | `docs/ios-testflight-readiness.md` |
+| Next TODO | `6. Audit generated iOS platform config` |
 
 ## Expected Command Boundaries
 

@@ -944,6 +944,78 @@ Reasoning:
 - Do not change signing, Bundle ID, capabilities, Apple Developer/App Store Connect, RevenueCat, App Store products, auth/Supabase, billing/entitlement, Android release settings, or production data.
 - Review generated files for sensitive values before commit.
 
+## iOS Capacitor Platform Setup - Task 5 Platform Generation Result
+
+| Field | Value |
+| --- | --- |
+| Active run | `ios-capacitor-platform-setup-run` |
+| Task | `5. Generate iOS platform` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Command executed | `npx cap add ios` |
+| Method | Capacitor iOS platform generation only. No `npx cap sync ios`, `npx cap open ios`, Xcode, manual `pod install`, `xcodebuild`, fastlane, archive, upload, App Store Connect, Apple Developer, RevenueCat, Supabase, auth, billing, entitlement, Android release, or production action was executed. Generated native files were inspected but not manually edited. |
+
+### Command Output Summary
+
+| Step | Result |
+| --- | --- |
+| Native project creation | Capacitor reported `Adding native Xcode project in ios` and `ios platform added`. |
+| Web asset copy | Capacitor copied `mobile-shell` assets to `ios/App/App/public`. |
+| Capacitor config copy | Capacitor created `ios/App/App/capacitor.config.json`. |
+| Plugin update | Capacitor found three iOS plugins: `@capacitor/push-notifications@8.1.1`, `@capawesome/capacitor-google-sign-in@0.1.0`, and `@revenuecat/purchases-capacitor@13.1.0`. |
+| Package manager style | Capacitor wrote `ios/App/CapApp-SPM/Package.swift`; no manual pod install was run. |
+
+### Generated Path Summary
+
+| Path or file | State |
+| --- | --- |
+| `ios/` | Created. |
+| `ios/.gitignore` | Created by Capacitor. |
+| `ios/debug.xcconfig` | Created. |
+| `ios/App/` | Created. |
+| `ios/App/App.xcodeproj/project.pbxproj` | Created. |
+| `ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist` | Created. |
+| `ios/App/App/AppDelegate.swift` | Created. |
+| `ios/App/App/Info.plist` | Created. |
+| `ios/App/App/Base.lproj/LaunchScreen.storyboard` | Created. |
+| `ios/App/App/Base.lproj/Main.storyboard` | Created. |
+| `ios/App/App/Assets.xcassets/...` | Created with default AppIcon and Splash image sets. |
+| `ios/App/CapApp-SPM/Package.swift` | Created and references Capacitor SPM plus local plugin packages. |
+| `ios/App/App/public/index.html` | Generated from `mobile-shell/index.html`, but ignored by generated `ios/.gitignore`. |
+| `ios/App/App/capacitor.config.json` and `ios/App/App/config.xml` | Generated but ignored by generated `ios/.gitignore`. |
+| `ios/capacitor-cordova-ios-plugins/` | Generated but ignored by generated `ios/.gitignore`. |
+
+### Config Reflection Audit
+
+| Check | Result |
+| --- | --- |
+| Bundle ID | `ios/App/App.xcodeproj/project.pbxproj` contains `PRODUCT_BUNDLE_IDENTIFIER = com.staronlabs.chartradar` for generated build configurations. |
+| Display name | `ios/App/App/Info.plist` contains `CFBundleDisplayName` value `Chart Radar`. |
+| `CFBundleIdentifier` | Uses `$(PRODUCT_BUNDLE_IDENTIFIER)`, matching standard generated project behavior. |
+| Marketing/build version | Generated project currently contains `MARKETING_VERSION = 1.0` and `CURRENT_PROJECT_VERSION = 1`. |
+| iOS deployment target | Generated project currently contains `IPHONEOS_DEPLOYMENT_TARGET = 15.0`. |
+| Code signing | Generated project uses automatic signing style, but no `DEVELOPMENT_TEAM` value was observed in the inspected project settings. |
+| Entitlements file | No `.entitlements` file was generated. |
+| Podfile | No `Podfile` was generated; Capacitor created Swift Package Manager files under `ios/App/CapApp-SPM`. |
+| Top-level workspace | No top-level `ios/App/App.xcworkspace` was generated; `project.xcworkspace` exists inside `App.xcodeproj`. |
+
+### Scope Checks
+
+| Check | Result |
+| --- | --- |
+| `package.json` / `package-lock.json` | No changes from `npx cap add ios`. |
+| `capacitor.config.ts` | No changes. |
+| Android native/release files | No changes. |
+| App/source/auth/Supabase/billing/RevenueCat/entitlement files | No changes. |
+| Native file manual edits | None. |
+| Forbidden commands | `npx cap sync ios`, `npx cap open ios`, Xcode, pod install, `xcodebuild`, fastlane, archive, upload, and external console commands were not run. |
+
+### Handoff To Task 6
+
+- Audit generated iOS config in more detail before any build/upload work.
+- Review whether generated version values, deployment target, automatic signing, missing entitlements, SPM plugin setup, and ignored generated `public`/config files need follow-up.
+- Do not edit native files in Task 6 unless a later task explicitly allows it.
+
 ## High-Risk Separation
 
 | Area | Status in this run |
