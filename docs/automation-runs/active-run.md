@@ -11,7 +11,7 @@
 - Previous run context:
   - `ios-xcode-signing-readiness-run` is `DONE`.
   - `ios-xcode-signing-readiness-run` selected `ios-first-local-build-readiness-run` as the next follow-up candidate.
-- Current phase: TODO 2 complete; next TODO is `3. Signing blocker decision`.
+- Current phase: TODO 3 complete; next TODO is `4. Safe local build command candidate selection`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No Xcode setting change, `xcodebuild`, local iOS build, archive, upload, TestFlight submission, signing change, provisioning/certificate creation, Apple Developer/App Store Connect change, native file edit, entitlements/capability creation, auth, Supabase, billing, RevenueCat, Android, or production action was executed during setup.
 
@@ -94,7 +94,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | DONE | Local iOS build environment preflight | Environment | HIGH | Check OS, Xcode, Command Line Tools, `xcode-select`, `xcodebuild` version, and record Apple ID/Xcode account login as manual-only. | No build. No Xcode setting changes. No Apple account changes. | `git diff --check` |
 | 2 | DONE | iOS project build precondition audit | Project Preflight | HIGH | Document current project path, scheme, target, configuration, signing state, SPM dependency, and ignored generated output preconditions. | No project edits. No `xcodebuild`. | `git diff --check` |
-| 3 | TODO | Signing blocker decision | Signing Decision | HIGH | Decide whether missing Team ID/signing/provisioning means first local build should be `BLOCKED`. | No `DEVELOPMENT_TEAM` setting. No provisioning creation. No Apple Developer console changes. | `git diff --check` |
+| 3 | DONE | Signing blocker decision | Signing Decision | HIGH | Decide whether missing Team ID/signing/provisioning means first local build should be `BLOCKED`. | No `DEVELOPMENT_TEAM` setting. No provisioning creation. No Apple Developer console changes. | `git diff --check` |
 | 4 | TODO | Safe local build command candidate selection | Command Plan | HIGH | Document the exact local build command candidate and the conditions that must be true before it can run. | Do not execute command. No archive/upload. | `git diff --check` |
 | 5 | TODO | Local build execution decision | Gate Decision | HIGH | Decide whether to run a local build or close as `BLOCKED` based on preconditions. | No TestFlight upload. No archive. No signing changes. | decision documented |
 | 6 | TODO | Readiness result documentation | Documentation | LOW | Document readiness result, blockers, and one next-run candidate. | No next run auto-creation. | active-run `DONE` or `BLOCKED` state check |
@@ -148,6 +148,17 @@ Task 6 must select at most one follow-up candidate:
 - Build/archive/upload execution: not run.
 - Native/config/console changes: none.
 - Next TODO remains `3. Signing blocker decision`.
+
+### 2026-06-10 - TODO 3 signing blocker decision
+
+- Result: `DONE`.
+- Decision: local iOS build execution is `BLOCKED` on the current machine.
+- Primary blockers: Windows environment, no Xcode, no Command Line Tools, scheme list unavailable, SPM resolution unavailable, Apple ID/Xcode account not checked, Apple Developer membership unverified, no `DEVELOPMENT_TEAM`, certificate/provisioning state unconfirmed.
+- Debug build separation: a future simulator-only Debug build may have fewer signing requirements, but it still requires macOS/Xcode, confirmed scheme, and SPM resolution.
+- TestFlight/archive separation: Team ID, certificates/provisioning, explicit App ID/App Store Connect linkage, and capability decisions remain required for device/archive/TestFlight paths.
+- Build/archive/upload execution: not run.
+- Native/config/console changes: none.
+- Next TODO remains `4. Safe local build command candidate selection`.
 
 ## Verification Policy
 
