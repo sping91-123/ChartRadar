@@ -1,6 +1,7 @@
 // 서비스 하단의 투자 유의 문구와 정책 링크를 보여주는 푸터입니다.
 import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
+import { APP_VERSION_DISPLAY } from "@/lib/appVersion";
 
 export function AppFooter() {
   return (
@@ -18,6 +19,12 @@ export function AppFooter() {
             거래 화면과 차이가 날 수 있으므로, 최종 주문 전에는 거래소 또는 증권사 화면에서 가격과 조건을 다시 확인해 주세요.
           </p>
           <nav className="flex flex-wrap gap-x-3 gap-y-1 text-slate-400" aria-label="서비스 정책">
+            <Link href="/faq" className="hover:text-white">
+              자주 묻는 질문
+            </Link>
+            <a href="mailto:staronlabs@gmail.com" className="hover:text-white">
+              문의
+            </a>
             <Link href="/terms" className="hover:text-white">
               이용약관
             </Link>
@@ -31,7 +38,7 @@ export function AppFooter() {
               구독 해지·환불 안내
             </Link>
           </nav>
-          <p className="text-slate-600">Chart Radar.</p>
+          <p className="text-slate-600">Chart Radar. 문의: staronlabs@gmail.com · {APP_VERSION_DISPLAY}</p>
         </div>
       </div>
     </footer>
