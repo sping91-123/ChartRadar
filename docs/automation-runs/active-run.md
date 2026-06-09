@@ -14,7 +14,7 @@
   - `alert-pro-rule-ui-clarity-run` is `DONE`.
   - `settings-account-polish-run` is `DONE`.
   - `settings-support-links-polish-run` is `DONE`.
-- Current phase: run registered; next TODO is `1. Capacitor iOS readiness audit`.
+- Current phase: Task 1 complete; next TODO is `2. Apple Developer submission requirement review`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No iOS platform add, iOS build, upload, App Store Connect change, Apple Developer change, RevenueCat change, auth change, Supabase change, billing change, Android release change, or production data action was executed during setup.
 
@@ -91,12 +91,25 @@
 
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TODO | Capacitor iOS readiness audit | Capacitor/iOS | MEDIUM | Check iOS platform status, Capacitor config, app name, appId, bundle identifier candidates, iOS build scripts, and whether native iOS setup is missing. | No iOS platform add. No iOS release setting edits. No Android setting edits. | `git diff --check` |
+| 1 | DONE | Capacitor iOS readiness audit | Capacitor/iOS | MEDIUM | Checked iOS platform status, Capacitor config, app name, appId, bundle identifier candidates, iOS build scripts, and missing native iOS setup. | No iOS platform add. No iOS release setting edits. No Android setting edits. | `git diff --check` |
 | 2 | TODO | Apple Developer submission requirement review | Store Requirements | MEDIUM | Document TestFlight-prep requirements for account/app metadata, privacy, support URL, screenshots, description, keywords, category, and marketing URL need. | No external console registration or edits. | `git diff --check` |
 | 3 | TODO | Sign in with Apple requirement risk review | Auth Policy | HIGH | Assess whether current Google login structure may require Sign in with Apple for iOS review and document Supabase/UI/auth implications. | No auth code edits. No Supabase edits. No Apple login implementation. | `git diff --check` |
 | 4 | TODO | RevenueCat Apple product mapping review | Monetization Mapping | HIGH | Document iOS subscription product, subscription group, RevenueCat offering/package/product, entitlement, price, and naming mapping needs. | No RevenueCat edits. No App Store Connect product creation. No productId, entitlement, price, or billing code edits. | `git diff --check` |
 | 5 | TODO | TestFlight first-build checklist | Build Readiness | MEDIUM | Create the pre-build checklist for Xcode, signing, certificates, provisioning, Capacitor sync, build command candidates, upload checks, privacy, account deletion, contact, and support URLs. | No iOS build/upload. No submission. No production setting changes. | `git diff --check` |
 | 6 | TODO | Select first iOS readiness follow-up run | Prioritization | LOW | Select exactly one follow-up run candidate after readiness audit. | No follow-up run auto-creation. No code edits. | `git diff --check` |
+
+## Task 1 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `1. Capacitor iOS readiness audit` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Source inspection and documentation only. No iOS platform add, sync, build, open, upload, pod install, Xcode, App Store Connect, Apple Developer, RevenueCat, auth, Supabase, billing, Android, package script, or production action was executed. |
+| Result | Capacitor common config exists with `appId` and `appName`, but the native iOS platform is absent and no iOS scripts or native project files were found. |
+| Output document | `docs/ios-testflight-readiness.md` |
+| Code/native/config changed? | `No` |
+| Next TODO | `2. Apple Developer submission requirement review` |
 
 ## Follow-Up Candidate Selection Method
 
