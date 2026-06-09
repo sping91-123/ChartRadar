@@ -54,7 +54,7 @@ These are candidate surfaces for future TODO tasks. Listing them here is not app
 | Order | Status | Task | Main question | Expected output |
 | --- | --- | --- | --- | --- |
 | 1 | DONE | Current alert structure audit | How are alerts generated, permissioned, stored, routed, gated, and configured today? | Structure map and protected-surface notes. |
-| 2 | TODO | Alert copy quality review | Does alert copy avoid investment instruction, guarantee, urgency, or excessive trading pressure? | Copy-risk findings and wording guardrails. |
+| 2 | DONE | Alert copy quality review | Does alert copy avoid investment instruction, guarantee, urgency, or excessive trading pressure? | Copy-risk findings and wording guardrails. |
 | 3 | TODO | Duplicate and cooldown policy review | Can the same user receive too many or repeated alerts? | Repetition/cooldown risk map. |
 | 4 | TODO | Basic/Pro alert limit review | Are free and paid alert limits consistent between UI and intended behavior? | Basic/Pro consistency findings. |
 | 5 | TODO | targetPath routing quality review | Where should alert taps land, and what should happen for login-required or missing routes? | Routing expectation table. |
@@ -162,6 +162,87 @@ These are candidate surfaces for future TODO tasks. Listing them here is not app
 - Inspect admin/browser test samples in `src/lib/pushTestMessages.ts` without sending any push.
 - Check for wording that could sound like investment instruction, guaranteed outcome, excessive urgency, or trade inducement.
 - Preserve the product framing as judgment support: conditions, evidence, risk, invalidation, and revisit cues.
+
+## Task 2 - Alert Copy Quality Audit
+
+| Field | Value |
+| --- | --- |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Source inspection only. No push endpoint, admin diagnostics endpoint, browser notification, OS permission prompt, database, token, external console, Android device, or production-mutating command was executed. |
+| Scope inspected | Push notification title/body, alert settings UI, browser notification preview, admin/test/diagnostic copy, Pro/Basic limit copy, targetPath/fallback related copy. |
+| Implementation allowed in this run? | `No` |
+
+### Copy Sources Inspected
+
+| Source | Copy surface | Assessment |
+| --- | --- | --- |
+| `src/lib/server/push/eventBuilders.ts` | Server push title/body for market scout, watchlist, risk-off, semiconductor, global momentum, and global asset events. | Mostly safe. Uses candidate, detected, evidence, risk, and confirmation language. Some momentum adjectives need caution. |
+| `src/lib/server/push/personalization.ts` | Personalized alt-market scout body for watched/unwatched symbols. | Mostly safe. Uses candidate and evidence confirmation language. |
+| `src/lib/server/push/scanners/liquidationScanner.ts` | Liquidation pressure push title/body. | Safe. Framed as risk and volatility confirmation. |
+| `src/lib/server/push/scanners/macroScanner.ts` | News and macro-calendar push title/body. | Mixed. Calendar copy is safe; news copy can pass through external headline/key-issue text and should be treated as uncertain. |
+| `src/lib/pushTestMessages.ts` | Admin/browser test notification examples. | Mostly safe, but one alt sample uses "strong candidate" language. Admin-only Android path, but still useful to normalize. |
+| `src/components/RadarAlertCenter.tsx` | Alert settings page, permission/status/toast/CTA, admin diagnostics/test panels, saved alert section. | Mostly safe. Caution around "매수가/무효화 알림" because it contains explicit buy-price framing. |
+| `src/components/RadarAlertMonitor.tsx` | Browser-local setup match notification and stock setup labels. | Caution. Browser notification can show "롱 우세" or "숏 우세", which is directional and closer to trading-language than server push copy. |
+| `src/lib/radarAlerts.ts` | User-facing alert rule title, description, trigger, cadence, value, summary. | Mostly safe. Some urgency/FOMO phrasing should be softened in a later copy run. |
+| `src/lib/usageMeter.ts` | Basic/Pro alert-rule usage limit messages. | Safe to low caution. It states limits and Pro re-check availability without direct purchase pressure. |
+| `src/lib/appPush.ts` | Android push permission, token sync, disable, test, channel description, fallback notification title. | Safe. Operational permission/status language, not investment copy. |
+| `src/app/api/admin/push-diagnostics/route.ts` | Admin diagnostic response fields and recent event copy passthrough. | Admin-only. It can expose generated alert title/body in the UI, so copy quality depends on upstream event builders. |
+| `src/lib/pushTargetPath.ts` | targetPath fallback routing. | No user-facing fallback text found; routing fallback is path-based only. |
+| `src/components/HeaderActions.tsx` | Settings menu link to alert settings. | Safe. Neutral "condition/status 확인" wording. |
+
+### Classification Summary
+
+| Classification | Pattern | Examples observed | Operational read |
+| --- | --- | --- | --- |
+| Safe | "감지", "확인", "근거", "조건", "리스크", "변동성", "일정", "권한", "연결" | "점수와 조건을 확인해 주세요", "리스크 확인이 필요합니다", "발표 전후 변동성 확대 가능성을 확인하세요" | Judgment-support framing. It asks the user to review context rather than act immediately. |
+| Safe | Permission and status copy | "권한 확인 중", "연결 저장 중", "앱 푸시 연결이 완료되지 않았습니다", "브라우저 알림은 ... 미리보기 수준" | Operationally clear and not trade-inducing. |
+| Safe | Admin diagnostics copy | "실제 발송 없이 후보와 제외 사유를 확인합니다", "기기 식별값, 이메일, 사용자 ID는 표시하지 않습니다" | Good operational guardrail. Continue keeping admin-only language clear. |
+| Caution | "후보", "강한 흐름", "강한 움직임", "주도력 강화" | Global and alt push samples/events use candidate and strength wording. | Can be acceptable with "확인" wording, but repeated push delivery could make it feel like opportunity chasing. |
+| Caution | "매수가/무효화 알림" | Saved-condition section title and button in `RadarAlertCenter`; related links from coin home. | "무효화" is good risk framing, but "매수가" can read more actionable than "판단 기준". |
+| Caution | "롱 우세", "숏 우세" | Browser-local `RadarAlertMonitor` notification and stock setup labels. | Not a direct entry instruction, but closer to position language than server push copy. |
+| Caution | External news headline passthrough | `macroScanner` uses `firstIssue` or `headline` as the push body. | Runtime copy may be longer or less bounded than first-party copy; cannot be fully judged by source inspection alone. |
+| Caution | Basic/Pro limit copy | "Pro에서는 장중 재확인이 가능합니다." | Not aggressive, but should stay factual and avoid implying Pro is required for urgent trading. |
+| High risk | Direct instruction or guarantee | No confirmed alert-specific match found for "지금 매수", "지금 매도", "롱 진입", "숏 진입", "확정 수익", "무조건", or "급등 보장". | No immediate high-risk implementation run is required from this audit alone. |
+
+### Safe Copy Patterns To Preserve
+
+- Use "감지되었습니다" with "확인해 주세요" rather than action verbs.
+- Pair directional or strength wording with evidence/risk confirmation.
+- Prefer "조건", "근거", "리스크", "변동성", "무효화", "흐름", and "다시 확인" over entry language.
+- Keep browser preview and Android app push distinction explicit.
+- Keep admin diagnostics clear that no real push send happens during diagnostics.
+- Keep Pro/Basic limit copy factual: quota, availability, and scope rather than urgency.
+
+### Caution Patterns To Review In A Separate Copy Run
+
+- Replace or soften "강한 후보" and "강한 움직임" where a mobile push could read as chasing momentum.
+- Consider changing "매수가/무효화 알림" to a less trade-direct label such as "판단 기준/무효화 알림" or "조건/무효화 알림".
+- Normalize browser-local "롱 우세"/"숏 우세" to less position-like wording if it appears in user notifications.
+- Wrap external news headline push bodies with first-party context and length limits instead of sending raw headline/key-issue text directly.
+- Review "먼저 봐야 할 코인을 놓치지 않게" because it can read as mild FOMO even though it is not a direct trading instruction.
+
+### Confirmed High-Risk Findings
+
+- No confirmed alert-specific high-risk copy was found in the inspected source set.
+- No inspected alert copy promised profit, guaranteed return, risk-free outcome, urgent entry, or immediate buy/sell action.
+- No code or user-facing copy was changed in this task.
+
+### Improvement Candidates For A Later Implementation Run
+
+| Candidate | Why | Risk | Implementation allowed now? |
+| --- | --- | --- | --- |
+| Alert copy normalization pass for "candidate/strong" wording | Keeps push copy from feeling like momentum chasing, especially on mobile where body text is short. | LOW | No |
+| Rename "매수가/무효화 알림" to less buy-action wording | Improves judgment-support framing on the alert settings screen and related CTAs. | MEDIUM because it touches user-facing UI copy | No |
+| Replace browser notification "롱/숏 우세" with safer direction wording | Reduces perceived position instruction in browser-local notifications. | MEDIUM because it touches notification copy | No |
+| Add first-party wrapper/length cap for macro/news push body | Reduces external headline copy risk and mobile truncation risk. | MEDIUM because it touches server push copy | No |
+
+### Next TODO - Duplicate And Cooldown Policy Points
+
+- Check whether repeated "후보", "강한", or "감지" alerts could create pressure even if each individual message is safe.
+- Inspect whether global batching already reduces repeated momentum/asset wording enough for a single user.
+- Verify whether cooldown and duplicate keys cover both market-wide scout events and saved-condition events.
+- Keep copy findings separate from cooldown implementation; do not edit cooldown or push-cron logic in the next audit task.
 
 ## Out Of Scope
 
