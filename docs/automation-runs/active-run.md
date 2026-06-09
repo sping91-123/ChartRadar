@@ -6,10 +6,10 @@
 
 ## Run State
 
-- Status: `ACTIVE`
+- Status: `DONE`
 - Setup date: 2026-06-09
 - Previous run context: `android-production-auto-smoke-run` is `DONE` and its recorded automatic checks are `PASS`.
-- Current phase: Tasks 1-5 are `DONE`; Task 6 is the next `TODO`.
+- Current phase: all 6 tasks completed; run closed.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No alert code, push command, production DB/token access, FCM, Supabase, RevenueCat, billing, Android release, or Android phone manual QA action was executed during setup.
 
@@ -79,7 +79,7 @@
 | 3 | DONE | Duplicate and cooldown policy review | Dedupe/Cooldown | MEDIUM | Check whether the same user can receive repetitive or too-frequent alerts from current structure. | No cooldown logic edits. No push-cron edits. No production DB edits. | `git diff --check` |
 | 4 | DONE | Basic/Pro alert limit review | Entitlement/Gating | HIGH | Check whether free/paid alert limits are consistent between screen design and expected runtime behavior. | No entitlement edits. No RevenueCat edits. No Supabase RLS edits. No billing edits. | `git diff --check` |
 | 5 | DONE | targetPath routing quality review | Notification Routing | MEDIUM | Document expected destination, fallback, login-required state, and missing-route behavior after alert click. | No routing code edits. No real push-click test. | `git diff --check` |
-| 6 | TODO | Alert improvement candidate selection | Prioritization | LOW | Select exactly one first alert-quality improvement candidate; implementation remains a separate run. | No multiple simultaneous improvements. No code edits. | `git diff --check` |
+| 6 | DONE | Alert improvement candidate selection | Prioritization | LOW | Select exactly one first alert-quality improvement candidate; implementation remains a separate run. | No multiple simultaneous improvements. No code edits. | `git diff --check` |
 
 ## Task 1 Completion Note
 
@@ -212,8 +212,33 @@
   - no admin test push
   - no push-cron call
   - no production DB or raw token query
-  - no browser navigation or Android device test
+- no browser navigation or Android device test
 - Next task remains: `6. Alert improvement candidate selection`
+
+## Task 6 Completion Note
+
+- Completed date: 2026-06-09
+- Completed task: `Alert improvement candidate selection`
+- Output document: `docs/alert-quality-operations.md`
+- Scope synthesized:
+  - current alert structure, copy quality, duplicate/cooldown, Basic/Pro gating, and targetPath routing findings from Tasks 1-5
+  - user trust impact, implementation scope, protected-surface risk, verification feasibility, and rollback simplicity
+- Selected first implementation candidate:
+  - clarify the alert settings UI/copy so Basic users do not see Pro alert rules as enabled or deliverable
+- Separate active-run candidate:
+  - `alert-pro-rule-ui-clarity-run`
+- Deferred higher-risk candidates:
+  - targetPath allowlist convention changes
+  - alert limit copy versus usageMeter policy alignment
+  - system-event entitlement bypass policy
+  - per-user hourly/daily push cap
+  - macro/news semantic repetition filtering
+  - push-click login returnTo handling
+  - Android cold-start/background push tap proof
+  - broader alert phrase softening
+- Protected actions not performed:
+  - no code, app UI, package, script, alert logic, push-cron, targetPath, routing, FCM, Supabase, RLS, billing, RevenueCat, entitlement, Android release, Play Console, production DB/token, real push, purchase, restore, or account deletion changes
+- Run state updated to `DONE` because all 6 tasks are complete.
 
 ## Documentation Policy
 

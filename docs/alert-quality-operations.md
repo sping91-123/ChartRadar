@@ -58,7 +58,7 @@ These are candidate surfaces for future TODO tasks. Listing them here is not app
 | 3 | DONE | Duplicate and cooldown policy review | Can the same user receive too many or repeated alerts? | Repetition/cooldown risk map. |
 | 4 | DONE | Basic/Pro alert limit review | Are free and paid alert limits consistent between UI and intended behavior? | Basic/Pro consistency findings. |
 | 5 | DONE | targetPath routing quality review | Where should alert taps land, and what should happen for login-required or missing routes? | Routing expectation table. |
-| 6 | TODO | Alert improvement candidate selection | What is the one safest first improvement candidate? | One implementation-run candidate with rationale. |
+| 6 | DONE | Alert improvement candidate selection | What is the one safest first improvement candidate? | One implementation-run candidate with rationale. |
 
 ## Task 1 - Current Alert Structure Audit
 
@@ -606,6 +606,91 @@ These are candidate surfaces for future TODO tasks. Listing them here is not app
 - Favor a small, high-confidence implementation run candidate over broad alert redesign.
 - Keep any actual code change, push delivery, billing, entitlement, routing, or production data work for a separate approved run.
 
+## Task 6 - Alert Improvement Candidate Selection
+
+| Field | Value |
+| --- | --- |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Documentation synthesis only. No code, UI copy, alert logic, push endpoint, production data, token, external console, Android device, or production-mutating command was executed. |
+| Scope synthesized | Task 1 alert structure, Task 2 copy quality, Task 3 duplicate/cooldown, Task 4 Basic/Pro gating, and Task 5 targetPath routing findings. |
+| Selected follow-up run | `alert-pro-rule-ui-clarity-run` |
+| Implementation allowed in this run? | `No` |
+
+### TODO 1-5 Audit Summary
+
+| Area | Key result | First-order risk |
+| --- | --- | --- |
+| Alert structure | Browser-local alert preview, Android FCM delivery, token sync, server scan, preferences, entitlement, cooldown, duplicate guard, and targetPath resolution are split across multiple surfaces. | Users may see settings as enabled while server delivery later filters them. |
+| Copy quality | Most alert copy is judgment-support oriented, but several phrases can be softened, including candidate strength, invalidation-price framing, and directional long/short wording. | Alert copy can feel like trade instruction if phrasing becomes too strong. |
+| Duplicate/cooldown | Existing event keys, sent-event history, symbol cooldowns, and scan-level batching reduce repetition. | There is no explicit per-user hourly/daily total push cap, and macro/news semantic repetition remains possible. |
+| Basic/Pro gating | Non-system Pro events are server-gated by entitlement, but Basic users can still see Pro rules in the UI and system events bypass `ruleAllowed`. | The Basic/Pro boundary can look inconsistent before any server-side delivery decision. |
+| targetPath routing | Internal allowlist and metadata fallback are generally safe, but `/alerts?market=global` relies on metadata fallback and push-click login returnTo is not preserved by the click listener itself. | Notification taps can land in a less expected route under malformed metadata or future login-required paths. |
+
+### Consolidated Risk List
+
+- Basic users may think Pro alert rules are enabled because Pro rules remain visible/toggle-like in the alert settings UI.
+- Plan copy advertises alert limits such as 30 or 40 while local `usageMeter` Pro limits use 20 for alert-rule buckets.
+- System events can bypass entitlement rule checks, making the free/paid alert boundary a policy question.
+- No explicit user-level hourly or daily total push cap was found.
+- Macro/news alerts may repeat semantically even when event keys differ.
+- `/alerts?market=global` target values depend on metadata fallback instead of direct allowlist acceptance.
+- Push-click login `returnTo` preservation is not implemented by the notification click listener itself.
+- Android cold start or background push tap behavior cannot be proven from source inspection alone.
+- Phrases such as strong candidate, invalidation-price alert, and long/short dominance should be softened in a later copy pass.
+
+### Priority Evaluation
+
+| Priority | Candidate | User impact | Implementation scope | Protected-surface risk | Verification feasibility | Decision |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Clarify Basic UI so Pro alert rules do not appear enabled for Basic users | HIGH | SMALL to MEDIUM UI/copy-only | LOW if entitlement, billing, Supabase, push-cron, and delivery logic stay untouched | High with source review plus static UI checks | Selected |
+| 2 | Align `/alerts?market=global|crypto` targetPath allowlist or payload convention | MEDIUM to HIGH | MEDIUM routing/targetPath work | MEDIUM because navigation behavior changes | Good with route/static checks; push-click still separate | Defer |
+| 3 | Resolve alert limit copy 30/40 vs usageMeter Pro 20 mismatch | HIGH | MEDIUM policy/copy/gating review | MEDIUM to HIGH because billing/plan copy and quota semantics are adjacent | Needs policy confirmation before edit | Defer |
+| 4 | Decide system-event entitlement bypass policy | HIGH | MEDIUM to LARGE server policy work | HIGH because entitlement and delivery behavior can change | Needs design and server dry-run plan | Separate design run |
+| 5 | Add per-user hourly/daily total cap | MEDIUM | LARGE server/data policy work | HIGH because push scanner and possibly DB semantics change | Needs dry-run diagnostics and rollout safety | Later operations run |
+| 6 | Reduce macro/news semantic repetition | MEDIUM | MEDIUM scanner/copy/filter work | MEDIUM because generated events can change | Needs sample-based review and dry-run evidence | Later quality run |
+| 7 | Preserve push-click returnTo for future login-required routes | MEDIUM | MEDIUM auth/navigation work | MEDIUM because auth routing changes | Needs manual and route checks | Later navigation run |
+| 8 | Prove Android cold-start/background push tap behavior | MEDIUM | QA-only first | LOW for manual QA, MEDIUM for automation | Requires real device/manual run | Separate manual QA |
+| 9 | Soften strong trade-like phrases | MEDIUM | SMALL copy-only | LOW if message generation semantics stay unchanged | Good with copy smoke | Later copy pass |
+
+### Selected First Implementation Candidate
+
+The first recommended implementation candidate is:
+
+`Basic users should not see Pro alert rules as if they are enabled or deliverable.`
+
+Proposed follow-up active-run name:
+
+`alert-pro-rule-ui-clarity-run`
+
+Recommended scope for that future run:
+
+- Review `RadarAlertCenter` and related alert settings display only.
+- Make Pro-only alert rules read as locked, unavailable, or explanatory for Basic users instead of enabled/deliverable.
+- Keep Basic users aware that Pro alert rules exist without implying active delivery.
+- Preserve current entitlement, billing, RevenueCat, Supabase, RLS, push-cron, scanner, token sync, and delivery behavior.
+- Do not send push, query production DB/token rows, or modify actual alert delivery logic.
+- Verify with `git diff --check`, type/build as appropriate for a UI-only change, and static copy checks.
+
+### Selection Rationale
+
+- It addresses immediate user trust: the user can understand why a Pro alert rule is visible but not active for Basic.
+- It can be implemented as a small UI/copy clarification without changing payment, entitlement, RevenueCat, Supabase, push-cron, FCM, or production data.
+- It reduces support risk around "I turned this on but did not receive alerts."
+- It fits naturally after Android production auto smoke because it improves alert settings clarity without reopening Android release work.
+- It is easier to roll back and verify than server entitlement, cooldown, DB, or targetPath changes.
+
+### Guardrails For The Future Implementation Run
+
+- Do not edit `src/lib/server/pushAlertScanner.ts`, `/api/push-cron`, FCM send helpers, `src/lib/appPush.ts`, token persistence, or cooldown/duplicate logic.
+- Do not edit billing products, prices, plan IDs, product IDs, entitlements, RevenueCat mapping, Supabase RLS, or production data.
+- Do not run actual push sends, purchase tests, restore tests, account deletion tests, or production DB/token queries.
+- Treat any change to server-side delivery, entitlement filtering, targetPath routing, or quota policy as a separate high-risk run.
+
+### Final Run Conclusion
+
+`alert-quality-operations-run` completed as an audit and prioritization run. The first implementation candidate is `alert-pro-rule-ui-clarity-run`; it should be opened separately only when implementation is explicitly requested. No code, app UI, package, script, alert logic, push-cron, targetPath, billing, entitlement, Supabase, FCM, RevenueCat, Android release, production DB/token, or real push action was changed or executed in this task.
+
 ## Out Of Scope
 
 - Real push send.
@@ -632,6 +717,6 @@ Use this format as each TODO completes.
 | Recommended follow-up | `TBD` |
 | Implementation allowed in this run? | `No` |
 
-## Initial Conclusion
+## Final Conclusion
 
-The run is ready to start with Task 1. The first task should map the current alert structure and stop at documentation. Any code, database, token, push delivery, or external service change must be split into a separate approved run.
+The run is complete. All six tasks were handled as audit, documentation, and prioritization work only. The selected first implementation candidate is `alert-pro-rule-ui-clarity-run`, and no follow-up run was opened automatically. Any code, UI, database, token, push delivery, billing, entitlement, routing, or external service change must be split into a separate approved run.
