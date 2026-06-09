@@ -689,7 +689,11 @@ Recommended scope for that future run:
 
 ### Final Run Conclusion
 
-`alert-quality-operations-run` completed as an audit and prioritization run. The first implementation candidate is `alert-pro-rule-ui-clarity-run`; it should be opened separately only when implementation is explicitly requested. No code, app UI, package, script, alert logic, push-cron, targetPath, billing, entitlement, Supabase, FCM, RevenueCat, Android release, production DB/token, or real push action was changed or executed in this task.
+`alert-quality-operations-run` completed as an audit and prioritization run. The first implementation candidate is `alert-pro-rule-ui-clarity-run`; it has now been registered separately after explicit implementation-run setup. No code, app UI, package, script, alert logic, push-cron, targetPath, billing, entitlement, Supabase, FCM, RevenueCat, Android release, production DB/token, or real push action was changed or executed in the original audit run.
+
+### Follow-Up Active Run Registration
+
+The follow-up implementation run `alert-pro-rule-ui-clarity-run` was registered on 2026-06-09. Its scope is intentionally narrow: clarify the alert settings UI/copy so Basic users do not interpret Pro alert rules as enabled or deliverable. The run excludes billing, entitlement, RevenueCat, Supabase, FCM, push-cron, scanner delivery logic, targetPath/routing, production DB/token work, real push sends, purchase/restore tests, and Android release changes.
 
 ## Out Of Scope
 
@@ -719,4 +723,4 @@ Use this format as each TODO completes.
 
 ## Final Conclusion
 
-The run is complete. All six tasks were handled as audit, documentation, and prioritization work only. The selected first implementation candidate is `alert-pro-rule-ui-clarity-run`, and no follow-up run was opened automatically. Any code, UI, database, token, push delivery, billing, entitlement, routing, or external service change must be split into a separate approved run.
+The audit run is complete. All six tasks were handled as audit, documentation, and prioritization work only. The selected first implementation candidate, `alert-pro-rule-ui-clarity-run`, has now been registered as a separate active run. Any code, UI, database, token, push delivery, billing, entitlement, routing, or external service change must remain within that new run's explicit scope and guardrails.
