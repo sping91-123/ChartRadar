@@ -2,218 +2,167 @@
 
 ## Run Title
 
-- `ios-testflight-readiness-run`
+- `ios-capacitor-platform-setup-run`
 
 ## Run State
 
-- Status: `DONE`
+- Status: `TODO`
 - Setup date: 2026-06-09
 - Previous run context:
-  - `android-production-auto-smoke-run` is `DONE` and recorded as `PASS`.
-  - `alert-quality-operations-run` is `DONE`.
-  - `alert-pro-rule-ui-clarity-run` is `DONE`.
-  - `settings-account-polish-run` is `DONE`.
-  - `settings-support-links-polish-run` is `DONE`.
-- Current phase: Task 6 complete; `ios-testflight-readiness-run` is DONE.
+  - `ios-testflight-readiness-run` is `DONE`.
+  - `ios-testflight-readiness-run` selected `ios-capacitor-platform-setup-run` as the first follow-up candidate.
+- Current phase: run registered; next TODO is `1. iOS setup preflight environment/status check`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
-- This setup registers the run only. No iOS platform add, iOS build, upload, App Store Connect change, Apple Developer change, RevenueCat change, auth change, Supabase change, billing change, Android release change, or production data action was executed during setup.
+- This setup registers the run only. No dependency install, iOS platform add, Capacitor sync, iOS build, Xcode, pod install, archive, upload, Apple Developer, App Store Connect, RevenueCat, Supabase, auth, billing, entitlement, Android release, or production action was executed during setup.
 
 ## Purpose
 
-- Audit ChartRadar readiness for a future iOS TestFlight build.
-- Prepare before building or uploading iOS artifacts; this is not an iOS production submission run.
-- Identify required settings, risks, and missing checklist items for Capacitor iOS, Apple Developer/App Store Connect, Sign in with Apple, RevenueCat product mapping, and first TestFlight build preparation.
-- Select one follow-up run candidate after the audit is complete.
+- Prepare and execute the first controlled Capacitor iOS platform setup path for ChartRadar TestFlight readiness.
+- Start with environment, dependency, package state, and command-scope checks before any native iOS project generation.
+- Add `@capacitor/ios` and generate the native `ios/` project only in the specific TODOs that allow those actions.
+- Keep TestFlight archive/upload, Apple Developer/App Store Connect, RevenueCat/App Store products, auth, Supabase, billing, Android release, and production settings out of scope.
 
 ## Background
 
-- Android launch stabilization and follow-up operations are complete:
-  - automatic Android production smoke checks passed
-  - alert operations audit completed
-  - Pro alert UI clarity completed
-  - settings/account audit completed
-  - settings support/policy link polish completed
-- The next priority is iOS TestFlight readiness, not iOS production release.
+- `ios-testflight-readiness-run` confirmed:
+  - `capacitor.config.ts` `appId`: `com.staronlabs.chartradar`
+  - `appName`: `Chart Radar`
+  - `webDir`: `mobile-shell`
+  - `ios/` directory is missing
+  - native iOS project is missing
+  - `@capacitor/ios` is missing
+  - `package.json` has Android Capacitor scripts only
+  - Bundle ID candidate is `com.staronlabs.chartradar`
+  - iOS display name candidate is `Chart Radar`
+- The same readiness run selected `ios-capacitor-platform-setup-run` as the first technical follow-up because no real iOS build/archive/TestFlight work can start without the native platform.
 
 ## Explicitly Out Of Scope
 
-- Adding the Capacitor iOS platform.
-- Running an iOS native build, archive, signing, upload, or TestFlight submission.
-- Modifying iOS native files, Android native/release files, Capacitor release settings, package scripts, or build configuration.
-- Changing Apple Developer, App Store Connect, RevenueCat, Supabase, billing, entitlement, product IDs, plan IDs, pricing, auth, or production settings.
-- Implementing Sign in with Apple.
-- Creating App Store subscription products or RevenueCat offerings/packages/products.
-- Querying or mutating production DB records.
+- Xcode archive, iOS build, TestFlight upload, Transporter upload, App Store Connect submission, or production iOS release.
+- Apple Developer/App Store Connect console changes, Bundle ID registration, App ID registration, certificate creation, provisioning profile creation, or capability toggles.
+- RevenueCat console changes, App Store subscription product creation, offering/package/product mapping changes, product IDs, plan IDs, entitlement names, prices, or billing policy changes.
+- Supabase/Auth/RLS changes, Sign in with Apple implementation, account/session changes, production DB changes, or real login/purchase/restore tests.
+- Android native/release setting changes.
+- FCM/push-cron/server sending changes.
+- Manual `pod install` unless a later explicitly approved run scopes it. If Capacitor CLI performs dependency installation as part of platform generation, document the result rather than manually expanding scope.
 
 ## High-Risk Guardrails
 
-- Do not run `npx cap add ios`, `npx cap sync ios`, Xcode build/archive/upload, Transporter upload, or App Store Connect submission commands during this run.
-- Do not access or change external Apple Developer, App Store Connect, RevenueCat, Supabase, or Play Console settings.
-- Do not modify auth, Supabase, billing, RevenueCat, entitlement, Android release, iOS native, package scripts, or production configuration.
-- For Sign in with Apple policy risk, verify current Apple guidance from official sources during the relevant TODO before drawing a final conclusion.
-- If any task requires implementation or external console work, stop and recommend a separate follow-up run.
+- Do not run `npx cap add ios` before TODO 5.
+- Do not run `npx cap sync ios`, `npx cap open ios`, `xcodebuild`, `fastlane`, `pod install`, archive, upload, or submission commands in this run.
+- Do not open Xcode.
+- Do not modify generated native iOS files after platform generation in this run; audit and document required changes instead.
+- Do not modify Android native/release settings.
+- Do not modify auth, Supabase, billing, RevenueCat, entitlement, product, price, push sending, account deletion, logout, or session logic.
+- If generated files include unexpected sensitive values or broad unrelated changes, stop and report before committing.
 
-## Scope
+## Allowed Change Scope
 
-- Primary planning file:
-  - `docs/automation-runs/active-run.md`
-- Companion readiness document:
-  - `docs/ios-testflight-readiness.md`
-- Optional later checklist if needed:
-  - `docs/qa/ios-testflight-checklist.md`
-
-## Reference Documents
-
+- `package.json`
+- `package-lock.json`
+- generated `ios/` files only during TODO 5
+- `docs/automation-runs/active-run.md`
 - `docs/ios-testflight-readiness.md`
-- `docs/app-store-release.md`
-- `docs/qa/android-production-qa-results.md`
-- `docs/android-production-qa-execution.md`
-- `docs/settings-account-polish.md`
-- `docs/alert-quality-operations.md`
+- optional `docs/qa/ios-testflight-checklist.md`
+
+## Forbidden Change Scope
+
+- Android native/release settings
+- `src/lib/billing.ts`
+- `src/lib/mobilePurchases.ts`
+- RevenueCat setup code
+- Supabase/Auth/RLS
+- product ID, plan ID, entitlement, and price semantics
+- push-cron and FCM server sending
+- account deletion, logout, and session logic
 
 ## Start Conditions
 
-- Confirm Android/alert/settings stabilization runs listed in the background are `DONE`.
-- Confirm `git status --short --branch`.
-- Confirm `git rev-list --left-right --count HEAD...origin/main`.
-- If local and `origin/main` diverge, stop before editing and report.
-- If the worktree is dirty, identify existing changes before editing.
+- Confirm `ios-testflight-readiness-run` is `DONE`.
+- Confirm current branch and working tree.
+- Confirm local branch is not diverged from upstream.
+- Confirm current Capacitor/package state and `ios/` absence before any install or platform generation.
 - Process exactly one `TODO` item per turn.
 
 ## Stop Conditions
 
-- The task requires iOS platform add, sync, build, archive, signing, upload, App Store Connect submission, or Apple Developer/App Store Connect/RevenueCat console change.
-- The task requires auth, Supabase, billing, RevenueCat, entitlement, product ID, plan ID, price, Android release, iOS native, package script, or production config changes.
-- The task expands from readiness audit into implementation.
-- Sensitive values appear in docs, logs, command output, or diffs.
+- The task requires external console work, signing, archive, upload, TestFlight submission, auth implementation, RevenueCat/App Store product work, Supabase changes, billing policy changes, Android release changes, or production data access.
+- `@capacitor/ios` install attempts to upgrade unrelated packages or Capacitor major versions unexpectedly.
+- `npx cap add ios` generates unexpected non-iOS or protected-path changes.
+- Sensitive values appear in generated files, docs, logs, command output, or diffs.
 
 ## Task List
 
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | DONE | Capacitor iOS readiness audit | Capacitor/iOS | MEDIUM | Checked iOS platform status, Capacitor config, app name, appId, bundle identifier candidates, iOS build scripts, and missing native iOS setup. | No iOS platform add. No iOS release setting edits. No Android setting edits. | `git diff --check` |
-| 2 | DONE | Apple Developer submission requirement review | Store Requirements | MEDIUM | Documented TestFlight-prep requirements for Apple Developer account, Bundle ID/App ID, App Store Connect metadata, privacy, support URLs, screenshots, and TestFlight information. | No external console registration or edits. | `git diff --check` |
-| 3 | DONE | Sign in with Apple requirement risk review | Auth Policy | HIGH | Assessed current Google/Kakao login structure against Apple login-services policy and documented iOS review risk plus Supabase/UI/auth implications. | No auth code edits. No Supabase edits. No Apple login implementation. | `git diff --check` |
-| 4 | DONE | RevenueCat Apple product mapping review | Monetization Mapping | HIGH | Documented iOS subscription product, subscription group, RevenueCat offering/package/product, entitlement, price, and naming mapping needs. | No RevenueCat edits. No App Store Connect product creation. No productId, entitlement, price, or billing code edits. | `git diff --check` |
-| 5 | DONE | TestFlight first-build checklist | Build Readiness | MEDIUM | Created the pre-build checklist for Xcode, signing, certificates, provisioning, Capacitor sync, build command candidates, upload checks, privacy, account deletion, contact, and support URLs. | No iOS build/upload. No submission. No production setting changes. | `git diff --check` |
-| 6 | DONE | Select first iOS readiness follow-up run | Prioritization | LOW | Selected exactly one follow-up run candidate after readiness audit. | No follow-up run auto-creation. No code edits. | `git diff --check` |
+| 1 | TODO | iOS setup preflight environment/status check | Preflight | LOW | Confirm branch, working tree, Node/npm, Capacitor config, package state, and missing iOS platform state. | No dependency install. No iOS platform add. | `git diff --check` |
+| 2 | TODO | Confirm `@capacitor/ios` install need and command | Dependency Plan | MEDIUM | Confirm matching Capacitor version and select the exact install command without installing yet. | No install. No unrelated package changes. | `git diff --check` |
+| 3 | TODO | Add `@capacitor/ios` dependency | Dependency Change | MEDIUM | Add `@capacitor/ios` matching the existing Capacitor major/version in the appropriate dependency section. | No arbitrary upgrades. No package manager change. No Android dependency change. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build` |
+| 4 | TODO | Confirm iOS platform generation prerequisites | Platform Preflight | MEDIUM | Confirm `npx cap add ios` prerequisites, `webDir`/mobile-shell state, and expected generated file scope before running platform generation. | No cap add. No Xcode. No sync/build. | `git diff --check` |
+| 5 | TODO | Generate iOS platform | Native Generation | HIGH | Run the controlled Capacitor iOS platform generation step. | No Xcode. No manual pod install. No build/archive/upload. No Apple Developer/App Store Connect changes. | `git diff --check`; generated file list review |
+| 6 | TODO | Audit generated iOS platform config | Native Audit | MEDIUM | Inspect generated native project Bundle ID/appName/webDir linkage and document needed follow-up edits. | No native config edits. No signing changes. | `git diff --check` |
+| 7 | TODO | Safe validation and result documentation | Verification | LOW | Document generated results and remaining risks; run safe checks. | No iOS build/upload. No Xcode. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:copy` |
+| 8 | TODO | Select next iOS follow-up run | Prioritization | LOW | Select exactly one next follow-up candidate after platform setup. | No next run auto-creation. | active-run overall status check |
 
-## Task 1 Completion Note
+## Expected Command Boundaries
 
-| Field | Value |
-| --- | --- |
-| Task | `1. Capacitor iOS readiness audit` |
-| Status | `DONE` |
-| Completed date | 2026-06-09 |
-| Method | Source inspection and documentation only. No iOS platform add, sync, build, open, upload, pod install, Xcode, App Store Connect, Apple Developer, RevenueCat, auth, Supabase, billing, Android, package script, or production action was executed. |
-| Result | Capacitor common config exists with `appId` and `appName`, but the native iOS platform is absent and no iOS scripts or native project files were found. |
-| Output document | `docs/ios-testflight-readiness.md` |
-| Code/native/config changed? | `No` |
-| Next TODO | `2. Apple Developer submission requirement review` |
+Allowed only in the specific TODOs that name them:
 
-## Task 2 Completion Note
+- `npm.cmd ls @capacitor/core @capacitor/android @capacitor/ios`
+- package inspection commands
+- `npm.cmd install @capacitor/ios@<matching-version> --save-dev`
+- `npx cap add ios`
 
-| Field | Value |
-| --- | --- |
-| Task | `2. Apple Developer submission requirement review` |
-| Status | `DONE` |
-| Completed date | 2026-06-09 |
-| Method | Documentation and official Apple reference review only. No Apple Developer console, App Store Connect, Bundle ID, App ID, TestFlight, iOS platform, iOS build, Xcode, Capacitor sync, RevenueCat, product, entitlement, auth, Supabase, billing, Android, or production setting was changed. |
-| Result | Documented Apple Developer account readiness, Bundle ID/App ID/capability candidates, App Store Connect app record and metadata requirements, privacy/review preparation, TestFlight preparation, current known values, missing owner/console information, and handoff risks for Sign in with Apple. |
-| Output document | `docs/ios-testflight-readiness.md` |
-| Code/native/config changed? | `No` |
-| Next TODO | `3. Sign in with Apple requirement risk review` |
+Always forbidden in this run:
 
-## Task 3 Completion Note
+- `npm.cmd run app:sync`
+- `npm.cmd run app:sync:prod`
+- `npm.cmd run app:add:android`
+- `npm.cmd run app:android`
+- `npm.cmd run app:android:debug`
+- `npm.cmd run app:android:release`
+- `npx cap sync ios`
+- `npx cap open ios`
+- `xcodebuild`
+- `fastlane`
+- `pod install`
+- archive/upload/submission commands
+- Apple Developer/App Store Connect/RevenueCat/Supabase/Play Console mutations
 
-| Field | Value |
-| --- | --- |
-| Task | `3. Sign in with Apple requirement risk review` |
-| Status | `DONE` |
-| Completed date | 2026-06-09 |
-| Method | Source inspection and official Apple policy review only. No Apple login implementation, auth code edit, Supabase provider edit, Apple Developer capability change, App Store Connect change, Bundle ID change, iOS platform action, iOS build, Xcode, production auth change, or real login test was executed. |
-| Result | Current source exposes Google login and web/non-Android Kakao login through Supabase-backed sessions, with no own email/password system and no Apple provider found. If Google/Kakao login is exposed on iOS for primary account authentication, Sign in with Apple or an equivalent privacy-preserving login option is a HIGH review-readiness risk. |
-| Output document | `docs/ios-testflight-readiness.md` |
-| Code/native/config changed? | `No` |
-| Next TODO | `4. RevenueCat Apple product mapping review` |
+## Next Follow-Up Candidate Set
 
-## Task 4 Completion Note
+Task 8 must pick exactly one:
 
-| Field | Value |
-| --- | --- |
-| Task | `4. RevenueCat Apple product mapping review` |
-| Status | `DONE` |
-| Completed date | 2026-06-09 |
-| Method | Source inspection and official Apple/RevenueCat reference review only. No RevenueCat, App Store Connect, Google Play Console, billing/mobile purchase code, product ID, plan ID, entitlement, price, auth, Supabase, iOS native, config, purchase, or restore action was changed or executed. |
-| Result | Documented current Android product/plan/entitlement structure, iOS App Store product and subscription-group planning needs, RevenueCat offering/package/product mapping requirements, entitlement unification candidate, iOS payment/review risks, and high-risk follow-up run candidates. |
-| Output document | `docs/ios-testflight-readiness.md` |
-| Code/native/config changed? | `No` |
-| Next TODO | `5. TestFlight first-build checklist` |
-
-## Task 5 Completion Note
-
-| Field | Value |
-| --- | --- |
-| Task | `5. TestFlight first-build checklist` |
-| Status | `DONE` |
-| Completed date | 2026-06-09 |
-| Method | Documentation only. No iOS platform add, sync, build, Xcode, pod install, archive, upload, Apple Developer, App Store Connect, RevenueCat, Supabase, auth, billing, entitlement, Android, real login, purchase, or restore action was changed or executed. |
-| Result | Created a first TestFlight prebuild checklist covering local environment, Capacitor iOS platform, Apple Developer, App Store Connect, auth, RevenueCat/IAP, push, policy/privacy, build/upload, internal versus external TestFlight, blockers, and separate-run candidates. |
-| Output documents | `docs/ios-testflight-readiness.md`, `docs/qa/ios-testflight-checklist.md` |
-| Code/native/config changed? | `No` |
-| Next TODO | `6. Select first iOS readiness follow-up run` |
-
-## Task 6 Completion Note
-
-| Field | Value |
-| --- | --- |
-| Task | `6. Select first iOS readiness follow-up run` |
-| Status | `DONE` |
-| Completed date | 2026-06-09 |
-| Method | Documentation and prioritization only. No follow-up active-run was created. No iOS platform add, sync, build, Xcode, pod install, archive, upload, Apple Developer, App Store Connect, RevenueCat, Supabase, auth, billing, entitlement, Android, real login, purchase, or restore action was changed or executed. |
-| Result | Selected `ios-capacitor-platform-setup-run` as the first follow-up candidate because the native iOS platform and `@capacitor/ios` are absent and block all real iOS build/archive/TestFlight work. Sign in with Apple, RevenueCat/App Store product mapping, push, and listing assets remain separate follow-up tracks. |
-| Output document | `docs/ios-testflight-readiness.md` |
-| Code/native/config changed? | `No` |
-| Active-run state | `DONE` |
-
-## Follow-Up Candidate Selection Method
-
-Task 6 must select exactly one follow-up candidate using these criteria:
-
-- Highest blocker risk for first TestFlight build.
-- Whether the task is required before any iOS build can be created.
-- Whether it affects auth review, subscription review, signing, or native platform setup.
-- Whether it can be completed without changing unrelated Android production behavior.
-- Verification clarity and ability to keep one commit/run scope.
-
-Candidate examples are not pre-approved implementation scope:
-
-- `ios-capacitor-platform-setup-run`
 - `ios-auth-apple-signin-risk-run`
 - `ios-revenuecat-product-mapping-run`
-- `ios-store-listing-assets-run`
+- `ios-push-apns-firebase-readiness-run`
+- `ios-xcode-signing-readiness-run`
 - `ios-testflight-build-run`
 
 ## Verification Policy
 
 - Always run `git diff --check`.
-- Confirm changed files remain inside `docs/` during this readiness audit run.
-- Confirm `package.json`, `scripts/`, app/UI code, Auth/Supabase, billing, RevenueCat, Android native/release files, iOS native files, and production config are unchanged.
+- Confirm changed files stay within the allowed scope for the active TODO.
+- Confirm Android native/release settings are unchanged.
+- Confirm auth/Supabase/billing/RevenueCat/entitlement/product/price/session/account deletion/logout/push sending code is unchanged.
+- For dependency/platform generation tasks, run `cmd /c npx tsc --noEmit` and `npm.cmd run build` when specified.
+- For final validation, run `npm.cmd run smoke:copy`.
 - Run sensitive-value pattern checks before commit.
 
 ## Commit And Push Policy
 
-- Setup commit message: `Define iOS TestFlight readiness run`.
+- Setup commit message: `Define iOS Capacitor platform setup run`.
+- Because this is a higher-risk run, prefer small commits per TODO.
 - Docs-only setup may be committed and pushed to `main` when verification passes and the branch is in sync with `origin/main`.
+- For `@capacitor/ios` install and `ios/` native generation TODOs, report file scope clearly before push.
 - Do not release, deploy, submit App Store Connect changes, submit Play Console changes, alter production configuration, or run production-mutating operations during this run.
 
 ## Completion Report Format
 
 - New active-run name.
 - Registered task list.
-- Whether Android/alert/settings stabilization completion is reflected.
-- iOS TestFlight readiness scope.
-- Whether high-risk forbidden scope is reflected.
+- Changes actually allowed in this run.
+- High-risk areas forbidden in this run.
 - Verification results.
 - Commit hash.
 - Push status.

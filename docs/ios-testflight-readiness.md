@@ -691,7 +691,17 @@ Reasoning:
 
 ### Final Conclusion For This Readiness Run
 
-`ios-testflight-readiness-run` is complete. The readiness audit selected `ios-capacitor-platform-setup-run` as the first follow-up candidate, but it did not create the follow-up run automatically. All implementation, native platform, build/upload, external console, auth, RevenueCat/IAP, Supabase, Android, and production changes remain out of scope until a separate run is explicitly opened.
+`ios-testflight-readiness-run` is complete. The readiness audit selected `ios-capacitor-platform-setup-run` as the first follow-up candidate. That follow-up run has now been registered separately after explicit setup. All implementation, native platform, build/upload, external console, auth, RevenueCat/IAP, Supabase, Android, and production changes remain limited to the explicit scope and guardrails of the new run.
+
+## Follow-Up Active Run Registration
+
+| Field | Value |
+| --- | --- |
+| Registered date | 2026-06-09 |
+| Active run | `ios-capacitor-platform-setup-run` |
+| Source candidate | Task 6 from `ios-testflight-readiness-run` |
+| Intended scope | Controlled preparation for adding `@capacitor/ios` and generating the Capacitor native iOS platform in separate TODOs. |
+| Excluded high-risk areas | Xcode archive/build/upload, TestFlight submission, Apple Developer/App Store Connect changes, RevenueCat/App Store products, Sign in with Apple implementation, auth/Supabase/billing/entitlement changes, Android release changes, production DB/config changes. |
 
 ## High-Risk Separation
 
@@ -733,4 +743,4 @@ Use this format as each TODO completes.
 
 ## Final Conclusion
 
-Tasks 1 through 6 are complete. `ios-testflight-readiness-run` is DONE. The selected first follow-up candidate is `ios-capacitor-platform-setup-run`, and no iOS platform, build, upload, external console, auth, billing, RevenueCat, Supabase, Android, or production configuration work has been authorized.
+Tasks 1 through 6 are complete. `ios-testflight-readiness-run` is DONE. The selected first follow-up candidate is `ios-capacitor-platform-setup-run`, and it has now been opened as the current active run after explicit setup. iOS platform, dependency, native-file, build/upload, external console, auth, billing, RevenueCat, Supabase, Android, and production configuration work remains constrained by that run's per-TODO guardrails.
