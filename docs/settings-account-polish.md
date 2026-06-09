@@ -612,6 +612,52 @@ Implement a low-risk link/display polish centered on `/menu` and `AppFooter`. Us
 | Account deletion/logout real behavior not manually validated | Separate manual QA required; do not combine with link polish. |
 | `mailto:` behavior in Android WebView is not device-tested | Record for Android manual QA or a later WebView-specific check. |
 
+## Settings Support Links Polish - Task 5 Safe Validation Execution
+
+| Field | Value |
+| --- | --- |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Final validation and run-closure documentation only. No additional app code, UI code, copy, email value, auth/session logic, logout/session behavior, account deletion logic, Supabase, RLS, billing, RevenueCat, entitlement, production DB, Android release, Play Console, purchase, restore, or external console work was changed or executed. |
+| Input | Final state after Task 3 implementation, email-role correction, and Task 4 documentation. |
+| Run result | `PASS` |
+
+### Final Validation Results
+
+| Check | Result |
+| --- | --- |
+| `git diff --check` | PASS |
+| `cmd /c npx tsc --noEmit` | PASS |
+| `npm.cmd run build` | PASS - production build completed and generated static pages `57/57`. |
+| `npm.cmd run smoke:copy` | PASS - no prohibited or broken user-facing copy was detected. |
+| `npm.cmd run smoke:mobile` | PASS - mobile/PWA packaging readiness checks passed. |
+| Legacy Gmail scan | PASS - no legacy Gmail address matches remain in the repository. |
+| Protected path diff check | PASS - no auth/session, logout/session, account deletion logic, Supabase/RLS, billing/RevenueCat/entitlement, production DB, Android release, Play Console, package, or script changes were present in this TODO. |
+| Final worktree before documentation | PASS - no build artifacts or temporary validation files were left after validation. |
+
+### Final Email State
+
+| Role | Address |
+| --- | --- |
+| General inquiries | `contact@staronlabs.com` |
+| Customer support and account/data deletion support | `support@staronlabs.com` |
+| Legacy Gmail address | Removed from source and docs without reintroducing the old address text. |
+
+### Run Closure Conclusion
+
+`settings-support-links-polish-run` is complete. Support, policy, account/data deletion guide, and app-version link polish has been implemented, documented, and safely validated. This run does not open further automatic implementation work.
+
+### Remaining Risks Kept For Follow-Up
+
+| Remaining risk | Follow-up |
+| --- | --- |
+| `/settings` still redirects to `/menu` | Keep as-is unless a separate route-structure run is opened. |
+| Header settings panel direct policy links remain limited | Keep the panel lightweight; reassess only if `/menu` and footer access are still insufficient. |
+| Business/developer information display is not finalized | Requires confirmed legal/operator text before display. |
+| Subscription restore/manage entry remains billing-adjacent | Separate high-risk or billing-adjacent run required. |
+| Account deletion/logout real behavior is not manually validated | Separate manual QA required. |
+| Android WebView `mailto:` behavior is not device-tested | Real-device QA required before claiming full Android handoff coverage. |
+
 ## Required Item Candidates
 
 | Item | Why it matters | Risk boundary |

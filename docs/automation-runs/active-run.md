@@ -6,7 +6,7 @@
 
 ## Run State
 
-- Status: `TODO`
+- Status: `DONE`
 - Setup date: 2026-06-09
 - Previous run context:
   - `settings-account-polish-run` is `DONE`.
@@ -14,7 +14,7 @@
   - `android-production-auto-smoke-run` is `DONE` and recorded as `PASS`.
   - `alert-quality-operations-run` is `DONE`.
   - `alert-pro-rule-ui-clarity-run` is `DONE`.
-- Current phase: Task 4 completed; next TODO is `5. Safe validation execution`.
+- Current phase: All five tasks completed; `settings-support-links-polish-run` is closed.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No app UI implementation, auth, session, logout, account deletion, Supabase, billing, RevenueCat, entitlement, production DB, purchase, restore, Android release, Play Console, or external console action was executed during setup.
 
@@ -99,7 +99,7 @@
 | 2 | DONE | Support and policy link proposal | UX Spec | LOW | Documented the smallest link/accessibility improvements for FAQ, support, privacy, terms, refund/subscription guide, alert settings, account deletion guide, and app version. | No implementation. | `git diff --check` |
 | 3 | DONE | Minimal support/policy link implementation | UI/Link/Copy | LOW | Improved `/menu` and `AppFooter` support, policy, alert settings, account deletion guide, and app info access. | No auth/session, billing, RevenueCat, entitlement, Supabase, account deletion, logout/session, purchase, restore, or production DB edits. | `git diff --check`; `cmd /c npx tsc --noEmit` |
 | 4 | DONE | Documentation update | Documentation | LOW | Recorded the implementation result, StarOn Labs email role split, verification results, resolved risks, and remaining risks in `docs/settings-account-polish.md`. | No feature expansion. | `git diff --check` |
-| 5 | TODO | Safe validation execution | Verification | LOW | Confirm the final change remains UI/link/copy/docs only and run safe checks. | No `smoke:billing`, `smoke:api`, real purchase, restore, account deletion, login, or logout tests. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:copy`; optional `npm.cmd run smoke:mobile` |
+| 5 | DONE | Safe validation execution | Verification | LOW | Final safe validation passed and run closure was documented. | No `smoke:billing`, `smoke:api`, real purchase, restore, account deletion, login, or logout tests. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:copy`; `npm.cmd run smoke:mobile` |
 
 ## Implementation Boundaries
 
@@ -158,6 +158,19 @@
 | Code changed? | `No additional code changes in this TODO` |
 | Protected logic changed? | `No` |
 | Next TODO | `5. Safe validation execution` |
+
+## Task 5 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `5. Safe validation execution` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Final validation and run-closure documentation only. |
+| Result | `git diff --check`, TypeScript, production build, `smoke:copy`, and `smoke:mobile` all passed. Legacy Gmail address scan passed, protected paths remained unchanged, and no build/temp artifacts were left staged. |
+| Code changed? | `No additional code changes in this TODO` |
+| Protected logic changed? | `No` |
+| Run status | `DONE` |
 
 ## Verification Policy
 
