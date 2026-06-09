@@ -1259,7 +1259,17 @@ Recommended scope for `ios-xcode-signing-readiness-run`:
 
 ### Final Conclusion For `ios-capacitor-platform-setup-run`
 
-`ios-capacitor-platform-setup-run` is complete. The run added `@capacitor/ios@8.3.3`, generated the Capacitor iOS native project, audited generated config, ran safe validation, documented remaining blockers, and selected `ios-xcode-signing-readiness-run` as the next follow-up candidate. No follow-up run was auto-created.
+`ios-capacitor-platform-setup-run` is complete. The run added `@capacitor/ios@8.3.3`, generated the Capacitor iOS native project, audited generated config, ran safe validation, documented remaining blockers, and selected `ios-xcode-signing-readiness-run` as the next follow-up candidate. That follow-up run has now been registered separately after explicit setup.
+
+## Xcode Signing Readiness Follow-Up Registration
+
+| Field | Value |
+| --- | --- |
+| Registered date | 2026-06-10 |
+| Active run | `ios-xcode-signing-readiness-run` |
+| Source candidate | Task 8 from `ios-capacitor-platform-setup-run` |
+| Intended scope | Source-inspection audit of Xcode signing, Team ID, Bundle ID/App ID, provisioning, capabilities, and build blockers. |
+| Excluded high-risk areas | Xcode opening, `project.pbxproj` edits, `Info.plist` edits, entitlements creation, signing changes, Apple Developer/App Store Connect mutations, xcodebuild/archive/upload/TestFlight submission, auth/Supabase/billing/RevenueCat/Android/production changes. |
 
 ## High-Risk Separation
 
@@ -1301,4 +1311,4 @@ Use this format as each TODO completes.
 
 ## Final Conclusion
 
-Tasks 1 through 6 are complete. `ios-testflight-readiness-run` is DONE. The selected first follow-up candidate is `ios-capacitor-platform-setup-run`, and that follow-up run is now also DONE after explicit setup, dependency addition, iOS platform generation, generated-config audit, safe validation, and next-run selection. The selected next iOS follow-up candidate is `ios-xcode-signing-readiness-run`; it was not auto-created.
+Tasks 1 through 6 are complete. `ios-testflight-readiness-run` is DONE. The selected first follow-up candidate is `ios-capacitor-platform-setup-run`, and that follow-up run is now also DONE after explicit setup, dependency addition, iOS platform generation, generated-config audit, safe validation, and next-run selection. The selected next iOS follow-up candidate, `ios-xcode-signing-readiness-run`, has now been opened as the current active run after explicit setup.
