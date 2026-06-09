@@ -112,6 +112,25 @@ These high-risk checks remain separate-approval items and were not executed:
 - Billing/auth/Supabase/FCM/Android release settings changed: `No`
 - Build/temp/smoke output staged: `No`
 
+## 1B. Final Auto Smoke Conclusion
+
+`android-production-auto-smoke-run` is complete from the automatic QA perspective.
+
+| Field | Final conclusion |
+| --- | --- |
+| Android production auto smoke | `PASS` |
+| TypeScript | `PASS` |
+| Build | `PASS` |
+| Lint | `PASS` |
+| Safe smoke | `PASS` |
+| Automatic QA follow-up | No additional automatic smoke, bugfix triage, or feature-development run is being opened from this result. |
+| Manual Android QA | Still `NOT_RUN`; open `android-production-manual-qa-run` separately only if the representative wants to verify on a real phone. |
+| High-risk QA | Actual purchase, purchase restore, account deletion, real push, production DB/token access, and external service changes still require separate approval. |
+
+All seven automatic QA result IDs are recorded as `PASS`: `AUTO-SAFE-001`, `AUTO-TS-001`, `AUTO-BUILD-001`, `AUTO-LINT-001`, `AUTO-SMOKE-COPY-001`, `AUTO-SMOKE-MOBILE-001`, and `AUTO-SMOKE-LAUNCH-001`.
+
+`AUTO-SMOKE-LAUNCH-001` includes one advisory `WARN Macro`; it is not treated as a failure because `npm.cmd run smoke:launch` exited with code `0`, reported launch score `92/100`, and met the pass threshold.
+
 ## 2. Automatic Smoke Results
 
 Record command results only after a command is actually executed. Do not paste secrets, raw tokens, credentials, or private account identifiers into output summaries.

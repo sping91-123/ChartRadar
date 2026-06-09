@@ -6,10 +6,10 @@
 
 ## Run State
 
-- Status: `ACTIVE`
+- Status: `DONE`
 - Setup date: 2026-06-09
 - Previous run prerequisite: `android-production-qa-execution-run` was confirmed `DONE` before this setup.
-- Current phase: Task 6 completed; Task 7 is the next `TODO`.
+- Current phase: all 7 tasks completed; run closed.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No smoke, typecheck, build, lint, Android, billing, push, DB, or external-console command was executed during setup.
 
@@ -116,7 +116,7 @@ Do not run:
 | 4 | DONE | Lint check | Lint | LOW | Confirm lint passes without auto-fix. | `npm.cmd run lint` | No lint auto-fix. No code changes. | Record `PASS`/`FAIL`/`BLOCKED` |
 | 5 | DONE | Safe smoke commands | Smoke | MEDIUM | Run only safe smoke commands from the execution plan. | `npm.cmd run smoke:copy`; `npm.cmd run smoke:mobile`; `npm.cmd run smoke:launch` | No `smoke:all`, `smoke:billing`, `smoke:api`, `check:app-billing`, payment, push, or DB mutation. | Record `PASS`/`FAIL`/`BLOCKED` |
 | 6 | DONE | QA results document update | Results | LOW | Summarize execution time, target commit, command status, failure log summary, and follow-up need. | Documentation only | No failure fixes. | `git diff --check` |
-| 7 | TODO | Next run recommendation | Follow-up | LOW | Recommend next run based on auto smoke results. | Documentation only | No implementation changes. | Active-run status update |
+| 7 | DONE | Next run recommendation | Follow-up | LOW | Recommend next run based on auto smoke results. | Documentation only | No implementation changes. | Active-run status update |
 
 ## Result Recording Rules
 
@@ -186,6 +186,18 @@ Do not run:
 - Result: `docs/qa/android-production-qa-results.md` now includes an auto-smoke final summary, result table, unexecuted command list, high-risk QA boundary, code/artifact boundary, and current conclusion.
 - Confirmed result set: `AUTO-SAFE-001`, `AUTO-TS-001`, `AUTO-BUILD-001`, `AUTO-LINT-001`, `AUTO-SMOKE-COPY-001`, `AUTO-SMOKE-MOBILE-001`, and `AUTO-SMOKE-LAUNCH-001` are all recorded as `PASS`.
 - `smoke:launch` advisory is documented as `WARN Macro`, exit code `0`, launch score `92/100`, and pass-threshold satisfied.
+- No TypeScript no-emit, build, lint, smoke, broad/protected smoke, Android native/release, billing, auth, Supabase, FCM, Play Console, production DB/token, payment, restore, account deletion, or push command was executed for this task.
+
+## Task 7 Completion Note
+
+- Completed: 2026-06-09.
+- Scope: documentation-only final recommendation and run closure.
+- Final conclusion: Android production auto smoke is `PASS`; TypeScript, build, lint, and safe smoke results are all `PASS`.
+- Advisory handling: `smoke:launch` reported one `WARN Macro`, but the command exited with code `0`, reported launch score `92/100`, and satisfied the pass threshold.
+- Recommendation: do not open additional automatic smoke, bugfix triage, or feature-development runs from this result.
+- Remaining optional path: open `android-production-manual-qa-run` separately only if the representative wants real-phone manual verification.
+- High-risk paths still require separate approval: actual purchase, purchase restore, account deletion, real push, production DB/token access, RevenueCat, Google Play Console, FCM, Supabase, or Android release changes.
+- Run state updated to `DONE` because all 7 tasks are complete.
 - No TypeScript no-emit, build, lint, smoke, broad/protected smoke, Android native/release, billing, auth, Supabase, FCM, Play Console, production DB/token, payment, restore, account deletion, or push command was executed for this task.
 
 ## Next Run Recommendation Rules
