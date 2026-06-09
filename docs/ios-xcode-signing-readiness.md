@@ -59,7 +59,7 @@ These are expected inspection targets for TODOs, not approval to edit them.
 | --- | --- | --- | --- | --- |
 | 1 | DONE | Xcode project signing state audit | What signing-related values are visible in generated project files today? | Source-visible signing state table. |
 | 2 | DONE | Apple Developer readiness checklist | What Apple Developer records and credentials must exist before signing works? | Developer account and provisioning checklist. |
-| 3 | TODO | Capability requirements checklist | Which capabilities are likely needed before build/review? | Capability need/risk matrix. |
+| 3 | DONE | Capability requirements checklist | Which capabilities are likely needed before build/review? | Capability need/risk matrix. |
 | 4 | TODO | Signing and build blocker checklist | What will most likely block first local build/archive? | Pre-build blocker checklist. |
 | 5 | TODO | Select next signing follow-up run | What is the next practical iOS follow-up after signing readiness? | One follow-up candidate, no auto-creation. |
 
@@ -260,6 +260,66 @@ These are expected inspection targets for TODOs, not approval to edit them.
 - Decide which capabilities are likely needed for ChartRadar iOS: Sign in with Apple, Push Notifications, In-App Purchase, Associated Domains, and any privacy/usage-description implications.
 - Keep actual capability toggles, entitlement creation, App ID edits, Xcode signing edits, and external console changes out of scope until a later approved implementation run.
 
+## Task 3 - Capability Requirements Checklist
+
+| Field | Value |
+| --- | --- |
+| Task | `3. Capability requirements checklist` |
+| Status | `DONE` |
+| Completed date | 2026-06-10 |
+| Method | Source inspection, official Apple reference review, and documentation only. No Apple Developer console change, App Store Connect change, entitlement creation, capability enablement, `project.pbxproj` edit, `Info.plist` edit, Xcode, `xcodebuild`, archive/upload, `npx cap sync ios`, `npx cap open ios`, Supabase Auth provider change, RevenueCat/App Store product change, Firebase/APNs setup, Android change, or production action was executed. |
+| Current source-visible basis | No `.entitlements` file, no `aps-environment`, no associated domains entitlement, no Sign in with Apple capability trace, no URL scheme/deep link plist entry, and no explicit IAP capability trace were found in the generated iOS project. |
+| Official sources checked | Apple App Review Guidelines 4.8, Apple capability overview, App ID capability enablement, Sign in with Apple capability docs, App ID registration docs, and capability request docs. Checked on 2026-06-10. |
+
+### Current Capability / Entitlements State
+
+| Area | Source-visible state | Meaning |
+| --- | --- | --- |
+| `.entitlements` file | None found under `ios/`. | No capability-backed entitlement file exists yet. |
+| Sign in with Apple | No Apple sign-in entitlement/capability trace found. | Apple login is not wired at native project level. |
+| Push Notifications | No `aps-environment` entitlement found. | iOS APNs capability is not configured. |
+| In-App Purchase | No explicit Xcode capability trace found. | RevenueCat plugin exists, but App Store IAP readiness is not established. |
+| Associated Domains | No associated domains entitlement found. | Universal link/deep-link domain association is not configured. |
+| URL/deep link plist entries | No `CFBundleURLTypes` entry observed in `Info.plist`. | Native OAuth/deep-link return path is not configured in plist. |
+
+### Capability Need Matrix
+
+| Capability | Need likelihood | Basis | Apple Developer / App Store Connect needs | Related app feature | Risk | Follow-up run | Forbidden in this run |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Sign in with Apple | HIGH | Current app has Google/Kakao login paths and Apple App Review Guideline 4.8 creates review risk when third-party login is used for the user's primary account. No Apple provider/button/capability wiring was found. | App ID Sign in with Apple capability, possible Services ID/key/domain decisions, Supabase Apple provider setup, redirect/deep-link review. | Login, account identity, Supabase session, Pro entitlement ownership. | HIGH: auth, account duplication, entitlement ownership, review readiness. | `ios-auth-apple-signin-risk-run` | No Apple login implementation, no capability enablement, no Supabase provider change. |
+| Push Notifications | HIGH | ChartRadar has alert/push features and Capacitor Push Notifications is linked, but current server scanner/token flow is Android/FCM-oriented and no iOS APNs entitlement exists. | Push Notifications capability, APNs key/certificate decision, Firebase iOS app/plist decision, iOS entitlement setup. | Alerts, push token registration, target-path notification flow. | HIGH: APNs/Firebase/server-token model and production push behavior. | `ios-push-apns-firebase-readiness-run` | No APNs/Firebase setup, no entitlement creation, no real push test. |
+| In-App Purchase | HIGH | Pro subscriptions and RevenueCat purchase/restore code exist, and iOS paid access needs App Store products and RevenueCat iOS mapping. | Explicit App ID/App Store products, subscription group/product setup, RevenueCat iOS app/products/offerings/packages, restore-purchase review. | `/pro`, native purchase, restore, server entitlement sync. | HIGH: billing, product mapping, entitlement, App Store review. | `ios-revenuecat-product-mapping-run` | No App Store product creation, no RevenueCat changes, no billing/mobilePurchases edits, no purchase/restore test. |
+| Associated Domains | MEDIUM | iOS OAuth redirect/deep-link/universal-link strategy is not finalized. May be required if login return or app links use universal links. | Associated Domains capability, domain ownership, apple-app-site-association hosting, redirect/deep-link policy. | Auth callback, notification/deep-link routing, app/web handoff. | MEDIUM: routing and domain configuration risk. | `ios-associated-domains-deeplink-readiness-run` | No domain capability, no AASA file, no routing/deep-link code edits. |
+| Background Modes | LOW / needs review | Current push/alert design appears notification-driven, not background execution-driven. No iOS background mode requirement confirmed. | Only if a later design requires background fetch/processing. | Push/alert operations. | MEDIUM if enabled unnecessarily. | Include in `ios-xcode-entitlements-capabilities-run` only if needed. | No background mode enablement. |
+| Keychain Sharing | LOW / needs review | Current auth session storage is web/Supabase-based; no iOS keychain-sharing need confirmed. | Only if later native auth/session storage requires keychain sharing. | Auth/session persistence. | MEDIUM if auth architecture changes. | Auth provider mapping run if native session storage changes. | No keychain capability. |
+| App Groups | LOW | No extension/widget/shared-container requirement identified. | None unless extensions are introduced. | No current feature dependency. | LOW. | Not prioritized. | No App Groups setup. |
+| HealthKit / Location / Camera / Photos | Not needed currently | No current ChartRadar feature requires these sensitive device APIs. | None. | Not applicable. | Avoid unnecessary privacy prompts/review burden. | Not prioritized. | No sensitive-device capability usage. |
+
+### Capability Sequencing Notes
+
+| Sequence point | Why it matters |
+| --- | --- |
+| Bundle ID / explicit App ID must be confirmed before capability work | Capabilities are enabled against the App ID and must match the Xcode target Bundle ID. |
+| Capability changes may affect provisioning profiles | Apple documentation notes provisioning profiles using a modified App ID may need regeneration. |
+| Xcode target and Apple Developer App ID must align | Capabilities often require both Apple Developer App ID configuration and Xcode target entitlement/config changes. |
+| Auth, IAP, push, and deep links should remain separate runs | Each capability touches different high-risk areas: auth/Supabase, billing/RevenueCat, APNs/Firebase, routing/domain. |
+
+### Official Reference Notes
+
+| Reference | Why it is relevant |
+| --- | --- |
+| Apple App Review Guidelines 4.8: https://developer.apple.com/app-store/review/guidelines/ | Sign in with Apple / equivalent login risk when third-party login is exposed. |
+| Apple capabilities overview: https://developer.apple.com/help/account/capabilities/capabilities-overview | Explains that capabilities may edit entitlements, plist, frameworks, and signing assets. |
+| Apple enable app capabilities: https://developer.apple.com/help/account/manage-identifiers/enable-app-capabilities | App ID capability enablement, push, Sign in with Apple, and provisioning-profile impact. |
+| Apple Sign in with Apple overview: https://developer.apple.com/help/account/capabilities/about-sign-in-with-apple | App ID Sign in with Apple capability setup context. |
+| Apple register an App ID: https://developer.apple.com/help/account/identifiers/register-an-app-id/ | Explicit App ID and default In-App Purchase note for explicit App IDs. |
+| Apple capability requests: https://developer.apple.com/help/account/capabilities/capability-requests | Managed capability request process if a later capability requires Apple approval. |
+
+### Task 4 Handoff
+
+- Convert capability gaps into signing/build blockers: missing Team ID, missing explicit App ID confirmation, absent entitlements, no APNs/Firebase iOS setup, no RevenueCat/App Store product mapping, unresolved Apple login, and no associated-domain/deep-link plan.
+- Keep Xcode, entitlements, Apple Developer/App Store Connect, Supabase/Auth, RevenueCat/Billing, Firebase/APNs, and native project edits out of scope until a later explicitly approved implementation run.
+
 ## High-Risk Separation
 
 | Area | Status in this run |
@@ -290,4 +350,4 @@ Use this format as each TODO completes.
 
 ## Final Conclusion
 
-Task 2 is complete. The next task is `3. Capability requirements checklist`, and no Xcode, signing, native project, Apple Developer/App Store Connect, auth, billing, RevenueCat, Supabase, Android, or production configuration change has been authorized.
+Task 3 is complete. The next task is `4. Signing and build blocker checklist`, and no Xcode, signing, native project, Apple Developer/App Store Connect, auth, billing, RevenueCat, Supabase, Android, or production configuration change has been authorized.
