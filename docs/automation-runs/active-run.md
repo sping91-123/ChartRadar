@@ -11,7 +11,7 @@
 - Previous run context:
   - `ios-testflight-readiness-run` is `DONE`.
   - `ios-testflight-readiness-run` selected `ios-capacitor-platform-setup-run` as the first follow-up candidate.
-- Current phase: Task 3 complete; next TODO is `4. Confirm iOS platform generation prerequisites`.
+- Current phase: Task 4 complete; next TODO is `5. Generate iOS platform`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No dependency install, iOS platform add, Capacitor sync, iOS build, Xcode, pod install, archive, upload, Apple Developer, App Store Connect, RevenueCat, Supabase, auth, billing, entitlement, Android release, or production action was executed during setup.
 
@@ -98,7 +98,7 @@
 | 1 | DONE | iOS setup preflight environment/status check | Preflight | LOW | Confirmed branch, working tree, Node/npm, Capacitor config, package state, and missing iOS platform state. | No dependency install. No iOS platform add. | `git diff --check` |
 | 2 | DONE | Confirm `@capacitor/ios` install need and command | Dependency Plan | MEDIUM | Confirmed matching Capacitor version and selected the exact install command without installing yet. | No install. No unrelated package changes. | `git diff --check` |
 | 3 | DONE | Add `@capacitor/ios` dependency | Dependency Change | MEDIUM | Added `@capacitor/ios` matching the existing Capacitor major/version in the appropriate dependency section. | No arbitrary upgrades. No package manager change. No Android dependency change. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build` |
-| 4 | TODO | Confirm iOS platform generation prerequisites | Platform Preflight | MEDIUM | Confirm `npx cap add ios` prerequisites, `webDir`/mobile-shell state, and expected generated file scope before running platform generation. | No cap add. No Xcode. No sync/build. | `git diff --check` |
+| 4 | DONE | Confirm iOS platform generation prerequisites | Platform Preflight | MEDIUM | Confirmed `npx cap add ios` prerequisites, `webDir`/mobile-shell state, and expected generated file scope before running platform generation. | No cap add. No Xcode. No sync/build. | `git diff --check` |
 | 5 | TODO | Generate iOS platform | Native Generation | HIGH | Run the controlled Capacitor iOS platform generation step. | No Xcode. No manual pod install. No build/archive/upload. No Apple Developer/App Store Connect changes. | `git diff --check`; generated file list review |
 | 6 | TODO | Audit generated iOS platform config | Native Audit | MEDIUM | Inspect generated native project Bundle ID/appName/webDir linkage and document needed follow-up edits. | No native config edits. No signing changes. | `git diff --check` |
 | 7 | TODO | Safe validation and result documentation | Verification | LOW | Document generated results and remaining risks; run safe checks. | No iOS build/upload. No Xcode. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:copy` |
@@ -144,6 +144,19 @@
 | Output document | `docs/ios-testflight-readiness.md` |
 | Package/native/config changed? | Only `package.json` and `package-lock.json` changed for the allowed dependency add. No native/config changes. |
 | Next TODO | `4. Confirm iOS platform generation prerequisites` |
+
+## Task 4 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `4. Confirm iOS platform generation prerequisites` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Read-only precondition checks and documentation only. No `npx cap add ios`, Capacitor sync, Xcode, pod install, iOS build/archive/upload, npm install/update/audit fix, package edit, native file generation, config edit, external console change, auth, Supabase, billing, RevenueCat, entitlement, Android release, or production action was executed. |
+| Result | `mobile-shell` exists with `index.html`, `ios/` is still missing, Capacitor config remains `appId` `com.staronlabs.chartradar`, `appName` `Chart Radar`, and `webDir` `mobile-shell`, and `@capacitor/core`, `@capacitor/android`, `@capacitor/cli`, and `@capacitor/ios` are aligned at `8.3.3`. Next command candidate is `npx cap add ios` with guardrails to avoid sync, Xcode, pod install, build/archive/upload, native edits, signing, console changes, and high-risk auth/billing/Supabase/RevenueCat/Android changes. |
+| Output document | `docs/ios-testflight-readiness.md` |
+| Package/native/config changed? | `No` |
+| Next TODO | `5. Generate iOS platform` |
 
 ## Expected Command Boundaries
 
