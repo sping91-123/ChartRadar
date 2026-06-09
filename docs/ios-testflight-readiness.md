@@ -55,7 +55,7 @@ These are future TODO inspection targets, not approval to change them.
 | 2 | DONE | Apple Developer submission requirement review | What App Store Connect and listing material must be ready before TestFlight? | Apple/TestFlight metadata checklist. |
 | 3 | DONE | Sign in with Apple requirement risk review | Does Google login create an Apple sign-in review requirement risk? | Policy risk summary and auth/Supabase impact notes. |
 | 4 | DONE | RevenueCat Apple product mapping review | What iOS subscription mapping must exist before paid iOS TestFlight/review? | RevenueCat/App Store product mapping checklist. |
-| 5 | TODO | TestFlight first-build checklist | What must be verified before first iOS build/upload? | Pre-build and upload-readiness checklist. |
+| 5 | DONE | TestFlight first-build checklist | What must be verified before first iOS build/upload? | Pre-build and upload-readiness checklist. |
 | 6 | TODO | Select first iOS readiness follow-up run | What is the first practical next run after audit? | One follow-up candidate, no auto-creation. |
 
 ## Task 1 - Capacitor iOS Readiness Audit
@@ -561,6 +561,57 @@ Planning conclusion: iOS products should unlock the same entitlements as Android
 - Include a checkpoint for iOS-visible Google Play/Android wording before external TestFlight or App Store Review.
 - Keep Sign in with Apple and RevenueCat App User ID planning connected because both affect account identity and paid access.
 
+## Task 5 - TestFlight First-Build Checklist
+
+| Field | Value |
+| --- | --- |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Documentation only. No iOS platform add, iOS sync, iOS build, Xcode, pod install, archive, upload, App Store Connect, Apple Developer, RevenueCat, Supabase, auth, billing, entitlement, Android, real login, real purchase, or restore action was changed or executed. |
+| Output checklist | `docs/qa/ios-testflight-checklist.md` |
+| Implementation allowed in this run? | `No` |
+
+### Checklist Summary
+
+The first-build checklist separates local build environment, Capacitor iOS platform setup, Apple Developer, App Store Connect, Auth, RevenueCat/IAP, push notifications, policy/privacy, build/upload, and TestFlight review readiness. Each row records current status, needed action, risk, and whether a separate run is required.
+
+### Current Blockers
+
+| Blocker | Impact |
+| --- | --- |
+| Native iOS platform is absent. | No Xcode project, archive, or TestFlight upload can happen yet. |
+| `@capacitor/ios` is absent. | Capacitor iOS platform setup cannot start without a separate approved run. |
+| Apple Developer membership, Team ID, Bundle ID, certificates, and provisioning are unverified. | Signing and upload readiness are not established. |
+| App Store Connect app record is absent or unverified. | TestFlight upload and tester setup are not ready. |
+| Sign in with Apple risk remains HIGH if Google/Kakao login is exposed on iOS. | External TestFlight/App Store Review may be blocked. |
+| RevenueCat/App Store product mapping is incomplete. | iOS purchase/restore and paid feature review are not ready. |
+| APNs/Firebase iOS push setup is incomplete. | iOS push notification QA is not ready. |
+| iOS screenshots/app icon assets are not prepared. | Store/TestFlight review asset readiness is incomplete. |
+
+### Internal TestFlight Versus External Review
+
+| Scope | Readiness note |
+| --- | --- |
+| Internal technical TestFlight | Can be treated separately from paid subscription/review readiness, but still requires native iOS platform, signing, App Store Connect app record, archive, and upload. |
+| External TestFlight | Adds Beta App Review, review notes, support/privacy URLs, and a reviewable login path. Auth and IAP gaps become much more important. |
+| App Store Review | Requires full metadata, privacy labels, account deletion access, support URL, IAP products/restore, auth policy compliance, screenshots/icons, and a stable signed build. |
+
+### Separate-Run Items
+
+| Area | Candidate run |
+| --- | --- |
+| Native iOS platform and Capacitor package setup | `ios-capacitor-platform-setup-run` |
+| Apple Developer account, Team ID, Bundle ID, signing | `ios-apple-developer-account-setup-run` |
+| App Store Connect app record and listing shell | `ios-app-store-connect-app-record-run` |
+| Sign in with Apple policy/implementation decision | `ios-auth-apple-signin-risk-run` |
+| RevenueCat/App Store subscription product mapping | `ios-revenuecat-product-mapping-run` |
+| APNs/Firebase iOS push readiness | `ios-push-apns-firebase-readiness-run` |
+| Store screenshots/icons/listing assets | `ios-store-listing-assets-run` |
+
+### Handoff To TODO 6 - Follow-Up Selection
+
+TODO 6 should select exactly one follow-up run. The current checklist points to `ios-capacitor-platform-setup-run` as the strongest first technical candidate because the native iOS platform and `@capacitor/ios` are absent. Auth, IAP, push, and review assets remain separate high-risk tracks.
+
 ## High-Risk Separation
 
 | Area | Status in this run |
@@ -601,4 +652,4 @@ Use this format as each TODO completes.
 
 ## Final Conclusion
 
-Tasks 1 through 4 are complete. The next task is `5. TestFlight first-build checklist`, and no iOS platform, build, upload, external console, auth, billing, RevenueCat, Supabase, Android, or production configuration work has been authorized.
+Tasks 1 through 5 are complete. The next task is `6. Select first iOS readiness follow-up run`, and no iOS platform, build, upload, external console, auth, billing, RevenueCat, Supabase, Android, or production configuration work has been authorized.
