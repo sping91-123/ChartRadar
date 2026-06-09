@@ -11,7 +11,7 @@
 - Previous run context:
   - `ios-testflight-readiness-run` is `DONE`.
   - `ios-testflight-readiness-run` selected `ios-capacitor-platform-setup-run` as the first follow-up candidate.
-- Current phase: Task 1 complete; next TODO is `2. Confirm @capacitor/ios install need and command`.
+- Current phase: Task 2 complete; next TODO is `3. Add @capacitor/ios dependency`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No dependency install, iOS platform add, Capacitor sync, iOS build, Xcode, pod install, archive, upload, Apple Developer, App Store Connect, RevenueCat, Supabase, auth, billing, entitlement, Android release, or production action was executed during setup.
 
@@ -96,7 +96,7 @@
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | DONE | iOS setup preflight environment/status check | Preflight | LOW | Confirmed branch, working tree, Node/npm, Capacitor config, package state, and missing iOS platform state. | No dependency install. No iOS platform add. | `git diff --check` |
-| 2 | TODO | Confirm `@capacitor/ios` install need and command | Dependency Plan | MEDIUM | Confirm matching Capacitor version and select the exact install command without installing yet. | No install. No unrelated package changes. | `git diff --check` |
+| 2 | DONE | Confirm `@capacitor/ios` install need and command | Dependency Plan | MEDIUM | Confirmed matching Capacitor version and selected the exact install command without installing yet. | No install. No unrelated package changes. | `git diff --check` |
 | 3 | TODO | Add `@capacitor/ios` dependency | Dependency Change | MEDIUM | Add `@capacitor/ios` matching the existing Capacitor major/version in the appropriate dependency section. | No arbitrary upgrades. No package manager change. No Android dependency change. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build` |
 | 4 | TODO | Confirm iOS platform generation prerequisites | Platform Preflight | MEDIUM | Confirm `npx cap add ios` prerequisites, `webDir`/mobile-shell state, and expected generated file scope before running platform generation. | No cap add. No Xcode. No sync/build. | `git diff --check` |
 | 5 | TODO | Generate iOS platform | Native Generation | HIGH | Run the controlled Capacitor iOS platform generation step. | No Xcode. No manual pod install. No build/archive/upload. No Apple Developer/App Store Connect changes. | `git diff --check`; generated file list review |
@@ -116,6 +116,19 @@
 | Output document | `docs/ios-testflight-readiness.md` |
 | Package/native/config changed? | `No` |
 | Next TODO | `2. Confirm @capacitor/ios install need and command` |
+
+## Task 2 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `2. Confirm @capacitor/ios install need and command` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | `package.json`, `package-lock.json`, and npm package-tree inspection only. No dependency install, package edit, lockfile edit, iOS platform add, Capacitor sync, Xcode, pod install, iOS build/archive/upload, external console change, auth, Supabase, billing, RevenueCat, entitlement, Android release, or production action was executed. |
+| Result | `@capacitor/core`, `@capacitor/android`, and `@capacitor/cli` are aligned at `8.3.3`; `@capacitor/ios` is absent. Because `@capacitor/android` and `@capacitor/cli` are in `devDependencies`, the selected TODO 3 candidate is `npm.cmd install @capacitor/ios@8.3.3 --save-dev`. |
+| Output document | `docs/ios-testflight-readiness.md` |
+| Package/native/config changed? | `No` |
+| Next TODO | `3. Add @capacitor/ios dependency` |
 
 ## Expected Command Boundaries
 

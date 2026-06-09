@@ -760,6 +760,61 @@ Reasoning:
 - Select the install command without installing in Task 2.
 - Keep `package.json`, `package-lock.json`, `capacitor.config.ts`, Android native/release files, auth/Supabase/billing/RevenueCat/entitlement code, and production settings unchanged until a later TODO explicitly allows changes.
 
+## iOS Capacitor Platform Setup - Task 2 Dependency Candidate
+
+| Field | Value |
+| --- | --- |
+| Active run | `ios-capacitor-platform-setup-run` |
+| Task | `2. Confirm @capacitor/ios install need and command` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | `package.json`, `package-lock.json`, and npm package-tree inspection only. No dependency install, package edit, lockfile edit, iOS platform add, Capacitor sync, Xcode, pod install, iOS build/archive/upload, external console change, auth, Supabase, billing, RevenueCat, entitlement, Android release, or production action was executed. |
+
+### Current Capacitor Package State
+
+| Package or file | Current state |
+| --- | --- |
+| `package.json` `dependencies` | `@capacitor/core` is declared as `^8.3.3`. |
+| `package.json` `devDependencies` | `@capacitor/android` and `@capacitor/cli` are declared as `^8.3.3`. |
+| `package.json` iOS dependency | `@capacitor/ios` is not declared. |
+| `package-lock.json` lockfile version | `3`. |
+| `package-lock.json` Capacitor lock state | `@capacitor/core` and `@capacitor/android` are locked at `8.3.3`; no `node_modules/@capacitor/ios` entry is present. |
+| `npm.cmd ls @capacitor/core @capacitor/android @capacitor/ios` | `@capacitor/core@8.3.3` and `@capacitor/android@8.3.3` are installed; `@capacitor/ios` is absent. |
+| Existing iOS scripts | No iOS add/sync/open/build script was found in `package.json`; existing mobile scripts are Android-focused. |
+
+### Add Need Assessment
+
+| Check | Assessment |
+| --- | --- |
+| Is `@capacitor/ios` needed? | Yes. The repo cannot generate or maintain a Capacitor native iOS project without the iOS platform package. |
+| Should the version match current Capacitor packages? | Yes. Use `8.3.3` to match `@capacitor/core`, `@capacitor/android`, and `@capacitor/cli`. |
+| Should it be installed in this TODO? | No. This TODO only selects the dependency candidate and command. |
+| Should `npx cap add ios` run in this TODO? | No. Platform generation is a later TODO after dependency install and preflight checks. |
+
+### Dependency Location Decision
+
+| Decision | Basis |
+| --- | --- |
+| Add `@capacitor/ios` to `devDependencies`. | `@capacitor/android` and `@capacitor/cli` are currently in `devDependencies`, so the platform package should follow the existing project convention. |
+| Do not add to `dependencies` in the current plan. | `@capacitor/core` is runtime-facing and already in `dependencies`; platform packages follow the Android precedent in `devDependencies`. |
+
+### Selected Install Candidate For TODO 3
+
+| Item | Candidate |
+| --- | --- |
+| Version | `@capacitor/ios@8.3.3` |
+| Command | `npm.cmd install @capacitor/ios@8.3.3 --save-dev` |
+| Expected package files | `package.json` and `package-lock.json` only. |
+| Expected dependency section | `devDependencies` |
+
+### TODO 3 Guardrails
+
+- Install exactly `@capacitor/ios@8.3.3`.
+- Do not upgrade `@capacitor/core`, `@capacitor/android`, `@capacitor/cli`, or unrelated packages.
+- Review `package.json` and `package-lock.json` diff before committing.
+- Stop if npm attempts a broader dependency churn, major version change, package manager change, or protected-path change.
+- Do not run `npx cap add ios`, `npx cap sync ios`, Xcode, pod install, build/archive/upload, external console actions, auth/Supabase/billing/RevenueCat/entitlement changes, Android release changes, or production actions in TODO 3 unless explicitly scoped later.
+
 ## High-Risk Separation
 
 | Area | Status in this run |
