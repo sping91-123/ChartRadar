@@ -58,7 +58,7 @@ These are expected inspection targets for TODOs, not approval to edit them.
 | Order | Status | Task | Main question | Expected output |
 | --- | --- | --- | --- | --- |
 | 1 | DONE | Xcode project signing state audit | What signing-related values are visible in generated project files today? | Source-visible signing state table. |
-| 2 | TODO | Apple Developer readiness checklist | What Apple Developer records and credentials must exist before signing works? | Developer account and provisioning checklist. |
+| 2 | DONE | Apple Developer readiness checklist | What Apple Developer records and credentials must exist before signing works? | Developer account and provisioning checklist. |
 | 3 | TODO | Capability requirements checklist | Which capabilities are likely needed before build/review? | Capability need/risk matrix. |
 | 4 | TODO | Signing and build blocker checklist | What will most likely block first local build/archive? | Pre-build blocker checklist. |
 | 5 | TODO | Select next signing follow-up run | What is the next practical iOS follow-up after signing readiness? | One follow-up candidate, no auto-creation. |
@@ -150,6 +150,116 @@ These are expected inspection targets for TODOs, not approval to edit them.
 - Document Apple Developer account, Team ID, Bundle ID/App ID, certificate, provisioning profile, and App Store Connect prerequisites.
 - Keep all Apple Developer/App Store Connect and Xcode signing changes out of scope until a later approved implementation run.
 
+## Task 2 - Apple Developer Readiness Checklist
+
+| Field | Value |
+| --- | --- |
+| Task | `2. Apple Developer readiness checklist` |
+| Status | `DONE` |
+| Completed date | 2026-06-10 |
+| Method | Readiness documentation only. No Apple Developer console change, App Store Connect change, Bundle ID/App ID creation, Team ID project setting, certificate creation/download, provisioning profile creation, Xcode, `xcodebuild`, archive/upload, `npx cap sync ios`, `npx cap open ios`, `project.pbxproj` edit, `Info.plist` edit, entitlements file creation, auth, Supabase, billing, RevenueCat, entitlement, Android, or production action was executed. |
+| Current source-visible basis | `PRODUCT_BUNDLE_IDENTIFIER` is `com.staronlabs.chartradar`; `DEVELOPMENT_TEAM` and provisioning profile settings are absent; signing style is `Automatic`. |
+
+### Apple Developer Account Readiness
+
+| Item | Current state | Required before build/archive path | Risk / note |
+| --- | --- | --- | --- |
+| Apple Developer Program membership | Not verified in repo. | Confirm active membership for the account/team that will own ChartRadar iOS. | BLOCKER if not enrolled or expired. |
+| Account type | Not verified. | Confirm individual vs organization membership. | Organization accounts add D-U-N-S, legal entity, and team-management checks. |
+| Account Holder/Admin access | Not verified. | Confirm an Account Holder/Admin can manage Certificates, Identifiers & Profiles and required App Store Connect actions. | Required for many identifier/certificate/provisioning changes. |
+| Team management | Not verified. | Confirm who will operate Xcode signing and who can access App Store Connect. | Needed before assigning signing responsibility. |
+| Agreements / tax / banking | Not verified. | Confirm App Store Connect agreements and finance status before paid IAP/subscription work. | May become a blocker for paid products even if a technical build is possible. |
+| Actual account lookup | Not performed. | Handle in a separate console-readiness or signing implementation run. | This run intentionally avoids console access/mutation. |
+
+### Team ID Readiness
+
+| Item | Current state | Required readiness |
+| --- | --- | --- |
+| Team ID value | Unknown; `DEVELOPMENT_TEAM` not found in `project.pbxproj`. | Identify the Apple Developer Team ID that should sign `com.staronlabs.chartradar`. |
+| Xcode project linkage | Not configured. | Decide later whether Xcode automatic signing should set Team ID or whether a controlled project edit is needed. |
+| Manual edit status | Not allowed in this run. | Do not write `DEVELOPMENT_TEAM` until a separate implementation run explicitly authorizes signing changes. |
+| Handoff | TODO 4 / later signing implementation. | Use the confirmed Team ID to unblock local build/archive readiness after Apple Developer checks. |
+
+### Bundle ID / App ID Readiness
+
+| Item | Current state | Required readiness |
+| --- | --- | --- |
+| Bundle ID candidate | `com.staronlabs.chartradar` from generated Xcode project. | Register or confirm an explicit App ID in Apple Developer Identifiers with this exact Bundle ID. |
+| Wildcard vs explicit | Not verified. | Use an explicit App ID for this app because capabilities such as Sign in with Apple, Push Notifications, and IAP should be app-specific. |
+| App ID capabilities | Not selected in this run. | Decide allowed capabilities before or during capability setup. |
+| App ID / Xcode match | Project currently uses `com.staronlabs.chartradar`. | Confirm Apple Developer App ID matches the Xcode target Bundle ID exactly. |
+| Actual creation/modification | Not performed. | Separate approved run only. |
+
+### Certificates Readiness
+
+| Certificate area | Need | Current state | Guardrail |
+| --- | --- | --- | --- |
+| Apple Development certificate | Needed for local device/debug signing if testing on iOS devices. | Not verified. | Do not create/download in this run. |
+| Apple Distribution certificate | Needed for distribution/archive/App Store Connect upload path unless cloud-managed signing handles it. | Not verified. | Do not create/download in this run. |
+| Cloud-managed signing | Possible with modern Xcode distribution workflow if account permissions allow it. | Not verified. | Decide later during signing implementation/readiness. |
+| Keychain state | Not inspected. | Unknown. | Do not inspect private keys or certificates in this docs-only run. |
+| Certificate ownership | Depends on account/team role. | Not verified. | Keep certificate management with Account Holder/Admin or approved signing operator. |
+
+### Provisioning Profiles Readiness
+
+| Profile area | Need | Current state | Guardrail |
+| --- | --- | --- | --- |
+| Development provisioning | Needed for local device/debug testing if manual signing is used or if automatic signing cannot resolve it. | No profile setting found in project. | Do not create or configure in this run. |
+| App Store distribution provisioning | Needed for archive/upload if manual signing is used; automatic signing may manage it after Team ID/capabilities are set. | No profile setting found in project. | Do not create or configure in this run. |
+| Capability alignment | Profiles must reflect App ID capabilities. | Not configured because capabilities are undecided. | TODO 3 should define capability needs before profile work. |
+| Regeneration risk | Capability changes can invalidate or require regenerated profiles. | Documented as a sequencing risk. | Avoid enabling capabilities casually. |
+
+### App Store Connect Linkage Readiness
+
+| Item | Current state | Required readiness |
+| --- | --- | --- |
+| App record | Not verified. | Create or confirm an App Store Connect app record before upload/TestFlight path. |
+| Bundle ID linkage | Not verified. | Link the App Store Connect app record to the correct Bundle ID. |
+| App name | Candidate is `Chart Radar`. | Confirm availability/final display and listing name before app record/listing work. |
+| SKU | Not defined in repo. | Define an internal SKU before app record creation. |
+| Primary language | Not defined in repo. | Decide primary language before app record creation. |
+| Metadata/listing | Partially planned in readiness docs. | Keep screenshots, support URL, privacy URL, review notes, and app category in store-listing work. |
+| Paid product readiness | Not ready. | RevenueCat/App Store products and agreements/finance status remain separate high-risk work. |
+
+### Current Values vs Confirmation Needed
+
+| Area | Confirmed from repo | Still needs external confirmation |
+| --- | --- | --- |
+| Bundle ID | `com.staronlabs.chartradar` | Whether Apple Developer Identifiers has a matching explicit App ID. |
+| Display name | `Chart Radar` | Whether App Store Connect app name/listing should use the same spacing/name. |
+| Team ID | Not present | Actual Apple Developer Team ID and signing owner. |
+| Signing style | Automatic | Whether automatic signing is acceptable for the first local build/archive path. |
+| Certificates | Not present in repo | Development/distribution certificate strategy. |
+| Provisioning | No project profile setting | Development and App Store provisioning profile strategy. |
+| Capabilities | None configured | Sign in with Apple, Push Notifications, IAP, Associated Domains needs. |
+
+### Readiness Blockers
+
+| Blocker | Why it blocks or risks later work | Next TODO / follow-up |
+| --- | --- | --- |
+| Apple Developer membership and role not verified | Signing assets and App ID work require proper program membership and permissions. | Keep as TODO 2 output; later signing implementation must verify. |
+| Team ID unknown | Xcode automatic signing cannot be trusted without a concrete team. | TODO 4 / signing implementation run. |
+| Explicit App ID not verified | Bundle ID must exist and match the Xcode target for capability/signing alignment. | TODO 3 capability planning, then signing setup. |
+| Certificates/provisioning not verified | Local device testing, archive, and upload paths may fail. | TODO 4 blocker checklist. |
+| App Store Connect app record not verified | TestFlight upload path needs an app record. | Later App Store Connect readiness run. |
+| Capabilities undecided | App ID, entitlements, and provisioning depend on capability decisions. | TODO 3. |
+
+### Official Reference Notes
+
+| Reference | Why it is relevant |
+| --- | --- |
+| Apple Developer - Register an App ID: https://developer.apple.com/help/account/identifiers/register-an-app-id/ | Explicit App ID and Bundle ID matching checklist. |
+| Apple Developer - Enable app capabilities: https://developer.apple.com/help/account/manage-identifiers/enable-app-capabilities | Capability changes and provisioning profile implications. |
+| Apple Developer - Certificates overview: https://developer.apple.com/help/account/create-certificates/certificates-overview | Development/distribution certificate planning. |
+| Apple Developer - Distribution provisioning profile glossary: https://developer.apple.com/help/glossary/distribution-provisioning-profile/ | Distribution profile purpose and App ID/certificate relationship. |
+| App Store Connect - Add a new app: https://developer.apple.com/help/app-store-connect/create-an-app-record/add-a-new-app | App record, Bundle ID, SKU, and primary language readiness. |
+| Apple Developer Program roles: https://developer.apple.com/support/roles/ | Account Holder/Admin/team access planning. |
+
+### Task 3 Handoff
+
+- Decide which capabilities are likely needed for ChartRadar iOS: Sign in with Apple, Push Notifications, In-App Purchase, Associated Domains, and any privacy/usage-description implications.
+- Keep actual capability toggles, entitlement creation, App ID edits, Xcode signing edits, and external console changes out of scope until a later approved implementation run.
+
 ## High-Risk Separation
 
 | Area | Status in this run |
@@ -180,4 +290,4 @@ Use this format as each TODO completes.
 
 ## Final Conclusion
 
-Task 1 is complete. The next task is `2. Apple Developer readiness checklist`, and no Xcode, signing, native project, Apple Developer/App Store Connect, auth, billing, RevenueCat, Supabase, Android, or production configuration change has been authorized.
+Task 2 is complete. The next task is `3. Capability requirements checklist`, and no Xcode, signing, native project, Apple Developer/App Store Connect, auth, billing, RevenueCat, Supabase, Android, or production configuration change has been authorized.
