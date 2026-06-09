@@ -1016,6 +1016,103 @@ Reasoning:
 - Review whether generated version values, deployment target, automatic signing, missing entitlements, SPM plugin setup, and ignored generated `public`/config files need follow-up.
 - Do not edit native files in Task 6 unless a later task explicitly allows it.
 
+## iOS Capacitor Platform Setup - Task 6 Generated Config Audit
+
+| Field | Value |
+| --- | --- |
+| Active run | `ios-capacitor-platform-setup-run` |
+| Task | `6. Audit generated iOS platform config` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Source inspection and documentation only. No native file edit, `Info.plist` edit, project file edit, entitlements file creation, signing change, `npx cap sync ios`, `npx cap open ios`, Xcode, pod install, iOS build/archive/upload, npm install/update/audit fix, external console change, auth, Supabase, billing, RevenueCat, entitlement, Android release, or production action was executed. |
+
+### Generated iOS Project Structure Audit
+
+| Area | Finding |
+| --- | --- |
+| Project root | `ios/` exists with generated `.gitignore`, `debug.xcconfig`, `App/`, and ignored `capacitor-cordova-ios-plugins/`. |
+| Xcode project | `ios/App/App.xcodeproj/project.pbxproj` exists. |
+| Workspace structure | No top-level `ios/App/App.xcworkspace` was generated. `ios/App/App.xcodeproj/project.xcworkspace` exists inside the Xcode project. |
+| Native app files | `ios/App/App/AppDelegate.swift`, `Info.plist`, `Base.lproj/LaunchScreen.storyboard`, and `Base.lproj/Main.storyboard` exist. |
+| Assets | `ios/App/App/Assets.xcassets` exists with generated `AppIcon.appiconset` and `Splash.imageset`. |
+| Swift Package setup | `ios/App/CapApp-SPM/Package.swift` exists and is marked as managed by Capacitor CLI commands. |
+| Generated web/config output | `ios/App/App/public/`, `ios/App/App/capacitor.config.json`, and `ios/App/App/config.xml` exist on disk but are ignored by generated `ios/.gitignore`. |
+
+### App Identity And Version Settings
+
+| Setting | Finding | Follow-up |
+| --- | --- | --- |
+| Bundle ID | `PRODUCT_BUNDLE_IDENTIFIER = com.staronlabs.chartradar` appears in generated project build configurations. | Confirm against Apple Developer Bundle ID before signing/upload. |
+| Display name | `Info.plist` has `CFBundleDisplayName` value `Chart Radar`. | Confirm final App Store display name before listing submission. |
+| Bundle identifier key | `CFBundleIdentifier` uses `$(PRODUCT_BUNDLE_IDENTIFIER)`. | Standard generated setup; no edit in this task. |
+| Marketing version | `MARKETING_VERSION = 1.0`. | Needs later release/version policy review. |
+| Build number | `CURRENT_PROJECT_VERSION = 1`. | Needs later build-number policy before TestFlight upload. |
+| Info plist path | `INFOPLIST_FILE = App/Info.plist`. | Generated project setting. |
+
+### Deployment, Device, Orientation, And Status Bar
+
+| Setting | Finding | Follow-up |
+| --- | --- | --- |
+| iOS deployment target | `IPHONEOS_DEPLOYMENT_TARGET = 15.0`. | Confirm this target is acceptable for the intended TestFlight audience. |
+| Swift version | `SWIFT_VERSION = 5.0`. | Generated default; no edit in this task. |
+| SPM platform baseline | `Package.swift` declares `.iOS(.v15)`. | Aligns with generated deployment target. |
+| Device family | `TARGETED_DEVICE_FAMILY = "1,2"`, meaning iPhone and iPad. | Confirm iPad support posture and screenshots later. |
+| Orientations | iPhone supports portrait, landscape left, and landscape right. iPad also supports upside down. | Needs later UX/orientation review for ChartRadar's mobile layout. |
+| Status bar behavior | `UIViewControllerBasedStatusBarAppearance` is `true`. | Later visual QA should verify safe area/status bar behavior. |
+| Required capabilities | `UIRequiredDeviceCapabilities` includes `armv7`. | Generated default; verify in a future native audit if App Store/device support needs tightening. |
+
+### SPM And Dependency Structure
+
+| Item | Finding |
+| --- | --- |
+| Capacitor Swift package | `Package.swift` references `https://github.com/ionic-team/capacitor-swift-pm.git` exact `8.3.3`. |
+| Local plugin packages | SPM references local paths for `@capacitor/push-notifications`, `@capawesome/capacitor-google-sign-in`, and `@revenuecat/purchases-capacitor`. |
+| Products linked | `Capacitor`, `Cordova`, `CapacitorPushNotifications`, `CapawesomeCapacitorGoogleSignIn`, and `RevenuecatPurchasesCapacitor`. |
+| Podfile | No `Podfile` was generated. Capacitor 8 generated Swift Package Manager setup instead. |
+| Manual dependency work | No manual pod install, package edit, or native dependency edit was performed. |
+
+### Ignored Generated Files
+
+| Ignored path | Why it is ignored / status |
+| --- | --- |
+| `ios/App/App/public/` | Copied web assets from `mobile-shell`; ignored by generated `ios/.gitignore`. |
+| `ios/App/App/capacitor.config.json` | Generated Capacitor config copy; ignored by generated `ios/.gitignore`. |
+| `ios/App/App/config.xml` | Generated Cordova compatibility config; ignored by generated `ios/.gitignore`. |
+| `ios/capacitor-cordova-ios-plugins/` | Generated Capacitor/Cordova plugin folder; ignored by generated `ios/.gitignore`. |
+
+These ignored files remain on disk after `npx cap add ios` but are not committed. This matches the generated iOS `.gitignore` policy. Task 7 should verify whether future sync/build workflows need to document how these generated outputs are recreated.
+
+### Missing Entitlements And Capabilities
+
+| Area | Current state | Blocker / follow-up |
+| --- | --- | --- |
+| `.entitlements` file | None generated. | Needed later if capabilities such as Sign in with Apple or Push Notifications require entitlement files. |
+| Sign in with Apple | No capability or entitlement configured. | HIGH review risk remains if Google/Kakao login is exposed on iOS. |
+| Push Notifications | Push plugin is linked, but no APNs entitlement/capability configuration exists. | Requires Apple Developer/Firebase/APNs follow-up. |
+| In-App Purchase | RevenueCat plugin is linked, but App Store IAP capability/product mapping is not configured here. | Requires RevenueCat/App Store product mapping follow-up. |
+| Associated Domains / deep links | None configured in generated project. | Needed later if auth callbacks/universal links require it. |
+| Signing team | `DEVELOPMENT_TEAM` was not observed in generated project settings. | Team ID/provisioning remains a build/upload blocker. |
+
+### Build And Upload Blockers
+
+| Blocker | Reason |
+| --- | --- |
+| Apple Developer Team ID missing | Signing cannot be completed without team/signing setup. |
+| Provisioning/certificate missing | Archive/upload readiness is not established. |
+| App Store Connect app record unverified | TestFlight upload/tester setup requires an app record. |
+| Sign in with Apple risk remains HIGH | Review readiness risk if third-party login is exposed. |
+| RevenueCat/App Store product mapping incomplete | Paid iOS purchase/restore validation is not ready. |
+| APNs/Firebase iOS push incomplete | iOS push token and notification QA are not ready. |
+| Production iOS icon/screenshot assets unverified | Generated default assets exist, but production listing/screenshot assets are not prepared. |
+| Runtime web content path needs later validation | Generated `webDir` output is `mobile-shell`; runtime server URL/content behavior still needs safe validation. |
+
+### Handoff To Task 7
+
+- Run the safe validation commands scoped by the active-run policy.
+- Reconfirm generated native files were not manually edited after generation.
+- Confirm ignored generated outputs remain ignored and no sensitive values are present.
+- Keep Xcode, sync, pod install, build/archive/upload, signing, external console changes, auth/Supabase/billing/RevenueCat/entitlement changes, Android release changes, and production actions out of scope.
+
 ## High-Risk Separation
 
 | Area | Status in this run |

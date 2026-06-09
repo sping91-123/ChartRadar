@@ -11,7 +11,7 @@
 - Previous run context:
   - `ios-testflight-readiness-run` is `DONE`.
   - `ios-testflight-readiness-run` selected `ios-capacitor-platform-setup-run` as the first follow-up candidate.
-- Current phase: Task 5 complete; next TODO is `6. Audit generated iOS platform config`.
+- Current phase: Task 6 complete; next TODO is `7. Safe validation and result documentation`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No dependency install, iOS platform add, Capacitor sync, iOS build, Xcode, pod install, archive, upload, Apple Developer, App Store Connect, RevenueCat, Supabase, auth, billing, entitlement, Android release, or production action was executed during setup.
 
@@ -100,7 +100,7 @@
 | 3 | DONE | Add `@capacitor/ios` dependency | Dependency Change | MEDIUM | Added `@capacitor/ios` matching the existing Capacitor major/version in the appropriate dependency section. | No arbitrary upgrades. No package manager change. No Android dependency change. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build` |
 | 4 | DONE | Confirm iOS platform generation prerequisites | Platform Preflight | MEDIUM | Confirmed `npx cap add ios` prerequisites, `webDir`/mobile-shell state, and expected generated file scope before running platform generation. | No cap add. No Xcode. No sync/build. | `git diff --check` |
 | 5 | DONE | Generate iOS platform | Native Generation | HIGH | Ran the controlled Capacitor iOS platform generation step. | No Xcode. No manual pod install. No build/archive/upload. No Apple Developer/App Store Connect changes. | `git diff --check`; generated file list review |
-| 6 | TODO | Audit generated iOS platform config | Native Audit | MEDIUM | Inspect generated native project Bundle ID/appName/webDir linkage and document needed follow-up edits. | No native config edits. No signing changes. | `git diff --check` |
+| 6 | DONE | Audit generated iOS platform config | Native Audit | MEDIUM | Inspected generated native project Bundle ID/appName/webDir linkage and documented needed follow-up edits. | No native config edits. No signing changes. | `git diff --check` |
 | 7 | TODO | Safe validation and result documentation | Verification | LOW | Document generated results and remaining risks; run safe checks. | No iOS build/upload. No Xcode. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:copy` |
 | 8 | TODO | Select next iOS follow-up run | Prioritization | LOW | Select exactly one next follow-up candidate after platform setup. | No next run auto-creation. | active-run overall status check |
 
@@ -171,6 +171,19 @@
 | Not generated / not executed | No top-level `App.xcworkspace`, no `Podfile`, and no `.entitlements` file were generated. No `npx cap sync ios`, Xcode, manual `pod install`, `xcodebuild`, fastlane, archive, upload, or external console commands were run. |
 | Output document | `docs/ios-testflight-readiness.md` |
 | Next TODO | `6. Audit generated iOS platform config` |
+
+## Task 6 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `6. Audit generated iOS platform config` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Source inspection and documentation only. No native file edit, `Info.plist` edit, project file edit, entitlements file creation, signing change, `npx cap sync ios`, `npx cap open ios`, Xcode, pod install, iOS build/archive/upload, npm install/update/audit fix, external console change, auth, Supabase, billing, RevenueCat, entitlement, Android release, or production action was executed. |
+| Result | Documented generated iOS project structure, Bundle ID `com.staronlabs.chartradar`, display name `Chart Radar`, deployment target `15.0`, SPM plugin setup, ignored generated files, missing entitlements/capabilities, and build/upload blockers. |
+| Output document | `docs/ios-testflight-readiness.md` |
+| Native/config/package changed? | `No`; generated native files were inspected only. |
+| Next TODO | `7. Safe validation and result documentation` |
 
 ## Expected Command Boundaries
 
