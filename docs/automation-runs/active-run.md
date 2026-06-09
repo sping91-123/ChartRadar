@@ -11,7 +11,7 @@
 - Previous run context:
   - `ios-capacitor-platform-setup-run` is `DONE`.
   - `ios-capacitor-platform-setup-run` selected `ios-xcode-signing-readiness-run` as the next follow-up candidate.
-- Current phase: run registered; next TODO is `1. Xcode project signing state audit`.
+- Current phase: Task 1 complete; next TODO is `2. Apple Developer readiness checklist`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No Xcode, xcodebuild, archive, upload, signing change, Apple Developer/App Store Connect change, native file edit, entitlements creation, auth, Supabase, billing, RevenueCat, Android, or production action was executed during setup.
 
@@ -93,7 +93,7 @@
 
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TODO | Xcode project signing state audit | Xcode Project | HIGH | Inspect source-visible signing, Team ID, Bundle ID, code-sign style, and provisioning settings in generated iOS project files. | No `project.pbxproj` edits. No Xcode. No signing changes. | `git diff --check` |
+| 1 | DONE | Xcode project signing state audit | Xcode Project | HIGH | Inspected source-visible signing, Team ID, Bundle ID, code-sign style, and provisioning settings in generated iOS project files. | No `project.pbxproj` edits. No Xcode. No signing changes. | `git diff --check` |
 | 2 | TODO | Apple Developer readiness checklist | Apple Developer | HIGH | Document required Team ID, Bundle ID/App ID, membership, certificate, and provisioning items. | No Apple Developer console changes. No Bundle ID creation. | `git diff --check` |
 | 3 | TODO | Capability requirements checklist | Capabilities | HIGH | Document likely iOS capabilities: Sign in with Apple, Push Notifications, In-App Purchase, and Associated Domains need. | No entitlements creation. No capability changes. No console changes. | `git diff --check` |
 | 4 | TODO | Signing and build blocker checklist | Build Readiness | MEDIUM | Document likely blockers before first Xcode build/archive: macOS/Xcode, Team, Bundle ID, provisioning, certificate, capability mismatch, and SPM resolution. | No `xcodebuild`. No archive. | `git diff --check` |
@@ -108,6 +108,19 @@ Task 5 must select exactly one:
 - `ios-push-apns-firebase-readiness-run`
 - `ios-first-local-build-readiness-run`
 - `ios-generated-output-policy-run`
+
+## Task 1 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `1. Xcode project signing state audit` |
+| Status | `DONE` |
+| Completed date | 2026-06-10 |
+| Method | Source inspection and documentation only. No `project.pbxproj` edit, `Info.plist` edit, entitlements file creation, signing change, Xcode, `xcodebuild`, archive/upload, `npx cap sync ios`, `npx cap open ios`, pod install, Apple Developer/App Store Connect change, auth, Supabase, billing, RevenueCat, entitlement, Android, or production action was executed. |
+| Result | `PRODUCT_BUNDLE_IDENTIFIER` is `com.staronlabs.chartradar`; `CODE_SIGN_STYLE` is `Automatic`; `CODE_SIGN_IDENTITY` is `iPhone Developer`; `DEVELOPMENT_TEAM` and `PROVISIONING_PROFILE_SPECIFIER` were not found. `Info.plist` uses build-setting references for bundle ID, marketing version, and build number. No `.entitlements` file or capability traces were found. |
+| Output document | `docs/ios-xcode-signing-readiness.md` |
+| Native/config/console changed? | `No` |
+| Next TODO | `2. Apple Developer readiness checklist` |
 
 ## Verification Policy
 

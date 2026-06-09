@@ -57,7 +57,7 @@ These are expected inspection targets for TODOs, not approval to edit them.
 
 | Order | Status | Task | Main question | Expected output |
 | --- | --- | --- | --- | --- |
-| 1 | TODO | Xcode project signing state audit | What signing-related values are visible in generated project files today? | Source-visible signing state table. |
+| 1 | DONE | Xcode project signing state audit | What signing-related values are visible in generated project files today? | Source-visible signing state table. |
 | 2 | TODO | Apple Developer readiness checklist | What Apple Developer records and credentials must exist before signing works? | Developer account and provisioning checklist. |
 | 3 | TODO | Capability requirements checklist | Which capabilities are likely needed before build/review? | Capability need/risk matrix. |
 | 4 | TODO | Signing and build blocker checklist | What will most likely block first local build/archive? | Pre-build blocker checklist. |
@@ -75,6 +75,80 @@ These are expected inspection targets for TODOs, not approval to edit them.
 | APNs/Firebase iOS push | Incomplete. |
 | TestFlight build/archive/upload | Not run. |
 | Ignored generated output policy | Unresolved. |
+
+## Task 1 - Xcode Project Signing State Audit
+
+| Field | Value |
+| --- | --- |
+| Task | `1. Xcode project signing state audit` |
+| Status | `DONE` |
+| Completed date | 2026-06-10 |
+| Method | Source inspection and documentation only. No `project.pbxproj` edit, `Info.plist` edit, entitlements file creation, signing change, Xcode, `xcodebuild`, archive/upload, `npx cap sync ios`, `npx cap open ios`, pod install, Apple Developer/App Store Connect change, auth, Supabase, billing, RevenueCat, entitlement, Android, or production action was executed. |
+| Files inspected | `ios/App/App.xcodeproj/project.pbxproj`, `ios/App/App/Info.plist`, generated `ios/` tree for entitlements/capability traces. |
+
+### Xcode Project Signing State
+
+| Setting | Debug | Release | Finding |
+| --- | --- | --- | --- |
+| `PRODUCT_BUNDLE_IDENTIFIER` | `com.staronlabs.chartradar` | `com.staronlabs.chartradar` | Bundle ID is consistent across app target Debug/Release settings. |
+| `DEVELOPMENT_TEAM` | Not found | Not found | Team ID is not configured in the generated project. |
+| `CODE_SIGN_STYLE` | `Automatic` | `Automatic` | Automatic signing is enabled, but no team/provisioning input is present. |
+| `PROVISIONING_PROFILE_SPECIFIER` | Not found | Not found | No named provisioning profile is configured. |
+| `CODE_SIGN_IDENTITY` | `iPhone Developer` in project-level Debug config | `iPhone Developer` in project-level Release config | Generated project uses the default developer signing identity string. |
+| `IPHONEOS_DEPLOYMENT_TARGET` | `15.0` | `15.0` | Matches prior platform setup audit. |
+| `TARGETED_DEVICE_FAMILY` | `1,2` | `1,2` | iPhone and iPad are targeted. |
+| `ASSETCATALOG_COMPILER_APPICON_NAME` | `AppIcon` | `AppIcon` | Generated app icon catalog is referenced. |
+| `MARKETING_VERSION` | `1.0` | `1.0` | Version policy still needs release planning before upload. |
+| `CURRENT_PROJECT_VERSION` | `1` | `1` | Build number policy still needs release planning before upload. |
+
+### Debug / Release Difference
+
+| Area | Debug | Release | Impact |
+| --- | --- | --- | --- |
+| Signing identity | `iPhone Developer` project-level setting | `iPhone Developer` project-level setting | No meaningful signing difference observed. |
+| Signing style | `Automatic` | `Automatic` | Both configurations require Team ID/provisioning readiness before practical build/archive use. |
+| Bundle ID | `com.staronlabs.chartradar` | `com.staronlabs.chartradar` | No Debug/Release Bundle ID drift observed. |
+| Deployment target | `15.0` | `15.0` | No target mismatch observed. |
+| Build optimization | Debug uses debug flags and testability; Release uses whole-module Swift compilation and product validation. | Release has `VALIDATE_PRODUCT = YES` in project-level Release config. | Expected generated build config difference; not a signing concern. |
+
+### Info.plist Identity State
+
+| Key | Current value / behavior | Readiness note |
+| --- | --- | --- |
+| `CFBundleDisplayName` | `Chart Radar` | Matches expected display name. |
+| `CFBundleName` | `$(PRODUCT_NAME)` | Uses Xcode build setting reference. |
+| `CFBundleIdentifier` | `$(PRODUCT_BUNDLE_IDENTIFIER)` | Uses build setting reference, so Bundle ID source of truth is the project build setting. |
+| `CFBundleShortVersionString` | `$(MARKETING_VERSION)` | Uses project `MARKETING_VERSION`; release version policy remains a follow-up. |
+| `CFBundleVersion` | `$(CURRENT_PROJECT_VERSION)` | Uses project build number; build-number policy remains a follow-up. |
+| URL schemes / deep links | No `CFBundleURLTypes` entry observed. | Auth callback and deep-link behavior need a later iOS auth/routing readiness pass if required. |
+| Privacy usage descriptions | No `NS*UsageDescription` entries observed in the inspected plist. | Add only when a concrete native capability requires it; not changed in this run. |
+| Launch / main storyboard | `LaunchScreen` and `Main` are referenced. | Generated Capacitor defaults. |
+
+### Entitlements And Capabilities State
+
+| Capability area | Source-visible state | Readiness implication |
+| --- | --- | --- |
+| `.entitlements` file | No `.entitlements` file found under `ios/`. | Capability-backed signing is not configured yet. |
+| Sign in with Apple | No entitlement/capability trace found. | HIGH review-readiness risk remains for iOS if third-party login is exposed. |
+| Push Notifications | No `aps-environment` entitlement found. | APNs/Firebase iOS push setup remains blocked until capability/entitlement planning. |
+| Associated Domains | No associated domains entitlement found. | Universal link/deep-link readiness remains unconfigured. |
+| In-App Purchase | No explicit capability trace found in project files. | RevenueCat plugin exists, but App Store product/IAP capability readiness remains unresolved. |
+
+### Build / Archive Blockers
+
+| Blocker | Current evidence | Next handoff |
+| --- | --- | --- |
+| Team ID missing | `DEVELOPMENT_TEAM` was not found in `project.pbxproj`. | TODO 2 should document Apple Developer Team ID/account readiness requirements. |
+| Provisioning profile missing | `PROVISIONING_PROFILE_SPECIFIER` was not found. | TODO 2 should document profile/certificate requirements without creating them. |
+| Bundle ID registration unverified | Project uses `com.staronlabs.chartradar`, but no external Apple record was checked. | TODO 2 should list Bundle ID/App ID registration checks. |
+| Capabilities absent | No entitlements file or capability traces were found. | TODO 3 should map likely capabilities and risks. |
+| Version/build-number policy unresolved | Generated values are `1.0` and `1`. | Later release/build run should define version policy before upload. |
+| Xcode build not attempted | This run prohibits Xcode and `xcodebuild`. | Build/archive remains a later explicitly scoped run. |
+
+### Task 2 Handoff
+
+- Document Apple Developer account, Team ID, Bundle ID/App ID, certificate, provisioning profile, and App Store Connect prerequisites.
+- Keep all Apple Developer/App Store Connect and Xcode signing changes out of scope until a later approved implementation run.
 
 ## High-Risk Separation
 
@@ -106,4 +180,4 @@ Use this format as each TODO completes.
 
 ## Final Conclusion
 
-This run is registered. The next task is `1. Xcode project signing state audit`, and no Xcode, signing, native project, Apple Developer/App Store Connect, auth, billing, RevenueCat, Supabase, Android, or production configuration change has been authorized.
+Task 1 is complete. The next task is `2. Apple Developer readiness checklist`, and no Xcode, signing, native project, Apple Developer/App Store Connect, auth, billing, RevenueCat, Supabase, Android, or production configuration change has been authorized.
