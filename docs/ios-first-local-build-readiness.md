@@ -46,7 +46,7 @@
 | 2 | DONE | iOS project build precondition audit | Is the generated project structurally ready for a Debug build attempt? | Project/scheme/target/signing/SPM/output precondition notes. |
 | 3 | DONE | Signing blocker decision | Are missing Team ID/provisioning items blocking local build? | `RUN_ALLOWED` or `BLOCKED` decision basis. |
 | 4 | DONE | Safe local build command candidate selection | What command would be safest if a build becomes allowed? | Command candidate and stop conditions. |
-| 5 | TODO | Local build execution decision | Should this run execute a build or close blocked? | Build decision record; no archive/upload. |
+| 5 | DONE | Local build execution decision | Should this run execute a build or close blocked? | Build decision record; no archive/upload. |
 | 6 | TODO | Readiness result documentation | What are the final blockers and next run? | Final readiness conclusion and one follow-up candidate. |
 
 ## Known Blockers At Setup
@@ -374,6 +374,67 @@ TODO 5 should decide `DO_NOT_RUN / BLOCKED` unless the execution environment has
 
 On the current Windows machine, TODO 5 should keep local build execution as `DO_NOT_RUN / BLOCKED`.
 
+## TODO 5 Result - Local Build Execution Decision
+
+Status: `DONE`
+
+Execution date: 2026-06-10
+
+Local iOS build execution: `DO_NOT_RUN`
+
+Readiness status: `BLOCKED`
+
+Method: decision-only documentation based on TODO 1 through TODO 4. No Xcode, `xcodebuild`, `npx cap sync ios`, `npx cap open ios`, pod install, local build, archive, upload, signing change, native file edit, or console change was executed.
+
+### Final Execution Decision
+
+| Decision item | Result | Basis |
+| --- | --- | --- |
+| Execute local iOS build now? | `DO_NOT_RUN` | Current machine is Windows, not macOS. |
+| Local build readiness status | `BLOCKED` | Xcode, Command Line Tools, scheme confirmation, SPM resolution, signing/team checks, and Apple account checks are unavailable. |
+| First safe build family | Debug simulator build only, in a future macOS/Xcode environment. | Simulator build reduces signing exposure but still requires Xcode, scheme confirmation, and SPM resolution. |
+| Device build | `DO_NOT_RUN` | Team ID, signing identity, certificate, provisioning, and App ID readiness are not confirmed. |
+| Archive/TestFlight upload | `FORBIDDEN` | Distribution signing, App Store Connect linkage, and explicit archive/upload approval are outside this run. |
+
+### Primary Blocker
+
+The primary blocker is the non-macOS execution environment. The current machine is Windows 11 Pro, so it cannot run the Xcode toolchain required for local iOS builds.
+
+### Secondary Blockers
+
+| Blocker | Current state | Required before retry |
+| --- | --- | --- |
+| Xcode | Not available. | Xcode installed on macOS. |
+| Xcode Command Line Tools | Not available. | `xcode-select -p` returns the intended Xcode path. |
+| Scheme confirmation | `App` is only an inferred scheme candidate. | `xcodebuild -list -project ios/App/App.xcodeproj` confirms scheme `App`. |
+| SPM resolution | Not possible on Windows. | Xcode/SPM can resolve `CapApp-SPM` packages. |
+| Apple ID / Xcode account | `NOT_CHECKED`. | Apple ID signed into Xcode if signing/build path requires it. |
+| Apple Developer Team ID | `DEVELOPMENT_TEAM` absent. | Team ID confirmed before device/archive paths; any project mutation must be a separate approved run. |
+| Signing/provisioning | Certificate and provisioning state unconfirmed. | Confirm signing assets before device build/archive. |
+| Explicit App ID / App Store Connect linkage | Unverified. | Confirm before TestFlight/archive path. |
+| Generated output freshness | Ignored iOS generated output exists but freshness is unverified. | Decide whether a later allowed `npx cap sync ios` is needed before build. |
+
+### macOS/Xcode Retry Conditions
+
+Only retry local iOS build readiness from a macOS environment. The minimum pre-build sequence should be:
+
+1. Confirm macOS with `sw_vers`.
+2. Confirm Xcode with `xcodebuild -version`.
+3. Confirm Command Line Tools path with `xcode-select -p`.
+4. Confirm simulator availability with `xcrun simctl list devices`.
+5. Confirm scheme/target/configuration with `xcodebuild -list -project ios/App/App.xcodeproj`.
+6. Confirm SPM package resolution is possible.
+7. Decide whether a Debug simulator build is allowed.
+
+Do not attempt device build, archive, upload, TestFlight submission, signing mutation, capability mutation, or Apple Developer/App Store Connect changes as part of a simple local readiness retry.
+
+### Decision For TODO 6
+
+TODO 6 should document the final readiness result as `BLOCKED` for current-machine local iOS build. The likely next follow-up should target either:
+
+- a macOS/Xcode environment handoff for local build readiness, or
+- signing/team setup readiness if a macOS environment is available but Team ID/signing remains unresolved.
+
 ## Build Command Candidate Policy
 
 The likely build command family is:
@@ -415,4 +476,4 @@ Use this format as each TODO completes.
 
 ## Final Conclusion
 
-TODO 4 is complete. Safe local build command candidates are documented for a future macOS/Xcode environment, but all `xcodebuild` build/archive/upload paths remain `BLOCKED` or `FORBIDDEN` on the current Windows machine. The next task is `5. Local build execution decision`. No local build, Xcode, signing, Apple console, native project edit, auth, billing, RevenueCat, Supabase, Android, or production configuration change has been authorized.
+TODO 5 is complete. Local iOS build execution is `DO_NOT_RUN / BLOCKED` on the current Windows machine. The next task is `6. Readiness result documentation`. No local build, Xcode, signing, Apple console, native project edit, auth, billing, RevenueCat, Supabase, Android, or production configuration change has been authorized.
