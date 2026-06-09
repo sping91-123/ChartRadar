@@ -9,7 +9,7 @@
 - Status: `ACTIVE`
 - Setup date: 2026-06-09
 - Previous run context: `android-production-auto-smoke-run` is `DONE` and its recorded automatic checks are `PASS`.
-- Current phase: Task 1 is the next `TODO`.
+- Current phase: Task 1 is `DONE`; Task 2 is the next `TODO`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No alert code, push command, production DB/token access, FCM, Supabase, RevenueCat, billing, Android release, or Android phone manual QA action was executed during setup.
 
@@ -74,12 +74,32 @@
 
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TODO | Current alert structure audit | Alert Structure | MEDIUM | Document alert generation, permission request, push token save, targetPath routing, Pro limits, and alert settings flow. | No FCM edits. No push-cron edits. No Supabase edits. No production DB edits. No real push send. | `git diff --check` |
+| 1 | DONE | Current alert structure audit | Alert Structure | MEDIUM | Document alert generation, permission request, push token save, targetPath routing, Pro limits, and alert settings flow. | No FCM edits. No push-cron edits. No Supabase edits. No production DB edits. No real push send. | `git diff --check` |
 | 2 | TODO | Alert copy quality review | Alert Copy | LOW | Check whether alert wording could read as investment instruction, guaranteed return, or excessive trade inducement. | No alert send logic edits. No real push send. | `git diff --check` |
 | 3 | TODO | Duplicate and cooldown policy review | Dedupe/Cooldown | MEDIUM | Check whether the same user can receive repetitive or too-frequent alerts from current structure. | No cooldown logic edits. No push-cron edits. No production DB edits. | `git diff --check` |
 | 4 | TODO | Basic/Pro alert limit review | Entitlement/Gating | HIGH | Check whether free/paid alert limits are consistent between screen design and expected runtime behavior. | No entitlement edits. No RevenueCat edits. No Supabase RLS edits. No billing edits. | `git diff --check` |
 | 5 | TODO | targetPath routing quality review | Notification Routing | MEDIUM | Document expected destination, fallback, login-required state, and missing-route behavior after alert click. | No routing code edits. No real push-click test. | `git diff --check` |
 | 6 | TODO | Alert improvement candidate selection | Prioritization | LOW | Select exactly one first alert-quality improvement candidate; implementation remains a separate run. | No multiple simultaneous improvements. No code edits. | `git diff --check` |
+
+## Task 1 Completion Note
+
+- Completed date: 2026-06-09
+- Completed task: `Current alert structure audit`
+- Output document: `docs/alert-quality-operations.md`
+- Scope inspected by source inspection only:
+  - alert generation through `/api/push-cron` and `runPushAlertScan`
+  - permission request and Android push registration through `src/lib/appPush.ts`
+  - token save and disable flow through `/api/push-tokens`
+  - targetPath sanitize/resolve flow through `src/lib/pushTargetPath.ts`
+  - Pro/Basic gating through `radarAlerts`, usage gating, `entitlements`, and token preferences
+  - alert settings through `RadarAlertCenter`, `/crypto/alert`, and `/alerts?market=global`
+- Protected actions not performed:
+  - no real push send
+  - no admin test push
+  - no push-cron call
+  - no production DB or raw token query
+  - no Supabase, FCM, RevenueCat, billing, entitlement, Android release, Play Console, app code, UI code, package, or script changes
+- Next task remains: `2. Alert copy quality review`
 
 ## Documentation Policy
 
