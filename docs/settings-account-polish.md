@@ -56,7 +56,7 @@ These surfaces are not implementation approval. They are the expected inspection
 | --- | --- | --- | --- | --- |
 | 1 | DONE | Current settings/account screen audit | What settings/account surfaces exist today, and what is missing for production trust? | Entry-path map and missing-item notes. |
 | 2 | DONE | Required settings item list finalization | Which items are required for a production-ready settings/account surface? | Required-item checklist. |
-| 3 | TODO | Settings screen structure proposal | How should settings sections be grouped and worded? | Recommended section structure and copy principles. |
+| 3 | DONE | Settings screen structure proposal | How should settings sections be grouped and worded? | Recommended section structure and copy principles. |
 | 4 | TODO | Select one first implementation candidate | What is the safest first implementation candidate with the highest trust impact? | One follow-up implementation-run candidate. |
 
 ## Task 1 - Current Settings/Account Screen Audit
@@ -207,6 +207,105 @@ These surfaces are not implementation approval. They are the expected inspection
 
 For production trust, the required settings surface should include account state, current plan/subscription state, alert settings, support/contact, terms/policies, account deletion, logout, app information/version, and a clear settings structure. The first implementation should prefer link/display parity and app-info/support discoverability over auth, billing, deletion, or session behavior changes.
 
+## Task 3 - Settings Screen Structure Proposal
+
+| Field | Value |
+| --- | --- |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Structure and wording-principle documentation only. No app code, UI code, user-facing code copy, auth/session logic, Supabase, RLS, billing, RevenueCat, entitlement, account deletion logic, logout/session behavior, production DB, purchase, restore, Android release, Play Console, or external console work was changed or executed. |
+| Input | Task 1 route/component audit and Task 2 required settings item matrix. |
+| Next TODO | `4. Select one first implementation candidate` |
+
+### Current Structure Problem Summary
+
+| Problem | Current shape | Production risk |
+| --- | --- | --- |
+| Settings route identity is unclear | `/settings` redirects to `/menu`, while the header settings panel opens as a modal and also pushes `/menu` into browser history. | Users and support docs may not have one stable place to describe as "Settings". |
+| Header panel is incomplete for trust links | Header panel includes account, display, alerts, learn, FAQ, and version, but not policy, refund, deletion, or support contact links. | Users can enter settings from the most visible path and still miss required trust actions. |
+| `/menu` is incomplete as a route-based hub | `/menu` includes account, Pro, FAQ, learn, terms, privacy, and refund, but not alert settings or app version. | The route page is less useful than the modal for app-support tasks. |
+| `/account` mixes status and actions | `/account` is the richest account page, but restore/manage guidance is not obvious and logout/deletion grouping can be clearer. | Users checking account state may not know where to manage subscription or distinguish logout from deletion. |
+| Support and developer information are not first-class | Support email appears inside policy/deletion pages; business/developer information is not clearly grouped. | Production trust and support recovery require extra hunting. |
+
+### Recommended Information Architecture
+
+Preferred target model:
+
+- `/settings` should be treated as the durable, support-friendly settings hub in a future implementation. It can group account, subscription, alerts, support, policies, app information, and dangerous actions in one route.
+- `/menu` should be treated as a quick navigation or legacy auxiliary hub. Until route behavior is changed, it should mirror the most important settings links enough that route users do not lose alert settings, app version, support, or policy access.
+- Header settings panel should stay a quick summary and shortcut surface: current account/plan cue, display controls, alert shortcut, support/FAQ/policy shortcuts, app version, and a route link into the durable settings/account surface.
+- `/account` should remain the detailed account page: identity, login state, current plan/access, subscription support links, logout, and account deletion guidance. It should not become the general settings inventory.
+
+Route behavior changes such as making `/settings` a standalone page or changing `/menu` redirects are implementation decisions for a later run. For the first low-risk implementation, link/display parity is safer than route remapping.
+
+### Route Role Definitions
+
+| Route or surface | Recommended role | Should contain | Should avoid | Implementation risk |
+| --- | --- | --- | --- | --- |
+| `/settings` | Canonical settings hub candidate for support docs and Android users. | All required sections or links to them: account, plan, alerts, support, policies, app info, dangerous actions. | Direct billing, auth, deletion, or token behavior changes. | LOW for page/link content; MEDIUM if changing redirects or route ownership. |
+| `/menu` | Quick menu and compatibility route while `/settings` role is clarified. | Account, Pro, alerts, FAQ/support, terms, privacy, refund, app version, settings hub link. | Becoming a second inconsistent settings inventory. | LOW for link/display parity. |
+| Header settings panel | Fast-access summary panel. | Compact account/plan state, display controls, alert shortcut, support/FAQ, policy links, app version, settings/account route links. | Deep account management or destructive actions as primary controls. | LOW for links and display-only additions. |
+| `/account` | Account detail and account actions. | Login state, email/provider, plan/access state, Pro/manage guidance, logout, deletion guide. | General app navigation unrelated to account trust. | LOW for grouping/links; HIGH for auth, logout, billing, or deletion behavior. |
+| `/pro` | Subscription explanation and purchase/restore surface. | Plan cards, current plan, restore/manage entry, billing support guidance. | Moving billing actions into settings without a billing-specific run. | HIGH for purchase/restore behavior; LOW for links to existing route. |
+| `/alerts` and `/crypto/alert` | Alert configuration surfaces. | Notification settings and market-specific alert controls. | FCM/token/delivery policy changes inside settings-polish work. | LOW for links; HIGH for push/token behavior. |
+
+### Recommended Section Structure
+
+| Section | Included items | Primary route or entry | Wording principle | Risk level |
+| --- | --- | --- | --- | --- |
+| Account | Login state, account identifier, provider, account detail link, login CTA when logged out. | Header panel, `/settings`, `/account`. | Show current state first: logged in, logged out, or checking session. | LOW for display/linking; HIGH for auth/session changes. |
+| Subscription/Plan | Current plan, Coin/Global/All Market access cue, Pro page link, restore/manage guidance link. | `/account`, `/settings`, `/pro`. | Use "manage" and "confirm" language, not pressure or guarantee language. | LOW for links; MEDIUM for plan display copy; HIGH for billing/RevenueCat/entitlement changes. |
+| Alerts | Alert settings link, Coin/Global alert links, Android push permission guidance as a pointer. | Header panel, `/settings`, `/menu`, `/alerts`, `/crypto/alert`. | Frame as notification control, not trade instruction. | LOW for links; HIGH for FCM/token/push delivery changes. |
+| Customer Support | FAQ, support contact, refund/subscription guide. | `/settings`, header panel, `/menu`, `/faq`, `/refund`. | Make help discoverable without creating a new support workflow. | LOW if reusing existing email/pages. |
+| Terms/Policies | Terms, privacy, refund policy, account deletion guide. | `/settings`, header panel, `/menu`, footer. | Keep labels plain and easy to scan. | LOW for links; MEDIUM if legal text changes are requested. |
+| App Information | App version/build display, service name, developer/business information access. | Header panel, `/settings`, `/menu`, `/account` support area. | Support-friendly: make version and operator context easy to quote. | LOW for display; HIGH for Android release or Play Console changes. |
+| Dangerous Actions | Logout and account deletion separated from ordinary settings. | `/account`, `/settings` dangerous-action group. | Clear but calm; deletion must remain visibly different from logout. | LOW for grouping; HIGH for logout/deletion behavior. |
+
+### Wording Principles
+
+- Lead with the user's current state: account, plan, notification access, and app version.
+- Use "manage", "check", "view", and "guide" for subscription/account support paths.
+- Keep logout and account deletion labels explicit, but avoid alarmist copy.
+- Keep policy and support labels short enough for 360px screens.
+- Do not use investment-instruction, profit-guarantee, or trade-entry language in settings or alert settings links.
+- Do not imply a paid feature is active when the current plan only shows an upgrade path.
+
+### Mobile And Android Considerations
+
+- Section labels should remain readable at 360px without relying on long single-line copy.
+- Long email addresses, plan names, and policy links should wrap without pushing action buttons off-screen.
+- Dangerous actions should not sit under sticky navigation or look like ordinary navigation items.
+- Header panel shortcuts should not be the only place where version/support/policy information exists.
+- If `/settings` becomes a standalone route later, it should be easier to screenshot and share with support than the transient header modal.
+
+### Implementation Risk Separation
+
+| Risk level | Examples | Allowed direction for a later low-risk implementation |
+| --- | --- | --- |
+| LOW | Add links, add section labels, show existing `APP_VERSION_DISPLAY`, expose existing FAQ/privacy/terms/refund/deletion routes, mirror alert settings links. | Safe candidate pool for Task 4. |
+| MEDIUM | Improve current plan display, add subscription manage/restore guidance from account, reposition logout area, clarify `/settings` versus `/menu` route behavior. | Requires tighter diff review and static/mobile verification. |
+| HIGH | Auth/session changes, real logout behavior changes, account deletion logic, billing/RevenueCat/entitlement changes, Supabase/RLS/production DB changes, Android release or Play Console changes. | Split into separate high-risk run; do not select as first implementation candidate. |
+
+### Criteria For TODO 4 First Candidate Selection
+
+Task 4 should select one candidate that:
+
+- Improves the most visible production trust gap.
+- Can be implemented as link/display/section structure only.
+- Does not touch auth, session, billing, RevenueCat, entitlement, Supabase, account deletion behavior, logout behavior, Android release, or Play Console.
+- Has a clear verification path with `git diff --check`, TypeScript/build if code is later changed, and mobile smoke if UI is later changed.
+- Reduces inconsistency between header settings panel, `/menu`, `/settings`, and `/account`.
+
+The strongest low-risk candidates after this structure proposal are:
+
+- Add missing support/policy/deletion links and app version visibility to the most-used settings entry.
+- Add alert settings and app version parity to `/menu`.
+- Add a subscription manage/restore guidance link from `/account` to existing `/pro` or `/refund` surfaces.
+
+### Task 3 Conclusion
+
+The recommended structure is to treat `/settings` as the future canonical settings hub, `/menu` as a quick or compatibility menu, the header panel as a summary/shortcut surface, and `/account` as account detail plus account actions. The first implementation candidate should be link/display parity rather than route remapping or protected account/billing logic.
+
 ## Required Item Candidates
 
 | Item | Why it matters | Risk boundary |
@@ -280,4 +379,4 @@ Use this format as each TODO completes.
 
 ## Final Conclusion
 
-Task 2 is complete. The next task is `3. Settings screen structure proposal`, and no implementation has been authorized in this run.
+Task 3 is complete. The next task is `4. Select one first implementation candidate`, and no implementation has been authorized in this run.

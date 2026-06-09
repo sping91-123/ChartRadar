@@ -12,7 +12,7 @@
   - `android-production-auto-smoke-run` is `DONE` and recorded as `PASS`.
   - `alert-quality-operations-run` is `DONE`.
   - `alert-pro-rule-ui-clarity-run` is `DONE`.
-- Current phase: Task 2 completed; next TODO is `3. Settings screen structure proposal`.
+- Current phase: Task 3 completed; next TODO is `4. Select one first implementation candidate`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No app code, UI code, auth, Supabase, billing, RevenueCat, entitlement, account deletion, production DB, purchase, restore, or logout action was executed during setup.
 
@@ -94,7 +94,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | DONE | Current settings/account screen audit | Source Inspection | MEDIUM | Identified current settings/account screens, entry paths, and missing production-trust items. | No auth, Supabase, account deletion, billing, or UI code edits. | `git diff --check` |
 | 2 | DONE | Required settings item list finalization | Product/Compliance UX | LOW | Confirmed required production settings items: account state, plan, alerts, support, privacy, terms, account deletion, logout, app version, and business/developer info access. | No code edits. | `git diff --check` |
-| 3 | TODO | Settings screen structure proposal | UX Spec | LOW | Document recommended sections: Account, Subscription/Plan, Alerts, Support, Terms/Policies, App Info, and Dangerous Actions. | No code edits. | `git diff --check` |
+| 3 | DONE | Settings screen structure proposal | UX Spec | LOW | Documented route roles and recommended sections: Account, Subscription/Plan, Alerts, Support, Terms/Policies, App Info, and Dangerous Actions. | No code edits. | `git diff --check` |
 | 4 | TODO | Select one first implementation candidate | Prioritization | MEDIUM | Select the safest, highest-trust implementation candidate for a later run. | No simultaneous auth, DB, billing, Supabase, or account deletion changes. | `git diff --check` |
 
 ## First Implementation Candidate Selection Method
@@ -145,6 +145,18 @@ Candidate examples are not pre-approved implementation scope. They include:
 | Result | Required, recommended, low-risk, and high-risk settings/account items were finalized in `docs/settings-account-polish.md`. |
 | Code changed? | `No` |
 | Next TODO | `3. Settings screen structure proposal` |
+
+## Task 3 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `3. Settings screen structure proposal` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Structure proposal and wording-principle documentation only. |
+| Result | Proposed `/settings` as the future canonical settings hub, `/menu` as quick/compatibility menu, header settings panel as summary/shortcut surface, and `/account` as account detail plus account actions. Recommended Account, Subscription/Plan, Alerts, Customer Support, Terms/Policies, App Information, and Dangerous Actions sections. |
+| Code changed? | `No` |
+| Next TODO | `4. Select one first implementation candidate` |
 
 ## Verification Policy
 
