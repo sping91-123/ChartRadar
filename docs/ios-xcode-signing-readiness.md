@@ -61,7 +61,7 @@ These are expected inspection targets for TODOs, not approval to edit them.
 | 2 | DONE | Apple Developer readiness checklist | What Apple Developer records and credentials must exist before signing works? | Developer account and provisioning checklist. |
 | 3 | DONE | Capability requirements checklist | Which capabilities are likely needed before build/review? | Capability need/risk matrix. |
 | 4 | DONE | Signing and build blocker checklist | What will most likely block first local build/archive? | Pre-build blocker checklist. |
-| 5 | TODO | Select next signing follow-up run | What is the next practical iOS follow-up after signing readiness? | One follow-up candidate, no auto-creation. |
+| 5 | DONE | Select next signing follow-up run | What is the next practical iOS follow-up after signing readiness? | One follow-up candidate, no auto-creation. |
 
 ## Known Blockers At Setup
 
@@ -405,6 +405,72 @@ These are expected inspection targets for TODOs, not approval to edit them.
 - Do not auto-create the selected run.
 - Keep native edits, Xcode/build/archive/upload, Apple Developer/App Store Connect changes, auth/Supabase changes, RevenueCat/billing changes, Firebase/APNs changes, and Android changes out of scope.
 
+## Task 5 - Select Next Signing Follow-Up Run
+
+| Field | Value |
+| --- | --- |
+| Task | `5. Select next signing follow-up run` |
+| Status | `DONE` |
+| Completed date | 2026-06-10 |
+| Method | Documentation and prioritization only. No next active-run was created. No Xcode, `xcodebuild`, fastlane, archive/upload/TestFlight submission, `npx cap sync ios`, `npx cap open ios`, pod install, `project.pbxproj` edit, `Info.plist` edit, entitlements creation, Apple Developer/App Store Connect change, certificates/provisioning creation, capability enablement, RevenueCat/Supabase/Firebase/APNs change, Android change, or production action was executed. |
+
+### Signing Readiness Final Summary
+
+| Area | Final finding |
+| --- | --- |
+| Xcode project identity | Bundle ID is `com.staronlabs.chartradar`; display name is `Chart Radar`; deployment target is `15.0`; device family is `1,2`. |
+| Signing state | `CODE_SIGN_STYLE` is `Automatic`, but `DEVELOPMENT_TEAM` and `PROVISIONING_PROFILE_SPECIFIER` are absent. |
+| Entitlements/capabilities | No `.entitlements` file or capability traces were found. Sign in with Apple, Push Notifications, IAP, and Associated Domains remain unconfigured. |
+| Apple Developer readiness | Membership, Account Holder/Admin role, Team ID, explicit App ID, certificates, provisioning, and App Store Connect app record remain externally unverified. |
+| Safe validation posture | This run did not execute Xcode/build/archive/upload and did not modify native/config/console surfaces. |
+
+### Blockers Summary
+
+| Blocker group | Highest-risk items |
+| --- | --- |
+| Local build environment | macOS, Xcode, Command Line Tools, Apple ID/Xcode login, and SPM package resolution are unverified. |
+| Signing | Team ID, Apple Developer membership, certificates, provisioning, and automatic signing viability are unresolved. |
+| App identity | Explicit App ID and App Store Connect Bundle ID linkage are unverified. |
+| Capabilities | Sign in with Apple, Push Notifications, IAP, Associated Domains, and entitlements remain unconfigured. |
+| Auth/review | Sign in with Apple risk remains HIGH if Google/Kakao login is exposed on iOS. |
+| IAP/RevenueCat | App Store subscription products, RevenueCat iOS mapping, and restore readiness remain incomplete. |
+| Push | APNs/Firebase iOS setup and real iOS push validation are incomplete. |
+| Project/release | Generated-output policy, version/build-number policy, production icon/splash/listing assets, archive, upload, and review notes remain unresolved. |
+
+### Follow-Up Candidate Evaluation
+
+| Candidate | Priority | Risk | Evaluation |
+| --- | --- | --- | --- |
+| `ios-first-local-build-readiness-run` | 1 | HIGH | Selected. It is the most direct next step after signing readiness because it can verify macOS/Xcode/Team ID/signing preconditions and decide, inside that run, whether a local build can be safely attempted or must be marked BLOCKED. |
+| `ios-auth-apple-signin-risk-run` | 2 | HIGH | Important because Sign in with Apple risk is HIGH, but auth/capability work should remain separate and can follow after local build readiness clarifies the platform path. |
+| `ios-revenuecat-product-mapping-run` | 3 | HIGH | Required for paid iOS feature readiness, but it likely touches App Store Connect/RevenueCat product mapping and should remain a separate high-risk run. |
+| `ios-push-apns-firebase-readiness-run` | 4 | HIGH | Required for alert delivery, but depends on APNs/Firebase/capability/entitlement planning and is not the first build blocker. |
+| `ios-generated-output-policy-run` | 5 | MEDIUM | Useful repo hygiene, but not a direct blocker for determining whether the generated iOS project can reach a first local build. |
+
+### Selected Next Run
+
+| Field | Value |
+| --- | --- |
+| Selected candidate | `ios-first-local-build-readiness-run` |
+| Reason | iOS native project and signing readiness audit are complete enough to move to first local build readiness, but actual build execution should be gated by macOS/Xcode/Team ID/signing precondition checks inside the next run. |
+| Auto-created? | No. The next active-run must be explicitly opened by a later request. |
+
+### Next Run Guardrail
+
+Recommended scope for `ios-first-local-build-readiness-run`:
+
+- Confirm macOS/Xcode/Command Line Tools availability.
+- Confirm Apple ID/Xcode account readiness without changing console state.
+- Confirm Team ID/signing prerequisites; if unavailable, record `BLOCKED`.
+- Inspect whether SPM dependencies can be resolved safely.
+- Decide inside that run whether any build command is allowed.
+- Keep Apple Developer/App Store Connect/RevenueCat/Supabase/Auth/Billing changes out of scope.
+- Keep TestFlight upload/archive submission out of scope unless a later explicit run authorizes it.
+
+### Final Conclusion For `ios-xcode-signing-readiness-run`
+
+`ios-xcode-signing-readiness-run` is complete. Tasks 1 through 5 are DONE. The selected next follow-up candidate is `ios-first-local-build-readiness-run`, and no next active-run was auto-created.
+
 ## High-Risk Separation
 
 | Area | Status in this run |
@@ -435,4 +501,4 @@ Use this format as each TODO completes.
 
 ## Final Conclusion
 
-Task 4 is complete. The next task is `5. Select next signing follow-up run`, and no Xcode, signing, native project, Apple Developer/App Store Connect, auth, billing, RevenueCat, Supabase, Android, or production configuration change has been authorized.
+Tasks 1 through 5 are complete. `ios-xcode-signing-readiness-run` is DONE. The selected next follow-up candidate is `ios-first-local-build-readiness-run`; it was not auto-created. No Xcode, signing, native project, Apple Developer/App Store Connect, auth, billing, RevenueCat, Supabase, Android, or production configuration change was authorized or executed.

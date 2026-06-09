@@ -6,12 +6,12 @@
 
 ## Run State
 
-- Status: `TODO`
+- Status: `DONE`
 - Setup date: 2026-06-10
 - Previous run context:
   - `ios-capacitor-platform-setup-run` is `DONE`.
   - `ios-capacitor-platform-setup-run` selected `ios-xcode-signing-readiness-run` as the next follow-up candidate.
-- Current phase: Task 4 complete; next TODO is `5. Select next signing follow-up run`.
+- Current phase: Task 5 complete; `ios-xcode-signing-readiness-run` is DONE.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No Xcode, xcodebuild, archive, upload, signing change, Apple Developer/App Store Connect change, native file edit, entitlements creation, auth, Supabase, billing, RevenueCat, Android, or production action was executed during setup.
 
@@ -97,7 +97,7 @@
 | 2 | DONE | Apple Developer readiness checklist | Apple Developer | HIGH | Documented required Team ID, Bundle ID/App ID, membership, certificate, provisioning, and App Store Connect linkage items. | No Apple Developer console changes. No Bundle ID creation. | `git diff --check` |
 | 3 | DONE | Capability requirements checklist | Capabilities | HIGH | Documented likely iOS capabilities: Sign in with Apple, Push Notifications, In-App Purchase, Associated Domains, and lower-priority capability candidates. | No entitlements creation. No capability changes. No console changes. | `git diff --check` |
 | 4 | DONE | Signing and build blocker checklist | Build Readiness | MEDIUM | Documented likely blockers before first Xcode build/archive: macOS/Xcode, Team, Bundle ID, provisioning, certificate, capability mismatch, SPM resolution, auth, IAP, push, project, and review readiness. | No `xcodebuild`. No archive. | `git diff --check` |
-| 5 | TODO | Select next signing follow-up run | Prioritization | LOW | Select exactly one follow-up run after signing readiness audit. | No next run auto-creation. No code/native/console changes. | active-run overall status check |
+| 5 | DONE | Select next signing follow-up run | Prioritization | LOW | Selected `ios-first-local-build-readiness-run` as the next follow-up candidate after signing readiness audit. | No next run auto-creation. No code/native/console changes. | active-run overall status check |
 
 ## Candidate Follow-Up Runs
 
@@ -160,6 +160,19 @@ Task 5 must select exactly one:
 | Output document | `docs/ios-xcode-signing-readiness.md` |
 | Native/config/console changed? | `No` |
 | Next TODO | `5. Select next signing follow-up run` |
+
+## Task 5 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `5. Select next signing follow-up run` |
+| Status | `DONE` |
+| Completed date | 2026-06-10 |
+| Method | Documentation and prioritization only. No next active-run was created. No Xcode, `xcodebuild`, fastlane, archive/upload/TestFlight submission, `npx cap sync ios`, `npx cap open ios`, pod install, `project.pbxproj` edit, `Info.plist` edit, entitlements creation, Apple Developer/App Store Connect change, certificates/provisioning creation, capability enablement, RevenueCat/Supabase/Firebase/APNs change, Android change, or production action was executed. |
+| Result | Selected `ios-first-local-build-readiness-run` as the next iOS follow-up candidate because the signing readiness audit now points to local environment, Team ID, automatic signing viability, and SPM resolution as the next direct blockers before any first build attempt. |
+| Output document | `docs/ios-xcode-signing-readiness.md` |
+| Native/config/console changed? | `No` |
+| Run status | `ios-xcode-signing-readiness-run` is `DONE`; no next active-run was auto-created. |
 
 ## Verification Policy
 
