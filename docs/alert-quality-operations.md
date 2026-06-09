@@ -56,7 +56,7 @@ These are candidate surfaces for future TODO tasks. Listing them here is not app
 | 1 | DONE | Current alert structure audit | How are alerts generated, permissioned, stored, routed, gated, and configured today? | Structure map and protected-surface notes. |
 | 2 | DONE | Alert copy quality review | Does alert copy avoid investment instruction, guarantee, urgency, or excessive trading pressure? | Copy-risk findings and wording guardrails. |
 | 3 | DONE | Duplicate and cooldown policy review | Can the same user receive too many or repeated alerts? | Repetition/cooldown risk map. |
-| 4 | TODO | Basic/Pro alert limit review | Are free and paid alert limits consistent between UI and intended behavior? | Basic/Pro consistency findings. |
+| 4 | DONE | Basic/Pro alert limit review | Are free and paid alert limits consistent between UI and intended behavior? | Basic/Pro consistency findings. |
 | 5 | TODO | targetPath routing quality review | Where should alert taps land, and what should happen for login-required or missing routes? | Routing expectation table. |
 | 6 | TODO | Alert improvement candidate selection | What is the one safest first improvement candidate? | One implementation-run candidate with rationale. |
 
@@ -357,6 +357,127 @@ These are candidate surfaces for future TODO tasks. Listing them here is not app
 - Confirm whether Basic users can see, save, or sync settings for rules that server delivery later blocks.
 - Confirm whether Pro plan differences should affect only rule availability or also noise controls such as cooldown, scan caps, or total alert volume.
 - Keep this as an audit only. Do not edit entitlement, RevenueCat, billing, RLS, token preference, or push logic.
+
+## Task 4 - Basic/Pro Alert Limit Audit
+
+| Field | Value |
+| --- | --- |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Source inspection only. No push endpoint, admin diagnostics endpoint, billing endpoint, purchase, restore, database, token, external console, Android device, or production-mutating command was executed. |
+| Scope inspected | Billing plan scopes, alert rule tiers, UI alert settings gate, local usage gate, Android token preference sync, server push entitlement gate, token preference gate, subscription/profile plan resolution, and Pro pricing display references. |
+| Implementation allowed in this run? | `No` |
+
+### Sources Inspected
+
+| Source | Relevance |
+| --- | --- |
+| `src/lib/billing.ts` | Plan ids, market scopes, alert limit labels, store entitlement mapping, combined plan resolution, and `hasMarketEntitlement`. |
+| `src/lib/radarAlerts.ts` | Alert rule ids, categories, `free`/`pro` tier labels, default-enabled rules, and summary counts. |
+| `src/components/RadarAlertCenter.tsx` | UI rule display, market scoping, Pro/Basic badges, local usage gate, notification permission flow, Android push connect flow, and preference sync. |
+| `src/lib/usageMeter.ts` | Local daily usage buckets for `cryptoAlertRule` and `stocksAlertRule`. |
+| `src/lib/server/push/entitlements.ts` | Server-side `userPlan` and `ruleAllowed` before push delivery. |
+| `src/lib/server/pushAlertScanner.ts` | Runtime order: profiles/subscriptions, quality gate, entitlement gate, token preference, cooldown, duplicate, send. |
+| `src/lib/server/push/preferences.ts` | Token market/rule preference filtering and system-event rule-preference bypass. |
+| `src/lib/server/push/genericEvents.ts` | Generic market-scout/global event construction path. |
+| `src/lib/server/push/eventBuilders.ts` | System market-scout/global event flags and watchlist event flags. |
+| `src/lib/server/push/presetEvents.ts` | Saved preset events mapped to watchlist rule ids. |
+| `src/lib/server/push/scanners/liquidationScanner.ts` | Liquidation pressure event rule id and `system` flag. |
+| `src/lib/server/push/scanners/macroScanner.ts` | Macro/news event rule id and `system` flag. |
+| `src/lib/appPush.ts` | Android token sync payload: `market`, `ruleIds`, `presets`, and login requirement. |
+| `src/app/api/push-tokens/route.ts` | Token market/rule/preset merge and persistence path. |
+| `src/lib/useSupabaseAuth.ts` | Client-side entitlement refresh and profile plan resolution from active subscriptions/profile/metadata. |
+| `src/components/ProPricingPanel.tsx` | Pro plan display, alert limit rows, scope-specific plan cards, purchase/restore surfaces. |
+| `src/app/alerts/page.tsx`, `src/app/crypto/alert/page.tsx`, `src/app/pro/page.tsx` | Alert and Pro route scoping. |
+
+### Basic/Pro Alert Limit Structure Summary
+
+- Plan scopes are defined in `billing.ts`: Basic has `trial`, Coin Pro has `crypto`, Global Pro has `stocks`, and All Market Pro has `bundle`.
+- `hasMarketEntitlement(plan, "crypto" | "stocks")` returns market-specific access for current paid plan ids, while legacy `member`, `premium`, and `admin` return broad market access.
+- Alert rules are defined separately from billing plans. `macro-news` is the only `free` rule in `radarAlertRules`; `radar-grade`, `liquidation-pressure`, `watchlist-surge`, and `stock-momentum` are `pro`.
+- The alert settings UI filters rules by current market plus `news`/`system` categories. It displays `Pro`/`Basic` badges, but source inspection did not find a hard disabled state for Pro rule toggles when `isPaid` is false.
+- The UI uses `getUsageGate(alertUsageBucketId, isPaid)` when enabling a rule or requesting browser preview permission. This is localStorage-based usage gating, not the same as server entitlement.
+- Android push registration requires login and sends the current market, enabled rule ids, and saved presets to `/api/push-tokens`. The token API authenticates the user but does not perform plan entitlement checks; server push scanning is the later enforcement point.
+- Server push scanning resolves plan from active/trialing subscriptions and profile, then calls `ruleAllowed(event, plan)` before token preferences and send attempts.
+- `ruleAllowed` allows `free` rules and market-matching Pro rules for entitled plans. However, it returns `true` for `event.system` before checking rule tier or market entitlement.
+- Token preferences also bypass rule-id matching for non-watchlist system events. Those events still need a matching token market, but not a matching rule id.
+
+### Product Allow/Limit Table
+
+| User state | Billing plan scope and displayed alert limit | UI alert settings behavior from source | Server non-system rule behavior | System-event behavior to verify |
+| --- | --- | --- | --- | --- |
+| Basic | `free`; plan copy says market-level basic alerts and `alerts: "market별 1개"`. | `isPaid` is false; local usage gate uses 1 daily crypto alert-rule action and 1 daily stocks alert-rule action. Pro rules are still visible with Pro badges and can appear enabled by defaults/local storage. | `macro-news` free rule allowed. Crypto/stocks Pro rules should be blocked by `ruleAllowed` when event is not system. | System market-scout, liquidation, macro, and global composite events can bypass `ruleAllowed` tier checks if the token market matches. This is the highest-risk consistency gap. |
+| Coin Pro monthly/yearly | `crypto`; billing copy says crypto alert conditions 20 monthly or 30 yearly. | Crypto alert page sees `isPaid` true and local usage gate uses 20. Global alert page sees `isPaid` false and uses Basic gate. | Crypto non-system Pro rules allowed. Stocks non-system Pro rules blocked. | If the user also has a stocks token market, stock/global system events may bypass tier checks despite Coin-only entitlement. |
+| Global Pro monthly/yearly | `stocks`; billing copy says global alert conditions 20 monthly or 30 yearly. | Global alert page sees `isPaid` true and local usage gate uses 20. Crypto alert page sees `isPaid` false and uses Basic gate. | Stocks non-system Pro rules allowed. Crypto non-system Pro rules blocked. | If the user also has a crypto token market, crypto system events may bypass tier checks despite Global-only entitlement. |
+| All Market Pro monthly | `bundle`; billing copy says market-level alert conditions 30. | Both crypto and global alert pages see `isPaid` true, but local alert-rule gate uses 20 for each market. | Crypto and stocks non-system Pro rules allowed. | System events also allowed; this is consistent with broad entitlement, but count labels differ from local gate. |
+| All Market Pro 6-month | `bundle`; billing copy says market-level alert conditions 40. | Both crypto and global alert pages see `isPaid` true, but local alert-rule gate uses 20 for each market. | Crypto and stocks non-system Pro rules allowed. | System events also allowed; this is consistent with broad entitlement, but count labels differ from local gate. |
+| Legacy `member`/`premium`/`admin` | Treated as paid broad access by `hasMarketEntitlement`; `admin` label resolves to All Market Pro. | Both markets should see paid access if profile is one of these legacy/admin plans. | Crypto and stocks non-system Pro rules allowed. | Broad system-event delivery is consistent with broad access, but legacy plan copy may be less explicit. |
+
+### UI Gating / Server Gating Comparison
+
+| Layer | Current behavior | Safety read |
+| --- | --- | --- |
+| Plan display | `/pro` uses billing plan scopes and shows alert limit rows for Basic, Coin Pro, Global Pro, and All Market Pro. | Clear product-level source of truth for user-facing plan scope, but local alert usage limits do not fully match yearly/bundle limit labels. |
+| Alert settings route | `/crypto/alert` shows crypto rules; `/alerts?market=global` shows stocks/global rules; `/alerts` redirects crypto to `/crypto/alert`. | Route scoping is clear. |
+| Rule visibility | Rules are filtered by market and display `Pro` or `Basic` badges. | The badge is informative, not a hard gate. Basic users can still see Pro toggles. |
+| Rule toggle | Enabling a rule uses local usage gate. It does not check `rule.tier` against `profile.plan` before allowing the toggle state. | Risk of "it looks enabled" for Basic users even when server later blocks non-system Pro delivery. |
+| Browser preview permission | Non-Android browser permission request also uses local usage gate and can create a browser notification preview. | Browser preview is not the same as server FCM entitlement enforcement. |
+| Android push registration | Requires login, Android support, permission, token registration, and `/api/push-tokens` sync. | Good login/token safety. Plan enforcement is not in token registration. |
+| Token persistence | `/api/push-tokens` merges existing and new `markets`/`rule_ids`; it syncs presets by market when provided. | Existing market/rule state can persist across plan changes or later UI changes until sync updates it. |
+| Server plan resolution | Scanner reads active/trialing subscriptions and profiles, then combines plans with `resolveCombinedBillingEntitlementPlan`. | Stronger than client-only gate and handles active subscription state. |
+| Server rule gate | `ruleAllowed` gates non-system Pro rules by `hasMarketEntitlement`. | Good for watchlist/preset Pro rules and non-system rule events. |
+| Server system-event gate | `ruleAllowed` returns true for `event.system`; `tokenPreferenceDecision` also bypasses rule preference for non-watchlist system events. | High-risk consistency gap. Market preference still applies, but plan tier and selected rule id may not. |
+| Saved preset events | Server `buildUserPresetEvents` maps saved conditions to watchlist rules without `system: true`. | Safer: Basic or wrong-market plans should be blocked by `ruleAllowed`. |
+| Client entitlement refresh | `useSupabaseAuth` refreshes profile/subscription entitlement on load, focus, visibility, auth refresh event, and 30-second interval. | Helps reduce stale UI plan state, but server remains the final authority. |
+
+### Confirmed Safety Elements
+
+- Market entitlement helpers correctly distinguish `crypto`, `stocks`, and `bundle` plan scopes for non-system checks.
+- Server push scan applies entitlement before token preference, cooldown, duplicate guard, and send attempts.
+- Active/trialing subscriptions are read separately from profile plan during server scan; expired subscription rows are filtered by `current_period_end`.
+- Saved preset/watchlist push events are non-system and should pass through normal Pro entitlement gates.
+- Android push registration requires a logged-in Supabase session before token sync.
+- The alert settings UI shows Pro/Basic badges beside each rule, so the tier distinction is at least visible.
+- `/pro` plan cards show market scope and alert limit copy before checkout.
+- Purchase, restore, RevenueCat, billing sync, Supabase, and RLS code paths were not executed or modified.
+
+### Risks And Uncertain Areas
+
+- Basic users can see Pro rule toggles and may have Pro default rule ids stored locally. This can make the UI look more enabled than server delivery actually permits.
+- Billing plan copy and local usage gate counts are not fully aligned. Yearly Coin/Global plans show 30 alert conditions, All Market monthly shows 30, and All Market 6-month shows 40, but `usageMeter` uses `proDailyLimit: 20` for both crypto and stocks alert-rule buckets.
+- `/api/push-tokens` accepts and merges markets/rule ids/presets after authentication without checking entitlement. That is acceptable if scanner enforcement is complete, but it makes server push gating the only real paid boundary.
+- `event.system` bypasses `ruleAllowed` entirely. Current generic market-scout, liquidation, macro/news, macro calendar, risk-off, and semiconductor/global composite events include system-style paths, so paid-boundary consistency depends on whether those events are intended to be free operational alerts or Pro market alerts.
+- Token preferences bypass rule ids for non-watchlist system events. A disabled Pro rule may not block a system event with the same rule id if the token market still matches.
+- Cross-market risk exists if a user has previously synced both markets on one token and later has only Coin Pro or only Global Pro. Non-system wrong-market Pro events should be blocked, but system wrong-market events may still pass if market preference remains.
+- Plan downgrade, subscription expiry, restore delay, or RevenueCat/App Store sync delay can leave the UI and token preferences out of sync until entitlement refresh and token sync complete.
+- Existing token `markets` and `rule_ids` are merged rather than replaced. This reduces accidental loss of preferences, but can keep stale market/rule preferences after plan or UI changes.
+- Local browser notification behavior and Android FCM behavior are not equivalent. Browser preview/local monitor can make alerts appear available even when Android server delivery would be filtered.
+- This audit did not verify live production subscriptions, token rows, or actual RevenueCat/Google Play entitlement state.
+
+### Improvement Candidates For A Later Implementation Run
+
+| Candidate | Why | Risk | Implementation allowed now? |
+| --- | --- | --- | --- |
+| Decide and document whether system market-scout/liquidation/global events are free or Pro-gated | The current `event.system` bypass is the largest Basic/Pro consistency question. | HIGH because it touches push entitlement policy and possibly alert delivery. | No |
+| Add a server-side entitlement check to system events that represent Pro market alerts | Aligns server delivery with Pro rule tiers if those events are not intended as free alerts. | HIGH because it changes delivery behavior. | No |
+| Make UI Pro rule toggles clearly locked or explanatory for Basic users | Reduces "enabled but not delivered" confusion. | MEDIUM because it touches user-facing alert settings UI. | No |
+| Align alert limit numbers between `billing.ts` plan copy and `usageMeter` buckets | Prevents paid users from seeing 30/40 in plan copy but 20 in local gate. | MEDIUM because it affects quota semantics. | No |
+| Replace merge-only token preference sync with market-scoped replacement or explicit stale preference cleanup | Reduces cross-market and downgrade drift. | MEDIUM to HIGH because it changes token persistence semantics. | No |
+| Add plan-state messaging for expired/restoring/delayed entitlement | Reduces "I paid but alerts did not come" support risk. | MEDIUM because it touches auth/billing/alert UX. | No |
+
+### High-Risk Areas To Keep Protected
+
+- `src/lib/billing.ts`, `src/lib/mobilePurchases.ts`, billing API routes, RevenueCat product/entitlement mapping, Google Play product/base-plan ids, prices, and restore flow.
+- `src/lib/server/push/entitlements.ts`, `src/lib/server/pushAlertScanner.ts`, `src/lib/server/push/preferences.ts`, and `/api/push-tokens`.
+- Supabase `profiles`, `subscriptions`, `push_tokens`, `push_alert_presets`, `push_alert_events`, and RLS policies.
+- Android native/release settings, FCM configuration, Play Console, RevenueCat dashboard, and production DB/token rows.
+
+### Next TODO - targetPath Routing Quality Points
+
+- Inspect where each alert type sends users: `/crypto`, `/alerts?market=crypto`, `/alerts?market=global`, `/global`, `/global/assets`, `/schedule`, and news routes.
+- Check whether Basic/Pro-gated target screens could create confusion after a notification tap.
+- Verify fallback behavior for missing or absent `targetPath` through source only.
+- Keep routing audit separate from entitlement fixes; do not edit routes, targetPath helpers, push listeners, or Android back-stack behavior.
 
 ## Out Of Scope
 

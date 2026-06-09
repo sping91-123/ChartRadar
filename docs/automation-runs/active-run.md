@@ -9,7 +9,7 @@
 - Status: `ACTIVE`
 - Setup date: 2026-06-09
 - Previous run context: `android-production-auto-smoke-run` is `DONE` and its recorded automatic checks are `PASS`.
-- Current phase: Tasks 1-3 are `DONE`; Task 4 is the next `TODO`.
+- Current phase: Tasks 1-4 are `DONE`; Task 5 is the next `TODO`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No alert code, push command, production DB/token access, FCM, Supabase, RevenueCat, billing, Android release, or Android phone manual QA action was executed during setup.
 
@@ -77,7 +77,7 @@
 | 1 | DONE | Current alert structure audit | Alert Structure | MEDIUM | Document alert generation, permission request, push token save, targetPath routing, Pro limits, and alert settings flow. | No FCM edits. No push-cron edits. No Supabase edits. No production DB edits. No real push send. | `git diff --check` |
 | 2 | DONE | Alert copy quality review | Alert Copy | LOW | Check whether alert wording could read as investment instruction, guaranteed return, or excessive trade inducement. | No alert send logic edits. No real push send. | `git diff --check` |
 | 3 | DONE | Duplicate and cooldown policy review | Dedupe/Cooldown | MEDIUM | Check whether the same user can receive repetitive or too-frequent alerts from current structure. | No cooldown logic edits. No push-cron edits. No production DB edits. | `git diff --check` |
-| 4 | TODO | Basic/Pro alert limit review | Entitlement/Gating | HIGH | Check whether free/paid alert limits are consistent between screen design and expected runtime behavior. | No entitlement edits. No RevenueCat edits. No Supabase RLS edits. No billing edits. | `git diff --check` |
+| 4 | DONE | Basic/Pro alert limit review | Entitlement/Gating | HIGH | Check whether free/paid alert limits are consistent between screen design and expected runtime behavior. | No entitlement edits. No RevenueCat edits. No Supabase RLS edits. No billing edits. | `git diff --check` |
 | 5 | TODO | targetPath routing quality review | Notification Routing | MEDIUM | Document expected destination, fallback, login-required state, and missing-route behavior after alert click. | No routing code edits. No real push-click test. | `git diff --check` |
 | 6 | TODO | Alert improvement candidate selection | Prioritization | LOW | Select exactly one first alert-quality improvement candidate; implementation remains a separate run. | No multiple simultaneous improvements. No code edits. | `git diff --check` |
 
@@ -152,7 +152,39 @@
   - no admin diagnostics call
   - no production DB or raw token query
   - no Supabase, RLS, RevenueCat, billing, entitlement, Android release, Play Console, app code, UI code, package, or script changes
-- Next task remains: `4. Basic/Pro alert limit review`
+- Task 3 handoff at completion: `4. Basic/Pro alert limit review`
+
+## Task 4 Completion Note
+
+- Completed date: 2026-06-09
+- Completed task: `Basic/Pro alert limit review`
+- Output document: `docs/alert-quality-operations.md`
+- Scope inspected by source inspection only:
+  - plan scopes, alert limit copy, store entitlement mapping, and `hasMarketEntitlement` in `src/lib/billing.ts`
+  - `free`/`pro` alert rule tiers and default-enabled rules in `src/lib/radarAlerts.ts`
+  - alert settings UI gating, local usage gate, Pro/Basic badges, and Android push preference sync in `RadarAlertCenter`
+  - server-side `userPlan` and `ruleAllowed` entitlement gate
+  - push scanner order from profile/subscription lookup through entitlement, token preferences, cooldown, duplicate, and send
+  - token preference market/rule filtering and system-event rule preference bypass
+  - Android token sync and `/api/push-tokens` market/rule/preset merge behavior
+  - Pro pricing plan display and alert limit rows
+- Result summary:
+  - market entitlement helpers distinguish Coin Pro, Global Pro, and All Market Pro for non-system checks
+  - UI shows Pro/Basic badges but does not hard-lock Pro rule toggles for Basic users
+  - local alert-rule usage gate uses Basic 1 and Pro 20 per market, which does not fully match yearly/bundle alert limit copy
+  - server `ruleAllowed` blocks non-system Pro events by market entitlement
+  - system events bypass `ruleAllowed`, and token preferences also bypass rule ids for non-watchlist system events; this is the main Basic/Pro consistency risk
+  - token registration is authenticated but not entitlement-gated, so scanner-side enforcement remains the paid boundary
+- Protected actions not performed:
+  - no entitlement, RevenueCat, billing, product id, plan id, price, Supabase, RLS, token, push scanner, cooldown, dedupe, push-cron, or alert logic edits
+  - no real push send
+  - no admin test push
+  - no push-cron call
+  - no billing endpoint call
+  - no purchase or restore test
+  - no production DB or raw token query
+  - no Android release, Play Console, app code, UI code, package, or script changes
+- Next task remains: `5. targetPath routing quality review`
 
 ## Documentation Policy
 
