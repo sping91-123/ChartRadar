@@ -60,7 +60,7 @@ These are expected inspection targets for TODOs, not approval to edit them.
 | 1 | DONE | Xcode project signing state audit | What signing-related values are visible in generated project files today? | Source-visible signing state table. |
 | 2 | DONE | Apple Developer readiness checklist | What Apple Developer records and credentials must exist before signing works? | Developer account and provisioning checklist. |
 | 3 | DONE | Capability requirements checklist | Which capabilities are likely needed before build/review? | Capability need/risk matrix. |
-| 4 | TODO | Signing and build blocker checklist | What will most likely block first local build/archive? | Pre-build blocker checklist. |
+| 4 | DONE | Signing and build blocker checklist | What will most likely block first local build/archive? | Pre-build blocker checklist. |
 | 5 | TODO | Select next signing follow-up run | What is the next practical iOS follow-up after signing readiness? | One follow-up candidate, no auto-creation. |
 
 ## Known Blockers At Setup
@@ -320,6 +320,91 @@ These are expected inspection targets for TODOs, not approval to edit them.
 - Convert capability gaps into signing/build blockers: missing Team ID, missing explicit App ID confirmation, absent entitlements, no APNs/Firebase iOS setup, no RevenueCat/App Store product mapping, unresolved Apple login, and no associated-domain/deep-link plan.
 - Keep Xcode, entitlements, Apple Developer/App Store Connect, Supabase/Auth, RevenueCat/Billing, Firebase/APNs, and native project edits out of scope until a later explicitly approved implementation run.
 
+## Task 4 - Signing And Build Blocker Checklist
+
+| Field | Value |
+| --- | --- |
+| Task | `4. Signing and build blocker checklist` |
+| Status | `DONE` |
+| Completed date | 2026-06-10 |
+| Method | Documentation only. No Xcode, `xcodebuild`, fastlane, archive/upload/TestFlight submission, `npx cap sync ios`, `npx cap open ios`, pod install, `project.pbxproj` edit, `Info.plist` edit, entitlements creation, Apple Developer/App Store Connect change, certificates/provisioning creation, capability enablement, RevenueCat/Supabase/Firebase/APNs change, Android change, or production action was executed. |
+| Current source-visible basis | `PRODUCT_BUNDLE_IDENTIFIER` is `com.staronlabs.chartradar`; `DEVELOPMENT_TEAM` and provisioning profile settings are absent; `.entitlements` file is absent; generated iOS project exists; ignored generated iOS outputs remain on disk but ignored. |
+
+### Signing / Build Blocker Checklist
+
+| Area | Blocker | Current state | Risk | Resolve before | Follow-up run candidate | Forbidden in this run |
+| --- | --- | --- | --- | --- | --- | --- |
+| Local environment | macOS availability | Not verified. | BLOCKER | Any local iOS build. | `ios-first-local-build-readiness-run` | Do not run Xcode or build commands. |
+| Local environment | Xcode installation/version | Not verified. | BLOCKER | Any local iOS build/archive. | `ios-first-local-build-readiness-run` | Do not open Xcode. |
+| Local environment | Xcode Command Line Tools | Not verified. | HIGH | First local build. | `ios-first-local-build-readiness-run` | Do not run `xcodebuild`. |
+| Local environment | Apple ID / Xcode account login | Not verified. | HIGH | Signing in Xcode. | `ios-first-local-build-readiness-run` | Do not sign in or change account state. |
+| Local environment | SPM dependency resolution | Not verified in Xcode; SPM files exist. | HIGH | First local build. | `ios-first-local-build-readiness-run` | Do not resolve packages through Xcode. |
+| Signing identity | Apple Developer membership | Not verified. | BLOCKER | Signing assets and App ID work. | `ios-first-local-build-readiness-run` or account setup run. | Do not access or mutate console state. |
+| Signing identity | Account Holder/Admin role | Not verified. | HIGH | Certificates, identifiers, profiles, App Store Connect setup. | `ios-first-local-build-readiness-run` or account setup run. | Do not change roles. |
+| Signing identity | Team ID / `DEVELOPMENT_TEAM` | Not configured in project. | BLOCKER | Xcode signing/build/archive. | `ios-first-local-build-readiness-run` | Do not write `DEVELOPMENT_TEAM`. |
+| Signing identity | Certificate availability | Not verified. | HIGH | Device signing and distribution archive. | `ios-first-local-build-readiness-run` | Do not create/download certificates. |
+| Signing identity | Automatic signing viability | Unknown; `CODE_SIGN_STYLE` is `Automatic`. | HIGH | First local build/archive. | `ios-first-local-build-readiness-run` | Do not toggle signing style. |
+| Bundle ID / App ID | Explicit App ID for `com.staronlabs.chartradar` | Not verified in Apple Developer. | BLOCKER | Signing and capabilities. | `ios-first-local-build-readiness-run` or account setup run. | Do not create Bundle ID/App ID. |
+| Bundle ID / App ID | Bundle ID availability | Not verified externally. | BLOCKER | App ID registration and App Store record. | Account setup run. | Do not query/mutate console. |
+| Bundle ID / App ID | App ID capability selection | Undecided. | HIGH | Capability enablement and provisioning. | `ios-xcode-entitlements-capabilities-run` | Do not enable capabilities. |
+| Bundle ID / App ID | App Store Connect Bundle ID linkage | Not verified. | HIGH | TestFlight upload path. | Store/App Connect readiness run. | Do not create app record. |
+| Provisioning | Development provisioning profile | Not configured/verified. | HIGH | Device debug build. | `ios-first-local-build-readiness-run` | Do not create profiles. |
+| Provisioning | App Store distribution provisioning profile | Not configured/verified. | BLOCKER | Archive/upload. | `ios-first-local-build-readiness-run` | Do not create profiles. |
+| Provisioning | Automatic signing can resolve profiles | Unknown. | HIGH | First build/archive. | `ios-first-local-build-readiness-run` | Do not trigger signing resolution. |
+| Provisioning | Manual signing need | Unknown. | MEDIUM | Build strategy decision. | `ios-first-local-build-readiness-run` | Do not switch signing strategy. |
+| Capabilities | Sign in with Apple capability | Absent. | HIGH | External TestFlight/App Store review if Google/Kakao login is exposed. | `ios-auth-apple-signin-risk-run` | Do not enable capability or auth provider. |
+| Capabilities | Push Notifications entitlement | Absent. | HIGH | iOS push token/delivery validation. | `ios-push-apns-firebase-readiness-run` | Do not create entitlements or APNs setup. |
+| Capabilities | In-App Purchase readiness | Incomplete. | HIGH | iOS paid feature validation/review. | `ios-revenuecat-product-mapping-run` | Do not create App Store products or RevenueCat mappings. |
+| Capabilities | Associated Domains need | Undecided. | MEDIUM | Universal link/deep-link/OAuth return strategy. | `ios-associated-domains-deeplink-readiness-run` | Do not add domains or routing code. |
+| Capabilities | `.entitlements` file | Absent. | HIGH | Any entitlement-backed capability. | `ios-xcode-entitlements-capabilities-run` | Do not create file. |
+| Auth / review | Google/Kakao login vs Apple login | Apple login not implemented; risk HIGH. | HIGH | External TestFlight/App Store Review. | `ios-auth-apple-signin-risk-run` | Do not change auth/Supabase. |
+| Auth / review | Supabase Apple provider | Not configured. | HIGH | Apple login implementation. | `ios-auth-apple-signin-risk-run` | Do not change provider settings. |
+| Auth / review | iOS redirect/deep link | Not defined; no plist URL scheme observed. | HIGH | Native auth callback reliability. | `ios-associated-domains-deeplink-readiness-run` | Do not edit plist/routing. |
+| Auth / review | Reviewer login/test account plan | Not defined. | MEDIUM | Beta App Review / App Store Review. | Store listing / review readiness run. | Do not create accounts. |
+| IAP / RevenueCat | App Store subscription products | Not created/verified. | HIGH | iOS purchases and review. | `ios-revenuecat-product-mapping-run` | Do not create products. |
+| IAP / RevenueCat | RevenueCat iOS mapping | Incomplete. | HIGH | iOS purchase/restore and entitlement sync. | `ios-revenuecat-product-mapping-run` | Do not change RevenueCat. |
+| IAP / RevenueCat | Restore purchases UX | Present in app flow but iOS readiness not verified. | HIGH | App Store review for paid apps. | `ios-revenuecat-product-mapping-run` | Do not run restore tests. |
+| IAP / RevenueCat | `/pro` iOS copy audit | Not complete. | MEDIUM | Paid feature review/readiness. | `ios-revenuecat-product-mapping-run` or copy audit run. | Do not edit billing copy here. |
+| Push / APNs / Firebase | APNs key/certificate | Not verified. | HIGH | iOS push delivery. | `ios-push-apns-firebase-readiness-run` | Do not create APNs keys/certs. |
+| Push / APNs / Firebase | Firebase iOS app | Not verified. | HIGH | FCM/APNs bridge for iOS. | `ios-push-apns-firebase-readiness-run` | Do not change Firebase. |
+| Push / APNs / Firebase | `GoogleService-Info.plist` | Not found. | HIGH | Firebase iOS SDK/config readiness if used. | `ios-push-apns-firebase-readiness-run` | Do not add plist. |
+| Push / APNs / Firebase | Real push test | Not run. | HIGH | Production push confidence. | `ios-push-apns-firebase-readiness-run` | Do not send push. |
+| Project / files | Ignored generated outputs policy | Unresolved; generated outputs are ignored. | MEDIUM | Repeatable sync/build workflow. | `ios-generated-output-policy-run` | Do not change `.gitignore` or generated files. |
+| Project / files | `ios/App/App/public/` ignored | On disk but ignored. | MEDIUM | Build reproducibility expectations. | `ios-generated-output-policy-run` | Do not stage ignored outputs. |
+| Project / files | `capacitor.config.json`, `config.xml`, plugin folder ignored | On disk but ignored. | MEDIUM | Future sync/build workflow docs. | `ios-generated-output-policy-run` | Do not stage ignored outputs. |
+| Project / files | Version/build number policy | `MARKETING_VERSION = 1.0`, `CURRENT_PROJECT_VERSION = 1`. | MEDIUM | Archive/upload. | First build or release policy run. | Do not edit project settings. |
+| Project / files | Production app icon/splash asset readiness | Generated assets exist; production readiness unverified. | MEDIUM | TestFlight/listing polish. | Store listing/assets run. | Do not edit assets here. |
+| Build/archive | First local build | Not run. | BLOCKER | Archive/upload. | `ios-first-local-build-readiness-run` | Do not build. |
+| Build/archive | Archive | Not run. | BLOCKER | TestFlight upload. | `ios-first-local-build-readiness-run` | Do not archive. |
+| Build/archive | TestFlight upload | Not run. | BLOCKER | Internal/external TestFlight. | Later TestFlight upload run. | Do not upload. |
+| Build/archive | App Store Connect metadata | Incomplete/unverified. | HIGH | TestFlight review and App Review. | Store listing/review readiness run. | Do not change App Store Connect. |
+| Build/archive | Beta App Review notes | Not defined. | MEDIUM | External TestFlight. | Store listing/review readiness run. | Do not submit review notes. |
+
+### Stage-Based Blocker Summary
+
+| Stage | Must resolve first | Can remain deferred |
+| --- | --- | --- |
+| Internal local build | macOS/Xcode/CLT, Apple ID login, Team ID, explicit App ID confirmation, automatic signing viability, SPM package resolution. | App Store listing metadata, external review notes, real IAP/push validation. |
+| Internal TestFlight | Distribution signing/archive path, App Store Connect app record, Bundle ID linkage, build/version policy, upload path, basic launch sanity. | External Beta App Review notes, full App Store metadata polish, public screenshots. |
+| External TestFlight | Reviewable login path, Sign in with Apple risk decision, privacy/support URLs, reviewer notes/test account plan, visible paid feature behavior. | Final App Store marketing copy and full release rollout decisions. |
+| App Store Review | Sign in with Apple/equivalent login compliance, IAP/RevenueCat mapping, restore behavior, App Privacy answers, support/privacy/refund links, production assets/screenshots, push/privacy disclosure accuracy. | Post-release operational tuning. |
+
+### Prioritized Handoff To Task 5
+
+| Priority | Follow-up candidate | Why it is next-relevant |
+| --- | --- | --- |
+| 1 | `ios-first-local-build-readiness-run` | Most direct next blocker after signing readiness: verify local environment, Team ID path, automatic signing feasibility, SPM resolution, and whether first build can be attempted safely. |
+| 2 | `ios-auth-apple-signin-risk-run` | Highest review risk once login is exposed to external testers/reviewers. |
+| 3 | `ios-revenuecat-product-mapping-run` | Required before paid iOS feature validation and App Store subscription review. |
+| 4 | `ios-push-apns-firebase-readiness-run` | Required before iOS alert delivery can be trusted. |
+| 5 | `ios-generated-output-policy-run` | Useful repo hygiene, but not the first build blocker. |
+
+### Task 5 Handoff
+
+- Select exactly one next follow-up run.
+- Do not auto-create the selected run.
+- Keep native edits, Xcode/build/archive/upload, Apple Developer/App Store Connect changes, auth/Supabase changes, RevenueCat/billing changes, Firebase/APNs changes, and Android changes out of scope.
+
 ## High-Risk Separation
 
 | Area | Status in this run |
@@ -350,4 +435,4 @@ Use this format as each TODO completes.
 
 ## Final Conclusion
 
-Task 3 is complete. The next task is `4. Signing and build blocker checklist`, and no Xcode, signing, native project, Apple Developer/App Store Connect, auth, billing, RevenueCat, Supabase, Android, or production configuration change has been authorized.
+Task 4 is complete. The next task is `5. Select next signing follow-up run`, and no Xcode, signing, native project, Apple Developer/App Store Connect, auth, billing, RevenueCat, Supabase, Android, or production configuration change has been authorized.
