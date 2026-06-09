@@ -96,7 +96,7 @@ These surfaces are not implementation approval. They are the expected inspection
 | `src/components/AppFooter.tsx` | Footer links to terms, privacy, account/data deletion, and refund. It includes investment-risk copy but only the brand name as operator info. |
 | `src/components/ProPricingPanel.tsx` | Shows current plan label, market access, purchase buttons, and native restore action `구독 권한 불러오기` when native purchase is available. |
 | `src/lib/appVersion.ts` | Defines `APP_VERSION_DISPLAY` as `앱 버전 1.0.8 / 빌드 11`; displayed in `HeaderActions` AppInfo section. |
-| `src/app/account/delete/page.tsx` | Provides deletion request email `staronlabs@gmail.com`, deletion scope, retained data scope, and Google Play subscription separation guidance. |
+| `src/app/account/delete/page.tsx` | Provides deletion request email `support@staronlabs.com`, deletion scope, retained data scope, and Google Play subscription separation guidance. |
 
 ### Current Provided Items
 
@@ -188,7 +188,7 @@ These surfaces are not implementation approval. They are the expected inspection
 | --- | --- | --- |
 | Add policy/support links to the header settings panel | Link-only UI change; does not change legal text or protected logic. | High trust impact because it reduces hunting from the main settings entry. |
 | Add alert settings and app version to `/menu` | Route-page link/display parity with header modal. | Good if Task 3 chooses `/menu` as the durable settings route. |
-| Add support/contact item that points to existing email or FAQ context | Display-only if it reuses existing `staronlabs@gmail.com` and FAQ/refund pages. | Avoid creating new external tooling. |
+| Add support/contact item that points to existing email or FAQ context | Display-only if it reuses existing `contact@staronlabs.com` / `support@staronlabs.com` and FAQ/refund pages. | Avoid creating new external tooling. |
 | Add app version to `/account` or `/menu` | Display-only using existing `APP_VERSION_DISPLAY`. | Strong support value with minimal risk. |
 | Add subscription manage/restore link from `/account` to `/pro` or `/refund` | Link-only; does not invoke restore or billing APIs. | Keep wording clear that actual restore remains on `/pro`. |
 | Standardize account deletion/logout grouping labels | UI/copy-only if actions and routes stay unchanged. | Avoid changing `signOut` or delete request behavior. |
@@ -409,16 +409,16 @@ Recommended implementation goal:
 | `/account` | Shows login/account state, email/provider details, current plan/access rows, Basic-to-`/pro` link, logout button, gated `/account/delete` guide link, and `AppFooter`. | No app version display on the account page itself, no explicit FAQ/support item, no alert settings link, and no direct subscription restore/manage entry beyond `/pro`/refund context. |
 | `AppFooter` | Links to `/terms`, `/privacy`, `/account/delete`, and `/refund`. Shows service-risk copy and `Chart Radar.` service name. | No FAQ link, no direct support/contact item, no app version/build display, and no clear business/developer information beyond service name. |
 | `/faq` | Provides FAQ content and links to `/terms`, `/privacy`, and `/refund`. | No direct support email/contact callout and no app version. |
-| `/privacy` | Mentions support email `staronlabs@gmail.com` for privacy inquiries and links to `/account/delete`. | Support contact is deep inside policy copy, not exposed as a settings/contact item. |
+| `/privacy` | Mentions contact email `contact@staronlabs.com` for privacy inquiries and links to `/account/delete`. | Contact path is deep inside policy copy, not exposed as a settings/contact item. |
 | `/refund` | Explains subscription cancellation/refund guidance and what to include when contacting support. | Does not show a direct support email in the inspected page body. |
-| `/account/delete` | Shows account/data deletion request guidance and support email `staronlabs@gmail.com`; clarifies store subscription cancellation is separate. | Delete contact path is available only after reaching a destructive-action guide. |
+| `/account/delete` | Shows account/data deletion request guidance and support email `support@staronlabs.com`; clarifies store subscription cancellation is separate. | Delete support path is available only after reaching a destructive-action guide. |
 | App version source | `APP_VERSION_DISPLAY` exists in `src/lib/appVersion.ts` and is rendered in header settings panel `AppInfoSection`. | Version is not shown in `/menu`, `/account`, footer, FAQ, privacy, or refund pages. |
 
 ### Missing Or Low-Accessibility Items
 
 | Item | Current state | Why it matters |
 | --- | --- | --- |
-| Direct support/contact | Support email exists in privacy and account deletion guide, but not as a first-class settings/menu/header item. | Users with billing, account, or app-version questions may not find contact guidance quickly. |
+| Direct support/contact | Contact/support emails exist in privacy and account deletion guide, but not as first-class settings/menu/header items. | Users with billing, account, or app-version questions may not find contact guidance quickly. |
 | Alert settings from `/menu` | Header panel and header bell expose alert settings, but `/menu` does not. | Users who land on the route-based menu lose a settings function available in the modal. |
 | Account deletion guide from `/menu` and header panel | Footer, `/account`, and privacy expose deletion guide, but main settings/menu shortcuts do not. | Production account-management expectations are harder to satisfy from the most visible settings entry. |
 | Terms/privacy/refund from header settings panel | Present in `/menu`, footer, and FAQ, but absent from the header settings panel. | The most visible settings panel is incomplete for trust/policy paths. |
@@ -441,7 +441,7 @@ Recommended implementation goal:
 | --- | --- |
 | Add alert settings and app version to `/menu` | Link/display-only parity with header settings panel. |
 | Add FAQ/support, terms, privacy, refund, and account deletion guide links to header settings panel | Existing route links only; no account, billing, or deletion behavior changes. |
-| Add a direct support/contact item that reuses existing `staronlabs@gmail.com` context | Uses already published contact text; avoid creating a new support workflow. |
+| Add direct contact/support items that reuse `contact@staronlabs.com` and `support@staronlabs.com` context | Uses already published contact/support text; avoid creating a new support workflow. |
 | Add FAQ and app version to `AppFooter` or route-based settings surfaces | Display/link-only; improves support discoverability. |
 | Add support/policy/app-version block to `/account` | Useful when users are already checking account state, as long as logout/deletion/auth behavior is untouched. |
 
@@ -482,7 +482,7 @@ TODO 2 should propose the smallest implementation set around route/link parity: 
 - Make support and policy routes findable from route-based settings/menu surfaces.
 - Preserve the header settings panel as a light summary/shortcut surface.
 - Reuse existing routes and constants only: `/faq`, `/terms`, `/privacy`, `/refund`, `/account/delete`, `/alerts` or `/crypto/alert`, and `APP_VERSION_DISPLAY`.
-- Reuse existing contact information only if it already appears in source (`staronlabs@gmail.com`); do not invent business/developer information.
+- Reuse existing contact information only if it already appears in source (`contact@staronlabs.com` for inquiries and `support@staronlabs.com` for customer support); do not invent business/developer information.
 - Keep the implementation link/display/copy-only and avoid account, billing, deletion, logout, session, push delivery, or route-ownership behavior changes.
 
 ### Route And Surface Proposal
@@ -502,7 +502,7 @@ Recommended TODO 3 scope:
 1. `/menu`
    - Add an alert settings link that points to an existing alert settings route.
    - Add account deletion guide access via existing `/account/delete`.
-   - Add a support/contact item that reuses existing `staronlabs@gmail.com` context or points to FAQ/support guidance.
+   - Add support/contact items that reuse existing `contact@staronlabs.com` and `support@staronlabs.com` context or point to FAQ/support guidance.
    - Show existing app version using `APP_VERSION_DISPLAY`.
    - Keep existing FAQ, Pro, terms, privacy, and refund links.
 
@@ -543,7 +543,7 @@ Recommended TODO 3 scope:
 
 ### TODO 3 Implementation Instruction Summary
 
-Implement a low-risk link/display polish centered on `/menu` and `AppFooter`. Use only existing routes and `APP_VERSION_DISPLAY`. Reuse `staronlabs@gmail.com` only because it already appears in privacy and account deletion pages. Do not change header panel density unless a single lightweight `/menu` or support entry is clearly needed. Do not touch `/account`, auth/session, billing, RevenueCat, entitlement, Supabase, account deletion logic, logout/session logic, Android release, Play Console, production DB, or actual login/logout/delete/payment/restore flows.
+Implement a low-risk link/display polish centered on `/menu` and `AppFooter`. Use only existing routes and `APP_VERSION_DISPLAY`. Reuse `contact@staronlabs.com` for inquiries and `support@staronlabs.com` for customer support because they are confirmed contact channels. Do not change header panel density unless a single lightweight `/menu` or support entry is clearly needed. Do not touch `/account`, auth/session, billing, RevenueCat, entitlement, Supabase, account deletion logic, logout/session logic, Android release, Play Console, production DB, or actual login/logout/delete/payment/restore flows.
 
 ## Required Item Candidates
 

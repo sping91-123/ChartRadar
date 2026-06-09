@@ -141,7 +141,7 @@
 | Status | `DONE` |
 | Completed date | 2026-06-09 |
 | Method | Low-risk UI/link/copy implementation only. |
-| Result | `/menu` now exposes alert settings, direct support contact, account deletion guidance, and app version using existing routes, existing `staronlabs@gmail.com`, and `APP_VERSION_DISPLAY`. `AppFooter` now exposes FAQ, support contact, and app version while preserving existing terms, privacy, account deletion, and refund links. |
+| Result | `/menu` now exposes alert settings, direct contact/support entries, account deletion guidance, and app version using existing routes, existing `contact@staronlabs.com` / `support@staronlabs.com`, and `APP_VERSION_DISPLAY`. `AppFooter` now exposes FAQ, contact/support entries, and app version while preserving existing terms, privacy, account deletion, and refund links. |
 | Code changed? | `Yes - UI/link/copy only` |
 | Protected logic changed? | `No` |
 | Next TODO | `4. Documentation update` |

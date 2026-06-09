@@ -22,8 +22,11 @@ export function AppFooter() {
             <Link href="/faq" className="hover:text-white">
               자주 묻는 질문
             </Link>
-            <a href="mailto:staronlabs@gmail.com" className="hover:text-white">
+            <a href="mailto:contact@staronlabs.com" className="hover:text-white">
               문의
+            </a>
+            <a href="mailto:support@staronlabs.com" className="hover:text-white">
+              고객지원
             </a>
             <Link href="/terms" className="hover:text-white">
               이용약관
@@ -38,7 +41,7 @@ export function AppFooter() {
               구독 해지·환불 안내
             </Link>
           </nav>
-          <p className="text-slate-600">Chart Radar. 문의: staronlabs@gmail.com · {APP_VERSION_DISPLAY}</p>
+          <p className="text-slate-600">Chart Radar. 문의: contact@staronlabs.com · 고객지원: support@staronlabs.com · {APP_VERSION_DISPLAY}</p>
         </div>
       </div>
     </footer>
