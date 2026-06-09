@@ -930,6 +930,48 @@ For TODO 3, implement only the alert settings UI/copy clarity required to make B
 - Re-record TypeScript, build, and copy-smoke status for the final run evidence.
 - Decide whether `npm.cmd run smoke:mobile` is useful and safe as an optional final check; do not run high-risk smoke commands such as billing, API, push, Android native, or release commands.
 
+## Follow-Up Run Task 5 - Safe Validation Execution
+
+| Field | Value |
+| --- | --- |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Safe validation and documentation only. No additional app code, UI code, user-facing code copy, alert logic, route, targetPath, billing, entitlement, Supabase, FCM, push-cron, production DB/token, external console, purchase, restore, or real push action was changed or executed. |
+| Active run | `alert-pro-rule-ui-clarity-run` |
+| Run status | `DONE` |
+
+### Final Validation Results
+
+| Command | Result |
+| --- | --- |
+| `git diff --check` | PASS |
+| `cmd /c npx tsc --noEmit` | PASS |
+| `npm.cmd run build` | PASS |
+| `npm.cmd run smoke:copy` | PASS |
+| `npm.cmd run smoke:mobile` | PASS |
+
+### Final Scope Check
+
+| Area | Result |
+| --- | --- |
+| Final implementation scope | Alert settings UI/copy and run documentation only. |
+| Protected path diff after validation | No tracked diff in billing, entitlement, RevenueCat/native purchase mapping, Supabase/RLS, push-cron, FCM/server alert sending, targetPath/routing, Android release, package scripts, production DB/token, or build output paths. |
+| High-risk commands | `smoke:billing`, `smoke:api`, `check:app-billing`, Android native/release commands, real push, purchase, restore, account deletion, and production DB/token work were not executed. |
+| Additional code after Task 3 | None. Task 4 and Task 5 only updated documentation/run records. |
+
+### Final Run Conclusion
+
+`alert-pro-rule-ui-clarity-run` is complete. Basic or wrong-market Pro alert rules now have a locked/read-only presentation in the alert settings UI, and safe validation passed. The run did not change billing, entitlement, RevenueCat, Supabase/RLS, push-cron, FCM/server alert sending, targetPath/routing, production DB/token, Android release, product IDs, plan IDs, prices, or package scripts.
+
+### Remaining Follow-Up Candidates
+
+- Resolve alert limit copy 30/40 versus `usageMeter` Pro 20 mismatch in a separate policy/copy run.
+- Decide system-event entitlement bypass policy in a separate high-risk design run.
+- Align `/alerts?market=global|crypto` targetPath allowlist or payload convention in a routing-focused run.
+- Evaluate per-user hourly/daily total push cap in a push operations run.
+- Review macro/news semantic repetition with sample-based evidence.
+- Verify Android push tap cold start/background behavior in a real-device manual QA run.
+
 ## Out Of Scope
 
 - Real push send.

@@ -6,10 +6,10 @@
 
 ## Run State
 
-- Status: `TODO`
+- Status: `DONE`
 - Setup date: 2026-06-09
 - Previous run context: `alert-quality-operations-run` is `DONE`.
-- Current phase: Task 4 completed; next TODO is `5. Safe validation execution`.
+- Current phase: all tasks completed; `alert-pro-rule-ui-clarity-run` is `DONE`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No UI implementation, entitlement, billing, RevenueCat, Supabase, push-cron, alert delivery, production DB/token, real push, purchase, restore, targetPath, routing, Android release, or external console action was executed during setup.
 
@@ -94,7 +94,7 @@
 | 2 | DONE | Basic-state Pro rule display proposal | UX Spec | LOW | Documented how Pro-only rules should appear to Basic users so they are not mistaken as enabled/deliverable. | No implementation. | `git diff --check` |
 | 3 | DONE | Minimal alert settings UI/copy implementation | UI/Copy | MEDIUM | Added clear limitation guidance and locked/read-only treatment so Basic users do not see Pro rules as actually configurable. | No entitlement, billing, RevenueCat, Supabase, push-cron, scanner, FCM, targetPath, routing, or delivery logic edits. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:copy` |
 | 4 | DONE | Related documentation update | Documentation | LOW | Recorded the implementation result and remaining risks in `docs/alert-quality-operations.md`. | No feature expansion. | `git diff --check` |
-| 5 | TODO | Safe validation execution | Verification | LOW | Confirm the final change remains UI/copy/docs only and run safe checks. | No `smoke:billing`, `smoke:api`, real push, real purchase, or restore. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build`; optional `npm.cmd run smoke:copy` |
+| 5 | DONE | Safe validation execution | Verification | LOW | Confirmed the final change remains UI/copy/docs only and ran safe checks. | No `smoke:billing`, `smoke:api`, real push, real purchase, or restore. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:copy`; `npm.cmd run smoke:mobile` |
 
 ## Task Execution Rules
 
@@ -152,6 +152,19 @@
 | Result | Task 3 implementation result, validation results, resolved user-trust risks, unchanged high-risk areas, remaining risks, and Task 5 check points were recorded in `docs/alert-quality-operations.md`. |
 | Additional code changed? | `No` |
 | Next TODO | `5. Safe validation execution` |
+
+## Task 5 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `5. Safe validation execution` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Safe validation and documentation only. |
+| Result | `git diff --check`, TypeScript, production build, copy smoke, and mobile smoke all passed. Protected paths remained unchanged. |
+| Additional code changed? | `No` |
+| Run status | `DONE` |
+| Next TODO | `None` |
 
 ## Verification Policy
 
