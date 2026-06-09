@@ -377,7 +377,17 @@ Recommended implementation goal:
 
 ### Final Run Conclusion
 
-`settings-account-polish-run` is complete. The selected next active-run candidate is `settings-support-links-polish-run`, but it has not been opened automatically. The next run should implement only the low-risk support/policy/app-version/link-accessibility polish unless the owner explicitly expands scope.
+`settings-account-polish-run` is complete. The selected next active-run candidate is `settings-support-links-polish-run`; it has now been registered separately after explicit setup. The next run should implement only the low-risk support/policy/app-version/link-accessibility polish unless the owner explicitly expands scope.
+
+## Follow-Up Active Run Registration
+
+| Field | Value |
+| --- | --- |
+| Registered date | 2026-06-09 |
+| Active run | `settings-support-links-polish-run` |
+| Source candidate | Task 4 from `settings-account-polish-run` |
+| Intended scope | Low-risk settings/menu/header UI link and copy polish for support, FAQ, terms, privacy, refund guidance, alert settings, account deletion guidance, and app version. |
+| Excluded high-risk areas | Auth/session, logout/session logic, account deletion logic, billing, RevenueCat, entitlement, Supabase/RLS, production DB, Android release, Play Console, purchase, restore, and external console work. |
 
 ## Required Item Candidates
 
@@ -452,4 +462,4 @@ Use this format as each TODO completes.
 
 ## Final Conclusion
 
-Task 4 is complete. `settings-account-polish-run` is done. The selected future implementation candidate is `settings-support-links-polish-run`; no next active-run was opened automatically.
+Task 4 is complete. `settings-account-polish-run` is done. The selected future implementation candidate is `settings-support-links-polish-run`, and it has now been opened as the current active run after explicit setup.
