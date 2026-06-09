@@ -6,12 +6,12 @@
 
 ## Run State
 
-- Status: `TODO`
+- Status: `DONE`
 - Setup date: 2026-06-09
 - Previous run context:
   - `ios-testflight-readiness-run` is `DONE`.
   - `ios-testflight-readiness-run` selected `ios-capacitor-platform-setup-run` as the first follow-up candidate.
-- Current phase: Task 7 complete; next TODO is `8. Select next iOS follow-up run`.
+- Current phase: Task 8 complete; `ios-capacitor-platform-setup-run` is DONE.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No dependency install, iOS platform add, Capacitor sync, iOS build, Xcode, pod install, archive, upload, Apple Developer, App Store Connect, RevenueCat, Supabase, auth, billing, entitlement, Android release, or production action was executed during setup.
 
@@ -102,7 +102,7 @@
 | 5 | DONE | Generate iOS platform | Native Generation | HIGH | Ran the controlled Capacitor iOS platform generation step. | No Xcode. No manual pod install. No build/archive/upload. No Apple Developer/App Store Connect changes. | `git diff --check`; generated file list review |
 | 6 | DONE | Audit generated iOS platform config | Native Audit | MEDIUM | Inspected generated native project Bundle ID/appName/webDir linkage and documented needed follow-up edits. | No native config edits. No signing changes. | `git diff --check` |
 | 7 | DONE | Safe validation and result documentation | Verification | LOW | Documented generated results and remaining risks after running safe checks. | No iOS build/upload. No Xcode. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:copy`; `npm.cmd run smoke:mobile` |
-| 8 | TODO | Select next iOS follow-up run | Prioritization | LOW | Select exactly one next follow-up candidate after platform setup. | No next run auto-creation. | active-run overall status check |
+| 8 | DONE | Select next iOS follow-up run | Prioritization | LOW | Selected `ios-xcode-signing-readiness-run` as the next follow-up candidate after platform setup. | No next run auto-creation. | active-run overall status check |
 
 ## Task 1 Completion Note
 
@@ -198,6 +198,19 @@
 | Native/config/package changed in Task 7? | `No` |
 | Remaining blockers | Missing `.entitlements`, signing/Team ID, Apple Developer/App Store Connect setup, Sign in with Apple risk, RevenueCat/App Store product mapping, APNs/Firebase iOS push, and TestFlight upload. |
 | Next TODO | `8. Select next iOS follow-up run` |
+
+## Task 8 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `8. Select next iOS follow-up run` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Documentation and prioritization only. No native iOS file edit, `Info.plist` edit, project file edit, entitlements file creation, signing change, `npx cap sync ios`, `npx cap open ios`, Xcode, pod install, iOS build/archive/upload, npm install/update/audit fix, external console change, auth, Supabase, billing, RevenueCat, entitlement, Android release, or production action was executed. |
+| Result | Selected `ios-xcode-signing-readiness-run` as the next iOS follow-up candidate because signing, Team ID, Bundle ID, provisioning, and capability readiness are the next practical blockers after the generated iOS project exists. Sign in with Apple, RevenueCat mapping, APNs/Firebase push, first local build, and generated-output policy remain separate later candidates. |
+| Output document | `docs/ios-testflight-readiness.md` |
+| Native/config/package changed in Task 8? | `No` |
+| Run status | `ios-capacitor-platform-setup-run` is `DONE`; no next active-run was auto-created. |
 
 ## Expected Command Boundaries
 
