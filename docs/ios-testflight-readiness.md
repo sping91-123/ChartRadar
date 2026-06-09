@@ -778,8 +778,8 @@ Reasoning:
 | `package.json` `devDependencies` | `@capacitor/android` and `@capacitor/cli` are declared as `^8.3.3`. |
 | `package.json` iOS dependency | `@capacitor/ios` is not declared. |
 | `package-lock.json` lockfile version | `3`. |
-| `package-lock.json` Capacitor lock state | `@capacitor/core` and `@capacitor/android` are locked at `8.3.3`; no `node_modules/@capacitor/ios` entry is present. |
-| `npm.cmd ls @capacitor/core @capacitor/android @capacitor/ios` | `@capacitor/core@8.3.3` and `@capacitor/android@8.3.3` are installed; `@capacitor/ios` is absent. |
+| `package-lock.json` Capacitor lock state at Task 2 time | `@capacitor/core` and `@capacitor/android` were locked at `8.3.3`; no `node_modules/@capacitor/ios` entry was present before Task 3. |
+| `npm.cmd ls @capacitor/core @capacitor/android @capacitor/ios` at Task 2 time | `@capacitor/core@8.3.3` and `@capacitor/android@8.3.3` were installed; `@capacitor/ios` was absent before Task 3. |
 | Existing iOS scripts | No iOS add/sync/open/build script was found in `package.json`; existing mobile scripts are Android-focused. |
 
 ### Add Need Assessment
@@ -814,6 +814,62 @@ Reasoning:
 - Review `package.json` and `package-lock.json` diff before committing.
 - Stop if npm attempts a broader dependency churn, major version change, package manager change, or protected-path change.
 - Do not run `npx cap add ios`, `npx cap sync ios`, Xcode, pod install, build/archive/upload, external console actions, auth/Supabase/billing/RevenueCat/entitlement changes, Android release changes, or production actions in TODO 3 unless explicitly scoped later.
+
+## iOS Capacitor Platform Setup - Task 3 Dependency Add Result
+
+| Field | Value |
+| --- | --- |
+| Active run | `ios-capacitor-platform-setup-run` |
+| Task | `3. Add @capacitor/ios dependency` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Command executed | `npm.cmd install @capacitor/ios@8.3.3 --save-dev` |
+| Method | Dependency add only. No iOS platform add, Capacitor sync, Xcode, pod install, iOS build/archive/upload, external console change, auth, Supabase, billing, RevenueCat, entitlement, Android release, or production action was executed. |
+
+### Package Change Summary
+
+| File | Change |
+| --- | --- |
+| `package.json` | Added `@capacitor/ios` to `devDependencies` with compatible range `^8.3.3`. |
+| `package-lock.json` | Added root devDependency entry and `node_modules/@capacitor/ios` lock entry at version `8.3.3`. |
+
+### Capacitor Version State After Install
+
+| Package | State |
+| --- | --- |
+| `@capacitor/core` | `8.3.3`; unchanged. |
+| `@capacitor/android` | `8.3.3`; unchanged. |
+| `@capacitor/cli` | `8.3.3`; unchanged. |
+| `@capacitor/ios` | Added at `8.3.3`; peer dependency expects `@capacitor/core` `^8.3.0`. |
+
+### Scope Checks
+
+| Check | Result |
+| --- | --- |
+| Other dependency upgrades | None observed in the package diff. |
+| Package manager change | None. Existing npm lockfile remains `lockfileVersion` 3. |
+| `ios/` directory | Still missing; no native platform was generated. |
+| Android native/release settings | No changes. |
+| Auth/Supabase/billing/RevenueCat/entitlement code | No changes. |
+| npm audit output | npm reported an audit summary after install. `npm audit fix` was not run because it is explicitly out of scope for this TODO. |
+
+### Verification Results
+
+| Check | Result |
+| --- | --- |
+| `git diff --check` | PASS. |
+| `cmd /c npx tsc --noEmit` | PASS after `npm.cmd run build` regenerated missing Next `.next/types` files. The first pre-build run failed only because generated `.next/types` files referenced by `tsconfig.json` were absent. |
+| `npm.cmd run build` | PASS. |
+| Changed file scope | `package.json`, `package-lock.json`, `docs/ios-testflight-readiness.md`, and `docs/automation-runs/active-run.md`. |
+| `ios/` directory | Still missing; no native iOS platform was generated. |
+| Protected paths | No `capacitor.config.ts`, app/source, Android, iOS native, scripts, mobile-shell, public, Supabase, auth, billing, RevenueCat, entitlement, or Android release changes. |
+
+### Handoff To Task 4
+
+- Confirm `mobile-shell` / `webDir` readiness and expected `npx cap add ios` generated file scope.
+- Confirm `ios/` is still absent before platform generation.
+- Do not run `npx cap add ios` until Task 5 explicitly allows it.
+- Keep Xcode, pod install, sync, build/archive/upload, external console changes, auth/Supabase/billing/RevenueCat/entitlement changes, Android release changes, and production actions out of scope.
 
 ## High-Risk Separation
 
