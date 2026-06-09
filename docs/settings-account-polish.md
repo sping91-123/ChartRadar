@@ -54,10 +54,96 @@ These surfaces are not implementation approval. They are the expected inspection
 
 | Order | Status | Task | Main question | Expected output |
 | --- | --- | --- | --- | --- |
-| 1 | TODO | Current settings/account screen audit | What settings/account surfaces exist today, and what is missing for production trust? | Entry-path map and missing-item notes. |
+| 1 | DONE | Current settings/account screen audit | What settings/account surfaces exist today, and what is missing for production trust? | Entry-path map and missing-item notes. |
 | 2 | TODO | Required settings item list finalization | Which items are required for a production-ready settings/account surface? | Required-item checklist. |
 | 3 | TODO | Settings screen structure proposal | How should settings sections be grouped and worded? | Recommended section structure and copy principles. |
 | 4 | TODO | Select one first implementation candidate | What is the safest first implementation candidate with the highest trust impact? | One follow-up implementation-run candidate. |
+
+## Task 1 - Current Settings/Account Screen Audit
+
+| Field | Value |
+| --- | --- |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Source inspection only. No app code, UI code, user-facing code copy, auth/session logic, Supabase, RLS, billing, RevenueCat, entitlement, account deletion logic, logout/session behavior, production DB, purchase, restore, Android release, Play Console, or external console work was changed or executed. |
+| Scope inspected | Settings/account routes, header settings entry, account page, account deletion page, login page, Pro page, alert settings routes, policy/support pages, footer links, app version constant. |
+| Next TODO | `2. Required settings item list finalization` |
+
+### Confirmed Routes
+
+| Route | File | Current role |
+| --- | --- | --- |
+| `/settings` | `src/app/settings/page.tsx` | Redirects to `/menu`; not a standalone settings page. |
+| `/menu` | `src/app/menu/page.tsx` | Standalone menu page with links to account, learn, FAQ, Pro, terms, privacy, and refund. |
+| Header settings panel | `src/components/Header.tsx`, `src/components/HeaderActions.tsx` | Primary in-app settings entry from the header menu button; pushes browser history to `/menu` while the modal panel is open. |
+| `/account` | `src/app/account/page.tsx` | Main account management page for login state, email, provider, current plan, market access, logout, admin entitlement link, and account deletion guide. |
+| `/account/delete` | `src/app/account/delete/page.tsx` | Account/data deletion request guide. No direct destructive delete button found in inspected UI. |
+| `/login` | `src/app/login/page.tsx` | Google/Kakao login entry with safe `returnTo` handling. |
+| `/pro` | `src/app/pro/page.tsx`, `src/components/ProPricingPanel.tsx` | Current plan, Basic/Pro differences, plan cards, Android Google Play purchase flow, and subscription restore entry. |
+| `/alerts` | `src/app/alerts/page.tsx` | Alert settings route; defaults crypto users to `/crypto/alert` and uses global/stocks mode when `market=global`. |
+| `/crypto/alert` | `src/app/crypto/alert/page.tsx`, `src/components/RadarAlertCenter.tsx` | Crypto alert settings surface. |
+| `/terms` | `src/app/terms/page.tsx` | Terms of service page. |
+| `/privacy` | `src/app/privacy/page.tsx` | Privacy policy page and account deletion guide link. |
+| `/refund` | `src/app/refund/page.tsx` | Subscription cancellation and refund guide. |
+| `/faq` | `src/app/faq/page.tsx` | Support-style FAQ with Pro, alerts, data, and policy links. |
+
+### Confirmed Components And Files
+
+| File or component | Current finding |
+| --- | --- |
+| `src/components/HeaderActions.tsx` | Header menu includes account/login, display settings, alert settings, learn, FAQ, and app version. It does not directly show terms, privacy, refund, account deletion, or support email inside the modal. |
+| `src/components/AuthStatus.tsx` | Header compact state shows Basic or plan label. Default variant includes sign-out, but current source usage found only compact variant in `HeaderActions`. |
+| `src/components/AppFooter.tsx` | Footer links to terms, privacy, account/data deletion, and refund. It includes investment-risk copy but only the brand name as operator info. |
+| `src/components/ProPricingPanel.tsx` | Shows current plan label, market access, purchase buttons, and native restore action `구독 권한 불러오기` when native purchase is available. |
+| `src/lib/appVersion.ts` | Defines `APP_VERSION_DISPLAY` as `앱 버전 1.0.8 / 빌드 11`; displayed in `HeaderActions` AppInfo section. |
+| `src/app/account/delete/page.tsx` | Provides deletion request email `staronlabs@gmail.com`, deletion scope, retained data scope, and Google Play subscription separation guidance. |
+
+### Current Provided Items
+
+| Area | Current coverage |
+| --- | --- |
+| Settings entry | Header menu button opens a full-screen settings panel. `/settings` redirects to `/menu`. `/menu` exists as a route-based menu page. |
+| Account state | `/account` shows loading, logged-in, and logged-out states. Logged-in state includes display name/email/provider/current plan/join date/last login when available. |
+| Login | Header settings panel links to login when logged out. `/account` logged-out state links to `/login?returnTo=%2Faccount`. `/login` offers Google and Kakao login buttons. |
+| Logout | `/account` has a logout button in the logged-in account section. `AuthStatus` default variant also has logout behavior, but inspected usage currently uses compact variant only. |
+| Current plan | `/account` shows plan label plus Coin Pro and Global Pro access rows. `/pro` shows current plan and market access rows. |
+| Purchase/restore | `/pro` contains purchase flow and native subscription restore button when native purchase is available. `/account` links to Pro range for Basic users but does not expose restore directly. |
+| Alerts | Header has a bell shortcut to market alert settings. Header settings panel includes `알림 설정`. Alert routes connect to `/crypto/alert` and `/alerts?market=global`. |
+| Alert Pro clarity | `RadarAlertCenter` is connected to the recent locked Pro rule UI clarity work; settings/account only links into alert settings and does not repeat that state itself. |
+| Support/FAQ | Header settings panel links to FAQ and learn. `/faq` links to terms, privacy, and refund. Refund and privacy pages include support-oriented guidance. |
+| Privacy/terms/refund | Footer links to terms, privacy, account deletion, and refund. `/menu` links to terms, privacy, and refund. |
+| Account deletion | `/account` separates deletion guidance into a lower dangerous section with a checkbox before linking to `/account/delete`. Footer and privacy page also link to deletion guide. |
+| App version | Header settings panel displays `APP_VERSION_DISPLAY`. `/menu` and `/account` do not show app version directly. |
+
+### Missing Or Ambiguous Items
+
+| Area | Missing or ambiguous item | User trust risk |
+| --- | --- | --- |
+| Settings route model | `/settings` redirects to `/menu`, while the header settings panel uses browser history state and `/menu` while open. | Users or support docs may not know whether Settings means modal panel or `/menu` route. |
+| Header settings completeness | Header settings panel has account, display, alerts/learn/FAQ, and version, but not terms/privacy/refund/account deletion/support email. | Production users may need to hunt through footer or `/menu` for policy and deletion paths. |
+| `/menu` completeness | `/menu` has account, Pro, policies, refund, FAQ, learn, but does not include alert settings or app version. | Route-based menu is less complete than header modal; support guidance may depend on which entry path the user found. |
+| Support/contact | No dedicated support/contact screen found. Support email appears in privacy and account deletion pages, but not as a clear settings item. | Users with billing/account issues may not find a direct contact path quickly. |
+| Business/developer information | App version is visible, and app id exists in code, but no clear in-app business/developer information section was found. | Store/support trust can feel incomplete if users need operator/developer details. |
+| Plan and restore from account | `/account` shows plan and market access, but restore/subscription management is only found in `/pro` and refund copy. | A user checking account status may not know where to restore or manage a Google Play subscription. |
+| Logout grouping | `/account` puts logout in the logged-in account block, while deletion is separated lower down. | Separation is mostly clear, but Task 2 should decide if logout belongs in a dedicated dangerous/account-actions section. |
+| App version placement | Version is in header settings modal only. | Users on `/account` or `/menu` may not see version when support asks for it. |
+
+### High-Risk Areas Identified But Not Touched
+
+| Area | Audit note |
+| --- | --- |
+| Auth/session | `useSupabaseAuth` drives user/profile/session and sign-out. No auth code was changed and no real logout was executed. |
+| Supabase/RLS/production DB | Account, profile, subscription, and deletion semantics depend on protected data surfaces. No DB or console access was performed. |
+| Billing/RevenueCat/entitlement | `/account` and `/pro` read plan/market access through existing billing helpers; restore and native purchase code remain untouched. |
+| Account deletion | `/account/delete` documents manual email-based deletion request. No deletion logic or real deletion test was performed. |
+| Android/Play Console | App version is sourced from code; Play Console listing/developer contact was not inspected or changed. |
+
+### Candidate Inputs For TODO 2
+
+- Decide whether the required settings surface should be the header modal, `/menu`, `/account`, or a clearer combination of these.
+- Treat app version, support/contact, policy links, account deletion, and subscription restore/manage paths as required-item candidates.
+- Consider adding account/status and app-info visibility to route-based pages, because modal-only information is harder to reference in support.
+- Keep the next tasks design-only; any implementation should stay UI/copy/accessibility-only unless a separate high-risk run is opened.
 
 ## Required Item Candidates
 
@@ -132,4 +218,4 @@ Use this format as each TODO completes.
 
 ## Final Conclusion
 
-This run is now registered. The next task is `1. Current settings/account screen audit`, and no implementation has been authorized in this run.
+Task 1 is complete. The next task is `2. Required settings item list finalization`, and no implementation has been authorized in this run.

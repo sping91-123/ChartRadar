@@ -12,7 +12,7 @@
   - `android-production-auto-smoke-run` is `DONE` and recorded as `PASS`.
   - `alert-quality-operations-run` is `DONE`.
   - `alert-pro-rule-ui-clarity-run` is `DONE`.
-- Current phase: run registered; next TODO is `1. Current settings/account screen audit`.
+- Current phase: Task 1 completed; next TODO is `2. Required settings item list finalization`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No app code, UI code, auth, Supabase, billing, RevenueCat, entitlement, account deletion, production DB, purchase, restore, or logout action was executed during setup.
 
@@ -92,7 +92,7 @@
 
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TODO | Current settings/account screen audit | Source Inspection | MEDIUM | Identify current settings/account screens, entry paths, and missing production-trust items. | No auth, Supabase, account deletion, billing, or UI code edits. | `git diff --check` |
+| 1 | DONE | Current settings/account screen audit | Source Inspection | MEDIUM | Identified current settings/account screens, entry paths, and missing production-trust items. | No auth, Supabase, account deletion, billing, or UI code edits. | `git diff --check` |
 | 2 | TODO | Required settings item list finalization | Product/Compliance UX | LOW | Confirm required production settings items: account state, plan, alerts, support, privacy, terms, account deletion, logout, app version, and business/developer info access. | No code edits. | `git diff --check` |
 | 3 | TODO | Settings screen structure proposal | UX Spec | LOW | Document recommended sections: Account, Subscription/Plan, Alerts, Support, Terms/Policies, App Info, and Dangerous Actions. | No code edits. | `git diff --check` |
 | 4 | TODO | Select one first implementation candidate | Prioritization | MEDIUM | Select the safest, highest-trust implementation candidate for a later run. | No simultaneous auth, DB, billing, Supabase, or account deletion changes. | `git diff --check` |
@@ -121,6 +121,18 @@ Candidate examples are not pre-approved implementation scope. They include:
 - No app/UI code changes are allowed in this run.
 - Actual implementation must be opened as a separate run after Task 4 selects one candidate.
 - Findings should be documented before any implementation decision.
+
+## Task 1 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `1. Current settings/account screen audit` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Source inspection and documentation only. |
+| Result | Settings/account entry paths, account state, login/logout, plan, alerts, support, policies, account deletion, app version, missing items, and high-risk protected areas were documented in `docs/settings-account-polish.md`. |
+| Code changed? | `No` |
+| Next TODO | `2. Required settings item list finalization` |
 
 ## Verification Policy
 
