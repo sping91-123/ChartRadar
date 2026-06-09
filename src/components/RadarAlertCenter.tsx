@@ -250,6 +250,22 @@ function marketDisplayName(market: AlertMarket | AppPushMarket) {
   return market === "stocks" ? "글로벌" : "코인";
 }
 
+function proPlanLabelForMarket(market: AlertMarket) {
+  return market === "stocks" ? "Global Pro" : "Coin Pro";
+}
+
+function proHrefForMarket(market: AlertMarket) {
+  return market === "stocks" ? "/pro?market=stocks" : "/pro?market=crypto";
+}
+
+function lockedRuleReason(market: AlertMarket) {
+  return `${proPlanLabelForMarket(market)}에서 받을 수 있는 알림입니다. 현재 플랜에서는 이 알림이 잠겨 있습니다.`;
+}
+
+function isRuleLockedForPlan(rule: RadarAlertRule, hasCurrentMarketEntitlement: boolean) {
+  return rule.tier === "pro" && !hasCurrentMarketEntitlement;
+}
+
 function formatPushMarkets(markets: AppPushMarket[]) {
   if (markets.length === 0) return "아직 없음";
   return markets.map(marketDisplayName).join(", ");
@@ -311,14 +327,25 @@ function monitorReasonLabel(reason: SetupAlertMonitorStatus["reason"]) {
 function RuleCard({
   rule,
   enabled,
+  locked = false,
+  lockedReason,
+  lockedCtaHref,
+  lockedCtaLabel,
   onToggle
 }: {
   rule: RadarAlertRule;
   enabled: boolean;
+  locked?: boolean;
+  lockedReason?: string;
+  lockedCtaHref?: string;
+  lockedCtaLabel?: string;
   onToggle: (ruleId: RadarAlertRuleId) => void;
 }) {
+  const statusLabel = locked ? "Pro 필요" : enabled ? "켜짐" : "꺼짐";
+  const statusTone: AlertStatusTone = locked ? "locked" : enabled ? "long" : "info";
+
   return (
-    <div className={`py-4 first:pt-0 last:pb-0 ${enabled ? "" : "opacity-80"}`}>
+    <div className={`py-4 first:pt-0 last:pb-0 ${enabled || locked ? "" : "opacity-80"}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -326,22 +353,36 @@ function RuleCard({
             <StatusPill tone={rule.tier === "pro" ? "locked" : "info"} icon={rule.tier === "pro" ? Crown : undefined}>
               {rule.tier === "pro" ? "Pro" : "Basic"}
             </StatusPill>
-            <StatusPill tone={enabled ? "long" : "info"}>{enabled ? "켜짐" : "꺼짐"}</StatusPill>
+            <StatusPill tone={statusTone}>{statusLabel}</StatusPill>
           </div>
           <h3 className="mt-3 text-base font-semibold text-ui-text">{rule.title}</h3>
           <p className="mt-1 text-sm leading-6 text-ui-muted [word-break:keep-all]">{rule.description}</p>
+          {locked && lockedReason ? <p className="mt-2 text-xs leading-5 text-ui-locked [word-break:keep-all]">{lockedReason}</p> : null}
+          {locked && lockedCtaHref && lockedCtaLabel ? (
+            <ActionButton href={lockedCtaHref} tone="secondary" className="mt-2 min-h-8 px-0 text-xs text-ui-brand">
+              <Crown size={13} aria-hidden />
+              {lockedCtaLabel}
+            </ActionButton>
+          ) : null}
         </div>
-        <button
-          type="button"
-          onClick={() => onToggle(rule.id)}
-          className={`relative h-7 w-12 shrink-0 rounded-full border transition ${
-            enabled ? "border-ui-brand bg-ui-brand" : "border-ui-lineStrong bg-ui-panel"
-          }`}
-          aria-pressed={enabled}
-          aria-label={`${rule.title} 알림 ${enabled ? "끄기" : "켜기"}`}
-        >
-          <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${enabled ? "left-6" : "left-1"}`} />
-        </button>
+        {locked ? (
+          <span className="inline-flex min-h-7 shrink-0 items-center gap-1.5 rounded-full border border-ui-lineStrong px-3 text-xs font-semibold text-ui-locked">
+            <Crown size={13} aria-hidden />
+            Pro 필요
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onToggle(rule.id)}
+            className={`relative h-7 w-12 shrink-0 rounded-full border transition ${
+              enabled ? "border-ui-brand bg-ui-brand" : "border-ui-lineStrong bg-ui-panel"
+            }`}
+            aria-pressed={enabled}
+            aria-label={`${rule.title} 알림 ${enabled ? "끄기" : "켜기"}`}
+          >
+            <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${enabled ? "left-6" : "left-1"}`} />
+          </button>
+        )}
       </div>
       <div className="mt-3">
         <DataRow className={alertRowClassName} label="조건" value="감시 중" detail={rule.trigger} />
@@ -446,9 +487,18 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
       }),
     [market]
   );
-  const scopedEnabledRuleIds = enabledRuleIds.filter((id) => scopedRules.some((rule) => rule.id === id));
-  const summary = useMemo(() => summarizeRadarAlerts(scopedEnabledRuleIds), [scopedEnabledRuleIds]);
+  const scopedEnabledRuleIds = useMemo(() => enabledRuleIds.filter((id) => scopedRules.some((rule) => rule.id === id)), [enabledRuleIds, scopedRules]);
+  const displayEnabledRuleIds = useMemo(
+    () =>
+      scopedEnabledRuleIds.filter((id) => {
+        const rule = scopedRules.find((item) => item.id === id);
+        return rule ? !isRuleLockedForPlan(rule, isPaid) : false;
+      }),
+    [isPaid, scopedEnabledRuleIds, scopedRules]
+  );
+  const summary = useMemo(() => summarizeRadarAlerts(displayEnabledRuleIds), [displayEnabledRuleIds]);
   const visibleRules = compact ? scopedRules.slice(0, 3) : scopedRules;
+  const lockedVisibleRuleCount = visibleRules.filter((rule) => isRuleLockedForPlan(rule, isPaid)).length;
   const visibleSetupMatches = useMemo(() => {
     const seen = new Set<string>();
     return setupMatches.filter((match) => {
@@ -476,6 +526,12 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
   const otherMarketHref = market === "stocks" ? "/crypto/alert" : "/alerts?market=global";
 
   function toggleRule(ruleId: RadarAlertRuleId) {
+    const rule = scopedRules.find((item) => item.id === ruleId);
+    if (rule && isRuleLockedForPlan(rule, isPaid)) {
+      setToast(lockedRuleReason(market));
+      return;
+    }
+
     if (!enabledRuleIds.includes(ruleId)) {
       const usageGate = getUsageGate(alertUsageBucketId, isPaid);
       if (!usageGate.allowed) {
@@ -861,15 +917,27 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
           description={summary.headline}
           action={
             <div className="flex flex-wrap gap-2">
-              <StatusPill tone="locked">Pro {summary.proCount}</StatusPill>
+              <StatusPill tone="locked">{lockedVisibleRuleCount > 0 ? `Pro 잠김 ${lockedVisibleRuleCount}` : `Pro ${summary.proCount}`}</StatusPill>
               <StatusPill tone="info">Basic {summary.freeCount}</StatusPill>
             </div>
           }
         />
         <div className="mt-4 divide-y divide-ui-line border-y border-ui-line">
-          {visibleRules.map((rule) => (
-            <RuleCard key={rule.id} rule={rule} enabled={enabledRuleIds.includes(rule.id)} onToggle={toggleRule} />
-          ))}
+          {visibleRules.map((rule) => {
+            const locked = isRuleLockedForPlan(rule, isPaid);
+            return (
+              <RuleCard
+                key={rule.id}
+                rule={rule}
+                enabled={!locked && enabledRuleIds.includes(rule.id)}
+                locked={locked}
+                lockedReason={locked ? lockedRuleReason(market) : undefined}
+                lockedCtaHref={locked ? proHrefForMarket(market) : undefined}
+                lockedCtaLabel={locked ? `${proPlanLabelForMarket(market)} 알림 기준 확인` : undefined}
+                onToggle={toggleRule}
+              />
+            );
+          })}
         </div>
       </PanelCard>
 
