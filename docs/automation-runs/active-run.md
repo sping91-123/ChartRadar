@@ -14,7 +14,7 @@
   - `android-production-auto-smoke-run` is `DONE` and recorded as `PASS`.
   - `alert-quality-operations-run` is `DONE`.
   - `alert-pro-rule-ui-clarity-run` is `DONE`.
-- Current phase: Task 1 completed; next TODO is `2. Support and policy link proposal`.
+- Current phase: Task 2 completed; next TODO is `3. Minimal support/policy link implementation`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No app UI implementation, auth, session, logout, account deletion, Supabase, billing, RevenueCat, entitlement, production DB, purchase, restore, Android release, Play Console, or external console action was executed during setup.
 
@@ -96,7 +96,7 @@
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | DONE | Reconfirm settings/menu link locations | Source Inspection | LOW | Reconfirmed support/policy/alert/app-info link locations in `/settings`, `/menu`, header settings panel, `/account`, and footer. | No code edits. | `git diff --check` |
-| 2 | TODO | Support and policy link proposal | UX Spec | LOW | Document the smallest link/accessibility improvements for FAQ, support, privacy, terms, refund/subscription guide, alert settings, account deletion guide, and app version. | No implementation. | `git diff --check` |
+| 2 | DONE | Support and policy link proposal | UX Spec | LOW | Documented the smallest link/accessibility improvements for FAQ, support, privacy, terms, refund/subscription guide, alert settings, account deletion guide, and app version. | No implementation. | `git diff --check` |
 | 3 | TODO | Minimal support/policy link implementation | UI/Link/Copy | LOW | Improve support, policy, alert settings, account deletion guide, and app info access in the most appropriate settings/menu/header surfaces. | No auth/session, billing, RevenueCat, entitlement, Supabase, account deletion, logout/session, purchase, restore, or production DB edits. | `git diff --check`; `cmd /c npx tsc --noEmit` |
 | 4 | TODO | Documentation update | Documentation | LOW | Record the implementation result and remaining risks in `docs/settings-account-polish.md`. | No feature expansion. | `git diff --check` |
 | 5 | TODO | Safe validation execution | Verification | LOW | Confirm the final change remains UI/link/copy/docs only and run safe checks. | No `smoke:billing`, `smoke:api`, real purchase, restore, account deletion, login, or logout tests. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:copy`; optional `npm.cmd run smoke:mobile` |
@@ -120,6 +120,18 @@
 | Result | Reconfirmed current support, FAQ, terms, privacy, refund, alert settings, account deletion guide, and app-version locations across `/settings`, `/menu`, header settings panel, `/account`, `AppFooter`, and related policy/support pages. |
 | Code changed? | `No` |
 | Next TODO | `2. Support and policy link proposal` |
+
+## Task 2 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `2. Support and policy link proposal` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Improvement proposal and implementation-boundary documentation only. |
+| Result | Proposed TODO 3 as a low-risk `/menu` and `AppFooter` centered link/display polish using existing routes, existing support email context, and `APP_VERSION_DISPLAY`, while leaving header settings panel light and avoiding `/account`, auth, billing, Supabase, entitlement, deletion, logout, production DB, Android release, and Play Console changes. |
+| Code changed? | `No` |
+| Next TODO | `3. Minimal support/policy link implementation` |
 
 ## Verification Policy
 

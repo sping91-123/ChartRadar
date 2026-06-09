@@ -459,6 +459,92 @@ Recommended implementation goal:
 
 TODO 2 should propose the smallest implementation set around route/link parity: header settings panel policy/support links, `/menu` alert settings and app version, and optionally a footer or account support/app-version cue. It should avoid standalone `/settings` route changes, support workflow creation, billing restore behavior, logout behavior, account deletion behavior, and unconfirmed business/developer information.
 
+## Settings Support Links Polish - Task 2 Support And Policy Link Proposal
+
+| Field | Value |
+| --- | --- |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Improvement proposal and implementation-boundary documentation only. No app code, UI code, user-facing code copy, auth/session logic, Supabase, RLS, billing, RevenueCat, entitlement, account deletion logic, logout/session behavior, production DB, purchase, restore, Android release, Play Console, or external console work was changed or executed. |
+| Input | Task 1 link-location audit for `/settings`, `/menu`, header settings panel, `/account`, `AppFooter`, and support/policy pages. |
+| Next TODO | `3. Minimal support/policy link implementation` |
+
+### Current Problem Summary
+
+- `/settings` currently redirects to `/menu`, so the route-based settings experience depends on `/menu` completeness.
+- `/menu` has account, FAQ, Pro, terms, privacy, and refund links, but lacks alert settings, account deletion guide, app version, and direct support/contact.
+- Header settings panel already has alert settings, FAQ, and app version, so adding every policy link there could make the panel too heavy.
+- `/account` should stay focused on account state, plan, logout, and account deletion guidance rather than becoming the full support directory.
+- `AppFooter` is already the global policy surface, but it lacks FAQ, direct support/contact, and app version.
+
+### Improvement Goals
+
+- Make support and policy routes findable from route-based settings/menu surfaces.
+- Preserve the header settings panel as a light summary/shortcut surface.
+- Reuse existing routes and constants only: `/faq`, `/terms`, `/privacy`, `/refund`, `/account/delete`, `/alerts` or `/crypto/alert`, and `APP_VERSION_DISPLAY`.
+- Reuse existing contact information only if it already appears in source (`staronlabs@gmail.com`); do not invent business/developer information.
+- Keep the implementation link/display/copy-only and avoid account, billing, deletion, logout, session, push delivery, or route-ownership behavior changes.
+
+### Route And Surface Proposal
+
+| Route or surface | Proposed direction | Include in TODO 3? | Rationale | Risk |
+| --- | --- | --- | --- | --- |
+| `/menu` | Add alert settings, account deletion guide, support/contact, and app version visibility while keeping existing account, FAQ, Pro, terms, privacy, and refund links. | Yes | `/settings` redirects here, so `/menu` should be the reliable route-based support/settings hub for Android users. | LOW if link/display-only. |
+| Header settings panel | Keep current account/display/alert/learn/FAQ/version structure. Optionally add one lightweight path to the route-based menu or support/policy hub only if implementation stays compact. | Not first priority | The panel is already a modal shortcut; overloading it with every policy link can reduce scanability. | LOW for one link; MEDIUM for broad panel restructuring. |
+| `/account` | Keep account state, plan, logout, and deletion guide focus. Do not add restore/manage behavior. A later UI-only support block can be considered if `/menu` and footer are not enough. | No for TODO 3 | Account is auth/billing-adjacent; avoid expanding the first low-risk implementation into account semantics. | MEDIUM if touching plan/account copy; HIGH if behavior changes. |
+| `AppFooter` | Add FAQ, support/contact cue, and app version display while keeping terms, privacy, account deletion, and refund links. | Yes | Footer already acts as global policy/trust surface; adding FAQ/contact/version improves production support discoverability without route behavior changes. | LOW if display-only. |
+| `/settings` | Keep redirect behavior unchanged in this run. | No | Making `/settings` standalone is broader route ownership work and not required for support-link polish. | MEDIUM route behavior risk. |
+
+### Minimum Implementation Scope For TODO 3
+
+Recommended TODO 3 scope:
+
+1. `/menu`
+   - Add an alert settings link that points to an existing alert settings route.
+   - Add account deletion guide access via existing `/account/delete`.
+   - Add a support/contact item that reuses existing `staronlabs@gmail.com` context or points to FAQ/support guidance.
+   - Show existing app version using `APP_VERSION_DISPLAY`.
+   - Keep existing FAQ, Pro, terms, privacy, and refund links.
+
+2. `AppFooter`
+   - Add FAQ link.
+   - Add support/contact cue using existing contact information only.
+   - Add app version display using `APP_VERSION_DISPLAY`.
+   - Keep existing terms, privacy, account deletion, and refund links.
+
+3. Header settings panel
+   - Leave as-is unless a small link to `/menu` is needed after implementation review.
+   - Do not add a dense list of every policy link to the modal.
+
+4. `/account`
+   - Leave account behavior and layout untouched in TODO 3.
+   - Do not add subscription restore/manage behavior.
+
+### Excluded Implementation Scope
+
+| Excluded item | Reason |
+| --- | --- |
+| Auth/session, login/logout, or `useSupabaseAuth` behavior changes | Protected account state and session behavior. |
+| Billing, RevenueCat, product/plan/price, entitlement, purchase, or restore behavior | Paid-access and store-purchase boundary. |
+| Supabase, RLS, production DB, account data, or production token access | Production data boundary. |
+| Account deletion logic, confirmation behavior, or real deletion testing | Destructive account boundary; link to existing guide only. |
+| Standalone `/settings` route or redirect behavior change | Broader route ownership decision, not link polish. |
+| Business/developer information not already confirmed in source | Avoid inventing legal/operator details. |
+| Android release, Play Console, external console, or store-listing changes | Release/store boundary. |
+
+### High-Risk Or Confirmation-Needed Items
+
+| Item | Handling |
+| --- | --- |
+| Business/developer details | Leave as "needs confirmed source" unless owner provides exact text. Existing service name and support email can be reused. |
+| Mailto behavior on Android WebView | If a `mailto:` link is used later, record it as needing manual Android QA. A plain text email avoids WebView handoff risk. |
+| Alert settings route choice | Prefer existing route behavior; do not alter FCM, token, permission, or delivery logic. |
+| Subscription management wording | Keep refund/subscription guidance as links to existing `/refund` or `/pro`; do not imply new restore/manage behavior. |
+
+### TODO 3 Implementation Instruction Summary
+
+Implement a low-risk link/display polish centered on `/menu` and `AppFooter`. Use only existing routes and `APP_VERSION_DISPLAY`. Reuse `staronlabs@gmail.com` only because it already appears in privacy and account deletion pages. Do not change header panel density unless a single lightweight `/menu` or support entry is clearly needed. Do not touch `/account`, auth/session, billing, RevenueCat, entitlement, Supabase, account deletion logic, logout/session logic, Android release, Play Console, production DB, or actual login/logout/delete/payment/restore flows.
+
 ## Required Item Candidates
 
 | Item | Why it matters | Risk boundary |
