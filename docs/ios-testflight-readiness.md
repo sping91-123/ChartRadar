@@ -53,7 +53,7 @@ These are future TODO inspection targets, not approval to change them.
 | --- | --- | --- | --- | --- |
 | 1 | DONE | Capacitor iOS readiness audit | Is the repo structurally ready for iOS platform/build work? | Capacitor/iOS status map and missing native setup notes. |
 | 2 | DONE | Apple Developer submission requirement review | What App Store Connect and listing material must be ready before TestFlight? | Apple/TestFlight metadata checklist. |
-| 3 | TODO | Sign in with Apple requirement risk review | Does Google login create an Apple sign-in review requirement risk? | Policy risk summary and auth/Supabase impact notes. |
+| 3 | DONE | Sign in with Apple requirement risk review | Does Google login create an Apple sign-in review requirement risk? | Policy risk summary and auth/Supabase impact notes. |
 | 4 | TODO | RevenueCat Apple product mapping review | What iOS subscription mapping must exist before paid iOS TestFlight/review? | RevenueCat/App Store product mapping checklist. |
 | 5 | TODO | TestFlight first-build checklist | What must be verified before first iOS build/upload? | Pre-build and upload-readiness checklist. |
 | 6 | TODO | Select first iOS readiness follow-up run | What is the first practical next run after audit? | One follow-up candidate, no auto-creation. |
@@ -331,6 +331,96 @@ Conclusion: the repo is not ready to build an iOS TestFlight artifact yet becaus
 - TODO 3 must verify the current App Review guideline and Apple Developer guidance for apps using third-party/social login before drawing a conclusion.
 - If Sign in with Apple is required, the follow-up must be separated from this readiness audit because it may affect UI, auth callback handling, Supabase provider configuration, Apple capability setup, and reviewer login instructions.
 - Do not implement Apple login, enable capabilities, or edit auth/Supabase code in TODO 3.
+
+## Task 3 - Sign in with Apple Requirement Risk Review
+
+| Field | Value |
+| --- | --- |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Source inspection and official Apple policy review only. No Apple login, auth code, Supabase provider, Apple Developer capability, App Store Connect, Bundle ID, iOS platform, iOS build, Xcode, production auth, or real login test was changed or executed. |
+| Official sources checked | App Review Guidelines 4.8 Login Services, Sign in with Apple capability documentation, and App Store review information. Checked on 2026-06-09. |
+| Implementation allowed in this run? | `No` |
+
+### Official Apple Policy References Checked
+
+| Topic | Official source |
+| --- | --- |
+| App Review Guidelines 4.8 Login Services | https://developer.apple.com/app-store/review/guidelines/ |
+| Sign in with Apple capability setup | https://developer.apple.com/help/account/configure-app-capabilities/about-sign-in-with-apple |
+| Enable app capabilities | https://developer.apple.com/help/account/manage-identifiers/enable-app-capabilities |
+| App Review information and demo account fields | https://developer.apple.com/help/app-store-connect/reference/app-review-information |
+
+### Current Login Structure Summary
+
+| Area | Current source signal | iOS readiness implication |
+| --- | --- | --- |
+| Primary login button | `src/components/GoogleLoginButton.tsx` renders Google login and uses Supabase OAuth on web. | If the same UI ships on iOS, Google is a third-party/social login for the primary app account. |
+| Android native login | `src/lib/nativeGoogleSignIn.ts` supports only Android native Google Sign-In and exchanges the Google ID token with Supabase. | iOS has no native Google helper in this checkout; an iOS build would likely fall back to the web OAuth path unless changed later. |
+| Web OAuth path | `GoogleLoginButton` builds a Supabase `/auth/v1/authorize` URL with `provider=google` and redirects to `/auth/callback`. | The iOS WebView/Capacitor redirect behavior is unproven and would still count as third-party login if exposed. |
+| Kakao login | `src/components/KakaoLoginButton.tsx` renders on web/non-Android when configured; `/api/auth/kakao/*` exchanges Kakao auth into a Supabase session with `provider: "kakao"`. | If Kakao is exposed on iOS, it is also a third-party/social login for the primary app account. |
+| Auth callback/session | `src/app/auth/callback/page.tsx` parses the OAuth hash and stores the custom Supabase session. | Apple login would need a compatible callback/session handoff or separate provider flow. |
+| Auth state hook | `src/lib/useSupabaseAuth.ts` is the central auth state hook and also refreshes entitlement-derived profile state. | Apple provider support would affect account state, profile display, and entitlement refresh paths. |
+| Account page provider display | `src/app/account/page.tsx` labels Google and Kakao providers and falls back to generic provider text. | Apple provider display would need review if implemented later. |
+| Login entry points | `src/app/login/page.tsx`, `src/components/HomeEntryGate.tsx`, `src/components/AuthStatus.tsx`, and `src/components/HeaderActions.tsx` route users to login/account flows. | Apple login UI would affect multiple visible entry points, not one isolated button. |
+| Own email/password login | No own email/password signup/login route was found in this inspection. | The app does not currently have a first-party account setup alternative that avoids third-party login policy risk. |
+| Browse without login | `HomeEntryGate` allows a Basic browse path without login. | Helpful, but account-based features still use Google/Kakao login for saved state, alerts, Pro, and account management. |
+| Apple provider | No Apple auth provider helper, button, Supabase provider flow, or capability wiring was found. | Apple login is not implemented in this checkout. |
+
+### Sign in with Apple Need Assessment
+
+| Scenario | Risk level | Reasoning |
+| --- | --- | --- |
+| iOS app exposes Google login for primary account creation/authentication and no equivalent privacy-preserving login option | HIGH | Apple App Review Guideline 4.8 applies to apps using third-party/social login services such as Google Sign-In for the user's primary account. |
+| iOS app exposes both Google and Kakao login and no equivalent privacy-preserving login option | HIGH | More third-party/social login options do not remove the requirement risk; Kakao adds the same review class of risk if exposed. |
+| iOS app removes all third-party/social login and only supports a company-owned account system or meaningful no-login use | LOWER, but not current source state | This would require a product/auth decision and likely code/UI changes; it is not the current implementation. |
+| Internal-only TestFlight technical build with no external beta review | MEDIUM | It may be possible to test internally before final auth policy resolution, but the unresolved policy risk remains a blocker before external TestFlight/App Review. |
+| External TestFlight or App Store Review with current Google/Kakao login exposed | HIGH | External TestFlight can require Beta App Review, and App Store Review will evaluate login policy. |
+
+Conclusion: if ChartRadar plans to offer the current Google login structure on iOS, Sign in with Apple or another equivalent login option should be treated as a HIGH review-readiness risk. The practical follow-up is a separate auth-focused run, not implementation inside this readiness audit.
+
+### Implementation Impact Scope If Apple Login Is Added Later
+
+| Area | Impact to plan later | Risk |
+| --- | --- | --- |
+| Apple Developer App ID capability | Enable/configure Sign in with Apple for the Bundle ID or related App ID grouping. | HIGH - external console and provisioning impact. |
+| Supabase Auth provider | Configure Apple provider, client/service IDs, key/team details, redirect URLs, and provider mapping. | HIGH - production auth configuration. |
+| iOS native project | Add entitlement/capability wiring once `ios/` exists. | HIGH - native project/signing impact. |
+| Redirect/deep link handling | Confirm OAuth callback works in iOS Capacitor/WebView and returns to the intended route. | HIGH - login reliability and review access. |
+| Login UI | Add Apple/equivalent login button to `/login`, `HomeEntryGate`, and possibly settings/account surfaces. | MEDIUM-HIGH - user-facing auth UI. |
+| Account provider display | Add Apple provider labeling and test provider metadata assumptions. | MEDIUM. |
+| Existing Google/Kakao accounts | Decide whether Apple login creates separate accounts or can be linked to existing user identities. | HIGH - account duplication and entitlement ownership risk. |
+| Pro entitlement and RevenueCat sync | Ensure Apple-auth users resolve the same Supabase profile/subscription logic. | HIGH - paid access risk. |
+| Privacy policy and App Privacy answers | Update collected data/provider descriptions if Apple login is introduced. | MEDIUM-HIGH. |
+| Reviewer account/test notes | Provide a reviewable sign-in path and demo account or instructions if login gates important features. | MEDIUM-HIGH. |
+
+### High-Risk Changes Explicitly Not Done
+
+| Item | Status |
+| --- | --- |
+| Apple login implementation | Not done. |
+| Supabase Apple provider setup | Not done. |
+| Apple Developer Sign in with Apple capability | Not enabled or changed. |
+| Bundle ID, App ID, certificate, provisioning, or entitlement changes | Not done. |
+| Auth UI changes | Not done. |
+| Account linking/merge behavior | Not changed. |
+| Production auth configuration | Not changed. |
+| Google, Kakao, or Apple real login tests | Not run. |
+| iOS platform add/sync/build/open/upload | Not run. |
+
+### Follow-Up Run Candidates
+
+| Candidate | Use when |
+| --- | --- |
+| `ios-auth-apple-signin-risk-run` | The owner wants a deeper policy/design decision before any auth implementation. |
+| `ios-auth-provider-mapping-run` | The owner wants to map Google, Kakao, Apple, Supabase identities, existing accounts, and entitlement ownership before implementation. |
+| `ios-auth-apple-signin-implementation-run` | The owner approves implementing Apple/equivalent login after provider mapping, capability, redirect, and QA scope are defined. |
+
+### Handoff To TODO 4 - RevenueCat Mapping Points
+
+- Apple login risk is separate from iOS subscription mapping, but both intersect at Supabase user identity and entitlement ownership.
+- TODO 4 should document App Store product IDs, subscription group structure, RevenueCat iOS app/offering/package/product mapping, and entitlement names without changing billing code or external consoles.
+- If Apple login is later implemented, RevenueCat subscriber identity and Supabase account identity must be checked together before real iOS purchase testing.
 
 ## High-Risk Separation
 

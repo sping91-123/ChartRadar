@@ -14,7 +14,7 @@
   - `alert-pro-rule-ui-clarity-run` is `DONE`.
   - `settings-account-polish-run` is `DONE`.
   - `settings-support-links-polish-run` is `DONE`.
-- Current phase: Task 2 complete; next TODO is `3. Sign in with Apple requirement risk review`.
+- Current phase: Task 3 complete; next TODO is `4. RevenueCat Apple product mapping review`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No iOS platform add, iOS build, upload, App Store Connect change, Apple Developer change, RevenueCat change, auth change, Supabase change, billing change, Android release change, or production data action was executed during setup.
 
@@ -93,7 +93,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | DONE | Capacitor iOS readiness audit | Capacitor/iOS | MEDIUM | Checked iOS platform status, Capacitor config, app name, appId, bundle identifier candidates, iOS build scripts, and missing native iOS setup. | No iOS platform add. No iOS release setting edits. No Android setting edits. | `git diff --check` |
 | 2 | DONE | Apple Developer submission requirement review | Store Requirements | MEDIUM | Documented TestFlight-prep requirements for Apple Developer account, Bundle ID/App ID, App Store Connect metadata, privacy, support URLs, screenshots, and TestFlight information. | No external console registration or edits. | `git diff --check` |
-| 3 | TODO | Sign in with Apple requirement risk review | Auth Policy | HIGH | Assess whether current Google login structure may require Sign in with Apple for iOS review and document Supabase/UI/auth implications. | No auth code edits. No Supabase edits. No Apple login implementation. | `git diff --check` |
+| 3 | DONE | Sign in with Apple requirement risk review | Auth Policy | HIGH | Assessed current Google/Kakao login structure against Apple login-services policy and documented iOS review risk plus Supabase/UI/auth implications. | No auth code edits. No Supabase edits. No Apple login implementation. | `git diff --check` |
 | 4 | TODO | RevenueCat Apple product mapping review | Monetization Mapping | HIGH | Document iOS subscription product, subscription group, RevenueCat offering/package/product, entitlement, price, and naming mapping needs. | No RevenueCat edits. No App Store Connect product creation. No productId, entitlement, price, or billing code edits. | `git diff --check` |
 | 5 | TODO | TestFlight first-build checklist | Build Readiness | MEDIUM | Create the pre-build checklist for Xcode, signing, certificates, provisioning, Capacitor sync, build command candidates, upload checks, privacy, account deletion, contact, and support URLs. | No iOS build/upload. No submission. No production setting changes. | `git diff --check` |
 | 6 | TODO | Select first iOS readiness follow-up run | Prioritization | LOW | Select exactly one follow-up run candidate after readiness audit. | No follow-up run auto-creation. No code edits. | `git diff --check` |
@@ -123,6 +123,19 @@
 | Output document | `docs/ios-testflight-readiness.md` |
 | Code/native/config changed? | `No` |
 | Next TODO | `3. Sign in with Apple requirement risk review` |
+
+## Task 3 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `3. Sign in with Apple requirement risk review` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Source inspection and official Apple policy review only. No Apple login implementation, auth code edit, Supabase provider edit, Apple Developer capability change, App Store Connect change, Bundle ID change, iOS platform action, iOS build, Xcode, production auth change, or real login test was executed. |
+| Result | Current source exposes Google login and web/non-Android Kakao login through Supabase-backed sessions, with no own email/password system and no Apple provider found. If Google/Kakao login is exposed on iOS for primary account authentication, Sign in with Apple or an equivalent privacy-preserving login option is a HIGH review-readiness risk. |
+| Output document | `docs/ios-testflight-readiness.md` |
+| Code/native/config changed? | `No` |
+| Next TODO | `4. RevenueCat Apple product mapping review` |
 
 ## Follow-Up Candidate Selection Method
 
