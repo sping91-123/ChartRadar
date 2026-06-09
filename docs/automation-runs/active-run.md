@@ -14,7 +14,7 @@
   - `android-production-auto-smoke-run` is `DONE` and recorded as `PASS`.
   - `alert-quality-operations-run` is `DONE`.
   - `alert-pro-rule-ui-clarity-run` is `DONE`.
-- Current phase: run registered; next TODO is `1. Reconfirm settings/menu link locations`.
+- Current phase: Task 1 completed; next TODO is `2. Support and policy link proposal`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No app UI implementation, auth, session, logout, account deletion, Supabase, billing, RevenueCat, entitlement, production DB, purchase, restore, Android release, Play Console, or external console action was executed during setup.
 
@@ -95,7 +95,7 @@
 
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TODO | Reconfirm settings/menu link locations | Source Inspection | LOW | Reconfirm support/policy/alert/app-info link locations in `/settings`, `/menu`, header settings panel, `/account`, and footer. | No code edits. | `git diff --check` |
+| 1 | DONE | Reconfirm settings/menu link locations | Source Inspection | LOW | Reconfirmed support/policy/alert/app-info link locations in `/settings`, `/menu`, header settings panel, `/account`, and footer. | No code edits. | `git diff --check` |
 | 2 | TODO | Support and policy link proposal | UX Spec | LOW | Document the smallest link/accessibility improvements for FAQ, support, privacy, terms, refund/subscription guide, alert settings, account deletion guide, and app version. | No implementation. | `git diff --check` |
 | 3 | TODO | Minimal support/policy link implementation | UI/Link/Copy | LOW | Improve support, policy, alert settings, account deletion guide, and app info access in the most appropriate settings/menu/header surfaces. | No auth/session, billing, RevenueCat, entitlement, Supabase, account deletion, logout/session, purchase, restore, or production DB edits. | `git diff --check`; `cmd /c npx tsc --noEmit` |
 | 4 | TODO | Documentation update | Documentation | LOW | Record the implementation result and remaining risks in `docs/settings-account-polish.md`. | No feature expansion. | `git diff --check` |
@@ -108,6 +108,18 @@
 - Task 4 updates docs only.
 - Task 5 runs safe validation and records results.
 - No task may alter account, auth, billing, entitlement, Supabase, deletion, logout/session, or production behavior.
+
+## Task 1 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `1. Reconfirm settings/menu link locations` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Source inspection and documentation only. |
+| Result | Reconfirmed current support, FAQ, terms, privacy, refund, alert settings, account deletion guide, and app-version locations across `/settings`, `/menu`, header settings panel, `/account`, `AppFooter`, and related policy/support pages. |
+| Code changed? | `No` |
+| Next TODO | `2. Support and policy link proposal` |
 
 ## Verification Policy
 

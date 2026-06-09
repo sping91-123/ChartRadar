@@ -389,6 +389,76 @@ Recommended implementation goal:
 | Intended scope | Low-risk settings/menu/header UI link and copy polish for support, FAQ, terms, privacy, refund guidance, alert settings, account deletion guidance, and app version. |
 | Excluded high-risk areas | Auth/session, logout/session logic, account deletion logic, billing, RevenueCat, entitlement, Supabase/RLS, production DB, Android release, Play Console, purchase, restore, and external console work. |
 
+## Settings Support Links Polish - Task 1 Link Location Audit
+
+| Field | Value |
+| --- | --- |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Source inspection and documentation only. No app code, UI code, user-facing code copy, auth/session logic, Supabase, RLS, billing, RevenueCat, entitlement, account deletion logic, logout/session behavior, production DB, purchase, restore, Android release, Play Console, or external console work was changed or executed. |
+| Scope inspected | `/settings`, `/menu`, header settings panel, `/account`, `AppFooter`, FAQ/privacy/refund/account deletion pages, and existing app version constant usage. |
+| Next TODO | `2. Support and policy link proposal` |
+
+### Current Link Location Table
+
+| Route or surface | Currently present links or information | Missing or low-accessibility items |
+| --- | --- | --- |
+| `/settings` | `src/app/settings/page.tsx` redirects to `/menu`. It has no standalone settings content. | No direct FAQ, support contact, privacy, terms, refund, alert settings, account deletion guide, or app version display except what `/menu` provides after redirect. |
+| `/menu` | Links to `/account`, `/learn`, `/faq`, `/pro`, `/terms`, `/privacy`, and `/refund`. | No direct alert settings link, no direct support/contact item, no account deletion guide link, and no app version display. |
+| Header settings panel | Shows compact account/login section, display settings, alert settings link through `marketAlertHref`, `/learn`, `/faq`, and `APP_VERSION_DISPLAY`. | No terms, privacy, refund/subscription guide, account deletion guide, or direct support/contact item. |
+| `/account` | Shows login/account state, email/provider details, current plan/access rows, Basic-to-`/pro` link, logout button, gated `/account/delete` guide link, and `AppFooter`. | No app version display on the account page itself, no explicit FAQ/support item, no alert settings link, and no direct subscription restore/manage entry beyond `/pro`/refund context. |
+| `AppFooter` | Links to `/terms`, `/privacy`, `/account/delete`, and `/refund`. Shows service-risk copy and `Chart Radar.` service name. | No FAQ link, no direct support/contact item, no app version/build display, and no clear business/developer information beyond service name. |
+| `/faq` | Provides FAQ content and links to `/terms`, `/privacy`, and `/refund`. | No direct support email/contact callout and no app version. |
+| `/privacy` | Mentions support email `staronlabs@gmail.com` for privacy inquiries and links to `/account/delete`. | Support contact is deep inside policy copy, not exposed as a settings/contact item. |
+| `/refund` | Explains subscription cancellation/refund guidance and what to include when contacting support. | Does not show a direct support email in the inspected page body. |
+| `/account/delete` | Shows account/data deletion request guidance and support email `staronlabs@gmail.com`; clarifies store subscription cancellation is separate. | Delete contact path is available only after reaching a destructive-action guide. |
+| App version source | `APP_VERSION_DISPLAY` exists in `src/lib/appVersion.ts` and is rendered in header settings panel `AppInfoSection`. | Version is not shown in `/menu`, `/account`, footer, FAQ, privacy, or refund pages. |
+
+### Missing Or Low-Accessibility Items
+
+| Item | Current state | Why it matters |
+| --- | --- | --- |
+| Direct support/contact | Support email exists in privacy and account deletion guide, but not as a first-class settings/menu/header item. | Users with billing, account, or app-version questions may not find contact guidance quickly. |
+| Alert settings from `/menu` | Header panel and header bell expose alert settings, but `/menu` does not. | Users who land on the route-based menu lose a settings function available in the modal. |
+| Account deletion guide from `/menu` and header panel | Footer, `/account`, and privacy expose deletion guide, but main settings/menu shortcuts do not. | Production account-management expectations are harder to satisfy from the most visible settings entry. |
+| Terms/privacy/refund from header settings panel | Present in `/menu`, footer, and FAQ, but absent from the header settings panel. | The most visible settings panel is incomplete for trust/policy paths. |
+| App version outside header panel | Present only in header settings panel. | Support cannot reliably tell users to find version on route-based pages. |
+| Business/developer information | Service name exists, app id appears in code, and support email exists in policy/deletion pages, but no clear developer/business info section was found. | This should not be invented; it needs confirmed source information before display. |
+
+### Duplicated But Different-Role Items
+
+| Item | Current duplicates | Role difference |
+| --- | --- | --- |
+| FAQ | `/menu`, header settings panel, and FAQ page footer links to policies. | FAQ is both a support entry point and a bridge to policy pages. |
+| Terms/privacy/refund | `/menu`, `AppFooter`, `/faq`; privacy also links to deletion. | `/menu` is route navigation, footer is global policy access, FAQ is support context. |
+| Account deletion guide | `/account`, `/privacy`, `AppFooter`, `/account/delete`. | `/account` is guided account action; footer/privacy are policy access; deletion page is the full request guide. |
+| Alert settings | Header bell, header settings panel, `/alerts`, `/crypto/alert`. | Header is quick access; alert routes are actual configuration surfaces. |
+| App version | Header settings panel only. | No duplicated support-friendly route location yet. |
+
+### Low-Risk Improvement Candidates For TODO 2
+
+| Candidate | Why low-risk |
+| --- | --- |
+| Add alert settings and app version to `/menu` | Link/display-only parity with header settings panel. |
+| Add FAQ/support, terms, privacy, refund, and account deletion guide links to header settings panel | Existing route links only; no account, billing, or deletion behavior changes. |
+| Add a direct support/contact item that reuses existing `staronlabs@gmail.com` context | Uses already published contact text; avoid creating a new support workflow. |
+| Add FAQ and app version to `AppFooter` or route-based settings surfaces | Display/link-only; improves support discoverability. |
+| Add support/policy/app-version block to `/account` | Useful when users are already checking account state, as long as logout/deletion/auth behavior is untouched. |
+
+### Needs Confirmation Or Higher-Risk Items
+
+| Item | Reason |
+| --- | --- |
+| Business/developer information display | Confirm exact legal/operator details before showing anything beyond existing service name/email. |
+| Standalone `/settings` route | Changing redirect/route ownership is broader than link polish and should be handled separately if selected. |
+| Subscription restore/manage behavior | Billing/RevenueCat/Google Play adjacent; do not add new restore behavior in this run. |
+| Account deletion flow changes | Only link to existing guide; do not change confirmation, deletion request, or execution behavior. |
+| Logout placement or behavior changes | Link polish should not alter `signOut`, reload, or session clearing behavior. |
+
+### Task 1 Handoff To TODO 2
+
+TODO 2 should propose the smallest implementation set around route/link parity: header settings panel policy/support links, `/menu` alert settings and app version, and optionally a footer or account support/app-version cue. It should avoid standalone `/settings` route changes, support workflow creation, billing restore behavior, logout behavior, account deletion behavior, and unconfirmed business/developer information.
+
 ## Required Item Candidates
 
 | Item | Why it matters | Risk boundary |
