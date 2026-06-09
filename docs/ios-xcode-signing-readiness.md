@@ -469,7 +469,17 @@ Recommended scope for `ios-first-local-build-readiness-run`:
 
 ### Final Conclusion For `ios-xcode-signing-readiness-run`
 
-`ios-xcode-signing-readiness-run` is complete. Tasks 1 through 5 are DONE. The selected next follow-up candidate is `ios-first-local-build-readiness-run`, and no next active-run was auto-created.
+`ios-xcode-signing-readiness-run` is complete. Tasks 1 through 5 are DONE. The selected next follow-up candidate is `ios-first-local-build-readiness-run`, and that follow-up run has now been registered after explicit setup.
+
+## First Local Build Readiness Follow-Up Registration
+
+| Field | Value |
+| --- | --- |
+| Registered date | 2026-06-10 |
+| Active run | `ios-first-local-build-readiness-run` |
+| Source candidate | Task 5 from `ios-xcode-signing-readiness-run` |
+| Intended scope | Verify macOS/Xcode/CLT/Apple ID/SPM/build preconditions, decide whether first local Debug build can run or must be marked `BLOCKED`, and keep archive/upload out of scope. |
+| Excluded high-risk areas | Xcode setting changes, signing/provisioning/certificate creation, Apple Developer/App Store Connect changes, entitlements/capability creation, archive/upload/TestFlight submission, auth/Supabase/billing/RevenueCat/Android/production changes. |
 
 ## High-Risk Separation
 
@@ -501,4 +511,4 @@ Use this format as each TODO completes.
 
 ## Final Conclusion
 
-Tasks 1 through 5 are complete. `ios-xcode-signing-readiness-run` is DONE. The selected next follow-up candidate is `ios-first-local-build-readiness-run`; it was not auto-created. No Xcode, signing, native project, Apple Developer/App Store Connect, auth, billing, RevenueCat, Supabase, Android, or production configuration change was authorized or executed.
+Tasks 1 through 5 are complete. `ios-xcode-signing-readiness-run` is DONE. The selected next follow-up candidate, `ios-first-local-build-readiness-run`, has now been opened as the current active run after explicit setup. No Xcode, signing, native project, Apple Developer/App Store Connect, auth, billing, RevenueCat, Supabase, Android, or production configuration change was authorized or executed by the signing readiness run.
