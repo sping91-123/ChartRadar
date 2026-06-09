@@ -55,7 +55,7 @@ These surfaces are not implementation approval. They are the expected inspection
 | Order | Status | Task | Main question | Expected output |
 | --- | --- | --- | --- | --- |
 | 1 | DONE | Current settings/account screen audit | What settings/account surfaces exist today, and what is missing for production trust? | Entry-path map and missing-item notes. |
-| 2 | TODO | Required settings item list finalization | Which items are required for a production-ready settings/account surface? | Required-item checklist. |
+| 2 | DONE | Required settings item list finalization | Which items are required for a production-ready settings/account surface? | Required-item checklist. |
 | 3 | TODO | Settings screen structure proposal | How should settings sections be grouped and worded? | Recommended section structure and copy principles. |
 | 4 | TODO | Select one first implementation candidate | What is the safest first implementation candidate with the highest trust impact? | One follow-up implementation-run candidate. |
 
@@ -145,6 +145,68 @@ These surfaces are not implementation approval. They are the expected inspection
 - Consider adding account/status and app-info visibility to route-based pages, because modal-only information is harder to reference in support.
 - Keep the next tasks design-only; any implementation should stay UI/copy/accessibility-only unless a separate high-risk run is opened.
 
+## Task 2 - Required Settings Item List Finalization
+
+| Field | Value |
+| --- | --- |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Documentation and prioritization only. No app code, UI code, user-facing code copy, auth/session logic, Supabase, RLS, billing, RevenueCat, entitlement, account deletion logic, logout/session behavior, production DB, purchase, restore, Android release, Play Console, or external console work was changed or executed. |
+| Input | Task 1 settings/account source inspection and production Android trust requirements. |
+| Next TODO | `3. Settings screen structure proposal` |
+
+### Required Settings Item Matrix
+
+| Item | Current provided? | Current location | Missing or unclear point | Priority | Implementation risk | Separate run needed? |
+| --- | --- | --- | --- | --- | --- | --- |
+| Account state | Partially yes | `/account`, `HeaderActions`, `AuthStatus` compact state | Header modal and route page show different levels of detail; `/menu` does not summarize account state. | Required | LOW if display-only; HIGH if auth/session changes | No for UI/copy display; yes for auth logic |
+| Current plan/subscription state | Partially yes | `/account`, `/pro`, `ProPricingPanel`, `AuthStatus` compact state | `/account` shows plan/access, but restore/manage entry is only obvious on `/pro`; plan support path is split. | Required | LOW for links/copy; HIGH for billing/RevenueCat/entitlement behavior | No for links/copy; yes for billing/restore logic |
+| Alert settings | Yes, but fragmented | Header bell, `HeaderActions`, `/alerts`, `/crypto/alert` | `/menu` does not include alert settings, and settings/account does not summarize Android push status. | Required | LOW for navigation links; HIGH for FCM/token behavior | No for navigation; yes for delivery/token logic |
+| Support/contact | Partially yes | `/faq`, `/privacy`, `/account/delete`, `/refund` | No dedicated support/contact settings item; support email is not easy to find from settings modal. | Required | LOW if link/email display only; MEDIUM if support workflow changes | No for display-only |
+| Terms/policies | Yes, but uneven | Footer, `/menu`, `/faq`, `/terms`, `/privacy`, `/refund` | Header settings modal omits terms/privacy/refund/deletion links. | Required | LOW | No |
+| Account deletion | Yes | `/account`, `/account/delete`, footer, `/privacy` | Discoverable, but not present in header settings modal or `/menu`; destructive action grouping should be standardized. | Required | LOW for link/grouping; HIGH for deletion logic | No for link/grouping; yes for deletion behavior |
+| Logout | Yes | `/account`; default `AuthStatus` variant has logout but current header usage is compact | Logout is not visible in header settings modal; it is separate from deletion but not in a dedicated account-actions group. | Required | LOW for placement/copy; HIGH for session behavior | No for placement; yes for logout behavior |
+| App information/version | Partially yes | `HeaderActions` AppInfo section via `APP_VERSION_DISPLAY` | Version is modal-only; `/menu` and `/account` do not expose it for support references. | Required | LOW for display-only; HIGH for Android release/version changes | No for display-only |
+| Settings structure itself | Partially yes | Header modal, `/settings` redirect, `/menu`, footer | Users may see different settings inventories depending on entry path; `/settings` redirect makes the model less explicit. | Required | LOW for structure/linking; MEDIUM if route behavior changes | No for docs/UI structure; yes for route behavior changes |
+| Business/developer information | Mostly unclear | Footer brand text, account deletion email, app id in code | No clear in-app business/developer information section was found. | Recommended | LOW for display-only; MEDIUM if legal/listing details need confirmation | No for placeholder/link structure; yes for Play Console/legal updates |
+| Subscription restore/manage shortcut | Partially yes | `/pro`, `/refund` | Account page users may not know restore/manage lives on Pro/refund surfaces. | Recommended | LOW for link/copy; HIGH for restore implementation | No for link/copy; yes for restore logic |
+
+### High-Risk Items To Split
+
+| High-risk item | Why it is separate | Required current action |
+| --- | --- | --- |
+| Auth/session behavior changes | `useSupabaseAuth` drives session, profile, sign-out, and entitlement refresh. | Do not modify in this run; only document display gaps. |
+| Logout behavior or real logout testing | Real logout changes/session clearing can affect account persistence and support recovery. | Keep as future high-risk run if behavior changes are needed. |
+| Account deletion logic or real deletion testing | Destructive account/data action requires policy, DB, and recovery handling. | Keep current guide; do not execute deletion. |
+| Billing, RevenueCat, entitlement, product/plan/price changes | Subscription state and restore behavior cross paid-access boundaries. | Only link or describe existing surfaces in low-risk work. |
+| Supabase/RLS/production DB work | Account, profile, subscription, and deletion state depend on protected data. | No DB/query work in this run. |
+| Android release or Play Console changes | App version and developer info may need store/listing verification. | Document as external follow-up only. |
+
+### Low-Risk First Implementation Candidate Pool
+
+| Candidate | Why it is low-risk | Notes for Task 4 |
+| --- | --- | --- |
+| Add policy/support links to the header settings panel | Link-only UI change; does not change legal text or protected logic. | High trust impact because it reduces hunting from the main settings entry. |
+| Add alert settings and app version to `/menu` | Route-page link/display parity with header modal. | Good if Task 3 chooses `/menu` as the durable settings route. |
+| Add support/contact item that points to existing email or FAQ context | Display-only if it reuses existing `staronlabs@gmail.com` and FAQ/refund pages. | Avoid creating new external tooling. |
+| Add app version to `/account` or `/menu` | Display-only using existing `APP_VERSION_DISPLAY`. | Strong support value with minimal risk. |
+| Add subscription manage/restore link from `/account` to `/pro` or `/refund` | Link-only; does not invoke restore or billing APIs. | Keep wording clear that actual restore remains on `/pro`. |
+| Standardize account deletion/logout grouping labels | UI/copy-only if actions and routes stay unchanged. | Avoid changing `signOut` or delete request behavior. |
+
+### Section Candidates For TODO 3
+
+- Account: login state, email, provider, account page link.
+- Subscription/Plan: current plan, market access, Pro page, restore/manage guidance link.
+- Alerts: alert settings route for current market and global/crypto access.
+- Support: FAQ, support email, refund guidance.
+- Terms/Policies: terms, privacy, refund, account deletion guide.
+- App Information: app version/build, brand/developer info access.
+- Dangerous Actions: logout and account deletion separated from ordinary settings.
+
+### Task 2 Conclusion
+
+For production trust, the required settings surface should include account state, current plan/subscription state, alert settings, support/contact, terms/policies, account deletion, logout, app information/version, and a clear settings structure. The first implementation should prefer link/display parity and app-info/support discoverability over auth, billing, deletion, or session behavior changes.
+
 ## Required Item Candidates
 
 | Item | Why it matters | Risk boundary |
@@ -218,4 +280,4 @@ Use this format as each TODO completes.
 
 ## Final Conclusion
 
-Task 1 is complete. The next task is `2. Required settings item list finalization`, and no implementation has been authorized in this run.
+Task 2 is complete. The next task is `3. Settings screen structure proposal`, and no implementation has been authorized in this run.
