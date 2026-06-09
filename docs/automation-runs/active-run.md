@@ -6,7 +6,7 @@
 
 ## Run State
 
-- Status: `TODO`
+- Status: `DONE`
 - Setup date: 2026-06-09
 - Previous run context:
   - `android-production-auto-smoke-run` is `DONE` and recorded as `PASS`.
@@ -14,7 +14,7 @@
   - `alert-pro-rule-ui-clarity-run` is `DONE`.
   - `settings-account-polish-run` is `DONE`.
   - `settings-support-links-polish-run` is `DONE`.
-- Current phase: Task 5 complete; next TODO is `6. Select first iOS readiness follow-up run`.
+- Current phase: Task 6 complete; `ios-testflight-readiness-run` is DONE.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No iOS platform add, iOS build, upload, App Store Connect change, Apple Developer change, RevenueCat change, auth change, Supabase change, billing change, Android release change, or production data action was executed during setup.
 
@@ -96,7 +96,7 @@
 | 3 | DONE | Sign in with Apple requirement risk review | Auth Policy | HIGH | Assessed current Google/Kakao login structure against Apple login-services policy and documented iOS review risk plus Supabase/UI/auth implications. | No auth code edits. No Supabase edits. No Apple login implementation. | `git diff --check` |
 | 4 | DONE | RevenueCat Apple product mapping review | Monetization Mapping | HIGH | Documented iOS subscription product, subscription group, RevenueCat offering/package/product, entitlement, price, and naming mapping needs. | No RevenueCat edits. No App Store Connect product creation. No productId, entitlement, price, or billing code edits. | `git diff --check` |
 | 5 | DONE | TestFlight first-build checklist | Build Readiness | MEDIUM | Created the pre-build checklist for Xcode, signing, certificates, provisioning, Capacitor sync, build command candidates, upload checks, privacy, account deletion, contact, and support URLs. | No iOS build/upload. No submission. No production setting changes. | `git diff --check` |
-| 6 | TODO | Select first iOS readiness follow-up run | Prioritization | LOW | Select exactly one follow-up run candidate after readiness audit. | No follow-up run auto-creation. No code edits. | `git diff --check` |
+| 6 | DONE | Select first iOS readiness follow-up run | Prioritization | LOW | Selected exactly one follow-up run candidate after readiness audit. | No follow-up run auto-creation. No code edits. | `git diff --check` |
 
 ## Task 1 Completion Note
 
@@ -162,6 +162,19 @@
 | Output documents | `docs/ios-testflight-readiness.md`, `docs/qa/ios-testflight-checklist.md` |
 | Code/native/config changed? | `No` |
 | Next TODO | `6. Select first iOS readiness follow-up run` |
+
+## Task 6 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `6. Select first iOS readiness follow-up run` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Documentation and prioritization only. No follow-up active-run was created. No iOS platform add, sync, build, Xcode, pod install, archive, upload, Apple Developer, App Store Connect, RevenueCat, Supabase, auth, billing, entitlement, Android, real login, purchase, or restore action was changed or executed. |
+| Result | Selected `ios-capacitor-platform-setup-run` as the first follow-up candidate because the native iOS platform and `@capacitor/ios` are absent and block all real iOS build/archive/TestFlight work. Sign in with Apple, RevenueCat/App Store product mapping, push, and listing assets remain separate follow-up tracks. |
+| Output document | `docs/ios-testflight-readiness.md` |
+| Code/native/config changed? | `No` |
+| Active-run state | `DONE` |
 
 ## Follow-Up Candidate Selection Method
 
