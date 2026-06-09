@@ -703,6 +703,63 @@ Reasoning:
 | Intended scope | Controlled preparation for adding `@capacitor/ios` and generating the Capacitor native iOS platform in separate TODOs. |
 | Excluded high-risk areas | Xcode archive/build/upload, TestFlight submission, Apple Developer/App Store Connect changes, RevenueCat/App Store products, Sign in with Apple implementation, auth/Supabase/billing/entitlement changes, Android release changes, production DB/config changes. |
 
+## iOS Capacitor Platform Setup - Task 1 Preflight State
+
+| Field | Value |
+| --- | --- |
+| Active run | `ios-capacitor-platform-setup-run` |
+| Task | `1. iOS setup preflight environment/status check` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Read-only command execution and source inspection only. No dependency install, `@capacitor/ios` install, iOS platform add, Capacitor sync, Xcode, pod install, iOS build/archive/upload, external console change, package edit, native edit, config edit, auth, Supabase, billing, RevenueCat, entitlement, Android release, or production action was executed. |
+
+### Commands Executed
+
+| Command | Result |
+| --- | --- |
+| `git status --short` | Clean working tree before documentation edits. |
+| `git branch --show-current` | `main` |
+| `git rev-parse --abbrev-ref --symbolic-full-name @{u}` | Equivalent command executed with quoted `@{u}` for PowerShell parsing; result `origin/main`. |
+| `git rev-list --left-right --count HEAD...@{u}` | Equivalent command executed with quoted `@{u}` for PowerShell parsing; result `0/0`. |
+| `node -v` | `v24.15.0` |
+| `npm -v` | `11.12.1` |
+| `npm.cmd ls @capacitor/core @capacitor/android @capacitor/ios` | `@capacitor/core@8.3.3` and `@capacitor/android@8.3.3` installed; `@capacitor/ios` not present in the package tree output. |
+
+### Git And Package State
+
+| Check | State |
+| --- | --- |
+| Branch | `main` |
+| Upstream | `origin/main` |
+| Ahead/behind | `0/0` |
+| Working tree before docs edit | Clean |
+| `package.json` / `package-lock.json` | No changes made in this task. |
+| `@capacitor/core` | Installed at `8.3.3`. |
+| `@capacitor/android` | Installed at `8.3.3`. |
+| `@capacitor/ios` | Not installed / not present in `package.json`, `package-lock.json`, or `npm.cmd ls` output. |
+
+### Capacitor Config State
+
+| Setting | Current value | Source |
+| --- | --- | --- |
+| `appId` | `com.staronlabs.chartradar` | `capacitor.config.ts` |
+| `appName` | `Chart Radar` | `capacitor.config.ts` |
+| `webDir` | `mobile-shell` | `capacitor.config.ts` |
+
+### iOS Platform State
+
+| Check | State |
+| --- | --- |
+| `ios/` directory | Missing |
+| Native iOS project | Missing because `ios/` is absent. |
+| iOS setup readiness | Not ready for platform generation until the next dependency planning/install TODOs are completed. |
+
+### Handoff To Task 2
+
+- Confirm the exact `@capacitor/ios` version needed to match the current Capacitor `8.3.3` packages.
+- Select the install command without installing in Task 2.
+- Keep `package.json`, `package-lock.json`, `capacitor.config.ts`, Android native/release files, auth/Supabase/billing/RevenueCat/entitlement code, and production settings unchanged until a later TODO explicitly allows changes.
+
 ## High-Risk Separation
 
 | Area | Status in this run |
