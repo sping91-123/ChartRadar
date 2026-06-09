@@ -859,6 +859,77 @@ Avoid these directions:
 
 For TODO 3, implement only the alert settings UI/copy clarity required to make Basic or wrong-market Pro rules read as locked/read-only. Prefer a small `RadarAlertCenter` display-state change that prevents locked Pro rows from toggling local state and prioritizes a Pro-required status over enabled/off badges. Do not alter server delivery, entitlement, billing, RevenueCat, Supabase, FCM, push-cron, targetPath, route behavior, token storage, production data, or purchase flows.
 
+## Follow-Up Run Task 4 - Related Documentation Update
+
+| Field | Value |
+| --- | --- |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Documentation update only. No additional app code, UI code, user-facing code copy, alert logic, route, targetPath, billing, entitlement, Supabase, FCM, push-cron, production DB/token, external console, purchase, restore, or real push action was changed or executed. |
+| Active run | `alert-pro-rule-ui-clarity-run` |
+| Next TODO | `5. Safe validation execution` |
+
+### Task 3 Implementation Summary
+
+| Item | Result |
+| --- | --- |
+| Changed file | `src/components/RadarAlertCenter.tsx` |
+| Locked display | Basic or wrong-market Pro rules now render as locked/read-only in the alert rule list. |
+| Primary status | Locked Pro rows show `Pro 필요`; `켜짐/꺼짐` no longer has priority for those rows. |
+| Toggle affordance | Locked rows render a read-only pill instead of the normal on/off switch. |
+| Locked explanation | Locked rows show a short explanation that the alert is available with the matching Pro plan. |
+| CTA | Locked rows show a function-explanation CTA such as Pro alert criteria review, routed to the relevant Pro context. |
+| Local state protection | `toggleRule` now returns before changing local rule state when the rule is locked for the current plan/market. |
+| Scope boundary | The change stays in alert settings UI/copy and active-run documentation. |
+
+### Risks Reduced By Task 3
+
+| Risk | Reduction |
+| --- | --- |
+| Basic users may think Pro rules are actually enabled. | Locked Pro rows no longer display as ordinary enabled/off toggles. |
+| Pro badge and enabled/off badge can conflict. | Locked rows prioritize `Pro 필요` over enabled/off state. |
+| localStorage/default Pro ids can look active for Basic users. | Locked display is derived from current plan/market, so Basic UI does not present those ids as active. |
+| UI settings can appear inconsistent with server `ruleAllowed`. | The UI now shows the paid boundary before server delivery filtering happens. |
+| "I configured this but no alert arrived" trust risk. | Pro-only delivery limits are visible at the rule row before the user treats the rule as active. |
+
+### High-Risk Areas Not Changed
+
+| Area | Status |
+| --- | --- |
+| Billing, product ids, plan ids, entitlement names, prices | Not changed |
+| RevenueCat or native purchase mapping | Not changed |
+| Supabase, RLS, production DB rows | Not changed |
+| Push token storage, lookup, insertion, deletion, or rotation | Not changed |
+| FCM, push-cron, scanner delivery logic, cooldown, duplicate guards | Not changed |
+| Server `ruleAllowed` or entitlement policy | Not changed |
+| targetPath, routing, push-click behavior, login returnTo | Not changed |
+| Actual push, admin test push, purchase, restore, Android native/release, external console tests | Not executed |
+
+### Recorded Task 3 Validation Results
+
+| Command | Result |
+| --- | --- |
+| `git diff --check` | PASS |
+| `cmd /c npx tsc --noEmit` | PASS |
+| `npm.cmd run build` | PASS |
+| `npm.cmd run smoke:copy` | PASS |
+
+### Remaining Risks After Task 3
+
+- Alert limit copy 30/40 versus `usageMeter` Pro 20 mismatch is still unresolved.
+- System-event entitlement bypass policy is still unresolved.
+- `/alerts?market=global|crypto` targetPath allowlist or payload convention is still unresolved.
+- Per-user hourly/daily total push cap is still absent.
+- Macro/news semantic repetition can still happen when event keys differ.
+- Android push tap cold start/background behavior still needs real-device or manual QA confirmation.
+
+### Task 5 Safe Validation Check Points
+
+- Reconfirm the diff remains limited to alert settings UI/copy and documentation.
+- Reconfirm billing, entitlement, RevenueCat, Supabase, FCM, push-cron, scanner delivery logic, targetPath/routing, package scripts, Android release, production DB/token surfaces remain unchanged.
+- Re-record TypeScript, build, and copy-smoke status for the final run evidence.
+- Decide whether `npm.cmd run smoke:mobile` is useful and safe as an optional final check; do not run high-risk smoke commands such as billing, API, push, Android native, or release commands.
+
 ## Out Of Scope
 
 - Real push send.
