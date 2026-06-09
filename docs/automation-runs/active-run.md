@@ -9,7 +9,7 @@
 - Status: `ACTIVE`
 - Setup date: 2026-06-09
 - Previous run context: `android-production-auto-smoke-run` is `DONE` and its recorded automatic checks are `PASS`.
-- Current phase: Tasks 1-2 are `DONE`; Task 3 is the next `TODO`.
+- Current phase: Tasks 1-3 are `DONE`; Task 4 is the next `TODO`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No alert code, push command, production DB/token access, FCM, Supabase, RevenueCat, billing, Android release, or Android phone manual QA action was executed during setup.
 
@@ -76,7 +76,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | DONE | Current alert structure audit | Alert Structure | MEDIUM | Document alert generation, permission request, push token save, targetPath routing, Pro limits, and alert settings flow. | No FCM edits. No push-cron edits. No Supabase edits. No production DB edits. No real push send. | `git diff --check` |
 | 2 | DONE | Alert copy quality review | Alert Copy | LOW | Check whether alert wording could read as investment instruction, guaranteed return, or excessive trade inducement. | No alert send logic edits. No real push send. | `git diff --check` |
-| 3 | TODO | Duplicate and cooldown policy review | Dedupe/Cooldown | MEDIUM | Check whether the same user can receive repetitive or too-frequent alerts from current structure. | No cooldown logic edits. No push-cron edits. No production DB edits. | `git diff --check` |
+| 3 | DONE | Duplicate and cooldown policy review | Dedupe/Cooldown | MEDIUM | Check whether the same user can receive repetitive or too-frequent alerts from current structure. | No cooldown logic edits. No push-cron edits. No production DB edits. | `git diff --check` |
 | 4 | TODO | Basic/Pro alert limit review | Entitlement/Gating | HIGH | Check whether free/paid alert limits are consistent between screen design and expected runtime behavior. | No entitlement edits. No RevenueCat edits. No Supabase RLS edits. No billing edits. | `git diff --check` |
 | 5 | TODO | targetPath routing quality review | Notification Routing | MEDIUM | Document expected destination, fallback, login-required state, and missing-route behavior after alert click. | No routing code edits. No real push-click test. | `git diff --check` |
 | 6 | TODO | Alert improvement candidate selection | Prioritization | LOW | Select exactly one first alert-quality improvement candidate; implementation remains a separate run. | No multiple simultaneous improvements. No code edits. | `git diff --check` |
@@ -123,7 +123,36 @@
   - no browser notification or OS permission prompt
   - no production DB or raw token query
   - no Supabase, FCM, RevenueCat, billing, entitlement, Android release, Play Console, app code, UI code, package, or script changes
-- Next task remains: `3. Duplicate and cooldown policy review`
+- Task 2 handoff at completion: `3. Duplicate and cooldown policy review`
+
+## Task 3 Completion Note
+
+- Completed date: 2026-06-09
+- Completed task: `Duplicate and cooldown policy review`
+- Output document: `docs/alert-quality-operations.md`
+- Scope inspected by source inspection only:
+  - per-user scanner flow, recent sent-event lookup, and same-scan cooldown state in `runPushAlertScan`
+  - cooldown rules in `src/lib/server/push/cooldown.ts`
+  - duplicate event-key helpers and sent-event history recording in `src/lib/server/push/duplicateGuard.ts`
+  - FCM send accounting and duplicate re-check in `src/lib/server/push/sendPush.ts`
+  - event-key buckets, market-scout limits, and global batching in event builders and generic events
+  - browser-local notification dedupe in `RadarAlertMonitor`
+  - `push_alert_events` schema reference and unique `(user_id, event_key)` index
+- Result summary:
+  - duplicate prevention uses per-user `eventKey`, pre-send `alreadySent`, sent-event recording, and a DB unique index
+  - cooldown is server-side for Android FCM and localStorage-based for browser preview
+  - current safeguards include same-symbol cooldowns, crypto alt market-scout global limit, scan-level market-scout caps, and global event batching
+  - no explicit per-user hourly or daily total push cap was found
+  - concurrency, post-FCM sent-event recording failure, multi-device delivery, and macro/news semantic repetition remain documented risks
+- Protected actions not performed:
+  - no cooldown, dedupe, rate-limit, push-cron, scanner, FCM, token preference, or alert code edits
+  - no real push send
+  - no admin test push
+  - no push-cron call
+  - no admin diagnostics call
+  - no production DB or raw token query
+  - no Supabase, RLS, RevenueCat, billing, entitlement, Android release, Play Console, app code, UI code, package, or script changes
+- Next task remains: `4. Basic/Pro alert limit review`
 
 ## Documentation Policy
 

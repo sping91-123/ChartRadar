@@ -55,7 +55,7 @@ These are candidate surfaces for future TODO tasks. Listing them here is not app
 | --- | --- | --- | --- | --- |
 | 1 | DONE | Current alert structure audit | How are alerts generated, permissioned, stored, routed, gated, and configured today? | Structure map and protected-surface notes. |
 | 2 | DONE | Alert copy quality review | Does alert copy avoid investment instruction, guarantee, urgency, or excessive trading pressure? | Copy-risk findings and wording guardrails. |
-| 3 | TODO | Duplicate and cooldown policy review | Can the same user receive too many or repeated alerts? | Repetition/cooldown risk map. |
+| 3 | DONE | Duplicate and cooldown policy review | Can the same user receive too many or repeated alerts? | Repetition/cooldown risk map. |
 | 4 | TODO | Basic/Pro alert limit review | Are free and paid alert limits consistent between UI and intended behavior? | Basic/Pro consistency findings. |
 | 5 | TODO | targetPath routing quality review | Where should alert taps land, and what should happen for login-required or missing routes? | Routing expectation table. |
 | 6 | TODO | Alert improvement candidate selection | What is the one safest first improvement candidate? | One implementation-run candidate with rationale. |
@@ -243,6 +243,120 @@ These are candidate surfaces for future TODO tasks. Listing them here is not app
 - Inspect whether global batching already reduces repeated momentum/asset wording enough for a single user.
 - Verify whether cooldown and duplicate keys cover both market-wide scout events and saved-condition events.
 - Keep copy findings separate from cooldown implementation; do not edit cooldown or push-cron logic in the next audit task.
+
+## Task 3 - Duplicate And Cooldown Policy Audit
+
+| Field | Value |
+| --- | --- |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Source inspection only. No push endpoint, admin diagnostics endpoint, browser notification, OS permission prompt, database, token, external console, Android device, or production-mutating command was executed. |
+| Scope inspected | Duplicate guard, cooldown decision, send flow, push event key buckets, scan-level limits, diagnostics counters, push token preferences, local browser notification dedupe, and schema references. |
+| Implementation allowed in this run? | `No` |
+
+### Sources Inspected
+
+| Source | Relevance |
+| --- | --- |
+| `src/lib/server/pushAlertScanner.ts` | Main per-user scan flow, recent sent-event lookup, cooldown gate, duplicate gate, dry-run simulation, send accounting, and diagnostics counters. |
+| `src/lib/server/push/cooldown.ts` | Current symbol cooldown, crypto alt market-scout cooldown, and market-scout global cooldown rules. |
+| `src/lib/server/push/duplicateGuard.ts` | `eventBucket`, `alreadySent`, `recentSentEvents`, and `recordSentEvent` helpers. |
+| `src/lib/server/push/sendPush.ts` | Per-user target-token filtering, duplicate re-check before FCM send, FCM result accounting, and sent-event recording. |
+| `src/lib/server/push/eventBuilders.ts` | Event-key construction, time buckets, scan-level event limits, and global batching helpers. |
+| `src/lib/server/push/genericEvents.ts` | Generic crypto/global event assembly and market-scout/global batch limit output. |
+| `src/lib/server/push/preferences.ts` | Token market/rule filtering before delivery. |
+| `src/lib/server/push/types.ts` | Duplicate, cooldown, rate-limit, and global-batch diagnostics fields. |
+| `src/components/RadarAlertMonitor.tsx` | Browser-local notification interval and localStorage notified-id dedupe. |
+| `src/lib/setupAlertPresets.ts` | Local setup match ids and visible-match dedupe used by browser/setup alert surfaces. |
+| `src/app/api/push-tokens/route.ts` | Token preference merge and preset sync flow that affects later delivery targeting. |
+| `supabase/migrations/20260519_push_tokens.sql` | `push_alert_events` table and unique `(user_id, event_key)` index reference. |
+
+### Current Duplicate Prevention
+
+- Server push dedupe is primarily per user and per `eventKey`.
+- `eventKey` values include a time bucket from `eventBucket(minutes)`. Source inspection found 15-minute buckets for setup, watchlist, global momentum, and global asset events; 30-minute buckets for risk-off, semiconductor leadership, and liquidation events; 180-minute buckets for macro news; and 360-minute buckets for macro calendar reminders.
+- `alreadySent(userId, eventKey)` checks `push_alert_events` before delivery, and `sendEventToUser` performs this duplicate re-check immediately before FCM send.
+- `recordSentEvent(userId, event, sentCount)` writes one sent-event row when at least one FCM target succeeds.
+- The migration defines a unique index on `(user_id, event_key)`, which is a second-layer duplicate record guard after application-level checks.
+- `runPushAlertScan` reads recent sent events once per user and keeps an in-memory `recentRowsForUser` list. In dry-run and send paths, successfully sendable events are added to that list so later candidates in the same scan can be blocked by cooldown.
+- Setup candidate selection also reduces repeated symbols before delivery. `topPushSetups` removes duplicate symbols before selecting top setup candidates.
+- Market-wide scan limits reduce same-scan repetition: crypto alt market-scout events are limited to one per scan, crypto major market-scout events to two per scan, global momentum events to one batched event per scan, and global asset events to one batched event per scan.
+- Browser-local notifications are separate from Android FCM. `RadarAlertMonitor` runs every five minutes while the app is open, skips Android native browser notifications, stores notified match ids in localStorage, and keeps the latest 80 ids per market.
+
+### Current Cooldown And Rate-Limit Policy
+
+| Policy | Current behavior from source inspection | Risk read |
+| --- | --- | --- |
+| Recent-event lookback | Server scanner loads each user's sent events from the last 6 hours. | Supports short-term cooldown only; not a daily fatigue cap. |
+| Setup score events | Events with `score !== undefined` use a same-market, same-kind, same-symbol cooldown of 120 minutes. | Good symbol-level repetition guard for setup/watchlist-like events. |
+| Liquidation pressure | Liquidation events use a 180-minute same-symbol cooldown. | Good for a high-volatility source, but still no cross-family user cap. |
+| Crypto alt market scout | Same-symbol alt market-scout cooldown is 360 minutes. | Strong guard for repeated alt suggestions. |
+| Crypto alt market-scout global limit | Any recent crypto alt `market_scout` event in the last 60 minutes blocks another alt market-scout candidate. | Good user-fatigue guard for noisy alt conditions. |
+| Market scout scan limit | At event-build time, alt market-scout events are capped to 1 per scan and major crypto market-scout events to 2 per scan. | Reduces burst volume before user-specific gates. |
+| Global momentum batch | Global momentum candidates are compacted into at most one batched event per scan. | Strong safety element for global repetition. |
+| Global asset batch | Global asset candidates are compacted into at most one batched event per scan. | Strong safety element for asset-list repetition. |
+| Macro news | Macro news uses a 180-minute event-key bucket. No separate cooldown rule was found when the event has no score. | Repetition depends on event key construction and source content. |
+| Macro calendar | Macro calendar reminder uses a 360-minute event-key bucket. No separate cooldown rule was found when the event has no score. | Usually acceptable for scheduled reminders, but no user-level daily cap. |
+| Basic/Pro cooldown difference | No plan-specific cooldown difference was found. Entitlement gates decide allowed rules, not cooldown duration. | Continue in TODO 4; this may be okay, but it should be explicit. |
+| User global cap | No explicit per-user hourly or daily total push cap was found. | Main fatigue-risk gap. |
+| Server-side vs local | Android FCM cooldown is server-side through `push_alert_events`; browser preview dedupe is localStorage only. | The two alert surfaces can differ by device and session. |
+
+### Confirmed Safety Elements
+
+- Real FCM send is isolated behind `/api/push-cron` send mode and `sendEventToUser`; this audit did not run those paths.
+- Per-user event-key duplicate checks happen before FCM send, not only after.
+- The database unique index on `(user_id, event_key)` protects the sent-event history from duplicate records.
+- Same-scan in-memory recent-row updates reduce repeated sends from multiple candidates in a single scan.
+- Crypto alt and global market-scout sources have scan-level caps before user-specific delivery.
+- Global momentum and global asset alerts are batched rather than sending every individual asset candidate.
+- Diagnostics counters separately track duplicate, cooldown, rate-limit, global batch, and skipped samples, which supports future dry-run review without changing logic.
+- Browser-local notification dedupe records notified ids and sends at most one fresh browser notification per market check.
+
+### Risks And Uncertain Areas
+
+- No explicit per-user hourly or daily push volume cap was found. If several alert families fire together, a user could still receive multiple pushes in a short window.
+- Cooldown is not plan-specific. Basic/Pro differences appear to come from entitlement and rule gating, not different noise controls.
+- Optional macro, news, liquidation, setup, market-scout, and global sources can all contribute events in the same scan. Some are capped, but no cross-family priority queue or total cap was found.
+- Macro/news copy and uniqueness are partly dependent on external source content. A new headline or key issue can create a new event key even if the user-facing meaning is similar.
+- Concurrent cron executions can race. Two runs can pass `alreadySent` before either records the sent event; the DB unique index can prevent duplicate history rows, but it does not necessarily prevent duplicate FCM sends that already happened.
+- If FCM succeeds but `recordSentEvent` fails afterward, later scans may not know the user already received that event. This is a duplicate-risk and accounting-risk case.
+- If all FCM sends fail, no sent-event row is recorded, so a later retry may send again. That is reasonable for delivery recovery, but it still needs operational monitoring.
+- If some tokens succeed and some fail, the user-level event record blocks the same event later for all tokens. This favors duplicate prevention over retrying failed devices.
+- Users with multiple enabled devices can receive the same event on more than one device. This is expected token behavior, but the user can perceive it as duplicate delivery.
+- Token preferences are read at scan time. Setting changes during a scan may not affect that in-flight scan.
+- User-level event history can block a newly enabled token from receiving the same event if another token already recorded the event in the same bucket.
+- Browser-local notification dedupe is localStorage-scoped. It does not share server push history and can reset by browser/device/storage state.
+- Browser setup match ids include dynamic scan context, so the same semantic condition could appear as a new match if generated with a different id.
+
+### User Fatigue Operating Criteria Candidates
+
+- Default target: keep ordinary users near 3 to 5 push notifications per day unless they explicitly save many watchlist conditions.
+- Burst target: avoid more than 1 to 2 non-critical pushes per hour.
+- Highest priority: major risk-off, liquidation pressure, macro-calendar/news items with broad market impact, and user-saved watchlist matches.
+- Medium priority: global momentum or global asset summary events, especially when batched.
+- Lower priority: broad market-scout candidates that are not tied to a saved symbol or watched condition.
+- Repetition rule candidate: avoid sending the same-market, same-meaning alert family repeatedly even when event keys differ.
+- Bundling rule candidate: combine lower-priority market-wide alerts into a summary instead of sending separate pushes.
+- Retry rule candidate: make post-FCM sent-event recording failures visible in diagnostics before changing retry behavior.
+
+### Improvement Candidates For A Later Implementation Run
+
+| Candidate | Why | Risk | Implementation allowed now? |
+| --- | --- | --- | --- |
+| Add a per-user hourly/daily push volume cap | Directly limits fatigue across alert families. | MEDIUM because it changes delivery behavior and needs careful diagnostics. | No |
+| Add a cross-family priority queue before sending | Prevents macro/news/setup/global events from all arriving together. | MEDIUM to HIGH because it changes alert ordering and user expectations. | No |
+| Add a concurrency/idempotency guard around cron send attempts | Reduces duplicate FCM sends during overlapping cron executions. | HIGH because it likely touches push-cron, DB, or locking strategy. | No |
+| Track sent-event recording failures explicitly | Improves detection of FCM-success/history-write-failure mismatch. | MEDIUM because it changes send accounting and diagnostics. | No |
+| Add semantic cooldown for macro/news alerts | Prevents similar headline/key-issue pushes from repeating with different event keys. | MEDIUM because it touches scanner/event-key policy. | No |
+| Document multi-device delivery expectations in settings/help copy | Reduces perceived duplicate confusion when one user has several devices. | LOW to MEDIUM because it touches user-facing copy. | No |
+
+### Next TODO - Basic/Pro Alert Limit Points
+
+- Verify whether Basic/Pro gating is consistent between `RadarAlertCenter`, `radarAlertRules`, `usageMeter`, token preferences, and server `ruleAllowed`.
+- Pay special attention to system events: `tokenWants` bypasses rule preferences for non-watchlist system events, so market preference and entitlement gates matter more than individual rule toggles for those events.
+- Confirm whether Basic users can see, save, or sync settings for rules that server delivery later blocks.
+- Confirm whether Pro plan differences should affect only rule availability or also noise controls such as cooldown, scan caps, or total alert volume.
+- Keep this as an audit only. Do not edit entitlement, RevenueCat, billing, RLS, token preference, or push logic.
 
 ## Out Of Scope
 
