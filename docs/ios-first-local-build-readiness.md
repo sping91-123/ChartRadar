@@ -43,7 +43,7 @@
 | Order | Status | Task | Main question | Expected output |
 | --- | --- | --- | --- | --- |
 | 1 | DONE | Local iOS build environment preflight | Is this machine ready to even consider an iOS local build? | OS/Xcode/CLT/SPM/account readiness table. |
-| 2 | TODO | iOS project build precondition audit | Is the generated project structurally ready for a Debug build attempt? | Project/scheme/target/signing/SPM/output precondition notes. |
+| 2 | DONE | iOS project build precondition audit | Is the generated project structurally ready for a Debug build attempt? | Project/scheme/target/signing/SPM/output precondition notes. |
 | 3 | TODO | Signing blocker decision | Are missing Team ID/provisioning items blocking local build? | `RUN_ALLOWED` or `BLOCKED` decision basis. |
 | 4 | TODO | Safe local build command candidate selection | What command would be safest if a build becomes allowed? | Command candidate and stop conditions. |
 | 5 | TODO | Local build execution decision | Should this run execute a build or close blocked? | Build decision record; no archive/upload. |
@@ -118,6 +118,113 @@ Apple ID/Xcode account readiness remains `NOT_CHECKED` because it requires Xcode
 
 No iOS build, archive, upload, Xcode open, signing change, provisioning/certificate creation, entitlements/capabilities creation, Apple console change, native project edit, auth/Supabase/billing/RevenueCat/entitlement edit, Android edit, or production action was executed.
 
+## TODO 2 Result - iOS Project Build Precondition Audit
+
+Status: `DONE`
+
+Execution date: 2026-06-10
+
+Method: source inspection only. No Xcode, `xcodebuild`, `npx cap sync ios`, `npx cap open ios`, pod install, archive, upload, signing change, native file edit, or console change was executed.
+
+### Project And Workspace State
+
+| Item | Current state | Build precondition | Current machine judgment | Follow-up |
+| --- | --- | --- | --- | --- |
+| Xcode project | `ios/App/App.xcodeproj` exists. | Required for local iOS build. | PASS by file inspection | Confirm from Xcode/macOS before any real build. |
+| Project workspace | `ios/App/App.xcodeproj/project.xcworkspace` exists. | Xcode can use the project workspace created by Capacitor. | PASS by file inspection | Actual workspace loading is blocked on Windows. |
+| Top-level workspace | No top-level `ios/App/App.xcworkspace` was found. | Not required for the current SPM-based generated project unless later tooling creates one. | PASS by file inspection | Re-check if a future sync/build creates workspace changes. |
+| Shared scheme file | No `.xcscheme` file was found by file inspection. | Scheme discovery normally requires Xcode or `xcodebuild -list`. | BLOCKED | Confirm scheme list on macOS/Xcode; expected scheme candidate is `App`. |
+
+### Target, Scheme, And Configuration Candidates
+
+| Item | Current state | Status |
+| --- | --- | --- |
+| Target candidate | `App` native target exists in `project.pbxproj`. | PASS |
+| Product name | `App` | PASS |
+| Scheme candidate | `App`, inferred from target/product name. | NEEDS_MANUAL_CONFIRMATION |
+| Build configurations | `Debug` and `Release` configurations exist. | PASS |
+| Default configuration | `Release` is the default configuration name in project and target configuration lists. | PASS |
+| Scheme list command | Not run because Xcode/`xcodebuild` is unavailable and forbidden in this TODO. | BLOCKED |
+
+### Build Configuration State
+
+| Setting | Current value | Status |
+| --- | --- | --- |
+| `PRODUCT_BUNDLE_IDENTIFIER` | `com.staronlabs.chartradar` | PASS |
+| `INFOPLIST_FILE` | `App/Info.plist` | PASS |
+| `IPHONEOS_DEPLOYMENT_TARGET` | `15.0` | PASS |
+| `TARGETED_DEVICE_FAMILY` | `1,2` | PASS |
+| `ASSETCATALOG_COMPILER_APPICON_NAME` | `AppIcon` | PASS |
+| `MARKETING_VERSION` | `1.0` | PASS |
+| `CURRENT_PROJECT_VERSION` | `1` | PASS |
+| `CFBundleDisplayName` | `Chart Radar` | PASS |
+| `CFBundleIdentifier` | Build setting reference in `Info.plist`. | PASS |
+| `CFBundleShortVersionString` | Build setting reference in `Info.plist`. | PASS |
+| `CFBundleVersion` | Build setting reference in `Info.plist`. | PASS |
+| URL/deep link entries | No `CFBundleURLTypes` entry was found in `Info.plist`. | NEEDS_MANUAL_CONFIRMATION |
+
+### Signing Preconditions
+
+| Signing item | Current state | Build precondition | Current machine judgment | Follow-up |
+| --- | --- | --- | --- | --- |
+| `DEVELOPMENT_TEAM` | Not found in `project.pbxproj`. | A valid Team ID is needed for real device signing and likely for managed signing. | BLOCKED | TODO 3 must decide whether local build is blocked until Team ID is set in a separate approved run. |
+| `CODE_SIGN_STYLE` | `Automatic` for Debug/Release. | Automatic signing still requires Xcode account/team access. | NEEDS_MANUAL_CONFIRMATION | Confirm on macOS/Xcode. |
+| `PROVISIONING_PROFILE_SPECIFIER` | Not found. | Automatic signing may omit this, but signing resolution must succeed in Xcode. | NEEDS_MANUAL_CONFIRMATION | Confirm on macOS/Xcode. |
+| Certificates | Not checked in this Windows environment. | Apple Development certificate may be needed for local device builds; simulator builds may avoid some signing needs. | BLOCKED | Confirm in macOS/Xcode or Apple Developer workflow. |
+| Provisioning | Not checked in this Windows environment. | Development profile may be needed for device build. | BLOCKED | Confirm after Team ID/account state is known. |
+
+### SPM Dependency Preconditions
+
+The generated iOS project uses Swift Package Manager setup through `ios/App/CapApp-SPM/Package.swift`.
+
+| Item | Current state | Status |
+| --- | --- | --- |
+| Swift tools version | `5.9` | PASS by file inspection |
+| iOS platform in package | `.iOS(.v15)` | PASS |
+| Capacitor SPM package | `capacitor-swift-pm`, exact `8.3.3` | PASS |
+| Local plugin packages | `@capacitor/push-notifications`, `@capawesome/capacitor-google-sign-in`, `@revenuecat/purchases-capacitor` | PASS by file inspection |
+| SPM resolution | Not run. Requires macOS/Xcode tooling. | BLOCKED |
+
+SPM resolution remains blocked on the current Windows machine. A later allowed macOS/Xcode run must confirm package resolution before treating the local iOS build path as ready.
+
+### Generated Output Preconditions
+
+Ignored generated outputs are present on disk and are not intended to be staged in this TODO:
+
+| Ignored path | Current state | Build relevance | Status |
+| --- | --- | --- | --- |
+| `ios/App/App/public/` | Present on disk, ignored by git. | Capacitor web assets for the native shell. | NEEDS_MANUAL_CONFIRMATION |
+| `ios/App/App/capacitor.config.json` | Present on disk, ignored by git. | Generated Capacitor native config. | NEEDS_MANUAL_CONFIRMATION |
+| `ios/App/App/config.xml` | Present on disk, ignored by git. | Generated Cordova compatibility config. | NEEDS_MANUAL_CONFIRMATION |
+| `ios/capacitor-cordova-ios-plugins/` | Present on disk, ignored by git. | Generated Cordova plugin compatibility area. | NEEDS_MANUAL_CONFIRMATION |
+
+These ignored files were not staged or committed by this TODO. A future macOS build-readiness run may need to decide whether `npx cap sync ios` is required before a real build attempt. Sync remains forbidden in this TODO.
+
+### Build Precondition Summary
+
+| Area | Current state | Build before requirement | Current machine judgment | Follow-up |
+| --- | --- | --- | --- | --- |
+| Project file | `ios/App/App.xcodeproj` exists. | Loadable from Xcode/macOS. | PASS by inspection | Confirm on macOS. |
+| Scheme | `App` inferred; no `.xcscheme` found. | Confirm with Xcode scheme list. | BLOCKED | MacOS/Xcode manual or allowed command check. |
+| Target/configuration | `App`, `Debug`, `Release`. | Use explicit configuration for any future command. | PASS by inspection | Candidate remains Debug for first local build planning. |
+| Signing | Team ID absent, automatic signing, no profile specifier. | Team/account/signing resolution needed. | BLOCKED | TODO 3 signing blocker decision. |
+| SPM | SPM package file exists with Capacitor `8.3.3`. | Xcode package resolution needed. | BLOCKED | MacOS/Xcode check in a later allowed run. |
+| Generated output | Ignored generated outputs exist on disk. | Confirm freshness or run sync only in an allowed run. | NEEDS_MANUAL_CONFIRMATION | Generated output policy remains a follow-up risk. |
+| Environment | Windows 11 Pro, no Xcode/CLT. | macOS/Xcode/CLT required. | BLOCKED | Move build checks to macOS. |
+
+### Blocker Summary For TODO 3
+
+- Current machine is Windows and cannot run Xcode local build checks.
+- Xcode and Command Line Tools are absent.
+- Scheme list cannot be confirmed because `xcodebuild -list` is unavailable and forbidden in this TODO.
+- `DEVELOPMENT_TEAM` is absent.
+- Signing certificates and provisioning state are not confirmed.
+- SPM dependency resolution cannot be confirmed on this machine.
+- Entitlements/capabilities are still absent.
+- Ignored generated output freshness is not guaranteed and may require a later explicitly allowed sync/build-readiness step.
+
+TODO 3 should decide whether missing Team ID/signing/provisioning and the Windows environment make the first local build path `BLOCKED` until a macOS/Xcode environment and signing team are available.
+
 ## Build Command Candidate Policy
 
 The likely build command family is:
@@ -159,4 +266,4 @@ Use this format as each TODO completes.
 
 ## Final Conclusion
 
-This run is registered. The next task is `1. Local iOS build environment preflight`, and no local build, Xcode, signing, Apple console, native project, auth, billing, RevenueCat, Supabase, Android, or production configuration change has been authorized.
+TODO 2 is complete. The current local iOS build path remains blocked on this Windows machine, and the next task is `3. Signing blocker decision`. No local build, Xcode, signing, Apple console, native project edit, auth, billing, RevenueCat, Supabase, Android, or production configuration change has been authorized.

@@ -11,7 +11,7 @@
 - Previous run context:
   - `ios-xcode-signing-readiness-run` is `DONE`.
   - `ios-xcode-signing-readiness-run` selected `ios-first-local-build-readiness-run` as the next follow-up candidate.
-- Current phase: TODO 1 complete; next TODO is `2. iOS project build precondition audit`.
+- Current phase: TODO 2 complete; next TODO is `3. Signing blocker decision`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No Xcode setting change, `xcodebuild`, local iOS build, archive, upload, TestFlight submission, signing change, provisioning/certificate creation, Apple Developer/App Store Connect change, native file edit, entitlements/capability creation, auth, Supabase, billing, RevenueCat, Android, or production action was executed during setup.
 
@@ -93,7 +93,7 @@
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | DONE | Local iOS build environment preflight | Environment | HIGH | Check OS, Xcode, Command Line Tools, `xcode-select`, `xcodebuild` version, and record Apple ID/Xcode account login as manual-only. | No build. No Xcode setting changes. No Apple account changes. | `git diff --check` |
-| 2 | TODO | iOS project build precondition audit | Project Preflight | HIGH | Document current project path, scheme, target, configuration, signing state, SPM dependency, and ignored generated output preconditions. | No project edits. No `xcodebuild`. | `git diff --check` |
+| 2 | DONE | iOS project build precondition audit | Project Preflight | HIGH | Document current project path, scheme, target, configuration, signing state, SPM dependency, and ignored generated output preconditions. | No project edits. No `xcodebuild`. | `git diff --check` |
 | 3 | TODO | Signing blocker decision | Signing Decision | HIGH | Decide whether missing Team ID/signing/provisioning means first local build should be `BLOCKED`. | No `DEVELOPMENT_TEAM` setting. No provisioning creation. No Apple Developer console changes. | `git diff --check` |
 | 4 | TODO | Safe local build command candidate selection | Command Plan | HIGH | Document the exact local build command candidate and the conditions that must be true before it can run. | Do not execute command. No archive/upload. | `git diff --check` |
 | 5 | TODO | Local build execution decision | Gate Decision | HIGH | Decide whether to run a local build or close as `BLOCKED` based on preconditions. | No TestFlight upload. No archive. No signing changes. | decision documented |
@@ -133,6 +133,21 @@ Task 6 must select at most one follow-up candidate:
 - Build/archive/upload execution: not run.
 - Native/config/console changes: none.
 - Next TODO remains `2. iOS project build precondition audit`.
+
+### 2026-06-10 - TODO 2 iOS project build precondition audit
+
+- Result: `DONE`.
+- Method: source inspection only.
+- Project state: `ios/App/App.xcodeproj` and `ios/App/App.xcodeproj/project.xcworkspace` exist.
+- Target/configuration state: target candidate `App`, scheme candidate `App`, `Debug` and `Release` configurations present, default configuration `Release`.
+- Build setting state: bundle ID `com.staronlabs.chartradar`, deployment target `15.0`, device family `1,2`, app icon `AppIcon`, marketing version `1.0`, build number `1`.
+- Signing state: `DEVELOPMENT_TEAM` not found, `CODE_SIGN_STYLE` is `Automatic`, provisioning profile specifier not found.
+- SPM state: `ios/App/CapApp-SPM/Package.swift` exists, uses Capacitor SPM package `8.3.3`, and references local plugin packages for push notifications, Google sign-in, and RevenueCat.
+- Generated output state: ignored generated outputs exist on disk and were not staged or committed.
+- Current machine status: scheme list, SPM resolution, signing resolution, and local build remain `BLOCKED` or `NEEDS_MANUAL_CONFIRMATION` because this environment is Windows without Xcode.
+- Build/archive/upload execution: not run.
+- Native/config/console changes: none.
+- Next TODO remains `3. Signing blocker decision`.
 
 ## Verification Policy
 
