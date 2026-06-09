@@ -757,6 +757,108 @@ The follow-up implementation run `alert-pro-rule-ui-clarity-run` was registered 
 - Keep the proposal limited to `RadarAlertCenter` display behavior and supporting copy.
 - Treat any server-side delivery, quota, token preference, targetPath, route, billing, or entitlement change as a separate high-risk run.
 
+## Follow-Up Run Task 2 - Basic-State Pro Rule Display Proposal
+
+| Field | Value |
+| --- | --- |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Design documentation only. No app code, UI code, user-facing code copy, alert logic, route, targetPath, billing, entitlement, Supabase, FCM, push-cron, production DB/token, external console, purchase, restore, or real push action was changed or executed. |
+| Active run | `alert-pro-rule-ui-clarity-run` |
+| Next TODO | `3. Minimal alert settings UI/copy implementation` |
+
+### Improvement Goal
+
+Basic users should understand that Pro alert rules exist, but should not read them as currently enabled, saved, or deliverable under the Basic plan. The UI should make the paid boundary visible before any server-side entitlement filter silently blocks delivery.
+
+### Basic-State Display Principles
+
+| Principle | Decision |
+| --- | --- |
+| Primary state | Show Pro rules to Basic users as locked or read-only, not as ordinary configurable rules. |
+| Toggle affordance | The Pro rule control should not visually behave like an active on/off toggle for Basic users. Disabled or locked treatment is preferred. |
+| Status priority | `Locked` or `Pro required` should take priority over `Enabled` or `Off` for Basic-state Pro rows. |
+| Badge relationship | Avoid showing `Pro` and `Enabled` in a way that implies the Basic user will receive that rule. |
+| Local/default drift | If localStorage or defaults include a Pro rule id, the Basic UI should still display the rule as locked, not active. |
+| Server consistency | A rule blocked by server entitlement should also look unavailable in the Basic UI. |
+| Scope boundary | The display change must not alter actual entitlement, billing, RevenueCat, Supabase, FCM, push-cron, token, scanner, or delivery behavior. |
+
+### Pro Rule State Policy
+
+| Viewer state | Rule tier or market | Recommended UI state | Toggle behavior | Status text intent |
+| --- | --- | --- | --- | --- |
+| Basic user | Pro rule for current market | Locked/read-only | Do not toggle the rule id. If clickable, open Pro context instead of changing state. | Pro alert available with matching Pro plan. |
+| Basic user | Basic/free rule | Normal configurable row | Existing on/off behavior can remain. | On/off state can be shown normally. |
+| Coin Pro user | Crypto Pro rule | Normal configurable row | Existing on/off behavior can remain. | Enabled/off state can be shown normally. |
+| Coin Pro user | Global/stocks Pro rule | Locked/read-only in global context | Do not toggle as deliverable unless matching entitlement exists. | Global Pro or All Market Pro needed. |
+| Global Pro user | Global/stocks Pro rule | Normal configurable row | Existing on/off behavior can remain. | Enabled/off state can be shown normally. |
+| Global Pro user | Crypto Pro rule | Locked/read-only in crypto context | Do not toggle as deliverable unless matching entitlement exists. | Coin Pro or All Market Pro needed. |
+| All Market Pro user | Any market Pro rule | Normal configurable row | Existing on/off behavior can remain. | Enabled/off state can be shown normally. |
+
+### Copy Candidates
+
+Preferred short copy candidates:
+
+- `Pro에서 받을 수 있는 알림입니다`
+- `현재 플랜에서는 이 알림이 잠겨 있습니다`
+- `Pro로 업그레이드하면 이 조건의 알림을 받을 수 있습니다`
+- `Coin Pro에서 열리는 알림입니다`
+- `Global Pro에서 열리는 알림입니다`
+- `All Market Pro에서 열리는 알림입니다`
+
+Avoid these directions:
+
+- `설정은 표시되지만 Basic에서는 발송되지 않습니다`
+- Copy that sounds like a system failure or hidden mismatch.
+- Copy that implies guaranteed profit, trade entry, or urgent action.
+- Copy that pressures payment before explaining the alert capability.
+
+### CTA Principles
+
+| CTA principle | Decision |
+| --- | --- |
+| Tone | Explain the capability first; avoid checkout pressure. |
+| Suggested labels | `Pro 알림 기준 확인`, `Pro에서 열리는 알림 보기`, or market-specific equivalents. |
+| Market context | Crypto Pro rules should point to Coin Pro context; global/stocks Pro rules should point to Global Pro context; cross-market rules should point to All Market Pro context when applicable. |
+| Behavior | CTA can route to an explanatory Pro context, but must not start checkout directly from a locked rule row. |
+| Copy safety | Keep wording as judgment support. Avoid investment instruction, guaranteed returns, or aggressive trading language. |
+
+### Minimal Implementation Scope For TODO 3
+
+| Area | Minimum implementation direction |
+| --- | --- |
+| `RuleCard` props/state | Add or derive a display state such as locked for plan, using existing profile plan and rule tier data. |
+| Pro rule row display | For Basic or wrong-market entitlement, show Pro rules as locked/read-only instead of enabled/off. |
+| Toggle affordance | Disable or replace the toggle for locked rows so clicking does not change the local enabled rule id. |
+| Status badges | Prevent locked Pro rows from showing an enabled badge as the primary state for Basic users. |
+| Locked reason | Add a concise reason near the row explaining that the alert opens with the matching Pro plan. |
+| Local/default drift handling | Even if a Pro rule id exists in defaults or localStorage, Basic UI should render it as locked rather than active. |
+| Scope limit | Keep changes inside `RadarAlertCenter` display/copy unless route wrapper context is strictly needed. |
+
+### Explicit Implementation Exclusions
+
+- Do not change `ruleAllowed` or server entitlement filtering.
+- Do not change auth, entitlement refresh, billing, RevenueCat, product IDs, plan IDs, entitlement names, prices, or purchase/restore behavior.
+- Do not change Supabase, RLS, production DB rows, token storage, or token preference persistence.
+- Do not change FCM, push-cron, scanner generation, cooldown, duplicate guards, event keys, or real alert sending.
+- Do not resolve alert limit copy 30/40 versus local Pro 20 quota mismatch in this run.
+- Do not resolve system-event entitlement bypass in this run.
+- Do not change targetPath allowlist, route resolution, push-click behavior, or login returnTo handling.
+- Do not run actual push, purchase, restore, account deletion, production DB/token, Android native/release, or external-console tests.
+
+### Validation Criteria For TODO 3
+
+- Basic-state Pro rules no longer look enabled or deliverable.
+- Basic/free rules still remain configurable.
+- Matching Pro users still see their market's Pro rules as configurable.
+- Wrong-market Pro users see the other market's Pro rules as locked or unavailable.
+- No billing, entitlement, Supabase, FCM, push-cron, scanner, targetPath, route, production DB/token, package, or script changes are included.
+- Verification should include `git diff --check` and `cmd /c npx tsc --noEmit`; build can remain for later safe validation unless TODO 3 scope or reviewer preference requires it.
+
+### TODO 3 Implementation Instruction Summary
+
+For TODO 3, implement only the alert settings UI/copy clarity required to make Basic or wrong-market Pro rules read as locked/read-only. Prefer a small `RadarAlertCenter` display-state change that prevents locked Pro rows from toggling local state and prioritizes a Pro-required status over enabled/off badges. Do not alter server delivery, entitlement, billing, RevenueCat, Supabase, FCM, push-cron, targetPath, route behavior, token storage, production data, or purchase flows.
+
 ## Out Of Scope
 
 - Real push send.

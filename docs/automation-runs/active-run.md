@@ -9,7 +9,7 @@
 - Status: `TODO`
 - Setup date: 2026-06-09
 - Previous run context: `alert-quality-operations-run` is `DONE`.
-- Current phase: Task 1 completed; next TODO is `2. Basic-state Pro rule display proposal`.
+- Current phase: Task 2 completed; next TODO is `3. Minimal alert settings UI/copy implementation`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No UI implementation, entitlement, billing, RevenueCat, Supabase, push-cron, alert delivery, production DB/token, real push, purchase, restore, targetPath, routing, Android release, or external console action was executed during setup.
 
@@ -91,7 +91,7 @@
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | DONE | Alert settings UI location audit | Source Inspection | LOW | Identified alert settings screens/components that show Pro rule toggles or Pro limitation guidance. | No code edits. No billing or entitlement edits. | `git diff --check` |
-| 2 | TODO | Basic-state Pro rule display proposal | UX Spec | LOW | Document how Pro-only rules should appear to Basic users so they are not mistaken as enabled/deliverable. | No implementation. | `git diff --check` |
+| 2 | DONE | Basic-state Pro rule display proposal | UX Spec | LOW | Documented how Pro-only rules should appear to Basic users so they are not mistaken as enabled/deliverable. | No implementation. | `git diff --check` |
 | 3 | TODO | Minimal alert settings UI/copy implementation | UI/Copy | MEDIUM | Add clear limitation guidance or locked/disabled treatment so Basic users do not see Pro rules as actually configurable. | No entitlement, billing, RevenueCat, Supabase, push-cron, scanner, FCM, targetPath, routing, or delivery logic edits. | `git diff --check`; `cmd /c npx tsc --noEmit` |
 | 4 | TODO | Related documentation update | Documentation | LOW | Record the implementation result and remaining risks in `docs/alert-quality-operations.md`. | No feature expansion. | `git diff --check` |
 | 5 | TODO | Safe validation execution | Verification | LOW | Confirm the final change remains UI/copy/docs only and run safe checks. | No `smoke:billing`, `smoke:api`, real push, real purchase, or restore. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build`; optional `npm.cmd run smoke:copy` |
@@ -116,6 +116,18 @@
 | Result | Alert settings UI routes, components, Pro rule toggle locations, Basic misunderstanding risks, and likely improvement positions were documented in `docs/alert-quality-operations.md`. |
 | Code changed? | `No` |
 | Next TODO | `2. Basic-state Pro rule display proposal` |
+
+## Task 2 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `2. Basic-state Pro rule display proposal` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Design documentation only. |
+| Result | Basic-state Pro rule display principles, locked/read-only state policy, copy candidates, CTA principles, implementation minimums, exclusions, and validation criteria were documented in `docs/alert-quality-operations.md`. |
+| Code changed? | `No` |
+| Next TODO | `3. Minimal alert settings UI/copy implementation` |
 
 ## Verification Policy
 
