@@ -545,6 +545,73 @@ Recommended TODO 3 scope:
 
 Implement a low-risk link/display polish centered on `/menu` and `AppFooter`. Use only existing routes and `APP_VERSION_DISPLAY`. Reuse `contact@staronlabs.com` for inquiries and `support@staronlabs.com` for customer support because they are confirmed contact channels. Do not change header panel density unless a single lightweight `/menu` or support entry is clearly needed. Do not touch `/account`, auth/session, billing, RevenueCat, entitlement, Supabase, account deletion logic, logout/session logic, Android release, Play Console, production DB, or actual login/logout/delete/payment/restore flows.
 
+## Settings Support Links Polish - Task 4 Documentation Update
+
+| Field | Value |
+| --- | --- |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Documentation update only. No additional app code, UI code, user-facing code copy, email value, auth/session logic, Supabase, RLS, billing, RevenueCat, entitlement, account deletion logic, logout/session behavior, production DB, purchase, restore, Android release, Play Console, or external console work was changed or executed. |
+| Input | Task 3 implementation results and follow-up email-role correction. |
+| Next TODO | `5. Safe validation execution` |
+
+### Implementation Summary
+
+| Area | Result |
+| --- | --- |
+| `/menu` | Added access to alert settings, inquiry/customer support, account/data deletion guidance, and app version display while preserving existing account, FAQ, Pro, terms, privacy, and refund links. |
+| `AppFooter` | Added FAQ, inquiry, customer support, and app version visibility while preserving terms, privacy, account deletion, and refund links. |
+| Policy/account guide pages | Updated privacy inquiry contact and account/data deletion support contact to StarOn Labs domain emails. |
+| Version source | Reused existing `APP_VERSION_DISPLAY`; no new versioning system was added. |
+| Contact role split | `contact@staronlabs.com` is used for general inquiries. `support@staronlabs.com` is used for customer support and account/data deletion requests. |
+| Removed legacy contact | Existing legacy Gmail address references were removed from the repository. |
+
+### Resolved Risks
+
+| Resolved risk | How it was reduced |
+| --- | --- |
+| Low alert-settings discoverability from `/menu` | `/menu` now includes an alert settings entry. |
+| Unclear inquiry/customer support path | `/menu` and `AppFooter` now expose StarOn Labs domain contact/support entries. |
+| Limited app-version visibility | `/menu` and `AppFooter` now show `APP_VERSION_DISPLAY`. |
+| Footer missing FAQ/contact access | `AppFooter` now links to FAQ and contact/support channels. |
+| Gmail-based trust concern | Repository references were moved from the legacy Gmail address to StarOn Labs domain emails. |
+| Production trust information scattered across surfaces | Route-based menu and global footer now cover the main support/policy/app-info paths more consistently. |
+
+### High-Risk Areas Not Changed
+
+| Area | Status |
+| --- | --- |
+| Auth/session | No changes. |
+| Logout/session behavior | No changes. |
+| Account deletion logic or execution | No changes; only the existing guide/contact copy was updated. |
+| Billing, RevenueCat, product ID, plan ID, entitlement, price, purchase, or restore behavior | No changes. |
+| Supabase, RLS, production DB, account data, or production tokens | No changes. |
+| Android native/release settings or Play Console | No changes. |
+| `/settings` standalone route | Not created; `/settings` still follows existing redirect behavior. |
+| Real login/logout/deletion/payment/restore tests | Not executed. |
+
+### Verification Results Recorded
+
+| Check | Result |
+| --- | --- |
+| `git diff --check` | PASS |
+| `cmd /c npx tsc --noEmit` | PASS |
+| `npm.cmd run build` | PASS |
+| `npm.cmd run smoke:copy` | PASS |
+| Protected area diff check | PASS - no auth, Supabase, billing, RevenueCat, entitlement, account deletion logic, logout/session, Android release, Play Console, package script, or production DB changes. |
+| Legacy contact scan | PASS - the legacy Gmail address no longer remains in the repository. |
+
+### Remaining Risks
+
+| Remaining risk | Follow-up |
+| --- | --- |
+| `/settings` still redirects to `/menu` | Keep as-is for this run; standalone settings route should be a separate route-structure task if needed. |
+| Header settings panel still has limited direct policy links | Keep panel lightweight; reassess only if users still miss policy/support paths after `/menu` and footer polish. |
+| Business/developer information display is not finalized | Requires confirmed legal/operator text before display. |
+| Subscription restore/manage entry remains billing-adjacent | Separate high-risk or billing-adjacent run required. |
+| Account deletion/logout real behavior not manually validated | Separate manual QA required; do not combine with link polish. |
+| `mailto:` behavior in Android WebView is not device-tested | Record for Android manual QA or a later WebView-specific check. |
+
 ## Required Item Candidates
 
 | Item | Why it matters | Risk boundary |
