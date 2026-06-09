@@ -9,7 +9,7 @@
 - Status: `TODO`
 - Setup date: 2026-06-09
 - Previous run context: `alert-quality-operations-run` is `DONE`.
-- Current phase: run registered; next TODO is `1. Alert settings UI location audit`.
+- Current phase: Task 1 completed; next TODO is `2. Basic-state Pro rule display proposal`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No UI implementation, entitlement, billing, RevenueCat, Supabase, push-cron, alert delivery, production DB/token, real push, purchase, restore, targetPath, routing, Android release, or external console action was executed during setup.
 
@@ -90,7 +90,7 @@
 
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TODO | Alert settings UI location audit | Source Inspection | LOW | Identify alert settings screens/components that show Pro rule toggles or Pro limitation guidance. | No code edits. No billing or entitlement edits. | `git diff --check` |
+| 1 | DONE | Alert settings UI location audit | Source Inspection | LOW | Identified alert settings screens/components that show Pro rule toggles or Pro limitation guidance. | No code edits. No billing or entitlement edits. | `git diff --check` |
 | 2 | TODO | Basic-state Pro rule display proposal | UX Spec | LOW | Document how Pro-only rules should appear to Basic users so they are not mistaken as enabled/deliverable. | No implementation. | `git diff --check` |
 | 3 | TODO | Minimal alert settings UI/copy implementation | UI/Copy | MEDIUM | Add clear limitation guidance or locked/disabled treatment so Basic users do not see Pro rules as actually configurable. | No entitlement, billing, RevenueCat, Supabase, push-cron, scanner, FCM, targetPath, routing, or delivery logic edits. | `git diff --check`; `cmd /c npx tsc --noEmit` |
 | 4 | TODO | Related documentation update | Documentation | LOW | Record the implementation result and remaining risks in `docs/alert-quality-operations.md`. | No feature expansion. | `git diff --check` |
@@ -104,6 +104,18 @@
 - Task 4 updates documentation only.
 - Task 5 runs safe validation and records results; it must not broaden scope.
 - Failures are documented first. Do not jump from a failing validation into high-risk billing, entitlement, Supabase, FCM, push-cron, or delivery changes.
+
+## Task 1 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `1. Alert settings UI location audit` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Source inspection and documentation only. |
+| Result | Alert settings UI routes, components, Pro rule toggle locations, Basic misunderstanding risks, and likely improvement positions were documented in `docs/alert-quality-operations.md`. |
+| Code changed? | `No` |
+| Next TODO | `2. Basic-state Pro rule display proposal` |
 
 ## Verification Policy
 

@@ -695,6 +695,68 @@ Recommended scope for that future run:
 
 The follow-up implementation run `alert-pro-rule-ui-clarity-run` was registered on 2026-06-09. Its scope is intentionally narrow: clarify the alert settings UI/copy so Basic users do not interpret Pro alert rules as enabled or deliverable. The run excludes billing, entitlement, RevenueCat, Supabase, FCM, push-cron, scanner delivery logic, targetPath/routing, production DB/token work, real push sends, purchase/restore tests, and Android release changes.
 
+## Follow-Up Run Task 1 - Alert Settings UI Location Audit
+
+| Field | Value |
+| --- | --- |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Source inspection only. No app code, UI code, copy, alert logic, route, targetPath, billing, entitlement, Supabase, FCM, push-cron, production DB/token, external console, purchase, restore, or real push action was changed or executed. |
+| Active run | `alert-pro-rule-ui-clarity-run` |
+| Next TODO | `2. Basic-state Pro rule display proposal` |
+
+### Checked Alert Settings Routes
+
+| Route | Source file | Finding |
+| --- | --- | --- |
+| `/crypto/alert` | `src/app/crypto/alert/page.tsx` | Directly renders `RadarAlertCenter` with `market="crypto"`. This is the primary crypto alert settings surface. |
+| `/alerts?market=global` | `src/app/alerts/page.tsx` | Renders `RadarAlertCenter` with `market="stocks"` when the query market is `global` or `stocks`. This is the global or stocks alert settings surface. |
+| `/alerts` | `src/app/alerts/page.tsx` | Defaults to crypto and redirects to `/crypto/alert`; it is not a separate alert settings UI. |
+
+### Checked Files And Components
+
+| File or component | Alert settings role | Basic/Pro clarity relevance |
+| --- | --- | --- |
+| `src/components/RadarAlertCenter.tsx` | Main alert settings UI for permission request, Android push status, rule list, Pro/Basic badges, rule toggles, saved-condition actions, and admin-only diagnostics. | Primary place where Basic users can see Pro rules and toggle-like controls. |
+| `RuleCard` in `RadarAlertCenter` | Displays a single rule row with category, Pro/Basic badge, enabled state, and toggle button. | The toggle button is always rendered through `onToggle(rule.id)` and does not receive a disabled or locked reason prop. |
+| `visibleRules` mapping in `RadarAlertCenter` | Renders market-scoped rules plus news/system category rules. | Source inspection found rule visibility is not filtered by Basic/Pro entitlement. |
+| `toggleRule` in `RadarAlertCenter` | Enables or disables local rule ids and runs usage gating before enabling. | The enabling path checks the usage bucket with `isPaid`, but does not directly block `rule.tier === "pro"` for Basic users in the UI layer. |
+| Android push preference sync in `RadarAlertCenter` | Sends selected `ruleIds` to app push registration or preference sync when push token support is available. | Locally enabled Pro rule ids can be passed as preferences, while server-side delivery later applies entitlement filtering. |
+| `src/lib/radarAlerts.ts` | Defines alert rule ids, tiers, markets, categories, and default-enabled state. | Pro rules are default-enabled in the rule definitions, so Basic users can start from a UI state that appears to include Pro rules. |
+| `src/lib/usageMeter.ts` | Defines local usage gate buckets for alert rule actions. | It gates action volume by paid state, not individual Pro rule display clarity. |
+| `src/lib/server/push/entitlements.ts` | Server-side reference for `ruleAllowed`. | Non-system Pro delivery is entitlement-gated on the server, which can differ from what the Basic UI appears to allow. This was inspected only as context. |
+| `src/lib/server/push/preferences.ts` and `src/lib/server/pushAlertScanner.ts` | Server-side reference for preference and scan filtering. | Confirms that final delivery decisions are separate from the client UI. These files are high-risk and were not changed. |
+
+### Basic Misunderstanding Positions
+
+| Position | Current display or behavior | Why Basic users can misunderstand it | Implementation risk |
+| --- | --- | --- | --- |
+| Pro rule row toggle | `RuleCard` shows a button that switches between enabled and off for every visible rule. | A Basic user can interpret the Pro row as configurable because the control looks actionable instead of locked or read-only. | LOW to MEDIUM if limited to UI display state; HIGH if it changes server entitlement or delivery. |
+| Pro badge near enabled badge | Pro rules show a `Pro` badge and can also show an enabled status badge. | The badge identifies tier, but does not clearly say that Basic cannot receive the rule. The enabled badge can overpower the Pro limitation message. | LOW if clarified with UI/copy only. |
+| Default rule ids | `getDefaultRadarAlertRuleIds` includes default-enabled Pro rules. | First-time or reset states can look like Pro rules are already part of the user's active alert setup. | MEDIUM if UI maps Pro defaults to a Basic locked display; HIGH if changing rule defaults or delivery. |
+| Local storage rule ids | Stored rule ids are filtered for validity and market/category, not paid entitlement. | A previously stored Pro rule can remain visually enabled after a user is Basic or after plan state changes. | MEDIUM for UI normalization; HIGH if modifying entitlement or server persistence. |
+| Usage gate only | `toggleRule` uses the alert-rule usage bucket and `isPaid`, but does not present a rule-tier lock before toggle. | Basic users may see usage-limit messaging instead of a clear "Pro-only rule" boundary. | LOW to MEDIUM for explanatory UI; HIGH for quota or billing policy changes. |
+| Android push preference sync | Enabled rule ids can be passed into app push preference registration or sync. | The UI can suggest the preference is saved even though non-system Pro delivery is blocked later by server entitlement. | MEDIUM for UI warning; HIGH if changing token preference or scanner logic. |
+| Alert summary counts | Summary action text includes counts such as Pro and Basic enabled rules. | A Basic user may read the Pro count as active deliverable rules rather than locked or unavailable rules. | LOW if summary wording is clarified. |
+
+### Improvement Positions For The Next TODO
+
+| Improvement position | Possible direction | Protected surface to avoid |
+| --- | --- | --- |
+| Pro rule row state | Make Basic-state Pro rules read as locked, unavailable, or read-only instead of enabled/deliverable. | Do not edit entitlement, billing, RevenueCat, Supabase, FCM, push-cron, server scanner, or delivery logic. |
+| Toggle affordance | Replace or disable the toggle affordance for Basic-state Pro rows, with a visible reason. | Do not change product IDs, plan IDs, quota policy, or server `ruleAllowed`. |
+| Rule-level explanation | Add a concise explanation near the Pro row that the rule requires the matching Pro plan. | Do not broaden into general pricing or billing copy changes. |
+| Summary/header copy | Clarify that Pro rule counts are locked or unavailable for Basic users if the UI still shows them. | Do not change usageMeter limits or plan copy limits in this run. |
+| Pro CTA placement | If a CTA is needed, keep it adjacent to the locked rule context and avoid implying investment results. | Do not alter `/pro` pricing, purchase flow, RevenueCat mapping, or checkout behavior. |
+| Stored/default rule drift | Display Basic-state Pro defaults as locked rather than silently enabled. | Do not mutate saved preferences, token rows, or production DB values. |
+
+### Task 2 Proposal Inputs
+
+- Decide whether the preferred Basic-state Pro display is disabled, locked/read-only, or enabled-looking with an explicit warning. Locked/read-only is the lowest-risk direction from this audit.
+- Define the exact UI states for Basic, matching Pro entitlement, and wrong-market Pro entitlement without changing entitlement logic.
+- Keep the proposal limited to `RadarAlertCenter` display behavior and supporting copy.
+- Treat any server-side delivery, quota, token preference, targetPath, route, billing, or entitlement change as a separate high-risk run.
+
 ## Out Of Scope
 
 - Real push send.
