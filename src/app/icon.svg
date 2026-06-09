@@ -6,11 +6,13 @@
     </linearGradient>
   </defs>
   <rect width="512" height="512" fill="#0b0b0f"/>
-  <path d="M140 334a154 154 0 0 1 242-180" fill="none" stroke="url(#radarBlue)" stroke-width="34" stroke-linecap="round"/>
-  <path d="M382 358A154 154 0 0 1 139 178" fill="none" stroke="url(#radarBlue)" stroke-width="34" stroke-linecap="round"/>
-  <path d="M194 320l70-70 45 45 91-91" fill="none" stroke="url(#radarBlue)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M371 183l58-16-15 59z" fill="url(#radarBlue)"/>
-  <path d="M242 247l118-118" fill="none" stroke="url(#radarBlue)" stroke-width="20" stroke-linecap="round"/>
-  <circle cx="242" cy="247" r="18" fill="#22c7ff"/>
-  <path d="M190 306a92 92 0 0 1 102-147" fill="none" stroke="url(#radarBlue)" stroke-width="12" stroke-linecap="round" opacity=".75"/>
+  <g transform="translate(35.84 35.84) scale(.86)">
+    <path d="M140 334a154 154 0 0 1 242-180" fill="none" stroke="url(#radarBlue)" stroke-width="34" stroke-linecap="round"/>
+    <path d="M382 358A154 154 0 0 1 139 178" fill="none" stroke="url(#radarBlue)" stroke-width="34" stroke-linecap="round"/>
+    <path d="M194 320l70-70 45 45 91-91" fill="none" stroke="url(#radarBlue)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M371 183l58-16-15 59z" fill="url(#radarBlue)"/>
+    <path d="M242 247l118-118" fill="none" stroke="url(#radarBlue)" stroke-width="20" stroke-linecap="round"/>
+    <circle cx="242" cy="247" r="18" fill="#22c7ff"/>
+    <path d="M190 306a92 92 0 0 1 102-147" fill="none" stroke="url(#radarBlue)" stroke-width="12" stroke-linecap="round" opacity=".75"/>
+  </g>
 </svg>
