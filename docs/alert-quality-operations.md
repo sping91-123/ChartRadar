@@ -57,7 +57,7 @@ These are candidate surfaces for future TODO tasks. Listing them here is not app
 | 2 | DONE | Alert copy quality review | Does alert copy avoid investment instruction, guarantee, urgency, or excessive trading pressure? | Copy-risk findings and wording guardrails. |
 | 3 | DONE | Duplicate and cooldown policy review | Can the same user receive too many or repeated alerts? | Repetition/cooldown risk map. |
 | 4 | DONE | Basic/Pro alert limit review | Are free and paid alert limits consistent between UI and intended behavior? | Basic/Pro consistency findings. |
-| 5 | TODO | targetPath routing quality review | Where should alert taps land, and what should happen for login-required or missing routes? | Routing expectation table. |
+| 5 | DONE | targetPath routing quality review | Where should alert taps land, and what should happen for login-required or missing routes? | Routing expectation table. |
 | 6 | TODO | Alert improvement candidate selection | What is the one safest first improvement candidate? | One implementation-run candidate with rationale. |
 
 ## Task 1 - Current Alert Structure Audit
@@ -478,6 +478,133 @@ These are candidate surfaces for future TODO tasks. Listing them here is not app
 - Check whether Basic/Pro-gated target screens could create confusion after a notification tap.
 - Verify fallback behavior for missing or absent `targetPath` through source only.
 - Keep routing audit separate from entitlement fixes; do not edit routes, targetPath helpers, push listeners, or Android back-stack behavior.
+
+## Task 5 - targetPath Routing Quality Audit
+
+| Field | Value |
+| --- | --- |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Source inspection only. No push endpoint, push send, push click test, browser navigation, Android device, database, token, external console, or production-mutating command was executed. |
+| Scope inspected | Push payload metadata, targetPath generation, targetPath allowlist, metadata fallback, Capacitor click listener, FCM data payload, admin test payload, route existence, login returnTo behavior, and Basic/Pro target-screen expectations. |
+| Implementation allowed in this run? | `No` |
+
+### Sources Inspected
+
+| Source | Relevance |
+| --- | --- |
+| `src/lib/pushTargetPath.ts` | Central allowlist, sanitizer, metadata fallback, and final fallback for notification navigation. |
+| `src/lib/appPush.ts` | Capacitor push action data merge and `window.location.assign(targetPath)` on notification tap. |
+| `src/lib/server/firebaseMessaging.ts` | FCM HTTP v1 payload passes `event.data` into message `data`; Android notification uses `click_action: "OPEN_ALERTS"`. |
+| `src/lib/server/push/sendPush.ts` | Server send path passes generated event metadata into FCM. |
+| `src/lib/server/push/targets.ts` | Symbol-to-target helpers for crypto major/alt and global index/asset routes. |
+| `src/lib/server/push/eventBuilders.ts` | Setup, watchlist, global momentum, global asset, risk-off, and semiconductor targetPath generation. |
+| `src/lib/server/push/scanners/liquidationScanner.ts` | Liquidation targetPath generation. |
+| `src/lib/server/push/scanners/macroScanner.ts` | News and macro-calendar targetPath generation. |
+| `src/lib/pushTestMessages.ts` and `src/app/api/push-test/route.ts` | Admin/test targetPath examples and test FCM payload shape. |
+| `src/app/alerts/page.tsx`, `src/app/crypto/alert/page.tsx` | Alert settings route and `/alerts` crypto redirect behavior. |
+| `src/app/alts/page.tsx`, `src/app/crypto/page.tsx`, `src/app/global/page.tsx`, `src/app/global/assets/page.tsx` | Current allowed route existence and redirect behavior. |
+| `src/app/news/page.tsx`, `src/app/schedule/page.tsx`, `src/app/journal/page.tsx` | Current news, schedule, and journal targets. |
+| `src/app/login/page.tsx`, `src/app/auth/callback/page.tsx`, `src/components/GoogleLoginButton.tsx`, `src/components/AuthStatus.tsx` | Login `returnTo` behavior and safe internal-path checks. |
+| `src/components/GlobalMarketPulse.tsx`, `src/components/StockRadarApp.tsx`, `src/components/SetupScoutPanel.tsx`, `src/components/crypto/CryptoProGate.tsx` | Basic/Pro target-screen gating expectations. |
+
+### targetPath Generation Summary
+
+| Alert source/type | Generated targetPath | Route behavior from source inspection |
+| --- | --- | --- |
+| Crypto major market scout | `/crypto` via `setupTargetPath` and `cryptoSetupTargetPath`. | `/crypto` exists and redirects to `/crypto/home`. |
+| Crypto alt market scout | `/alts` via `setupTargetPath` for non-major crypto symbols. | `/alts` exists and redirects to `/crypto/perpetual/alts`. |
+| Crypto saved/watchlist setup | `/crypto` for major symbols or `/alts` for alt symbols. | Same as crypto market scout. |
+| Global index momentum | `/global` via `stockSetupTargetPath` for index symbols. | `/global` exists. |
+| Global asset momentum | `/global/assets` via `stockSetupTargetPath` for non-index global symbols. | `/global/assets` exists. |
+| Global risk-off composite | `/global`. | `/global` exists. |
+| Semiconductor leadership composite | `/global/assets`. | `/global/assets` exists. |
+| Global momentum batch | `/global`. | `/global` exists. |
+| Global asset batch | `/global/assets`. | `/global/assets` exists. |
+| Liquidation pressure | `/crypto`. | `/crypto` redirects to `/crypto/home`. |
+| News/macro event | `/news?market=crypto` or `/news?market=global`. | Global news route exists; crypto news query redirects to `/crypto/news`. |
+| Macro calendar reminder | `/schedule`. | `/schedule` exists and derives market from query when present. |
+| Admin/default push test | `/alerts` or metadata-derived crypto/global route. | `/alerts` exists; no market query means crypto redirect to `/crypto/alert`. |
+| Journal allowlist entries | `/journal?market=crypto`, `/journal?market=global`. | Routes exist, but current inspected push generators do not appear to emit journal targetPath. |
+| Pro/settings/account | No allowed targetPath found. | Notifications do not directly route to `/pro`, `/settings`, `/account`, or `/menu` by allowlist. |
+
+### Allowlist And Fallback Structure
+
+- `sanitizePushTargetPath` accepts only strings that start with `/`, do not start with `//`, do not contain backslashes, and do not contain ASCII control characters.
+- The sanitizer is exact-match only against `allowedPushTargetPaths`: `/alerts`, `/crypto`, `/alts`, `/global`, `/global/assets`, `/schedule`, `/news?market=global`, `/news?market=crypto`, `/journal?market=global`, and `/journal?market=crypto`.
+- External URLs, protocol-relative paths, paths with backslashes, arbitrary unknown paths, and unlisted query strings are rejected.
+- `resolvePushTargetPath` prefers a valid explicit `targetPath` unless it is `/alerts`.
+- If explicit `targetPath` is `/alerts`, the resolver first tries metadata-based routing from `type`, `alertKind`, `alert_kind`, `kind`, `market`, and `symbol`.
+- If metadata can resolve a route, it wins over `/alerts` and over many generic target values.
+- If metadata cannot resolve a route, the resolver falls back to explicit `/alerts`, then sanitized `target`, then final `/alerts`.
+- Because target query strings are exact-match allowlisted, `target: "/alerts?market=global"` is not accepted by the sanitizer. It only reaches a global destination when metadata itself resolves to a global route.
+
+### Notification Click Flow
+
+- `sendEventToUser` passes `event.data` to `sendFcmMessage`; FCM sends it as Android `message.data`.
+- The Android notification includes `click_action: "OPEN_ALERTS"` and the same data payload.
+- `registerAppPushListeners` registers a Capacitor `pushNotificationActionPerformed` listener.
+- On tap, `pushActionData` merges nested notification data and top-level event data. Top-level `event.data` wins if the same key appears in more than one place.
+- The merged data is resolved through `resolvePushTargetPath`.
+- The app then calls `window.location.assign(targetPath)`.
+- No source-level retry, pending navigation queue, or post-login redirect is attached to the push click itself.
+
+### Login Needed State Expectations
+
+- Current allowlisted target paths mostly point to public or Basic-capable app pages rather than strictly login-only pages.
+- `/journal?market=...` uses `useSupabaseAuth`; when no session is present, source inspection shows local entries are loaded and remote sync is skipped. That means a notification tap to journal is not a hard login redirect.
+- Alert settings require login for Android push token sync, but `/alerts` and `/crypto/alert` still render the settings UI and show login CTAs for app push connection.
+- Login pages support safe internal `returnTo` parameters, and OAuth callback returns to a sanitized internal path. However, a push click does not automatically route to `/login?returnTo=<targetPath>`.
+- If a future notification target becomes truly login-required, source inspection found no dedicated push-click path preservation beyond the page's own login link behavior.
+
+### Pro Limited State Expectations
+
+- The allowlist does not send users directly to `/pro`, so push taps land on market/news/schedule/journal/alert pages first.
+- Coin target routes such as `/crypto` and `/alts` can show Basic-access summaries and Coin Pro CTAs through existing crypto Pro gate components.
+- Global target routes such as `/global` and `/global/assets` can show Basic-access summaries and Global Pro CTAs through `GlobalMarketPulse` and `StockRadarApp` gating.
+- This is safer than routing straight to checkout, but users can still experience "alert opened a page where details are locked" if the alert was generated for a Pro-level condition.
+- The previous Basic/Pro audit still matters here: if system events bypass entitlement, a Basic user could tap into a Pro-limited market page and see only Basic summaries.
+
+### Confirmed Safety Elements
+
+- External URL navigation is blocked by the sanitizer because only exact internal allowlist paths are accepted.
+- Protocol-relative URLs, backslash paths, control-character paths, unknown paths, and arbitrary query strings are rejected.
+- All currently allowlisted route bases exist in the repo. `/crypto` and `/alts` intentionally redirect to current crypto home/perpetual-alt routes.
+- Metadata fallback reduces bad generic `/alerts` landings for events that include market, symbol, and alert kind.
+- Missing or invalid target data falls back to `/alerts`, which is an internal app route.
+- No notification can directly open `/pro`, checkout, account deletion, settings, admin, billing, or external console paths through the current allowlist.
+- This audit did not send a push, click a push, query production data, or change routing code.
+
+### Risks And Uncertain Areas
+
+- `/alerts?market=global` is used as a `target` value in several payloads, but it is not an allowed sanitized path. It depends on metadata fallback to reach the right global route.
+- The allowlist includes `/journal?market=crypto` and `/journal?market=global`, but inspected push generators do not currently use those paths. The intended journal notification use case is unclear.
+- If an allowlisted route is later deleted or converted to a different redirect, the resolver will still consider it valid. There is no route-existence check at runtime.
+- `window.location.assign` is simple and predictable, but cold-start/background Android timing was not verified. A push action before listeners are registered or before web state is ready remains a manual QA question.
+- The click listener does not preserve targetPath through login automatically. Future login-required alert targets need explicit handling.
+- Existing fallback to `/alerts` without query redirects to `/crypto/alert`, so a malformed global alert can land on the crypto alert settings page.
+- Query strings are exact-match allowlisted. This is safe, but brittle if future routes need additional query parameters such as symbol, id, source, or tab.
+- `pushActionData` merge precedence makes top-level event data override nested notification data. This is reasonable, but source inspection cannot prove every Capacitor/FCM payload shape in production.
+- Multiple devices can have different login/session/plan states; the same targetPath may display different Basic/Pro or local/remote journal states.
+- No actual Android WebView deep-link, back-stack, app relaunch, or safe-area behavior was verified.
+
+### Improvement Candidates For A Later Implementation Run
+
+| Candidate | Why | Risk | Implementation allowed now? |
+| --- | --- | --- | --- |
+| Add `/alerts?market=global` and `/alerts?market=crypto` to explicit allowlist or stop using them as `target` values | Reduces reliance on metadata fallback and prevents malformed global alerts from landing on crypto alert settings. | MEDIUM because it touches routing resolver or payload conventions. | No |
+| Add route-existence smoke coverage for allowed push target paths | Catches deleted/renamed allowlisted routes before release. | LOW to MEDIUM depending on smoke scope. | No |
+| Add post-login return handling for future login-required notification targets | Prevents losing a notification destination if a route starts requiring login. | MEDIUM because it touches auth/navigation behavior. | No |
+| Add a small targetPath matrix to admin diagnostics | Makes dry-run target outcomes visible without real push clicks. | MEDIUM because it touches diagnostics output. | No |
+| Decide whether journal targetPath should be used or removed from allowlist | Clarifies whether journal notification routing is part of product scope. | LOW if documentation-only, MEDIUM if code changes. | No |
+| Add Android manual QA cases for cold start, background tap, current-screen tap, and back behavior | Covers platform-specific behavior that source inspection cannot prove. | LOW as QA planning, MEDIUM if implemented as automation. | No |
+
+### Next TODO - Alert Improvement Candidate Selection Points
+
+- Strong candidates now documented across this run include system-event Basic/Pro gate ambiguity, alert limit copy vs usage-gate mismatch, `/alerts?market=global` target allowlist mismatch, and missing per-user total push cap.
+- Choose exactly one first improvement candidate in Task 6.
+- Favor a small, high-confidence implementation run candidate over broad alert redesign.
+- Keep any actual code change, push delivery, billing, entitlement, routing, or production data work for a separate approved run.
 
 ## Out Of Scope
 

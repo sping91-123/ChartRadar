@@ -9,7 +9,7 @@
 - Status: `ACTIVE`
 - Setup date: 2026-06-09
 - Previous run context: `android-production-auto-smoke-run` is `DONE` and its recorded automatic checks are `PASS`.
-- Current phase: Tasks 1-4 are `DONE`; Task 5 is the next `TODO`.
+- Current phase: Tasks 1-5 are `DONE`; Task 6 is the next `TODO`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No alert code, push command, production DB/token access, FCM, Supabase, RevenueCat, billing, Android release, or Android phone manual QA action was executed during setup.
 
@@ -78,7 +78,7 @@
 | 2 | DONE | Alert copy quality review | Alert Copy | LOW | Check whether alert wording could read as investment instruction, guaranteed return, or excessive trade inducement. | No alert send logic edits. No real push send. | `git diff --check` |
 | 3 | DONE | Duplicate and cooldown policy review | Dedupe/Cooldown | MEDIUM | Check whether the same user can receive repetitive or too-frequent alerts from current structure. | No cooldown logic edits. No push-cron edits. No production DB edits. | `git diff --check` |
 | 4 | DONE | Basic/Pro alert limit review | Entitlement/Gating | HIGH | Check whether free/paid alert limits are consistent between screen design and expected runtime behavior. | No entitlement edits. No RevenueCat edits. No Supabase RLS edits. No billing edits. | `git diff --check` |
-| 5 | TODO | targetPath routing quality review | Notification Routing | MEDIUM | Document expected destination, fallback, login-required state, and missing-route behavior after alert click. | No routing code edits. No real push-click test. | `git diff --check` |
+| 5 | DONE | targetPath routing quality review | Notification Routing | MEDIUM | Document expected destination, fallback, login-required state, and missing-route behavior after alert click. | No routing code edits. No real push-click test. | `git diff --check` |
 | 6 | TODO | Alert improvement candidate selection | Prioritization | LOW | Select exactly one first alert-quality improvement candidate; implementation remains a separate run. | No multiple simultaneous improvements. No code edits. | `git diff --check` |
 
 ## Task 1 Completion Note
@@ -184,7 +184,36 @@
   - no purchase or restore test
   - no production DB or raw token query
   - no Android release, Play Console, app code, UI code, package, or script changes
-- Next task remains: `5. targetPath routing quality review`
+- Task 4 handoff at completion: `5. targetPath routing quality review`
+
+## Task 5 Completion Note
+
+- Completed date: 2026-06-09
+- Completed task: `targetPath routing quality review`
+- Output document: `docs/alert-quality-operations.md`
+- Scope inspected by source inspection only:
+  - central resolver and allowlist in `src/lib/pushTargetPath.ts`
+  - Capacitor notification tap listener and `window.location.assign` in `src/lib/appPush.ts`
+  - FCM data payload path in `src/lib/server/firebaseMessaging.ts` and `src/lib/server/push/sendPush.ts`
+  - setup/watchlist/global/liquidation/macro/admin test targetPath generators
+  - allowed route existence and redirects for `/crypto`, `/alts`, `/global`, `/global/assets`, `/schedule`, `/news`, `/journal`, and `/alerts`
+  - login `returnTo` behavior and Basic/Pro target-screen gate expectations
+- Result summary:
+  - targetPath sanitizer only accepts exact internal allowlist entries and rejects external URL, `//`, backslash, control-character, unknown, and arbitrary query paths
+  - metadata fallback maps alert type, market, symbol, and alert kind to crypto, alt, global, global asset, news, schedule, or alerts routes
+  - Android notification tap merges push action data, resolves targetPath, then uses `window.location.assign`
+  - no direct notification route to `/pro`, checkout, settings, account deletion, billing, admin, or external console was found
+  - `/alerts?market=global` appears as a payload `target` value but is not directly allowlisted; it depends on metadata fallback
+  - no source-level post-login preservation for push targetPath was found beyond normal page login links
+- Protected actions not performed:
+  - no targetPath, routing, push listener, push scanner, push-cron, alert logic, FCM, Supabase, RLS, billing, entitlement, RevenueCat, Android release, Play Console, app code, UI code, package, or script changes
+  - no real push send
+  - no push click test
+  - no admin test push
+  - no push-cron call
+  - no production DB or raw token query
+  - no browser navigation or Android device test
+- Next task remains: `6. Alert improvement candidate selection`
 
 ## Documentation Policy
 
