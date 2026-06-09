@@ -14,7 +14,7 @@
   - `alert-pro-rule-ui-clarity-run` is `DONE`.
   - `settings-account-polish-run` is `DONE`.
   - `settings-support-links-polish-run` is `DONE`.
-- Current phase: Task 1 complete; next TODO is `2. Apple Developer submission requirement review`.
+- Current phase: Task 2 complete; next TODO is `3. Sign in with Apple requirement risk review`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No iOS platform add, iOS build, upload, App Store Connect change, Apple Developer change, RevenueCat change, auth change, Supabase change, billing change, Android release change, or production data action was executed during setup.
 
@@ -92,7 +92,7 @@
 | Order | Status | Task | Area | Risk | Goal | Forbidden | Validation |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | DONE | Capacitor iOS readiness audit | Capacitor/iOS | MEDIUM | Checked iOS platform status, Capacitor config, app name, appId, bundle identifier candidates, iOS build scripts, and missing native iOS setup. | No iOS platform add. No iOS release setting edits. No Android setting edits. | `git diff --check` |
-| 2 | TODO | Apple Developer submission requirement review | Store Requirements | MEDIUM | Document TestFlight-prep requirements for account/app metadata, privacy, support URL, screenshots, description, keywords, category, and marketing URL need. | No external console registration or edits. | `git diff --check` |
+| 2 | DONE | Apple Developer submission requirement review | Store Requirements | MEDIUM | Documented TestFlight-prep requirements for Apple Developer account, Bundle ID/App ID, App Store Connect metadata, privacy, support URLs, screenshots, and TestFlight information. | No external console registration or edits. | `git diff --check` |
 | 3 | TODO | Sign in with Apple requirement risk review | Auth Policy | HIGH | Assess whether current Google login structure may require Sign in with Apple for iOS review and document Supabase/UI/auth implications. | No auth code edits. No Supabase edits. No Apple login implementation. | `git diff --check` |
 | 4 | TODO | RevenueCat Apple product mapping review | Monetization Mapping | HIGH | Document iOS subscription product, subscription group, RevenueCat offering/package/product, entitlement, price, and naming mapping needs. | No RevenueCat edits. No App Store Connect product creation. No productId, entitlement, price, or billing code edits. | `git diff --check` |
 | 5 | TODO | TestFlight first-build checklist | Build Readiness | MEDIUM | Create the pre-build checklist for Xcode, signing, certificates, provisioning, Capacitor sync, build command candidates, upload checks, privacy, account deletion, contact, and support URLs. | No iOS build/upload. No submission. No production setting changes. | `git diff --check` |
@@ -110,6 +110,19 @@
 | Output document | `docs/ios-testflight-readiness.md` |
 | Code/native/config changed? | `No` |
 | Next TODO | `2. Apple Developer submission requirement review` |
+
+## Task 2 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `2. Apple Developer submission requirement review` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Documentation and official Apple reference review only. No Apple Developer console, App Store Connect, Bundle ID, App ID, TestFlight, iOS platform, iOS build, Xcode, Capacitor sync, RevenueCat, product, entitlement, auth, Supabase, billing, Android, or production setting was changed. |
+| Result | Documented Apple Developer account readiness, Bundle ID/App ID/capability candidates, App Store Connect app record and metadata requirements, privacy/review preparation, TestFlight preparation, current known values, missing owner/console information, and handoff risks for Sign in with Apple. |
+| Output document | `docs/ios-testflight-readiness.md` |
+| Code/native/config changed? | `No` |
+| Next TODO | `3. Sign in with Apple requirement risk review` |
 
 ## Follow-Up Candidate Selection Method
 
