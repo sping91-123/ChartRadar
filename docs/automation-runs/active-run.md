@@ -6,13 +6,13 @@
 
 ## Run State
 
-- Status: `TODO`
+- Status: `DONE`
 - Setup date: 2026-06-09
 - Previous run context:
   - `android-production-auto-smoke-run` is `DONE` and recorded as `PASS`.
   - `alert-quality-operations-run` is `DONE`.
   - `alert-pro-rule-ui-clarity-run` is `DONE`.
-- Current phase: Task 3 completed; next TODO is `4. Select one first implementation candidate`.
+- Current phase: All four tasks completed; `settings-account-polish-run` is closed.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No app code, UI code, auth, Supabase, billing, RevenueCat, entitlement, account deletion, production DB, purchase, restore, or logout action was executed during setup.
 
@@ -95,7 +95,7 @@
 | 1 | DONE | Current settings/account screen audit | Source Inspection | MEDIUM | Identified current settings/account screens, entry paths, and missing production-trust items. | No auth, Supabase, account deletion, billing, or UI code edits. | `git diff --check` |
 | 2 | DONE | Required settings item list finalization | Product/Compliance UX | LOW | Confirmed required production settings items: account state, plan, alerts, support, privacy, terms, account deletion, logout, app version, and business/developer info access. | No code edits. | `git diff --check` |
 | 3 | DONE | Settings screen structure proposal | UX Spec | LOW | Documented route roles and recommended sections: Account, Subscription/Plan, Alerts, Support, Terms/Policies, App Info, and Dangerous Actions. | No code edits. | `git diff --check` |
-| 4 | TODO | Select one first implementation candidate | Prioritization | MEDIUM | Select the safest, highest-trust implementation candidate for a later run. | No simultaneous auth, DB, billing, Supabase, or account deletion changes. | `git diff --check` |
+| 4 | DONE | Select one first implementation candidate | Prioritization | MEDIUM | Selected `settings-support-links-polish-run` as the safest first implementation candidate. | No simultaneous auth, DB, billing, Supabase, or account deletion changes. | `git diff --check` |
 
 ## First Implementation Candidate Selection Method
 
@@ -157,6 +157,19 @@ Candidate examples are not pre-approved implementation scope. They include:
 | Result | Proposed `/settings` as the future canonical settings hub, `/menu` as quick/compatibility menu, header settings panel as summary/shortcut surface, and `/account` as account detail plus account actions. Recommended Account, Subscription/Plan, Alerts, Customer Support, Terms/Policies, App Information, and Dangerous Actions sections. |
 | Code changed? | `No` |
 | Next TODO | `4. Select one first implementation candidate` |
+
+## Task 4 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `4. Select one first implementation candidate` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Candidate evaluation and run closure documentation only. |
+| Result | Selected `settings-support-links-polish-run` as the first future implementation candidate because it improves support, policy, account deletion guide, alert settings, and app-version discoverability while avoiding auth, billing, Supabase, entitlement, logout, account deletion behavior, production DB, Android release, and Play Console changes. |
+| Code changed? | `No` |
+| Active-run opened automatically? | `No` |
+| Run status | `DONE` |
 
 ## Verification Policy
 

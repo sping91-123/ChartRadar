@@ -57,7 +57,7 @@ These surfaces are not implementation approval. They are the expected inspection
 | 1 | DONE | Current settings/account screen audit | What settings/account surfaces exist today, and what is missing for production trust? | Entry-path map and missing-item notes. |
 | 2 | DONE | Required settings item list finalization | Which items are required for a production-ready settings/account surface? | Required-item checklist. |
 | 3 | DONE | Settings screen structure proposal | How should settings sections be grouped and worded? | Recommended section structure and copy principles. |
-| 4 | TODO | Select one first implementation candidate | What is the safest first implementation candidate with the highest trust impact? | One follow-up implementation-run candidate. |
+| 4 | DONE | Select one first implementation candidate | What is the safest first implementation candidate with the highest trust impact? | One follow-up implementation-run candidate. |
 
 ## Task 1 - Current Settings/Account Screen Audit
 
@@ -306,6 +306,79 @@ The strongest low-risk candidates after this structure proposal are:
 
 The recommended structure is to treat `/settings` as the future canonical settings hub, `/menu` as a quick or compatibility menu, the header panel as a summary/shortcut surface, and `/account` as account detail plus account actions. The first implementation candidate should be link/display parity rather than route remapping or protected account/billing logic.
 
+## Task 4 - First Implementation Candidate Selection
+
+| Field | Value |
+| --- | --- |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Candidate prioritization and run closure documentation only. No app code, UI code, user-facing code copy, auth/session logic, Supabase, RLS, billing, RevenueCat, entitlement, account deletion logic, logout/session behavior, production DB, purchase, restore, Android release, Play Console, or external console work was changed or executed. |
+| Input | Task 1 audit, Task 2 required settings item list, and Task 3 structure proposal. |
+| Selected future implementation run | `settings-support-links-polish-run` |
+| Opened automatically? | `No` |
+
+### TODO 1-3 Synthesis
+
+| Source | Main finding | Implication for first implementation |
+| --- | --- | --- |
+| Task 1 audit | Header settings panel is the most visible entry but lacks policy, refund, deletion, and clear support contact links. `/menu` lacks alert settings and app version. | Fix discoverability before touching account, billing, or route ownership behavior. |
+| Task 2 required items | Support/contact, terms/policies, account deletion, app version, alerts, and settings structure are required production trust items. | A link/display-only polish can cover several required items with low risk. |
+| Task 3 structure proposal | `/settings` can become the future canonical hub, `/menu` can stay quick/compatibility, header panel should be summary/shortcut, `/account` should remain account detail. | The first implementation should improve shortcut parity rather than remap routes or change protected logic. |
+
+### Candidate Evaluation
+
+| Rank | Candidate run | Scope | User trust impact | Implementation risk | Protected-area separation | Verification clarity | Decision |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | `settings-support-links-polish-run` | Improve access to support, FAQ, terms, privacy, refund, account deletion guide, alert settings, and app version from settings/menu surfaces. | HIGH: users can find production support and policy paths faster. | LOW if limited to links, section labels, and existing version display. | Strong: no auth, billing, Supabase, entitlement, logout, deletion behavior, or DB changes required. | Clear: static diff plus TypeScript/build/mobile smoke in the implementation run if UI code changes. | SELECTED |
+| 2 | `settings-app-info-developer-info-run` | Improve app version, service name, and developer/operator information access. | MEDIUM: improves support and store trust. | LOW to MEDIUM because business/developer wording may need confirmation. | Strong if display-only; weaker if Play Console/legal wording changes are needed. | Clear for display-only changes. | Defer; can be included only if info is already confirmed. |
+| 3 | `settings-account-status-polish-run` | Clarify account state and current plan display. | HIGH: directly affects account confidence. | MEDIUM because plan/access display can touch entitlement or billing-adjacent assumptions. | Needs careful boundary around `useSupabaseAuth`, billing helpers, and entitlement reads. | Good, but requires broader code review. | Defer. |
+| 4 | `settings-danger-zone-polish-run` | Separate logout and account deletion into a clearer dangerous-actions area. | MEDIUM to HIGH for account safety. | MEDIUM to HIGH because logout/deletion behavior must remain untouched. | Possible but fragile near auth/session and deletion routes. | Good only if grouping is UI-only. | Defer. |
+| 5 | `settings-subscription-management-entry-run` | Clarify subscription management and restore entry from account/settings. | HIGH for paying users. | HIGH because it is billing, RevenueCat, Google Play, and entitlement adjacent. | Weak unless strictly link-only. | Requires billing-specific review and possibly `smoke:billing`. | Separate high-risk or billing-adjacent run. |
+
+### Selected First Implementation Candidate
+
+Selected candidate: `settings-support-links-polish-run`.
+
+Recommended implementation goal:
+
+- Improve production-trust link discoverability across the most visible settings entry points.
+- Prefer header settings panel and `/menu` parity because those are the surfaces where current users are most likely to look first.
+- Reuse existing routes and constants only: `/faq`, `/terms`, `/privacy`, `/refund`, `/account/delete`, `/alerts` or `/crypto/alert`, and `APP_VERSION_DISPLAY`.
+- Keep changes limited to links, labels, section grouping, and app-version visibility.
+
+### Selection Rationale
+
+- It addresses the clearest user-trust gap found in Task 1: users can open settings but still miss support, policy, refund, deletion, or app-version paths.
+- It covers multiple required Task 2 items without changing protected systems.
+- It aligns with Task 3's model of header panel as a summary/shortcut surface and `/menu` as quick/compatibility route.
+- It avoids auth/session, billing, RevenueCat, entitlement, Supabase, production DB, logout behavior, account deletion behavior, Android release, and Play Console changes.
+- It is small enough for one implementation commit and easy to revert.
+
+### Allowed Scope For The Future Run
+
+| Allowed item | Boundary |
+| --- | --- |
+| Add or reorganize links to existing support/policy routes | Do not edit legal text or create a new support backend. |
+| Add app version visibility using existing `APP_VERSION_DISPLAY` | Do not change Android version, build number, package metadata, or release config. |
+| Add alert settings link parity to `/menu` or header settings panel | Do not change FCM, push token, notification permission, or alert delivery logic. |
+| Improve section labels and grouping | Keep wording support-oriented and non-investment-advice. |
+| Reuse existing account deletion guide link | Do not change deletion behavior or execute deletion. |
+
+### Forbidden Scope For The Future Run
+
+| Forbidden item | Reason |
+| --- | --- |
+| Auth/session changes, real login/logout tests, or logout behavior changes | Protected account behavior. |
+| Billing, RevenueCat, product/plan/price, entitlement, purchase, or restore changes | Paid-access boundary. |
+| Supabase, RLS, production DB, account data, or production token work | Production data boundary. |
+| Account deletion logic changes or real deletion tests | Destructive account boundary. |
+| Android native/release, Play Console, or external console changes | Release/store boundary. |
+| Route ownership remapping such as making `/settings` standalone | MEDIUM route behavior work; not needed for first low-risk polish. |
+
+### Final Run Conclusion
+
+`settings-account-polish-run` is complete. The selected next active-run candidate is `settings-support-links-polish-run`, but it has not been opened automatically. The next run should implement only the low-risk support/policy/app-version/link-accessibility polish unless the owner explicitly expands scope.
+
 ## Required Item Candidates
 
 | Item | Why it matters | Risk boundary |
@@ -379,4 +452,4 @@ Use this format as each TODO completes.
 
 ## Final Conclusion
 
-Task 3 is complete. The next task is `4. Select one first implementation candidate`, and no implementation has been authorized in this run.
+Task 4 is complete. `settings-account-polish-run` is done. The selected future implementation candidate is `settings-support-links-polish-run`; no next active-run was opened automatically.
