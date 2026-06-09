@@ -54,7 +54,7 @@ These are future TODO inspection targets, not approval to change them.
 | 1 | DONE | Capacitor iOS readiness audit | Is the repo structurally ready for iOS platform/build work? | Capacitor/iOS status map and missing native setup notes. |
 | 2 | DONE | Apple Developer submission requirement review | What App Store Connect and listing material must be ready before TestFlight? | Apple/TestFlight metadata checklist. |
 | 3 | DONE | Sign in with Apple requirement risk review | Does Google login create an Apple sign-in review requirement risk? | Policy risk summary and auth/Supabase impact notes. |
-| 4 | TODO | RevenueCat Apple product mapping review | What iOS subscription mapping must exist before paid iOS TestFlight/review? | RevenueCat/App Store product mapping checklist. |
+| 4 | DONE | RevenueCat Apple product mapping review | What iOS subscription mapping must exist before paid iOS TestFlight/review? | RevenueCat/App Store product mapping checklist. |
 | 5 | TODO | TestFlight first-build checklist | What must be verified before first iOS build/upload? | Pre-build and upload-readiness checklist. |
 | 6 | TODO | Select first iOS readiness follow-up run | What is the first practical next run after audit? | One follow-up candidate, no auto-creation. |
 
@@ -422,6 +422,145 @@ Conclusion: if ChartRadar plans to offer the current Google login structure on i
 - TODO 4 should document App Store product IDs, subscription group structure, RevenueCat iOS app/offering/package/product mapping, and entitlement names without changing billing code or external consoles.
 - If Apple login is later implemented, RevenueCat subscriber identity and Supabase account identity must be checked together before real iOS purchase testing.
 
+## Task 4 - RevenueCat Apple Product Mapping Review
+
+| Field | Value |
+| --- | --- |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Source inspection and official Apple/RevenueCat reference review only. No RevenueCat, App Store Connect, Google Play Console, billing code, mobile purchase code, product ID, plan ID, entitlement, price, auth, Supabase, iOS native, config, real purchase, or restore test was changed or executed. |
+| Official sources checked | Apple auto-renewable subscription/subscription group documentation and RevenueCat product, offering, entitlement, customer identity, and restore documentation. Checked on 2026-06-09. |
+| Implementation allowed in this run? | `No` |
+
+### Official Apple And RevenueCat References Checked
+
+| Topic | Official source |
+| --- | --- |
+| App Store auto-renewable subscriptions and subscription groups | https://developer.apple.com/help/app-store-connect/manage-subscriptions/offer-auto-renewable-subscriptions |
+| Apple subscription group guidance | https://developer.apple.com/app-store/subscriptions/ |
+| App Store subscription reference name, Product ID, and availability | https://developer.apple.com/help/app-store-connect/manage-subscriptions/set-availability-for-an-auto-renewable-subscription/ |
+| RevenueCat products overview | https://www.revenuecat.com/docs/offerings/products-overview |
+| RevenueCat offerings and packages | https://www.revenuecat.com/docs/offerings/overview |
+| RevenueCat entitlements | https://www.revenuecat.com/docs/entitlements |
+| RevenueCat customer identity | https://www.revenuecat.com/docs/customers/identifying-customers |
+| RevenueCat restore purchases | https://www.revenuecat.com/docs/getting-started/restoring-purchases |
+| RevenueCat CustomerInfo and active entitlements | https://www.revenuecat.com/docs/customers/customer-info |
+
+### Current Android Product And Entitlement Structure
+
+Source inspection shows the existing paid plan catalog is centralized in `src/lib/billing.ts`. The product IDs below are current store product identifiers in code; they should not be assumed to be final App Store Connect Product IDs without a separate mapping run.
+
+| Internal plan | User-facing product | Duration | Current product ID | Current base plan ID | Market scope | Entitlement expectation | Current amount |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `crypto_monthly` | Coin Pro monthly | 1 month | `chart_radar_crypto_monthly` | `monthly` | `crypto` | `coin_pro` or legacy `crypto_pro` unlocks Coin Pro. | KRW 29,000 |
+| `crypto_yearly` | Coin Pro yearly | 1 year | `chart_radar_crypto_yearly` | `year-1` | `crypto` | `coin_pro` or legacy `crypto_pro` unlocks Coin Pro. | KRW 290,000 |
+| `stocks_monthly` | Global Pro monthly | 1 month | `chart_radar_global_monthly` | `monthly` | `stocks` | `global_pro` unlocks Global Pro. | KRW 19,000 |
+| `stocks_yearly` | Global Pro yearly | 1 year | `chart_radar_global_yearly` | `yearly-1` | `stocks` | `global_pro` unlocks Global Pro. | KRW 190,000 |
+| `bundle_monthly` | All Market Pro monthly | 1 month | `chart_radar_bundle_monthly` | `monthly` | `bundle` | `all_market_pro` or legacy `bundle_pro` unlocks Coin and Global Pro. | KRW 39,000 |
+| `bundle_yearly` | All Market Pro 6-month, legacy internal ID | 6 months | `chart_radar_bundle_6month` | `month-6` | `bundle` | `all_market_pro` or legacy `bundle_pro` unlocks Coin and Global Pro. | KRW 199,000 |
+
+### Current Code Mapping Signals
+
+| Source | Current signal | iOS implication |
+| --- | --- | --- |
+| `src/lib/billing.ts` | Paid plans include `appStoreProductId`, Android-like `appStoreBasePlanId`, market scope, price labels, and entitlement aliases. | iOS mapping must decide whether to reuse current product IDs or introduce App Store-specific IDs and then update code in a separate high-risk run. |
+| `src/lib/billing.ts` | `getStoreProductIdentifier()` joins product and base plan as `product:basePlan` when a base plan exists. | This is Android-friendly. App Store product mapping should verify whether iOS product lookup should continue requiring a base plan. |
+| `src/lib/billing.ts` | Active RevenueCat entitlements resolve `all_market_pro` / `bundle_pro`, `coin_pro` / `crypto_pro`, and `global_pro`. | iOS products should unlock the same canonical entitlements if cross-platform access is intended. |
+| `src/lib/mobilePurchases.ts` | Native platform type includes `ios`, and iOS uses `NEXT_PUBLIC_REVENUECAT_IOS_API_KEY`. | iOS purchase flow has a code branch, but App Store products and RevenueCat iOS app mapping are unproven. |
+| `src/lib/mobilePurchases.ts` | iOS purchase path checks RevenueCat offerings first. Package ID is normally the internal plan ID, except `bundle_yearly` maps to `bundle_6month`. | RevenueCat package identifiers must match this expectation unless a later implementation run changes code. |
+| `src/lib/mobilePurchases.ts` | Purchases are configured with the Supabase user ID as RevenueCat `appUserID`. | Cross-platform entitlement continuity depends on stable Supabase user identity. Do not use email as the App User ID. |
+| `src/app/api/billing/app-store/sync/route.ts` | Sync accepts `android` or `ios`, fetches RevenueCat subscriber state, maps active subscriptions by product ID, and maps active entitlements by entitlement ID. | iOS RevenueCat products and entitlements must be visible through the same subscriber API for Supabase entitlement sync to work. |
+| `.env.example` | Contains RevenueCat Android public key, iOS public key, and REST key placeholders. | iOS environment readiness needs key provisioning later; no values were read or changed here. |
+| `src/lib/server/healthStatus.ts` | Separates Android billing readiness from iOS billing readiness. | Launch diagnostics can represent iOS billing readiness after keys/provider setup, but this task did not validate live values. |
+
+### iOS App Store Product Mapping Needs
+
+The following are planning candidates only. Actual App Store Connect Product IDs must be created or confirmed in a separate high-risk console run before code or RevenueCat mapping is changed.
+
+| Product line | Duration | Candidate iOS Product ID | App Store product type | Subscription group consideration | Notes |
+| --- | --- | --- | --- | --- | --- |
+| Coin Pro | 1 month | `chartradar.coinpro.monthly` | Auto-renewable subscription | Candidate group: `Chart Radar Pro` | Unlocks Coin Pro scope only. |
+| Coin Pro | 1 year | `chartradar.coinpro.yearly` | Auto-renewable subscription | Same group as Coin monthly. | Annual equivalent of Coin Pro. |
+| Global Pro | 1 month | `chartradar.globalpro.monthly` | Auto-renewable subscription | Candidate group: `Chart Radar Pro` | Unlocks Global Pro scope only. |
+| Global Pro | 1 year | `chartradar.globalpro.yearly` | Auto-renewable subscription | Same group as Global monthly. | Annual equivalent of Global Pro. |
+| All Market Pro | 1 month | `chartradar.allmarketpro.monthly` | Auto-renewable subscription | Candidate group: `Chart Radar Pro`, likely highest level. | Unlocks Coin and Global Pro scopes. |
+| All Market Pro | 6 months | `chartradar.allmarketpro.6month` | Auto-renewable subscription | Same group as All Market monthly. | Current app plan uses legacy internal ID `bundle_yearly` but displays a 6-month product. |
+
+### Subscription Group Decision Needed
+
+| Option | Benefit | Risk / decision point |
+| --- | --- | --- |
+| Single group `Chart Radar Pro` | Aligns with Apple's general guidance for simple subscription structures and supports upgrade/downgrade/crossgrade relationships. | Users can normally hold only one subscription in a group at a time, so Coin+Global separate simultaneous subscriptions would not be the intended model. The bundle product should be the combined path. |
+| Separate groups for Coin, Global, and All Market | Allows independent subscriptions by market line. | More complex App Store behavior, more review/UX burden, and possible mismatch with the app's bundle-oriented plan model. |
+
+Recommended planning assumption: use one subscription group if ChartRadar wants one active Pro tier at a time, with All Market Pro above Coin Pro and Global Pro. Confirm with owner/product policy before creating App Store products.
+
+### RevenueCat Mapping Needs
+
+| Mapping item | Required later | Current planning note |
+| --- | --- | --- |
+| RevenueCat iOS app | Yes | Must be connected to the iOS Bundle ID candidate `com.staronlabs.chartradar` after Apple app setup exists. |
+| App Store products in RevenueCat | Yes | Add exact App Store Connect Product IDs after they are created/approved. Current Android IDs must not be assumed final for iOS. |
+| Entitlements | Yes | Prefer existing canonical entitlements: `coin_pro`, `global_pro`, and `all_market_pro`; keep legacy aliases in code only for backward compatibility unless a migration run changes them. |
+| Offering strategy | Needs decision | Either share the current/default offering across platforms with platform-specific products in equivalent packages, or use an iOS-specific offering if paywall copy/availability differs. |
+| Package identifiers | Yes | Current iOS code expects package IDs matching plan IDs: `crypto_monthly`, `crypto_yearly`, `stocks_monthly`, `stocks_yearly`, `bundle_monthly`, and `bundle_6month` for the 6-month All Market package. |
+| Product-to-package equivalence | Yes | Equivalent Android/iOS products should sit in the same package if the same paywall option unlocks the same entitlement and duration. |
+| App User ID | Yes | Use the Supabase user ID already passed to RevenueCat. Do not use email as App User ID. |
+| Restore behavior | Yes | Restore UX already exists in code, but iOS restore transfer/merge behavior and account identity rules need a separate QA/policy run. |
+| Server entitlement sync | Yes | RevenueCat REST subscriber state must expose active iOS subscriptions/entitlements so `/api/billing/app-store/sync` can grant Supabase entitlements. |
+
+### Android/iOS Entitlement Unification Candidate
+
+| Access scope | Preferred canonical entitlement | Existing alias accepted by code | Unlock expectation |
+| --- | --- | --- | --- |
+| Coin Pro | `coin_pro` | `crypto_pro` | Unlock crypto/Coin Pro screens and alerts. |
+| Global Pro | `global_pro` | None observed. | Unlock Global Pro screens and alerts. |
+| All Market Pro | `all_market_pro` | `bundle_pro` | Unlock both Coin Pro and Global Pro scopes. |
+
+Planning conclusion: iOS products should unlock the same entitlements as Android products so a user has consistent access across platforms when the same Supabase user ID is used as RevenueCat App User ID. Do not change Supabase plan IDs, code product IDs, entitlement names, or price policy inside this readiness run.
+
+### iOS Payment And Review Risks
+
+| Risk | Why it matters | Follow-up |
+| --- | --- | --- |
+| App Store products absent | iOS purchases cannot work without App Store Connect auto-renewable products and RevenueCat mapping. | `ios-app-store-subscription-products-run` or `ios-revenuecat-product-mapping-run`. |
+| Product ID/base plan mismatch | Current code expects `appStoreBasePlanId` for native products, while App Store products do not use Google Play base plans in the same way. | Separate implementation review before real iOS purchase testing. |
+| Google Play / Android copy on iOS | `/pro`, `/refund`, `/terms`, and purchase-stage copy include Android/Google Play-specific wording. | `ios-pro-page-iap-copy-audit-run`. |
+| External payment steering | iOS App Review can reject flows that steer users away from IAP for digital subscriptions. | Review `/pro` and policy pages before App Store submission. |
+| Restore behavior unclear | iOS users expect restore purchases; RevenueCat restore behavior and Supabase entitlement sync need QA. | `ios-purchase-restore-readiness-run`. |
+| RevenueCat identity/account merge | Apple login, Google login, and Supabase user identity can affect entitlement ownership. | Coordinate with Sign in with Apple follow-up. |
+| Internal TestFlight vs paid review | A first internal technical TestFlight may be possible without completed IAP mapping if purchases are not being tested, but external review or paid feature validation will need mapping. | Capture in TODO 5 checklist. |
+
+### High-Risk Changes Explicitly Not Done
+
+| Item | Status |
+| --- | --- |
+| App Store Connect product creation or subscription group setup | Not done. |
+| RevenueCat product, offering, package, entitlement, app, or key changes | Not done. |
+| Google Play product changes | Not done. |
+| `billing.ts`, `mobilePurchases.ts`, checkout/sync route, product ID, plan ID, entitlement, or price changes | Not done. |
+| Supabase/auth/provider/account changes | Not done. |
+| iOS platform add/sync/build/open/upload, Xcode, pod install, fastlane, or TestFlight upload | Not run. |
+| Real purchase or restore test | Not run. |
+
+### Follow-Up Run Candidates
+
+| Candidate | Purpose |
+| --- | --- |
+| `ios-revenuecat-product-mapping-run` | Decide exact cross-platform RevenueCat offering, package, product, entitlement, and App User ID mapping. |
+| `ios-app-store-subscription-products-run` | Create or configure App Store Connect subscription group and products after owner approval. |
+| `ios-pro-page-iap-copy-audit-run` | Remove Android/Google Play-specific purchase wording from iOS-visible surfaces before review. |
+| `ios-purchase-restore-readiness-run` | Define and test iOS restore behavior, account identity, and Supabase entitlement sync. |
+| `ios-revenuecat-identity-restore-run` | Resolve identity/restore edge cases if Apple login and Google login coexist. |
+
+### Handoff To TODO 5 - First Build Checklist Points
+
+- Separate first iOS technical build readiness from iOS paid purchase readiness.
+- Mark IAP purchase/restore testing as unavailable until App Store products and RevenueCat mapping are configured in a separate approved run.
+- Do not test `/pro` iOS checkout until product IDs, offerings, packages, entitlements, restore behavior, and review copy have been approved.
+- Include a checkpoint for iOS-visible Google Play/Android wording before external TestFlight or App Store Review.
+- Keep Sign in with Apple and RevenueCat App User ID planning connected because both affect account identity and paid access.
+
 ## High-Risk Separation
 
 | Area | Status in this run |
@@ -462,4 +601,4 @@ Use this format as each TODO completes.
 
 ## Final Conclusion
 
-This run is registered. The next task is `1. Capacitor iOS readiness audit`, and no iOS platform, build, upload, external console, auth, billing, RevenueCat, Supabase, Android, or production configuration work has been authorized.
+Tasks 1 through 4 are complete. The next task is `5. TestFlight first-build checklist`, and no iOS platform, build, upload, external console, auth, billing, RevenueCat, Supabase, Android, or production configuration work has been authorized.
