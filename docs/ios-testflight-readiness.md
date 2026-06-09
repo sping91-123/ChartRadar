@@ -1113,6 +1113,74 @@ These ignored files remain on disk after `npx cap add ios` but are not committed
 - Confirm ignored generated outputs remain ignored and no sensitive values are present.
 - Keep Xcode, sync, pod install, build/archive/upload, signing, external console changes, auth/Supabase/billing/RevenueCat/entitlement changes, Android release changes, and production actions out of scope.
 
+## iOS Capacitor Platform Setup - Task 7 Safe Validation Results
+
+| Field | Value |
+| --- | --- |
+| Active run | `ios-capacitor-platform-setup-run` |
+| Task | `7. Safe validation and result documentation` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Safe validation commands and documentation only. No native iOS file edit, `Info.plist` edit, project file edit, entitlements file creation, signing change, `npx cap sync ios`, `npx cap open ios`, Xcode, pod install, iOS build/archive/upload, npm install/update/audit fix, external console change, auth, Supabase, billing, RevenueCat, entitlement, Android release, or production action was executed. |
+
+### TypeScript, Build, And Smoke Results
+
+| Command | Result | Notes |
+| --- | --- | --- |
+| `git diff --check` | PASS | No whitespace errors before result documentation. |
+| `cmd /c npx tsc --noEmit` | PASS | TypeScript static check completed without emitting files. |
+| `npm.cmd run build` | PASS | Next.js production build completed successfully. |
+| `npm.cmd run smoke:copy` | PASS | User-facing copy smoke found no blocked wording or broken characters. |
+| `npm.cmd run smoke:mobile` | PASS | Mobile/PWA packaging smoke passed, including Capacitor config and mobile shell checks. |
+
+### Capacitor Package Alignment
+
+| Package | Version / status |
+| --- | --- |
+| `@capacitor/core` | `8.3.3` |
+| `@capacitor/android` | `8.3.3` |
+| `@capacitor/ios` | `8.3.3` |
+| Alignment result | PASS: Capacitor core, Android, and iOS packages are aligned at `8.3.3`. |
+
+### iOS Generated And Ignored State
+
+| Area | Result |
+| --- | --- |
+| Tracked native project | `ios/` native project exists from TODO 5 and remains tracked where generated files are not ignored. |
+| Ignored generated outputs | `ios/App/App/capacitor.config.json`, `ios/App/App/config.xml`, `ios/App/App/public/`, and `ios/capacitor-cordova-ios-plugins/` remain on disk as ignored outputs. |
+| Commit/stage status for ignored outputs | Ignored generated outputs are not staged or committed. |
+| Additional native edits in Task 7 | None. Task 7 did not modify generated native files. |
+
+### Protected Path Check
+
+| Protected area | Result |
+| --- | --- |
+| Android native/release settings | No changes. |
+| Auth/Supabase/RLS/session/account logic | No changes. |
+| Billing/RevenueCat/entitlement/product/price logic | No changes. |
+| FCM/push-cron/server sending | No changes. |
+| Apple Developer/App Store Connect/RevenueCat/Supabase consoles | No access or changes. |
+| iOS sync/open/build/archive/upload | Not executed. |
+| Package/config after Task 7 | No additional package, lockfile, or Capacitor config changes. |
+
+### Remaining iOS Blockers
+
+| Blocker | Status |
+| --- | --- |
+| `.entitlements` file | Still absent. |
+| Signing / Team ID | `DEVELOPMENT_TEAM` remains unset / unverified. |
+| Apple Developer / App Store Connect setup | Still not configured in this run. |
+| Sign in with Apple | Readiness risk remains HIGH if third-party login is exposed on iOS. |
+| RevenueCat / App Store product mapping | Still incomplete. |
+| APNs / Firebase iOS push | Still incomplete. |
+| TestFlight upload | Not attempted. |
+
+### Handoff To Task 8
+
+- Select exactly one next iOS follow-up run candidate.
+- Keep follow-up creation manual; do not automatically open a new active-run inside Task 8.
+- Continue separating platform setup, signing, Apple auth, IAP mapping, APNs/Firebase push, and TestFlight upload into explicit scoped runs.
+
 ## High-Risk Separation
 
 | Area | Status in this run |

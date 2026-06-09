@@ -11,7 +11,7 @@
 - Previous run context:
   - `ios-testflight-readiness-run` is `DONE`.
   - `ios-testflight-readiness-run` selected `ios-capacitor-platform-setup-run` as the first follow-up candidate.
-- Current phase: Task 6 complete; next TODO is `7. Safe validation and result documentation`.
+- Current phase: Task 7 complete; next TODO is `8. Select next iOS follow-up run`.
 - Execution mode: `AUTO RUN ACTIVE PLAN` processes exactly one `TODO` task per turn.
 - This setup registers the run only. No dependency install, iOS platform add, Capacitor sync, iOS build, Xcode, pod install, archive, upload, Apple Developer, App Store Connect, RevenueCat, Supabase, auth, billing, entitlement, Android release, or production action was executed during setup.
 
@@ -101,7 +101,7 @@
 | 4 | DONE | Confirm iOS platform generation prerequisites | Platform Preflight | MEDIUM | Confirmed `npx cap add ios` prerequisites, `webDir`/mobile-shell state, and expected generated file scope before running platform generation. | No cap add. No Xcode. No sync/build. | `git diff --check` |
 | 5 | DONE | Generate iOS platform | Native Generation | HIGH | Ran the controlled Capacitor iOS platform generation step. | No Xcode. No manual pod install. No build/archive/upload. No Apple Developer/App Store Connect changes. | `git diff --check`; generated file list review |
 | 6 | DONE | Audit generated iOS platform config | Native Audit | MEDIUM | Inspected generated native project Bundle ID/appName/webDir linkage and documented needed follow-up edits. | No native config edits. No signing changes. | `git diff --check` |
-| 7 | TODO | Safe validation and result documentation | Verification | LOW | Document generated results and remaining risks; run safe checks. | No iOS build/upload. No Xcode. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:copy` |
+| 7 | DONE | Safe validation and result documentation | Verification | LOW | Documented generated results and remaining risks after running safe checks. | No iOS build/upload. No Xcode. | `git diff --check`; `cmd /c npx tsc --noEmit`; `npm.cmd run build`; `npm.cmd run smoke:copy`; `npm.cmd run smoke:mobile` |
 | 8 | TODO | Select next iOS follow-up run | Prioritization | LOW | Select exactly one next follow-up candidate after platform setup. | No next run auto-creation. | active-run overall status check |
 
 ## Task 1 Completion Note
@@ -184,6 +184,20 @@
 | Output document | `docs/ios-testflight-readiness.md` |
 | Native/config/package changed? | `No`; generated native files were inspected only. |
 | Next TODO | `7. Safe validation and result documentation` |
+
+## Task 7 Completion Note
+
+| Field | Value |
+| --- | --- |
+| Task | `7. Safe validation and result documentation` |
+| Status | `DONE` |
+| Completed date | 2026-06-09 |
+| Method | Safe validation commands and documentation only. No native iOS file edit, `Info.plist` edit, project file edit, entitlements file creation, signing change, `npx cap sync ios`, `npx cap open ios`, Xcode, pod install, iOS build/archive/upload, npm install/update/audit fix, external console change, auth, Supabase, billing, RevenueCat, entitlement, Android release, or production action was executed. |
+| Result | `git diff --check`, `cmd /c npx tsc --noEmit`, `npm.cmd run build`, `npm.cmd run smoke:copy`, and `npm.cmd run smoke:mobile` passed. Capacitor packages are aligned at `8.3.3`; ignored generated iOS outputs remain untracked/unstaged; protected paths were not changed. |
+| Output document | `docs/ios-testflight-readiness.md` |
+| Native/config/package changed in Task 7? | `No` |
+| Remaining blockers | Missing `.entitlements`, signing/Team ID, Apple Developer/App Store Connect setup, Sign in with Apple risk, RevenueCat/App Store product mapping, APNs/Firebase iOS push, and TestFlight upload. |
+| Next TODO | `8. Select next iOS follow-up run` |
 
 ## Expected Command Boundaries
 
