@@ -63,6 +63,25 @@ function formatPercent(value: number | null) {
   return `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
 }
 
+function buildPriceEnrichment(input: {
+  matcher: RegExp;
+  sourceUrl: string;
+  actualValue: string;
+}): MacroSourceEnrichment {
+  return {
+    matcher: input.matcher,
+    eventType: "numeric_release",
+    source: "BLS",
+    sourceType: "official_api",
+    sourceUrl: input.sourceUrl,
+    officialUrl: input.sourceUrl,
+    isOfficial: true,
+    confidence: 0.95,
+    actualValue: input.actualValue,
+    unit: "%"
+  };
+}
+
 function formatPayrollChange(value: number | null) {
   if (value === null) return "확인 중";
   return `${value > 0 ? "+" : ""}${value.toFixed(0)}K`;
@@ -108,33 +127,53 @@ export async function fetchBlsOfficialActuals(): Promise<MacroSourceEnrichment[]
   const enrichments: MacroSourceEnrichment[] = [];
 
   if (cpi && coreCpi) {
-    enrichments.push({
-      matcher: /cpi/i,
-      eventType: "numeric_release",
-      source: "BLS",
-      sourceType: "official_api",
-      sourceUrl: "https://www.bls.gov/cpi/",
-      officialUrl: "https://www.bls.gov/cpi/",
-      isOfficial: true,
-      confidence: 0.95,
-      actualValue: `CPI ${formatPercent(cpi.mom)} 전월비 / ${formatPercent(cpi.yoy)} 전년비, 근원 ${formatPercent(coreCpi.mom)} 전월비 / ${formatPercent(coreCpi.yoy)} 전년비`,
-      unit: "%"
-    });
+    enrichments.push(
+      buildPriceEnrichment({
+        matcher: /^core\s+cpi\s+(m\/m|mom)$/i,
+        sourceUrl: "https://www.bls.gov/cpi/",
+        actualValue: formatPercent(coreCpi.mom)
+      }),
+      buildPriceEnrichment({
+        matcher: /^core\s+cpi\s+(y\/y|yoy)$/i,
+        sourceUrl: "https://www.bls.gov/cpi/",
+        actualValue: formatPercent(coreCpi.yoy)
+      }),
+      buildPriceEnrichment({
+        matcher: /^cpi\s+(m\/m|mom)$/i,
+        sourceUrl: "https://www.bls.gov/cpi/",
+        actualValue: formatPercent(cpi.mom)
+      }),
+      buildPriceEnrichment({
+        matcher: /^cpi\s+(y\/y|yoy)$/i,
+        sourceUrl: "https://www.bls.gov/cpi/",
+        actualValue: formatPercent(cpi.yoy)
+      })
+    );
   }
 
   if (ppi && corePpi) {
-    enrichments.push({
-      matcher: /ppi/i,
-      eventType: "numeric_release",
-      source: "BLS",
-      sourceType: "official_api",
-      sourceUrl: "https://www.bls.gov/ppi/",
-      officialUrl: "https://www.bls.gov/ppi/",
-      isOfficial: true,
-      confidence: 0.95,
-      actualValue: `PPI ${formatPercent(ppi.mom)} 전월비 / ${formatPercent(ppi.yoy)} 전년비, 근원 ${formatPercent(corePpi.mom)} 전월비 / ${formatPercent(corePpi.yoy)} 전년비`,
-      unit: "%"
-    });
+    enrichments.push(
+      buildPriceEnrichment({
+        matcher: /^core\s+ppi\s+(m\/m|mom)$/i,
+        sourceUrl: "https://www.bls.gov/ppi/",
+        actualValue: formatPercent(corePpi.mom)
+      }),
+      buildPriceEnrichment({
+        matcher: /^core\s+ppi\s+(y\/y|yoy)$/i,
+        sourceUrl: "https://www.bls.gov/ppi/",
+        actualValue: formatPercent(corePpi.yoy)
+      }),
+      buildPriceEnrichment({
+        matcher: /^ppi\s+(m\/m|mom)$/i,
+        sourceUrl: "https://www.bls.gov/ppi/",
+        actualValue: formatPercent(ppi.mom)
+      }),
+      buildPriceEnrichment({
+        matcher: /^ppi\s+(y\/y|yoy)$/i,
+        sourceUrl: "https://www.bls.gov/ppi/",
+        actualValue: formatPercent(ppi.yoy)
+      })
+    );
   }
 
   if (unemploymentRate) {

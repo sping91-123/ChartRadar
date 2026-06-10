@@ -258,6 +258,122 @@ function macroSourceNote(note: string) {
   return `${note} BLS 공식 통계, Fed, DOL 등 공개 자료를 함께 확인합니다.`;
 }
 
+type PriceMacroFamily = "core-cpi" | "cpi" | "core-ppi" | "ppi";
+type PriceMacroPeriod = "mom" | "yoy";
+
+function priceMacroFamily(label: string): PriceMacroFamily | null {
+  const lower = label.toLowerCase();
+  const isCore = /\bcore\b/.test(lower);
+  if (/\bcpi\b/.test(lower)) return isCore ? "core-cpi" : "cpi";
+  if (/\bppi\b/.test(lower)) return isCore ? "core-ppi" : "ppi";
+  return null;
+}
+
+function priceMacroPeriod(label: string): PriceMacroPeriod | null {
+  const lower = label.toLowerCase();
+  if (/\bm\/m\b|\bmom\b|전월비/.test(lower)) return "mom";
+  if (/\by\/y\b|\byoy\b|전년비/.test(lower)) return "yoy";
+  return null;
+}
+
+function priceMacroPeriodLabel(period: PriceMacroPeriod) {
+  return period === "mom" ? "전월비" : "전년비";
+}
+
+function priceMacroFamilyLabel(family: PriceMacroFamily) {
+  if (family === "core-cpi") return "Core CPI";
+  if (family === "cpi") return "CPI";
+  if (family === "core-ppi") return "Core PPI";
+  return "PPI";
+}
+
+function priceMacroFamilyKey(item: MacroEventItem) {
+  const family = priceMacroFamily(item.label);
+  return family ? `${family}|${item.releaseAt}` : null;
+}
+
+function priceMacroGroupKey(item: MacroEventItem) {
+  const family = priceMacroFamily(item.label);
+  const period = priceMacroPeriod(item.label);
+  return family && period ? `${family}|${item.releaseAt}` : null;
+}
+
+function priceMacroPeriodSort(item: MacroEventItem) {
+  const period = priceMacroPeriod(item.label);
+  if (period === "mom") return 0;
+  if (period === "yoy") return 1;
+  return 2;
+}
+
+function joinPriceMacroValues(items: MacroEventItem[], valueOf: (item: MacroEventItem) => string | undefined) {
+  const parts = items
+    .map((item) => {
+      const value = valueOf(item);
+      if (isEmptyValue(value)) return null;
+      const period = priceMacroPeriod(item.label);
+      return `${period ? priceMacroPeriodLabel(period) : macroLabel(item.label)} ${macroValueText(value)}`;
+    })
+    .filter((value): value is string => Boolean(value));
+
+  return parts.length ? parts.join(" / ") : undefined;
+}
+
+function mergePriceMacroGroup(items: MacroEventItem[]) {
+  const orderedItems = [...items].sort((a, b) => priceMacroPeriodSort(a) - priceMacroPeriodSort(b) || a.label.localeCompare(b.label));
+  const primaryItem = orderedItems[0];
+  const family = priceMacroFamily(primaryItem.label);
+  if (!family) return primaryItem;
+
+  const actualValue = joinPriceMacroValues(orderedItems, (item) => item.actualValue ?? item.actual);
+  const consensusValue = joinPriceMacroValues(orderedItems, (item) => item.consensusValue ?? item.forecast);
+  const previousValue = joinPriceMacroValues(orderedItems, (item) => item.previousValue ?? item.previous);
+  const label = priceMacroFamilyLabel(family);
+
+  return {
+    ...primaryItem,
+    id: `${family}-${primaryItem.releaseAt}`,
+    label,
+    title: label,
+    importance: orderedItems.reduce<MacroEventItem["importance"]>((max, item) => (item.importance > max ? item.importance : max), primaryItem.importance),
+    actual: actualValue ?? primaryItem.actual,
+    actualValue,
+    forecast: consensusValue ?? primaryItem.forecast,
+    consensusValue,
+    previous: previousValue ?? primaryItem.previous,
+    previousValue
+  };
+}
+
+function getDisplayCalendarItems(items: MacroEventItem[]) {
+  const groupedFamilyKeys = new Set(
+    items
+      .filter((item) => priceMacroPeriod(item.label))
+      .map(priceMacroFamilyKey)
+      .filter((key): key is string => Boolean(key))
+  );
+  const groupedItems = new Map<string, MacroEventItem[]>();
+  const standaloneItems: MacroEventItem[] = [];
+  const standalonePriceKeys = new Set<string>();
+
+  for (const item of items) {
+    const groupKey = priceMacroGroupKey(item);
+    if (groupKey) {
+      groupedItems.set(groupKey, [...(groupedItems.get(groupKey) ?? []), item]);
+      continue;
+    }
+
+    const familyKey = priceMacroFamilyKey(item);
+    if (familyKey && groupedFamilyKeys.has(familyKey)) continue;
+    if (familyKey) {
+      if (standalonePriceKeys.has(familyKey)) continue;
+      standalonePriceKeys.add(familyKey);
+    }
+    standaloneItems.push(item);
+  }
+
+  return [...Array.from(groupedItems.values()).map(mergePriceMacroGroup), ...standaloneItems];
+}
+
 function getUpcomingItems(items: MacroEventItem[]) {
   const now = Date.now();
   return items.filter((item) => eventTime(item) > now).sort((a, b) => eventTime(a) - eventTime(b));
@@ -292,6 +408,9 @@ function MacroNewsItem({ item, sectionLabel, subdued = false, released = false }
   const sourceUrl = item.officialUrl ?? item.sourceUrl;
   const pendingActual = !hasActualValue(item) && hasReleaseTimePassed(item) && !isDocumentEvent(item);
   const showSectionLabel = Boolean(sectionLabel && !(released && sectionLabel === "발표"));
+  const impactRead = released ? cryptoImpactRead(item) : null;
+  const ImpactIcon = impactRead === "호재" ? TrendingUp : impactRead === "악재" ? TrendingDown : impactRead === "중립" ? Minus : null;
+  const impactReadTone = impactRead === "호재" ? "long" : impactRead === "악재" ? "risk" : "watch";
 
   return (
     <article className={`py-2 first:pt-0 ${subdued ? "opacity-95" : ""}`}>
@@ -299,6 +418,11 @@ function MacroNewsItem({ item, sectionLabel, subdued = false, released = false }
         {showSectionLabel ? <StatusPill tone="info" className="min-h-5 px-0 text-[10px]">{sectionLabel}</StatusPill> : null}
         <StatusPill tone={hasReleaseTimePassed(item) ? "watch" : "info"} className="min-h-5 px-0 text-[10px]">{compactStatusLabel(item)}</StatusPill>
         <StatusPill tone={isHighImpactMacro(item) ? "risk" : "info"} className="min-h-5 px-0 text-[10px]">{impactLabel(item)}</StatusPill>
+        {impactRead && ImpactIcon ? (
+          <StatusPill tone={impactReadTone} icon={ImpactIcon} className="min-h-5 px-0 text-[10px]">
+            {impactRead}
+          </StatusPill>
+        ) : null}
       </div>
       <h4 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{macroLabel(item.label)}</h4>
       <p className="mt-0.5 text-[11px] font-semibold leading-4 text-ui-muted">한국시간 {item.dateKst}</p>
@@ -323,9 +447,10 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
   const [calendar, setCalendar] = useState<MacroCalendarPayload>(fallbackCalendar);
   const [isPastExpanded, setIsPastExpanded] = useState(false);
   const [isUpcomingExpanded, setIsUpcomingExpanded] = useState(false);
-  const upcomingItems = getUpcomingItems(calendar.items);
-  const releasedItems = getRecentReleasedItems(calendar.items);
-  const previousReleasedItems = getPreviousReleasedItems(calendar.items);
+  const displayItems = getDisplayCalendarItems(calendar.items);
+  const upcomingItems = getUpcomingItems(displayItems);
+  const releasedItems = getRecentReleasedItems(displayItems);
+  const previousReleasedItems = getPreviousReleasedItems(displayItems);
   const fullReleasedItems = previousReleasedItems.length ? previousReleasedItems : releasedItems;
   const visibleReleasedItems = fullReleasedItems.slice(0, isPastExpanded ? 4 : 1);
   const nearestUpcoming = upcomingItems[0];
@@ -423,7 +548,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
   }
 
   if (compact) {
-    const item = getCompactItem(calendar.items);
+    const item = getCompactItem(displayItems);
     if (!item) {
       return (
         <div className="py-2 text-xs font-bold leading-5 text-slate-500 [word-break:keep-all]">

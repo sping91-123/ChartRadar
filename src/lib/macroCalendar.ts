@@ -433,7 +433,7 @@ function parseTradingEconomicsEvents(html: string) {
     .filter((item): item is MacroEventItem => Boolean(item));
 }
 
-async function fetchTradingEconomicsUpcomingEvents(now: number) {
+async function fetchTradingEconomicsCalendarEvents(now: number) {
   const response = await fetch(TRADING_ECONOMICS_NEXT_WEEK_URL, {
     headers: { "user-agent": "ChartRadarBot/1.0 (+https://chartradar.kr)" },
     cache: "no-store"
@@ -441,7 +441,7 @@ async function fetchTradingEconomicsUpcomingEvents(now: number) {
   if (!response.ok) throw new Error(`Trading Economics calendar ${response.status}`);
   return parseTradingEconomicsEvents(await response.text()).filter((item) => {
     const time = Date.parse(item.releaseAt);
-    return Number.isFinite(time) && time >= now;
+    return Number.isFinite(time) && (time >= now || now - time <= PREVIOUS_RELEASE_RETENTION_MS);
   });
 }
 
@@ -521,7 +521,7 @@ export async function getMacroCalendarPayload(options: { bypassCache?: boolean }
   if (!options.bypassCache && cachedPayload && cachedPayload.expiresAt > now) return withMacroCalendarDebug(cachedPayload.payload, "memory-cache");
 
   try {
-    const [forexFactoryResult, tradingEconomicsResult] = await Promise.allSettled([fetchForexFactoryEvents(), fetchTradingEconomicsUpcomingEvents(now)]);
+    const [forexFactoryResult, tradingEconomicsResult] = await Promise.allSettled([fetchForexFactoryEvents(), fetchTradingEconomicsCalendarEvents(now)]);
     const events = forexFactoryResult.status === "fulfilled" ? forexFactoryResult.value : [];
     const tradingEconomicsItems = tradingEconomicsResult.status === "fulfilled" ? tradingEconomicsResult.value : [];
     if (events.length === 0 && tradingEconomicsItems.length === 0) {
