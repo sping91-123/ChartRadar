@@ -305,13 +305,25 @@ function priceMacroPeriodSort(item: MacroEventItem) {
   return 2;
 }
 
+function hasBothPriceMacroPeriods(items: MacroEventItem[]) {
+  const periods = new Set(items.map((item) => priceMacroPeriod(item.label)).filter(Boolean));
+  return periods.has("mom") && periods.has("yoy");
+}
+
 function joinPriceMacroValues(items: MacroEventItem[], valueOf: (item: MacroEventItem) => string | undefined) {
+  const shouldShowPeriodLabels = hasBothPriceMacroPeriods(items);
+  const seenPeriods = new Set<PriceMacroPeriod>();
   const parts = items
     .map((item) => {
       const value = valueOf(item);
       if (isEmptyValue(value)) return null;
       const period = priceMacroPeriod(item.label);
-      return `${period ? priceMacroPeriodLabel(period) : macroLabel(item.label)} ${macroValueText(value)}`;
+      if (period) {
+        if (seenPeriods.has(period)) return null;
+        seenPeriods.add(period);
+      }
+      const valueText = macroValueText(value);
+      return shouldShowPeriodLabels && period ? `${priceMacroPeriodLabel(period)} ${valueText}` : valueText;
     })
     .filter((value): value is string => Boolean(value));
 
