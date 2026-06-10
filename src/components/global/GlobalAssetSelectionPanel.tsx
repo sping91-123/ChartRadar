@@ -98,20 +98,20 @@ export function GlobalAssetSelectionPanel({
           </label>
         </div>
 
-        <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="mt-4 grid grid-cols-4 gap-2 sm:flex sm:overflow-x-auto sm:pb-1 sm:[scrollbar-width:none] sm:[&::-webkit-scrollbar]:hidden">
           {featuredItems.map((item) => (
             <button
               key={item.symbol}
               type="button"
               onClick={() => selectSymbol(item.symbol)}
-              className={`min-h-11 shrink-0 border-b-2 px-1 text-left transition ${
+              className={`min-h-11 min-w-0 border-b-2 px-1 py-1 text-left transition sm:shrink-0 ${
                 symbol === item.symbol
                   ? "border-ui-brand text-ui-brand"
                   : "border-transparent bg-transparent text-ui-muted hover:text-ui-text"
               }`}
             >
-              <span className="block text-sm font-semibold">{item.symbol}</span>
-              <span className={`block text-[10px] font-medium ${symbol === item.symbol ? "text-ui-brand/80" : "text-ui-subtle"}`}>
+              <span className="block truncate text-sm font-semibold">{item.symbol}</span>
+              <span className={`block truncate text-[10px] font-medium ${symbol === item.symbol ? "text-ui-brand/80" : "text-ui-subtle"}`}>
                 {groupLabels[item.group]}
               </span>
             </button>
@@ -143,13 +143,13 @@ export function GlobalAssetSelectionPanel({
             </button>
           </div>
 
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mt-3 flex flex-wrap gap-2 sm:flex-nowrap sm:overflow-x-auto sm:pb-1 sm:[scrollbar-width:none] sm:[&::-webkit-scrollbar]:hidden">
             {visibleSavedItems.map((item) => (
               <button
                 key={item.symbol}
                 type="button"
                 onClick={() => selectSymbol(item.symbol)}
-                className={`min-h-10 shrink-0 border-b-2 px-1 text-left transition ${
+                className={`min-h-10 min-w-0 border-b-2 px-1 text-left transition sm:shrink-0 ${
                   symbol === item.symbol
                     ? "border-emerald-300 text-emerald-200"
                     : "border-transparent bg-transparent text-ui-muted hover:text-ui-text"
