@@ -446,7 +446,7 @@ function MarketRadarCard({
       />
 
       <div className="grid gap-x-5 sm:grid-cols-2">
-        <MetricRow label="위험자산 매수 심리" value={moodStyle.risk} />
+        <MetricRow label="위험자산 선호 심리" value={moodStyle.risk} />
         <MetricRow label={copy.directionLabel} value={moodStyle.chartTone} />
         <MetricRow label={copy.subMarketLabel} value={moodStyle.subTone} />
       </div>

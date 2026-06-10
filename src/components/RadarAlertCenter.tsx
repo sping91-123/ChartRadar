@@ -820,7 +820,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
 
       <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
         <SectionHeader
-          title="매수가/무효화 알림"
+          title="기준가/무효화 알림"
           description="관심 있는 자산과 판단 기준을 모아두고 다시 맞아떨어지는 순간을 확인합니다."
           action={<StatusPill tone="info">{setupPresets.length}개 저장</StatusPill>}
         />
@@ -832,7 +832,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
             className="min-h-10 w-full text-sm"
           >
             {isManualChecking ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Radar size={16} aria-hidden />}
-            매수가/무효화 알림 다시 확인
+            기준가/무효화 알림 다시 확인
           </ActionButton>
         </div>
 

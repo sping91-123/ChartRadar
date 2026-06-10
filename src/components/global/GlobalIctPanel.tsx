@@ -13,8 +13,8 @@ function premiumDiscountLabel(value: TimeframeAnalysis["premiumDiscount"]) {
 }
 
 function oteZoneLabel(value: TimeframeAnalysis["oteZone"]) {
-  if (value === "long") return "롱 OTE";
-  if (value === "short") return "숏 OTE";
+  if (value === "long") return "상방 OTE";
+  if (value === "short") return "하방 OTE";
   return "OTE 밖";
 }
 
@@ -116,7 +116,7 @@ export function GlobalIctPanel({ analysis, timeframe, candlesLength }: { analysi
           value={`${premiumDiscountLabel(analysis.premiumDiscount)} · ${oteZoneLabel(analysis.oteZone)}`}
           detail={
             analysis.oteLevels
-              ? `롱 ${formatZonePrice(analysis.oteLevels.longLow, analysis.oteLevels.longHigh)} · 숏 ${formatZonePrice(analysis.oteLevels.shortLow, analysis.oteLevels.shortHigh)}`
+              ? `상방 ${formatZonePrice(analysis.oteLevels.longLow, analysis.oteLevels.longHigh)} · 하방 ${formatZonePrice(analysis.oteLevels.shortLow, analysis.oteLevels.shortHigh)}`
               : "최근 딜링레인지 기준을 확인 중입니다."
           }
           tone={analysis.oteZone === "long" ? "bullish" : analysis.oteZone === "short" ? "bearish" : "neutral"}
@@ -137,15 +137,15 @@ export function GlobalIctPanel({ analysis, timeframe, candlesLength }: { analysi
           tone={latestDisplacement?.direction ?? "neutral"}
         />
         <IctStatusCard
-          title="Buy-side"
+          title="상단 유동성"
           value={analysis.buySideLiquidity ? formatPrice(analysis.buySideLiquidity.level) : "미확인"}
-          detail={analysis.buySideLiquidity ? `${formatAgeByTimeframe(analysis.buySideLiquidity.age, timeframe)} · 거리 ${analysis.buySideLiquidity.distancePercent.toFixed(2)}%` : "가까운 매수 유동성 풀을 찾지 못했습니다."}
+          detail={analysis.buySideLiquidity ? `${formatAgeByTimeframe(analysis.buySideLiquidity.age, timeframe)} · 거리 ${analysis.buySideLiquidity.distancePercent.toFixed(2)}%` : "가까운 상단 유동성 풀을 찾지 못했습니다."}
           tone="neutral"
         />
         <IctStatusCard
-          title="Sell-side"
+          title="하단 유동성"
           value={analysis.sellSideLiquidity ? formatPrice(analysis.sellSideLiquidity.level) : "미확인"}
-          detail={analysis.sellSideLiquidity ? `${formatAgeByTimeframe(analysis.sellSideLiquidity.age, timeframe)} · 거리 ${analysis.sellSideLiquidity.distancePercent.toFixed(2)}%` : "가까운 매도 유동성 풀을 찾지 못했습니다."}
+          detail={analysis.sellSideLiquidity ? `${formatAgeByTimeframe(analysis.sellSideLiquidity.age, timeframe)} · 거리 ${analysis.sellSideLiquidity.distancePercent.toFixed(2)}%` : "가까운 하단 유동성 풀을 찾지 못했습니다."}
           tone="neutral"
         />
       </div>

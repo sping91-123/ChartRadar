@@ -180,7 +180,7 @@ function parseEntryMeta(entry: JournalEntry): ParsedEntryMeta {
     entryReasons,
     keptPrinciples,
     brokenPrinciples,
-    nextCheckpoint: readNoteValue(entry.note, ["다음 매매 전 체크", "다음에 고칠 점"]) || "다음 매매 전 손절 기준과 들어간 이유를 먼저 확인하세요.",
+    nextCheckpoint: readNoteValue(entry.note, ["다음 매매 전 체크", "다음에 고칠 점"]) || "다음 판단 전 손절 기준과 들어간 이유를 먼저 확인하세요.",
     memo: readNoteValue(entry.note, ["선택 메모", "메모"]),
     brokenReal,
     principleStatus
@@ -212,17 +212,17 @@ function buildFeedback(params: {
   const checkpoint =
     params.nextFix ||
     (brokenReal.includes("손절 늦춤")
-      ? "다음 매매 전 손절 기준을 먼저 적고 지지·저항 반응을 확인하세요."
+      ? "다음 판단 전 손절 기준을 먼저 적고 지지·저항 반응을 확인하세요."
       : params.entryReasons.some((item) => item.includes("추격") || item.includes("감정"))
-        ? "다음 매매 전 들어간 이유가 충분한지 한 번 더 확인하세요."
-        : "다음 매매 전 손절 기준과 지지·저항 반응을 먼저 확인하세요.");
+        ? "다음 판단 전 들어간 이유가 충분한지 한 번 더 확인하세요."
+        : "다음 판단 전 손절 기준과 지지·저항 반응을 먼저 확인하세요.");
 
   return {
     principleStatus,
     mistake,
     wellDone,
     checkpoint,
-    message: "이번 복기는 방향 판단보다 진입 기준 확인이 핵심입니다. 다음 매매 전에는 손절 기준과 지지·저항 반응을 먼저 확인하세요."
+    message: "이번 복기는 방향 판단보다 기준 확인이 핵심입니다. 다음 판단 전에는 손절 기준과 지지·저항 반응을 먼저 확인하세요."
   };
 }
 
@@ -417,7 +417,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
       repeatedMistake,
       checkpoint:
         repeatedMistake && repeatedMistake !== "없음"
-          ? `다음 매매 전 ${repeatedMistake} 기준을 먼저 확인하세요.`
+          ? `다음 판단 전 ${repeatedMistake} 기준을 먼저 확인하세요.`
           : latestCheckpoint || "복기 1건 이상 저장 시 표시됩니다"
     };
   }, [marketEntries]);
@@ -554,7 +554,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                   <StatusPill tone="info" icon={ClipboardCheck}>오늘의 복기</StatusPill>
                   <StatusPill tone={market === "stocks" ? "watch" : "info"}>{marketLabel}</StatusPill>
                 </div>
-                <h1 className="max-w-full text-xl font-semibold leading-tight tracking-tight text-ui-text [overflow-wrap:anywhere] sm:text-2xl">오늘의 판단을 다음 매매의 기준으로 바꿉니다.</h1>
+                <h1 className="max-w-full text-xl font-semibold leading-tight tracking-tight text-ui-text [overflow-wrap:anywhere] sm:text-2xl">오늘의 판단을 다음 기준으로 정리합니다.</h1>
               </div>
             </div>
           </div>
@@ -594,7 +594,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                   value={summary.repeatedMistake || "기록 없음"}
                   detail={summary.repeatedMistake ? "가장 자주 나온 깨진 기준입니다." : undefined}
                 />
-                <MetricRow label="다음 매매 전 체크" value="확인" detail={summary.checkpoint} />
+                <MetricRow label="다음 판단 전 체크" value="확인" detail={summary.checkpoint} />
               </div>
             </PanelCard>
 
@@ -732,12 +732,12 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                 />
 
                 <label className="grid min-w-0 gap-2 text-ui-label font-semibold text-ui-subtle" htmlFor="journal-next-fix">
-                  다음에 고칠 점 한 줄
+                  다음 판단 전 체크 한 줄
                   <input
                     id="journal-next-fix"
                     value={nextFix}
                     onChange={(event) => setNextFix(event.target.value)}
-                    placeholder="예: 다음 매매 전 손절 기준을 먼저 적고 확인하기"
+                    placeholder="예: 다음 판단 전 손절 기준을 먼저 적고 확인하기"
                     className="min-h-11 w-full min-w-0 max-w-full border-b border-ui-line bg-transparent px-0 text-[15px] font-semibold text-ui-text outline-none placeholder:text-ui-subtle focus:border-ui-brand sm:min-h-12 sm:text-base"
                   />
                 </label>
@@ -786,7 +786,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                   <DataRow label="원칙 준수 상태" value={lastFeedback.principleStatus} />
                   <DataRow label="주요 실수" value={lastFeedback.mistake} />
                   <DataRow label="잘한 점" value={lastFeedback.wellDone} />
-                  <DataRow label="다음 매매 전 체크포인트" value="확인" detail={lastFeedback.checkpoint} />
+                  <DataRow label="다음 판단 전 체크포인트" value="확인" detail={lastFeedback.checkpoint} />
                 </div>
               </PanelCard>
             ) : null}
@@ -866,7 +866,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                               </span>
                             }
                           />
-                          <DataRow label="다음 매매 전 체크" value="확인" detail={parsed.nextCheckpoint} />
+                          <DataRow label="다음 판단 전 체크" value="확인" detail={parsed.nextCheckpoint} />
                         </div>
 
                         {(entry.source === "scout" || entry.source === "chart") ? <OutcomeButtons entry={entry} onOutcome={recordOutcome} /> : null}

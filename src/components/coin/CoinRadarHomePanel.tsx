@@ -228,137 +228,137 @@ function scoreToneClass(score: number) {
 }
 
 function riskFor(changePercent: number) {
-  if (changePercent >= 6) return "추격 매수 금지";
-  if (changePercent <= -6) return "매수 보류";
-  if (changePercent >= 2.5) return "매수 대기";
+  if (changePercent >= 6) return "추격 리스크 큼";
+  if (changePercent <= -6) return "확인 전 보류";
+  if (changePercent >= 2.5) return "확인 대기";
   if (changePercent <= -2.5) return "하방 우세";
   return "관망";
 }
 
 function checkFor(changePercent: number) {
-  if (changePercent >= 2.5) return "매수 후보 거래대금 유지";
-  if (changePercent <= -2.5) return "매수 보류 후 저점권 확인";
+  if (changePercent >= 2.5) return "후보 거래대금 유지";
+  if (changePercent <= -2.5) return "보류 후 저점권 확인";
   return "BTC 방향과 뉴스 충돌 확인";
 }
 
 function directSignalText(text: string | undefined) {
   return (text ?? "미확인")
-    .replace(/리스크 우선/g, "진입 대기")
+    .replace(/리스크 우선/g, "위험 먼저 확인")
     .replace(/선물 포지션 쏠림/g, "롱/숏 포지션 쏠림")
     .replace(/선물 쏠림 큼/g, "롱/숏 쏠림 강함")
     .replace(/하락 위험/g, "하방 우세")
     .replace(/큰 경고 없음/g, "큰 위험 신호 없음")
-    .replace(/추적 조건/g, "매수 판단 기준");
+    .replace(/추적 조건/g, "재확인 기준");
 }
 
 function conclusionText(decision: CoinHomeDecisionSummary | undefined) {
   if (!decision) return "시장 데이터를 확인하는 중입니다.";
-  if (decision.state === "하락 위험 큼") return "매수 보류 구간입니다. 하방 우세가 약해질 때까지 대기합니다.";
+  if (decision.state === "하락 위험 큼") return "위험 확인 구간입니다. 하방 우세가 약해질 때까지 대기합니다.";
   if (decision.state === "크게 흔들림") {
-    return "추격 매수 금지 구간입니다. 롱/숏 위험이 낮아진 뒤 다시 봅니다.";
+    return "추격 리스크가 큰 구간입니다. 롱/숏 위험이 낮아진 뒤 다시 봅니다.";
   }
   if (decision.state === "추적 우세") {
-    return "매수 후보가 보입니다. 확인가와 손절/무효화 기준을 같이 봅니다.";
+    return "후보 신호가 보입니다. 확인가와 손절/무효화 기준을 같이 봅니다.";
   }
   if (decision.state === "확인 필요") {
-    return "매수 대기 구간입니다. BTC와 알트 방향 정렬을 기다립니다.";
+    return "확인 대기 구간입니다. BTC와 알트 방향 정렬을 기다립니다.";
   }
-  return "관망 구간입니다. 매수 후보는 알림으로만 추적합니다.";
+  return "관망 구간입니다. 후보 신호는 알림으로만 추적합니다.";
 }
 
 function invalidationText(decision: CoinHomeDecisionSummary | undefined) {
   if (!decision) return "시장 데이터 확인 필요";
-  if (decision.state === "하락 위험 큼") return "BTC 약세 지속 시 매수 보류";
-  if (decision.state === "크게 흔들림") return "롱/숏 쏠림 강하면 진입 대기";
+  if (decision.state === "하락 위험 큼") return "BTC 약세 지속 시 보류";
+  if (decision.state === "크게 흔들림") return "롱/숏 쏠림 강하면 관망";
   if (decision.state === "추적 우세") return "BTC 이탈 또는 알트 거래대금 약화";
-  if (decision.topRisk !== "큰 경고 없음") return `${directSignalText(decision.topRisk)} 확대 시 매수 보류`;
-  return "새 위험 신호 발생 시 매수 보류";
+  if (decision.topRisk !== "큰 경고 없음") return `${directSignalText(decision.topRisk)} 확대 시 보류`;
+  return "새 위험 신호 발생 시 보류";
 }
 
 function volatilityWatchText(report: OptionsMarketReport | null | undefined) {
   if (!report) return "롱/숏 위험 대기";
-  if (report.expectedMovePercent !== null && report.expectedMovePercent >= 14) return "진입 위험 증가";
+  if (report.expectedMovePercent !== null && report.expectedMovePercent >= 14) return "변동성 위험 증가";
   if (report.expectedMovePercent !== null && report.expectedMovePercent >= 9) return "롱/숏 위험 확대";
-  return "진입 전 변동성 기준";
+  return "변동성 기준 확인";
 }
 
 function readinessDisplay(decision: CoinHomeDecisionSummary | undefined) {
-  if (!decision) return { label: "오늘 매수 판단", value: "판단 대기", detail: "시장 데이터 확인 중" };
+  if (!decision) return { label: "오늘 확인 기준", value: "판단 대기", detail: "시장 데이터 확인 중" };
   const score = `${decision.readinessScore}/100`;
   if (decision.state === "하락 위험 큼" || decision.readinessScore <= 20) {
-    return { label: "오늘 매수 판단", value: `매수 준비도 ${score}`, detail: "하방 우세 완화 전 매수 보류" };
+    return { label: "오늘 확인 기준", value: `추적 준비도 ${score}`, detail: "하방 우세 완화 전 보류" };
   }
   if (decision.state === "크게 흔들림") {
-    return { label: "오늘 매수 판단", value: `매수 준비도 ${score}`, detail: "추격 매수 금지" };
+    return { label: "오늘 확인 기준", value: `추적 준비도 ${score}`, detail: "추격 리스크 큼" };
   }
   if (decision.state === "관망하기" || decision.readinessScore < 45) {
-    return { label: "오늘 매수 판단", value: `매수 준비도 ${score}`, detail: "매수 후보는 알림으로 추적" };
+    return { label: "오늘 확인 기준", value: `추적 준비도 ${score}`, detail: "후보 신호는 알림으로 추적" };
   }
   if (decision.state === "확인 필요") {
-    return { label: "오늘 매수 판단", value: `매수 준비도 ${score}`, detail: "확인가 도달 전 대기" };
+    return { label: "오늘 확인 기준", value: `추적 준비도 ${score}`, detail: "확인가 도달 전 대기" };
   }
-  return { label: "오늘 매수 판단", value: `매수 준비도 ${score}`, detail: "매수 후보와 손절/무효화 기준 확인" };
+  return { label: "오늘 확인 기준", value: `추적 준비도 ${score}`, detail: "후보 신호와 손절/무효화 기준 확인" };
 }
 
 function marketModeDisplay(decision: CoinHomeDecisionSummary | undefined) {
   if (!decision) return { label: "시장 판단", value: "판단 대기", detail: "시장 데이터 확인 중" };
   if (decision.leadership === "리스크 우선" || decision.state === "하락 위험 큼") {
-    return { label: "시장 판단", value: "하방 우세", detail: "BTC 4H 약세 완화 전 매수 보류" };
+    return { label: "시장 판단", value: "하방 우세", detail: "BTC 4H 약세 완화 전 보류" };
   }
   if (decision.state === "크게 흔들림") {
-    return { label: "시장 판단", value: "롱/숏 위험", detail: "포지션 부담 완화 전 진입 대기" };
+    return { label: "시장 판단", value: "롱/숏 위험", detail: "포지션 부담 완화 전 관망" };
   }
   if (decision.leadership === "섞임") {
-    return { label: "시장 판단", value: "매수 대기", detail: directSignalText(decision.reason) };
+    return { label: "시장 판단", value: "확인 대기", detail: directSignalText(decision.reason) };
   }
   return {
     label: "시장 판단",
-    value: decision.leadership === "알트도 강함" ? "매수 후보 확대" : directSignalText(decision.leadership),
+    value: decision.leadership === "알트도 강함" ? "후보 신호 확대" : directSignalText(decision.leadership),
     detail: directSignalText(decision.reason)
   };
 }
 
 function focusSectionTitle(decision: CoinHomeDecisionSummary | undefined) {
-  if (!decision) return "매수 판단 기준";
-  if (decision.state === "하락 위험 큼") return "매수 보류 기준";
+  if (!decision) return "확인 기준";
+  if (decision.state === "하락 위험 큼") return "보류 기준";
   if (decision.state === "크게 흔들림") return "롱/숏 위험 기준";
-  if (decision.state === "관망하기" || decision.state === "확인 필요") return "매수 대기 기준";
-  return "매수 후보 기준";
+  if (decision.state === "관망하기" || decision.state === "확인 필요") return "확인 대기 기준";
+  return "후보 신호 기준";
 }
 
 function recheckConditionText(decision: CoinHomeDecisionSummary | undefined) {
   if (!decision) return "시장 데이터 확인 필요";
-  if (decision.state === "하락 위험 큼") return "하방 우세 완화 전 매수 보류";
-  if (decision.state === "크게 흔들림") return "롱/숏 위험 완화 전 진입 대기";
-  if (decision.state === "관망하기") return "매수 후보는 알림으로 추적";
-  if (decision.state === "추적 우세") return "매수 후보 거래대금 유지";
+  if (decision.state === "하락 위험 큼") return "하방 우세 완화 전 보류";
+  if (decision.state === "크게 흔들림") return "롱/숏 위험 완화 전 관망";
+  if (decision.state === "관망하기") return "후보 신호는 알림으로 추적";
+  if (decision.state === "추적 우세") return "후보 거래대금 유지";
   return directSignalText(decision.nextCondition);
 }
 
 function confirmationMetricText(decision: CoinHomeDecisionSummary | undefined) {
   if (!decision) return "시장 데이터 확인 필요";
   if (decision.state === "하락 위험 큼") return "손절/무효화 기준 먼저 확인";
-  if (decision.state === "크게 흔들림") return "롱/숏 쏠림과 진입 위험";
-  if (decision.state === "추적 우세") return "매수 후보 거래대금 유지";
+  if (decision.state === "크게 흔들림") return "롱/숏 쏠림과 변동성 위험";
+  if (decision.state === "추적 우세") return "후보 거래대금 유지";
   return "BTC 흐름 · 큰 뉴스 반응";
 }
 
 function decisionDisplayLabel(decision: CoinHomeDecisionSummary | undefined) {
   if (!decision) return "판단 대기";
-  if (decision.state === "하락 위험 큼") return "매수 보류";
-  if (decision.state === "크게 흔들림") return "추격 매수 금지";
-  if (decision.state === "추적 우세") return "매수 후보";
-  if (decision.state === "확인 필요") return "매수 대기";
+  if (decision.state === "하락 위험 큼") return "위험 확인";
+  if (decision.state === "크게 흔들림") return "추격 리스크";
+  if (decision.state === "추적 우세") return "후보 신호";
+  if (decision.state === "확인 필요") return "확인 대기";
   return "관망";
 }
 
 function radarInterpretation(decision: CoinHomeDecisionSummary | undefined) {
   if (!decision) return "시장 데이터 확인 중";
-  if (decision.state === "하락 위험 큼") return "지금은 매수보다 위험 회피";
-  if (decision.state === "크게 흔들림") return "롱/숏 위험 높음 · 진입 대기";
-  if (decision.state === "추적 우세") return "매수 후보와 손절/무효화 기준 확인";
+  if (decision.state === "하락 위험 큼") return "지금은 위험 회피 우선";
+  if (decision.state === "크게 흔들림") return "롱/숏 위험 높음 · 관망";
+  if (decision.state === "추적 우세") return "후보 신호와 손절/무효화 기준 확인";
   if (decision.state === "확인 필요") return "확인가 도달 전 대기";
-  return "매수 후보는 알림으로 추적";
+  return "후보 신호는 알림으로 추적";
 }
 
 function decisionTone(decision: CoinHomeDecisionSummary | undefined): "long" | "short" | "watch" | "risk" | "info" {
@@ -371,39 +371,39 @@ function decisionTone(decision: CoinHomeDecisionSummary | undefined): "long" | "
 
 function primaryActionFor(decision: CoinHomeDecisionSummary | undefined) {
   if (!decision) {
-    return { label: "매수가/무효화 알림 저장", detail: "판단 전 알림으로 대기", href: "/crypto/alert" };
+    return { label: "알림 조건 저장", detail: "판단 전 알림으로 대기", href: "/crypto/alert" };
   }
   if (decision.state === "하락 위험 큼" || decision.state === "크게 흔들림" || decision.leadership === "리스크 우선") {
-    return { label: "롱/숏 위험 먼저 보기", detail: "진입 대기 기준 확인", href: "/crypto/perpetual" };
+    return { label: "포지션 위험 먼저 보기", detail: "관망 기준 확인", href: "/crypto/perpetual" };
   }
   if (decision.state === "추적 우세") {
-    return { label: "매수 후보 보기", detail: "오늘 매수 후보 확인", href: "/crypto/spot" };
+    return { label: "후보 신호 보기", detail: "오늘 조건 확인", href: "/crypto/spot" };
   }
   if (decision.state === "확인 필요" && decision.topRisk === "큰 경고 없음") {
     return { label: "뉴스 영향 보기", detail: "뉴스 충돌 확인", href: "/crypto/news" };
   }
-  return { label: "매수가/무효화 알림 저장", detail: "후보는 알림으로 대기", href: "/crypto/alert" };
+  return { label: "알림 조건 저장", detail: "조건은 알림으로 대기", href: "/crypto/alert" };
 }
 
 function todayTasksFor(decision: CoinHomeDecisionSummary | undefined) {
-  if (!decision) return ["시장 판단 대기", "매수 후보는 알림으로 추적", "뉴스 충돌 확인"];
+  if (!decision) return ["시장 판단 대기", "후보 신호는 알림으로 추적", "뉴스 충돌 확인"];
   if (decision.state === "하락 위험 큼" || decision.state === "크게 흔들림" || decision.leadership === "리스크 우선") {
-    return ["롱/숏 위험 먼저 판단", "현물은 확인가까지 매수 대기", "매수가/무효화 알림 저장"];
+    return ["포지션 위험 먼저 판단", "현물은 확인가까지 대기", "무효화 알림 저장"];
   }
   if (decision.state === "추적 우세") {
-    return ["매수 후보 먼저 확인", "손절/무효화 기준 확인", "뉴스 충돌 확인"];
+    return ["후보 신호 먼저 확인", "손절/무효화 기준 확인", "뉴스 충돌 확인"];
   }
   if (decision.state === "확인 필요") {
-    return ["BTC·알트 방향 정렬 대기", "매수 후보는 확인가까지 대기", "뉴스 충돌 확인"];
+    return ["BTC·알트 방향 정렬 대기", "후보 신호는 확인가까지 대기", "뉴스 충돌 확인"];
   }
-  return ["BTC 방향 정렬 대기", "매수 후보는 알림으로 추적", "뉴스 영향만 확인"];
+  return ["BTC 방향 정렬 대기", "후보 신호는 알림으로 추적", "뉴스 영향만 확인"];
 }
 
 const quickActions = [
-  { label: "매수 후보", detail: "오늘 매수 후보 보기", href: "/crypto/spot" },
-  { label: "롱/숏 위험", detail: "진입 대기 기준 보기", href: "/crypto/perpetual" },
+  { label: "후보 신호", detail: "오늘 조건 보기", href: "/crypto/spot" },
+  { label: "포지션 위험", detail: "관망 기준 보기", href: "/crypto/perpetual" },
   { label: "뉴스 영향", detail: "뉴스 충돌 확인", href: "/crypto/news" },
-  { label: "알림 걸기", detail: "매수가/무효화 저장", href: "/crypto/alert" }
+  { label: "알림 걸기", detail: "무효화 기준 저장", href: "/crypto/alert" }
 ];
 
 function largeTradeDetail(
@@ -415,9 +415,9 @@ function largeTradeDetail(
   if (!report) return undefined;
   if (report.largeTradeCount <= 0 || report.totalLargeNotionalUsd <= 0) return "최근 큰 유입/이탈 신호는 제한적입니다.";
   const weakBtc = technical?.trendLabel.includes("하락") || technical4h?.trendLabel.includes("하락") || decision?.state === "하락 위험 큼";
-  if (report.dominantSide === "buy" && weakBtc) return "큰 매수 체결은 있으나 BTC 약세 완화 전 매수 대기입니다.";
-  if (report.dominantSide === "buy") return "큰 매수 체결 유지 여부를 봅니다.";
-  if (report.dominantSide === "sell") return "큰 매도 체결 확대 시 매수 보류입니다.";
+  if (report.dominantSide === "buy" && weakBtc) return "큰 유입은 있으나 BTC 약세 완화 전 보류입니다.";
+  if (report.dominantSide === "buy") return "큰 유입 유지 여부를 봅니다.";
+  if (report.dominantSide === "sell") return "큰 이탈 확대 시 보류입니다.";
   return report.summary;
 }
 
