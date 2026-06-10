@@ -47,7 +47,7 @@
 | 3 | DONE | Signing blocker decision | Are missing Team ID/provisioning items blocking local build? | `RUN_ALLOWED` or `BLOCKED` decision basis. |
 | 4 | DONE | Safe local build command candidate selection | What command would be safest if a build becomes allowed? | Command candidate and stop conditions. |
 | 5 | DONE | Local build execution decision | Should this run execute a build or close blocked? | Build decision record; no archive/upload. |
-| 6 | TODO | Readiness result documentation | What are the final blockers and next run? | Final readiness conclusion and one follow-up candidate. |
+| 6 | DONE | Readiness result documentation | What are the final blockers and next run? | Final readiness conclusion and one follow-up candidate. |
 
 ## Known Blockers At Setup
 
@@ -435,6 +435,94 @@ TODO 6 should document the final readiness result as `BLOCKED` for current-machi
 - a macOS/Xcode environment handoff for local build readiness, or
 - signing/team setup readiness if a macOS environment is available but Team ID/signing remains unresolved.
 
+## TODO 6 Result - Readiness Result Documentation
+
+Status: `DONE`
+
+Execution date: 2026-06-10
+
+Run status: `DONE`
+
+Local iOS build execution: `DO_NOT_RUN`
+
+Readiness result: `BLOCKED`
+
+Method: final documentation only. No Xcode, `xcodebuild`, `npx cap sync ios`, `npx cap open ios`, pod install, local build, archive, upload, signing change, native file edit, or console change was executed.
+
+### Run Summary
+
+| Item | Final result |
+| --- | --- |
+| Active run | `ios-first-local-build-readiness-run` |
+| Overall run status | `DONE` |
+| Local build execution | `DO_NOT_RUN` |
+| Readiness status | `BLOCKED` |
+| Primary blocker | Current machine is Windows, not macOS/Xcode. |
+| Build/archive/upload | Not executed. |
+| Code/native/config/console changes | None. |
+| Next active-run creation | Not created automatically. |
+
+### Readiness Result Table
+
+| Area | Final state | Result | Notes |
+| --- | --- | --- | --- |
+| Environment | Windows 11 Pro, not macOS. | BLOCKED | iOS local build requires macOS/Xcode. |
+| Xcode/CLT | `xcodebuild` and `xcode-select` unavailable. | BLOCKED | Xcode toolchain cannot be checked or run here. |
+| Project/scheme | `ios/App/App.xcodeproj` exists; target candidate `App`; scheme candidate `App`. | PARTIAL | Actual scheme list remains blocked without Xcode. |
+| Build configuration | Debug/Release exist; Bundle ID `com.staronlabs.chartradar`; deployment target `15.0`. | PASS by inspection | Structural project settings are present. |
+| Signing | `DEVELOPMENT_TEAM` absent; signing/provisioning unconfirmed. | BLOCKED | Device/archive paths require signing readiness. |
+| SPM | `CapApp-SPM/Package.swift` exists. | BLOCKED | SPM resolution cannot be confirmed on Windows. |
+| Generated outputs | Ignored iOS generated outputs exist on disk. | NEEDS_MANUAL_CONFIRMATION | Freshness/sync policy must be decided in a later allowed run. |
+| Build command | Safe command candidates documented for future macOS environment. | NOT_RUN | No build command was executed. |
+| Archive/upload | Archive, upload, TestFlight, Transporter, fastlane paths remain forbidden. | FORBIDDEN | Separate high-risk run required. |
+
+### Final Blockers
+
+- Current machine is Windows, not macOS.
+- Xcode and Xcode Command Line Tools are unavailable.
+- Scheme list cannot be confirmed.
+- SPM resolution cannot be confirmed.
+- Apple ID/Xcode account is `NOT_CHECKED`.
+- Apple Developer membership and Team ID are unverified.
+- `DEVELOPMENT_TEAM` is absent from the generated Xcode project.
+- Signing certificate and provisioning profile state is unconfirmed.
+- Explicit App ID `com.staronlabs.chartradar` and App Store Connect linkage are unverified.
+- `.entitlements` and capability setup are absent.
+- Sign in with Apple, IAP/RevenueCat, and APNs/Firebase iOS readiness remain separate high-risk blockers.
+
+### macOS/Xcode Retry Conditions
+
+Retry local iOS build readiness only after a macOS machine is available. Required preconditions:
+
+1. macOS environment confirmed with `sw_vers`.
+2. Xcode installed and confirmed with `xcodebuild -version`.
+3. Xcode Command Line Tools selected and confirmed with `xcode-select -p`.
+4. Apple ID signed into Xcode if signing/build path requires it.
+5. Apple Developer membership and Team ID confirmed.
+6. Explicit App ID `com.staronlabs.chartradar` confirmed or created in a separate approved Apple Developer run.
+7. Scheme list confirmed with `xcodebuild -list -project ios/App/App.xcodeproj`.
+8. SPM resolution confirmed.
+9. Debug simulator build decision made separately.
+
+Do not move directly to device build, archive, upload, TestFlight submission, signing mutation, capability mutation, Apple Developer/App Store Connect changes, or RevenueCat/Supabase/auth/billing changes from this run.
+
+### Next Run Candidates
+
+| Candidate | When to choose | Purpose | Risk |
+| --- | --- | --- | --- |
+| `ios-macos-xcode-environment-setup-run` | No macOS/Xcode build machine is ready. | Prepare/check macOS, Xcode, CLT, simulator, and Xcode account environment before build attempts. | MEDIUM |
+| `ios-xcode-team-signing-setup-run` | macOS/Xcode exists but Team ID/signing is unresolved. | Prepare Team ID/signing/certificate/provisioning path without archive/upload. | HIGH |
+| `ios-auth-apple-signin-risk-run` | App Review auth risk should be addressed next. | Resolve Sign in with Apple policy/design risk before App Store review. | HIGH |
+| `ios-revenuecat-product-mapping-run` | iOS paid subscription readiness is next. | Prepare App Store IAP and RevenueCat iOS product mapping. | HIGH |
+| `ios-push-apns-firebase-readiness-run` | iOS alert delivery readiness is next. | Prepare APNs/Firebase iOS push capability and config path. | HIGH |
+| `ios-first-local-build-run` | macOS/Xcode, scheme/SPM, and build prerequisites are ready. | Execute the first allowed local Debug simulator build. | HIGH |
+
+Recommended next candidate depends on equipment:
+
+- If no macOS/Xcode machine is available: `ios-macos-xcode-environment-setup-run`.
+- If macOS/Xcode is available but signing is not ready: `ios-xcode-team-signing-setup-run`.
+- Do not open `ios-first-local-build-run` until macOS/Xcode, scheme confirmation, and SPM readiness are available.
+
 ## Build Command Candidate Policy
 
 The likely build command family is:
@@ -476,4 +564,4 @@ Use this format as each TODO completes.
 
 ## Final Conclusion
 
-TODO 5 is complete. Local iOS build execution is `DO_NOT_RUN / BLOCKED` on the current Windows machine. The next task is `6. Readiness result documentation`. No local build, Xcode, signing, Apple console, native project edit, auth, billing, RevenueCat, Supabase, Android, or production configuration change has been authorized.
+The `ios-first-local-build-readiness-run` is complete and `DONE`. Final result: local iOS build execution is `DO_NOT_RUN / BLOCKED` on the current Windows machine. No local build, Xcode, signing, Apple console, native project edit, auth, billing, RevenueCat, Supabase, Android, or production configuration change was authorized or executed.
