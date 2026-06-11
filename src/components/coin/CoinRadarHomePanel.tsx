@@ -48,6 +48,7 @@ type CoinHomeState =
   | { status: "error"; message: string };
 
 const tileSymbols = ["BTC", "ETH", "XRP", "SOL", "DOGE", "BNB"] as const;
+const HOME_FETCH_TIMEOUT_MS = 9000;
 
 type RepresentativeSymbol = (typeof tileSymbols)[number];
 type VisualTone = "long" | "short" | "watch" | "risk" | "info";
@@ -258,7 +259,7 @@ function conclusionText(decision: CoinHomeDecisionSummary | undefined) {
     return "추격 리스크가 큰 구간입니다. 롱/숏 위험이 낮아진 뒤 다시 봅니다.";
   }
   if (decision.state === "추적 우세") {
-    return "후보 신호가 보입니다. 확인가와 손절/무효화 기준을 같이 봅니다.";
+    return "후보 신호가 보입니다. 확인 조건과 무효화 기준을 같이 봅니다.";
   }
   if (decision.state === "확인 필요") {
     return "확인 대기 구간입니다. BTC와 알트 방향 정렬을 기다립니다.";
@@ -297,7 +298,7 @@ function readinessDisplay(decision: CoinHomeDecisionSummary | undefined) {
   if (decision.state === "확인 필요") {
     return { label: "오늘 확인 기준", value: `추적 준비도 ${score}`, detail: "확인가 도달 전 대기" };
   }
-  return { label: "오늘 확인 기준", value: `추적 준비도 ${score}`, detail: "후보 신호와 손절/무효화 기준 확인" };
+  return { label: "오늘 확인 기준", value: `추적 준비도 ${score}`, detail: "후보 신호와 무효화 기준 확인" };
 }
 
 function marketModeDisplay(decision: CoinHomeDecisionSummary | undefined) {
@@ -337,7 +338,7 @@ function recheckConditionText(decision: CoinHomeDecisionSummary | undefined) {
 
 function confirmationMetricText(decision: CoinHomeDecisionSummary | undefined) {
   if (!decision) return "시장 데이터 확인 필요";
-  if (decision.state === "하락 위험 큼") return "손절/무효화 기준 먼저 확인";
+  if (decision.state === "하락 위험 큼") return "무효화 기준 먼저 확인";
   if (decision.state === "크게 흔들림") return "롱/숏 쏠림과 변동성 위험";
   if (decision.state === "추적 우세") return "후보 거래대금 유지";
   return "BTC 흐름 · 큰 뉴스 반응";
@@ -356,7 +357,7 @@ function radarInterpretation(decision: CoinHomeDecisionSummary | undefined) {
   if (!decision) return "시장 데이터 확인 중";
   if (decision.state === "하락 위험 큼") return "지금은 위험 회피 우선";
   if (decision.state === "크게 흔들림") return "롱/숏 위험 높음 · 관망";
-  if (decision.state === "추적 우세") return "후보 신호와 손절/무효화 기준 확인";
+  if (decision.state === "추적 우세") return "후보 신호와 무효화 기준 확인";
   if (decision.state === "확인 필요") return "확인가 도달 전 대기";
   return "후보 신호는 알림으로 추적";
 }
@@ -391,7 +392,7 @@ function todayTasksFor(decision: CoinHomeDecisionSummary | undefined) {
     return ["포지션 위험 먼저 판단", "현물은 확인가까지 대기", "무효화 알림 저장"];
   }
   if (decision.state === "추적 우세") {
-    return ["후보 신호 먼저 확인", "손절/무효화 기준 확인", "뉴스 충돌 확인"];
+    return ["후보 신호 먼저 확인", "무효화 기준 확인", "뉴스 충돌 확인"];
   }
   if (decision.state === "확인 필요") {
     return ["BTC·알트 방향 정렬 대기", "후보 신호는 확인가까지 대기", "뉴스 충돌 확인"];
@@ -628,10 +629,30 @@ function findReading(report: TechnicalRadarReport | null, label: string): Indica
   return [...report.momentumIndicators, ...report.trendIndicators, ...report.volatilityIndicators].find((item) => item.label === label) ?? null;
 }
 
-async function jsonOrNull<T>(input: RequestInfo | URL) {
-  const response = await fetch(input, { cache: "no-store" });
-  if (!response.ok) return null;
-  return (await response.json()) as T;
+async function jsonOrNull<T>(input: RequestInfo | URL, timeoutMs = HOME_FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(input, { cache: "no-store", signal: controller.signal });
+    if (!response.ok) return null;
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
+function withTimeoutFallback<T>(promise: Promise<T>, fallback: T, timeoutMs = HOME_FETCH_TIMEOUT_MS + 1500) {
+  let timeoutId: number | null = null;
+  const timeout = new Promise<T>((resolve) => {
+    timeoutId = window.setTimeout(() => resolve(fallback), timeoutMs);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timeoutId !== null) window.clearTimeout(timeoutId);
+  });
 }
 
 export function CoinRadarHomePanel() {
@@ -642,6 +663,22 @@ export function CoinRadarHomePanel() {
     setState({ status: "loading" });
 
     try {
+      type HomePayloads = [
+        { items?: MarketBoardItem[]; cachedAt?: number; cached?: boolean; stale?: boolean } | null,
+        { candles?: Candle[] } | null,
+        { candles?: Candle[] } | null,
+        CoinMarketMetricsPayload | null,
+        { report?: StablecoinLiquidityReport } | null,
+        { report?: LargeTradeFlowReport } | null,
+        { report?: OptionsMarketReport } | null,
+        { report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean } | null,
+        { report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean } | null,
+        { report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean } | null,
+        { report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean } | null,
+        { report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean } | null,
+        { report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean } | null
+      ];
+      const emptyPayloads: HomePayloads = [null, null, null, null, null, null, null, null, null, null, null, null, null];
       const [
         boardPayload,
         candlesPayload,
@@ -656,7 +693,7 @@ export function CoinRadarHomePanel() {
         solFundingPayload,
         dogeFundingPayload,
         bnbFundingPayload
-      ] = await Promise.all([
+      ] = await withTimeoutFallback<HomePayloads>(Promise.all([
         jsonOrNull<{ items?: MarketBoardItem[]; cachedAt?: number; cached?: boolean; stale?: boolean }>("/api/market-board"),
         jsonOrNull<{ candles?: Candle[] }>("/api/crypto-candles?symbol=BTCUSDT&timeframe=1h&limit=180"),
         jsonOrNull<{ candles?: Candle[] }>("/api/crypto-candles?symbol=BTCUSDT&timeframe=4h&limit=180"),
@@ -670,7 +707,7 @@ export function CoinRadarHomePanel() {
         jsonOrNull<{ report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean }>("/api/liquidation-pressure?symbol=SOLUSDT&period=1h"),
         jsonOrNull<{ report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean }>("/api/liquidation-pressure?symbol=DOGEUSDT&period=1h"),
         jsonOrNull<{ report?: LiquidationPressureReport; cachedAt?: number; cached?: boolean; stale?: boolean }>("/api/liquidation-pressure?symbol=BNBUSDT&period=1h")
-      ]);
+      ]), emptyPayloads);
 
       const board = boardPayload?.items ?? [];
       const candles = candlesPayload?.candles ?? [];
@@ -752,9 +789,26 @@ export function CoinRadarHomePanel() {
 
   if (state.status === "loading") {
     return (
-      <PanelCard variant="report" padding="lg" className="flex min-h-56 items-center justify-center text-sm font-semibold text-ui-muted">
-        코인 시장을 분석하고 있습니다.
-      </PanelCard>
+      <div className="flex max-w-full flex-col gap-3 overflow-x-hidden" aria-busy="true">
+        <section className="rounded-ui-lg bg-ui-panel px-4 pb-5 pt-4">
+          <div className="h-3 w-20 rounded-full bg-ui-brand/25" />
+          <div className="mt-4 h-8 w-44 rounded-ui-sm bg-ui-elevated" />
+          <div className="mt-4 h-5 w-56 max-w-full rounded-ui-sm bg-ui-elevated" />
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            <div className="h-16 rounded-ui-sm bg-ui-elevated" />
+            <div className="h-16 rounded-ui-sm bg-ui-elevated" />
+          </div>
+          <div className="mt-4 h-12 rounded-ui-sm bg-ui-brand/25" />
+        </section>
+        <section className="rounded-ui-lg bg-ui-panel px-4 py-4">
+          <p className="text-sm font-semibold text-ui-muted">코인 시장을 분석하고 있습니다.</p>
+          <div className="mt-4 space-y-3">
+            <div className="h-5 rounded-ui-sm bg-ui-elevated" />
+            <div className="h-5 rounded-ui-sm bg-ui-elevated" />
+            <div className="h-5 rounded-ui-sm bg-ui-elevated" />
+          </div>
+        </section>
+      </div>
     );
   }
 
@@ -781,56 +835,69 @@ export function CoinRadarHomePanel() {
   const todayTasks = todayTasksFor(decision);
 
   return (
-    <div className="flex flex-col gap-3 sm:gap-4">
-      <PanelCard variant="flat" padding="none" className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/55 p-4">
+    <div className="flex max-w-full flex-col gap-3 overflow-x-hidden">
+      <section className="rounded-ui-lg bg-ui-panel px-4 pb-5 pt-4">
         <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-3">
           <div className="min-w-0">
             <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-brand">COIN RADAR</p>
-            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-ui-text">오늘의 레이더</h2>
+            <h2 className="mt-1 text-[1.7rem] font-semibold leading-9 tracking-tight text-ui-text">오늘의 레이더</h2>
           </div>
-          <ActionButton tone="ghost" className="min-h-7 shrink-0 px-2 text-[11px]" onClick={() => void load()}>
+          <ActionButton tone="ghost" className="min-h-9 shrink-0 px-3 text-xs" onClick={() => void load()}>
             <RefreshCw size={12} aria-hidden />
             새로고침
           </ActionButton>
           <div className="col-span-2 min-w-0">
-            <StatusPill tone={decisionTone(decision)} className="min-h-0 px-0">
+            <StatusPill tone={decisionTone(decision)}>
               {decisionDisplayLabel(decision)}
             </StatusPill>
-            <p className="mt-2 text-lg font-semibold leading-7 text-ui-text [word-break:keep-all]">{radarInterpretation(decision)}</p>
-            <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{primaryAction.detail}</p>
+            <p className="mt-3 text-xl font-semibold leading-8 text-ui-text [word-break:keep-all]">{radarInterpretation(decision)}</p>
+            <p className="mt-2 text-sm leading-6 text-ui-muted [word-break:keep-all]">{primaryAction.detail}</p>
+          </div>
+          <div className="col-span-2 grid min-w-0 grid-cols-2 gap-2">
+            <div className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3">
+              <p className="truncate text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{readiness.label}</p>
+              <p className="mt-1 truncate text-base font-semibold text-ui-text">{readiness.value}</p>
+            </div>
+            <div className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3">
+              <p className="truncate text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{marketMode.label}</p>
+              <p className="mt-1 truncate text-base font-semibold text-ui-text">{marketMode.value}</p>
+            </div>
           </div>
           <div className="col-span-2">
-            <ActionButton tone="primary" href={primaryAction.href} className="min-h-11 w-full justify-between px-4 text-sm">
+            <ActionButton tone="primary" href={primaryAction.href} className="min-h-12 w-full justify-between px-4 text-[15px]">
               <span>{primaryAction.label}</span>
               <ArrowUpRight size={15} aria-hidden />
             </ActionButton>
           </div>
         </div>
-      </PanelCard>
+      </section>
 
-      <PanelCard variant="flat" padding="none" className="rounded-ui-lg border border-ui-line/20 bg-ui-panel/45 p-3">
+      <section className="rounded-ui-lg bg-ui-panel px-4 py-4">
         <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">오늘 판단 순서</p>
-        <ol className="mt-3 space-y-2">
+        <ol className="mt-4 divide-y divide-ui-line">
           {todayTasks.slice(0, 3).map((task, index) => (
-            <li key={task} className="flex min-w-0 items-center gap-2 rounded-ui-sm bg-ui-inset/25 px-3 py-2">
-              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-ui-brand/15 text-[11px] font-semibold text-ui-brand">
+            <li key={task} className="flex min-w-0 items-center gap-3 py-3.5">
+              <span className="shrink-0 text-sm font-semibold text-ui-brand">
                 {index + 1}
               </span>
-              <span className="min-w-0 text-sm font-medium leading-5 text-ui-text [word-break:keep-all]">{task}</span>
+              <span className="min-w-0 text-[15px] font-medium leading-6 text-ui-text [word-break:keep-all]">{task}</span>
             </li>
           ))}
         </ol>
-      </PanelCard>
+      </section>
 
-      <section className="grid grid-cols-2 gap-2" aria-label="빠른 실행">
+      <section className="rounded-ui-lg bg-ui-panel px-4 py-2" aria-label="빠른 실행">
         {quickActions.map((action) => (
           <Link
             key={action.href}
             href={action.href}
-            className="min-w-0 rounded-ui-lg border border-ui-line/20 bg-ui-panel/45 px-3 py-3 text-left transition hover:border-ui-brand/40 hover:bg-ui-panel/60 active:scale-[0.99]"
+            className="block min-w-0 border-t border-ui-line py-3.5 text-left transition first:border-t-0 hover:text-ui-brand active:scale-[0.99]"
           >
-            <span className="block text-sm font-semibold leading-5 text-ui-text">{action.label}</span>
-            <span className="mt-0.5 block truncate text-xs font-medium text-ui-muted">{action.detail}</span>
+            <span className="flex min-w-0 items-center justify-between gap-3 text-[15px] font-semibold leading-6 text-ui-text">
+              <span className="min-w-0 [word-break:keep-all]">{action.label}</span>
+              <ArrowUpRight size={14} aria-hidden className="shrink-0 text-ui-subtle" />
+            </span>
+            <span className="mt-1 block text-sm font-medium leading-5 text-ui-muted [word-break:keep-all]">{action.detail}</span>
           </Link>
         ))}
       </section>
@@ -878,7 +945,7 @@ export function CoinRadarHomePanel() {
                 </div>
                 <div className="mt-4 space-y-3 text-sm leading-6 text-ui-muted">
                   <div>
-                    <p className="font-semibold text-ui-text">매수 보류 기준</p>
+                    <p className="font-semibold text-ui-text">관찰 보류 기준</p>
                     <p className="mt-1">
                       {riskFor(item?.changePercent ?? 0)}
                     </p>
@@ -896,34 +963,34 @@ export function CoinRadarHomePanel() {
         </div>
       ) : null}
 
-      <PanelCard variant="flat" padding="none">
+      <section className="py-4">
         <details className="group">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-ui-text">왜 이 결론인지 보기</p>
+              <p className="text-base font-semibold text-ui-text">왜 이 결론인지 보기</p>
             </div>
-            <span className="shrink-0 text-xs font-semibold text-ui-muted group-open:hidden">펼치기</span>
-            <span className="hidden shrink-0 text-xs font-semibold text-ui-muted group-open:inline">판단 근거 접기</span>
+            <span className="shrink-0 text-sm font-semibold text-ui-muted group-open:hidden">펼치기</span>
+            <span className="hidden shrink-0 text-sm font-semibold text-ui-muted group-open:inline">판단 근거 접기</span>
           </summary>
 
           <div className="mt-4 space-y-5 border-t border-ui-line pt-4">
             <section className="space-y-3">
               <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">판단 압축 근거</p>
-              <div className="grid gap-2 sm:grid-cols-3">
-                <article className="min-w-0 rounded-ui-sm bg-ui-inset/25 p-3">
+              <div className="divide-y divide-ui-line sm:grid sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                <article className="min-w-0 py-3 sm:px-3">
                   <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{readiness.label}</p>
                   <p className="mt-1 text-base font-semibold text-ui-text">{readiness.value}</p>
-                  <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{readiness.detail}</p>
+                  <p className="mt-1 text-sm leading-6 text-ui-muted [word-break:keep-all]">{readiness.detail}</p>
                 </article>
-                <article className="min-w-0 rounded-ui-sm bg-ui-inset/25 p-3">
+                <article className="min-w-0 py-3 sm:px-3">
                   <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{marketMode.label}</p>
                   <p className="mt-1 text-base font-semibold text-ui-text">{marketMode.value}</p>
-                  <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{marketMode.detail}</p>
+                  <p className="mt-1 text-sm leading-6 text-ui-muted [word-break:keep-all]">{marketMode.detail}</p>
                 </article>
-                <article className="min-w-0 rounded-ui-sm bg-ui-inset/25 p-3">
+                <article className="min-w-0 py-3 sm:px-3">
                   <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">다시 볼 기준</p>
                   <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{recheckCondition}</p>
-                  <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{conclusionText(summary?.decision)}</p>
+                  <p className="mt-1 text-sm leading-6 text-ui-muted [word-break:keep-all]">{conclusionText(summary?.decision)}</p>
                 </article>
               </div>
             </section>
@@ -932,33 +999,33 @@ export function CoinRadarHomePanel() {
               <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{focusTitle}</p>
               <div className="mt-3 grid gap-3 md:grid-cols-3">
                 <article className="min-w-0">
-                  <p className="text-xs font-semibold text-ui-muted">BTC 흐름</p>
+                  <p className="text-sm font-semibold text-ui-muted">BTC 흐름</p>
                   <p className="mt-1 text-base font-semibold text-ui-text">{summary?.report?.trendLabel ?? "미확인"}</p>
-                  <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">4H {summary?.report4h?.trendLabel ?? "미확인"}까지 같이 봅니다.</p>
+                  <p className="mt-1 text-sm leading-6 text-ui-muted [word-break:keep-all]">4H {summary?.report4h?.trendLabel ?? "미확인"}까지 같이 봅니다.</p>
                 </article>
                 <article className="min-w-0">
-                  <p className="text-xs font-semibold text-ui-muted">다음 지표</p>
+                  <p className="text-sm font-semibold text-ui-muted">다음 지표</p>
                   <p className="mt-1 text-base font-semibold leading-6 text-ui-text [word-break:keep-all]">{confirmationMetric}</p>
                 </article>
                 <article className="min-w-0">
-                  <p className="text-xs font-semibold text-ui-muted">주의 포인트</p>
+                  <p className="text-sm font-semibold text-ui-muted">주의 포인트</p>
                   <p className="mt-1 text-base font-semibold text-ui-text">{directSignalText(summary?.decision.topRisk)}</p>
-                  <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">부담이 낮아질 때까지 매수 보류입니다.</p>
+                  <p className="mt-1 text-sm leading-6 text-ui-muted [word-break:keep-all]">부담이 낮아질 때까지 관찰만 유지합니다.</p>
                 </article>
               </div>
             </section>
 
             <section className="border-t border-ui-line pt-4">
-              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">손절/무효화와 롱·숏 위험</p>
+              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">무효화 기준과 롱·숏 위험</p>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <article className="min-w-0">
-                  <p className="text-xs font-semibold text-ui-muted">손절/무효화 기준</p>
+                  <p className="text-sm font-semibold text-ui-muted">무효화 기준</p>
                   <p className="mt-1 text-base font-semibold leading-6 text-ui-text [word-break:keep-all]">{invalidationText(summary?.decision)}</p>
                 </article>
                 <article className="min-w-0">
-                  <p className="text-xs font-semibold text-ui-muted">롱/숏 위험</p>
+                  <p className="text-sm font-semibold text-ui-muted">롱/숏 위험</p>
                   <p className="mt-1 text-base font-semibold text-ui-text">{optionsDisplay(summary?.optionsMarket)}</p>
-                  <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{volatilityWatchText(summary?.optionsMarket)}</p>
+                  <p className="mt-1 text-sm leading-6 text-ui-muted [word-break:keep-all]">{volatilityWatchText(summary?.optionsMarket)}</p>
                 </article>
               </div>
             </section>
@@ -1064,7 +1131,7 @@ export function CoinRadarHomePanel() {
             </section>
           </div>
         </details>
-      </PanelCard>
+      </section>
 
     </div>
   );

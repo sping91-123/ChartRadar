@@ -427,11 +427,11 @@ function MacroNewsItem({ item, sectionLabel, subdued = false, released = false }
   return (
     <article className={`py-2 first:pt-0 ${subdued ? "opacity-95" : ""}`}>
       <div className="flex flex-wrap items-center gap-1.5">
-        {showSectionLabel ? <StatusPill tone="info" className="min-h-5 px-0 text-[10px]">{sectionLabel}</StatusPill> : null}
-        <StatusPill tone={hasReleaseTimePassed(item) ? "watch" : "info"} className="min-h-5 px-0 text-[10px]">{compactStatusLabel(item)}</StatusPill>
-        <StatusPill tone={isHighImpactMacro(item) ? "risk" : "info"} className="min-h-5 px-0 text-[10px]">{impactLabel(item)}</StatusPill>
+        {showSectionLabel ? <StatusPill tone="info" className="min-h-5 px-1.5 text-[10px]">{sectionLabel}</StatusPill> : null}
+        <StatusPill tone={hasReleaseTimePassed(item) ? "watch" : "info"} className="min-h-5 px-1.5 text-[10px]">{compactStatusLabel(item)}</StatusPill>
+        <StatusPill tone={isHighImpactMacro(item) ? "risk" : "info"} className="min-h-5 px-1.5 text-[10px]">{impactLabel(item)}</StatusPill>
         {impactRead && ImpactIcon ? (
-          <StatusPill tone={impactReadTone} icon={ImpactIcon} className="min-h-5 px-0 text-[10px]">
+          <StatusPill tone={impactReadTone} icon={ImpactIcon} className="min-h-5 px-1.5 text-[10px]">
             {impactRead}
           </StatusPill>
         ) : null}
@@ -586,7 +586,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
 
     return (
       <div className="space-y-1.5">
-        <Link href={href} className="group flex min-h-10 items-start gap-2 border-y border-ui-line/70 bg-transparent px-1 py-2 transition hover:bg-white/[0.025]">
+        <Link href={href} className="group flex min-h-11 items-start gap-2 rounded-ui-lg bg-ui-panel px-3 py-2.5 transition hover:bg-ui-elevated">
           <div className={`flex w-[4.35rem] shrink-0 flex-col items-center justify-start gap-1 pt-0.5 text-center text-[11px] font-black ${isReleased ? "text-signal-warning" : "text-accent-blue"}`}>
             <span>{eventKind}</span>
             {impactRead && ImpactIcon ? (

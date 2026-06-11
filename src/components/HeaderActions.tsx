@@ -14,8 +14,6 @@ import {
   UserCircle,
   type LucideIcon
 } from "lucide-react";
-import { AuthStatus } from "@/components/AuthStatus";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { APP_VERSION_DISPLAY } from "@/lib/appVersion";
 import { clearPreferredMarket, readPreferredMarket, type PreferredMarket } from "@/lib/marketPreference";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
@@ -51,7 +49,7 @@ function SettingsLink({
 
 function SettingsSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-ui-lg border border-white/10 bg-white/[0.035] px-3 py-3">
+    <section className="rounded-ui-lg bg-ui-panel px-3 py-3">
       <p className="mb-2 text-sm font-black text-white">{title}</p>
       {children}
     </section>
@@ -114,17 +112,10 @@ function DisplaySettingsSection() {
       <div className="grid gap-4 py-1">
         <div className="grid gap-2">
           <span className="min-w-0">
-            <span className="block text-sm font-black text-white">테마</span>
-            <span className="mt-0.5 block text-xs leading-5 text-slate-400">기기 테마를 기본으로 쓰고, 필요하면 라이트/다크를 고정합니다.</span>
-          </span>
-          <ThemeToggle variant="switch" />
-        </div>
-        <div className="grid gap-2">
-          <span className="min-w-0">
             <span className="block text-sm font-black text-white">시작 화면</span>
             <span className="mt-0.5 block text-xs leading-5 text-slate-400">처음에는 시장을 선택하고, 이후에는 마지막으로 사용한 시장으로 바로 들어갑니다.</span>
           </span>
-          <div className="rounded-ui-sm bg-white/[0.04] px-3 py-2">
+          <div className="rounded-ui-sm bg-ui-elevated px-3 py-2">
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-bold text-slate-400">현재 기억된 시장</span>
               <span className="text-xs font-black text-white">{preferredMarket === "global" ? "Global Radar" : preferredMarket === "coin" ? "Coin Radar" : "선택 전"}</span>
@@ -132,7 +123,7 @@ function DisplaySettingsSection() {
             <button
               type="button"
               onClick={resetPreferredMarket}
-              className="mt-2 min-h-9 w-full border border-white/10 px-3 text-xs font-black text-slate-300 transition hover:border-cyan-300/40 hover:text-white"
+              className="mt-2 min-h-9 w-full rounded-ui-sm bg-ui-inset px-3 text-xs font-black text-slate-300 transition hover:text-white"
             >
               다음 시작 때 시장 다시 선택
             </button>
@@ -145,7 +136,7 @@ function DisplaySettingsSection() {
 
 function AppInfoSection() {
   return (
-    <section className="rounded-ui-lg border border-white/10 bg-white/[0.035] px-3 pb-2.5 pt-3">
+    <section className="rounded-ui-lg bg-ui-panel px-3 pb-2.5 pt-3">
       <p className="text-sm font-black text-white">Chart Radar</p>
       <p className="mt-1 text-xs font-semibold text-slate-500">{APP_VERSION_DISPLAY}</p>
     </section>
@@ -203,9 +194,6 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
 
   return (
     <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-      <div className="hidden min-[390px]:block">
-        <AuthStatus variant="compact" />
-      </div>
       <Link
         href={alertHref}
         className="relative grid min-h-9 min-w-9 place-items-center rounded-full bg-transparent text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
@@ -236,7 +224,7 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
           className="settings-fullscreen-panel settings-slide-panel fixed inset-0 z-[100] overflow-y-auto overflow-x-hidden px-3 pb-3 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-5 sm:pb-5 sm:pt-[calc(env(safe-area-inset-top)+1.25rem)]"
         >
           <div className="mx-auto flex min-h-full w-full max-w-md flex-col">
-            <header className="sticky top-0 z-10 -mx-3 flex items-center gap-3 border-b border-white/10 bg-inherit px-3 py-3 sm:-mx-5 sm:px-5">
+            <header className="sticky top-0 z-10 -mx-3 flex items-center gap-3 border-b border-ui-line bg-inherit px-3 py-3 sm:-mx-5 sm:px-5">
               <button
                 type="button"
                 onClick={closeSettings}

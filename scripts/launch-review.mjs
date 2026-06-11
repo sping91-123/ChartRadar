@@ -113,8 +113,11 @@ const checks = [
   {
     area: "Visual System",
     weight: 6,
-    pass: includes("src/app/globals.css", "theme") && includes("src/components/ThemeToggle.tsx", "theme"),
-    detail: "다크와 라이트 테마 기반이 있습니다."
+    pass:
+      includes("src/app/globals.css", "--cr-color-canvas") &&
+      includes("src/app/layout.tsx", "theme-dark") &&
+      !exists("src/components/ThemeToggle.tsx"),
+    detail: "다크 단일 테마 토큰과 시작 시점 테마 가드가 구성되어 있습니다."
   },
   {
     area: "Operations",

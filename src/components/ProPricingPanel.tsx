@@ -266,11 +266,11 @@ function ValueCard({
   tone?: ValueCardTone;
 }) {
   return (
-    <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-4">
+    <div className="border-t border-ui-line py-4">
       <StatusPill tone={tone}>{label}</StatusPill>
       <p className="mt-2 text-base font-semibold leading-6 text-ui-text [word-break:keep-all]">{value}</p>
       <p className="mt-2 text-ui-body leading-6 text-ui-muted [word-break:keep-all]">{detail}</p>
-    </PanelCard>
+    </div>
   );
 }
 
@@ -286,11 +286,11 @@ function ProUnlocksSection() {
         {proUnlockItems.map((item) => {
           const Icon = item.icon;
           return (
-            <PanelCard key={item.title} variant="flat" padding="none" className="border-t border-ui-line py-4">
+            <article key={item.title} className="border-t border-ui-line py-4">
               <Icon size={18} className="text-ui-brand" aria-hidden />
               <h3 className="mt-3 text-sm font-semibold text-ui-text">{item.title}</h3>
               <p className="mt-2 text-ui-body leading-6 text-ui-muted [word-break:keep-all]">{item.detail}</p>
-            </PanelCard>
+            </article>
           );
         })}
       </div>
@@ -326,7 +326,7 @@ function PlanCard({
       tone={plan.marketScope === "bundle" ? "elevated" : "panel"}
       variant="flat"
       padding="none"
-      className="flex h-full min-w-0 flex-col border-t border-ui-line py-5"
+      className="flex h-full min-w-0 flex-col rounded-ui border border-ui-line/60 bg-ui-panel/45 p-4"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -509,7 +509,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
 
   return (
     <section className="flex flex-col gap-4 sm:gap-5">
-      <AppSurface tone="panel" variant="flat" padding="none" className="border-b border-ui-line py-5">
+      <AppSurface tone="panel" variant="flat" padding="none" className="border-y border-ui-line py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <SectionHeader eyebrow={copy.eyebrow} title={copy.title} description={copy.body} />
           <StatusPill tone={session ? "info" : "locked"} className="self-start">{currentPlanLabel}</StatusPill>

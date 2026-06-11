@@ -70,15 +70,15 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
           <Link
             key={label}
             href={href}
-            className={`group flex min-h-[3.35rem] min-w-0 flex-col items-center justify-center gap-1 rounded-ui-sm border px-1.5 py-1 text-center text-[10px] font-black leading-none tracking-tight transition sm:min-h-[3.25rem] sm:px-2 sm:text-[11px] ${
+            className={`group flex min-h-[3.65rem] min-w-0 flex-col items-center justify-center gap-1.5 border-t-2 px-1.5 py-1 text-center text-xs font-semibold leading-none transition sm:min-h-[3.5rem] sm:px-2 ${
               isFixedGridNav ? "w-full" : "shrink-0 md:shrink"
             } ${
               active
-                ? "border-ui-brand/70 bg-ui-brand/15 text-ui-text"
-                : "border-transparent bg-transparent text-ui-muted hover:border-ui-line hover:bg-white/[0.035] hover:text-ui-text"
+                ? "border-ui-brand text-ui-text"
+                : "border-transparent text-ui-muted hover:border-ui-line hover:text-ui-text"
             }`}
           >
-            <Icon size={17} aria-hidden className={`shrink-0 ${active ? "text-ui-brand" : "text-ui-subtle transition group-hover:text-ui-muted"}`} />
+            <Icon size={18} aria-hidden className={`shrink-0 ${active ? "text-ui-brand" : "text-ui-subtle transition group-hover:text-ui-muted"}`} />
             <span className="whitespace-nowrap">{label}</span>
           </Link>
         );

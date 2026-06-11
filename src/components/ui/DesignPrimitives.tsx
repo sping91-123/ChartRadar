@@ -15,10 +15,10 @@ function cx(...classes: Array<string | false | null | undefined>) {
 
 const surfaceVariantClass: Record<SurfaceVariant, Record<Tone, string>> = {
   card: {
-    panel: "border border-ui-line bg-ui-panel text-ui-text shadow-ui-panel",
-    elevated: "border border-ui-lineStrong bg-ui-elevated text-ui-text shadow-ui-elevated",
-    inset: "border border-ui-line bg-ui-inset text-ui-muted shadow-none",
-    critical: "border border-ui-line bg-ui-panel text-ui-risk shadow-ui-panel"
+    panel: "border border-transparent bg-ui-panel text-ui-text shadow-ui-panel",
+    elevated: "border border-transparent bg-ui-elevated text-ui-text shadow-ui-elevated",
+    inset: "border border-transparent bg-ui-inset text-ui-muted shadow-none",
+    critical: "border border-ui-risk/20 bg-ui-panel text-ui-risk shadow-ui-panel"
   },
   flat: {
     panel: "bg-transparent text-ui-text",
@@ -125,17 +125,17 @@ export function SectionHeader({
 }
 
 const statusClass: Record<StatusTone, string> = {
-  long: "text-ui-long",
-  short: "text-ui-short",
-  watch: "text-ui-watch",
-  risk: "text-ui-risk",
-  locked: "text-ui-locked",
-  info: "text-ui-muted"
+  long: "border-transparent bg-ui-long/10 text-ui-long",
+  short: "border-transparent bg-ui-short/10 text-ui-short",
+  watch: "border-transparent bg-ui-watch/10 text-ui-watch",
+  risk: "border-transparent bg-ui-risk/15 text-ui-risk",
+  locked: "border-transparent bg-ui-inset text-ui-locked",
+  info: "border-transparent bg-ui-elevated text-ui-muted"
 };
 
 export function StatusPill({ tone = "info", icon: Icon, children, className }: { tone?: StatusTone; icon?: LucideIcon; children: ReactNode; className?: string }) {
   return (
-    <span className={cx("inline-flex min-h-7 items-center gap-1.5 px-0 text-ui-label font-semibold", statusClass[tone], className)}>
+    <span className={cx("inline-flex min-h-8 items-center gap-1.5 rounded-ui-sm border px-3 text-xs font-semibold leading-none", statusClass[tone], className)}>
       {Icon ? <Icon size={13} aria-hidden /> : null}
       {children}
     </span>
@@ -167,10 +167,10 @@ export function DataRow({
 export const MetricRow = DataRow;
 
 const buttonClass: Record<ButtonTone, string> = {
-  primary: "bg-ui-brand text-slate-950 hover:brightness-110",
-  secondary: "bg-transparent text-ui-text hover:text-ui-brand",
-  ghost: "bg-transparent text-ui-muted hover:text-ui-text",
-  danger: "bg-transparent text-ui-short hover:text-rose-300"
+  primary: "bg-ui-brand text-white hover:brightness-110",
+  secondary: "bg-ui-elevated text-ui-text hover:bg-ui-inset",
+  ghost: "bg-transparent text-ui-muted hover:bg-ui-elevated/55 hover:text-ui-text",
+  danger: "bg-ui-short/10 text-ui-short hover:bg-ui-short/15"
 };
 
 interface ActionButtonBase {
@@ -184,7 +184,7 @@ type ActionButtonProps = ActionButtonBase & ButtonHTMLAttributes<HTMLButtonEleme
 
 export function ActionButton({ tone = "secondary", className, children, href, type = "button", ...props }: ActionButtonProps) {
   const classes = cx(
-    "inline-flex min-h-9 items-center justify-center gap-2 rounded-ui-sm px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50",
+    "inline-flex min-h-10 items-center justify-center gap-2 rounded-ui-sm px-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50",
     buttonClass[tone],
     className
   );

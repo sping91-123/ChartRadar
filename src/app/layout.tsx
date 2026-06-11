@@ -70,8 +70,8 @@ export const viewport: Viewport = {
   maximumScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#0b0b0f" },
-    { media: "(prefers-color-scheme: light)", color: "#f6f8fb" }
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0d" },
+    { media: "(prefers-color-scheme: light)", color: "#0a0a0d" }
   ]
 };
 
@@ -86,7 +86,7 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var t=localStorage.getItem('chart-radar.theme')||'system';var r=t==='system'?(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):t;document.documentElement.classList.add(r==='light'?'theme-light':'theme-dark');if(t==='system')document.documentElement.classList.add('theme-system');document.documentElement.style.colorScheme=r;var c=r==='light'?'#f6f8fb':'#0b0b0f';document.querySelectorAll('meta[name=\"theme-color\"]').forEach(function(m){m.setAttribute('content',c);});}catch(e){document.documentElement.classList.add('theme-dark');}"
+              "try{localStorage.removeItem('chart-radar.theme');document.documentElement.classList.remove('theme-light','theme-system');document.documentElement.classList.add('theme-dark');document.documentElement.style.colorScheme='dark';document.querySelectorAll('meta[name=\"theme-color\"]').forEach(function(m){m.setAttribute('content','#0a0a0d');});}catch(e){document.documentElement.classList.add('theme-dark');}"
           }}
         />
         <AuthHashRescue />

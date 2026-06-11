@@ -36,7 +36,7 @@ export function HeaderMarketSwitcher({ market, subtitle }: { market?: HeaderMark
   const [switchingKey, setSwitchingKey] = useState<PreferredMarket | null>(null);
   const switchTimer = useRef<number | null>(null);
   const preferred = marketFromHeader(market);
-  const title = market === "crypto" ? "Coin Radar" : market === "stocks" ? "Global Radar" : "ChartRadar";
+  const title = market === "crypto" ? "Coin Radar" : market === "stocks" ? "Global Radar" : "Chart Radar";
 
   useEffect(() => {
     if (preferred) savePreferredMarket(preferred);
@@ -80,16 +80,16 @@ export function HeaderMarketSwitcher({ market, subtitle }: { market?: HeaderMark
           event.stopPropagation();
           setOpen((value) => !value);
         }}
-        className="flex min-w-0 items-center gap-2.5 text-left sm:gap-3"
+        className="flex w-full min-w-0 items-center gap-2.5 text-left sm:gap-3"
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-ui-sm border border-ui-line bg-ui-panel text-ui-brand sm:h-10 sm:w-10">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-ui-sm bg-ui-panel text-ui-brand sm:h-10 sm:w-10">
           <MarketIcon market={market} />
         </span>
-        <span className="min-w-0">
-          <span className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-[17px] font-semibold leading-tight tracking-tight text-ui-text sm:text-xl">
+        <span className="min-w-0 flex-1 overflow-visible">
+          <span className="flex min-w-0 items-center gap-1.5 overflow-visible">
+            <span className="shrink-0 whitespace-nowrap text-base font-semibold leading-tight tracking-tight text-ui-text sm:text-xl">
               {title}
             </span>
             <ChevronDown size={16} className={`shrink-0 text-ui-muted transition ${open ? "rotate-180" : ""}`} aria-hidden />

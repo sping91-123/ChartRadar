@@ -1,20 +1,18 @@
 export function getChartThemeOptions() {
-  const isLight = typeof document !== "undefined" && document.documentElement.classList.contains("theme-light");
-
   return {
     layout: {
-      background: { color: isLight ? "#ffffff" : "#11151c" },
-      textColor: isLight ? "#334155" : "#cbd5e1"
+      background: { color: "#17181e" },
+      textColor: "#d8dee9"
     },
     grid: {
-      vertLines: { color: isLight ? "rgba(148, 163, 184, 0.22)" : "rgba(148, 163, 184, 0.08)" },
-      horzLines: { color: isLight ? "rgba(148, 163, 184, 0.22)" : "rgba(148, 163, 184, 0.08)" }
+      vertLines: { color: "rgba(255, 255, 255, 0.045)" },
+      horzLines: { color: "rgba(255, 255, 255, 0.045)" }
     },
     rightPriceScale: {
-      borderColor: isLight ? "rgba(148, 163, 184, 0.35)" : "rgba(148, 163, 184, 0.18)"
+      borderColor: "rgba(255, 255, 255, 0.08)"
     },
     timeScale: {
-      borderColor: isLight ? "rgba(148, 163, 184, 0.35)" : "rgba(148, 163, 184, 0.18)"
+      borderColor: "rgba(255, 255, 255, 0.08)"
     }
   };
 }
