@@ -203,15 +203,13 @@ export function CoinSignalPressurePanel({
   items: CoinSignalPressureItem[];
 }) {
   return (
-    <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
+    <PanelCard variant="report" padding="md" className="space-y-4">
       <SectionHeader title={title} />
-      <div className="grid gap-0 md:grid-cols-2">
-        {items.map((item, index) => (
+      <div className="grid gap-2 md:grid-cols-2">
+        {items.map((item) => (
           <article
             key={item.label}
-            className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0" : ""} ${
-              index % 2 === 1 ? "md:border-l md:border-ui-line" : ""
-            } ${index > 1 ? "md:border-t md:border-ui-line" : ""}`}
+            className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3"
           >
             <div className="flex min-w-0 items-start justify-between gap-3">
               <div className="min-w-0">
@@ -284,7 +282,7 @@ export function CoinFuturesSignalPressurePanel({ mode, symbols: customSymbols }:
       : "BTC/ETH 롱/숏 쏠림을 판단하는 중입니다.";
 
   return (
-    <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
+    <PanelCard variant="report" padding="md" className="space-y-4">
       <SectionHeader
         eyebrow="Binance 공개 선물 데이터"
         title={isAltMode ? "알트 롱/숏 쏠림" : "BTC/ETH 롱/숏 쏠림"}
@@ -310,16 +308,14 @@ export function CoinFuturesSignalPressurePanel({ mode, symbols: customSymbols }:
       ) : null}
 
       {cards.length ? (
-        <div className="grid gap-0 md:grid-cols-2">
-          {cards.map(({ report, label }, index) => {
+        <div className="grid gap-2 md:grid-cols-2">
+          {cards.map(({ report, label }) => {
             const tone = pressureTone(report);
             const score = pressureScore(report);
             return (
               <article
                 key={report.symbol}
-                className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0" : ""} ${
-                  index % 2 === 1 ? "md:border-l md:border-ui-line" : ""
-                } ${index > 1 ? "md:border-t md:border-ui-line" : ""}`}
+                className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3"
               >
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="min-w-0">

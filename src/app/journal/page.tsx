@@ -307,7 +307,7 @@ function ChipGroup({
         : "border-ui-brand text-ui-brand";
 
   return (
-    <div className="min-w-0 max-w-full overflow-hidden border-t border-ui-line pt-3">
+    <div className="min-w-0 max-w-full overflow-hidden rounded-ui-sm bg-ui-inset px-3 py-3">
       <div className="mb-2 flex min-w-0 flex-wrap items-center justify-between gap-2">
         <p className="min-w-0 text-ui-label font-semibold text-ui-subtle">{label}</p>
         {helper ? <span className="min-w-0 text-ui-label text-ui-muted">{helper}</span> : null}
@@ -678,7 +678,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
                 <div className="grid min-w-0 gap-3 lg:grid-cols-3">
                   <ChipGroup label="방향" options={directions} selected={[direction]} onToggle={(item) => setDirection(item as DirectionType)} />
                   <ChipGroup label="결과" options={resultOptions} selected={[result]} onToggle={(item) => setResult(item as TradeResult)} tone="green" />
-                  <div className="min-w-0 max-w-full overflow-hidden border-t border-ui-line pt-3">
+                  <div className="min-w-0 max-w-full overflow-hidden rounded-ui-sm bg-ui-inset px-3 py-3">
                     <p className="mb-2 text-ui-label font-semibold text-ui-subtle">손익 결과</p>
                     <div className="flex min-w-0 max-w-full flex-wrap gap-1.5 sm:gap-2">
                       {rResultOptions.map((item) => (

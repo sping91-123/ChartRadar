@@ -70,7 +70,7 @@ export function CoinFuturesBrief({ mode }: { mode: FuturesBriefMode }) {
     : ["BTC/ETH 롱·숏 쏠림 완화", "큰 유입·이탈 체결 반복", "롱/숏 방향과 변동성 위험 동시 확대"];
 
   return (
-    <PanelCard variant="report" padding="md" className="space-y-4 rounded-ui-lg border border-ui-line/25 bg-ui-panel/45">
+    <PanelCard variant="report" padding="md" className="space-y-4 rounded-ui-lg">
       <SectionHeader
         title={isAltMode ? "알트 포지션 위험 결론" : "선물 포지션 위험"}
         description={

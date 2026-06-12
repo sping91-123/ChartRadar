@@ -466,9 +466,9 @@ function MarketRadarCard({
 
 function EmptyBriefingCard({ copy }: { copy: (typeof marketCopy)[RadarNewsMarket] }) {
   return (
-    <PanelCard variant="flat" padding="md" className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/45">
+    <PanelCard tone="elevated" variant="report" padding="md" className="rounded-ui-lg">
       <div className="flex items-start gap-3">
-        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-ui-sm bg-ui-inset/45 text-ui-brand">
+        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-ui-sm bg-ui-inset text-ui-brand">
           <Clock3 size={16} aria-hidden />
         </div>
         <div>
@@ -600,7 +600,7 @@ function BriefingCardView({
   const Icon = style.icon;
 
   return (
-    <PanelCard variant="flat" padding="none" className="space-y-2.5 border-t border-ui-line py-4">
+    <PanelCard tone="elevated" variant="report" padding="md" className="space-y-2.5">
       <div className="flex flex-wrap items-center gap-2">
         <StatusPill tone={directionTone(card.tone)} icon={Icon}>
           {style.label}
@@ -612,7 +612,7 @@ function BriefingCardView({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1.5">
           {card.tags.slice(0, 2).map((tag) => (
-            <span key={tag} className="rounded-ui-sm border border-ui-line bg-ui-inset px-2 py-1 text-[11px] font-semibold text-ui-muted">
+            <span key={tag} className="rounded-ui-sm bg-ui-inset px-2 py-1 text-[11px] font-semibold text-ui-muted">
               {tag}
             </span>
           ))}
@@ -736,7 +736,7 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
 
   return (
     <section className="space-y-4">
-      <PanelCard variant="report" padding="none" className="border-b border-ui-line pb-3">
+      <PanelCard variant="report" padding="lg" className="space-y-2">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">{copy.eyebrow}</p>
@@ -754,13 +754,13 @@ export function RadarNewsPanel({ market = "crypto" }: { market?: RadarNewsMarket
       </PanelCard>
 
       {error ? (
-        <AppSurface variant="flat" tone="critical" padding="none" className="border-t border-rose-400/24 py-3 text-sm font-semibold text-ui-short shadow-none">
+        <AppSurface variant="report" tone="critical" padding="md" className="text-sm font-semibold text-ui-short shadow-none">
           {error}
         </AppSurface>
       ) : null}
 
       {isInitialLoading ? (
-        <AppSurface variant="flat" tone="inset" padding="none" className="border-t border-ui-line py-3 text-sm font-semibold leading-6 text-ui-brand shadow-none">
+        <AppSurface variant="report" tone="inset" padding="md" className="text-sm font-semibold leading-6 text-ui-brand shadow-none">
           공개 뉴스를 읽고 있습니다. 강한 이슈가 잡히면 바로 정리합니다.
         </AppSurface>
       ) : null}

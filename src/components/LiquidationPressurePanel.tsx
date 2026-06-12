@@ -213,7 +213,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
         </div>
       </div>
 
-      <div className="mt-4 border-y border-white/10 py-4">
+      <div className="mt-4 rounded-ui-sm bg-ui-elevated px-3 py-3">
         <div className="flex items-center justify-between gap-3 text-xs font-bold">
           <span className="text-signal-success">롱 우세 압력 {report.upsideShortPressure}점</span>
           <span className="text-signal-danger">숏 우세 압력 {report.downsideLongPressure}점</span>
@@ -239,7 +239,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
       </div>
 
       <div className="mt-3 grid gap-3 lg:grid-cols-[0.95fr_1.05fr]">
-        <div className="border-y border-white/10 py-4">
+        <div className="rounded-ui-sm bg-ui-elevated px-3 py-3">
           <div className="flex items-center justify-between gap-2">
             <h4 className="text-sm font-black text-white">글로벌 롱/숏 비율</h4>
             <CompactHelp label="롱/숏 비율">Binance 기준 롱과 숏 포지션 비율입니다. 한쪽으로 몰릴수록 반대 방향 변동성도 같이 커질 수 있습니다.</CompactHelp>
@@ -262,7 +262,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
           </div>
         </div>
 
-        <div className="border-y border-white/10 py-4">
+        <div className="rounded-ui-sm bg-ui-elevated px-3 py-3">
           <div className="flex items-center justify-between gap-2">
             <h4 className="text-sm font-black text-white">큰 매수/매도 체결</h4>
             <CompactHelp label="큰 체결">최근 시장가 매수와 시장가 매도 중 어느 쪽 체결이 더 강했는지 보는 값입니다. 한쪽으로 치우치면 진입 위험이 커질 수 있습니다.</CompactHelp>
@@ -271,7 +271,7 @@ export function LiquidationPressurePanel({ symbol, timeframe }: LiquidationPress
             <Metric label="시장가 유입" value={formatPercent(report.takerFlow.buyPercent, 1)} sub={report.takerFlow.buyVolume === null ? "-" : report.takerFlow.buyVolume.toLocaleString("ko-KR", { maximumFractionDigits: 2 })} />
             <Metric label="시장가 이탈" value={formatPercent(report.takerFlow.sellPercent, 1)} sub={report.takerFlow.sellVolume === null ? "-" : report.takerFlow.sellVolume.toLocaleString("ko-KR", { maximumFractionDigits: 2 })} />
           </div>
-          <p className="mt-3 border-t border-white/10 pt-3 text-xs leading-5 text-slate-400 [word-break:keep-all]">
+          <p className="mt-3 rounded-ui-sm bg-ui-inset px-3 py-3 text-xs leading-5 text-slate-400 [word-break:keep-all]">
             {takerInterpretation(report)}
           </p>
         </div>

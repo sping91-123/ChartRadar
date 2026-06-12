@@ -27,10 +27,10 @@ const surfaceVariantClass: Record<SurfaceVariant, Record<Tone, string>> = {
     critical: "bg-transparent text-ui-risk"
   },
   report: {
-    panel: "bg-transparent text-ui-text shadow-none",
-    elevated: "bg-transparent text-ui-text shadow-none",
-    inset: "bg-transparent text-ui-muted shadow-none",
-    critical: "bg-transparent text-ui-risk shadow-none"
+    panel: "bg-ui-panel text-ui-text shadow-none",
+    elevated: "bg-ui-elevated text-ui-text shadow-none",
+    inset: "bg-ui-elevated text-ui-muted shadow-none",
+    critical: "bg-ui-panel text-ui-risk shadow-none"
   },
   list: {
     panel: "bg-transparent text-ui-text",
@@ -54,7 +54,7 @@ const radiusClass: Record<SurfaceRadius, string> = {
 };
 
 function defaultRadiusForVariant(variant: SurfaceVariant): SurfaceRadius {
-  return variant === "flat" || variant === "report" || variant === "list" ? "none" : "md";
+  return variant === "flat" || variant === "list" ? "none" : "md";
 }
 
 interface AppSurfaceProps {

@@ -114,7 +114,7 @@ export function AltFuturesSignalSection() {
 
   return (
     <>
-      <section className="border-y border-ui-line py-3 sm:py-4">
+      <section className="rounded-ui bg-ui-panel p-4">
         <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">내 알트 선물 목록</p>

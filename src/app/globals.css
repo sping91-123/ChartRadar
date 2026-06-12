@@ -8,8 +8,8 @@
   --cr-color-panel: #17181e;
   --cr-color-elevated: #20212a;
   --cr-color-inset: #262833;
-  --cr-color-line: rgba(255, 255, 255, 0.065);
-  --cr-color-line-strong: rgba(255, 255, 255, 0.11);
+  --cr-color-line: #2a2c35;
+  --cr-color-line-strong: #383b46;
   --cr-color-text: #f7f8fb;
   --cr-color-muted: #aeb4c1;
   --cr-color-subtle: #777d8b;
@@ -136,11 +136,11 @@ button {
 }
 
 .border-surface-line {
-  border-color: rgba(255, 255, 255, 0.065) !important;
+  border-color: var(--cr-color-line) !important;
 }
 
 .enterprise-panel {
-  border: 1px solid rgba(255, 255, 255, 0.065);
+  border: 1px solid var(--cr-color-line);
   background: #17181e;
   box-shadow: none;
 }
@@ -168,7 +168,7 @@ body:has(.radar-bottom-nav) .app-scroll-root {
 
 .radar-bottom-nav {
   padding-bottom: calc(0.55rem + env(safe-area-inset-bottom));
-  border-top: 1px solid rgba(255, 255, 255, 0.065);
+  border-top: 1px solid var(--cr-color-line);
   background: rgba(23, 24, 30, 0.94);
   backdrop-filter: blur(18px) saturate(1.15);
   -webkit-backdrop-filter: blur(18px) saturate(1.15);
@@ -253,6 +253,53 @@ button {
 [class~="bg-slate-950/70"],
 [class~="bg-slate-950/60"] {
   background-color: #0a0a0d !important;
+}
+
+[class~="bg-ui-panel/35"],
+[class~="bg-ui-panel/45"],
+[class~="bg-ui-panel/55"],
+[class~="bg-ui-panel/60"],
+[class~="bg-surface-card/55"],
+[class~="bg-surface-card/70"],
+[class~="bg-surface-card/75"],
+[class~="bg-surface-card/78"],
+[class~="bg-surface-card/80"],
+[class~="bg-surface-card/90"] {
+  background-color: #17181e !important;
+}
+
+[class~="bg-ui-elevated/55"],
+[class~="bg-ui-inset/20"],
+[class~="bg-ui-inset/25"],
+[class~="bg-ui-inset/30"],
+[class~="bg-ui-inset/45"],
+[class~="bg-ui-inset/55"],
+[class~="bg-ui-inset/60"],
+[class~="bg-surface-cardSoft/85"],
+[class~="bg-black/10"],
+[class~="bg-black/15"],
+[class~="bg-black/20"],
+[class~="bg-black/25"],
+[class~="bg-black/30"],
+[class~="bg-white/[0.02]"],
+[class~="bg-white/[0.035]"],
+[class~="bg-white/[0.04]"],
+[class~="bg-white/5"],
+[class~="bg-white/10"] {
+  background-color: #20212a !important;
+}
+
+[class~="border-ui-line/20"],
+[class~="border-ui-line/25"],
+[class~="border-ui-line/40"],
+[class~="border-ui-line/60"],
+[class~="border-ui-line/70"],
+[class~="border-white/10"],
+[class~="border-white/15"],
+[class~="border-white/20"],
+[class~="border-slate-300/15"],
+[class~="border-slate-400/20"] {
+  border-color: var(--cr-color-line) !important;
 }
 
 @keyframes radar-sweep {

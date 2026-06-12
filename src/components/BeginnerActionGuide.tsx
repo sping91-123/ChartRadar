@@ -24,7 +24,7 @@ function stepToneClass(tone: BeginnerGuideTone = "neutral") {
   if (tone === "danger") return "border-signal-danger/25 bg-signal-danger/10 text-signal-danger";
   if (tone === "warning") return "border-signal-warning/25 bg-signal-warning/10 text-signal-warning";
   if (tone === "info") return "border-cyan-300/25 bg-cyan-300/10 text-cyan-100";
-  return "border-white/10 bg-black/20 text-slate-200";
+  return "border-transparent bg-ui-elevated text-slate-200";
 }
 
 export function BeginnerActionGuide({
@@ -36,7 +36,7 @@ export function BeginnerActionGuide({
   help
 }: BeginnerActionGuideProps) {
   return (
-    <section className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/45 p-4">
+    <section className="rounded-ui-lg bg-ui-panel p-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-2">

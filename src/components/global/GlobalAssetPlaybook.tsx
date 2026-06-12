@@ -59,14 +59,14 @@ export function GlobalPlaybook({
 
   return (
     <div className="mt-5 grid gap-3 lg:grid-cols-4">
-      <article className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3">
+      <article className="rounded-ui-lg bg-ui-panel p-3">
         <Clock3 size={20} aria-hidden />
         <p className="mt-3 text-xs font-semibold text-ui-subtle">미국장 구간</p>
         <h3 className="mt-2 text-base font-semibold text-ui-text">{sessionState?.title ?? "미국장 시간 확인 중"}</h3>
         <p className="mt-2 text-xs leading-5 text-ui-muted">{sessionState?.detail ?? "현재 한국 시간 기준 미국장 구간을 확인하고 있습니다."}</p>
       </article>
 
-      <article className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3">
+      <article className="rounded-ui-lg bg-ui-panel p-3">
         <Compass size={20} aria-hidden />
         <p className="mt-3 text-xs font-semibold text-ui-subtle">먼저 볼 것</p>
         <h3 className="mt-2 text-base font-semibold text-ui-text">{focus}</h3>
@@ -75,14 +75,14 @@ export function GlobalPlaybook({
         </p>
       </article>
 
-      <article className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3">
+      <article className="rounded-ui-lg bg-ui-panel p-3">
         <Target className="text-ui-brand" size={20} aria-hidden />
         <p className="mt-3 text-xs font-semibold text-ui-subtle">기준선</p>
         <h3 className="mt-2 text-base font-semibold text-ui-text">기준선 행동</h3>
         <p className="mt-2 text-xs leading-5 text-ui-muted">{basis}</p>
       </article>
 
-      <article className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3">
+      <article className="rounded-ui-lg bg-ui-panel p-3">
         <Shield className="text-ui-brand" size={20} aria-hidden />
         <p className="mt-3 text-xs font-semibold text-ui-subtle">위험 메모</p>
         <h3 className="mt-2 text-base font-semibold text-ui-text">위험도 {riskScore === null ? "확인 중" : `${Math.round(riskScore)}%`}</h3>

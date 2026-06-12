@@ -79,7 +79,7 @@ export function CoinStablecoinLiquidityPanel() {
   }, [loadReport]);
 
   return (
-    <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
+    <PanelCard variant="report" padding="md" className="space-y-4">
       <SectionHeader
         eyebrow="DeFiLlama 공개 스테이블코인 데이터"
         title="스테이블코인 유동성 참고"
@@ -109,8 +109,8 @@ export function CoinStablecoinLiquidityPanel() {
       ) : null}
 
       {report ? (
-        <div className="grid gap-0 md:grid-cols-2">
-          <article className="min-w-0 py-3 md:px-3">
+        <div className="grid gap-2 md:grid-cols-2">
+          <article className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3">
             <div className="flex min-w-0 items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">USD STABLE</p>
@@ -129,7 +129,7 @@ export function CoinStablecoinLiquidityPanel() {
               <span className="text-right">{formatUsdChange(report.change7dUsd)}</span>
             </div>
           </article>
-          <article className="min-w-0 border-t border-ui-line py-3 md:border-l md:border-t-0 md:px-3">
+          <article className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3">
             <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs font-semibold leading-5 text-ui-muted">
               <span>1일 비율</span>
               <span className="text-right text-ui-text">{formatPercent(report.change1dPercent)}</span>

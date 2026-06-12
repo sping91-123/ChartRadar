@@ -79,7 +79,7 @@ export function CoinUnlockPressurePanel() {
   const summary = top ? `${top.symbol} ${top.unlockValueLabel} · ${formatDate(top.unlockDate)}` : "다가오는 알트 언락 부담을 확인하는 중입니다.";
 
   return (
-    <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
+    <PanelCard variant="report" padding="md" className="space-y-4">
       <SectionHeader
         eyebrow="Tokenomics 공개 언락 페이지"
         title="알트 언락 부담"
@@ -105,13 +105,11 @@ export function CoinUnlockPressurePanel() {
       ) : null}
 
       {items.length ? (
-        <div className="grid gap-0 md:grid-cols-2">
+        <div className="grid gap-2 md:grid-cols-2">
           {items.map((item, index) => (
             <article
               key={`${item.slug ?? item.symbol}-${item.unlockDate ?? index}`}
-              className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0" : ""} ${
-                index % 2 === 1 ? "md:border-l md:border-ui-line" : ""
-              } ${index > 1 ? "md:border-t md:border-ui-line" : ""}`}
+              className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3"
             >
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0">

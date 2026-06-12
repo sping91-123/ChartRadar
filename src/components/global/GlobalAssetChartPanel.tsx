@@ -21,7 +21,7 @@ export function GlobalAssetChartPanel({
   state: LoadState;
 }) {
   return (
-    <div className="mt-5 rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3 sm:p-4">
+    <div className="mt-5 rounded-ui-lg bg-ui-panel p-3 sm:p-4">
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-semibold text-ui-subtle">선택 종목</p>
@@ -39,7 +39,7 @@ export function GlobalAssetChartPanel({
         ) : null}
       </div>
 
-      <div className="relative min-h-[320px] overflow-hidden rounded-ui-md bg-ui-inset/20 sm:min-h-[360px]">
+      <div className="relative min-h-[320px] overflow-hidden rounded-ui-md bg-ui-elevated sm:min-h-[360px]">
         <div ref={chartRef} className="h-[320px] w-full sm:h-[360px]" />
         {state.status === "loading" ? (
           <div className="absolute inset-0 grid place-items-center bg-ui-canvas/70 text-sm text-ui-muted">
@@ -51,7 +51,7 @@ export function GlobalAssetChartPanel({
         ) : null}
         {state.status === "error" ? (
           <div className="absolute inset-0 grid place-items-center bg-ui-canvas/80 p-4 text-center text-sm text-signal-danger">
-            <div className="max-w-sm rounded-ui-sm bg-ui-inset/35 px-3 py-3">
+            <div className="max-w-sm rounded-ui-sm bg-ui-inset px-3 py-3">
               <p className="font-semibold">차트 데이터를 불러오지 못했습니다.</p>
               <p className="mt-2 text-xs leading-5 text-signal-danger/90">{state.message || "잠시 후 다시 확인해 주세요."}</p>
             </div>

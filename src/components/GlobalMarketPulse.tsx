@@ -185,7 +185,7 @@ function modeDecisionLabel(payload: DashboardPayload) {
 function toneClass(tone: PressureTone) {
   if (tone === "supportive") return "border-emerald-300/20 bg-emerald-400/10 text-emerald-100";
   if (tone === "burden") return "border-rose-300/20 bg-rose-400/10 text-rose-100";
-  return "border-ui-line/25 bg-ui-inset/30 text-ui-muted";
+  return "border-transparent bg-ui-elevated text-ui-muted";
 }
 
 function toneLabel(tone: PressureTone) {
@@ -213,7 +213,7 @@ function ProCta({ compact = false }: { compact?: boolean }) {
   return (
     <Link
       href="/pro?market=stocks"
-      className={`inline-flex items-center justify-center gap-2 border-b border-ui-brand/40 bg-transparent text-center font-semibold leading-4 text-ui-brand transition hover:text-ui-text ${
+      className={`inline-flex items-center justify-center gap-2 rounded-ui-sm bg-ui-elevated text-center font-semibold leading-4 text-ui-brand transition hover:bg-ui-inset hover:text-ui-text ${
         compact ? "min-h-8 px-2.5 text-[11px]" : "min-h-10 px-3 text-xs"
       }`}
     >
@@ -268,7 +268,7 @@ function SectionShell({
   children: ReactNode;
 }) {
   return (
-    <article className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3">
+    <article className="rounded-ui-lg bg-ui-elevated p-3">
       <div className="flex items-start gap-3">
         <Icon className="mt-0.5 shrink-0 text-ui-brand" size={18} aria-hidden />
         <div className="min-w-0">
@@ -285,9 +285,9 @@ function FallbackChecklist({ compact = false }: { compact?: boolean }) {
   return (
     <div className={compact ? "py-3" : "py-4"}>
       <p className="text-xs font-semibold text-ui-text">기본 체크리스트</p>
-      <div className="mt-3 grid divide-y divide-ui-line/60 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-5">
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
         {fallbackChecklist.map((item) => (
-          <div key={item} className="px-3 py-2 text-[11px] font-medium leading-5 text-ui-muted [word-break:keep-all]">
+          <div key={item} className="rounded-ui-sm bg-ui-inset px-3 py-2 text-[11px] font-medium leading-5 text-ui-muted [word-break:keep-all]">
             {item}
           </div>
         ))}
@@ -313,7 +313,7 @@ function focusAssetsForPayload(payload: DashboardPayload): FocusAsset[] {
 
 function FocusAssetStrip({ items }: { items: FocusAsset[] }) {
   return (
-    <article className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3">
+    <article className="rounded-ui-lg bg-ui-elevated p-3">
       <div className="flex items-start gap-3">
         <Sparkles className="mt-0.5 shrink-0 text-ui-brand" size={18} aria-hidden />
         <div className="min-w-0">
@@ -346,7 +346,7 @@ function FocusAssetStrip({ items }: { items: FocusAsset[] }) {
 
 function PrimaryRiskBlock({ payload, pressures }: { payload: DashboardPayload; pressures: PressureItem[] }) {
   return (
-    <article className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3">
+    <article className="rounded-ui-lg bg-ui-elevated p-3">
       <div className="flex items-start gap-3">
         <ShieldAlert className="mt-0.5 shrink-0 text-amber-200" size={18} aria-hidden />
         <div className="min-w-0">
@@ -376,7 +376,7 @@ function PrimaryRiskBlock({ payload, pressures }: { payload: DashboardPayload; p
 
 function MarketThermometerBlock({ items }: { items: ThermometerAxis[] }) {
   return (
-    <article className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3">
+    <article className="rounded-ui-lg bg-ui-elevated p-3">
       <div className="flex items-start gap-3">
         <Gauge className="mt-0.5 shrink-0 text-ui-brand" size={18} aria-hidden />
         <div>
@@ -402,7 +402,7 @@ function MarketThermometerBlock({ items }: { items: ThermometerAxis[] }) {
 
 function RelationshipChecksBlock({ items }: { items: RelationshipCheck[] }) {
   return (
-    <article className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3">
+    <article className="rounded-ui-lg bg-ui-elevated p-3">
       <div className="flex items-start gap-3">
         <LineChart className="mt-0.5 shrink-0 text-ui-brand" size={18} aria-hidden />
         <div>
@@ -599,7 +599,7 @@ export function GlobalMarketPulse() {
   const focusAssets = useMemo(() => (payload ? focusAssetsForPayload(payload) : []), [payload]);
 
   return (
-    <section className="min-w-0 overflow-hidden rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-4 sm:p-5">
+    <section className="min-w-0 overflow-hidden rounded-ui-lg bg-ui-panel p-4 sm:p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-3">
           <div className="grid h-10 w-10 shrink-0 place-items-center text-ui-brand">
@@ -616,7 +616,7 @@ export function GlobalMarketPulse() {
         <div className="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
           <Link
             href="/global/assets"
-            className="inline-flex min-h-10 items-center justify-center gap-2 border-b border-ui-brand/40 bg-transparent px-1 text-xs font-semibold text-ui-brand transition hover:border-ui-brand hover:text-ui-text"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-ui-sm bg-ui-elevated px-3 text-xs font-semibold text-ui-brand transition hover:bg-ui-inset hover:text-ui-text"
           >
             <BarChart3 size={13} aria-hidden />
             자산레이더 보기
@@ -625,7 +625,7 @@ export function GlobalMarketPulse() {
           <button
             type="button"
             onClick={() => load()}
-            className="inline-flex min-h-10 items-center justify-center gap-2 border-b border-ui-line bg-transparent px-1 text-xs font-semibold text-ui-muted transition hover:border-ui-brand/50 hover:text-ui-text"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-ui-sm bg-ui-elevated px-3 text-xs font-semibold text-ui-muted transition hover:bg-ui-inset hover:text-ui-text"
           >
             <RefreshCw size={13} aria-hidden />
             다시 확인
@@ -634,7 +634,7 @@ export function GlobalMarketPulse() {
       </div>
 
       {state.status === "loading" ? (
-        <div className="mt-4 rounded-ui-lg border border-ui-line/25 bg-ui-inset/25 p-3">
+        <div className="mt-4 rounded-ui-lg bg-ui-elevated p-3">
           <div className="flex items-center text-sm text-ui-muted">
             <Loader2 className="mr-2 animate-spin" size={16} aria-hidden />
             글로벌 시장 흐름을 불러오는 중입니다. 지연되면 아래 기본 체크리스트부터 확인하세요.
@@ -657,7 +657,7 @@ export function GlobalMarketPulse() {
       ) : payload ? (
         <>
           <div className="mt-4 grid gap-3 lg:grid-cols-[1.1fr_1fr]">
-            <article className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/45 p-3">
+            <article className="rounded-ui-lg bg-ui-elevated p-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold text-ui-brand">미국장 30초 체크</p>
@@ -666,10 +666,10 @@ export function GlobalMarketPulse() {
                       {modeIcon(payload.marketMode)}
                       {modeDecisionLabel(payload)}
                     </span>
-                    <span className="border-b border-ui-line px-1 py-1.5 text-xs font-semibold text-ui-muted">
+                    <span className="rounded-ui-sm bg-ui-inset px-2 py-1.5 text-xs font-semibold text-ui-muted">
                       시장 상태 {payload.marketMode}
                     </span>
-                    <span className="border-b border-ui-line px-1 py-1.5 text-xs font-semibold text-ui-muted">
+                    <span className="rounded-ui-sm bg-ui-inset px-2 py-1.5 text-xs font-semibold text-ui-muted">
                       판단 강도 {payload.strengthLabel ?? "중간"} · {payload.strength}/100
                     </span>
                   </div>
@@ -702,7 +702,7 @@ export function GlobalMarketPulse() {
             </div>
           ) : null}
 
-          <div className="mt-4 rounded-ui-lg border border-ui-line/25 bg-ui-inset/20 p-3">
+          <div className="mt-4 rounded-ui-lg bg-ui-elevated p-3">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ui-subtle">세부 근거</p>
             <h3 className="mt-1 text-base font-semibold text-ui-text">판정 근거</h3>
             <p className="mt-2 text-xs font-medium leading-5 text-ui-muted [word-break:keep-all]">

@@ -30,7 +30,7 @@ export function directionLabel(value: DirectionState) {
 export function directionClass(value: DirectionState) {
   if (value === "bullish") return "border-emerald-300/25 bg-emerald-400/10 text-emerald-100";
   if (value === "bearish") return "border-rose-300/25 bg-rose-400/10 text-rose-100";
-  return "border-slate-300/15 bg-white/[0.04] text-slate-200";
+  return "border-transparent bg-ui-elevated text-slate-200";
 }
 
 export function formatAgeByTimeframe(age: number | undefined, timeframe: ChartTimeframe) {

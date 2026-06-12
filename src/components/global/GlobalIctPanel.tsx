@@ -36,7 +36,7 @@ function IctStatusCard({
   tone?: DirectionState;
 }) {
   return (
-    <article className="rounded-ui-sm bg-ui-inset/25 p-3">
+    <article className="rounded-ui-sm bg-ui-elevated p-3">
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ui-subtle">{title}</p>
       <h4 className="mt-2 text-base font-semibold text-ui-text">{value}</h4>
       <p className="mt-2 text-xs leading-5 text-ui-muted">{detail}</p>
@@ -54,7 +54,7 @@ export function GlobalIctPanel({ analysis, timeframe, candlesLength }: { analysi
   const latestDisplacement = analysis.latestDisplacement;
 
   return (
-    <section className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3 sm:p-4">
+    <section className="rounded-ui-lg bg-ui-panel p-3 sm:p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-ui-brand">ICT Radar</p>

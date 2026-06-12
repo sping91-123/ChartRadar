@@ -1,20 +1,24 @@
-// Android 앱의 Capacitor 진입 Activity입니다.
+// Capacitor entry Activity for the Android app.
 package com.staronlabs.chartradar;
 
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.webkit.WebView;
 import android.widget.Toast;
 
-import com.getcapacitor.BridgeActivity;
 import androidx.activity.EdgeToEdge;
 import androidx.activity.OnBackPressedCallback;
 import androidx.activity.SystemBarStyle;
 import androidx.core.splashscreen.SplashScreen;
 
+import com.getcapacitor.BridgeActivity;
+
 public class MainActivity extends BridgeActivity {
     private static final long MIN_SPLASH_DURATION_MS = 1500L;
     private static final long EXIT_BACK_INTERVAL_MS = 2000L;
+    private static final String HOME_PATH = "/crypto/home";
     private long lastBackPressedAt = 0L;
 
     @Override
@@ -29,21 +33,33 @@ public class MainActivity extends BridgeActivity {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                if (getBridge() != null && getBridge().getWebView() != null && getBridge().getWebView().canGoBack()) {
-                    getBridge().getWebView().goBack();
+                WebView webView = getBridge() != null ? getBridge().getWebView() : null;
+                if (webView != null && !isHomePath(webView.getUrl())) {
+                    lastBackPressedAt = 0L;
+                    webView.evaluateJavascript("window.location.replace('" + HOME_PATH + "')", null);
                     return;
                 }
 
                 long now = SystemClock.elapsedRealtime();
                 if (now - lastBackPressedAt <= EXIT_BACK_INTERVAL_MS) {
-                    setEnabled(false);
-                    getOnBackPressedDispatcher().onBackPressed();
+                    finish();
                     return;
                 }
 
                 lastBackPressedAt = now;
-                Toast.makeText(MainActivity.this, "한 번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, "\ud55c \ubc88 \ub354 \ub204\ub974\uba74 \uc885\ub8cc\ub429\ub2c8\ub2e4.", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private boolean isHomePath(String url) {
+        if (url == null || url.isEmpty()) return false;
+
+        try {
+            Uri uri = Uri.parse(url);
+            return HOME_PATH.equals(uri.getPath());
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 }

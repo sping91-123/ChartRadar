@@ -148,7 +148,7 @@ export function CoinLargeTradeFlowPanel({ mode, symbols: customSymbols }: { mode
       : "BTC/ETH 큰 매수/매도 체결 판단 중입니다.";
 
   return (
-    <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
+    <PanelCard variant="report" padding="md" className="space-y-4">
       <SectionHeader
         eyebrow="Binance 공개 선물 체결"
         title={isAltMode ? "알트 큰 매수/매도 체결" : "BTC/ETH 큰 매수/매도 체결"}
@@ -174,15 +174,13 @@ export function CoinLargeTradeFlowPanel({ mode, symbols: customSymbols }: { mode
       ) : null}
 
       {cards.length ? (
-        <div className="grid gap-0 md:grid-cols-2">
-          {cards.map(({ report, label }, index) => {
+        <div className="grid gap-2 md:grid-cols-2">
+          {cards.map(({ report, label }) => {
             const tone = sideTone(report.dominantSide);
             return (
               <article
                 key={report.symbol}
-                className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0" : ""} ${
-                  index % 2 === 1 ? "md:border-l md:border-ui-line" : ""
-                } ${index > 1 ? "md:border-t md:border-ui-line" : ""}`}
+                className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3"
               >
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="min-w-0">

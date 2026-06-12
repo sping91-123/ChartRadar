@@ -112,7 +112,7 @@ function InsightList({
 
 function LockedValue({ label }: { label: string }) {
   return (
-    <div className="border-y border-white/10 py-3">
+    <div className="rounded-ui-sm bg-ui-elevated px-3 py-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-black text-slate-200">{label}</p>
         <Lock size={14} className="text-cyan-200" aria-hidden />
@@ -176,7 +176,7 @@ function CompactRadarInsightPanel({
   ];
 
   return (
-    <section className={`overflow-hidden rounded-ui-lg border border-ui-line/25 bg-ui-panel/45 p-4 ${className}`}>
+    <section className={`overflow-hidden rounded-ui-lg bg-ui-panel p-4 ${className}`}>
       <SectionHeader
         eyebrow="오늘 먼저 볼 판단"
         title={insight.symbol}
@@ -198,7 +198,7 @@ function CompactRadarInsightPanel({
           <p className="mt-3 hidden max-w-3xl text-sm leading-6 text-ui-muted [word-break:keep-all] sm:block">{compactLine(insight.summary, 128)}</p>
         </div>
 
-        <div className="border-t border-ui-line pt-3 lg:border-t-0 lg:pt-0">
+        <div className="rounded-ui-sm bg-ui-elevated px-3 py-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2">
               <Gauge size={16} className="text-ui-brand" aria-hidden />
@@ -229,7 +229,7 @@ function CompactRadarInsightPanel({
       {summaryMetrics.length ? (
         <div className="mt-4 grid gap-2 sm:grid-cols-3">
           {summaryMetrics.slice(0, 3).map((metric) => (
-            <div key={metric.label} className="border-t border-ui-line pt-3">
+            <div key={metric.label} className="rounded-ui-sm bg-ui-elevated px-3 py-3">
               <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{metric.label}</p>
               <p className="mt-2 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{compactLine(metric.value, 44)}</p>
               {metric.detail ? <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{metric.detail}</p> : null}
@@ -239,7 +239,7 @@ function CompactRadarInsightPanel({
       ) : null}
 
       <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <div className="border-t border-ui-line pt-3">
+        <div className="rounded-ui-sm bg-ui-elevated px-3 py-3">
           <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">확인한 내용</p>
           <ul className="mt-2 divide-y divide-ui-line">
             {keyReasons.map((item) => (
@@ -249,7 +249,7 @@ function CompactRadarInsightPanel({
             ))}
           </ul>
         </div>
-        <div className="border-t border-ui-line pt-3">
+        <div className="rounded-ui-sm bg-ui-elevated px-3 py-3">
           <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">다음 확인</p>
           <ul className="mt-2 divide-y divide-ui-line">
             {nextChecks.length ? (
@@ -298,7 +298,7 @@ export function RadarInsightPanel({
   const strengthHelpText = strengthHelp?.join(" ");
 
   return (
-    <section className={`relative overflow-hidden border-y border-surface-line py-4 ${className}`}>
+    <section className={`relative overflow-hidden rounded-ui-lg bg-ui-panel p-4 ${className}`}>
       <div className={`absolute inset-x-0 top-0 h-1 ${strengthClass(insight.finalView)}`} aria-hidden />
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
@@ -327,7 +327,7 @@ export function RadarInsightPanel({
           <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-400 [word-break:keep-all]">{insight.summary}</p>
         </div>
 
-        <div className="w-full shrink-0 border-y border-white/10 py-3 lg:w-64">
+        <div className="w-full shrink-0 rounded-ui-sm bg-ui-elevated px-3 py-3 lg:w-64">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Gauge size={16} className="text-cyan-200" aria-hidden />
@@ -385,7 +385,7 @@ export function RadarInsightPanel({
 
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         {isPro ? (
-          <div className="border-y border-white/10 py-3">
+          <div className="rounded-ui-sm bg-ui-elevated px-3 py-3">
             <p className="text-xs font-black text-slate-200">다음 확인 기준</p>
             <p className="mt-2 text-xs font-bold leading-5 text-slate-300 [word-break:keep-all]">{insight.nextAction}</p>
           </div>
@@ -393,7 +393,7 @@ export function RadarInsightPanel({
           <LockedValue label="다음 확인 기준" />
         )}
         {isPro ? (
-          <div className="border-y border-white/10 py-3">
+          <div className="rounded-ui-sm bg-ui-elevated px-3 py-3">
             <p className="text-xs font-black text-slate-200">업데이트 시각</p>
             <p className="mt-2 text-xs font-bold leading-5 text-slate-300">{formatUpdatedAt(insight.updatedAt)}</p>
           </div>

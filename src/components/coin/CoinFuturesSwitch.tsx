@@ -7,7 +7,7 @@ const futuresTabs = [
 
 export function CoinFuturesSwitch({ active }: { active: "major" | "alts" }) {
   return (
-    <nav className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/40 p-1" aria-label="코인 선물 내부 탭">
+    <nav className="rounded-ui-lg bg-ui-panel p-1" aria-label="코인 선물 내부 탭">
       <div className="grid grid-cols-2 gap-1">
         {futuresTabs.map((tab) => {
           const isActive = tab.id === active;

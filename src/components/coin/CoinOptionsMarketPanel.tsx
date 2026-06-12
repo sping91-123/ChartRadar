@@ -117,7 +117,7 @@ export function CoinOptionsMarketPanel() {
     : "BTC/ETH 옵션 쏠림을 롱/숏 위험 참고값으로 판단하는 중입니다.";
 
   return (
-    <PanelCard variant="report" padding="md" className="space-y-4 border-y border-ui-line">
+    <PanelCard variant="report" padding="md" className="space-y-4">
       <SectionHeader
         eyebrow="Deribit 공개 옵션 데이터"
         title="옵션 시장 온도 참고"
@@ -143,13 +143,13 @@ export function CoinOptionsMarketPanel() {
       ) : null}
 
       {reports.length ? (
-        <div className="grid gap-0 md:grid-cols-2">
-          {reports.map((report, index) => {
+        <div className="grid gap-2 md:grid-cols-2">
+          {reports.map((report) => {
             const tone = sideTone(report.dominantSide);
             return (
               <article
                 key={report.currency}
-                className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0 md:border-l" : ""}`}
+                className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3"
               >
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="min-w-0">

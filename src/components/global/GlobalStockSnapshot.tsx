@@ -17,7 +17,7 @@ export function StockSnapshot({
 
   return (
     <div className="grid gap-3 lg:grid-cols-4">
-      <div className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3 lg:col-span-2">
+      <div className="rounded-ui-lg bg-ui-panel p-3 lg:col-span-2">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ui-subtle">세부 근거 요약</p>
@@ -44,7 +44,7 @@ export function StockSnapshot({
         </div>
       </div>
 
-      <div className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3">
+      <div className="rounded-ui-lg bg-ui-panel p-3">
         <Activity className="text-ui-brand" size={20} aria-hidden />
         <p className="mt-3 text-xs font-semibold text-ui-subtle">현재가와 변동</p>
         <p className="mt-1 text-2xl font-semibold text-ui-text">{latest ? formatPrice(latest.close) : "미확인"}</p>
@@ -53,7 +53,7 @@ export function StockSnapshot({
         </p>
       </div>
 
-      <div className="rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3">
+      <div className="rounded-ui-lg bg-ui-panel p-3">
         <Shield className="text-ui-brand" size={20} aria-hidden />
         <p className="mt-3 text-xs font-semibold text-ui-subtle">가까운 기준선</p>
         <p className="mt-1 text-sm font-semibold text-emerald-200">지지 {formatPrice(support)}</p>

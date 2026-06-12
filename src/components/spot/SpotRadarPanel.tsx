@@ -277,11 +277,11 @@ function SpotMarketChecklist({ payload }: { payload: SpotRadarPayload }) {
   ];
 
   return (
-    <div className="grid gap-0 border-t border-ui-line md:grid-cols-3">
-      {checks.map((check, index) => (
+    <div className="grid gap-2 md:grid-cols-3">
+      {checks.map((check) => (
         <article
           key={check.label}
-          className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0 md:border-l" : ""}`}
+          className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3"
         >
           <div className="flex min-w-0 items-start justify-between gap-3">
             <div className="min-w-0">
@@ -327,7 +327,7 @@ function CompactSpotState({
   action?: ReactNode;
 }) {
   return (
-    <div className="rounded-ui-sm bg-ui-inset/25 px-3 py-3">
+    <div className="rounded-ui-sm bg-ui-elevated px-3 py-3">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2">
           {icon ? <span className="mt-0.5 shrink-0 text-ui-muted">{icon}</span> : null}
@@ -357,7 +357,7 @@ function SpotChartEvidencePanel({
   const visibleItems = (payload?.items ?? []).filter((item) => isReasonableBuyCandidate(itemsByMarket.get(item.market) ?? null, item));
 
   return (
-    <section className="space-y-4 border-t border-ui-line pt-4">
+    <section className="space-y-4 pt-2">
       <SectionHeader
         title="선택 후보 차트"
         action={
@@ -370,7 +370,7 @@ function SpotChartEvidencePanel({
 
       {isHelpOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="w-full max-w-sm border border-ui-line bg-ui-panel p-4 shadow-ui-elevated">
+          <div className="w-full max-w-sm rounded-ui-lg bg-ui-panel p-4 shadow-ui-elevated">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-base font-semibold text-ui-text">차트 기준</p>
@@ -403,16 +403,14 @@ function SpotChartEvidencePanel({
       ) : error ? (
         <CompactSpotState icon={<AlertTriangle size={15} aria-hidden />} title="차트 대기" body={error} />
       ) : visibleItems.length > 0 ? (
-        <div className="grid gap-0 md:grid-cols-2">
-          {visibleItems.map((item, index) => {
+        <div className="grid gap-2 md:grid-cols-2">
+          {visibleItems.map((item) => {
             const spotItem = itemsByMarket.get(item.market) ?? null;
 
             return (
               <article
                 key={`${item.exchange}-${item.market}`}
-                className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0" : ""} ${
-                  index % 2 === 1 ? "md:border-l md:border-ui-line" : ""
-                } ${index > 1 ? "md:border-t md:border-ui-line" : ""}`}
+                className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3"
               >
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -432,7 +430,7 @@ function SpotChartEvidencePanel({
                   <span className="text-center">{formatRangePosition(item.rangePositionPercent)}</span>
                   <span className="text-right">{formatVolumeRatio(item.volumeRatio)}</span>
                 </div>
-                <SpotPlanGrid item={spotItem} chart={item} className="mt-3 border-t border-ui-line pt-3" />
+                <SpotPlanGrid item={spotItem} chart={item} className="mt-3 rounded-ui-sm bg-ui-inset px-3 py-3" />
               </article>
             );
           })}
@@ -569,9 +567,9 @@ function SpotPriorityPanel({
         <CompactSpotState icon={<AlertTriangle size={15} aria-hidden />} title={error} body="거래소 public API 응답이 늦거나 제한될 수 있습니다." />
       ) : (
         <>
-          <div className="grid gap-0 lg:grid-cols-2">
-            {groups.map((group, index) => (
-              <article key={group.label} className="min-w-0 border-t border-ui-line/70 py-3 first:border-t-0 lg:border-l lg:border-t-0 lg:px-4 lg:first:border-l-0">
+          <div className="grid gap-2 lg:grid-cols-2">
+            {groups.map((group) => (
+              <article key={group.label} className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3">
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{group.label}</p>
@@ -586,7 +584,7 @@ function SpotPriorityPanel({
                     group.items.map(({ item, chart, reason, score, tone }) => {
                       const plan = buildSpotPricePlan(item, chart);
                       return (
-                        <div key={`${group.label}-${item.market}`} className="border-t border-ui-line pt-3 first:border-t-0 first:pt-0">
+                        <div key={`${group.label}-${item.market}`} className="rounded-ui-sm bg-ui-inset px-3 py-3">
                           <div className="flex min-w-0 items-center justify-between gap-3">
                             <p className="truncate text-base font-semibold text-ui-text">{item.symbol}</p>
                             <span className={`shrink-0 text-sm font-semibold ${chartToneClass[tone]}`}>{Math.round(score)}점</span>
@@ -598,14 +596,14 @@ function SpotPriorityPanel({
                       );
                     })
                   ) : (
-                    <p className="border-t border-ui-line pt-3 text-sm leading-6 text-ui-muted">관찰 후보 대기 중입니다.</p>
+                    <p className="rounded-ui-sm bg-ui-inset px-3 py-3 text-sm leading-6 text-ui-muted">관찰 후보 대기 중입니다.</p>
                   )}
                 </div>
               </article>
             ))}
           </div>
 
-          <div className="border-t border-ui-line pt-3">
+          <div className="rounded-ui-sm bg-ui-elevated px-3 py-3">
             <div className="flex min-w-0 items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">무효화/리스크 기준</p>
@@ -615,12 +613,12 @@ function SpotPriorityPanel({
                 기준
               </StatusPill>
             </div>
-            <div className="mt-3 grid gap-0 md:grid-cols-3">
+            <div className="mt-3 grid gap-2 md:grid-cols-3">
               {invalidationItems.length > 0 ? (
-                invalidationItems.map(({ item, chart }, index) => {
+                invalidationItems.map(({ item, chart }) => {
                   const plan = buildSpotPricePlan(item, chart);
                   return (
-                    <article key={`risk-${item.market}`} className="min-w-0 border-t border-ui-line/70 py-3 first:border-t-0 md:border-l md:border-t-0 md:px-3 md:first:border-l-0">
+                    <article key={`risk-${item.market}`} className="min-w-0 rounded-ui-sm bg-ui-inset px-3 py-3">
                       <div className="flex min-w-0 items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="truncate text-base font-semibold text-ui-text">{item.symbol}</p>
@@ -635,7 +633,7 @@ function SpotPriorityPanel({
                   );
                 })
               ) : (
-                <p className="border-t border-ui-line pt-3 text-sm leading-6 text-ui-muted">무효화 요약은 관찰 후보가 잡히면 표시합니다.</p>
+                <p className="rounded-ui-sm bg-ui-inset px-3 py-3 text-sm leading-6 text-ui-muted">무효화 요약은 관찰 후보가 잡히면 표시합니다.</p>
               )}
             </div>
           </div>
@@ -654,7 +652,7 @@ function SpotExchangeToggle({ exchange, onSelectExchange }: { exchange: SpotExch
           type="button"
           onClick={() => onSelectExchange(item.id)}
           className={`inline-flex min-h-10 items-center gap-2 border px-2 text-xs font-semibold transition ${
-            exchange === item.id ? "border-white bg-ui-brand/15 text-ui-text" : "border-transparent text-ui-muted hover:border-ui-line hover:text-ui-text"
+            exchange === item.id ? "border-ui-brand bg-ui-brand/15 text-ui-text" : "border-transparent text-ui-muted hover:border-ui-line hover:text-ui-text"
           }`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -711,7 +709,7 @@ function PersonalSpotPanel({
 
       {isPickerOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="w-full max-w-md border border-ui-line bg-ui-panel p-4 shadow-ui-elevated">
+          <div className="w-full max-w-md rounded-ui-lg bg-ui-panel p-4 shadow-ui-elevated">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-base font-semibold text-ui-text">관심 알트 등록</p>
@@ -797,7 +795,7 @@ function PersonalSpotPanel({
                 <span className="text-center">{formatRangePosition(chart.rangePositionPercent)}</span>
                 <span className="text-right">{formatVolumeRatio(chart.volumeRatio)}</span>
               </div>
-              <SpotPlanGrid item={selectedItem} chart={chart} className="mt-2 border-t border-ui-line pt-2" />
+              <SpotPlanGrid item={selectedItem} chart={chart} className="mt-2 rounded-ui-sm bg-ui-inset px-3 py-3" />
             </div>
             <div className="grid grid-cols-2 gap-3 text-right sm:grid-cols-1 sm:gap-2">
               <DataRow label="현재가" value={formatOptionalPrice(chartCurrentPrice(selectedItem, chart))} />
@@ -817,7 +815,7 @@ function SpotRow({ item, chart }: { item: SpotRadarItem; chart: SpotChartSummary
   const DirectionIcon = item.changePercent >= 0 ? ArrowUpRight : ArrowDownRight;
 
   return (
-    <article className="grid gap-3 border-t border-ui-line py-4 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_11rem] sm:items-start sm:gap-5">
+    <article className="grid gap-3 rounded-ui-sm bg-ui-elevated px-3 py-3 sm:grid-cols-[minmax(0,1fr)_11rem] sm:items-start sm:gap-5">
       <div className="min-w-0">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0">
@@ -831,7 +829,7 @@ function SpotRow({ item, chart }: { item: SpotRadarItem; chart: SpotChartSummary
         </div>
 
         {chart ? (
-          <div className="mt-3 border-t border-ui-line pt-3">
+          <div className="mt-3 rounded-ui-sm bg-ui-inset px-3 py-3">
             <div className="flex min-w-0 items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">차트</p>
@@ -1142,7 +1140,7 @@ export function SpotRadarPanel() {
               key={item.id}
               type="button"
               onClick={() => setFilter(item.id)}
-              className={`min-h-8 border-b px-2 text-xs font-semibold transition ${
+              className={`min-h-8 border-b border-ui-line px-2 text-xs font-semibold transition ${
                 filter === item.id ? "rounded-ui-sm bg-ui-active text-ui-text" : "text-ui-muted hover:bg-ui-inset/60 hover:text-ui-text"
               }`}
             >

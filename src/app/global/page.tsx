@@ -8,7 +8,7 @@ import { RadarTopNav } from "@/components/RadarTopNav";
 
 export default function GlobalMarketPage() {
   return (
-    <main className="min-h-screen px-3 pb-24 sm:px-5 sm:pb-28">
+    <main className="min-h-screen max-w-full overflow-x-hidden px-3 pb-24 sm:px-5 sm:pb-28">
       <GlobalAssetHashRedirect />
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 sm:gap-4">
         <Header market="stocks" />

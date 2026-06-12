@@ -32,16 +32,14 @@ export function CoinSignalConflictPanel({
   return (
     <PanelCard variant="flat" padding="none" className="space-y-4">
       <SectionHeader title={title} />
-      <div className="grid gap-0 border-y border-ui-line md:grid-cols-2">
-        {items.map((item, index) => {
+      <div className="grid gap-2 md:grid-cols-2">
+        {items.map((item) => {
           const Icon = item.icon ?? (item.tone === "risk" ? AlertTriangle : item.tone === "info" ? CheckCircle2 : GitCompareArrows);
 
           return (
             <article
               key={`${item.label}-${item.title}`}
-              className={`min-w-0 py-3 md:px-3 ${index > 0 ? "border-t border-ui-line md:border-t-0" : ""} ${
-                index % 2 === 1 ? "md:border-l md:border-ui-line" : ""
-              } ${index > 1 ? "md:border-t md:border-ui-line" : ""}`}
+              className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3"
             >
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0">

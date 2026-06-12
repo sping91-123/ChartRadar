@@ -103,10 +103,10 @@ export function ResultCard({ result }: ResultCardProps) {
         )}
       </div>
 
-      <div className="mt-5 border-y border-white/10 py-4">
+      <div className="mt-5 rounded-ui-sm bg-ui-elevated px-3 py-3">
         <h3 className="text-sm font-bold text-white">포지션 계산</h3>
         {result.positionSizing ? (
-          <div className="mt-3 grid gap-x-6 border-y border-white/10 sm:grid-cols-2">
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <Metric label="허용 손실 금액" value={formatCurrency(result.positionSizing.allowedLossAmount)} />
             <Metric label="적정 포지션 명목가" value={formatCurrency(result.positionSizing.positionNotional)} />
             <Metric label="필요 증거금" value={formatCurrency(result.positionSizing.requiredMargin)} />
@@ -121,7 +121,7 @@ export function ResultCard({ result }: ResultCardProps) {
         )}
       </div>
 
-      <div className="mt-4 border-y border-white/10 py-4">
+      <div className="mt-4 rounded-ui-sm bg-ui-elevated px-3 py-3">
         <h3 className="text-sm font-bold text-white">레버리지 체크</h3>
         <p className="mt-2 text-sm leading-6 text-slate-300">{result.leverageWarning}</p>
       </div>

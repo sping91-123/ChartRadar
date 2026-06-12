@@ -72,7 +72,7 @@ export function GlobalAssetSelectionPanel({
         </button>
       </div>
 
-      <div className="mt-5 rounded-ui-lg border border-ui-line/25 bg-ui-panel/35 p-3 sm:p-4">
+      <div className="mt-5 rounded-ui-lg bg-ui-panel p-3 sm:p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-ui-brand">
@@ -120,7 +120,7 @@ export function GlobalAssetSelectionPanel({
 
         <GlobalAssetChecklist selectedInfo={selectedInfo} />
 
-        <div className="mt-4 rounded-ui-md bg-ui-inset/20 p-3">
+        <div className="mt-4 rounded-ui-md bg-ui-elevated p-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-semibold text-ui-text">관심 글로벌 종목</p>
@@ -201,7 +201,7 @@ export function GlobalAssetSelectionPanel({
           ))}
         </div>
         {visibleUniverse.length === 0 ? (
-          <p className="mt-3 rounded-ui-sm bg-ui-inset/25 px-3 py-2 text-xs font-medium text-ui-muted">
+          <p className="mt-3 rounded-ui-sm bg-ui-elevated px-3 py-2 text-xs font-medium text-ui-muted">
             검색 결과가 없습니다. 종목명이나 심볼을 조금 짧게 입력해 보세요.
           </p>
         ) : null}
