@@ -9,6 +9,7 @@ import { getMacroCalendarFallbackPayload, type MacroCalendarPayload } from "@/li
 import { StatusPill } from "@/components/ui/DesignPrimitives";
 
 const RECENT_RELEASE_WINDOW_MS = 24 * 60 * 60 * 1000;
+const COMPACT_UPCOMING_WINDOW_MS = 24 * 60 * 60 * 1000;
 const PREVIOUS_RELEASE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const fallbackCalendar = getMacroCalendarFallbackPayload();
 
@@ -138,7 +139,7 @@ function getTimeLabel(releaseAt: string) {
 }
 
 function compactEventKind(item: MacroEventItem) {
-  if (hasReleaseTimePassed(item)) return "최근 발표";
+  if (hasReleaseTimePassed(item)) return isRecentlyReleased(item) ? "최근 발표" : "지난 일정";
   if (isSameKstDate(item.releaseAt)) return "오늘 예정";
   return "다음 일정";
 }
@@ -391,6 +392,16 @@ function getUpcomingItems(items: MacroEventItem[]) {
   return items.filter((item) => eventTime(item) > now).sort((a, b) => eventTime(a) - eventTime(b));
 }
 
+function getUpcomingWithinCompactWindowItems(items: MacroEventItem[]) {
+  const now = Date.now();
+  return items
+    .filter((item) => {
+      const diff = eventTime(item) - now;
+      return diff > 0 && diff <= COMPACT_UPCOMING_WINDOW_MS;
+    })
+    .sort((a, b) => eventTime(a) - eventTime(b));
+}
+
 function getRecentReleasedItems(items: MacroEventItem[]) {
   return items.filter((item) => isRecentlyReleased(item)).sort((a, b) => eventTime(b) - eventTime(a));
 }
@@ -401,8 +412,11 @@ function getPreviousReleasedItems(items: MacroEventItem[]) {
 
 function getCompactItem(items: MacroEventItem[]) {
   const visibleItems = items.filter(isVisibleCompactImpact);
+  const upcomingWithin24Hours = getUpcomingWithinCompactWindowItems(visibleItems)[0];
+  const recentReleased = getRecentReleasedItems(visibleItems)[0];
+  const previousReleased = getPreviousReleasedItems(visibleItems)[0];
   const nearestUpcoming = getUpcomingItems(visibleItems)[0];
-  return nearestUpcoming ?? getRecentReleasedItems(visibleItems)[0] ?? visibleItems[0];
+  return upcomingWithin24Hours ?? recentReleased ?? previousReleased ?? nearestUpcoming ?? visibleItems[0];
 }
 
 function MacroNewsValue({ label, value, pending = false, blankWhenMissing = false }: { label: string; value?: string; pending?: boolean; blankWhenMissing?: boolean }) {
@@ -460,7 +474,8 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
   const [hasLoadedCalendar, setHasLoadedCalendar] = useState(false);
   const [isPastExpanded, setIsPastExpanded] = useState(false);
   const [isUpcomingExpanded, setIsUpcomingExpanded] = useState(false);
-  const displayItems = getDisplayCalendarItems(calendar.items);
+  const calendarItems = compact && !hasLoadedCalendar ? [] : calendar.items;
+  const displayItems = getDisplayCalendarItems(calendarItems);
   const upcomingItems = getUpcomingItems(displayItems);
   const releasedItems = getRecentReleasedItems(displayItems);
   const previousReleasedItems = getPreviousReleasedItems(displayItems);

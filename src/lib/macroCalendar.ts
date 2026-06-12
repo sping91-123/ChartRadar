@@ -85,7 +85,7 @@ const IMPORTANT_USD_EVENTS = [
   /powell|fed chair/i,
   /existing home sales/i,
   /new home sales/i,
-  /consumer confidence/i,
+  /consumer confidence|consumer sentiment|michigan|university of michigan|uom/i,
   /durable goods/i,
   /jolts/i
 ];
