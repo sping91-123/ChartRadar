@@ -499,6 +499,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
   const summary = useMemo(() => summarizeRadarAlerts(displayEnabledRuleIds), [displayEnabledRuleIds]);
   const visibleRules = compact ? scopedRules.slice(0, 3) : scopedRules;
   const lockedVisibleRuleCount = visibleRules.filter((rule) => isRuleLockedForPlan(rule, isPaid)).length;
+  const visibleBasicRuleCount = visibleRules.filter((rule) => rule.tier !== "pro").length;
   const visibleSetupMatches = useMemo(() => {
     const seen = new Set<string>();
     return setupMatches.filter((match) => {
@@ -718,6 +719,26 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
           </div>
         }
       />
+
+      {!isPaid ? (
+        <AppSurface tone="inset" variant="flat" padding="none" className="border-y border-ui-line py-3">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusPill tone="info">Basic {visibleBasicRuleCount}</StatusPill>
+                <StatusPill tone="locked" icon={Crown}>Pro 잠김 {lockedVisibleRuleCount}</StatusPill>
+              </div>
+              <p className="mt-2 text-sm leading-6 text-ui-muted [word-break:keep-all]">
+                Basic은 핵심 알림을 직접 저장하고, {proPlanLabelForMarket(market)}는 무효화·변동성·시장 전환 조건까지 함께 감시합니다.
+              </p>
+            </div>
+            <ActionButton href={proHrefForMarket(market)} tone="secondary" className="min-h-9 w-full text-xs sm:w-auto">
+              <Crown size={13} aria-hidden />
+              Pro 알림 기준 보기
+            </ActionButton>
+          </div>
+        </AppSurface>
+      ) : null}
 
       <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

@@ -254,6 +254,34 @@ function getPlanDisplayCopy(plan: BillingPlan) {
   return planDisplayCopy[plan.id] ?? { description: plan.description, highlights: plan.highlights };
 }
 
+function getPlanPayoffCopy(plan: BillingPlan) {
+  if (plan.marketScope === "crypto") {
+    return {
+      title: "오늘 코인 판단을 다시 볼 기준까지 열립니다.",
+      items: ["추적 조건과 무효화 기준", "코인 Pro 알림 기준", "같은 기준의 복기 흐름"]
+    };
+  }
+
+  if (plan.marketScope === "stocks") {
+    return {
+      title: "미국장 판단 이후의 시장 맥락까지 열립니다.",
+      items: ["지수·선물 리스크 맥락", "이벤트와 섹터 흐름", "글로벌 Pro 알림 기준"]
+    };
+  }
+
+  if (plan.marketScope === "bundle") {
+    return {
+      title: "코인과 글로벌 리스크를 한 화면 기준으로 묶어 봅니다.",
+      items: ["Coin Pro 전체 기준", "Global Pro 전체 맥락", "시장 간 리스크 비교"]
+    };
+  }
+
+  return {
+    title: "Pro 판단 보조 기준이 열립니다.",
+    items: ["추적 조건", "무효화 기준", "알림·복기 흐름"]
+  };
+}
+
 function ValueCard({
   label,
   value,
@@ -319,6 +347,7 @@ function PlanCard({
 }) {
   const hasMonthlyValue = plan.monthlyValue > 0 && plan.billingPeriodMonths > 1;
   const displayCopy = getPlanDisplayCopy(plan);
+  const payoffCopy = getPlanPayoffCopy(plan);
 
   return (
     <AppSurface
@@ -354,6 +383,19 @@ function PlanCard({
           </li>
         ))}
       </ul>
+
+      <div className="mt-4 border-y border-ui-line py-3">
+        <StatusPill tone="long">업그레이드 즉시 열림</StatusPill>
+        <p className="mt-2 text-sm font-semibold leading-6 text-ui-text [word-break:keep-all]">{payoffCopy.title}</p>
+        <ul className="mt-3 grid gap-2 text-sm text-ui-muted">
+          {payoffCopy.items.map((item) => (
+            <li key={item} className="flex gap-2 [word-break:keep-all]">
+              <CheckCircle2 className="mt-0.5 shrink-0 text-ui-long" size={15} aria-hidden />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       <AppSurface tone="inset" variant="list" padding="none" className="mt-4 border-y border-ui-line py-2">
         <MetricRow label="시장" value={<span className="block max-w-[9rem] whitespace-normal break-keep">{plan.limits.markets}</span>} />
@@ -528,6 +570,9 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
             <p className="mt-2 text-sm font-semibold leading-6 text-ui-text [word-break:keep-all]">코인과 미국장을 함께 보는 통합 판단 흐름</p>
           </div>
         </div>
+        <ActionButton href="#pro-plans" tone="secondary" className="mt-5 min-h-10 w-full text-sm sm:w-auto">
+          현재 플랜과 가격 보기
+        </ActionButton>
       </AppSurface>
 
       <section className="flex flex-col gap-3">
@@ -585,7 +630,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
         </AppSurface>
       ) : null}
 
-      <div className="flex flex-col gap-3">
+      <div id="pro-plans" className="flex scroll-mt-24 flex-col gap-3">
         <SectionHeader eyebrow="AVAILABLE PLANS" title="현재 플랜과 가격 선택" description={plansDescription} />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {paidPlans.map((plan) => (

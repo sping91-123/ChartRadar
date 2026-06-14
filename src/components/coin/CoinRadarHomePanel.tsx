@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowDownRight, ArrowUpRight, RefreshCw, TrendingUp, X } from "lucide-react";
+import { AlertTriangle, ArrowDownRight, ArrowUpRight, Crown, RefreshCw, TrendingUp, X } from "lucide-react";
 import { ActionButton, PanelCard, StatusPill } from "@/components/ui/DesignPrimitives";
 import type { CoinMarketMetricsPayload } from "@/lib/coinMarketMetrics";
 import type { Candle } from "@/lib/marketAnalysis";
@@ -852,6 +852,32 @@ export function CoinRadarHomePanel() {
             </StatusPill>
             <p className="mt-3 text-xl font-semibold leading-8 text-ui-text [word-break:keep-all]">{radarInterpretation(decision)}</p>
             <p className="mt-2 text-sm leading-6 text-ui-muted [word-break:keep-all]">{primaryAction.detail}</p>
+          </div>
+          <div className="col-span-2 border-y border-ui-line py-3">
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              <div className="min-w-0">
+                <StatusPill tone="locked" icon={Crown}>Coin Pro 미리보기</StatusPill>
+                <p className="mt-2 text-sm font-medium leading-6 text-ui-muted [word-break:keep-all]">
+                  Basic은 결론을 먼저 보여주고, Pro는 이 판단을 다시 볼 기준까지 엽니다.
+                </p>
+              </div>
+              <Link href="/pro?market=crypto" className="inline-flex min-h-9 shrink-0 items-center gap-1.5 text-sm font-semibold text-ui-brand transition hover:text-ui-text">
+                열기
+                <ArrowUpRight size={14} aria-hidden />
+              </Link>
+            </div>
+            <div className="mt-3 grid gap-2">
+              {[
+                { label: "추적 조건", value: recheckCondition },
+                { label: "무효화 기준", value: invalidationText(summary?.decision) },
+                { label: "알림·복기", value: "조건 도달 시 같은 기준으로 다시 점검" }
+              ].map((item) => (
+                <div key={item.label} className="flex min-w-0 items-start justify-between gap-3 rounded-ui-sm bg-ui-inset/35 px-3 py-2">
+                  <span className="shrink-0 text-xs font-semibold text-ui-subtle">{item.label}</span>
+                  <span className="min-w-0 text-right text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{item.value}</span>
+                </div>
+              ))}
+            </div>
           </div>
           <div className="col-span-2 grid min-w-0 grid-cols-2 gap-2">
             <div className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3">
