@@ -19,6 +19,7 @@ create table if not exists public.journals (
   title text not null,
   bias text not null default '관망',
   note text not null default '',
+  market text check (market in ('crypto', 'stocks')),
   source text not null default 'manual' check (source in ('manual', 'chart', 'scout')),
   symbol text,
   timeframe text,

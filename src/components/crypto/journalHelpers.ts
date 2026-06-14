@@ -47,6 +47,7 @@ export function buildCryptoJournalEntry({
     title: `${symbol} ${timeframe} 레이더 저장`,
     bias: analysis.bias === "long" ? "롱" : analysis.bias === "short" ? "숏" : "관찰",
     note: noteParts.join("\n"),
+    market: "crypto",
     source: "chart",
     symbol,
     timeframe,

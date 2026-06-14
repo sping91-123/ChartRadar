@@ -8,6 +8,7 @@ interface JournalRow {
   title: string;
   bias: string;
   note: string;
+  market?: JournalEntry["market"] | null;
   source: "manual" | "chart" | "scout";
   symbol: string | null;
   timeframe: string | null;
@@ -42,7 +43,7 @@ function rowToEntry(row: JournalRow): JournalEntry {
     bias: row.bias,
     note: row.note,
     createdAt: row.created_at,
-    market: inferMarket(row.verdict),
+    market: row.market ?? inferMarket(row.verdict),
     source: row.source,
     symbol: row.symbol ?? undefined,
     timeframe: row.timeframe ?? undefined,
@@ -54,9 +55,13 @@ function rowToEntry(row: JournalRow): JournalEntry {
 }
 
 export async function loadRemoteJournalEntries(accessToken: string) {
-  const rows = await supabaseRest<JournalRow[]>("journals?select=*&order=created_at.desc", {
-    accessToken
-  });
+  const user = await fetchSupabaseUser(accessToken);
+  const rows = await supabaseRest<JournalRow[]>(
+    `journals?select=*&user_id=eq.${encodeURIComponent(user.id)}&order=created_at.desc`,
+    {
+      accessToken
+    }
+  );
   return rows.map(rowToEntry);
 }
 
@@ -74,6 +79,7 @@ export async function createRemoteJournalEntry(
       title: entry.title,
       bias: entry.bias,
       note: entry.note,
+      market: entry.market ?? inferMarket(entry.verdict ?? null) ?? null,
       source: entry.source ?? "manual",
       symbol: entry.symbol ?? null,
       timeframe: entry.timeframe ?? null,
@@ -119,17 +125,20 @@ export async function updateRemoteJournalOutcome(
 }
 
 export async function migrateLocalJournalEntries(accessToken: string, entries: JournalEntry[]) {
+  if (!entries.length) return [];
+
   const user = await fetchSupabaseUser(accessToken);
-  const rows = await supabaseRest<JournalRow[]>("journals", {
+  const rows = await supabaseRest<JournalRow[]>("journals?on_conflict=id", {
     accessToken,
     method: "POST",
-    prefer: "return=representation",
+    prefer: "resolution=merge-duplicates,return=representation",
     body: entries.map((entry) => ({
       id: entry.id,
       user_id: user.id,
       title: entry.title,
       bias: entry.bias,
       note: entry.note,
+      market: entry.market ?? inferMarket(entry.verdict ?? null) ?? null,
       source: entry.source ?? "manual",
       symbol: entry.symbol ?? null,
       timeframe: entry.timeframe ?? null,

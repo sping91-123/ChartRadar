@@ -38,6 +38,7 @@ import {
   createRemoteJournalEntry,
   deleteRemoteJournalEntry,
   loadRemoteJournalEntries,
+  migrateLocalJournalEntries,
   updateRemoteJournalOutcome
 } from "@/lib/remoteJournal";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
@@ -106,6 +107,18 @@ function detectEntryMarket(entry: JournalEntry): MarketScope | "unknown" {
 
   const symbol = entry.symbol.replace("USDT.P", "").replace("USDT", "").toUpperCase();
   return stockSymbols.has(symbol) ? "stocks" : "crypto";
+}
+
+function mergeJournalEntries(...entryGroups: JournalEntry[][]) {
+  const entriesById = new Map<string, JournalEntry>();
+
+  entryGroups.flat().forEach((entry) => {
+    if (!entriesById.has(entry.id)) entriesById.set(entry.id, entry);
+  });
+
+  return Array.from(entriesById.values()).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 }
 
 function formatDateTime(value: string) {
@@ -359,11 +372,26 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
   const refreshRemote = useCallback(async () => {
     if (!session?.accessToken) return;
     setIsLoadingRemote(true);
+    const localEntries = loadJournalEntries();
+
     try {
       const remoteEntries = await loadRemoteJournalEntries(session.accessToken);
-      setEntries(remoteEntries);
+      const remoteIds = new Set(remoteEntries.map((entry) => entry.id));
+      const localOnlyEntries = localEntries.filter((entry) => !remoteIds.has(entry.id));
+
+      if (!localOnlyEntries.length) {
+        setEntries(mergeJournalEntries(remoteEntries, localEntries));
+        return;
+      }
+
+      try {
+        const migratedEntries = await migrateLocalJournalEntries(session.accessToken, localOnlyEntries);
+        setEntries(mergeJournalEntries(remoteEntries, migratedEntries, localEntries));
+      } catch {
+        setEntries(mergeJournalEntries(remoteEntries, localEntries));
+      }
     } catch {
-      setEntries(loadJournalEntries());
+      setEntries(localEntries);
     } finally {
       setIsLoadingRemote(false);
     }
@@ -384,7 +412,7 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
     () =>
       entries.filter((entry) => {
         const detected = detectEntryMarket(entry);
-        return detected === "unknown" || detected === market;
+        return detected === market || (detected === "unknown" && market === "crypto");
       }),
     [entries, market]
   );
@@ -503,8 +531,13 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
     };
 
     if (session?.accessToken) {
-      const created = await createRemoteJournalEntry(session.accessToken, entry);
-      setEntries((current) => [created, ...current]);
+      try {
+        const created = await createRemoteJournalEntry(session.accessToken, entry);
+        setEntries((current) => mergeJournalEntries([created], current));
+      } catch {
+        const next = appendJournalEntry(entry);
+        setEntries((current) => mergeJournalEntries(next, current));
+      }
     } else {
       const next = appendJournalEntry(entry);
       setEntries(next);
@@ -515,10 +548,24 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
   }
 
   async function removeEntry(id: string) {
+    const previous = entries;
     const next = entries.filter((entry) => entry.id !== id);
+    const localEntries = loadJournalEntries();
+    const localHasEntry = localEntries.some((entry) => entry.id === id);
+    const nextLocalEntries = localEntries.filter((entry) => entry.id !== id);
+
     setEntries(next);
     if (session?.accessToken) {
-      await deleteRemoteJournalEntry(session.accessToken, id);
+      try {
+        await deleteRemoteJournalEntry(session.accessToken, id);
+        if (localHasEntry) saveJournalEntries(nextLocalEntries);
+      } catch {
+        if (localHasEntry) {
+          saveJournalEntries(nextLocalEntries);
+        } else {
+          setEntries(previous);
+        }
+      }
     } else {
       saveJournalEntries(next);
     }
@@ -528,13 +575,31 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
     const currentEntry = entries.find((entry) => entry.id === id);
     const nextOutcome = currentEntry?.outcome === outcome ? undefined : outcome;
     const nextOutcomeAt = nextOutcome ? new Date().toISOString() : undefined;
+    const previous = entries;
     const next = entries.map((entry) =>
       entry.id === id ? { ...entry, outcome: nextOutcome, outcomeAt: nextOutcomeAt } : entry
     );
+    const localEntries = loadJournalEntries();
+    const localHasEntry = localEntries.some((entry) => entry.id === id);
+    const nextLocalEntries = localEntries.map((entry) =>
+      entry.id === id ? { ...entry, outcome: nextOutcome, outcomeAt: nextOutcomeAt } : entry
+    );
+
     setEntries(next);
 
     if (session?.accessToken) {
-      await updateRemoteJournalOutcome(session.accessToken, id, nextOutcome ?? null, nextOutcomeAt ?? null);
+      try {
+        const updated = await updateRemoteJournalOutcome(session.accessToken, id, nextOutcome ?? null, nextOutcomeAt ?? null);
+        if (!updated) throw new Error("Remote journal entry was not found.");
+        setEntries((current) => current.map((entry) => (entry.id === id ? updated : entry)));
+        if (localHasEntry) saveJournalEntries(nextLocalEntries);
+      } catch {
+        if (localHasEntry) {
+          saveJournalEntries(nextLocalEntries);
+        } else {
+          setEntries(previous);
+        }
+      }
     } else {
       saveJournalEntries(next);
     }

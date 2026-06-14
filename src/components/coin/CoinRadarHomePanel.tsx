@@ -624,6 +624,62 @@ function CoinStatusTile({
   );
 }
 
+function SnapshotMetricCard({
+  label,
+  value,
+  detail,
+  tone = "info"
+}: {
+  label: string;
+  value: string;
+  detail?: string;
+  tone?: VisualTone;
+}) {
+  const toneClass = visualToneClass[tone];
+
+  return (
+    <article className="min-w-0 rounded-ui-sm bg-ui-inset/30 px-2.5 py-2">
+      <p className="truncate text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{label}</p>
+      <p className={`mt-0.5 truncate text-sm font-semibold leading-5 ${toneClass.text}`}>{value}</p>
+      {detail ? <p className="mt-0.5 hidden truncate text-[11px] font-medium leading-4 text-ui-muted [word-break:keep-all] min-[430px]:block">{detail}</p> : null}
+    </article>
+  );
+}
+
+function CoinSnapshotTile({
+  symbol,
+  item,
+  score,
+  onClick
+}: {
+  symbol: RepresentativeSymbol;
+  item: MarketBoardItem | null;
+  score: number;
+  onClick: () => void;
+}) {
+  const changePercent = item?.changePercent ?? 0;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`min-w-0 rounded-ui-sm border px-2.5 py-2 text-left transition hover:bg-ui-inset/55 active:scale-[0.99] ${tileToneClass(changePercent)}`}
+      aria-label={`${symbol} 상세 보기`}
+    >
+      <span className="flex min-w-0 items-start justify-between gap-2">
+        <span className="min-w-0 text-sm font-semibold tracking-tight text-ui-text">{symbol}</span>
+        <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold leading-none ${scoreToneClass(score)}`}>
+          {score}점
+        </span>
+      </span>
+      <span className={`mt-1 block truncate text-sm font-semibold ${tileAccentClass(changePercent)}`}>{formatPercent(item?.changePercent)}</span>
+      <span className="mt-0.5 block truncate text-[11px] font-semibold text-ui-subtle">
+        {item ? `$${formatPrice(item.price)}` : "가격 확인 중"}
+      </span>
+    </button>
+  );
+}
+
 function findReading(report: TechnicalRadarReport | null, label: string): IndicatorReading | null {
   if (!report) return null;
   return [...report.momentumIndicators, ...report.trendIndicators, ...report.volatilityIndicators].find((item) => item.label === label) ?? null;
@@ -801,6 +857,24 @@ export function CoinRadarHomePanel() {
           <div className="mt-4 h-12 rounded-ui-sm bg-ui-brand/25" />
         </section>
         <section className="rounded-ui-lg bg-ui-panel px-4 py-4">
+          <div className="h-3 w-24 rounded-full bg-ui-elevated" />
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="h-20 rounded-ui-sm bg-ui-elevated" />
+            <div className="h-20 rounded-ui-sm bg-ui-elevated" />
+            <div className="h-20 rounded-ui-sm bg-ui-elevated" />
+            <div className="h-20 rounded-ui-sm bg-ui-elevated" />
+          </div>
+        </section>
+        <section className="rounded-ui-lg bg-ui-panel px-4 py-4">
+          <div className="h-3 w-20 rounded-full bg-ui-elevated" />
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="h-20 rounded-ui-sm bg-ui-elevated" />
+            <div className="h-20 rounded-ui-sm bg-ui-elevated" />
+            <div className="h-20 rounded-ui-sm bg-ui-elevated" />
+            <div className="h-20 rounded-ui-sm bg-ui-elevated" />
+          </div>
+        </section>
+        <section className="rounded-ui-lg bg-ui-panel px-4 py-4">
           <p className="text-sm font-semibold text-ui-muted">코인 시장을 분석하고 있습니다.</p>
           <div className="mt-4 space-y-3">
             <div className="h-5 rounded-ui-sm bg-ui-elevated" />
@@ -833,16 +907,44 @@ export function CoinRadarHomePanel() {
   const confirmationMetric = confirmationMetricText(decision);
   const primaryAction = primaryActionFor(decision);
   const todayTasks = todayTasksFor(decision);
+  const liquidityScore = summary?.stablecoinLiquidity?.flowScore;
+  const marketSnapshotItems: Array<{ label: string; value: string; detail: string; tone: VisualTone }> = [
+    {
+      label: "BTC 1H",
+      value: summary?.report?.trendLabel ?? "미확인",
+      detail: `4H ${summary?.report4h?.trendLabel ?? "미확인"}까지 같이 봅니다.`,
+      tone: decisionTone(decision)
+    },
+    {
+      label: "공포탐욕",
+      value: summary?.fearGreed ? `${summary.fearGreed.score} · ${summary.fearGreed.label}` : "미확인",
+      detail: summary?.fearGreed ? "과열·공포 위치를 먼저 확인합니다." : "공포탐욕 데이터를 확인하는 중입니다.",
+      tone: toneFromFearGreed(summary?.fearGreed?.score)
+    },
+    {
+      label: "스테이블 유동성",
+      value: liquidityScore !== null && liquidityScore !== undefined ? `${liquidityScore}점` : "미확인",
+      detail: summary?.stablecoinLiquidity?.summary ?? "유동성 흐름을 확인하는 중입니다.",
+      tone: toneFromLiquidity(summary?.stablecoinLiquidity)
+    },
+    {
+      label: "큰 체결",
+      value: largeTradeDisplay(summary?.largeTradeFlow),
+      detail: largeTradeDetail(summary?.largeTradeFlow, decision, summary?.report, summary?.report4h) ?? "큰 체결 방향을 확인하는 중입니다.",
+      tone: largeTradeTone(summary?.largeTradeFlow, decision)
+    }
+  ];
+  const visibleCoinSymbols = tileSymbols.slice(0, 4);
 
   return (
     <div className="flex max-w-full flex-col gap-3 overflow-x-hidden">
-      <section className="rounded-ui-lg bg-ui-panel px-4 pb-5 pt-4">
-        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-3">
+      <section className="rounded-ui-lg bg-ui-panel px-3.5 pb-4 pt-3">
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2.5">
           <div className="min-w-0">
             <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-brand">COIN RADAR</p>
-            <h2 className="mt-1 text-[1.7rem] font-semibold leading-9 tracking-tight text-ui-text">오늘의 레이더</h2>
+            <h2 className="mt-0.5 text-2xl font-semibold leading-8 tracking-tight text-ui-text">오늘의 레이더</h2>
           </div>
-          <ActionButton tone="ghost" className="min-h-9 shrink-0 px-3 text-xs" onClick={() => void load()}>
+          <ActionButton tone="ghost" className="min-h-8 shrink-0 px-2.5 text-xs" onClick={() => void load()}>
             <RefreshCw size={12} aria-hidden />
             새로고침
           </ActionButton>
@@ -850,55 +952,69 @@ export function CoinRadarHomePanel() {
             <StatusPill tone={decisionTone(decision)}>
               {decisionDisplayLabel(decision)}
             </StatusPill>
-            <p className="mt-3 text-xl font-semibold leading-8 text-ui-text [word-break:keep-all]">{radarInterpretation(decision)}</p>
-            <p className="mt-2 text-sm leading-6 text-ui-muted [word-break:keep-all]">{primaryAction.detail}</p>
-          </div>
-          <div className="col-span-2 border-y border-ui-line py-3">
-            <div className="flex min-w-0 items-center justify-between gap-3">
-              <div className="min-w-0">
-                <StatusPill tone="locked" icon={Crown}>Coin Pro 미리보기</StatusPill>
-                <p className="mt-2 text-sm font-medium leading-6 text-ui-muted [word-break:keep-all]">
-                  Basic은 결론을 먼저 보여주고, Pro는 이 판단을 다시 볼 기준까지 엽니다.
-                </p>
-              </div>
-              <Link href="/pro?market=crypto" className="inline-flex min-h-9 shrink-0 items-center gap-1.5 text-sm font-semibold text-ui-brand transition hover:text-ui-text">
-                열기
-                <ArrowUpRight size={14} aria-hidden />
-              </Link>
-            </div>
-            <div className="mt-3 grid gap-2">
-              {[
-                { label: "추적 조건", value: recheckCondition },
-                { label: "무효화 기준", value: invalidationText(summary?.decision) },
-                { label: "알림·복기", value: "조건 도달 시 같은 기준으로 다시 점검" }
-              ].map((item) => (
-                <div key={item.label} className="flex min-w-0 items-start justify-between gap-3 rounded-ui-sm bg-ui-inset/35 px-3 py-2">
-                  <span className="shrink-0 text-xs font-semibold text-ui-subtle">{item.label}</span>
-                  <span className="min-w-0 text-right text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{item.value}</span>
-                </div>
-              ))}
-            </div>
+            <p className="mt-2 text-lg font-semibold leading-6 text-ui-text [word-break:keep-all]">{radarInterpretation(decision)}</p>
           </div>
           <div className="col-span-2 grid min-w-0 grid-cols-2 gap-2">
-            <div className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3">
+            <div className="min-w-0 rounded-ui-sm bg-ui-elevated px-2.5 py-2">
               <p className="truncate text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{readiness.label}</p>
-              <p className="mt-1 truncate text-base font-semibold text-ui-text">{readiness.value}</p>
+              <p className="mt-0.5 truncate text-sm font-semibold text-ui-text">{readiness.value}</p>
             </div>
-            <div className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3">
+            <div className="min-w-0 rounded-ui-sm bg-ui-elevated px-2.5 py-2">
               <p className="truncate text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">{marketMode.label}</p>
-              <p className="mt-1 truncate text-base font-semibold text-ui-text">{marketMode.value}</p>
+              <p className="mt-0.5 truncate text-sm font-semibold text-ui-text">{marketMode.value}</p>
             </div>
           </div>
-          <div className="col-span-2">
-            <ActionButton tone="primary" href={primaryAction.href} className="min-h-12 w-full justify-between px-4 text-[15px]">
+          <div className="col-span-2 grid gap-1.5">
+            {[
+              { label: "추적", value: recheckCondition },
+              { label: "무효화", value: invalidationText(summary?.decision) }
+            ].map((item) => (
+              <div key={item.label} className="flex min-w-0 items-start justify-between gap-3 rounded-ui-sm bg-ui-inset/35 px-2.5 py-1.5">
+                <span className="shrink-0 pt-0.5 text-[11px] font-semibold text-ui-subtle">{item.label}</span>
+                <span className="min-w-0 text-right text-xs font-semibold leading-5 text-ui-text [word-break:keep-all]">{item.value}</span>
+              </div>
+            ))}
+          </div>
+          <div className="col-span-2 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+            <ActionButton tone="primary" href={primaryAction.href} className="min-h-10 justify-between px-3 text-sm">
               <span>{primaryAction.label}</span>
-              <ArrowUpRight size={15} aria-hidden />
+              <ArrowUpRight size={14} aria-hidden />
             </ActionButton>
+            <Link href="/pro?market=crypto" className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-ui-sm bg-ui-inset/45 px-3 text-xs font-semibold text-ui-brand transition hover:bg-ui-inset/70 hover:text-ui-text">
+              <Crown size={12} aria-hidden />
+              Pro
+            </Link>
           </div>
         </div>
       </section>
 
-      <section className="rounded-ui-lg bg-ui-panel px-4 py-4">
+      <section className="rounded-ui-lg bg-ui-panel px-3.5 py-2.5">
+        <div className="flex min-w-0 items-end justify-between gap-3">
+          <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">시장 스냅샷</p>
+          <p className="shrink-0 text-[11px] font-semibold leading-4 text-ui-subtle">판단 핵심 4개</p>
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {marketSnapshotItems.map((item) => (
+            <SnapshotMetricCard key={item.label} label={item.label} value={item.value} detail={item.detail} tone={item.tone} />
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-ui-lg bg-ui-panel px-3.5 py-2.5">
+        <div className="flex min-w-0 items-end justify-between gap-3">
+          <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">대표 코인</p>
+          <p className="shrink-0 text-[11px] font-semibold leading-4 text-ui-subtle">탭해서 상세 확인</p>
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {visibleCoinSymbols.map((symbol) => {
+            const item = boardItem(state.data.board, symbol);
+            const score = scoreFor(item?.changePercent ?? 0, summary?.fearGreed?.score ?? null);
+            return <CoinSnapshotTile key={symbol} symbol={symbol} item={item} score={score} onClick={() => setSelectedSymbol(symbol)} />;
+          })}
+        </div>
+      </section>
+
+      <section className="rounded-ui-lg bg-ui-panel px-3.5 py-3">
         <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">오늘 판단 순서</p>
         <ol className="mt-4 divide-y divide-ui-line">
           {todayTasks.slice(0, 3).map((task, index) => (
@@ -912,20 +1028,23 @@ export function CoinRadarHomePanel() {
         </ol>
       </section>
 
-      <section className="rounded-ui-lg bg-ui-panel px-4 py-2" aria-label="빠른 실행">
-        {quickActions.map((action) => (
-          <Link
-            key={action.href}
-            href={action.href}
-            className="block min-w-0 border-t border-ui-line py-3.5 text-left transition first:border-t-0 hover:text-ui-brand active:scale-[0.99]"
-          >
-            <span className="flex min-w-0 items-center justify-between gap-3 text-[15px] font-semibold leading-6 text-ui-text">
-              <span className="min-w-0 [word-break:keep-all]">{action.label}</span>
-              <ArrowUpRight size={14} aria-hidden className="shrink-0 text-ui-subtle" />
-            </span>
-            <span className="mt-1 block text-sm font-medium leading-5 text-ui-muted [word-break:keep-all]">{action.detail}</span>
-          </Link>
-        ))}
+      <section className="rounded-ui-lg bg-ui-panel px-4 py-4" aria-label="빠른 실행">
+        <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">빠른 실행</p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {quickActions.map((action) => (
+            <Link
+              key={action.href}
+              href={action.href}
+              className="block min-w-0 rounded-ui-sm bg-ui-inset/30 px-3 py-3 text-left transition hover:bg-ui-inset/55 active:scale-[0.99]"
+            >
+              <span className="flex min-w-0 items-center justify-between gap-2 text-sm font-semibold leading-5 text-ui-text">
+                <span className="min-w-0 truncate">{action.label}</span>
+                <ArrowUpRight size={13} aria-hidden className="shrink-0 text-ui-subtle" />
+              </span>
+              <span className="mt-1 line-clamp-2 text-xs font-medium leading-5 text-ui-muted [word-break:keep-all]">{action.detail}</span>
+            </Link>
+          ))}
+        </div>
       </section>
 
       {selectedSymbol ? (

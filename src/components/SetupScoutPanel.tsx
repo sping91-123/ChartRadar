@@ -528,6 +528,7 @@ function SetupCard({
       title: setup.headline,
       bias: isLong ? "롱" : "숏",
       note: buildJournalNote(setup),
+      market: "crypto" as const,
       source: "scout" as const,
       symbol: setup.symbol,
       timeframe: setup.timeframe,
