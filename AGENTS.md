@@ -1,3 +1,12 @@
+## Codex Desktop 안정성 규칙
+
+이 Windows 환경에서는 Codex in-app Browser 플러그인(`browser` / `iab` backend)이 웹뷰를 붙이는 순간 Codex Desktop이 종료되는 Crashpad 덤프가 반복 생성됐다.
+
+* ChartRadar 작업에서는 in-app Browser 플러그인을 사용하지 않는다.
+* 로컬 UI 확인은 CLI Playwright, smoke 스크립트, 또는 Chrome 플러그인/외부 Chrome을 사용한다.
+* `/crypto`, `/alts`, `/global`, `/news`, `/journal`, `/pro` 모바일 확인이 필요해도 `browser.tabs.new()` 또는 `agent.browsers.get("iab")` 경로를 사용하지 않는다.
+* 다시 종료 현상이 생기면 먼저 `C:\Users\USER\AppData\Local\Packages\OpenAI.Codex_2p2nqsd0c76g0\LocalCache\Roaming\Codex\web\Codex\Crashpad\reports\`와 Codex Desktop 로그를 확인한다.
+
 ## 자동 실행 레벨
 
 대표의 명령어에 따라 Codex의 자율 실행 범위를 아래처럼 구분한다.
