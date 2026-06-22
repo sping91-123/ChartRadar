@@ -98,6 +98,13 @@ const checks = [
   }
 ];
 
+checks.splice(
+  checks.findIndex((check) => check.path === "/crypto/review"),
+  0,
+  { label: "Coin alert list", path: "/crypto/alertlist" },
+  { label: "Coin alert settings", path: "/crypto/alertset" }
+);
+
 async function fetchWithTimeout(check) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);

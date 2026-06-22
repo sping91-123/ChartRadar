@@ -23,8 +23,7 @@ export function tokenPreferenceDecision(token: PushTokenRow, event: PushAlertEve
   const markets = token.markets ?? [];
   const ruleIds = token.rule_ids ?? [];
   const marketOk = markets.length === 0 || markets.some((market) => marketMatchesPreference(market, event.market));
-  const shouldBypassRulePreference = event.system === true && event.isWatchlist !== true;
-  const ruleOk = shouldBypassRulePreference || ruleIds.length === 0 || ruleIds.includes(event.ruleId);
+  const ruleOk = ruleIds.includes(event.ruleId);
   return {
     allowed: marketOk && ruleOk,
     marketOk,

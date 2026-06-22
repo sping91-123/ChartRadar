@@ -23,8 +23,22 @@ function marketFromHeader(market?: HeaderMarket): PreferredMarket | null {
   return null;
 }
 
+function CoinRadarSymbol() {
+  return (
+    <span
+      className="relative grid h-full w-full place-items-center overflow-hidden rounded-ui-sm bg-slate-950"
+      aria-hidden
+    >
+      <span className="absolute left-1.5 top-1.5 h-5 w-5 rounded-full border border-amber-200/45 bg-amber-400/25 shadow-[0_0_14px_rgba(245,158,11,0.25)]" />
+      <span className="absolute bottom-1.5 right-1.5 grid h-6 w-6 place-items-center rounded-full border border-amber-50/85 bg-[linear-gradient(135deg,#fde68a_0%,#f59e0b_48%,#b45309_100%)] shadow-[0_0_16px_rgba(251,191,36,0.48)]">
+        <Bitcoin size={14} strokeWidth={2.7} className="text-slate-950" />
+      </span>
+    </span>
+  );
+}
+
 function MarketIcon({ market }: { market?: HeaderMarket }) {
-  if (market === "crypto") return <Bitcoin size={18} aria-hidden />;
+  if (market === "crypto") return <CoinRadarSymbol />;
   if (market === "stocks") return <TrendingUp size={18} aria-hidden />;
   return <span className="text-sm font-semibold">C</span>;
 }
@@ -84,7 +98,7 @@ export function HeaderMarketSwitcher({ market, subtitle }: { market?: HeaderMark
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-ui-sm bg-ui-panel text-ui-brand sm:h-10 sm:w-10">
+        <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-ui-sm bg-ui-panel text-ui-brand sm:h-10 sm:w-10">
           <MarketIcon market={market} />
         </span>
         <span className="min-w-0 flex-1 overflow-visible">

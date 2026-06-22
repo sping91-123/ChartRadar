@@ -347,6 +347,14 @@ function timeframeSignalSummary(item: TimeframeAnalysis) {
   return parts.length ? parts.slice(0, 3).join(" / ") : "겹치는 신호 없음";
 }
 
+function normalizeDetailSymbolParam(value: string | null) {
+  const normalized = value?.trim().toUpperCase();
+  if (!normalized) return null;
+  const compact = normalized.replace(".P", "").replace(":USDT", "").replace("/", "");
+  if (!compact) return null;
+  return compact.endsWith("USDT") ? `${compact}.P` : `${compact}USDT.P`;
+}
+
 export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorOnly?: boolean; altOnly?: boolean } = {}) {
   const initialSymbol = altOnly ? altSymbols[0] : majorSymbols[0];
   const { profile } = useSupabaseAuth();
@@ -387,6 +395,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
   const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>(defaultOverlaySettings);
   const [altAnalysisGate, setAltAnalysisGate] = useState<AltAnalysisGate>(() => initialAltAnalysisGate(false));
   const [hasMounted, setHasMounted] = useState(false);
+  const [requestedSymbol, setRequestedSymbol] = useState<string | null>(null);
   const effectiveTradingMode: TradingMode = activeTimeframe === "5m" || activeTimeframe === "15m" ? "scalp" : "swing";
   const modeTimeframes = chartTimeframes;
   const primarySymbols = useMemo(() => (altOnly ? altSymbols.slice(0, 5) : majorSymbols), [altOnly]);
@@ -424,6 +433,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
   useEffect(() => {
     setHasMounted(true);
     setOverlaySettings(readOverlaySettings());
+    setRequestedSymbol(normalizeDetailSymbolParam(new URLSearchParams(window.location.search).get("symbol")));
   }, []);
 
   useEffect(() => {
@@ -484,6 +494,14 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
       setStructureSensitivity(storedStructureSensitivity);
     }
   }, [altOnly]);
+
+  useEffect(() => {
+    if (!requestedSymbol) return;
+    const isMajorSymbol = majorSymbols.includes(requestedSymbol);
+    if (majorOnly && !isMajorSymbol) return;
+    if (altOnly && isMajorSymbol) return;
+    selectSymbol(requestedSymbol, { userSelected: altOnly });
+  }, [altOnly, majorOnly, requestedSymbol, selectSymbol]);
 
   useEffect(() => {
     writeLocalStorage(storageKey("symbol"), legacyStorageKeys("symbol"), symbol);

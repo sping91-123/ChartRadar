@@ -1,4 +1,4 @@
-// Coin Radar 홈이 사용하는 BTC 도미넌스, 환율, 김프 보조값을 public source에서 정리합니다.
+// 선물 상세 분석이 사용하는 BTC 도미넌스, 환율, 김치 프리미엄 보조값을 public source에서 정리합니다.
 import { NextResponse } from "next/server";
 import type { CoinMarketMetricsPayload } from "@/lib/coinMarketMetrics";
 import { rateLimit } from "@/lib/server/rateLimit";

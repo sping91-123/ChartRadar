@@ -1,6 +1,7 @@
 import { CoinFuturesSwitch } from "@/components/coin/CoinFuturesSwitch";
 import { CoinFuturesBrief } from "@/components/coin/CoinFuturesBrief";
 import { AltFuturesSignalSection } from "@/components/coin/AltFuturesSignalSection";
+import { CoinMarketEnvironmentPanel } from "@/components/coin/CoinMarketEnvironmentPanel";
 import { CoinStablecoinLiquidityPanel } from "@/components/coin/CoinStablecoinLiquidityPanel";
 import { CoinUnlockPressurePanel } from "@/components/coin/CoinUnlockPressurePanel";
 import { Header } from "@/components/Header";
@@ -23,9 +24,10 @@ export default function CryptoPerpetualAltsPage() {
           <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">시장 환경 참고</p>
           <h2 className="mt-1 text-ui-heading font-semibold tracking-tight text-ui-text">알트 직접 신호와 분리해서 봅니다</h2>
           <p className="mt-1 text-ui-body text-ui-muted [word-break:keep-all]">
-            스테이블코인 유동성은 알트 선물 판단을 보조하는 시장 전체 환경 값입니다.
+            BTC 도미넌스, 김치 프리미엄, 환율, 스테이블코인 유동성은 알트 선물 판단을 보조하는 시장 전체 환경 값입니다.
           </p>
         </section>
+        <CoinMarketEnvironmentPanel mode="alts" />
         <CoinStablecoinLiquidityPanel />
         <section className="pt-1">
           <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">세부 근거</p>

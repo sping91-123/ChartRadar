@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 
 export default function AlertsPage({ searchParams }: { searchParams?: { market?: string } }) {
   const market = searchParams?.market === "stocks" || searchParams?.market === "global" ? "stocks" : "crypto";
-  if (market === "crypto") redirect("/crypto/alert");
+  if (market === "crypto") redirect("/crypto/alertlist");
 
   return (
     <main className="min-h-screen px-3 pb-10 sm:px-5">

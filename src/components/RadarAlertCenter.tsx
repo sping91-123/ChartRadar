@@ -474,11 +474,6 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
     window.localStorage.setItem(getMarketRuleStorageKey(market), JSON.stringify(enabledRuleIds));
   }, [enabledRuleIds, hasLoadedStoredRules, market, rulesMarket]);
 
-  useEffect(() => {
-    if (!appPushState.supported || !appPushState.token || !hasLoadedStoredRules || rulesMarket !== market) return;
-    void syncAndroidAppPushPreferences({ market, ruleIds: enabledRuleIds, presets: setupPresets }).then(setAppPushState);
-  }, [appPushState.supported, appPushState.token, enabledRuleIds, hasLoadedStoredRules, market, rulesMarket, setupPresets]);
-
   const scopedRules = useMemo(
     () =>
       radarAlertRules.filter((rule) => {
@@ -513,7 +508,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
   const isAndroidAppPush = appPushState.supported && appPushState.platform === "android";
   const isAdmin = profile?.plan === "admin" || user?.app_metadata?.role === "admin" || user?.app_metadata?.plan === "admin";
   const alertsMarketParam = market === "stocks" ? "global" : "crypto";
-  const loginHref = `/login?returnTo=${encodeURIComponent(market === "stocks" ? `/alerts?market=${alertsMarketParam}` : "/crypto/alert")}`;
+  const loginHref = `/login?returnTo=${encodeURIComponent(market === "stocks" ? `/alerts?market=${alertsMarketParam}` : "/crypto/alertset")}`;
   const isAppPushConnecting =
     isRequesting ||
     appPushState.registrationStage === "checking_permission" ||
@@ -524,7 +519,19 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
     isAndroidAppPush && appPushState.permission === "granted" && Boolean(appPushState.token) && appPushState.synced && appPushState.registrationStage === "enabled";
   const isCurrentMarketPushEnabled = appPushState.synced && appPushState.markets.includes(market);
   const otherMarket = market === "stocks" ? "crypto" : "stocks";
-  const otherMarketHref = market === "stocks" ? "/crypto/alert" : "/alerts?market=global";
+  const otherMarketHref = market === "stocks" ? "/crypto/alertset" : "/alerts?market=global";
+
+  function deliverableRuleIds(ruleIds: RadarAlertRuleId[]) {
+    return ruleIds.filter((id) => {
+      const rule = scopedRules.find((item) => item.id === id);
+      return rule ? !isRuleLockedForPlan(rule, isPaid) : false;
+    });
+  }
+
+  useEffect(() => {
+    if (!appPushState.supported || !appPushState.token || !hasLoadedStoredRules || rulesMarket !== market) return;
+    void syncAndroidAppPushPreferences({ market, ruleIds: displayEnabledRuleIds, presets: setupPresets }).then(setAppPushState);
+  }, [appPushState.supported, appPushState.token, displayEnabledRuleIds, hasLoadedStoredRules, market, rulesMarket, setupPresets]);
 
   function toggleRule(ruleId: RadarAlertRuleId) {
     const rule = scopedRules.find((item) => item.id === ruleId);
@@ -544,7 +551,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
     setEnabledRuleIds((current) => {
       const next = current.includes(ruleId) ? current.filter((id) => id !== ruleId) : [...current, ruleId];
       if (appPushState.supported && appPushState.token) {
-        void syncAndroidAppPushPreferences({ market, ruleIds: next, presets: readSetupAlertPresets(market) }).then(setAppPushState);
+        void syncAndroidAppPushPreferences({ market, ruleIds: deliverableRuleIds(next), presets: readSetupAlertPresets(market) }).then(setAppPushState);
       }
       return next;
     });
@@ -561,7 +568,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
     setTestResult(null);
     try {
       if (isAndroidAppPush) {
-        const next = await registerAndroidAppPush({ market, ruleIds: scopedEnabledRuleIds, presets: readSetupAlertPresets(market) });
+        const next = await registerAndroidAppPush({ market, ruleIds: displayEnabledRuleIds, presets: readSetupAlertPresets(market) });
         setAppPushState(next);
         if (next.registrationStage === "enabled" && next.synced) {
           setToast("앱 푸시 알림이 켜졌습니다. 저장한 조건과 알림 규칙이 연결되었습니다.");
@@ -1085,7 +1092,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
 
       {compact ? (
         <ActionButton
-          href={market === "stocks" ? "/alerts?market=global" : "/crypto/alert"}
+          href={market === "stocks" ? "/alerts?market=global" : "/crypto/alertset"}
           tone="secondary"
           className="min-h-10 w-full text-sm"
         >

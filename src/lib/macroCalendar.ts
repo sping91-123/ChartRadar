@@ -61,10 +61,11 @@ type ForexFactoryEvent = {
 };
 
 const FOREX_FACTORY_THIS_WEEK = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
-const TRADING_ECONOMICS_NEXT_WEEK_URL = "https://tradingeconomics.com/calendar?country=united%20states&importance=2&range=4";
+const TRADING_ECONOMICS_CALENDAR_URL = "https://tradingeconomics.com/calendar";
 const KST_TIME_ZONE = "Asia/Seoul";
 const RECENT_RELEASE_MS = 24 * 60 * 60 * 1000;
 const PREVIOUS_RELEASE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+const UPCOMING_RELEASE_LOOKAHEAD_MS = 7 * 24 * 60 * 60 * 1000;
 const PENDING_ACTUAL_REFRESH_WINDOW_MS = PREVIOUS_RELEASE_RETENTION_MS;
 const JOBLESS_CLAIMS_PATTERN =
   /신규\s*실업수당\s*청구|initial\s+jobless\s+claims|initial\s+claims|jobless\s+claims|unemployment\s+claims|unemployment\s+insurance\s+weekly\s+claims|continuing\s+claims/i;
@@ -127,6 +128,21 @@ function formatKstShort(iso: string) {
     minute: "2-digit",
     hour12: false
   }).format(date);
+}
+
+function formatCalendarDate(ms: number) {
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
+function tradingEconomicsCalendarUrl(now: number) {
+  const params = new URLSearchParams({
+    country: "united states",
+    importance: "2",
+    startdate: formatCalendarDate(now - PREVIOUS_RELEASE_RETENTION_MS),
+    enddate: formatCalendarDate(now + UPCOMING_RELEASE_LOOKAHEAD_MS)
+  });
+
+  return `${TRADING_ECONOMICS_CALENDAR_URL}?${params.toString()}`;
 }
 
 function normalizeTitle(title: string) {
@@ -434,7 +450,7 @@ function parseTradingEconomicsEvents(html: string) {
 }
 
 async function fetchTradingEconomicsCalendarEvents(now: number) {
-  const response = await fetch(TRADING_ECONOMICS_NEXT_WEEK_URL, {
+  const response = await fetch(tradingEconomicsCalendarUrl(now), {
     headers: { "user-agent": "ChartRadarBot/1.0 (+https://chartradar.kr)" },
     cache: "no-store"
   });

@@ -1,5 +1,5 @@
-"use client";
-// 헤더 우측에서 저빈도 보조 기능과 계정 액션을 정리하는 메뉴입니다.
+﻿"use client";
+// 헤더 오른쪽에서 알림, 보조 기능, 계정 액션을 정리하는 메뉴입니다.
 
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
@@ -22,7 +22,11 @@ type HeaderMarket = "crypto" | "stocks";
 type AuthState = ReturnType<typeof useSupabaseAuth>;
 
 function marketAlertHref(market?: HeaderMarket) {
-  return market === "stocks" ? "/alerts?market=global" : "/crypto/alert";
+  return market === "stocks" ? "/alerts?market=global" : "/crypto/alertlist";
+}
+
+function marketAlertSettingsHref(market?: HeaderMarket) {
+  return market === "stocks" ? "/alerts?market=global" : "/crypto/alertset";
 }
 
 function SettingsLink({
@@ -86,7 +90,7 @@ function AccountSettingsSection({
             <LogIn className="mt-0.5 shrink-0 text-cyan-200" size={16} aria-hidden />
             <span className="min-w-0">
               <span className="block text-sm font-black text-white">로그인하기</span>
-              <span className="mt-0.5 block text-xs leading-5 text-slate-400">로그인 후 회원정보관리와 Pro 권한을 확인할 수 있습니다.</span>
+              <span className="mt-0.5 block text-xs leading-5 text-slate-400">로그인하면 회원정보관리와 Pro 권한을 확인할 수 있습니다.</span>
             </span>
           </Link>
         )}
@@ -117,8 +121,8 @@ function DisplaySettingsSection() {
           </span>
           <div className="rounded-ui-sm bg-ui-elevated px-3 py-2">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-xs font-bold text-slate-400">현재 기억된 시장</span>
-              <span className="text-xs font-black text-white">{preferredMarket === "global" ? "Global Radar" : preferredMarket === "coin" ? "Coin Radar" : "선택 전"}</span>
+              <span className="text-xs font-bold text-slate-400">현재 기억한 시장</span>
+              <span className="text-xs font-black text-white">{preferredMarket === "global" ? "Global Radar" : preferredMarket === "coin" ? "Coin Radar" : "선택 없음"}</span>
             </div>
             <button
               type="button"
@@ -146,6 +150,7 @@ function AppInfoSection() {
 export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
   const auth = useSupabaseAuth();
   const alertHref = marketAlertHref(market);
+  const alertSettingsHref = marketAlertSettingsHref(market);
   const alertBadgeCount: number | null = null;
   const [loginHref, setLoginHref] = useState("/login");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -197,8 +202,8 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
       <Link
         href={alertHref}
         className="relative grid min-h-9 min-w-9 place-items-center rounded-full bg-transparent text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
-        aria-label="알림 설정"
-        title="알림 설정"
+        aria-label="알림 목록"
+        title="알림 목록"
       >
         <Bell size={18} aria-hidden />
         {typeof alertBadgeCount === "number" && alertBadgeCount > 0 ? (
@@ -246,9 +251,9 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
               <DisplaySettingsSection />
               <SettingsSection title="고객지원">
                 <div className="grid gap-1">
-                  <SettingsLink href={alertHref} icon={Bell} label="알림 설정" description="시장별 알림 조건과 알림 수신 상태를 확인합니다." />
+                  <SettingsLink href={alertSettingsHref} icon={Bell} label="알림 설정" description="시장별 알림 조건과 수신 상태를 확인합니다." />
                   <SettingsLink href="/learn" icon={BookOpen} label="용어 안내" description="지표와 시장별 용어를 카테고리별로 설명합니다." />
-                  <SettingsLink href="/faq" icon={HelpCircle} label="자주 묻는 질문" description="서비스 성격, 데이터 기준, Pro와 결제 안내를 확인합니다." />
+                  <SettingsLink href="/faq" icon={HelpCircle} label="자주 묻는 질문" description="서비스 가격, 데이터 기준, Pro와 결제 안내를 확인합니다." />
                 </div>
               </SettingsSection>
               <AppInfoSection />

@@ -22,7 +22,6 @@ export function userPlan(
 }
 
 export function ruleAllowed(event: PushAlertEvent, plan: BillingEntitlementPlan) {
-  if (event.system) return true;
   const ruleId = event.ruleId;
   const rules = asArray(radarAlertRules);
   const rule = rules.find((item) => item.id === ruleId);

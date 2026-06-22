@@ -1,8 +1,10 @@
 // Android 앱 푸시 토큰을 로그인 사용자 계정에 연결합니다.
 import { NextResponse } from "next/server";
+import { radarAlertRules, type RadarAlertRule, type RadarAlertRuleId } from "@/lib/radarAlerts";
 import { fetchSupabaseUserOnServer, isSupabaseAdminConfigured, supabaseAdminRest } from "@/lib/server/supabaseAdmin";
 
 type PushPlatform = "android" | "ios" | "web";
+type PushMarket = "crypto" | "stocks";
 
 interface PushTokenRequestBody {
   token?: string;
@@ -16,7 +18,7 @@ interface PushTokenRequestBody {
 
 interface NormalizedPushPreset {
   preset_id: string;
-  market: "crypto" | "stocks";
+  market: PushMarket;
   symbol: string;
   mode: string | null;
   timeframe: string;
@@ -52,31 +54,27 @@ function normalizeStringList(values: unknown, allowed?: Set<string>) {
   ).slice(0, 40);
 }
 
+const validRuleIds = new Set(radarAlertRules.map((rule) => rule.id));
+const sharedAlertCategories = new Set<RadarAlertRule["category"]>(["news", "system"]);
+
+function normalizePushRuleIds(values: unknown): RadarAlertRuleId[] {
+  return normalizeStringList(values, validRuleIds) as RadarAlertRuleId[];
+}
+
 function normalizePushMarketValue(value: string) {
   const market = value.trim();
   if (market === "global") return "stocks";
   return market;
 }
 
-function normalizePushMarkets(values: unknown) {
+function normalizePushMarkets(values: unknown): PushMarket[] {
   if (!Array.isArray(values)) return [];
   return Array.from(
     new Set(
       values
         .filter((item): item is string => typeof item === "string")
         .map(normalizePushMarketValue)
-        .filter((item) => item === "crypto" || item === "stocks")
-    )
-  ).slice(0, 40);
-}
-
-function mergeStringLists(current: string[] | null | undefined, next: string[], allowed?: Set<string>) {
-  return Array.from(
-    new Set(
-      [...(current ?? []), ...next]
-        .filter((item): item is string => typeof item === "string")
-        .map((item) => item.trim())
-        .filter((item) => item && (!allowed || allowed.has(item)))
+        .filter((item): item is PushMarket => item === "crypto" || item === "stocks")
     )
   ).slice(0, 40);
 }
@@ -85,7 +83,21 @@ function mergePushMarkets(current: string[] | null | undefined, next: string[]) 
   return normalizePushMarkets([...(current ?? []), ...next]);
 }
 
-function normalizePreset(item: unknown, fallbackMarket: "crypto" | "stocks"): NormalizedPushPreset | null {
+function ruleAppliesToMarkets(rule: RadarAlertRule, markets: PushMarket[]) {
+  const scopedMarkets = markets.length > 0 ? markets : (["crypto", "stocks"] satisfies PushMarket[]);
+  if (sharedAlertCategories.has(rule.category)) return true;
+  if (rule.category === "crypto") return scopedMarkets.includes("crypto");
+  if (rule.category === "stocks") return scopedMarkets.includes("stocks");
+  return false;
+}
+
+function replaceScopedRuleIds(current: string[] | null | undefined, next: RadarAlertRuleId[], markets: PushMarket[]) {
+  const scopedRuleIds = new Set(radarAlertRules.filter((rule) => ruleAppliesToMarkets(rule, markets)).map((rule) => rule.id));
+  const preservedRuleIds = normalizePushRuleIds(current).filter((id) => !scopedRuleIds.has(id));
+  return Array.from(new Set([...preservedRuleIds, ...next])).slice(0, 40);
+}
+
+function normalizePreset(item: unknown, fallbackMarket: PushMarket): NormalizedPushPreset | null {
   if (!item || typeof item !== "object") return null;
   const preset = item as Record<string, unknown>;
   const rawId = typeof preset.id === "string" ? preset.id.trim() : "";
@@ -132,7 +144,7 @@ export async function POST(request: Request) {
 
   const appId = typeof body.appId === "string" && body.appId.trim() ? body.appId.trim() : "com.staronlabs.chartradar";
   const markets = normalizePushMarkets(body.markets);
-  const ruleIds = normalizeStringList(body.ruleIds);
+  const ruleIds = normalizePushRuleIds(body.ruleIds);
   const fallbackMarket = markets.includes("stocks") && !markets.includes("crypto") ? "stocks" : "crypto";
   const shouldSyncPresets = Array.isArray(body.presets);
   const presets = Array.isArray(body.presets)
@@ -150,7 +162,7 @@ export async function POST(request: Request) {
   );
   const existing = existingRows[0] ?? null;
   const mergedMarkets = mergePushMarkets(existing?.markets, markets);
-  const mergedRuleIds = mergeStringLists(existing?.rule_ids, ruleIds);
+  const nextRuleIds = replaceScopedRuleIds(existing?.rule_ids, ruleIds, markets);
 
   const rows = await supabaseAdminRest<Array<{ id: string }>>("push_tokens?on_conflict=token", {
     method: "POST",
@@ -163,7 +175,7 @@ export async function POST(request: Request) {
       app_id: appId,
       enabled: body.enabled !== false,
       markets: mergedMarkets,
-      rule_ids: mergedRuleIds,
+      rule_ids: nextRuleIds,
       last_registered_at: now,
       last_seen_at: now
     }
