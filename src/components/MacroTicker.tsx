@@ -191,10 +191,18 @@ function isVisibleCompactImpact(item: MacroEventItem) {
 
 function numericMacroValue(value?: string) {
   if (isEmptyValue(value)) return null;
-  const match = value?.replace(/,/g, "").match(/-?\d+(\.\d+)?/);
+  const match = value?.replace(/,/g, "").match(/(-?\d+(?:\.\d+)?)\s*([KMBT])?/i);
   if (!match) return null;
-  const parsed = Number(match[0]);
-  return Number.isFinite(parsed) ? parsed : null;
+  const parsed = Number(match[1]);
+  const suffix = match[2]?.toUpperCase();
+  const multiplier = suffix === "K" ? 1_000 : suffix === "M" ? 1_000_000 : suffix === "B" ? 1_000_000_000 : suffix === "T" ? 1_000_000_000_000 : 1;
+  return Number.isFinite(parsed) ? parsed * multiplier : null;
+}
+
+function macroSurprise(actual: number, expected: number) {
+  const diff = actual - expected;
+  if (Math.abs(diff) < 1e-9) return "same";
+  return diff > 0 ? "higher" : "lower";
 }
 
 function cryptoImpactRead(item: MacroEventItem): "호재" | "악재" | "중립" | null {
@@ -205,26 +213,45 @@ function cryptoImpactRead(item: MacroEventItem): "호재" | "악재" | "중립" 
   if (actual === null || expected === null) return null;
 
   const lower = item.label.toLowerCase();
-  const diff = actual - expected;
-  const materiallyHigher = diff > 0.001;
-  const materiallyLower = diff < -0.001;
+  const surprise = macroSurprise(actual, expected);
+  if (surprise === "same") return "중립";
 
-  if (lower.includes("cpi") || lower.includes("ppi") || lower.includes("pce") || lower.includes("inflation")) {
-    if (materiallyLower) return "호재";
-    if (materiallyHigher) return "악재";
-    return "중립";
+  if (
+    lower.includes("cpi") ||
+    lower.includes("ppi") ||
+    lower.includes("pce") ||
+    lower.includes("inflation") ||
+    lower.includes("average hourly earnings") ||
+    lower.includes("wage")
+  ) {
+    return surprise === "lower" ? "호재" : "악재";
   }
 
-  if (lower.includes("jobless") || lower.includes("claims") || lower.includes("unemployment")) {
-    if (materiallyHigher) return "중립";
-    if (materiallyLower) return "악재";
-    return "중립";
+  if (lower.includes("jobless") || lower.includes("claims") || lower.includes("unemployment rate")) {
+    return surprise === "higher" ? "호재" : "악재";
   }
 
-  if (lower.includes("retail") || lower.includes("gdp") || lower.includes("pmi") || lower.includes("durable") || lower.includes("home sales")) {
-    if (materiallyHigher) return "중립";
-    if (materiallyLower) return "악재";
-    return "중립";
+  if (
+    lower.includes("non-farm") ||
+    lower.includes("nonfarm") ||
+    lower.includes("payroll") ||
+    lower.includes("employment change") ||
+    lower.includes("jolts")
+  ) {
+    return surprise === "lower" ? "호재" : "악재";
+  }
+
+  if (
+    lower.includes("retail") ||
+    lower.includes("gdp") ||
+    lower.includes("pmi") ||
+    lower.includes("ism") ||
+    lower.includes("durable") ||
+    lower.includes("home sales") ||
+    lower.includes("consumer confidence") ||
+    lower.includes("consumer sentiment")
+  ) {
+    return surprise === "lower" ? "호재" : "악재";
   }
 
   return null;
