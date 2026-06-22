@@ -164,9 +164,9 @@ function CoinSelectionTabs({
   activeCoin: HomeInterestCoin;
   onSelect: (coin: HomeInterestCoin) => void;
 }) {
-  if (coins.length <= 1) return null;
+  if (coins.length <= 0) return null;
   return (
-    <div className="flex gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="관심코인">
+    <div className="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="관심코인">
       {coins.map((coin) => {
         const active = sameHomeCoin(coin, activeCoin);
         return (
@@ -174,13 +174,14 @@ function CoinSelectionTabs({
             key={`${coin.exchangeId}:${coin.symbol}`}
             type="button"
             onClick={() => onSelect(coin)}
-            className={`min-h-10 shrink-0 rounded-ui-sm px-3 text-sm font-semibold transition ${
-              active ? "bg-ui-brand text-white" : "bg-ui-elevated text-ui-muted hover:bg-ui-inset hover:text-ui-text"
+            className={`min-h-10 max-w-[7.75rem] shrink-0 rounded-ui-sm border px-2.5 py-1.5 text-left transition ${
+              active ? "border-ui-brand/70 bg-ui-brand/15 text-ui-text" : "border-ui-line/65 bg-ui-inset/80 text-ui-muted hover:bg-ui-elevated hover:text-ui-text"
             }`}
             role="tab"
             aria-selected={active}
           >
-            {coin.base}
+            <span className="block truncate text-xs font-black leading-4">{coin.base}USDT.P</span>
+            <span className="block truncate text-[10px] font-bold leading-3 opacity-70">{coin.exchangeLabel}</span>
           </button>
         );
       })}
@@ -266,12 +267,18 @@ function PriceDirectionPanel({
   snapshot,
   ticker,
   onShowScore,
-  onOpenSettings
+  onOpenSettings,
+  coins,
+  activeCoin,
+  onSelectCoin
 }: {
   snapshot: CryptoHomeSnapshot;
   ticker: CryptoHomeTicker | null;
   onShowScore: () => void;
   onOpenSettings: () => void;
+  coins: HomeInterestCoin[];
+  activeCoin: HomeInterestCoin;
+  onSelectCoin: (coin: HomeInterestCoin) => void;
 }) {
   const direction = directionAccent(snapshot.direction);
   const changePercent = ticker?.changePercent ?? snapshot.changePercent;
@@ -279,19 +286,20 @@ function PriceDirectionPanel({
   const scoreZone = snapshot.compositeScore >= 62 ? "상방권" : snapshot.compositeScore <= 38 ? "하방권" : "중립권";
   return (
     <section className="rounded-ui-md border border-ui-line/70 bg-ui-elevated/50 px-3 py-3">
-      <div className="grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-        <div className="min-w-0">
+      <div className="flex min-w-0 items-start gap-2">
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-black uppercase tracking-[0.12em] text-ui-subtle">관심코인</p>
-          <p className="mt-1 text-sm font-black leading-4 text-ui-muted">{snapshot.selection.exchangeLabel}</p>
-          <h1 className="mt-0.5 text-2xl font-black leading-7 tracking-tight text-ui-text [word-break:keep-all]">{snapshot.selection.base}USDT.P</h1>
+          <div className="mt-2">
+            <CoinSelectionTabs coins={coins} activeCoin={activeCoin} onSelect={onSelectCoin} />
+          </div>
         </div>
-        <ActionButton tone="secondary" onClick={onOpenSettings} className="min-h-9 shrink-0 px-2.5 text-xs">
+        <ActionButton tone="secondary" onClick={onOpenSettings} className="mt-5 min-h-9 shrink-0 px-2.5 text-xs">
           <Settings2 size={15} aria-hidden />
           관심코인 설정
         </ActionButton>
       </div>
 
-      <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+      <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
         <div className="min-w-0">
           <p className="text-3xl font-black tracking-tight text-ui-text">{formatPrice(ticker?.price ?? snapshot.price)}</p>
           <p className={`mt-1 text-sm font-black ${changePercent !== null && changePercent !== undefined && changePercent < 0 ? "text-ui-short" : "text-ui-long"}`}>
@@ -879,9 +887,10 @@ export function CoinRadarHomePanel() {
             ticker={visibleTicker}
             onShowScore={() => setScoreOpen(true)}
             onOpenSettings={() => setSettingsOpen(true)}
+            coins={coins}
+            activeCoin={activeCoin}
+            onSelectCoin={setActiveCoin}
           />
-
-          <CoinSelectionTabs coins={coins} activeCoin={activeCoin} onSelect={setActiveCoin} />
 
           <StructureTable snapshot={activeSnapshot} />
           <PressurePanel snapshot={activeSnapshot} onShowEvidence={() => setEvidenceOpen(true)} />
