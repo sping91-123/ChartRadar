@@ -87,6 +87,10 @@ body {
   scrollbar-gutter: stable;
 }
 
+html[data-native-app="true"] .app-footer-web-disclaimer {
+  display: none;
+}
+
 .market-selection-lock .app-scroll-root {
   overflow: hidden;
   overscroll-behavior: none;

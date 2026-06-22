@@ -75,6 +75,27 @@ export const viewport: Viewport = {
   ]
 };
 
+const initialClientBootScript = `
+try {
+  var root = document.documentElement;
+  var capacitor = window.Capacitor;
+  var isNativeApp = Boolean(
+    (capacitor && typeof capacitor.isNativePlatform === "function" && capacitor.isNativePlatform()) ||
+    window.androidBridge
+  );
+  if (isNativeApp) root.setAttribute("data-native-app", "true");
+  localStorage.removeItem("chart-radar.theme");
+  root.classList.remove("theme-light", "theme-system");
+  root.classList.add("theme-dark");
+  root.style.colorScheme = "dark";
+  document.querySelectorAll('meta[name="theme-color"]').forEach(function(m) {
+    m.setAttribute("content", "#0a0a0d");
+  });
+} catch (e) {
+  document.documentElement.classList.add("theme-dark");
+}
+`;
+
 export default function RootLayout({
   children
 }: Readonly<{
@@ -85,8 +106,7 @@ export default function RootLayout({
       <body>
         <script
           dangerouslySetInnerHTML={{
-            __html:
-              "try{localStorage.removeItem('chart-radar.theme');document.documentElement.classList.remove('theme-light','theme-system');document.documentElement.classList.add('theme-dark');document.documentElement.style.colorScheme='dark';document.querySelectorAll('meta[name=\"theme-color\"]').forEach(function(m){m.setAttribute('content','#0a0a0d');});}catch(e){document.documentElement.classList.add('theme-dark');}"
+            __html: initialClientBootScript
           }}
         />
         <AuthHashRescue />
