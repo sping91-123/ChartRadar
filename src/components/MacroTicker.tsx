@@ -439,11 +439,11 @@ function getPreviousReleasedItems(items: MacroEventItem[]) {
 
 function getCompactItem(items: MacroEventItem[]) {
   const visibleItems = items.filter(isVisibleCompactImpact);
-  const upcomingWithin24Hours = getUpcomingWithinCompactWindowItems(visibleItems)[0];
   const recentReleased = getRecentReleasedItems(visibleItems)[0];
+  const upcomingWithin24Hours = getUpcomingWithinCompactWindowItems(visibleItems)[0];
   const previousReleased = getPreviousReleasedItems(visibleItems)[0];
   const nearestUpcoming = getUpcomingItems(visibleItems)[0];
-  return upcomingWithin24Hours ?? recentReleased ?? previousReleased ?? nearestUpcoming ?? visibleItems[0];
+  return recentReleased ?? upcomingWithin24Hours ?? previousReleased ?? nearestUpcoming ?? visibleItems[0];
 }
 
 function MacroNewsValue({ label, value, pending = false, blankWhenMissing = false }: { label: string; value?: string; pending?: boolean; blankWhenMissing?: boolean }) {

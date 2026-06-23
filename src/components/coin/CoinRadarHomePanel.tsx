@@ -450,6 +450,13 @@ function StrategyRadar({
 }
 
 function EvidenceDialog({ snapshot, onClose }: { snapshot: CryptoHomeSnapshot; onClose: () => void }) {
+  const pressureSourceLabel =
+    snapshot.pressure.source === "binance-public"
+      ? "Binance 공개 파생 데이터"
+      : snapshot.pressure.source === "binance-public-proxy"
+        ? "Binance 공개 파생 데이터로 보강"
+        : "CCXT 공개 데이터 일부";
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-3 py-5" role="dialog" aria-modal="true" aria-labelledby="pressure-evidence-title">
       <div className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-ui-md bg-ui-panel p-4 text-ui-text">
@@ -459,7 +466,7 @@ function EvidenceDialog({ snapshot, onClose }: { snapshot: CryptoHomeSnapshot; o
               롱/숏 압력 근거
             </p>
             <p className="mt-1 text-xs font-semibold text-ui-muted">
-              {snapshot.pressure.source === "binance-public" ? "Binance 공개 파생 데이터" : "CCXT 공개 데이터 일부"}
+              {pressureSourceLabel}
             </p>
           </div>
           <button type="button" onClick={onClose} className="grid h-9 w-9 shrink-0 place-items-center text-ui-muted transition hover:text-ui-text" aria-label="닫기">

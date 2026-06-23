@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
-  const shouldBypassCache = url.searchParams.get("refresh") === "1";
+  const shouldBypassCache = url.searchParams.get("refresh") === "1" || url.searchParams.has("ts");
   const storedPayload = shouldBypassCache ? null : await readStoredMacroCalendarPayload().catch(() => null);
   const shouldRefreshActuals = storedPayload ? hasPendingActualRefreshWindow(storedPayload) : false;
   const payload =

@@ -54,7 +54,7 @@ export interface CryptoHomeSnapshot {
       value: string;
       available: boolean;
     }>;
-    source: "binance-public" | "ccxt-public-partial";
+    source: "binance-public" | "binance-public-proxy" | "ccxt-public-partial";
   };
   strategyRadar: Array<{
     title: string;
@@ -559,49 +559,51 @@ function pressurePayload(report: LiquidationPressureReport, source: CryptoHomeSn
   const shortScore = report.upsideShortPressure;
   const dominant: CryptoHomeSnapshot["pressure"]["dominant"] =
     longScore > shortScore + 8 ? "long" : shortScore > longScore + 8 ? "short" : "balanced";
+  const evidence = [
+    {
+      label: "전체 롱/숏",
+      value: formatLongShortSnapshot(report.globalLongShort),
+      available: report.globalLongShort.longPercent !== null && report.globalLongShort.shortPercent !== null
+    },
+    {
+      label: "상위 계정 롱/숏",
+      value: formatLongShortSnapshot(report.topAccountLongShort),
+      available: report.topAccountLongShort.longPercent !== null && report.topAccountLongShort.shortPercent !== null
+    },
+    {
+      label: "상위 포지션 롱/숏",
+      value: formatLongShortSnapshot(report.topPositionLongShort),
+      available: report.topPositionLongShort.longPercent !== null && report.topPositionLongShort.shortPercent !== null
+    },
+    {
+      label: "Taker 매수/매도",
+      value: formatTakerFlow(report.takerFlow),
+      available: report.takerFlow.buyPercent !== null && report.takerFlow.sellPercent !== null
+    },
+    {
+      label: "Funding rate",
+      value: formatOptionalPercent(report.fundingRatePercent, 4),
+      available: report.fundingRatePercent !== null
+    },
+    {
+      label: "OI 변화",
+      value: formatOptionalPercent(report.openInterestChangePercent, 2),
+      available: report.openInterestChangePercent !== null
+    },
+    {
+      label: "Open interest",
+      value: formatOptionalNumber(report.openInterestValue, 0),
+      available: report.openInterestValue !== null
+    }
+  ].sort((left, right) => Number(right.available) - Number(left.available));
+
   return {
     longScore,
     shortScore,
     dominant,
     report,
     source,
-    evidence: [
-      {
-        label: "전체 롱/숏",
-        value: formatLongShortSnapshot(report.globalLongShort),
-        available: report.globalLongShort.longPercent !== null && report.globalLongShort.shortPercent !== null
-      },
-      {
-        label: "상위 계정 롱/숏",
-        value: formatLongShortSnapshot(report.topAccountLongShort),
-        available: report.topAccountLongShort.longPercent !== null && report.topAccountLongShort.shortPercent !== null
-      },
-      {
-        label: "상위 포지션 롱/숏",
-        value: formatLongShortSnapshot(report.topPositionLongShort),
-        available: report.topPositionLongShort.longPercent !== null && report.topPositionLongShort.shortPercent !== null
-      },
-      {
-        label: "Taker 매수/매도",
-        value: formatTakerFlow(report.takerFlow),
-        available: report.takerFlow.buyPercent !== null && report.takerFlow.sellPercent !== null
-      },
-      {
-        label: "Funding rate",
-        value: formatOptionalPercent(report.fundingRatePercent, 4),
-        available: report.fundingRatePercent !== null
-      },
-      {
-        label: "OI 변화",
-        value: formatOptionalPercent(report.openInterestChangePercent, 2),
-        available: report.openInterestChangePercent !== null
-      },
-      {
-        label: "Open interest",
-        value: formatOptionalNumber(report.openInterestValue, 0),
-        available: report.openInterestValue !== null
-      }
-    ]
+    evidence
   };
 }
 
@@ -654,6 +656,13 @@ async function fetchPressure(selection: CryptoExchangeMarket, price: number) {
       return pressurePayload(report, "binance-public");
     } catch (error) {
       console.warn("[cryptoExchangeData] Binance pressure failed, falling back to ccxt partial:", error);
+    }
+  } else {
+    try {
+      const report = await fetchLiquidationPressureReport(binanceSymbol(selection), "1h");
+      return pressurePayload(report, "binance-public-proxy");
+    } catch (error) {
+      console.warn("[cryptoExchangeData] Binance proxy pressure failed, falling back to ccxt partial:", error);
     }
   }
   return fetchGenericPressure(selection.exchangeId, selection.symbol, price);
