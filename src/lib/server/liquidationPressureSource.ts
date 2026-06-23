@@ -3,6 +3,8 @@ import { buildLiquidationPressureReport, type LiquidationPressureReport, type Lo
 
 const FETCH_TIMEOUT_MS = 4500;
 const BINANCE_FAPI = "https://fapi.binance.com";
+const BINANCE_WEB = "https://www.binance.com";
+const BINANCE_INFO = "https://www.binance.info";
 const BINANCE_SPOT_DATA_API = "https://data-api.binance.vision";
 
 interface PremiumIndexPayload {
@@ -69,7 +71,7 @@ async function fetchJson<T>(url: string) {
 
   try {
     const response = await fetch(url, {
-      headers: { Accept: "application/json" },
+      headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0 ChartRadar/1.0" },
       cache: "no-store",
       signal: controller.signal
     });
@@ -82,6 +84,20 @@ async function fetchJson<T>(url: string) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function fetchFirstJson<T>(urls: string[]) {
+  let lastError: unknown = null;
+
+  for (const url of urls) {
+    try {
+      return await fetchJson<T>(url);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Binance data unavailable");
 }
 
 function parseLongShort(row: LongShortRow | null): LongShortSnapshot {
@@ -168,6 +184,36 @@ async function fetchFallbackMarkPrice(symbol: string, period: string) {
 }
 
 export async function fetchLiquidationPressureReport(symbol: string, period: string): Promise<LiquidationPressureReport> {
+  const premiumIndexUrls = [
+    `${BINANCE_FAPI}/fapi/v1/premiumIndex?symbol=${symbol}`,
+    `${BINANCE_WEB}/fapi/v1/premiumIndex?symbol=${symbol}`,
+    `${BINANCE_INFO}/fapi/v1/premiumIndex?symbol=${symbol}`
+  ];
+  const openInterestUrls = [
+    `${BINANCE_FAPI}/futures/data/openInterestHist?symbol=${symbol}&period=${period}&limit=12`,
+    `${BINANCE_WEB}/futures/data/openInterestHist?symbol=${symbol}&period=${period}&limit=12`,
+    `${BINANCE_INFO}/futures/data/openInterestHist?symbol=${symbol}&period=${period}&limit=12`
+  ];
+  const globalLongShortUrls = [
+    `${BINANCE_FAPI}/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=${period}&limit=1`,
+    `${BINANCE_WEB}/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=${period}&limit=1`,
+    `${BINANCE_INFO}/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=${period}&limit=1`
+  ];
+  const topAccountUrls = [
+    `${BINANCE_FAPI}/futures/data/topLongShortAccountRatio?symbol=${symbol}&period=${period}&limit=1`,
+    `${BINANCE_WEB}/futures/data/topLongShortAccountRatio?symbol=${symbol}&period=${period}&limit=1`,
+    `${BINANCE_INFO}/futures/data/topLongShortAccountRatio?symbol=${symbol}&period=${period}&limit=1`
+  ];
+  const topPositionUrls = [
+    `${BINANCE_FAPI}/futures/data/topLongShortPositionRatio?symbol=${symbol}&period=${period}&limit=1`,
+    `${BINANCE_WEB}/futures/data/topLongShortPositionRatio?symbol=${symbol}&period=${period}&limit=1`,
+    `${BINANCE_INFO}/futures/data/topLongShortPositionRatio?symbol=${symbol}&period=${period}&limit=1`
+  ];
+  const takerUrls = [
+    `${BINANCE_FAPI}/futures/data/takerlongshortRatio?symbol=${symbol}&period=${period}&limit=1`,
+    `${BINANCE_WEB}/futures/data/takerlongshortRatio?symbol=${symbol}&period=${period}&limit=1`,
+    `${BINANCE_INFO}/futures/data/takerlongshortRatio?symbol=${symbol}&period=${period}&limit=1`
+  ];
   const [
     premiumIndexResult,
     openInterestResult,
@@ -176,12 +222,12 @@ export async function fetchLiquidationPressureReport(symbol: string, period: str
     topPositionResult,
     takerResult
   ] = await Promise.allSettled([
-    fetchJson<PremiumIndexPayload>(`${BINANCE_FAPI}/fapi/v1/premiumIndex?symbol=${symbol}`),
-    fetchJson<OpenInterestHistRow[]>(`${BINANCE_FAPI}/futures/data/openInterestHist?symbol=${symbol}&period=${period}&limit=12`),
-    fetchJson<LongShortRow[]>(`${BINANCE_FAPI}/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=${period}&limit=1`),
-    fetchJson<LongShortRow[]>(`${BINANCE_FAPI}/futures/data/topLongShortAccountRatio?symbol=${symbol}&period=${period}&limit=1`),
-    fetchJson<LongShortRow[]>(`${BINANCE_FAPI}/futures/data/topLongShortPositionRatio?symbol=${symbol}&period=${period}&limit=1`),
-    fetchJson<TakerLongShortRow[]>(`${BINANCE_FAPI}/futures/data/takerlongshortRatio?symbol=${symbol}&period=${period}&limit=1`)
+    fetchFirstJson<PremiumIndexPayload>(premiumIndexUrls),
+    fetchFirstJson<OpenInterestHistRow[]>(openInterestUrls),
+    fetchFirstJson<LongShortRow[]>(globalLongShortUrls),
+    fetchFirstJson<LongShortRow[]>(topAccountUrls),
+    fetchFirstJson<LongShortRow[]>(topPositionUrls),
+    fetchFirstJson<TakerLongShortRow[]>(takerUrls)
   ]);
 
   const premiumIndexPayload = settledValue(premiumIndexResult, "premiumIndex");
