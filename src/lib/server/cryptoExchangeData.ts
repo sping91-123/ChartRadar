@@ -543,9 +543,20 @@ function formatOptionalNumber(value: number | null | undefined, digits = 2) {
   return value.toLocaleString("ko-KR", { maximumFractionDigits: digits });
 }
 
+function formatLongShortSnapshot(snapshot: LiquidationPressureReport["globalLongShort"]) {
+  if (snapshot.longPercent === null || snapshot.shortPercent === null) return "데이터 없음";
+  const ratio = snapshot.ratio === null ? "" : ` · 비율 ${snapshot.ratio.toFixed(2)}`;
+  return `롱 ${snapshot.longPercent.toFixed(1)}% / 숏 ${snapshot.shortPercent.toFixed(1)}%${ratio}`;
+}
+
+function formatTakerFlow(flow: LiquidationPressureReport["takerFlow"]) {
+  if (flow.buyPercent === null || flow.sellPercent === null) return "데이터 없음";
+  return `매수 ${flow.buyPercent.toFixed(1)}% / 매도 ${flow.sellPercent.toFixed(1)}%`;
+}
+
 function pressurePayload(report: LiquidationPressureReport, source: CryptoHomeSnapshot["pressure"]["source"]) {
-  const longScore = report.upsideShortPressure;
-  const shortScore = report.downsideLongPressure;
+  const longScore = report.downsideLongPressure;
+  const shortScore = report.upsideShortPressure;
   const dominant: CryptoHomeSnapshot["pressure"]["dominant"] =
     longScore > shortScore + 8 ? "long" : shortScore > longScore + 8 ? "short" : "balanced";
   return {
@@ -556,14 +567,29 @@ function pressurePayload(report: LiquidationPressureReport, source: CryptoHomeSn
     source,
     evidence: [
       {
+        label: "전체 롱/숏",
+        value: formatLongShortSnapshot(report.globalLongShort),
+        available: report.globalLongShort.longPercent !== null && report.globalLongShort.shortPercent !== null
+      },
+      {
+        label: "상위 계정 롱/숏",
+        value: formatLongShortSnapshot(report.topAccountLongShort),
+        available: report.topAccountLongShort.longPercent !== null && report.topAccountLongShort.shortPercent !== null
+      },
+      {
+        label: "상위 포지션 롱/숏",
+        value: formatLongShortSnapshot(report.topPositionLongShort),
+        available: report.topPositionLongShort.longPercent !== null && report.topPositionLongShort.shortPercent !== null
+      },
+      {
+        label: "Taker 매수/매도",
+        value: formatTakerFlow(report.takerFlow),
+        available: report.takerFlow.buyPercent !== null && report.takerFlow.sellPercent !== null
+      },
+      {
         label: "Funding rate",
         value: formatOptionalPercent(report.fundingRatePercent, 4),
         available: report.fundingRatePercent !== null
-      },
-      {
-        label: "Open interest",
-        value: formatOptionalNumber(report.openInterestValue, 0),
-        available: report.openInterestValue !== null
       },
       {
         label: "OI 변화",
@@ -571,17 +597,9 @@ function pressurePayload(report: LiquidationPressureReport, source: CryptoHomeSn
         available: report.openInterestChangePercent !== null
       },
       {
-        label: "Long/Short ratio",
-        value: report.globalLongShort.ratio === null ? "데이터 없음" : report.globalLongShort.ratio.toFixed(2),
-        available: report.globalLongShort.ratio !== null
-      },
-      {
-        label: "Taker buy/sell",
-        value:
-          report.takerFlow.buyPercent === null || report.takerFlow.sellPercent === null
-            ? "데이터 없음"
-            : `Buy ${report.takerFlow.buyPercent.toFixed(1)}% / Sell ${report.takerFlow.sellPercent.toFixed(1)}%`,
-        available: report.takerFlow.buyPercent !== null && report.takerFlow.sellPercent !== null
+        label: "Open interest",
+        value: formatOptionalNumber(report.openInterestValue, 0),
+        available: report.openInterestValue !== null
       }
     ]
   };
