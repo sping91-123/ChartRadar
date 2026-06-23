@@ -37,6 +37,13 @@ interface TakerLongShortRow {
   timestamp: number;
 }
 
+interface FundingRateRow {
+  symbol: string;
+  fundingTime: number;
+  fundingRate: string;
+  markPrice?: string;
+}
+
 type KlineRow = [
   number,
   string,
@@ -57,12 +64,26 @@ function toNumber(value: unknown) {
   return Number.isFinite(num) ? num : null;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
 function unwrapRows<T>(payload: unknown): T[] {
   if (Array.isArray(payload)) return payload as T[];
-  if (payload && typeof payload === "object" && Array.isArray((payload as { value?: unknown }).value)) {
-    return (payload as { value: T[] }).value;
+  if (isRecord(payload) && Array.isArray(payload.value)) {
+    return payload.value as T[];
+  }
+  if (isRecord(payload) && Array.isArray(payload.data)) {
+    return payload.data as T[];
   }
   return [];
+}
+
+function unwrapObject<T>(payload: unknown): T | null {
+  if (!isRecord(payload)) return null;
+  if (isRecord(payload.data)) return payload.data as T;
+  if (isRecord(payload.value)) return payload.value as T;
+  return payload as T;
 }
 
 async function fetchJson<T>(url: string) {
@@ -148,6 +169,13 @@ function openInterestChange(rows: OpenInterestHistRow[]) {
   };
 }
 
+function latestFundingRate(rows: FundingRateRow[]) {
+  const sortedRows = rows
+    .filter((row) => Number.isFinite(Number(row.fundingTime)))
+    .sort((a, b) => Number(a.fundingTime) - Number(b.fundingTime));
+  return sortedRows[sortedRows.length - 1] ?? rows[0] ?? null;
+}
+
 function settledValue<T>(result: PromiseSettledResult<T>, label: string) {
   if (result.status === "fulfilled") return result.value;
   console.warn(`[liquidation-pressure-source] optional Binance source failed: ${label}`, result.reason);
@@ -189,6 +217,11 @@ export async function fetchLiquidationPressureReport(symbol: string, period: str
     `${BINANCE_WEB}/fapi/v1/premiumIndex?symbol=${symbol}`,
     `${BINANCE_INFO}/fapi/v1/premiumIndex?symbol=${symbol}`
   ];
+  const fundingRateUrls = [
+    `${BINANCE_FAPI}/fapi/v1/fundingRate?symbol=${symbol}&limit=1`,
+    `${BINANCE_WEB}/fapi/v1/fundingRate?symbol=${symbol}&limit=1`,
+    `${BINANCE_INFO}/fapi/v1/fundingRate?symbol=${symbol}&limit=1`
+  ];
   const openInterestUrls = [
     `${BINANCE_FAPI}/futures/data/openInterestHist?symbol=${symbol}&period=${period}&limit=12`,
     `${BINANCE_WEB}/futures/data/openInterestHist?symbol=${symbol}&period=${period}&limit=12`,
@@ -216,6 +249,7 @@ export async function fetchLiquidationPressureReport(symbol: string, period: str
   ];
   const [
     premiumIndexResult,
+    fundingRateResult,
     openInterestResult,
     globalLongShortResult,
     topAccountResult,
@@ -223,6 +257,7 @@ export async function fetchLiquidationPressureReport(symbol: string, period: str
     takerResult
   ] = await Promise.allSettled([
     fetchFirstJson<PremiumIndexPayload>(premiumIndexUrls),
+    fetchFirstJson<FundingRateRow[]>(fundingRateUrls),
     fetchFirstJson<OpenInterestHistRow[]>(openInterestUrls),
     fetchFirstJson<LongShortRow[]>(globalLongShortUrls),
     fetchFirstJson<LongShortRow[]>(topAccountUrls),
@@ -230,16 +265,19 @@ export async function fetchLiquidationPressureReport(symbol: string, period: str
     fetchFirstJson<TakerLongShortRow[]>(takerUrls)
   ]);
 
-  const premiumIndexPayload = settledValue(premiumIndexResult, "premiumIndex");
+  const premiumIndexPayload = unwrapObject<PremiumIndexPayload>(settledValue(premiumIndexResult, "premiumIndex"));
+  const fundingRatePayload = settledValue(fundingRateResult, "fundingRate");
   const openInterestPayload = settledValue(openInterestResult, "openInterestHist");
   const globalLongShortPayload = settledValue(globalLongShortResult, "globalLongShortAccountRatio");
   const topAccountPayload = settledValue(topAccountResult, "topLongShortAccountRatio");
   const topPositionPayload = settledValue(topPositionResult, "topLongShortPositionRatio");
   const takerPayload = settledValue(takerResult, "takerlongshortRatio");
   const oi = openInterestChange(unwrapRows<OpenInterestHistRow>(openInterestPayload));
+  const latestFunding = latestFundingRate(unwrapRows<FundingRateRow>(fundingRatePayload));
   const premiumMarkPrice = toNumber(premiumIndexPayload?.markPrice);
-  const fallbackMarkPrice = premiumMarkPrice === null ? await fetchFallbackMarkPrice(symbol, period) : null;
-  const markPrice = premiumMarkPrice ?? fallbackMarkPrice;
+  const fundingMarkPrice = toNumber(latestFunding?.markPrice);
+  const fallbackMarkPrice = premiumMarkPrice === null && fundingMarkPrice === null ? await fetchFallbackMarkPrice(symbol, period) : null;
+  const markPrice = premiumMarkPrice ?? fundingMarkPrice ?? fallbackMarkPrice;
   if (markPrice === null || markPrice <= 0) {
     throw new Error("Liquidation pressure mark price unavailable");
   }
@@ -249,7 +287,7 @@ export async function fetchLiquidationPressureReport(symbol: string, period: str
     period,
     markPrice,
     indexPrice: toNumber(premiumIndexPayload?.indexPrice),
-    fundingRate: toNumber(premiumIndexPayload?.lastFundingRate),
+    fundingRate: toNumber(premiumIndexPayload?.lastFundingRate) ?? toNumber(latestFunding?.fundingRate),
     nextFundingTime: premiumIndexPayload?.nextFundingTime ?? null,
     openInterestValue: oi.value,
     openInterestChangePercent: oi.changePercent,

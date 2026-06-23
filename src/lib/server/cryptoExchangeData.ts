@@ -561,6 +561,21 @@ function pressurePayload(report: LiquidationPressureReport, source: CryptoHomeSn
     longScore > shortScore + 8 ? "long" : shortScore > longScore + 8 ? "short" : "balanced";
   const evidence = [
     {
+      label: "펀딩비",
+      value: formatOptionalPercent(report.fundingRatePercent, 4),
+      available: report.fundingRatePercent !== null
+    },
+    {
+      label: "OI 변화",
+      value: formatOptionalPercent(report.openInterestChangePercent, 2),
+      available: report.openInterestChangePercent !== null
+    },
+    {
+      label: "미결제약정",
+      value: formatOptionalNumber(report.openInterestValue, 0),
+      available: report.openInterestValue !== null
+    },
+    {
       label: "전체 롱/숏",
       value: formatLongShortSnapshot(report.globalLongShort),
       available: report.globalLongShort.longPercent !== null && report.globalLongShort.shortPercent !== null
@@ -579,23 +594,8 @@ function pressurePayload(report: LiquidationPressureReport, source: CryptoHomeSn
       label: "Taker 매수/매도",
       value: formatTakerFlow(report.takerFlow),
       available: report.takerFlow.buyPercent !== null && report.takerFlow.sellPercent !== null
-    },
-    {
-      label: "Funding rate",
-      value: formatOptionalPercent(report.fundingRatePercent, 4),
-      available: report.fundingRatePercent !== null
-    },
-    {
-      label: "OI 변화",
-      value: formatOptionalPercent(report.openInterestChangePercent, 2),
-      available: report.openInterestChangePercent !== null
-    },
-    {
-      label: "Open interest",
-      value: formatOptionalNumber(report.openInterestValue, 0),
-      available: report.openInterestValue !== null
     }
-  ].sort((left, right) => Number(right.available) - Number(left.available));
+  ];
 
   return {
     longScore,

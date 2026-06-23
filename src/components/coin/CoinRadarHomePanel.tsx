@@ -217,6 +217,33 @@ function StructureTable({ snapshot }: { snapshot: CryptoHomeSnapshot }) {
   );
 }
 
+function pressureDominantLabel(pressure: CryptoHomeSnapshot["pressure"]) {
+  if (pressure.longScore > pressure.shortScore + 8) return "롱 압력 우세";
+  if (pressure.shortScore > pressure.longScore + 8) return "숏 압력 우세";
+  return "롱/숏 균형";
+}
+
+function pressureMarkerPercent(pressure: CryptoHomeSnapshot["pressure"]) {
+  const total = pressure.longScore + pressure.shortScore;
+  return total > 0 ? Math.max(4, Math.min(96, (pressure.longScore / total) * 100)) : 50;
+}
+
+function PressureGauge({ pressure }: { pressure: CryptoHomeSnapshot["pressure"] }) {
+  const markerPercent = pressureMarkerPercent(pressure);
+
+  return (
+    <div className="relative h-8">
+      <span className="absolute inset-x-0 top-1/2 h-3 -translate-y-1/2 rounded-full bg-gradient-to-r from-ui-short via-ui-lineStrong to-ui-long" aria-hidden />
+      <span className="absolute left-1/2 top-1/2 h-8 w-px -translate-y-1/2 bg-white/45" aria-hidden />
+      <span
+        className="absolute top-1/2 h-7 w-2 -translate-x-1/2 -translate-y-1/2 rounded-[2px] bg-ui-brand"
+        style={{ left: `${markerPercent}%` }}
+        aria-hidden
+      />
+    </div>
+  );
+}
+
 function PressurePanel({
   snapshot,
   onShowEvidence
@@ -225,10 +252,7 @@ function PressurePanel({
   onShowEvidence: () => void;
 }) {
   const { pressure } = snapshot;
-  const total = pressure.longScore + pressure.shortScore;
-  const markerPercent = total > 0 ? Math.max(4, Math.min(96, (pressure.longScore / total) * 100)) : 50;
-  const dominantLabel =
-    pressure.longScore > pressure.shortScore + 8 ? "롱 압력 우세" : pressure.shortScore > pressure.longScore + 8 ? "숏 압력 우세" : "롱/숏 균형";
+  const dominantLabel = pressureDominantLabel(pressure);
   return (
     <section className="rounded-ui-md bg-ui-elevated/45 px-3 py-3">
       <div className="flex min-w-0 items-start justify-between gap-3">
@@ -241,18 +265,7 @@ function PressurePanel({
         </ActionButton>
       </div>
       <div className="mt-4">
-        <div className="flex items-center justify-between text-xs font-black">
-          <span className="text-ui-short">숏 {pressure.shortScore}점</span>
-          <span className="text-ui-long">롱 {pressure.longScore}점</span>
-        </div>
-        <div className="relative mt-2 h-4 rounded-full bg-gradient-to-r from-ui-short via-ui-line to-ui-long">
-          <span className="absolute left-1/2 top-1/2 h-7 w-px -translate-y-1/2 bg-white/80" aria-hidden />
-          <span
-            className="absolute top-1/2 h-8 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-ui-brand shadow-[0_0_0_3px_rgba(255,255,255,0.12)]"
-            style={{ left: `${markerPercent}%` }}
-            aria-hidden
-          />
-        </div>
+        <PressureGauge pressure={pressure} />
         <div className="mt-2 flex items-center justify-between text-[11px] font-semibold text-ui-subtle">
           <span>숏 쏠림</span>
           <span>균형</span>
@@ -456,6 +469,7 @@ function EvidenceDialog({ snapshot, onClose }: { snapshot: CryptoHomeSnapshot; o
       : snapshot.pressure.source === "binance-public-proxy"
         ? "Binance 공개 파생 데이터로 보강"
         : "CCXT 공개 데이터 일부";
+  const dominantLabel = pressureDominantLabel(snapshot.pressure);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-3 py-5" role="dialog" aria-modal="true" aria-labelledby="pressure-evidence-title">
@@ -473,7 +487,23 @@ function EvidenceDialog({ snapshot, onClose }: { snapshot: CryptoHomeSnapshot; o
             <X size={18} aria-hidden />
           </button>
         </div>
-        <div className="mt-4 divide-y divide-ui-line rounded-ui-sm bg-ui-inset/30">
+        <div className="mt-4 rounded-ui-sm border border-ui-line/70 bg-ui-inset/25 px-3 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-black text-ui-subtle">숏 압력</p>
+              <p className="mt-1 text-lg font-black text-ui-short">{snapshot.pressure.shortScore}점</p>
+            </div>
+            <p className="shrink-0 rounded-ui-sm bg-ui-panel px-2 py-1 text-xs font-black text-ui-text">{dominantLabel}</p>
+            <div className="min-w-0 text-right">
+              <p className="text-[11px] font-black text-ui-subtle">롱 압력</p>
+              <p className="mt-1 text-lg font-black text-ui-long">{snapshot.pressure.longScore}점</p>
+            </div>
+          </div>
+          <div className="mt-3">
+            <PressureGauge pressure={snapshot.pressure} />
+          </div>
+        </div>
+        <div className="mt-3 divide-y divide-ui-line rounded-ui-sm bg-ui-inset/30">
           {snapshot.pressure.evidence.map((item) => (
             <div key={item.label} className="flex min-w-0 items-start justify-between gap-3 px-3 py-2.5">
               <span className="text-xs font-semibold text-ui-muted">{item.label}</span>
