@@ -367,6 +367,24 @@ function tickerChangePercent(ticker: unknown) {
   return null;
 }
 
+function changePercentFromHourlyCandles(candles: Candle[], latestPrice: number | null | undefined) {
+  if (candles.length < 25) return null;
+  const latest = latestPrice !== null && latestPrice !== undefined && Number.isFinite(latestPrice) && latestPrice > 0 ? latestPrice : candles.at(-1)?.close ?? null;
+  const base = candles.at(-25)?.close ?? null;
+  if (latest === null || base === null || !Number.isFinite(latest) || !Number.isFinite(base) || base <= 0) return null;
+  return ((latest - base) / base) * 100;
+}
+
+async function fetchFallback24hChangePercent(selection: CryptoExchangeMarket, latestPrice: number | null | undefined) {
+  try {
+    const candles = await fetchExchangeCandles(selection.exchangeId, selection.symbol, "1h", 80);
+    return changePercentFromHourlyCandles(candles, latestPrice);
+  } catch (error) {
+    console.warn("[cryptoExchangeData] 24h change fallback failed:", selection.exchangeId, selection.symbol, error);
+    return null;
+  }
+}
+
 async function fetchSelectionTicker(selection: CryptoExchangeMarket) {
   if (selection.exchangeId === "binance") {
     return fetchBinanceTickerDirect(selection.marketId);
@@ -850,10 +868,12 @@ export async function getCryptoHomeTicker(exchangeId: CryptoExchangeId, rawSymbo
     return null;
   });
   const ticker = isRecord(tickerResult) ? tickerResult : null;
+  const price = tickerLastPrice(ticker);
+  const changePercent = tickerChangePercent(ticker) ?? (await fetchFallback24hChangePercent(selection, price));
   return {
     selection,
-    price: tickerLastPrice(ticker),
-    changePercent: tickerChangePercent(ticker),
+    price,
+    changePercent,
     quoteVolume: tickerQuoteVolume(ticker),
     updatedAt: new Date().toISOString()
   };
@@ -871,9 +891,11 @@ export async function getCryptoHomeSnapshot(exchangeId: CryptoExchangeId, rawSym
 
   const analyses = candleResults.map(({ timeframe, candles }) => analyzeTimeframe(timeframe, candles));
   const active = analyses.find((item) => item.timeframe === "1h") ?? analyses[0];
-  const latestCandle = candleResults.find((item) => item.timeframe === "1h")?.candles.at(-1) ?? candleResults[0]?.candles.at(-1);
+  const hourlyCandles = candleResults.find((item) => item.timeframe === "1h")?.candles ?? [];
+  const latestCandle = hourlyCandles.at(-1) ?? candleResults[0]?.candles.at(-1);
   const ticker = isRecord(tickerResult) ? tickerResult : null;
   const price = tickerLastPrice(ticker) ?? latestCandle?.close ?? 0;
+  const changePercent = tickerChangePercent(ticker) ?? changePercentFromHourlyCandles(hourlyCandles, price);
   const analysis = summarizeMarket(`${selection.exchangeLabel}:${selection.base}USDT`, "1h", analyses, price, "swing");
   const scoreBreakdown = compositeStructureScore(analyses);
   const compositeScore = scoreBreakdown.finalScore;
@@ -891,7 +913,7 @@ export async function getCryptoHomeSnapshot(exchangeId: CryptoExchangeId, rawSym
   return {
     selection,
     price,
-    changePercent: tickerChangePercent(ticker),
+    changePercent,
     quoteVolume: tickerQuoteVolume(ticker),
     direction,
     directionLabel: directionLabel(direction),
