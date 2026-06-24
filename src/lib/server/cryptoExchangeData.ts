@@ -334,6 +334,39 @@ function tickerQuoteVolume(ticker: unknown) {
   );
 }
 
+function tickerLastPrice(ticker: unknown) {
+  if (!isRecord(ticker)) return null;
+  const info = isRecord(ticker.info) ? ticker.info : {};
+  return safeNumber(ticker.last ?? ticker.close ?? info.lastPrice ?? info.last ?? info.close ?? info.markPrice);
+}
+
+function tickerChangePercent(ticker: unknown) {
+  if (!isRecord(ticker)) return null;
+  const info = isRecord(ticker.info) ? ticker.info : {};
+  const direct = safeNumber(
+    ticker.percentage ??
+      ticker.changePercent ??
+      ticker.priceChangePercent ??
+      info.priceChangePercent ??
+      info.changePercent ??
+      info.changePercent24h ??
+      info.change24hPercent ??
+      info.changeRate ??
+      info.priceChangeRate
+  );
+  if (direct !== null) return direct;
+
+  const last = tickerLastPrice(ticker);
+  const open = safeNumber(ticker.open ?? info.openPrice ?? info.open24h);
+  if (last !== null && open !== null && open > 0) return ((last - open) / open) * 100;
+
+  const absoluteChange = safeNumber(ticker.change ?? ticker.priceChange ?? info.priceChange ?? info.change24h);
+  const previous = last !== null && absoluteChange !== null ? last - absoluteChange : null;
+  if (last !== null && absoluteChange !== null && previous !== null && previous > 0) return (absoluteChange / previous) * 100;
+
+  return null;
+}
+
 async function fetchSelectionTicker(selection: CryptoExchangeMarket) {
   if (selection.exchangeId === "binance") {
     return fetchBinanceTickerDirect(selection.marketId);
@@ -382,6 +415,16 @@ async function enrichMarketVolumes(exchangeId: CryptoExchangeId, markets: Crypto
 export async function getExchangeMarkets(exchangeId: CryptoExchangeId) {
   const cached = marketCache.get(exchangeId);
   if (cached && cached.expiresAt > Date.now()) return cached.markets;
+
+  if (exchangeId === "binance") {
+    try {
+      const markets = await fetchBinanceFuturesMarketsDirect();
+      marketCache.set(exchangeId, { markets, expiresAt: Date.now() + MARKET_CACHE_TTL_MS });
+      return markets;
+    } catch (error) {
+      console.warn("[cryptoExchangeData] Binance direct market universe failed:", error);
+    }
+  }
 
   try {
     const exchange = exchangeFor(exchangeId);
@@ -809,8 +852,8 @@ export async function getCryptoHomeTicker(exchangeId: CryptoExchangeId, rawSymbo
   const ticker = isRecord(tickerResult) ? tickerResult : null;
   return {
     selection,
-    price: safeNumber(ticker?.last ?? ticker?.close),
-    changePercent: safeNumber(ticker?.percentage),
+    price: tickerLastPrice(ticker),
+    changePercent: tickerChangePercent(ticker),
     quoteVolume: tickerQuoteVolume(ticker),
     updatedAt: new Date().toISOString()
   };
@@ -830,7 +873,7 @@ export async function getCryptoHomeSnapshot(exchangeId: CryptoExchangeId, rawSym
   const active = analyses.find((item) => item.timeframe === "1h") ?? analyses[0];
   const latestCandle = candleResults.find((item) => item.timeframe === "1h")?.candles.at(-1) ?? candleResults[0]?.candles.at(-1);
   const ticker = isRecord(tickerResult) ? tickerResult : null;
-  const price = safeNumber(ticker?.last ?? ticker?.close) ?? latestCandle?.close ?? 0;
+  const price = tickerLastPrice(ticker) ?? latestCandle?.close ?? 0;
   const analysis = summarizeMarket(`${selection.exchangeLabel}:${selection.base}USDT`, "1h", analyses, price, "swing");
   const scoreBreakdown = compositeStructureScore(analyses);
   const compositeScore = scoreBreakdown.finalScore;
@@ -848,7 +891,7 @@ export async function getCryptoHomeSnapshot(exchangeId: CryptoExchangeId, rawSym
   return {
     selection,
     price,
-    changePercent: safeNumber(ticker?.percentage),
+    changePercent: tickerChangePercent(ticker),
     quoteVolume: tickerQuoteVolume(ticker),
     direction,
     directionLabel: directionLabel(direction),

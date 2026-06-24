@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowUp, Check, ChevronRight, HelpCircle, Loader2, RefreshCw, Settings2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronRight, HelpCircle, Loader2, RefreshCw, Settings2, X } from "lucide-react";
 import { ActionButton } from "@/components/ui/DesignPrimitives";
 import { hasMarketEntitlement } from "@/lib/billing";
 import { withSupabaseAuth } from "@/lib/authFetch";
@@ -54,7 +54,7 @@ function formatPrice(value: number | null | undefined) {
 }
 
 function formatPercent(value: number | null | undefined, digits = 2) {
-  if (value === null || value === undefined || !Number.isFinite(value)) return "변동률 확인 중";
+  if (value === null || value === undefined || !Number.isFinite(value)) return "변동률 미제공";
   return `${value > 0 ? "+" : ""}${value.toFixed(digits)}%`;
 }
 
@@ -155,7 +155,7 @@ function SnapshotSkeleton() {
   );
 }
 
-function CoinSelectionTabs({
+function CoinSelectionDropdown({
   coins,
   activeCoin,
   onSelect
@@ -164,27 +164,63 @@ function CoinSelectionTabs({
   activeCoin: HomeInterestCoin;
   onSelect: (coin: HomeInterestCoin) => void;
 }) {
+  const [open, setOpen] = useState(false);
   if (coins.length <= 0) return null;
+
   return (
-    <div className="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="관심코인">
-      {coins.map((coin) => {
-        const active = sameHomeCoin(coin, activeCoin);
-        return (
-          <button
-            key={`${coin.exchangeId}:${coin.symbol}`}
-            type="button"
-            onClick={() => onSelect(coin)}
-            className={`min-h-10 max-w-[7.75rem] shrink-0 rounded-ui-sm border px-2.5 py-1.5 text-left transition ${
-              active ? "border-ui-brand/70 bg-ui-brand/15 text-ui-text" : "border-ui-line/65 bg-ui-inset/80 text-ui-muted hover:bg-ui-elevated hover:text-ui-text"
-            }`}
-            role="tab"
-            aria-selected={active}
-          >
-            <span className="block truncate text-xs font-black leading-4">{coin.base}USDT.P</span>
-            <span className="block truncate text-[10px] font-bold leading-3 opacity-70">{coin.exchangeLabel}</span>
-          </button>
-        );
-      })}
+    <div
+      className="relative max-w-[11.5rem]"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="flex min-h-10 w-full min-w-0 items-center justify-between gap-2 rounded-ui-sm border border-ui-brand/60 bg-ui-brand/15 px-2.5 py-1.5 text-left text-ui-text"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className="min-w-0">
+          <span className="block truncate text-xs font-black leading-4">{activeCoin.base}USDT.P</span>
+          <span className="block truncate text-[10px] font-bold leading-3 text-ui-muted">{activeCoin.exchangeLabel}</span>
+        </span>
+        <ChevronDown size={15} className={`shrink-0 text-ui-muted transition ${open ? "rotate-180" : ""}`} aria-hidden />
+      </button>
+
+      {open ? (
+        <div className="absolute left-0 top-[calc(100%+0.35rem)] z-40 w-[13.5rem] overflow-hidden rounded-ui-sm border border-ui-line bg-ui-panel shadow-[0_16px_40px_rgba(0,0,0,0.38)]" role="listbox" aria-label="관심코인 선택">
+          <div className="border-b border-ui-line px-2.5 py-2 text-[10px] font-black text-ui-subtle">
+            관심코인 {coins.length}개
+          </div>
+          <div className="max-h-52 overflow-y-auto py-1">
+            {coins.map((coin) => {
+              const active = sameHomeCoin(coin, activeCoin);
+              return (
+                <button
+                  key={`${coin.exchangeId}:${coin.symbol}`}
+                  type="button"
+                  onClick={() => {
+                    onSelect(coin);
+                    setOpen(false);
+                  }}
+                  className={`flex min-h-10 w-full min-w-0 items-center justify-between gap-2 px-2.5 py-1.5 text-left transition ${
+                    active ? "bg-ui-brand/15 text-ui-text" : "text-ui-muted hover:bg-ui-elevated hover:text-ui-text"
+                  }`}
+                  role="option"
+                  aria-selected={active}
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-xs font-black leading-4">{coin.base}USDT.P</span>
+                    <span className="block truncate text-[10px] font-bold leading-3 opacity-70">{coin.exchangeLabel}</span>
+                  </span>
+                  {active ? <Check size={14} className="shrink-0 text-ui-brand" aria-hidden /> : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -303,7 +339,7 @@ function PriceDirectionPanel({
         <div className="min-w-0 flex-1">
           <p className="text-xs font-black uppercase tracking-[0.12em] text-ui-subtle">관심코인</p>
           <div className="mt-2">
-            <CoinSelectionTabs coins={coins} activeCoin={activeCoin} onSelect={onSelectCoin} />
+            <CoinSelectionDropdown coins={coins} activeCoin={activeCoin} onSelect={onSelectCoin} />
           </div>
         </div>
         <ActionButton tone="secondary" onClick={onOpenSettings} className="mt-5 min-h-9 shrink-0 px-2.5 text-xs">
