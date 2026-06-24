@@ -14,7 +14,7 @@ import { fetchBlsOfficialActuals } from "@/lib/macro/sourceAdapters/bls";
 import { getCensusOfficialEnrichments } from "@/lib/macro/sourceAdapters/census";
 import { fetchDolOfficialEnrichments } from "@/lib/macro/sourceAdapters/dol";
 import { fetchFedOfficialEnrichments } from "@/lib/macro/sourceAdapters/fed";
-import { fetchTradingEconomicsCalendarEnrichments } from "@/lib/macro/sourceAdapters/tradingEconomics";
+import { fetchTradingEconomicsCalendarEnrichments, fetchTradingEconomicsPmiFallbackItems } from "@/lib/macro/sourceAdapters/tradingEconomics";
 import { type MacroSourceEnrichment } from "@/lib/macro/types";
 
 export type MacroCalendarSource = "forex-factory" | "official-bls" | "automatic-mixed";
@@ -318,6 +318,25 @@ function eventDedupeKey(item: MacroEventItem) {
   return `${normalizeTitle(item.label).toLowerCase()}|${dateKey}|${item.source}`;
 }
 
+function pmiEventKind(label: string) {
+  const normalized = normalizeTitle(label).toLowerCase();
+  if (/manufacturing\s+pmi/.test(normalized)) return "manufacturing-pmi";
+  if (/services\s+pmi/.test(normalized)) return "services-pmi";
+  if (/composite\s+pmi/.test(normalized)) return "composite-pmi";
+  return null;
+}
+
+function hasOverlappingPmiEvent(items: MacroEventItem[], fallback: MacroEventItem) {
+  const fallbackKind = pmiEventKind(fallback.label);
+  const fallbackTime = Date.parse(fallback.releaseAt);
+  if (!fallbackKind || !Number.isFinite(fallbackTime)) return false;
+
+  return items.some((item) => {
+    const itemTime = Date.parse(item.releaseAt);
+    return pmiEventKind(item.label) === fallbackKind && Number.isFinite(itemTime) && Math.abs(itemTime - fallbackTime) <= 36 * 60 * 60 * 1000;
+  });
+}
+
 function isRecentReleasedMacroFallback(item: MacroEventItem, now: number) {
   const releaseTime = Date.parse(item.releaseAt);
   if (!Number.isFinite(releaseTime)) return false;
@@ -537,10 +556,15 @@ export async function getMacroCalendarPayload(options: { bypassCache?: boolean }
   if (!options.bypassCache && cachedPayload && cachedPayload.expiresAt > now) return withMacroCalendarDebug(cachedPayload.payload, "memory-cache");
 
   try {
-    const [forexFactoryResult, tradingEconomicsResult] = await Promise.allSettled([fetchForexFactoryEvents(), fetchTradingEconomicsCalendarEvents(now)]);
+    const [forexFactoryResult, tradingEconomicsResult, pmiFallbackResult] = await Promise.allSettled([
+      fetchForexFactoryEvents(),
+      fetchTradingEconomicsCalendarEvents(now),
+      fetchTradingEconomicsPmiFallbackItems(now)
+    ]);
     const events = forexFactoryResult.status === "fulfilled" ? forexFactoryResult.value : [];
     const tradingEconomicsItems = tradingEconomicsResult.status === "fulfilled" ? tradingEconomicsResult.value : [];
-    if (events.length === 0 && tradingEconomicsItems.length === 0) {
+    const pmiFallbackCandidates = pmiFallbackResult.status === "fulfilled" ? pmiFallbackResult.value : [];
+    if (events.length === 0 && tradingEconomicsItems.length === 0 && pmiFallbackCandidates.length === 0) {
       throw forexFactoryResult.status === "rejected" ? forexFactoryResult.reason : new Error("Public macro calendar unavailable");
     }
 
@@ -552,7 +576,9 @@ export async function getMacroCalendarPayload(options: { bypassCache?: boolean }
         const time = Date.parse(item.releaseAt);
         return time >= now || now - time <= PREVIOUS_RELEASE_RETENTION_MS;
       });
-    const baseItems = [...forexFactoryItems, ...tradingEconomicsItems];
+    const publicCalendarItems = [...forexFactoryItems, ...tradingEconomicsItems];
+    const pmiFallbackItems = pmiFallbackCandidates.filter((item) => !hasOverlappingPmiEvent(publicCalendarItems, item));
+    const baseItems = [...publicCalendarItems, ...pmiFallbackItems];
     const mergedBaseItems = mergeRecentReleasedEvents(baseItems, now);
     const enrichments = await getOfficialEnrichments(mergedBaseItems);
     const items = normalizeMacroEvents(mergedBaseItems, enrichments, now).filter(isVisibleMacroImportance);
