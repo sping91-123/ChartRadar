@@ -134,6 +134,44 @@ function compactAiText(text: string) {
   return text.replace(/[\u3400-\u9fff]/g, "").replace(/\s+/g, " ").trim();
 }
 
+function homeTextTone(text: string) {
+  const lower = text.toLowerCase();
+  if (["상방", "상승", "위쪽", "above", "롱", "매수", "호재", "지지", "돌파", "상단 가격권", "프리미엄"].some((keyword) => lower.includes(keyword.toLowerCase()))) {
+    return "text-ui-long";
+  }
+  if (["하방", "하락", "아래쪽", "below", "숏", "매도", "악재", "저항", "이탈", "하단 가격권", "디스카운트", "핵심 매물대 아래"].some((keyword) => lower.includes(keyword.toLowerCase()))) {
+    return "text-ui-short";
+  }
+  if (["주의", "위험", "리스크", "과열", "조심"].some((keyword) => text.includes(keyword))) {
+    return "text-ui-watch";
+  }
+  return "text-ui-brand";
+}
+
+const homeHighlightPattern =
+  /(핵심 매물대 아래|핵심 매물대 위|확정 구조|전환 신호|수급 구간|가격 공백|핵심 매물대|가격 위치|전환 가격 공백|상단 가격권|하단 가격권|균형 가격권|디스카운트|프리미엄|상방|하방|상승|하락|위쪽|아래쪽|above|below|롱|숏|매수|매도|호재|악재|지지|저항|돌파|이탈|중립|횡보|관망|주의|위험|리스크|과열|조심)/gi;
+
+const homeHighlightExactPattern =
+  /^(핵심 매물대 아래|핵심 매물대 위|확정 구조|전환 신호|수급 구간|가격 공백|핵심 매물대|가격 위치|전환 가격 공백|상단 가격권|하단 가격권|균형 가격권|디스카운트|프리미엄|상방|하방|상승|하락|위쪽|아래쪽|above|below|롱|숏|매수|매도|호재|악재|지지|저항|돌파|이탈|중립|횡보|관망|주의|위험|리스크|과열|조심)$/i;
+
+function HighlightedHomeText({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(homeHighlightPattern).map((part, index) => {
+        if (!part) return null;
+        const isKeyword = homeHighlightExactPattern.test(part);
+        return isKeyword ? (
+          <span key={`${part}-${index}`} className={`font-semibold ${homeTextTone(part)}`}>
+            {part}
+          </span>
+        ) : (
+          <span key={`${part}-${index}`}>{part}</span>
+        );
+      })}
+    </>
+  );
+}
+
 function readableParagraphs(text: string) {
   return compactAiText(text)
     .split(/(?<=[.!?。])\s+|\n+/)
@@ -228,7 +266,7 @@ function CoinSelectionDropdown({
 function StructureTable({ snapshot }: { snapshot: CryptoHomeSnapshot }) {
   return (
     <section className="rounded-ui-md bg-ui-elevated/45 px-3 py-3">
-      <p className="text-sm font-black text-ui-text">MSB / CHoCH</p>
+      <p className="text-sm font-black text-ui-text">구조 흐름</p>
       <div className="mt-3 grid grid-cols-[3.75rem_repeat(5,minmax(2.4rem,1fr))] items-center gap-1 text-center text-[11px] font-black text-ui-subtle">
         <span className="text-left">프레임</span>
         {snapshot.timeframes.map((item) => (
@@ -237,13 +275,13 @@ function StructureTable({ snapshot }: { snapshot: CryptoHomeSnapshot }) {
       </div>
       <div className="mt-2 grid gap-2">
         <div className="grid grid-cols-[3.75rem_repeat(5,minmax(2.4rem,1fr))] items-center gap-1">
-          <span className="text-sm font-black text-ui-text">MSB</span>
+          <span className="text-sm font-black text-ui-text">확정 구조</span>
           {snapshot.timeframes.map((item) => (
             <span key={item.timeframe}>{arrowCell(item.msb)}</span>
           ))}
         </div>
         <div className="grid grid-cols-[3.75rem_repeat(5,minmax(2.4rem,1fr))] items-center gap-1">
-          <span className="text-sm font-black text-ui-text">CHoCH</span>
+          <span className="text-sm font-black text-ui-text">전환 신호</span>
           {snapshot.timeframes.map((item) => (
             <span key={item.timeframe}>{arrowCell(item.choch)}</span>
           ))}
@@ -374,7 +412,7 @@ function PriceDirectionPanel({
               </span>
               <span className={`min-w-0 text-2xl font-black leading-7 ${direction.text}`}>{snapshot.directionLabel}</span>
             </div>
-            <p className="mt-1 text-xs font-semibold leading-5 text-ui-muted">프레임별 MSB와 CHoCH를 종합한 구조 점수입니다.</p>
+            <p className="mt-1 text-xs font-semibold leading-5 text-ui-muted">프레임별 확정 구조와 전환 신호를 종합한 구조 점수입니다.</p>
           </div>
           <button
             type="button"
@@ -462,7 +500,9 @@ function StrategyRadar({
       {aiText ? (
         <div className="grid gap-2 border-t border-ui-line pt-3 text-sm leading-6 text-ui-muted [word-break:keep-all]">
           {readableParagraphs(aiText).map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
+            <p key={paragraph}>
+              <HighlightedHomeText text={paragraph} />
+            </p>
           ))}
         </div>
       ) : null}
@@ -487,7 +527,9 @@ function StrategyRadar({
               {strategyPartRows(item.body).map((part) => (
                 <div key={`${item.title}-${part.label}`} className="grid grid-cols-[2.4rem_1fr] gap-2 text-xs leading-5">
                   <span className="font-black text-ui-subtle">{part.label}</span>
-                  <span className="font-medium text-ui-muted [word-break:keep-all]">{part.text}</span>
+                  <span className="font-medium text-ui-muted [word-break:keep-all]">
+                    <HighlightedHomeText text={part.text} />
+                  </span>
                 </div>
               ))}
             </div>
@@ -576,7 +618,7 @@ function ScoreDialog({ snapshot, onClose }: { snapshot: CryptoHomeSnapshot; onCl
             <p id="score-evidence-title" className="text-base font-black">
               종합점수 근거
             </p>
-            <p className="mt-1 text-xs font-semibold text-ui-muted">MSB, CHoCH, 프레임 가중치와 보정값을 합산했습니다.</p>
+            <p className="mt-1 text-xs font-semibold text-ui-muted">확정 구조, 전환 신호, 프레임 가중치와 보정값을 합산했습니다.</p>
           </div>
           <button type="button" onClick={onClose} className="grid h-9 w-9 shrink-0 place-items-center text-ui-muted transition hover:text-ui-text" aria-label="닫기">
             <X size={18} aria-hidden />
@@ -602,7 +644,7 @@ function ScoreDialog({ snapshot, onClose }: { snapshot: CryptoHomeSnapshot; onCl
             <div key={row.timeframe} className="grid grid-cols-[3.5rem_1fr_auto] items-center gap-2 px-3 py-2.5 text-xs">
               <span className="font-black text-ui-text">{row.label}</span>
               <span className="min-w-0 font-semibold leading-5 text-ui-muted">
-                MSB {scoreStateLabel(row.msb)} {signed(row.msbContribution)} · CHoCH {scoreStateLabel(row.choch)} {signed(row.chochContribution)}
+                확정 구조 {scoreStateLabel(row.msb)} {signed(row.msbContribution)} · 전환 신호 {scoreStateLabel(row.choch)} {signed(row.chochContribution)}
               </span>
               <span className={`font-black ${row.totalContribution > 0 ? "text-ui-long" : row.totalContribution < 0 ? "text-ui-short" : "text-ui-subtle"}`}>
                 {signed(row.totalContribution)}

@@ -77,7 +77,7 @@ export async function getCensusOfficialEnrichments(): Promise<MacroSourceEnrichm
 
   return [
     {
-      matcher: /new home sales|new residential sales/i,
+      matcher: /^(?!.*\b(?:mom|m\/m|month\s*over\s*month|change)\b).*(?:new home sales|new residential sales)/i,
       eventType: "numeric_release",
       source: "Census",
       sourceType: "official_page",

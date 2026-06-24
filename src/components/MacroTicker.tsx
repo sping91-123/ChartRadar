@@ -73,13 +73,21 @@ function hasActualValue(item: MacroEventItem) {
 
 function macroValueText(value?: string) {
   if (isEmptyValue(value)) return "미정";
-  return (value ?? "")
+  return normalizeCompactCountUnits(value ?? "")
     .replace(/\bCore\b/g, "근원")
     .replace(/\bMoM\b/g, "전월비")
     .replace(/\bYoY\b/g, "전년비")
     .replace(/\bPrevious\b/gi, "이전")
     .replace(/\bForecast\b/gi, "예측")
     .replace(/\bActual\b/gi, "결과");
+}
+
+function normalizeCompactCountUnits(value: string) {
+  return value.replace(/\b(0?\.\d+)M\b/gi, (_match, amount: string) => {
+    const millions = Number(amount);
+    if (!Number.isFinite(millions) || millions <= 0 || millions >= 1) return `${amount}M`;
+    return `${Math.round(millions * 1000)}K`;
+  });
 }
 
 function primaryMacroValueText(value?: string) {
@@ -118,7 +126,7 @@ function displayActual(item: MacroEventItem) {
 
 function displayItemConsensusValue(item: MacroEventItem) {
   return hasReleaseTimePassed(item)
-    ? displayReleasedComparisonValue([item.consensusValue, item.forecast], "예측 없음")
+    ? displayReleasedComparisonValue([item.consensusValue, item.forecast], "예측 확인 중")
     : displayConsensusValue(item);
 }
 
@@ -273,8 +281,8 @@ function macroLabel(label: string) {
   if (lower.includes("gdp")) return lower.includes("estimate") ? "GDP 수정치" : "GDP";
   if (lower.includes("personal income and outlays")) return "PCE·개인소득";
   if (lower.includes("pce")) return "PCE 물가";
-  if (lower.includes("existing home sales")) return "기존주택판매";
-  if (lower.includes("new home sales")) return "신규주택판매";
+  if (lower.includes("existing home sales")) return /\bmom\b|\bm\/m\b|month\s*over\s*month|전월비/i.test(label) ? "기존주택판매 전월비" : "기존주택판매";
+  if (lower.includes("new home sales")) return /\bmom\b|\bm\/m\b|month\s*over\s*month|전월비/i.test(label) ? "신규주택판매 전월비" : "신규주택판매";
   if (lower.includes("durable goods")) return "내구재 주문";
   if (lower.includes("manufacturing pmi")) return "제조업 PMI";
   if (lower.includes("consumer sentiment")) return "소비자심리";
@@ -288,6 +296,7 @@ function macroSourceNote(note: string) {
 
 type PriceMacroFamily = "core-cpi" | "cpi" | "core-ppi" | "ppi";
 type PriceMacroPeriod = "mom" | "yoy";
+type HomeSalesFamily = "new-home-sales" | "existing-home-sales";
 
 function priceMacroFamily(label: string): PriceMacroFamily | null {
   const lower = label.toLowerCase();
@@ -317,6 +326,22 @@ function priceMacroFamilyLabel(family: PriceMacroFamily) {
 
 function priceMacroFamilyKey(item: MacroEventItem) {
   const family = priceMacroFamily(item.label);
+  return family ? `${family}|${item.releaseAt}` : null;
+}
+
+function homeSalesFamily(label: string): HomeSalesFamily | null {
+  const lower = label.toLowerCase();
+  if (lower.includes("new home sales")) return "new-home-sales";
+  if (lower.includes("existing home sales")) return "existing-home-sales";
+  return null;
+}
+
+function isHomeSalesRateItem(label: string) {
+  return /\bmom\b|\bm\/m\b|month\s*over\s*month|전월비|change/i.test(label);
+}
+
+function homeSalesFamilyKey(item: MacroEventItem) {
+  const family = homeSalesFamily(item.label);
   return family ? `${family}|${item.releaseAt}` : null;
 }
 
@@ -385,6 +410,12 @@ function mergePriceMacroGroup(items: MacroEventItem[]) {
 }
 
 function getDisplayCalendarItems(items: MacroEventItem[]) {
+  const homeSalesLevelKeys = new Set(
+    items
+      .filter((item) => homeSalesFamily(item.label) && !isHomeSalesRateItem(item.label))
+      .map(homeSalesFamilyKey)
+      .filter((key): key is string => Boolean(key))
+  );
   const groupedFamilyKeys = new Set(
     items
       .filter((item) => priceMacroPeriod(item.label))
@@ -396,6 +427,9 @@ function getDisplayCalendarItems(items: MacroEventItem[]) {
   const standalonePriceKeys = new Set<string>();
 
   for (const item of items) {
+    const homeSalesKey = homeSalesFamilyKey(item);
+    if (homeSalesKey && isHomeSalesRateItem(item.label) && homeSalesLevelKeys.has(homeSalesKey)) continue;
+
     const groupKey = priceMacroGroupKey(item);
     if (groupKey) {
       groupedItems.set(groupKey, [...(groupedItems.get(groupKey) ?? []), item]);
@@ -481,7 +515,7 @@ function MacroNewsItem({ item, sectionLabel, subdued = false, released = false }
       <p className="mt-0.5 text-[11px] font-semibold leading-4 text-ui-muted">한국시간 {item.dateKst}</p>
       <div className="mt-1.5 grid grid-cols-3 gap-x-2 gap-y-1 text-left min-[420px]:flex min-[420px]:flex-wrap min-[420px]:gap-x-3">
         <MacroNewsValue label={isDocumentEvent(item) ? "상태" : "실제"} value={displayActual(item)} pending={pendingActual} blankWhenMissing />
-        <MacroNewsValue label="예측" value={displayItemConsensusValue(item)} pending={displayItemConsensusValue(item) === "예측 확인 필요"} />
+        <MacroNewsValue label="예측" value={displayItemConsensusValue(item)} pending={displayItemConsensusValue(item).startsWith("예측 확인")} />
         <MacroNewsValue label="이전" value={displayItemPreviousValue(item)} pending={displayItemPreviousValue(item) === "이전 확인 필요"} />
       </div>
       <p className="mt-1.5 min-w-0 whitespace-normal text-xs leading-relaxed text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]">{item.marketImpact}</p>

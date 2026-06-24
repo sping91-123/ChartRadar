@@ -20,7 +20,7 @@ const cache = new Map<string, CacheValue>();
 function normalizeSymbol(raw: string | null) {
   const fallback = "BTCUSDT";
   if (!raw) return fallback;
-  const cleaned = raw.toUpperCase().replace(".P", "").replace("/", "").trim();
+  const cleaned = raw.toUpperCase().replace(".P", "").replace(":USDT", "").replace("/", "").trim();
   if (!/^[A-Z0-9]{2,30}$/.test(cleaned)) return null;
   return cleaned.endsWith("USDT") ? cleaned : `${cleaned}USDT`;
 }

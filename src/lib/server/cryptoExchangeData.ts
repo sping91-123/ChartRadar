@@ -736,22 +736,105 @@ function stateLabel(value: DirectionState) {
   return "미확인";
 }
 
+function homePocLabel(value: string) {
+  if (value === "above") return "위쪽";
+  if (value === "below") return "아래쪽";
+  if (value === "near") return "근처";
+  return "미확인";
+}
+
+function homePremiumDiscountLabel(value: string) {
+  if (value === "premium") return "상단 가격권";
+  if (value === "discount") return "하단 가격권";
+  if (value === "equilibrium") return "균형 가격권";
+  return "가격 위치 미확인";
+}
+
+function homeMacdLabel(value: string) {
+  if (value === "rising") return "상승";
+  if (value === "falling") return "하락";
+  if (value === "neutral") return "중립";
+  return "미확인";
+}
+
+function homeVolatilityLabel(value: string) {
+  if (value === "expanded") return "확대";
+  if (value === "compressed") return "압축";
+  if (value === "normal") return "보통";
+  return "미확인";
+}
+
+function homeVolumeLabel(value: string) {
+  if (value === "high") return "높음";
+  if (value === "low") return "낮음";
+  if (value === "normal") return "보통";
+  return "미확인";
+}
+
+function homeBollingerLabel(value: string) {
+  if (value === "upper") return "상단";
+  if (value === "middle") return "중간";
+  if (value === "lower") return "하단";
+  if (value === "outsideUpper") return "상단 밖";
+  if (value === "outsideLower") return "하단 밖";
+  return "미확인";
+}
+
+function homeFriendlyText(text: string) {
+  return text
+    .replace(/\biFVG\b/g, "전환 가격 공백")
+    .replace(/\bFVG\b/g, "가격 공백")
+    .replace(/\bMSB\b/g, "확정 구조")
+    .replace(/\bCHoCH\b/g, "전환 신호")
+    .replace(/\bOB\b/g, "수급 구간")
+    .replace(/\bPOC\b/g, "핵심 매물대")
+    .replace(/\bPD\b/g, "가격 위치")
+    .replace(/\bOTE\b/g, "되돌림 구간")
+    .replace(/\bCISD\b/g, "단기 전환")
+    .replace(/\bBB\b/g, "브레이커 구간")
+    .replace(/\bDealing range\b/gi, "가격 범위")
+    .replace(/프리미엄/g, "상단 가격권")
+    .replace(/디스카운트/g, "하단 가격권")
+    .replace(/\babove\b/gi, "위")
+    .replace(/\bbelow\b/gi, "아래")
+    .replace(/\bbullish\b/gi, "상방")
+    .replace(/\bbearish\b/gi, "하방")
+    .replace(/\brising\b/gi, "상승")
+    .replace(/\bfalling\b/gi, "하락")
+    .replace(/\bneutral\b/gi, "중립")
+    .replace(/\bexpanded\b/gi, "확대")
+    .replace(/\bcompressed\b/gi, "압축")
+    .replace(/\bnormal\b/gi, "보통")
+    .replace(/\bhigh\b/gi, "높음")
+    .replace(/\blow\b/gi, "낮음")
+    .replace(/확정 구조 상승/g, "확정 구조 상방")
+    .replace(/확정 구조 하락/g, "확정 구조 하방")
+    .replace(/전환 신호 상승/g, "전환 신호 상방")
+    .replace(/전환 신호 하락/g, "전환 신호 하방")
+    .replace(/상승 수급 구간/g, "상방 수급 구간")
+    .replace(/하락 수급 구간/g, "하방 수급 구간")
+    .replace(/상승 가격 공백/g, "상방 가격 공백")
+    .replace(/하락 가격 공백/g, "하방 가격 공백")
+    .replace(/현재가가 핵심 매물대 위에서 유지/g, "핵심 매물대 위 유지")
+    .replace(/현재가가 핵심 매물대 아래에서 유지/g, "핵심 매물대 아래 유지");
+}
+
 function activeAnalysisPayload(active: TimeframeAnalysis) {
   return {
     timeframe: active.timeframe,
     msb: stateLabel(active.msb),
     choch: stateLabel(active.choch),
-    ob: active.latestOb ? `${stateLabel(active.latestOb.direction)} OB` : "없음",
-    fvg: active.latestFvg ? `${stateLabel(active.latestFvg.direction)} ${active.latestFvg.state.toUpperCase()}` : "없음",
+    ob: active.latestOb ? `${stateLabel(active.latestOb.direction)} 수급 구간` : "없음",
+    fvg: active.latestFvg ? `${stateLabel(active.latestFvg.direction)} ${active.latestFvg.state === "ifvg" ? "전환 가격 공백" : "가격 공백"}` : "없음",
     sweep: active.latestSweep ? stateLabel(active.latestSweep.direction) : "없음",
     cisd: active.latestCisd ? stateLabel(active.latestCisd.direction) : "없음",
-    pd: active.premiumDiscount === "premium" ? "프리미엄" : active.premiumDiscount === "discount" ? "디스카운트" : "중립",
-    poc: active.volumeProfile ? active.volumeProfile.position : "unknown",
+    pd: homePremiumDiscountLabel(active.premiumDiscount),
+    poc: active.volumeProfile ? homePocLabel(active.volumeProfile.position) : "핵심 매물대 미확인",
     rsi: active.condition.rsi14 === null ? "미확인" : active.condition.rsi14.toFixed(1),
-    macd: active.condition.macdState,
-    volatility: active.condition.volatilityState,
-    volume: active.condition.volumeState,
-    bollinger: active.condition.bollingerPosition
+    macd: homeMacdLabel(active.condition.macdState),
+    volatility: homeVolatilityLabel(active.condition.volatilityState),
+    volume: homeVolumeLabel(active.condition.volumeState),
+    bollinger: homeBollingerLabel(active.condition.bollingerPosition)
   };
 }
 
@@ -764,22 +847,22 @@ function buildAiInput(selection: CryptoExchangeMarket, analysis: MarketAnalysis,
     verdict: analysis.verdict,
     bias: analysis.bias,
     biasScore: analysis.biasScore,
-    scoreRange: "-10 ~ +10",
+    scoreRange: "범위 제한 없는 구조 기울기값",
     readiness: analysis.readiness,
-    summaryLine: analysis.summaryLine,
-    actionGuide: analysis.actionGuide,
-    currentLocationLabel: analysis.currentLocationLabel,
+    summaryLine: homeFriendlyText(analysis.summaryLine),
+    actionGuide: homeFriendlyText(analysis.actionGuide),
+    currentLocationLabel: homeFriendlyText(analysis.currentLocationLabel),
     killzone: analysis.killzone,
-    opportunityFlags: analysis.opportunityFlags,
-    riskFlags: analysis.riskFlags,
-    reasons: analysis.reasons,
+    opportunityFlags: analysis.opportunityFlags.map(homeFriendlyText),
+    riskFlags: analysis.riskFlags.map(homeFriendlyText),
+    reasons: analysis.reasons.map((reason) => ({ ...reason, text: homeFriendlyText(reason.text) })),
     active: activeAnalysisPayload(active),
     timeframes: snapshotTimeframes.map((item) => ({
       timeframe: item.timeframe,
       msb: stateLabel(item.msb),
       choch: stateLabel(item.choch),
       score: item.score,
-      summary: `${timeframeLabels[item.timeframe]} MSB ${stateLabel(item.msb)}, CHoCH ${stateLabel(item.choch)}`
+      summary: `${timeframeLabels[item.timeframe]} 확정 구조 ${stateLabel(item.msb)}, 전환 신호 ${stateLabel(item.choch)}`
     })),
     scenario: null
   };
@@ -797,12 +880,12 @@ function buildStrategyRadar(analysis: MarketAnalysis, active: TimeframeAnalysis,
         ? "가격이 좁게 모인 상태라 첫 움직임보다 유지 여부가 중요합니다."
         : "변동폭은 과도하지 않아 구조 방향과 압력 일치 여부를 함께 볼 수 있습니다.";
   const riskEvidence = firstMeaningfulText(
-    analysis.riskFlags,
-    `1시간 변동성은 ${active.condition.volatilityState}, 거래량 상태는 ${active.condition.volumeState}입니다.`
+    analysis.riskFlags.map(homeFriendlyText),
+    `1시간 변동성은 ${homeVolatilityLabel(active.condition.volatilityState)}, 거래량 상태는 ${homeVolumeLabel(active.condition.volumeState)}입니다.`
   );
   const riskCheck = firstMeaningfulText(
-    analysis.checkpoints,
-    analysis.actionGuide || "추격 판단보다 구조가 다시 모이는지 먼저 확인합니다."
+    analysis.checkpoints.map(homeFriendlyText),
+    homeFriendlyText(analysis.actionGuide || "추격 판단보다 구조가 다시 모이는지 먼저 확인합니다.")
   );
 
   const trendAnalysis =
@@ -811,13 +894,13 @@ function buildStrategyRadar(analysis: MarketAnalysis, active: TimeframeAnalysis,
       : analysis.bias === "short"
         ? "구조 점수는 아래쪽으로 기울어 있습니다."
         : "방향 근거가 섞여 있어 아직 한쪽 판단을 강하게 두기 어렵습니다.";
-  const trendEvidence = `${timeframeLabels[active.timeframe]} MSB ${stateLabel(active.msb)}, CHoCH ${stateLabel(active.choch)}. ${analysis.summaryLine}`;
+  const trendEvidence = `${timeframeLabels[active.timeframe]} 확정 구조 ${stateLabel(active.msb)}, 전환 신호 ${stateLabel(active.choch)}. ${homeFriendlyText(analysis.summaryLine)}`;
   const trendCheck =
     analysis.bias === "long"
-      ? "상위 프레임 MSB가 유지되고 짧은 프레임 CHoCH가 같은 방향으로 붙는지 확인합니다."
+      ? "상위 프레임 확정 구조가 유지되고 짧은 프레임 전환 신호가 같은 방향으로 붙는지 확인합니다."
       : analysis.bias === "short"
-        ? "반등 크기보다 짧은 프레임 CHoCH 회복 여부와 상위 프레임 저항 반응을 확인합니다."
-        : "MSB와 CHoCH가 같은 방향으로 정렬될 때까지 판단 강도를 낮춥니다.";
+        ? "반등 크기보다 짧은 프레임 전환 신호 회복 여부와 상위 프레임 저항 반응을 확인합니다."
+        : "확정 구조와 전환 신호가 같은 방향으로 정렬될 때까지 판단 강도를 낮춥니다.";
 
   const pressureSummary =
     pressure.dominant === "long"
@@ -839,7 +922,7 @@ function buildStrategyRadar(analysis: MarketAnalysis, active: TimeframeAnalysis,
   const shortTermEvidence = availablePressureEvidence ? `${pressureSummary} 근거는 ${availablePressureEvidence}입니다.` : pressureSummary;
   const shortTermCheck =
     pressure.dominant === "balanced"
-      ? "5분과 15분 CHoCH가 같은 방향으로 재정렬되는지 확인합니다."
+      ? "5분과 15분 전환 신호가 같은 방향으로 재정렬되는지 확인합니다."
       : "압력 방향과 5분, 15분 구조 방향이 같은 쪽으로 맞는지 확인합니다.";
 
   return [
