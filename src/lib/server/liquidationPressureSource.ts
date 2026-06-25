@@ -44,6 +44,12 @@ interface FundingRateRow {
   markPrice?: string;
 }
 
+interface SupplementalFundingRate {
+  fundingRate: number;
+  nextFundingTime: number | null;
+  source: string;
+}
+
 type KlineRow = [
   number,
   string,
@@ -176,6 +182,86 @@ function latestFundingRate(rows: FundingRateRow[]) {
   return sortedRows[sortedRows.length - 1] ?? rows[0] ?? null;
 }
 
+function baseFromUsdtSymbol(symbol: string) {
+  return symbol.toUpperCase().replace(/USDT$/, "");
+}
+
+async function fetchOkxFundingRate(symbol: string): Promise<SupplementalFundingRate | null> {
+  const base = baseFromUsdtSymbol(symbol);
+  if (!base || base === symbol) return null;
+  const payload = await fetchJson<unknown>(`https://www.okx.com/api/v5/public/funding-rate?instId=${base}-USDT-SWAP`);
+  const row = isRecord(payload) && Array.isArray(payload.data) && isRecord(payload.data[0]) ? payload.data[0] : null;
+  const fundingRate = toNumber(row?.fundingRate);
+  if (fundingRate === null) return null;
+  return {
+    fundingRate,
+    nextFundingTime: toNumber(row?.nextFundingTime ?? row?.fundingTime),
+    source: "OKX"
+  };
+}
+
+async function fetchBybitFundingRate(symbol: string): Promise<SupplementalFundingRate | null> {
+  const payload = await fetchJson<unknown>(`https://api.bybit.com/v5/market/tickers?category=linear&symbol=${symbol}`);
+  const result = isRecord(payload) && isRecord(payload.result) ? payload.result : null;
+  const row = result && Array.isArray(result.list) && isRecord(result.list[0]) ? result.list[0] : null;
+  const fundingRate = toNumber(row?.fundingRate);
+  if (fundingRate === null) return null;
+  return {
+    fundingRate,
+    nextFundingTime: toNumber(row?.nextFundingTime),
+    source: "Bybit"
+  };
+}
+
+async function fetchBitgetFundingRate(symbol: string): Promise<SupplementalFundingRate | null> {
+  const payload = await fetchJson<unknown>(`https://api.bitget.com/api/v2/mix/market/current-fund-rate?symbol=${symbol}&productType=USDT-FUTURES`);
+  const row = isRecord(payload) && Array.isArray(payload.data) && isRecord(payload.data[0]) ? payload.data[0] : null;
+  const fundingRate = toNumber(row?.fundingRate);
+  if (fundingRate === null) return null;
+  return {
+    fundingRate,
+    nextFundingTime: toNumber(row?.nextUpdate),
+    source: "Bitget"
+  };
+}
+
+async function fetchGateFundingRate(symbol: string): Promise<SupplementalFundingRate | null> {
+  const base = baseFromUsdtSymbol(symbol);
+  if (!base || base === symbol) return null;
+  const payload = await fetchJson<unknown>(`https://api.gateio.ws/api/v4/futures/usdt/contracts/${base}_USDT`);
+  const row = isRecord(payload) ? payload : null;
+  const fundingRate = toNumber(row?.funding_rate ?? row?.funding_rate_indicative);
+  if (fundingRate === null) return null;
+  const nextApplySeconds = toNumber(row?.funding_next_apply);
+  return {
+    fundingRate,
+    nextFundingTime: nextApplySeconds === null ? null : nextApplySeconds * 1000,
+    source: "Gate.io"
+  };
+}
+
+async function fetchSupplementalFundingRate(symbol: string): Promise<SupplementalFundingRate | null> {
+  const results = await Promise.allSettled([
+    fetchOkxFundingRate(symbol),
+    fetchBybitFundingRate(symbol),
+    fetchBitgetFundingRate(symbol),
+    fetchGateFundingRate(symbol)
+  ]);
+  const rows = results
+    .map((result) => (result.status === "fulfilled" ? result.value : null))
+    .filter((row): row is SupplementalFundingRate => row !== null && Number.isFinite(row.fundingRate));
+
+  if (!rows.length) return null;
+
+  const fundingRate = rows.reduce((sum, row) => sum + row.fundingRate, 0) / rows.length;
+  const nextFundingTime = rows.find((row) => row.nextFundingTime !== null)?.nextFundingTime ?? null;
+  return {
+    fundingRate,
+    nextFundingTime,
+    source: rows.length === 1 ? `${rows[0].source} 보강` : "대체 거래소 평균"
+  };
+}
+
 function settledValue<T>(result: PromiseSettledResult<T>, label: string) {
   if (result.status === "fulfilled") return result.value;
   console.warn(`[liquidation-pressure-source] optional Binance source failed: ${label}`, result.reason);
@@ -281,14 +367,17 @@ export async function fetchLiquidationPressureReport(symbol: string, period: str
   if (markPrice === null || markPrice <= 0) {
     throw new Error("Liquidation pressure mark price unavailable");
   }
+  const binanceFundingRate = toNumber(premiumIndexPayload?.lastFundingRate) ?? toNumber(latestFunding?.fundingRate);
+  const supplementalFundingRate = binanceFundingRate === null ? await fetchSupplementalFundingRate(symbol) : null;
 
   return buildLiquidationPressureReport({
     symbol,
     period,
     markPrice,
     indexPrice: toNumber(premiumIndexPayload?.indexPrice),
-    fundingRate: toNumber(premiumIndexPayload?.lastFundingRate) ?? toNumber(latestFunding?.fundingRate),
-    nextFundingTime: premiumIndexPayload?.nextFundingTime ?? null,
+    fundingRate: binanceFundingRate ?? supplementalFundingRate?.fundingRate ?? null,
+    fundingRateSource: binanceFundingRate !== null ? "Binance" : supplementalFundingRate?.source ?? null,
+    nextFundingTime: premiumIndexPayload?.nextFundingTime ?? supplementalFundingRate?.nextFundingTime ?? null,
     openInterestValue: oi.value,
     openInterestChangePercent: oi.changePercent,
     globalLongShort: parseLongShort(unwrapRows<LongShortRow>(globalLongShortPayload)[0] ?? null),

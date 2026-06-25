@@ -599,6 +599,13 @@ function formatOptionalPercent(value: number | null | undefined, digits = 3) {
   return `${sign}${value.toFixed(digits)}%`;
 }
 
+function fundingEvidenceValue(report: LiquidationPressureReport) {
+  const value = formatOptionalPercent(report.fundingRatePercent, 4);
+  if (value === "데이터 없음") return value;
+  if (!report.fundingRateSource || report.fundingRateSource === "Binance") return value;
+  return `${value} · ${report.fundingRateSource}`;
+}
+
 function formatOptionalNumber(value: number | null | undefined, digits = 2) {
   if (value === null || value === undefined || !Number.isFinite(value)) return "데이터 없음";
   return value.toLocaleString("ko-KR", { maximumFractionDigits: digits });
@@ -623,7 +630,7 @@ function pressurePayload(report: LiquidationPressureReport, source: CryptoHomeSn
   const evidence = [
     {
       label: "펀딩비",
-      value: formatOptionalPercent(report.fundingRatePercent, 4),
+      value: fundingEvidenceValue(report),
       available: report.fundingRatePercent !== null
     },
     {

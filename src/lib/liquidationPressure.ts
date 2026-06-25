@@ -28,6 +28,7 @@ export interface LiquidationPressureReport {
   markPrice: number;
   indexPrice: number | null;
   fundingRatePercent: number | null;
+  fundingRateSource: string | null;
   nextFundingTime: number | null;
   openInterestValue: number | null;
   openInterestChangePercent: number | null;
@@ -51,6 +52,7 @@ export interface BuildLiquidationPressureInput {
   markPrice: number;
   indexPrice?: number | null;
   fundingRate?: number | null;
+  fundingRateSource?: string | null;
   nextFundingTime?: number | null;
   openInterestValue?: number | null;
   openInterestChangePercent?: number | null;
@@ -185,6 +187,7 @@ export function buildLiquidationPressureReport(input: BuildLiquidationPressureIn
     markPrice,
     indexPrice: safeNumber(input.indexPrice),
     fundingRatePercent,
+    fundingRateSource: input.fundingRateSource ?? null,
     nextFundingTime: input.nextFundingTime ?? null,
     openInterestValue: safeNumber(input.openInterestValue),
     openInterestChangePercent,
