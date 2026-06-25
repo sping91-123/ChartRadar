@@ -258,7 +258,7 @@ async function fetchSupplementalFundingRate(symbol: string): Promise<Supplementa
   return {
     fundingRate,
     nextFundingTime,
-    source: rows.length === 1 ? `${rows[0].source} 보강` : "대체 거래소 평균"
+    source: rows.length === 1 ? `${rows[0].source} 참고값` : "주요 선물시장 참고 평균"
   };
 }
 

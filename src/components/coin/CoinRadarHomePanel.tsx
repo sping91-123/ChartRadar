@@ -577,8 +577,8 @@ function EvidenceDialog({ evidenceState, onClose }: { evidenceState: PressureEvi
         {evidenceState.status === "loading" ? (
           <div className="mt-4 flex min-h-40 flex-col items-center justify-center gap-3 rounded-ui-sm bg-ui-inset/30 px-4 py-6 text-center">
             <Loader2 size={22} className="animate-spin text-ui-muted" aria-hidden />
-            <p className="text-sm font-black text-ui-text">최신 펀딩비 확인 중</p>
-            <p className="text-xs leading-5 text-ui-muted">선택한 관심코인의 압력 근거를 다시 불러오고 있습니다.</p>
+            <p className="text-sm font-black text-ui-text">압력 데이터를 분석하는 중</p>
+            <p className="text-xs leading-5 text-ui-muted">선택한 관심코인의 롱/숏 압력 근거를 다시 계산하고 있습니다.</p>
           </div>
         ) : null}
 
