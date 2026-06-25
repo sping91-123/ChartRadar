@@ -55,6 +55,7 @@ export interface CryptoHomeSnapshot {
       available: boolean;
     }>;
     source: "binance-public" | "binance-public-proxy" | "ccxt-public-partial";
+    exchangeStatuses: CryptoExchangeDataStatus[];
   };
   strategyRadar: Array<{
     title: string;
@@ -104,6 +105,14 @@ export interface CryptoHomeSnapshot {
     scenario: null;
   };
   updatedAt: string;
+}
+
+export interface CryptoExchangeDataStatus {
+  exchangeId: CryptoExchangeId;
+  exchangeLabel: string;
+  status: "available" | "partial" | "unavailable";
+  available: string[];
+  unavailable: string[];
 }
 
 export interface CryptoHomeScoreBreakdown {
@@ -169,6 +178,7 @@ const marketCache = new Map<CryptoExchangeId, { expiresAt: number; markets: Cryp
 const exchangeCache = new Map<CryptoExchangeId, any>();
 const MARKET_CACHE_TTL_MS = 5 * 60 * 1000;
 const BINANCE_FAPI = "https://fapi.binance.com";
+const DATA_STATUS_TIMEOUT_MS = 3500;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -396,6 +406,217 @@ async function fetchSelectionTicker(selection: CryptoExchangeMarket) {
   } catch {
     return exchange.fetchTicker(selection.symbol, { type: "swap", subType: "linear" });
   }
+}
+
+function compactUsdtSymbol(base: string) {
+  return `${base.toUpperCase()}USDT`;
+}
+
+function dashedUsdtSymbol(base: string) {
+  return `${base.toUpperCase()}-USDT`;
+}
+
+function gateUsdtSymbol(base: string) {
+  return `${base.toUpperCase()}_USDT`;
+}
+
+function firstDataRow(payload: unknown) {
+  if (!isRecord(payload)) return null;
+  if (Array.isArray(payload.data) && isRecord(payload.data[0])) return payload.data[0];
+  if (isRecord(payload.data)) return payload.data;
+  if (isRecord(payload.result) && Array.isArray(payload.result.list) && isRecord(payload.result.list[0])) return payload.result.list[0];
+  return null;
+}
+
+async function fetchStatusOk(url: string, hasData: (payload: unknown) => boolean) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), DATA_STATUS_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0 ChartRadar/1.0" },
+      cache: "no-store",
+      signal: controller.signal
+    });
+    if (!response.ok) return false;
+    return hasData(await response.json());
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function statusFromChecks(
+  exchangeId: CryptoExchangeId,
+  checks: Record<"price" | "funding" | "openInterest" | "longShort", boolean>
+): CryptoExchangeDataStatus {
+  const labels = {
+    price: "가격/24h",
+    funding: "펀딩비",
+    openInterest: "미결제약정",
+    longShort: "롱/숏 비율"
+  };
+  const available = (Object.keys(labels) as Array<keyof typeof labels>)
+    .filter((key) => checks[key])
+    .map((key) => labels[key]);
+  const unavailable = (Object.keys(labels) as Array<keyof typeof labels>)
+    .filter((key) => !checks[key])
+    .map((key) => labels[key]);
+
+  return {
+    exchangeId,
+    exchangeLabel: exchangeConfigs[exchangeId].label,
+    status: unavailable.length === 0 ? "available" : available.length > 0 ? "partial" : "unavailable",
+    available,
+    unavailable
+  };
+}
+
+async function fetchExchangeDataStatus(exchangeId: CryptoExchangeId, base: string): Promise<CryptoExchangeDataStatus> {
+  const compact = compactUsdtSymbol(base);
+  const dashed = dashedUsdtSymbol(base);
+  const gateSymbol = gateUsdtSymbol(base);
+
+  if (exchangeId === "binance") {
+    const [price, funding, openInterest, longShort] = await Promise.all([
+      fetchStatusOk(`${BINANCE_FAPI}/fapi/v1/ticker/24hr?symbol=${compact}`, (payload) => {
+        const row = isRecord(payload) ? payload : null;
+        return safeNumber(row?.lastPrice) !== null && safeNumber(row?.priceChangePercent) !== null;
+      }),
+      fetchStatusOk(`${BINANCE_FAPI}/fapi/v1/premiumIndex?symbol=${compact}`, (payload) => {
+        const row = isRecord(payload) ? payload : null;
+        return safeNumber(row?.lastFundingRate) !== null;
+      }),
+      fetchStatusOk(`${BINANCE_FAPI}/fapi/v1/openInterest?symbol=${compact}`, (payload) => {
+        const row = isRecord(payload) ? payload : null;
+        return safeNumber(row?.openInterest) !== null;
+      }),
+      fetchStatusOk(`${BINANCE_FAPI}/futures/data/globalLongShortAccountRatio?symbol=${compact}&period=1h&limit=1`, (payload) => {
+        const row = Array.isArray(payload) && isRecord(payload[0]) ? payload[0] : null;
+        return safeNumber(row?.longAccount) !== null && safeNumber(row?.shortAccount) !== null;
+      })
+    ]);
+    return statusFromChecks(exchangeId, { price, funding, openInterest, longShort });
+  }
+
+  if (exchangeId === "okx") {
+    const [price, funding, openInterest, longShort] = await Promise.all([
+      fetchStatusOk(`https://www.okx.com/api/v5/market/ticker?instId=${dashed}-SWAP`, (payload) => {
+        const row = firstDataRow(payload);
+        return safeNumber(row?.last) !== null && safeNumber(row?.open24h) !== null;
+      }),
+      fetchStatusOk(`https://www.okx.com/api/v5/public/funding-rate?instId=${dashed}-SWAP`, (payload) => {
+        const row = firstDataRow(payload);
+        return safeNumber(row?.fundingRate) !== null;
+      }),
+      fetchStatusOk(`https://www.okx.com/api/v5/public/open-interest?instType=SWAP&instId=${dashed}-SWAP`, (payload) => {
+        const row = firstDataRow(payload);
+        return safeNumber(row?.oiUsd ?? row?.oi) !== null;
+      }),
+      fetchStatusOk(`https://www.okx.com/api/v5/rubik/stat/contracts/long-short-account-ratio?ccy=${base.toUpperCase()}&period=1H`, (payload) => {
+        return isRecord(payload) && Array.isArray(payload.data) && Array.isArray(payload.data[0]) && safeNumber(payload.data[0][1]) !== null;
+      })
+    ]);
+    return statusFromChecks(exchangeId, { price, funding, openInterest, longShort });
+  }
+
+  if (exchangeId === "bingx") {
+    const [price, funding, openInterest] = await Promise.all([
+      fetchStatusOk(`https://open-api.bingx.com/openApi/swap/v2/quote/ticker?symbol=${dashed}`, (payload) => {
+        const row = firstDataRow(payload);
+        return safeNumber(row?.lastPrice) !== null && safeNumber(row?.priceChangePercent) !== null;
+      }),
+      fetchStatusOk(`https://open-api.bingx.com/openApi/swap/v2/quote/premiumIndex?symbol=${dashed}`, (payload) => {
+        const row = firstDataRow(payload);
+        return safeNumber(row?.lastFundingRate) !== null;
+      }),
+      fetchStatusOk(`https://open-api.bingx.com/openApi/swap/v2/quote/openInterest?symbol=${dashed}`, (payload) => {
+        const row = firstDataRow(payload);
+        return safeNumber(row?.openInterest) !== null;
+      })
+    ]);
+    return statusFromChecks(exchangeId, { price, funding, openInterest, longShort: false });
+  }
+
+  if (exchangeId === "bitget") {
+    const [price, funding, openInterest, longShort] = await Promise.all([
+      fetchStatusOk(`https://api.bitget.com/api/v2/mix/market/ticker?symbol=${compact}&productType=USDT-FUTURES`, (payload) => {
+        const row = firstDataRow(payload);
+        return safeNumber(row?.lastPr) !== null && safeNumber(row?.change24h) !== null;
+      }),
+      fetchStatusOk(`https://api.bitget.com/api/v2/mix/market/current-fund-rate?symbol=${compact}&productType=USDT-FUTURES`, (payload) => {
+        const row = firstDataRow(payload);
+        return safeNumber(row?.fundingRate) !== null;
+      }),
+      fetchStatusOk(`https://api.bitget.com/api/v2/mix/market/open-interest?symbol=${compact}&productType=USDT-FUTURES`, (payload) => {
+        const row = firstDataRow(payload);
+        return isRecord(row) && Array.isArray(row.openInterestList) && safeNumber(row.openInterestList[0]?.size) !== null;
+      }),
+      fetchStatusOk(`https://api.bitget.com/api/v2/mix/market/account-long-short?symbol=${compact}&productType=USDT-FUTURES&period=1h`, (payload) => {
+        const row = firstDataRow(payload);
+        return safeNumber(row?.longAccountRatio) !== null && safeNumber(row?.shortAccountRatio) !== null;
+      })
+    ]);
+    return statusFromChecks(exchangeId, { price, funding, openInterest, longShort });
+  }
+
+  if (exchangeId === "gateio") {
+    const [price, funding, openInterest, longShort] = await Promise.all([
+      fetchStatusOk(`https://api.gateio.ws/api/v4/futures/usdt/tickers?contract=${gateSymbol}`, (payload) => {
+        const row = Array.isArray(payload) && isRecord(payload[0]) ? payload[0] : null;
+        return safeNumber(row?.last) !== null && safeNumber(row?.change_percentage) !== null;
+      }),
+      fetchStatusOk(`https://api.gateio.ws/api/v4/futures/usdt/tickers?contract=${gateSymbol}`, (payload) => {
+        const row = Array.isArray(payload) && isRecord(payload[0]) ? payload[0] : null;
+        return safeNumber(row?.funding_rate ?? row?.funding_rate_indicative) !== null;
+      }),
+      fetchStatusOk(`https://api.gateio.ws/api/v4/futures/usdt/tickers?contract=${gateSymbol}`, (payload) => {
+        const row = Array.isArray(payload) && isRecord(payload[0]) ? payload[0] : null;
+        return safeNumber(row?.total_size) !== null;
+      }),
+      fetchStatusOk(`https://api.gateio.ws/api/v4/futures/usdt/contracts/${gateSymbol}`, (payload) => {
+        const row = isRecord(payload) ? payload : null;
+        return safeNumber(row?.long_users) !== null && safeNumber(row?.short_users) !== null;
+      })
+    ]);
+    return statusFromChecks(exchangeId, { price, funding, openInterest, longShort });
+  }
+
+  const [price, funding, openInterest, longShort] = await Promise.all([
+    fetchStatusOk(`https://api.bybit.com/v5/market/tickers?category=linear&symbol=${compact}`, (payload) => {
+      const row = firstDataRow(payload);
+      return safeNumber(row?.lastPrice) !== null && safeNumber(row?.price24hPcnt) !== null;
+    }),
+    fetchStatusOk(`https://api.bybit.com/v5/market/tickers?category=linear&symbol=${compact}`, (payload) => {
+      const row = firstDataRow(payload);
+      return safeNumber(row?.fundingRate) !== null;
+    }),
+    fetchStatusOk(`https://api.bybit.com/v5/market/tickers?category=linear&symbol=${compact}`, (payload) => {
+      const row = firstDataRow(payload);
+      return safeNumber(row?.openInterestValue ?? row?.openInterest) !== null;
+    }),
+    fetchStatusOk(`https://api.bybit.com/v5/market/account-ratio?category=linear&symbol=${compact}&period=1h&limit=1`, (payload) => {
+      const row = firstDataRow(payload);
+      return safeNumber(row?.buyRatio) !== null && safeNumber(row?.sellRatio) !== null;
+    })
+  ]);
+  return statusFromChecks(exchangeId, { price, funding, openInterest, longShort });
+}
+
+async function fetchExchangeDataStatuses(base: string) {
+  const exchangeIds = Object.keys(exchangeConfigs) as CryptoExchangeId[];
+  const results = await Promise.allSettled(exchangeIds.map((exchangeId) => fetchExchangeDataStatus(exchangeId, base)));
+  return results.map((result, index) => {
+    const exchangeId = exchangeIds[index];
+    if (result.status === "fulfilled") return result.value;
+    return {
+      exchangeId,
+      exchangeLabel: exchangeConfigs[exchangeId].label,
+      status: "unavailable" as const,
+      available: [],
+      unavailable: ["가격/24h", "펀딩비", "미결제약정", "롱/숏 비율"]
+    };
+  });
 }
 
 function sortMarketsByVolume(a: CryptoExchangeMarket, b: CryptoExchangeMarket) {
@@ -998,7 +1219,14 @@ export async function getCryptoHomeSnapshot(exchangeId: CryptoExchangeId, rawSym
     score: item.score,
     regime: item.condition.regime
   }));
-  const pressure = await fetchPressure(selection, price);
+  const [pressure, exchangeStatuses] = await Promise.all([
+    fetchPressure(selection, price),
+    fetchExchangeDataStatuses(selection.base)
+  ]);
+  const pressureWithStatuses = {
+    ...pressure,
+    exchangeStatuses
+  };
 
   return {
     selection,
@@ -1011,8 +1239,8 @@ export async function getCryptoHomeSnapshot(exchangeId: CryptoExchangeId, rawSym
     scoreBreakdown,
     analysis,
     timeframes: snapshotTimeframes,
-    pressure,
-    strategyRadar: buildStrategyRadar(analysis, active, pressure),
+    pressure: pressureWithStatuses,
+    strategyRadar: buildStrategyRadar(analysis, active, pressureWithStatuses),
     aiInput: buildAiInput(selection, analysis, active, snapshotTimeframes),
     updatedAt: new Date().toISOString()
   };

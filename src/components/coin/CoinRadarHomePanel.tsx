@@ -324,6 +324,52 @@ function PressureGauge({ pressure }: { pressure: CryptoHomeSnapshot["pressure"] 
   );
 }
 
+function statusBadgeClass(status: CryptoHomeSnapshot["pressure"]["exchangeStatuses"][number]["status"]) {
+  if (status === "available") return "bg-ui-long/12 text-ui-long";
+  if (status === "partial") return "bg-ui-watch/12 text-ui-watch";
+  return "bg-ui-short/12 text-ui-short";
+}
+
+function statusLabel(status: CryptoHomeSnapshot["pressure"]["exchangeStatuses"][number]["status"]) {
+  if (status === "available") return "수신 가능";
+  if (status === "partial") return "일부 수신";
+  return "미수신";
+}
+
+function ExchangeDataStatusPanel({ statuses }: { statuses: CryptoHomeSnapshot["pressure"]["exchangeStatuses"] }) {
+  if (!statuses.length) return null;
+
+  const availableExchanges = statuses.filter((item) => item.status === "available").map((item) => item.exchangeLabel);
+  const limitedExchanges = statuses.filter((item) => item.status !== "available").map((item) => item.exchangeLabel);
+
+  return (
+    <div className="mt-3 rounded-ui-sm bg-ui-inset/30 px-3 py-3">
+      <p className="text-xs font-black text-ui-text">거래소별 데이터 수신</p>
+      <p className="mt-1 text-[11px] font-semibold leading-4 text-ui-muted">
+        수신 가능 {availableExchanges.length ? availableExchanges.join(", ") : "없음"} · 제한 {limitedExchanges.length ? limitedExchanges.join(", ") : "없음"}
+      </p>
+      <div className="mt-3 grid gap-2">
+        {statuses.map((item) => (
+          <div key={item.exchangeId} className="rounded-ui-sm border border-ui-line/60 bg-ui-panel/45 px-3 py-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-black text-ui-text">{item.exchangeLabel}</span>
+              <span className={`shrink-0 rounded-ui-sm px-2 py-1 text-[11px] font-black ${statusBadgeClass(item.status)}`}>{statusLabel(item.status)}</span>
+            </div>
+            <p className="mt-2 text-[11px] font-semibold leading-4 text-ui-muted">
+              받음: {item.available.length ? item.available.join(", ") : "없음"}
+            </p>
+            {item.unavailable.length ? (
+              <p className="mt-1 text-[11px] font-semibold leading-4 text-ui-subtle">
+                미수신: {item.unavailable.join(", ")}
+              </p>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PressurePanel({
   snapshot,
   onShowEvidence
@@ -615,6 +661,7 @@ function EvidenceDialog({ evidenceState, onClose }: { evidenceState: PressureEvi
                 </div>
               ))}
             </div>
+            <ExchangeDataStatusPanel statuses={snapshot.pressure.exchangeStatuses} />
             <p className="mt-3 text-xs leading-5 text-ui-muted [word-break:keep-all]">
               거래소별 공개 범위가 달라 값이 비어 있을 수 있습니다. 데이터 없음 항목이 많을수록 압력 점수는 참고용으로만 봐야 합니다.
             </p>
