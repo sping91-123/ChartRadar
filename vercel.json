@@ -1,6 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
+    "src/app/api/crypto-home-snapshot/route.ts": {
+      "regions": ["icn1"]
+    },
+    "src/app/api/crypto-home-ticker/route.ts": {
+      "regions": ["icn1"]
+    },
     "src/app/api/liquidation-pressure/route.ts": {
       "regions": ["icn1"]
     },
