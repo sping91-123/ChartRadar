@@ -25,6 +25,12 @@ type LoadState =
   | { status: "ready"; snapshot: CryptoHomeSnapshot }
   | { status: "error"; message: string };
 
+type PressureEvidenceState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "ready"; snapshot: CryptoHomeSnapshot }
+  | { status: "error"; message: string };
+
 type MarketLoadState =
   | { status: "idle"; markets: CryptoExchangeMarket[] }
   | { status: "loading"; markets: CryptoExchangeMarket[] }
@@ -540,14 +546,17 @@ function StrategyRadar({
   );
 }
 
-function EvidenceDialog({ snapshot, onClose }: { snapshot: CryptoHomeSnapshot; onClose: () => void }) {
+function EvidenceDialog({ evidenceState, onClose }: { evidenceState: PressureEvidenceState; onClose: () => void }) {
+  const snapshot = evidenceState.status === "ready" ? evidenceState.snapshot : null;
   const pressureSourceLabel =
-    snapshot.pressure.source === "binance-public"
+    !snapshot
+      ? "최신 압력 데이터 확인 중"
+      : snapshot.pressure.source === "binance-public"
       ? "Binance 공개 파생 데이터"
       : snapshot.pressure.source === "binance-public-proxy"
         ? "Binance 공개 파생 데이터로 보강"
         : "CCXT 공개 데이터 일부";
-  const dominantLabel = pressureDominantLabel(snapshot.pressure);
+  const dominantLabel = snapshot ? pressureDominantLabel(snapshot.pressure) : null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-3 py-5" role="dialog" aria-modal="true" aria-labelledby="pressure-evidence-title">
@@ -565,33 +574,52 @@ function EvidenceDialog({ snapshot, onClose }: { snapshot: CryptoHomeSnapshot; o
             <X size={18} aria-hidden />
           </button>
         </div>
-        <div className="mt-4 rounded-ui-sm border border-ui-line/70 bg-ui-inset/25 px-3 py-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[11px] font-black text-ui-subtle">숏 압력</p>
-              <p className="mt-1 text-lg font-black text-ui-short">{snapshot.pressure.shortScore}점</p>
-            </div>
-            <p className="shrink-0 rounded-ui-sm bg-ui-panel px-2 py-1 text-xs font-black text-ui-text">{dominantLabel}</p>
-            <div className="min-w-0 text-right">
-              <p className="text-[11px] font-black text-ui-subtle">롱 압력</p>
-              <p className="mt-1 text-lg font-black text-ui-long">{snapshot.pressure.longScore}점</p>
-            </div>
+        {evidenceState.status === "loading" ? (
+          <div className="mt-4 flex min-h-40 flex-col items-center justify-center gap-3 rounded-ui-sm bg-ui-inset/30 px-4 py-6 text-center">
+            <Loader2 size={22} className="animate-spin text-ui-muted" aria-hidden />
+            <p className="text-sm font-black text-ui-text">최신 펀딩비 확인 중</p>
+            <p className="text-xs leading-5 text-ui-muted">선택한 관심코인의 압력 근거를 다시 불러오고 있습니다.</p>
           </div>
-          <div className="mt-3">
-            <PressureGauge pressure={snapshot.pressure} />
+        ) : null}
+
+        {evidenceState.status === "error" ? (
+          <div className="mt-4 rounded-ui-sm bg-ui-inset/30 px-4 py-5">
+            <p className="text-sm font-black text-ui-text">압력 근거를 불러오지 못했습니다.</p>
+            <p className="mt-2 text-xs leading-5 text-ui-muted">{evidenceState.message}</p>
           </div>
-        </div>
-        <div className="mt-3 divide-y divide-ui-line rounded-ui-sm bg-ui-inset/30">
-          {snapshot.pressure.evidence.map((item) => (
-            <div key={item.label} className="flex min-w-0 items-start justify-between gap-3 px-3 py-2.5">
-              <span className="text-xs font-semibold text-ui-muted">{item.label}</span>
-              <span className={`text-right text-sm font-semibold ${item.available ? "text-ui-text" : "text-ui-subtle"}`}>{item.value}</span>
+        ) : null}
+
+        {snapshot && dominantLabel ? (
+          <>
+            <div className="mt-4 rounded-ui-sm border border-ui-line/70 bg-ui-inset/25 px-3 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-black text-ui-subtle">숏 압력</p>
+                  <p className="mt-1 text-lg font-black text-ui-short">{snapshot.pressure.shortScore}점</p>
+                </div>
+                <p className="shrink-0 rounded-ui-sm bg-ui-panel px-2 py-1 text-xs font-black text-ui-text">{dominantLabel}</p>
+                <div className="min-w-0 text-right">
+                  <p className="text-[11px] font-black text-ui-subtle">롱 압력</p>
+                  <p className="mt-1 text-lg font-black text-ui-long">{snapshot.pressure.longScore}점</p>
+                </div>
+              </div>
+              <div className="mt-3">
+                <PressureGauge pressure={snapshot.pressure} />
+              </div>
             </div>
-          ))}
-        </div>
-        <p className="mt-3 text-xs leading-5 text-ui-muted [word-break:keep-all]">
-          거래소별 공개 범위가 달라 값이 비어 있을 수 있습니다. 데이터 없음 항목이 많을수록 압력 점수는 참고용으로만 봐야 합니다.
-        </p>
+            <div className="mt-3 divide-y divide-ui-line rounded-ui-sm bg-ui-inset/30">
+              {snapshot.pressure.evidence.map((item) => (
+                <div key={item.label} className="flex min-w-0 items-start justify-between gap-3 px-3 py-2.5">
+                  <span className="text-xs font-semibold text-ui-muted">{item.label}</span>
+                  <span className={`text-right text-sm font-semibold ${item.available ? "text-ui-text" : "text-ui-subtle"}`}>{item.value}</span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-xs leading-5 text-ui-muted [word-break:keep-all]">
+              거래소별 공개 범위가 달라 값이 비어 있을 수 있습니다. 데이터 없음 항목이 많을수록 압력 점수는 참고용으로만 봐야 합니다.
+            </p>
+          </>
+        ) : null}
       </div>
     </div>
   );
@@ -872,6 +900,7 @@ export function CoinRadarHomePanel() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
+  const [evidenceState, setEvidenceState] = useState<PressureEvidenceState>({ status: "idle" });
   const [scoreOpen, setScoreOpen] = useState(false);
   const [tickerState, setTickerState] = useState<CryptoHomeTicker | null>(null);
   const [aiStatus, setAiStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -895,10 +924,12 @@ export function CoinRadarHomePanel() {
       const payload = (await response.json()) as { snapshot?: CryptoHomeSnapshot; error?: string };
       if (!response.ok || !payload.snapshot) throw new Error(payload.error ?? "홈 분석을 불러오지 못했습니다.");
       setState({ status: "ready", snapshot: payload.snapshot });
+      return payload.snapshot;
     } catch (error) {
       if (!options.silent) {
         setState({ status: "error", message: error instanceof Error ? error.message : "홈 분석을 불러오지 못했습니다." });
       }
+      return null;
     }
   }, []);
 
@@ -977,7 +1008,14 @@ export function CoinRadarHomePanel() {
 
   const openPressureEvidence = () => {
     setEvidenceOpen(true);
-    void loadSnapshot(activeCoin, { silent: true });
+    setEvidenceState({ status: "loading" });
+    void loadSnapshot(activeCoin, { silent: true }).then((snapshot) => {
+      if (snapshot) {
+        setEvidenceState({ status: "ready", snapshot });
+        return;
+      }
+      setEvidenceState({ status: "error", message: "선택한 관심코인의 최신 압력 데이터를 받지 못했습니다." });
+    });
   };
 
   const activeSnapshot = state.status === "ready" ? state.snapshot : null;
@@ -1024,7 +1062,7 @@ export function CoinRadarHomePanel() {
 
       {settingsOpen ? <SettingsDialog coins={coins} isPaid={isPaid} onSave={saveCoins} onClose={() => setSettingsOpen(false)} /> : null}
       {scoreOpen && activeSnapshot ? <ScoreDialog snapshot={activeSnapshot} onClose={() => setScoreOpen(false)} /> : null}
-      {evidenceOpen && activeSnapshot ? <EvidenceDialog snapshot={activeSnapshot} onClose={() => setEvidenceOpen(false)} /> : null}
+      {evidenceOpen ? <EvidenceDialog evidenceState={evidenceState} onClose={() => setEvidenceOpen(false)} /> : null}
     </div>
   );
 }
