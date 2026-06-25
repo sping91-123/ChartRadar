@@ -883,10 +883,12 @@ export function CoinRadarHomePanel() {
     setActiveCoin((current) => stored.find((coin) => sameHomeCoin(coin, current)) ?? stored[0] ?? defaultHomeInterestCoin);
   }, [isPaid]);
 
-  const loadSnapshot = useCallback(async (coin: HomeInterestCoin) => {
-    setState({ status: "loading" });
-    setAiText("");
-    setAiStatus("idle");
+  const loadSnapshot = useCallback(async (coin: HomeInterestCoin, options: { silent?: boolean } = {}) => {
+    if (!options.silent) {
+      setState({ status: "loading" });
+      setAiText("");
+      setAiStatus("idle");
+    }
     try {
       const params = new URLSearchParams({ exchange: coin.exchangeId, symbol: coin.symbol });
       const response = await fetch(`/api/crypto-home-snapshot?${params.toString()}`, { cache: "no-store" });
@@ -894,7 +896,9 @@ export function CoinRadarHomePanel() {
       if (!response.ok || !payload.snapshot) throw new Error(payload.error ?? "홈 분석을 불러오지 못했습니다.");
       setState({ status: "ready", snapshot: payload.snapshot });
     } catch (error) {
-      setState({ status: "error", message: error instanceof Error ? error.message : "홈 분석을 불러오지 못했습니다." });
+      if (!options.silent) {
+        setState({ status: "error", message: error instanceof Error ? error.message : "홈 분석을 불러오지 못했습니다." });
+      }
     }
   }, []);
 
@@ -971,6 +975,11 @@ export function CoinRadarHomePanel() {
     setSettingsOpen(false);
   };
 
+  const openPressureEvidence = () => {
+    setEvidenceOpen(true);
+    void loadSnapshot(activeCoin, { silent: true });
+  };
+
   const activeSnapshot = state.status === "ready" ? state.snapshot : null;
   const visibleTicker = tickerState ?? (activeSnapshot ? {
     selection: activeSnapshot.selection,
@@ -1008,7 +1017,7 @@ export function CoinRadarHomePanel() {
           />
 
           <StructureTable snapshot={activeSnapshot} />
-          <PressurePanel snapshot={activeSnapshot} onShowEvidence={() => setEvidenceOpen(true)} />
+          <PressurePanel snapshot={activeSnapshot} onShowEvidence={openPressureEvidence} />
           <StrategyRadar snapshot={activeSnapshot} aiText={aiText} aiStatus={aiStatus} />
         </>
       ) : null}
