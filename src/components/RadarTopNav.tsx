@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Coins, Crown, History, Home, Newspaper, Radar, TrendingUp } from "lucide-react";
+import { ChartCandlestick, Coins, Crown, History, Home, Newspaper, Radar, TrendingUp } from "lucide-react";
 
 type MarketScope = "crypto" | "stocks" | "all";
 
@@ -18,7 +18,7 @@ type NavItem = {
 const cryptoNavItems: NavItem[] = [
   { label: "홈", icon: Home, href: "/crypto/home", match: ["/crypto/home"] },
   { label: "현물", icon: Coins, href: "/crypto/spot", match: ["/crypto/spot"] },
-  { label: "선물", icon: Radar, href: "/crypto/perpetual", match: ["/crypto/perpetual", "/crypto/perpetual/alts"] },
+  { label: "선물", icon: ChartCandlestick, href: "/crypto/perpetual", match: ["/crypto/perpetual", "/crypto/perpetual/alts"] },
   { label: "뉴스", icon: Newspaper, href: "/crypto/news", match: ["/crypto/news"], market: "crypto" },
   { label: "복기", icon: History, href: "/crypto/review", match: ["/crypto/review"], market: "crypto" }
 ];
@@ -70,15 +70,15 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
           <Link
             key={label}
             href={href}
-            className={`group flex min-h-[3.65rem] min-w-0 flex-col items-center justify-center gap-1.5 border-t-2 px-1.5 py-1 text-center text-xs font-semibold leading-none transition sm:min-h-[3.5rem] sm:px-2 ${
+            className={`group flex min-h-[3.65rem] min-w-0 flex-col items-center justify-center gap-1.5 px-1.5 py-1 text-center text-xs font-semibold leading-none transition sm:min-h-[3.5rem] sm:px-2 ${
               isFixedGridNav ? "w-full" : "shrink-0 md:shrink"
             } ${
               active
-                ? "border-ui-brand text-ui-text"
-                : "border-transparent text-ui-muted hover:border-ui-line hover:text-ui-text"
+                ? "text-ui-muted"
+                : "text-ui-muted hover:bg-ui-inset/60 hover:text-ui-text"
             }`}
           >
-            <Icon size={18} aria-hidden className={`shrink-0 ${active ? "text-ui-brand" : "text-ui-subtle transition group-hover:text-ui-muted"}`} />
+            <Icon size={23} aria-hidden className={`shrink-0 ${active ? "text-ui-brand" : "text-ui-subtle transition group-hover:text-ui-muted"}`} />
             <span className="whitespace-nowrap">{label}</span>
           </Link>
         );
