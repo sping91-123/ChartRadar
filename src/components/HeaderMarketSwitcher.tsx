@@ -83,8 +83,11 @@ export function HeaderMarketSwitcher({ market, subtitle }: { market?: HeaderMark
     if (switchTimer.current) window.clearTimeout(switchTimer.current);
     switchTimer.current = window.setTimeout(() => {
       router.push(option.href);
-    }, 260);
+    }, 520);
   };
+
+  const switchingLabel = switchingKey === "global" ? "글로벌 레이더를 불러오는 중" : "코인 레이더를 불러오는 중";
+  const switchingDescription = switchingKey === "global" ? "미국장과 글로벌 자산 흐름을 준비합니다." : "관심 코인과 선물 흐름을 준비합니다.";
 
   return (
     <div className="relative min-w-0 flex-1">
@@ -136,13 +139,13 @@ export function HeaderMarketSwitcher({ market, subtitle }: { market?: HeaderMark
       ) : null}
 
       {switchingKey ? (
-        <div className="pointer-events-none fixed inset-x-0 top-0 z-[120]">
-          <div className="h-0.5 w-full overflow-hidden bg-ui-line">
-            <div className="h-full w-1/2 animate-pulse bg-ui-brand" />
-          </div>
-          <div className="mx-auto mt-2 flex w-fit items-center gap-2 rounded-full border border-ui-line bg-ui-panel/90 px-3 py-1.5 text-[11px] font-semibold text-ui-text shadow-lg shadow-black/25 backdrop-blur-md">
-            <Loader2 size={12} className="animate-spin text-ui-brand" aria-hidden />
-            {switchingKey === "global" ? "Global Radar loading" : "Coin Radar loading"}
+        <div className="pointer-events-none fixed inset-0 z-[120] grid place-items-center bg-black/35 px-6 backdrop-blur-[2px]">
+          <div className="w-full max-w-[18rem] rounded-ui-md border border-ui-line bg-ui-panel/95 px-4 py-4 text-center shadow-2xl shadow-black/40">
+            <div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-ui-brand/12 text-ui-brand">
+              <Loader2 size={21} className="animate-spin" aria-hidden />
+            </div>
+            <p className="mt-3 text-sm font-black text-ui-text">{switchingLabel}</p>
+            <p className="mt-1 text-xs font-semibold leading-5 text-ui-muted">{switchingDescription}</p>
           </div>
         </div>
       ) : null}
