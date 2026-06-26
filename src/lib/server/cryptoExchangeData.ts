@@ -31,6 +31,7 @@ export interface CryptoHomeSnapshot {
   price: number;
   changePercent: number | null;
   quoteVolume: number | null;
+  chartCandles: Candle[];
   direction: "up" | "down" | "sideways";
   directionLabel: "상승세" | "하락세" | "횡보";
   compositeScore: number;
@@ -1233,6 +1234,7 @@ export async function getCryptoHomeSnapshot(exchangeId: CryptoExchangeId, rawSym
     price,
     changePercent,
     quoteVolume: tickerQuoteVolume(ticker),
+    chartCandles: hourlyCandles.slice(-90),
     direction,
     directionLabel: directionLabel(direction),
     compositeScore,

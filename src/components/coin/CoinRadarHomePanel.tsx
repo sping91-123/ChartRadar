@@ -1,10 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { CandlestickSeries, createChart, type IChartApi, type ISeriesApi } from "lightweight-charts";
 import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronRight, HelpCircle, Loader2, RefreshCw, Settings2, X } from "lucide-react";
+import { toKstTime } from "@/components/crypto/chartInteractionHelpers";
 import { ActionButton } from "@/components/ui/DesignPrimitives";
 import { hasMarketEntitlement } from "@/lib/billing";
+import { getChartThemeOptions, observeChartThemeChange } from "@/lib/chartTheme";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import {
   basicHomeInterestChangeStatus,
@@ -266,6 +269,142 @@ function CoinSelectionDropdown({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function chartPreviewChange(candles: CryptoHomeSnapshot["chartCandles"]) {
+  if (candles.length < 2) return null;
+  const latest = candles.at(-1);
+  const base = candles.at(-25) ?? candles[0];
+  if (!latest || !base || base.close <= 0) return null;
+  return ((latest.close - base.close) / base.close) * 100;
+}
+
+function StructurePreviewChart({ snapshot }: { snapshot: CryptoHomeSnapshot }) {
+  const chartRef = useRef<HTMLDivElement | null>(null);
+  const chartApiRef = useRef<IChartApi | null>(null);
+  const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const candles = useMemo(() => snapshot.chartCandles ?? [], [snapshot.chartCandles]);
+  const previewChange = chartPreviewChange(candles);
+  const previewTone = previewChange !== null && previewChange < 0 ? "text-ui-short" : "text-ui-long";
+
+  useEffect(() => {
+    if (!chartRef.current || chartApiRef.current) return;
+    const chartThemeOptions = getChartThemeOptions();
+    const chart = createChart(chartRef.current, {
+      autoSize: true,
+      ...chartThemeOptions,
+      layout: {
+        ...chartThemeOptions.layout,
+        background: { color: "transparent" }
+      },
+      grid: {
+        vertLines: { color: "transparent" },
+        horzLines: { color: "rgba(255, 255, 255, 0.035)" }
+      },
+      rightPriceScale: {
+        ...chartThemeOptions.rightPriceScale,
+        visible: false
+      },
+      timeScale: {
+        ...chartThemeOptions.timeScale,
+        visible: false,
+        timeVisible: false
+      },
+      crosshair: {
+        mode: 0
+      },
+      handleScroll: false,
+      handleScale: false
+    });
+    const candleSeries = chart.addSeries(CandlestickSeries, {
+      upColor: "#2fd39a",
+      downColor: "#ef4b67",
+      borderUpColor: "#2fd39a",
+      borderDownColor: "#ef4b67",
+      wickUpColor: "#2fd39a",
+      wickDownColor: "#ef4b67"
+    });
+
+    chartApiRef.current = chart;
+    candleSeriesRef.current = candleSeries;
+    const stopObservingTheme = observeChartThemeChange(() => {
+      const nextThemeOptions = getChartThemeOptions();
+      chart.applyOptions({
+        ...nextThemeOptions,
+        layout: {
+          ...nextThemeOptions.layout,
+          background: { color: "transparent" }
+        },
+        grid: {
+          vertLines: { color: "transparent" },
+          horzLines: { color: "rgba(255, 255, 255, 0.035)" }
+        },
+        rightPriceScale: {
+          ...nextThemeOptions.rightPriceScale,
+          visible: false
+        },
+        timeScale: {
+          ...nextThemeOptions.timeScale,
+          visible: false,
+          timeVisible: false
+        }
+      });
+    });
+
+    return () => {
+      stopObservingTheme();
+      chart.remove();
+      chartApiRef.current = null;
+      candleSeriesRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const candleSeries = candleSeriesRef.current;
+    if (!candleSeries) return;
+
+    candleSeries.setData(
+      candles.map((candle) => ({
+        time: toKstTime(candle.time),
+        open: candle.open,
+        high: candle.high,
+        low: candle.low,
+        close: candle.close
+      }))
+    );
+
+    const lastPrice = candles.at(-1)?.close;
+    if (lastPrice && Number.isFinite(lastPrice)) {
+      const precision = lastPrice >= 1000 ? 1 : lastPrice >= 100 ? 2 : lastPrice >= 10 ? 3 : lastPrice >= 1 ? 4 : lastPrice >= 0.01 ? 5 : 6;
+      candleSeries.applyOptions({
+        priceFormat: {
+          type: "price",
+          precision,
+          minMove: Math.pow(10, -precision)
+        }
+      });
+    }
+
+    chartApiRef.current?.timeScale().fitContent();
+  }, [candles]);
+
+  return (
+    <section className="rounded-ui-md bg-ui-elevated/45 px-3 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-black text-ui-text">가격 흐름</p>
+          <p className="mt-0.5 text-[11px] font-semibold text-ui-muted">최근 1시간봉 기준</p>
+        </div>
+        <span className={`shrink-0 text-sm font-black ${previewTone}`}>{previewChange === null ? "확인 중" : formatPercent(previewChange)}</span>
+      </div>
+      <div className="relative mt-3 h-36 overflow-hidden rounded-ui-sm bg-ui-inset/25">
+        <div ref={chartRef} className="h-full w-full pointer-events-none" />
+        {!candles.length ? (
+          <div className="absolute inset-0 grid place-items-center text-xs font-semibold text-ui-muted">차트 데이터 확인 중</div>
+        ) : null}
+      </div>
+    </section>
   );
 }
 
@@ -1101,6 +1240,7 @@ export function CoinRadarHomePanel() {
             onSelectCoin={setActiveCoin}
           />
 
+          <StructurePreviewChart snapshot={activeSnapshot} />
           <StructureTable snapshot={activeSnapshot} />
           <PressurePanel snapshot={activeSnapshot} onShowEvidence={openPressureEvidence} />
           <StrategyRadar snapshot={activeSnapshot} aiText={aiText} aiStatus={aiStatus} />
