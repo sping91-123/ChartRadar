@@ -1212,6 +1212,7 @@ export async function getCryptoHomeSnapshot(exchangeId: CryptoExchangeId, rawSym
   const scoreBreakdown = compositeStructureScore(analyses);
   const compositeScore = scoreBreakdown.finalScore;
   const direction = directionForScore(compositeScore);
+  const previewCandles = candleResults.find((item) => item.timeframe === "15m")?.candles ?? hourlyCandles;
   const snapshotTimeframes = analyses.map((item) => ({
     timeframe: item.timeframe,
     label: timeframeLabels[item.timeframe],
@@ -1234,7 +1235,7 @@ export async function getCryptoHomeSnapshot(exchangeId: CryptoExchangeId, rawSym
     price,
     changePercent,
     quoteVolume: tickerQuoteVolume(ticker),
-    chartCandles: hourlyCandles.slice(-90),
+    chartCandles: previewCandles.slice(-96),
     direction,
     directionLabel: directionLabel(direction),
     compositeScore,

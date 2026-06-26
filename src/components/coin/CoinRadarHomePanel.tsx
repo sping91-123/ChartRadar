@@ -275,7 +275,7 @@ function CoinSelectionDropdown({
 function chartPreviewChange(candles: CryptoHomeSnapshot["chartCandles"]) {
   if (candles.length < 2) return null;
   const latest = candles.at(-1);
-  const base = candles.at(-25) ?? candles[0];
+  const base = candles[0];
   if (!latest || !base || base.close <= 0) return null;
   return ((latest.close - base.close) / base.close) * 100;
 }
@@ -394,7 +394,7 @@ function StructurePreviewChart({ snapshot }: { snapshot: CryptoHomeSnapshot }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-black text-ui-text">가격 흐름</p>
-          <p className="mt-0.5 text-[11px] font-semibold text-ui-muted">최근 1시간봉 기준</p>
+          <p className="mt-0.5 text-[11px] font-semibold text-ui-muted">15분봉 · 최근 24시간</p>
         </div>
         <span className={`shrink-0 text-sm font-black ${previewTone}`}>{previewChange === null ? "확인 중" : formatPercent(previewChange)}</span>
       </div>
