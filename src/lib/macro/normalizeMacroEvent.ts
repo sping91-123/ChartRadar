@@ -24,8 +24,20 @@ function categoryFromTitle(title: string) {
   return "macro";
 }
 
+const RELEASE_MATCH_WINDOW_MS = 36 * 60 * 60 * 1000;
+
+function matchesReleaseWindow(item: MacroEventItem, enrichment: MacroSourceEnrichment) {
+  if (!enrichment.releasedAt) return true;
+
+  const itemTime = Date.parse(item.releaseAt);
+  const enrichmentTime = Date.parse(enrichment.releasedAt);
+  if (!Number.isFinite(itemTime) || !Number.isFinite(enrichmentTime)) return true;
+
+  return Math.abs(itemTime - enrichmentTime) <= RELEASE_MATCH_WINDOW_MS;
+}
+
 function pickEnrichment(item: MacroEventItem, enrichments: MacroSourceEnrichment[]) {
-  return enrichments.find((candidate) => candidate.matcher.test(item.label));
+  return enrichments.find((candidate) => candidate.matcher.test(item.label) && matchesReleaseWindow(item, candidate));
 }
 
 export function normalizeMacroEvent(item: MacroEventItem, enrichments: MacroSourceEnrichment[] = [], nowMs = Date.now()): MacroEventItem {

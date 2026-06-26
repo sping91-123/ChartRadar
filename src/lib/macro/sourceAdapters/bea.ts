@@ -1,7 +1,26 @@
 import { type MacroSourceEnrichment } from "@/lib/macro/types";
 
 const BEA_GDP_RELEASE_URL = "https://www.bea.gov/news/2026/gdp-second-estimate-and-corporate-profits-1st-quarter-2026";
-const BEA_PIO_RELEASE_URL = "https://www.bea.gov/news/2026/personal-income-and-outlays-april-2026";
+const BEA_PIO_RELEASE_SCHEDULE_URL = "https://www.bea.gov/news/schedule";
+const BEA_MONTH_SLUGS = [
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december"
+] as const;
+
+type OfficialRelease = {
+  url: string;
+  text: string;
+};
 
 function compactText(value: string) {
   return value
@@ -20,6 +39,37 @@ async function fetchOfficialText(url: string) {
   });
   if (!response.ok) return null;
   return compactText(await response.text());
+}
+
+async function fetchFirstOfficialRelease(urls: string[]): Promise<OfficialRelease | null> {
+  for (const url of urls) {
+    const text = await fetchOfficialText(url).catch(() => null);
+    if (text && /Personal Income and Outlays,/i.test(text)) return { url, text };
+  }
+  return null;
+}
+
+function personalIncomeReleaseCandidates(now = new Date()) {
+  return Array.from({ length: 4 }, (_, offset) => {
+    const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - offset, 1));
+    const year = date.getUTCFullYear();
+    const month = BEA_MONTH_SLUGS[date.getUTCMonth()];
+    return `https://www.bea.gov/news/${year}/personal-income-and-outlays-${month}-${year}`;
+  });
+}
+
+function parseBeaReleaseAt(text: string | null) {
+  if (!text) return undefined;
+  const match = /RELEASE AT 8:30 a\.m\. (EDT|EST), [A-Za-z]+, ([A-Za-z]+) (\d{1,2}), (\d{4})/i.exec(text);
+  if (!match) return undefined;
+
+  const monthIndex = BEA_MONTH_SLUGS.findIndex((month) => month.toLowerCase() === match[2].toLowerCase());
+  const day = Number(match[3]);
+  const year = Number(match[4]);
+  if (monthIndex < 0 || !Number.isFinite(day) || !Number.isFinite(year)) return undefined;
+
+  const utcHour = match[1].toUpperCase() === "EST" ? 13 : 12;
+  return new Date(Date.UTC(year, monthIndex, day, utcHour, 30)).toISOString();
 }
 
 function matchPercent(text: string, pattern: RegExp) {
@@ -60,30 +110,64 @@ function buildGdpEnrichments(text: string | null): MacroSourceEnrichment[] {
   ];
 }
 
-function buildPersonalIncomeEnrichments(text: string | null): MacroSourceEnrichment[] {
+function buildPersonalIncomeEnrichments(release: OfficialRelease | null): MacroSourceEnrichment[] {
+  const text = release?.text ?? null;
   const personalIncome = text ? matchPercent(text, /Current-dollar personal income\s+[+-]?\d+(?:\.\d+)?\s+([+-]?\d+(?:\.\d+)?)/i) : undefined;
   const pce = text ? matchPercent(text, /Current-dollar PCE\s+[+-]?\d+(?:\.\d+)?\s+([+-]?\d+(?:\.\d+)?)/i) : undefined;
-  const pcePrice = text ? matchPercent(text, /PCE price index for April increased ([+-]?\d+(?:\.\d+)?) percent/i) : undefined;
+  const pcePrice = text ? matchPercent(text, /PCE price index for [A-Za-z]+ increased ([+-]?\d+(?:\.\d+)?) percent/i) : undefined;
+  const pcePriceYoy = text ? matchPercent(text, /From the same month one year ago, the PCE price index for [A-Za-z]+ increased ([+-]?\d+(?:\.\d+)?) percent/i) : undefined;
   const corePce = text ? matchPercent(text, /Excluding food and energy, the PCE price index increased ([+-]?\d+(?:\.\d+)?) percent/i) : undefined;
   const corePceYoy = text ? matchPercent(text, /Excluding food and energy, the PCE price index increased ([+-]?\d+(?:\.\d+)?) percent from one year ago/i) : undefined;
+  const releaseAt = parseBeaReleaseAt(text);
 
   const base = {
     eventType: "numeric_release" as const,
     source: "BEA" as const,
     sourceType: "official_page" as const,
-    sourceUrl: BEA_PIO_RELEASE_URL,
-    officialUrl: BEA_PIO_RELEASE_URL,
+    sourceUrl: release?.url ?? BEA_PIO_RELEASE_SCHEDULE_URL,
+    officialUrl: release?.url,
     isOfficial: true,
     confidence: text ? 0.96 : 0.72,
-    unit: "%"
+    unit: "%",
+    releasedAt: releaseAt
   };
 
   return [
     {
       ...base,
-      matcher: /core pce|pce price index/i,
-      actualValue: corePce ? `Core PCE ${corePce} m/m${corePceYoy ? `, ${corePceYoy} y/y` : ""}${pcePrice ? `; PCE ${pcePrice} m/m` : ""}` : undefined,
+      matcher: /core pce.*(?:m\/m|mom|month)|(?:m\/m|mom|month).*core pce|pce price index excluding food and energy.*(?:m\/m|mom|month)/i,
+      actualValue: corePce ? `Core PCE ${corePce} m/m` : undefined,
       staleReason: corePce ? undefined : "BEA Personal Income and Outlays release page was reachable, but core PCE was not parsed."
+    },
+    {
+      ...base,
+      matcher: /core pce.*(?:y\/y|yoy|year)|(?:y\/y|yoy|year).*core pce|pce price index excluding food and energy.*(?:y\/y|yoy|year)/i,
+      actualValue: corePceYoy ? `Core PCE ${corePceYoy} y/y` : undefined,
+      staleReason: corePceYoy ? undefined : "BEA Personal Income and Outlays release page was reachable, but core PCE year-over-year value was not parsed."
+    },
+    {
+      ...base,
+      matcher: /core pce|pce price index excluding food and energy/i,
+      actualValue: corePce ? `Core PCE ${corePce} m/m${corePceYoy ? `, ${corePceYoy} y/y` : ""}` : undefined,
+      staleReason: corePce ? undefined : "BEA Personal Income and Outlays release page was reachable, but core PCE was not parsed."
+    },
+    {
+      ...base,
+      matcher: /pce price index.*(?:m\/m|mom|month)|(?:m\/m|mom|month).*pce price index|pce prices.*(?:m\/m|mom|month)|pce deflator.*(?:m\/m|mom|month)/i,
+      actualValue: pcePrice ? `PCE ${pcePrice} m/m` : undefined,
+      staleReason: pcePrice ? undefined : "BEA Personal Income and Outlays release page was reachable, but PCE price index was not parsed."
+    },
+    {
+      ...base,
+      matcher: /pce price index.*(?:y\/y|yoy|year)|(?:y\/y|yoy|year).*pce price index|pce prices.*(?:y\/y|yoy|year)|pce deflator.*(?:y\/y|yoy|year)/i,
+      actualValue: pcePriceYoy ? `PCE ${pcePriceYoy} y/y` : undefined,
+      staleReason: pcePriceYoy ? undefined : "BEA Personal Income and Outlays release page was reachable, but PCE price index year-over-year value was not parsed."
+    },
+    {
+      ...base,
+      matcher: /pce price index|pce prices|pce deflator/i,
+      actualValue: pcePrice ? `PCE ${pcePrice} m/m${pcePriceYoy ? `, ${pcePriceYoy} y/y` : ""}` : undefined,
+      staleReason: pcePrice ? undefined : "BEA Personal Income and Outlays release page was reachable, but PCE price index was not parsed."
     },
     {
       ...base,
@@ -101,12 +185,12 @@ function buildPersonalIncomeEnrichments(text: string | null): MacroSourceEnrichm
 }
 
 export async function getBeaOfficialEnrichments(): Promise<MacroSourceEnrichment[]> {
-  const [gdpText, pioText] = await Promise.all([
+  const [gdpText, pioRelease] = await Promise.all([
     fetchOfficialText(BEA_GDP_RELEASE_URL).catch(() => null),
-    fetchOfficialText(BEA_PIO_RELEASE_URL).catch(() => null)
+    fetchFirstOfficialRelease(personalIncomeReleaseCandidates()).catch(() => null)
   ]);
 
-  const enrichments = [...buildGdpEnrichments(gdpText), ...buildPersonalIncomeEnrichments(pioText)];
+  const enrichments = [...buildGdpEnrichments(gdpText), ...buildPersonalIncomeEnrichments(pioRelease)];
   if (enrichments.some((item) => item.actualValue)) return enrichments;
 
   return [
