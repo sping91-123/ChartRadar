@@ -355,8 +355,19 @@ function normalizeDetailSymbolParam(value: string | null) {
   return compact.endsWith("USDT") ? `${compact}.P` : `${compact}USDT.P`;
 }
 
-export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorOnly?: boolean; altOnly?: boolean } = {}) {
-  const initialSymbol = altOnly ? altSymbols[0] : majorSymbols[0];
+export function LiveMarketChart({
+  majorOnly = false,
+  altOnly = false,
+  selectedSymbol,
+  hideSymbolSelector = false
+}: {
+  majorOnly?: boolean;
+  altOnly?: boolean;
+  selectedSymbol?: string;
+  hideSymbolSelector?: boolean;
+} = {}) {
+  const controlledSymbol = selectedSymbol && symbols.includes(selectedSymbol) ? selectedSymbol : null;
+  const initialSymbol = controlledSymbol ?? (altOnly ? altSymbols[0] : majorSymbols[0]);
   const { profile } = useSupabaseAuth();
   const hasCoinPro = hasMarketEntitlement(profile?.plan, "crypto");
   const isMajorScreen = majorOnly && !altOnly;
@@ -475,7 +486,7 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
     const storedMsbMode = readLocalStorageWithLegacy(storageKey("msbMode"), legacyStorageKeys("msbMode")) as "close" | "wick" | null;
     const storedStructureSensitivity = Number(readLocalStorageWithLegacy(storageKey("structureSensitivity"), legacyStorageKeys("structureSensitivity"))) as StructureSensitivity;
 
-    if (storedSymbol && symbols.includes(storedSymbol) && (!altOnly || !majorSymbols.includes(storedSymbol))) {
+    if (!controlledSymbol && storedSymbol && symbols.includes(storedSymbol) && (!altOnly || !majorSymbols.includes(storedSymbol))) {
       setSymbol(storedSymbol);
     }
     if (storedTimeframe && chartTimeframes.includes(storedTimeframe)) {
@@ -493,15 +504,22 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
     if ([5, 7, 9].includes(storedStructureSensitivity)) {
       setStructureSensitivity(storedStructureSensitivity);
     }
-  }, [altOnly]);
+  }, [altOnly, controlledSymbol]);
 
   useEffect(() => {
+    if (controlledSymbol) return;
     if (!requestedSymbol) return;
     const isMajorSymbol = majorSymbols.includes(requestedSymbol);
     if (majorOnly && !isMajorSymbol) return;
     if (altOnly && isMajorSymbol) return;
     selectSymbol(requestedSymbol, { userSelected: altOnly });
-  }, [altOnly, majorOnly, requestedSymbol, selectSymbol]);
+  }, [altOnly, controlledSymbol, majorOnly, requestedSymbol, selectSymbol]);
+
+  useEffect(() => {
+    if (!controlledSymbol) return;
+    if (symbol === controlledSymbol) return;
+    selectSymbol(controlledSymbol);
+  }, [controlledSymbol, selectSymbol, symbol]);
 
   useEffect(() => {
     writeLocalStorage(storageKey("symbol"), legacyStorageKeys("symbol"), symbol);
@@ -1560,90 +1578,92 @@ export function LiveMarketChart({ majorOnly = false, altOnly = false }: { majorO
 
       </div>
 
-      <div
-        className={
-          isMajorScreen
-            ? "relative mt-3 grid grid-cols-2 border-b border-ui-line"
-            : altOnly
-              ? "relative mt-4 grid grid-cols-3 gap-0 border-b border-ui-line sm:grid-cols-6"
-            : `relative mt-4 grid gap-2 ${majorOnly ? "grid-cols-2" : altOnly ? "grid-cols-3 sm:grid-cols-6" : "grid-cols-3"}`
-        }
-      >
-        {primarySymbols.map((item) => (
-          <button
-            key={item}
-            type="button"
-            onClick={() => selectSymbol(item, { userSelected: true })}
-            className={
-              isMajorScreen
-                ? `min-h-11 whitespace-nowrap border-b-2 px-3 text-sm font-semibold transition ${
-                    symbol === item ? "border-ui-brand text-ui-text" : "border-transparent text-ui-muted hover:text-ui-text"
-                  }`
-                : altOnly
-                  ? `min-h-10 whitespace-nowrap border-b-2 px-2 text-sm font-black transition ${
-                      symbol === item ? "border-accent-blue bg-transparent text-accent-blue" : "border-transparent bg-transparent text-slate-400 hover:text-slate-200"
+      {!hideSymbolSelector ? (
+        <div
+          className={
+            isMajorScreen
+              ? "relative mt-3 grid grid-cols-2 border-b border-ui-line"
+              : altOnly
+                ? "relative mt-4 grid grid-cols-3 gap-0 border-b border-ui-line sm:grid-cols-6"
+              : `relative mt-4 grid gap-2 ${majorOnly ? "grid-cols-2" : altOnly ? "grid-cols-3 sm:grid-cols-6" : "grid-cols-3"}`
+          }
+        >
+          {primarySymbols.map((item) => (
+            <button
+              key={item}
+              type="button"
+              onClick={() => selectSymbol(item, { userSelected: true })}
+              className={
+                isMajorScreen
+                  ? `min-h-11 whitespace-nowrap border-b-2 px-3 text-sm font-semibold transition ${
+                      symbol === item ? "border-ui-brand text-ui-text" : "border-transparent text-ui-muted hover:text-ui-text"
                     }`
-                : `min-h-10 whitespace-nowrap border-b-2 px-3 text-sm font-black transition ${
-                    symbol === item
-                      ? "border-accent-blue bg-transparent text-accent-blue"
-                      : "border-transparent bg-transparent text-slate-400 hover:text-slate-200"
-                  }`
-            }
-          >
-            {symbolLabel(item)}
-          </button>
-        ))}
-        {!majorOnly ? (
-          <button
-            type="button"
-            onClick={() => {
-              setShowOtherSymbols((value) => {
-                if (value) setOtherSymbolQuery("");
-                return !value;
-              });
-            }}
-            className={`min-h-10 whitespace-nowrap border-b-2 px-3 text-sm font-black transition ${
-              isOtherSymbolActive || showOtherSymbols
-                ? "border-accent-blue bg-transparent text-accent-blue"
-                : "border-transparent bg-transparent text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            {isOtherSymbolActive ? symbolLabel(symbol) : "그 외"}
-          </button>
-        ) : null}
-        {!majorOnly && showOtherSymbols ? (
-          <div className="absolute left-0 top-full z-50 mt-2 max-h-[58vh] w-[min(92vw,560px)] overflow-hidden rounded-ui-lg bg-ui-panel p-2 shadow-none">
-            <input
-              value={otherSymbolQuery}
-              onChange={(event) => setOtherSymbolQuery(event.target.value)}
-              placeholder="코인 검색"
-              className="mb-2 h-10 w-full rounded-ui-sm border border-ui-line bg-ui-elevated px-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-accent-blue"
-            />
-            <div className="grid max-h-[44vh] grid-cols-4 gap-2 overflow-y-auto sm:grid-cols-6">
-              {filteredOtherSymbols.length > 0 ? (
-                filteredOtherSymbols.map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => selectSymbol(item, { userSelected: true })}
-                    className={`min-h-9 rounded-md border px-2 text-xs font-black transition ${
+                  : altOnly
+                    ? `min-h-10 whitespace-nowrap border-b-2 px-2 text-sm font-black transition ${
+                        symbol === item ? "border-accent-blue bg-transparent text-accent-blue" : "border-transparent bg-transparent text-slate-400 hover:text-slate-200"
+                      }`
+                  : `min-h-10 whitespace-nowrap border-b-2 px-3 text-sm font-black transition ${
                       symbol === item
-                        ? "border-accent-blue bg-accent-blue text-slate-950"
-                        : "border-transparent bg-ui-elevated text-slate-300 hover:border-accent-blue/60"
-                    }`}
-                  >
-                    {symbolLabel(item)}
-                  </button>
-                ))
-              ) : (
-                <p className="col-span-4 rounded-ui-sm bg-ui-elevated px-3 py-4 text-center text-xs font-bold text-slate-400 sm:col-span-6">
-                  검색 결과가 없습니다.
-                </p>
-              )}
+                        ? "border-accent-blue bg-transparent text-accent-blue"
+                        : "border-transparent bg-transparent text-slate-400 hover:text-slate-200"
+                    }`
+              }
+            >
+              {symbolLabel(item)}
+            </button>
+          ))}
+          {!majorOnly ? (
+            <button
+              type="button"
+              onClick={() => {
+                setShowOtherSymbols((value) => {
+                  if (value) setOtherSymbolQuery("");
+                  return !value;
+                });
+              }}
+              className={`min-h-10 whitespace-nowrap border-b-2 px-3 text-sm font-black transition ${
+                isOtherSymbolActive || showOtherSymbols
+                  ? "border-accent-blue bg-transparent text-accent-blue"
+                  : "border-transparent bg-transparent text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              {isOtherSymbolActive ? symbolLabel(symbol) : "그 외"}
+            </button>
+          ) : null}
+          {!majorOnly && showOtherSymbols ? (
+            <div className="absolute left-0 top-full z-50 mt-2 max-h-[58vh] w-[min(92vw,560px)] overflow-hidden rounded-ui-lg bg-ui-panel p-2 shadow-none">
+              <input
+                value={otherSymbolQuery}
+                onChange={(event) => setOtherSymbolQuery(event.target.value)}
+                placeholder="코인 검색"
+                className="mb-2 h-10 w-full rounded-ui-sm border border-ui-line bg-ui-elevated px-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-accent-blue"
+              />
+              <div className="grid max-h-[44vh] grid-cols-4 gap-2 overflow-y-auto sm:grid-cols-6">
+                {filteredOtherSymbols.length > 0 ? (
+                  filteredOtherSymbols.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => selectSymbol(item, { userSelected: true })}
+                      className={`min-h-9 rounded-md border px-2 text-xs font-black transition ${
+                        symbol === item
+                          ? "border-accent-blue bg-accent-blue text-slate-950"
+                          : "border-transparent bg-ui-elevated text-slate-300 hover:border-accent-blue/60"
+                      }`}
+                    >
+                      {symbolLabel(item)}
+                    </button>
+                  ))
+                ) : (
+                  <p className="col-span-4 rounded-ui-sm bg-ui-elevated px-3 py-4 text-center text-xs font-bold text-slate-400 sm:col-span-6">
+                    검색 결과가 없습니다.
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
-        ) : null}
-      </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {altOnly ? (
         <CryptoAltAnalysisGateBanner

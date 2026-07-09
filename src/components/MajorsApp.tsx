@@ -1,3 +1,7 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { ChevronDown, LineChart, ShieldAlert } from "lucide-react";
 import { CoinOptionsMarketPanel } from "@/components/coin/CoinOptionsMarketPanel";
 import { CoinLargeTradeFlowPanel } from "@/components/coin/CoinLargeTradeFlowPanel";
 import { CoinFuturesBrief } from "@/components/coin/CoinFuturesBrief";
@@ -9,43 +13,130 @@ import { CoinMarketEnvironmentPanel } from "@/components/coin/CoinMarketEnvironm
 import { Header } from "@/components/Header";
 import { LiveMarketChart } from "@/components/LiveMarketChart";
 import { RadarTopNav } from "@/components/RadarTopNav";
+import { SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
+
+const majorAssetOptions = [
+  { id: "btc", label: "비트", detail: "BTC", apiSymbol: "BTCUSDT", chartSymbol: "BTCUSDT.P" },
+  { id: "eth", label: "이더", detail: "ETH", apiSymbol: "ETHUSDT", chartSymbol: "ETHUSDT.P" }
+] as const;
+
+type MajorAssetId = (typeof majorAssetOptions)[number]["id"];
+
+function isMajorAssetId(value: string | null): value is MajorAssetId {
+  return value === "btc" || value === "eth";
+}
+
+function CoinMajorAssetSwitch({ active, onChange }: { active: MajorAssetId; onChange: (next: MajorAssetId) => void }) {
+  return (
+    <nav className="rounded-ui-lg bg-ui-panel p-1" aria-label="메이저 선물 코인 선택">
+      <div className="grid grid-cols-2 gap-1">
+        {majorAssetOptions.map((asset) => {
+          const isActive = asset.id === active;
+
+          return (
+            <button
+              key={asset.id}
+              type="button"
+              onClick={() => onChange(asset.id)}
+              aria-pressed={isActive}
+              className={`min-h-[3.3rem] min-w-0 rounded-ui-sm px-2 py-2 text-center transition ${
+                isActive ? "bg-ui-active text-ui-text" : "text-ui-muted hover:bg-ui-inset/60 hover:text-ui-text"
+              }`}
+            >
+              <span className="block text-sm font-semibold leading-5">{asset.label}</span>
+              <span className="block text-[11px] font-medium leading-4 text-ui-subtle">{asset.detail}</span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
+function BackgroundEvidenceDisclosure({ children }: { children: ReactNode }) {
+  return (
+    <details className="group border-t border-ui-line pt-4">
+      <summary className="flex cursor-pointer list-none items-start justify-between gap-3 py-2 marker:hidden [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0">
+          <span className="block text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">보조 데이터</span>
+          <span className="mt-1 block text-ui-heading font-semibold tracking-tight text-ui-text">시장 환경, 온체인, 옵션은 접어 둡니다</span>
+          <span className="mt-1 block max-w-3xl text-ui-body text-ui-muted [word-break:keep-all]">
+            매매 판단은 상단 플랜과 차트 확인을 우선하고, 이 값들은 필요할 때만 참고합니다.
+          </span>
+        </span>
+        <ChevronDown className="mt-1 shrink-0 text-ui-subtle transition group-open:rotate-180" size={18} aria-hidden />
+      </summary>
+      <div className="mt-3 grid gap-3">{children}</div>
+    </details>
+  );
+}
 
 export function MajorsApp() {
+  const [activeAssetId, setActiveAssetId] = useState<MajorAssetId>("btc");
+  const activeAsset = majorAssetOptions.find((asset) => asset.id === activeAssetId) ?? majorAssetOptions[0];
+  const selectedSymbols = useMemo(
+    () => [{ symbol: activeAsset.apiSymbol, label: activeAsset.detail }],
+    [activeAsset.apiSymbol, activeAsset.detail]
+  );
+  const selectedOptionCurrencies = useMemo(() => [activeAsset.detail], [activeAsset.detail]);
+  const handleAssetChange = useCallback((next: MajorAssetId) => {
+    setActiveAssetId(next);
+    const url = new URL(window.location.href);
+    url.searchParams.set("asset", next);
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+  }, []);
+
+  useEffect(() => {
+    const requestedAsset = new URLSearchParams(window.location.search).get("asset");
+    if (isMajorAssetId(requestedAsset)) setActiveAssetId(requestedAsset);
+  }, []);
+
   return (
     <main className="min-h-screen max-w-full overflow-x-hidden px-3 pb-28 sm:px-5 sm:pb-16">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 sm:gap-4">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 sm:gap-3">
         <Header market="crypto" />
         <RadarTopNav />
         <CoinFuturesSwitch active="major" />
-        <CoinFuturesBrief mode="major" />
-        <section className="pt-1">
-          <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">앱이 감지한 선물 직접 신호</p>
-          <h2 className="mt-1 text-ui-heading font-semibold tracking-tight text-ui-text">BTC/ETH 쏠림과 큰 체결을 먼저 확인합니다</h2>
-          <p className="mt-1 text-ui-body text-ui-muted [word-break:keep-all]">
-            메이저 선물 화면은 BTC와 ETH의 포지션 쏠림, 큰 체결 흐름, 구조·변동성 신호를 우선 분리합니다.
-          </p>
+        <CoinMajorAssetSwitch active={activeAssetId} onChange={handleAssetChange} />
+        <CoinFuturesBrief mode="major" symbols={selectedSymbols} />
+
+        <section className="space-y-3 pt-1">
+          <SectionHeader
+            eyebrow="실시간 수치"
+            title={`${activeAsset.label} 플랜에 쓰인 쏠림과 체결입니다`}
+            description={`${activeAsset.detail} 선물 상세 수치가 필요할 때만 확인합니다. 매매 방향은 상단의 롱/숏 플랜을 먼저 봅니다.`}
+            action={
+              <StatusPill tone="risk" icon={ShieldAlert}>
+                상세
+              </StatusPill>
+            }
+          />
+          <div className="grid gap-3 xl:grid-cols-2">
+            <CoinFuturesSignalPressurePanel mode="major" symbols={selectedSymbols} />
+            <CoinLargeTradeFlowPanel mode="major" symbols={selectedSymbols} />
+          </div>
         </section>
-        <CoinFuturesSignalPressurePanel mode="major" />
-        <CoinLargeTradeFlowPanel mode="major" />
-        <section className="pt-1">
-          <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">시장 환경 참고</p>
-          <h2 className="mt-1 text-ui-heading font-semibold tracking-tight text-ui-text">선물 방향보다 배경 리스크로 봅니다</h2>
-          <p className="mt-1 text-ui-body text-ui-muted [word-break:keep-all]">
-            BTC 도미넌스, 김치 프리미엄, 환율, 스테이블코인 유동성, BTC 온체인 혼잡, 옵션 예상 변동은 BTC/ETH 선물 판단을 보조하는 시장 환경 값입니다.
-          </p>
+
+        <section className="space-y-3 pt-1">
+          <SectionHeader
+            eyebrow="가격 확인"
+            title="플랜이 맞는 가격 자리만 확인합니다"
+            description="롱은 돌파 유지, 숏은 이탈 유지처럼 상단 플랜의 조건이 차트에서도 이어지는지만 봅니다."
+            action={
+              <StatusPill tone="watch" icon={LineChart}>
+                차트
+              </StatusPill>
+            }
+          />
+          <LiveMarketChart majorOnly selectedSymbol={activeAsset.chartSymbol} hideSymbolSelector />
         </section>
-        <CoinMarketEnvironmentPanel mode="major" />
-        <CoinStablecoinLiquidityPanel />
-        <CoinOnchainPulsePanel />
-        <CoinOptionsMarketPanel />
-        <section className="pt-1">
-          <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">세부 근거</p>
-          <h2 className="mt-1 text-ui-heading font-semibold tracking-tight text-ui-text">BTC/ETH 구조와 변동성을 다시 확인합니다</h2>
-          <p className="mt-1 text-ui-body text-ui-muted [word-break:keep-all]">
-            상단에서 감지한 선물 리스크가 차트 구조와 같은 방향인지 하단 세부 근거에서 확인합니다.
-          </p>
-        </section>
-        <LiveMarketChart majorOnly />
+
+        <BackgroundEvidenceDisclosure>
+          <CoinMarketEnvironmentPanel mode="major" />
+          <CoinStablecoinLiquidityPanel />
+          {activeAsset.id === "btc" ? <CoinOnchainPulsePanel /> : null}
+          <CoinOptionsMarketPanel currencies={selectedOptionCurrencies} />
+        </BackgroundEvidenceDisclosure>
       </div>
     </main>
   );

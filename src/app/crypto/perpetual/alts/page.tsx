@@ -13,7 +13,7 @@ import { WatchlistPanel } from "@/components/WatchlistPanel";
 export default function CryptoPerpetualAltsPage() {
   return (
     <main className="min-h-screen px-3 pb-28 sm:px-5 sm:pb-16">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 sm:gap-4">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 sm:gap-3">
         <Header market="crypto" />
         <RadarTopNav />
         <CoinFuturesSwitch active="alts" />

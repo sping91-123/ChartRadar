@@ -70,7 +70,7 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
           <Link
             key={label}
             href={href}
-            className={`group flex min-h-[3.65rem] min-w-0 flex-col items-center justify-center gap-1.5 px-1.5 py-1 text-center text-xs font-semibold leading-none transition sm:min-h-[3.5rem] sm:px-2 ${
+            className={`group flex min-h-[3.2rem] min-w-0 flex-col items-center justify-center gap-1 px-1.5 py-0.5 text-center text-xs font-semibold leading-none transition sm:min-h-[3.15rem] sm:px-2 ${
               isFixedGridNav ? "w-full" : "shrink-0 md:shrink"
             } ${
               active
@@ -78,7 +78,7 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
                 : "text-ui-muted hover:bg-ui-inset/60 hover:text-ui-text"
             }`}
           >
-            <Icon size={23} aria-hidden className={`shrink-0 ${active ? "text-ui-brand" : "text-ui-subtle transition group-hover:text-ui-muted"}`} />
+            <Icon size={21} aria-hidden className={`shrink-0 ${active ? "text-ui-brand" : "text-ui-subtle transition group-hover:text-ui-muted"}`} />
             <span className="whitespace-nowrap">{label}</span>
           </Link>
         );
@@ -87,7 +87,7 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
   );
 
   return (
-    <nav className="radar-bottom-nav fixed inset-x-0 bottom-0 z-40 px-0 pt-1">
+    <nav className="radar-bottom-nav fixed inset-x-0 bottom-0 z-40 px-0 pt-0">
       <div className="mx-auto max-w-md px-2">
         {navContent}
       </div>

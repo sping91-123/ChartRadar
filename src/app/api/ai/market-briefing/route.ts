@@ -33,9 +33,33 @@ function isValidInput(value: unknown): value is MarketBriefingInput {
   if (!Array.isArray(value.timeframes)) return false;
   if (!Array.isArray(value.reasons)) return false;
   if (value.timeframes.length > 5 || value.reasons.length > 16) return false;
+  const aggregate = value.aggregate;
+  const validAggregate =
+    aggregate === undefined ||
+    (isRecord(aggregate) &&
+      typeof aggregate.directionLabel === "string" &&
+      typeof aggregate.compositeScore === "number" &&
+      typeof aggregate.alignment === "string" &&
+      typeof aggregate.shortTimeframeSummary === "string" &&
+      typeof aggregate.higherTimeframeSummary === "string" &&
+      typeof aggregate.volatility === "string" &&
+      typeof aggregate.volume === "string" &&
+      isStringArray(aggregate.keySignals));
+  const pressure = value.pressure;
+  const validPressure =
+    pressure === undefined ||
+    (isRecord(pressure) &&
+      typeof pressure.dominant === "string" &&
+      typeof pressure.dominantLabel === "string" &&
+      typeof pressure.longScore === "number" &&
+      typeof pressure.shortScore === "number" &&
+      typeof pressure.summary === "string" &&
+      typeof pressure.structurePressureRead === "string" &&
+      isStringArray(pressure.evidence));
 
   return (
     typeof value.symbol === "string" &&
+    (value.analysisScope === undefined || typeof value.analysisScope === "string") &&
     typeof value.activeTimeframe === "string" &&
     typeof value.tradingMode === "string" &&
     typeof value.price === "number" &&
@@ -50,6 +74,8 @@ function isValidInput(value: unknown): value is MarketBriefingInput {
     typeof value.killzone === "string" &&
     isStringArray(value.opportunityFlags) &&
     isStringArray(value.riskFlags) &&
+    validAggregate &&
+    validPressure &&
     value.timeframes.every((item) => isRecord(item) && typeof item.timeframe === "string")
   );
 }
@@ -57,6 +83,7 @@ function isValidInput(value: unknown): value is MarketBriefingInput {
 function cacheKey(input: MarketBriefingInput) {
   return [
     input.symbol,
+    input.analysisScope,
     input.activeTimeframe,
     input.tradingMode,
     Math.round(input.price * 100) / 100,
@@ -67,7 +94,12 @@ function cacheKey(input: MarketBriefingInput) {
     input.active.ob,
     input.active.fvg,
     input.active.poc,
-    input.active.pd
+    input.active.pd,
+    input.aggregate?.compositeScore ?? "",
+    input.aggregate?.alignment ?? "",
+    input.pressure?.dominant ?? "",
+    input.pressure?.longScore ?? "",
+    input.pressure?.shortScore ?? ""
   ].join("|");
 }
 

@@ -662,8 +662,8 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
 
     return (
       <div className="space-y-1.5">
-        <Link href={href} className="group flex min-h-11 items-start gap-1.5 rounded-ui-lg bg-ui-panel px-2.5 py-2.5 transition hover:bg-ui-elevated">
-          <div className={`flex w-11 shrink-0 flex-col items-center justify-start gap-1 pt-0.5 text-center text-[10px] font-black leading-3 ${isReleased ? "text-signal-warning" : "text-accent-blue"}`}>
+        <Link href={href} className="group flex min-h-10 items-start gap-1.5 rounded-ui-lg bg-ui-panel px-2.5 py-2 transition hover:bg-ui-elevated">
+          <div className={`flex w-10 shrink-0 flex-col items-center justify-start gap-0.5 text-center text-[10px] font-black leading-3 ${isReleased ? "text-signal-warning" : "text-accent-blue"}`}>
             <span>{eventKind}</span>
             {impactRead && ImpactIcon ? (
               <span className={`inline-flex flex-col items-center justify-center gap-0.5 ${impactToneClass}`} aria-label={impactRead}>
@@ -678,10 +678,10 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
             <p className="line-clamp-4 text-[10.5px] font-black leading-4 text-white [word-break:keep-all]">
               {macroLabel(item.label)} · <span className={compactStateClass(item)}>{compactStatusLabel(item)}</span> · {impactLabel(item)}
             </p>
-            <p className="mt-0.5 text-[10.5px] font-bold leading-4 text-slate-500 [word-break:keep-all]">
+            <p className="text-[10.5px] font-bold leading-[15px] text-slate-500 [word-break:keep-all]">
               <span>한국시간 {item.dateKst}</span>
             </p>
-            <p className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-bold leading-4 text-slate-500 [overflow-wrap:anywhere] [word-break:keep-all]">
+            <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-bold leading-[15px] text-slate-500 [overflow-wrap:anywhere] [word-break:keep-all]">
               <span>{primaryValueLabel} {primaryValue}</span>
               <span>예측 {displayConsensusValue(item)}</span>
               <span>이전 {displayPreviousValue(item)}</span>

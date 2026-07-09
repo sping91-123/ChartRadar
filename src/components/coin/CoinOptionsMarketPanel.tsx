@@ -13,7 +13,7 @@ type OptionsMarketPayload = {
   error?: string;
 };
 
-const currencies: OptionsCurrency[] = ["BTC", "ETH"];
+const defaultCurrencies: OptionsCurrency[] = ["BTC", "ETH"];
 
 function formatRatio(value: number | null | undefined) {
   if (value === null || value === undefined || !Number.isFinite(value)) return "-";
@@ -81,10 +81,12 @@ async function fetchOptionsMarket(currency: OptionsCurrency) {
   return payload.report;
 }
 
-export function CoinOptionsMarketPanel() {
+export function CoinOptionsMarketPanel({ currencies = defaultCurrencies }: { currencies?: OptionsCurrency[] } = {}) {
   const [status, setStatus] = useState<LoadStatus>("idle");
   const [reports, setReports] = useState<OptionsMarketReport[]>([]);
   const [error, setError] = useState("");
+  const currencyLabel = currencies.join("/");
+  const hasSingleCurrency = currencies.length === 1;
 
   const loadReports = useCallback(async () => {
     setStatus("loading");
@@ -100,7 +102,7 @@ export function CoinOptionsMarketPanel() {
 
     setStatus("error");
     setError("옵션 시장 데이터를 잠시 확인하지 못했습니다.");
-  }, []);
+  }, [currencies]);
 
   useEffect(() => {
     void loadReports();
@@ -114,13 +116,13 @@ export function CoinOptionsMarketPanel() {
 
   const topSummary = topReport
     ? `${topReport.currency} ${topReport.summary} 방향 결론이 아니라 롱/숏 위험 참고값으로만 봅니다.`
-    : "BTC/ETH 옵션 쏠림을 롱/숏 위험 참고값으로 판단하는 중입니다.";
+    : `${currencyLabel} 옵션 쏠림을 롱/숏 위험 참고값으로 판단하는 중입니다.`;
 
   return (
     <PanelCard variant="report" padding="md" className="space-y-4">
       <SectionHeader
         eyebrow="Deribit 공개 옵션 데이터"
-        title="옵션 시장 온도 참고"
+        title={hasSingleCurrency ? `${currencyLabel} 옵션 시장 온도 참고` : "옵션 시장 온도 참고"}
         description={topSummary}
         action={
           <ActionButton tone="secondary" onClick={loadReports} disabled={status === "loading"}>
@@ -143,7 +145,7 @@ export function CoinOptionsMarketPanel() {
       ) : null}
 
       {reports.length ? (
-        <div className="grid gap-2 md:grid-cols-2">
+        <div className={`grid gap-2 ${reports.length > 1 ? "md:grid-cols-2" : ""}`}>
           {reports.map((report) => {
             const tone = sideTone(report.dominantSide);
             return (
@@ -181,7 +183,7 @@ export function CoinOptionsMarketPanel() {
       ) : null}
 
       <CompactHelp label="데이터 기준">
-        Deribit 공개 옵션 요약에서 BTC/ETH 옵션의 미결제약정, 거래대금, IV를 묶어 봅니다. 예상 변동은 선물 방향 결론이 아니라 시장 전체 변동성 압력을 보조 확인하는 참고 범위입니다.
+        Deribit 공개 옵션 요약에서 {currencyLabel} 옵션의 미결제약정, 거래대금, IV를 묶어 봅니다. 예상 변동은 선물 방향 결론이 아니라 시장 전체 변동성 압력을 보조 확인하는 참고 범위입니다.
       </CompactHelp>
     </PanelCard>
   );

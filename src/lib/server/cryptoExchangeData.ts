@@ -65,6 +65,7 @@ export interface CryptoHomeSnapshot {
   }>;
   aiInput: {
     symbol: string;
+    analysisScope: string;
     activeTimeframe: ChartTimeframe;
     tradingMode: "swing";
     price: number;
@@ -95,6 +96,25 @@ export interface CryptoHomeSnapshot {
       volatility: string;
       volume: string;
       bollinger: string;
+    };
+    aggregate: {
+      directionLabel: string;
+      compositeScore: number;
+      alignment: string;
+      shortTimeframeSummary: string;
+      higherTimeframeSummary: string;
+      volatility: string;
+      volume: string;
+      keySignals: string[];
+    };
+    pressure: {
+      dominant: "long" | "short" | "balanced";
+      dominantLabel: string;
+      longScore: number;
+      shortScore: number;
+      summary: string;
+      structurePressureRead: string;
+      evidence: string[];
     };
     timeframes: Array<{
       timeframe: ChartTimeframe;
@@ -1067,9 +1087,145 @@ function activeAnalysisPayload(active: TimeframeAnalysis) {
   };
 }
 
-function buildAiInput(selection: CryptoExchangeMarket, analysis: MarketAnalysis, active: TimeframeAnalysis, snapshotTimeframes: CryptoHomeSnapshot["timeframes"]) {
+function signalSide(score: number) {
+  if (score > 0.35) return "long";
+  if (score < -0.35) return "short";
+  return "mixed";
+}
+
+function signalSideLabel(score: number) {
+  const side = signalSide(score);
+  if (side === "long") return "상방 우위";
+  if (side === "short") return "하방 우위";
+  return "혼조";
+}
+
+function frameGroupSignal(analyses: TimeframeAnalysis[], frameGroup: ChartTimeframe[]) {
+  return analyses
+    .filter((item) => frameGroup.includes(item.timeframe))
+    .reduce((sum, item) => sum + timeframeWeights[item.timeframe] * (directionValue(item.msb) + directionValue(item.choch) * 0.6), 0);
+}
+
+function frameGroupSummary(analyses: TimeframeAnalysis[], frameGroup: ChartTimeframe[]) {
+  const selected = frameGroup
+    .map((timeframe) => analyses.find((item) => item.timeframe === timeframe))
+    .filter((item): item is TimeframeAnalysis => Boolean(item));
+  const score = frameGroupSignal(selected, frameGroup);
+  const detail = selected.map((item) => `${timeframeLabels[item.timeframe]} ${stateLabel(item.msb)}/${stateLabel(item.choch)}`).join(", ");
+  return `${signalSideLabel(score)}${detail ? ` · ${detail}` : ""}`;
+}
+
+function aggregateConditionSummary(analyses: TimeframeAnalysis[], valueFor: (analysis: TimeframeAnalysis) => string) {
+  const counts = new Map<string, number>();
+  for (const analysis of analyses) {
+    const label = valueFor(analysis);
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0], "ko-KR"))
+    .map(([label, count]) => `${label} ${count}개`)
+    .join(", ");
+}
+
+function aggregateAlignmentSummary(shortSignal: number, higherSignal: number) {
+  const shortSide = signalSide(shortSignal);
+  const higherSide = signalSide(higherSignal);
+  if (shortSide !== "mixed" && shortSide === higherSide) {
+    return `단기와 상위 프레임이 모두 ${shortSide === "long" ? "상방" : "하방"} 쪽으로 정렬되어 있습니다.`;
+  }
+  if (shortSide !== "mixed" && higherSide !== "mixed" && shortSide !== higherSide) {
+    return "단기와 상위 프레임 방향이 서로 엇갈립니다.";
+  }
+  if (higherSide !== "mixed") {
+    return `상위 프레임은 ${higherSide === "long" ? "상방" : "하방"} 우위지만 단기 신호는 아직 혼조입니다.`;
+  }
+  if (shortSide !== "mixed") {
+    return `단기 신호는 ${shortSide === "long" ? "상방" : "하방"} 우위지만 상위 프레임 확인은 아직 부족합니다.`;
+  }
+  return "단기와 상위 프레임 모두 혼조라 방향 확정 강도는 낮습니다.";
+}
+
+function chooseRepresentativeAnalysis(analyses: TimeframeAnalysis[], scoreBreakdown: CryptoHomeScoreBreakdown) {
+  const strongest = [...scoreBreakdown.rows]
+    .sort((left, right) => Math.abs(right.totalContribution) - Math.abs(left.totalContribution))
+    .find((row) => Math.abs(row.totalContribution) > 0.01);
+  return analyses.find((item) => item.timeframe === strongest?.timeframe) ?? analyses.find((item) => item.timeframe === "15m") ?? analyses[0];
+}
+
+function buildAggregatePayload(
+  analyses: TimeframeAnalysis[],
+  scoreBreakdown: CryptoHomeScoreBreakdown,
+  direction: CryptoHomeSnapshot["direction"]
+): CryptoHomeSnapshot["aiInput"]["aggregate"] {
+  const shortFrames: ChartTimeframe[] = ["5m", "15m"];
+  const higherFrames: ChartTimeframe[] = ["1h", "4h", "1d"];
+  const shortSignal = frameGroupSignal(analyses, shortFrames);
+  const higherSignal = frameGroupSignal(analyses, higherFrames);
+  return {
+    directionLabel: directionLabel(direction),
+    compositeScore: scoreBreakdown.finalScore,
+    alignment: aggregateAlignmentSummary(shortSignal, higherSignal),
+    shortTimeframeSummary: frameGroupSummary(analyses, shortFrames),
+    higherTimeframeSummary: frameGroupSummary(analyses, higherFrames),
+    volatility: aggregateConditionSummary(analyses, (item) => homeVolatilityLabel(item.condition.volatilityState)),
+    volume: aggregateConditionSummary(analyses, (item) => homeVolumeLabel(item.condition.volumeState)),
+    keySignals: [...scoreBreakdown.rows]
+      .sort((left, right) => Math.abs(right.totalContribution) - Math.abs(left.totalContribution))
+      .slice(0, 3)
+      .map((row) => `${row.label} 확정 구조 ${stateLabel(row.msb)}, 전환 신호 ${stateLabel(row.choch)}`)
+  };
+}
+
+function homePressureDominantLabel(pressure: CryptoHomeSnapshot["pressure"]) {
+  if (pressure.dominant === "long") return "롱 압력 우세";
+  if (pressure.dominant === "short") return "숏 압력 우세";
+  return "압력 균형";
+}
+
+function homePressureSummary(pressure: CryptoHomeSnapshot["pressure"]) {
+  if (pressure.dominant === "long") return `롱 압력이 ${pressure.longScore}점으로 숏 ${pressure.shortScore}점보다 우세합니다.`;
+  if (pressure.dominant === "short") return `숏 압력이 ${pressure.shortScore}점으로 롱 ${pressure.longScore}점보다 우세합니다.`;
+  return `롱 ${pressure.longScore}점, 숏 ${pressure.shortScore}점으로 압력 차이가 크지 않습니다.`;
+}
+
+function homePressureEvidence(pressure: CryptoHomeSnapshot["pressure"], limit = 3) {
+  return pressure.evidence
+    .filter((item) => item.available)
+    .slice(0, limit)
+    .map((item) => `${item.label} ${item.value}`);
+}
+
+function pressureStructureRead(aggregate: CryptoHomeSnapshot["aiInput"]["aggregate"], pressure: CryptoHomeSnapshot["pressure"]) {
+  const shortSide = signalSide(frameSummarySignal(aggregate.shortTimeframeSummary));
+  const higherSide = signalSide(frameSummarySignal(aggregate.higherTimeframeSummary));
+  const pressureSide = pressure.dominant;
+
+  if (pressureSide === "balanced") {
+    return `구조는 ${aggregate.alignment} 압력은 균형권이라 가격 반응 확인이 더 중요합니다.`;
+  }
+  if (shortSide === pressureSide || higherSide === pressureSide) {
+    return `구조 흐름과 ${homePressureDominantLabel(pressure)}가 일부 같은 방향으로 맞습니다.`;
+  }
+  return `구조 흐름과 ${homePressureDominantLabel(pressure)}가 완전히 맞지는 않아 추격 판단은 보수적으로 봅니다.`;
+}
+
+function frameSummarySignal(summary: string) {
+  if (summary.includes("상방 우위")) return 1;
+  if (summary.includes("하방 우위")) return -1;
+  return 0;
+}
+
+function buildAiInput(
+  selection: CryptoExchangeMarket,
+  analysis: MarketAnalysis,
+  active: TimeframeAnalysis,
+  snapshotTimeframes: CryptoHomeSnapshot["timeframes"],
+  aggregate: CryptoHomeSnapshot["aiInput"]["aggregate"],
+  pressure: CryptoHomeSnapshot["pressure"]
+) {
   return {
     symbol: `${selection.exchangeLabel}:${selection.base}USDT`,
+    analysisScope: "전체 프레임 종합 기준",
     activeTimeframe: analysis.activeTimeframe,
     tradingMode: "swing" as const,
     price: analysis.price,
@@ -1086,6 +1242,16 @@ function buildAiInput(selection: CryptoExchangeMarket, analysis: MarketAnalysis,
     riskFlags: analysis.riskFlags.map(homeFriendlyText),
     reasons: analysis.reasons.map((reason) => ({ ...reason, text: homeFriendlyText(reason.text) })),
     active: activeAnalysisPayload(active),
+    aggregate,
+    pressure: {
+      dominant: pressure.dominant,
+      dominantLabel: homePressureDominantLabel(pressure),
+      longScore: pressure.longScore,
+      shortScore: pressure.shortScore,
+      summary: homePressureSummary(pressure),
+      structurePressureRead: pressureStructureRead(aggregate, pressure),
+      evidence: homePressureEvidence(pressure)
+    },
     timeframes: snapshotTimeframes.map((item) => ({
       timeframe: item.timeframe,
       msb: stateLabel(item.msb),
@@ -1101,16 +1267,25 @@ function firstMeaningfulText(items: string[], fallback: string) {
   return items.map((item) => item.trim()).find(Boolean) ?? fallback;
 }
 
-function buildStrategyRadar(analysis: MarketAnalysis, active: TimeframeAnalysis, pressure: CryptoHomeSnapshot["pressure"]): CryptoHomeSnapshot["strategyRadar"] {
+function buildStrategyRadar(
+  analysis: MarketAnalysis,
+  analyses: TimeframeAnalysis[],
+  scoreBreakdown: CryptoHomeScoreBreakdown,
+  direction: CryptoHomeSnapshot["direction"],
+  aggregate: CryptoHomeSnapshot["aiInput"]["aggregate"],
+  pressure: CryptoHomeSnapshot["pressure"]
+): CryptoHomeSnapshot["strategyRadar"] {
+  const hasExpandedVolatility = analyses.some((item) => item.condition.volatilityState === "expanded");
+  const hasCompressedVolatility = analyses.some((item) => item.condition.volatilityState === "compressed");
   const riskAnalysis =
-    active.condition.volatilityState === "expanded"
-      ? "변동폭이 커진 상태라 방향보다 리스크 관리가 먼저입니다."
-      : active.condition.volatilityState === "compressed"
+    hasExpandedVolatility
+      ? "일부 프레임에서 변동폭이 커진 상태라 방향보다 리스크 관리가 먼저입니다."
+      : hasCompressedVolatility
         ? "가격이 좁게 모인 상태라 첫 움직임보다 유지 여부가 중요합니다."
-        : "변동폭은 과도하지 않아 구조 방향과 압력 일치 여부를 함께 볼 수 있습니다.";
+        : "전체 변동폭은 과도하지 않아 구조 방향과 압력 일치 여부를 함께 볼 수 있습니다.";
   const riskEvidence = firstMeaningfulText(
     analysis.riskFlags.map(homeFriendlyText),
-    `1시간 변동성은 ${homeVolatilityLabel(active.condition.volatilityState)}, 거래량 상태는 ${homeVolumeLabel(active.condition.volumeState)}입니다.`
+    `전체 프레임 변동성은 ${aggregate.volatility}, 거래량 상태는 ${aggregate.volume}입니다.`
   );
   const riskCheck = firstMeaningfulText(
     analysis.checkpoints.map(homeFriendlyText),
@@ -1118,52 +1293,43 @@ function buildStrategyRadar(analysis: MarketAnalysis, active: TimeframeAnalysis,
   );
 
   const trendAnalysis =
-    analysis.bias === "long"
-      ? "구조 점수는 위쪽으로 기울어 있습니다."
-      : analysis.bias === "short"
-        ? "구조 점수는 아래쪽으로 기울어 있습니다."
-        : "방향 근거가 섞여 있어 아직 한쪽 판단을 강하게 두기 어렵습니다.";
-  const trendEvidence = `${timeframeLabels[active.timeframe]} 확정 구조 ${stateLabel(active.msb)}, 전환 신호 ${stateLabel(active.choch)}. ${homeFriendlyText(analysis.summaryLine)}`;
+    direction === "up"
+      ? "전체 프레임 종합 구조는 위쪽으로 기울어 있습니다."
+      : direction === "down"
+        ? "전체 프레임 종합 구조는 아래쪽으로 기울어 있습니다."
+        : "단기와 상위 프레임 근거가 섞여 있어 아직 한쪽 판단을 강하게 두기 어렵습니다.";
+  const trendEvidence = `종합 점수 ${scoreBreakdown.finalScore}점. ${aggregate.alignment} 단기: ${aggregate.shortTimeframeSummary}. 상위: ${aggregate.higherTimeframeSummary}.`;
   const trendCheck =
-    analysis.bias === "long"
+    direction === "up"
       ? "상위 프레임 확정 구조가 유지되고 짧은 프레임 전환 신호가 같은 방향으로 붙는지 확인합니다."
-      : analysis.bias === "short"
+      : direction === "down"
         ? "반등 크기보다 짧은 프레임 전환 신호 회복 여부와 상위 프레임 저항 반응을 확인합니다."
         : "확정 구조와 전환 신호가 같은 방향으로 정렬될 때까지 판단 강도를 낮춥니다.";
 
-  const pressureSummary =
-    pressure.dominant === "long"
-      ? `롱 압력이 ${pressure.longScore}점으로 숏 ${pressure.shortScore}점보다 우세합니다.`
-      : pressure.dominant === "short"
-        ? `숏 압력이 ${pressure.shortScore}점으로 롱 ${pressure.longScore}점보다 우세합니다.`
-        : `롱 ${pressure.longScore}점, 숏 ${pressure.shortScore}점으로 압력 차이가 크지 않습니다.`;
-  const availablePressureEvidence = pressure.evidence
-    .filter((item) => item.available)
-    .slice(0, 2)
-    .map((item) => `${item.label} ${item.value}`)
-    .join(", ");
+  const pressureSummary = homePressureSummary(pressure);
+  const availablePressureEvidence = homePressureEvidence(pressure, 2).join(", ");
   const shortTermAnalysis =
     pressure.dominant === "long"
-      ? "짧은 구간에서는 위쪽 변동성이 먼저 커질 수 있습니다."
+      ? `짧은 구간에서는 위쪽 변동성이 먼저 커질 수 있습니다. ${pressureStructureRead(aggregate, pressure)}`
       : pressure.dominant === "short"
-        ? "짧은 구간에서는 아래쪽 변동성이 먼저 커질 수 있습니다."
-        : "짧은 구간 압력은 균형에 가까워 구조 확인이 더 중요합니다.";
+        ? `짧은 구간에서는 아래쪽 변동성이 먼저 커질 수 있습니다. ${pressureStructureRead(aggregate, pressure)}`
+        : `짧은 구간 압력은 균형에 가까워 구조 확인이 더 중요합니다. ${pressureStructureRead(aggregate, pressure)}`;
   const shortTermEvidence = availablePressureEvidence ? `${pressureSummary} 근거는 ${availablePressureEvidence}입니다.` : pressureSummary;
   const shortTermCheck =
     pressure.dominant === "balanced"
       ? "5분과 15분 전환 신호가 같은 방향으로 재정렬되는지 확인합니다."
-      : "압력 방향과 5분, 15분 구조 방향이 같은 쪽으로 맞는지 확인합니다.";
+      : `압력 방향과 단기 구조가 같은 쪽으로 맞는지 확인합니다. 현재 단기 구조는 ${aggregate.shortTimeframeSummary}입니다.`;
 
   return [
     {
       title: "리스크 체크",
       body: [`분석: ${riskAnalysis}`, `근거: ${riskEvidence}`, `확인: ${riskCheck}`].join("\n"),
-      tone: active.condition.volatilityState === "expanded" ? "risk" : "watch"
+      tone: hasExpandedVolatility ? "risk" : "watch"
     },
     {
       title: "구조 방향",
       body: [`분석: ${trendAnalysis}`, `근거: ${trendEvidence}`, `확인: ${trendCheck}`].join("\n"),
-      tone: analysis.bias === "long" ? "long" : analysis.bias === "short" ? "short" : "watch"
+      tone: direction === "up" ? "long" : direction === "down" ? "short" : "watch"
     },
     {
       title: "단기 확인",
@@ -1202,16 +1368,17 @@ export async function getCryptoHomeSnapshot(exchangeId: CryptoExchangeId, rawSym
   ]);
 
   const analyses = candleResults.map(({ timeframe, candles }) => analyzeTimeframe(timeframe, candles));
-  const active = analyses.find((item) => item.timeframe === "1h") ?? analyses[0];
   const hourlyCandles = candleResults.find((item) => item.timeframe === "1h")?.candles ?? [];
   const latestCandle = hourlyCandles.at(-1) ?? candleResults[0]?.candles.at(-1);
   const ticker = isRecord(tickerResult) ? tickerResult : null;
   const price = tickerLastPrice(ticker) ?? latestCandle?.close ?? 0;
   const changePercent = tickerChangePercent(ticker) ?? changePercentFromHourlyCandles(hourlyCandles, price);
-  const analysis = summarizeMarket(`${selection.exchangeLabel}:${selection.base}USDT`, "1h", analyses, price, "swing");
   const scoreBreakdown = compositeStructureScore(analyses);
+  const active = chooseRepresentativeAnalysis(analyses, scoreBreakdown);
+  const analysis = summarizeMarket(`${selection.exchangeLabel}:${selection.base}USDT`, active.timeframe, analyses, price, "swing");
   const compositeScore = scoreBreakdown.finalScore;
   const direction = directionForScore(compositeScore);
+  const aggregate = buildAggregatePayload(analyses, scoreBreakdown, direction);
   const previewCandles = candleResults.find((item) => item.timeframe === "15m")?.candles ?? hourlyCandles;
   const snapshotTimeframes = analyses.map((item) => ({
     timeframe: item.timeframe,
@@ -1243,8 +1410,8 @@ export async function getCryptoHomeSnapshot(exchangeId: CryptoExchangeId, rawSym
     analysis,
     timeframes: snapshotTimeframes,
     pressure: pressureWithStatuses,
-    strategyRadar: buildStrategyRadar(analysis, active, pressureWithStatuses),
-    aiInput: buildAiInput(selection, analysis, active, snapshotTimeframes),
+    strategyRadar: buildStrategyRadar(analysis, analyses, scoreBreakdown, direction, aggregate, pressureWithStatuses),
+    aiInput: buildAiInput(selection, analysis, active, snapshotTimeframes, aggregate, pressureWithStatuses),
     updatedAt: new Date().toISOString()
   };
 }

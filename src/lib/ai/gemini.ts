@@ -21,7 +21,7 @@ const BRIEFING_SYSTEM_INSTRUCTION = `당신은 코인 시장 구조를 설명하
 
 출력 규칙.
 - 500자에서 900자 사이의 한국어 문단 2개로 작성하고, 문단 사이는 빈 줄 하나로 구분합니다.
-- 첫 문단은 현재 시장 해석과 롱/숏/횡보 중 무엇이 우세한지 설명합니다.
+- 첫 문단은 현재 차트 요약으로 전체 구조 흐름과 롱/숏 우세 압력이 같은 방향인지, 엇갈리는지 함께 설명합니다.
 - 둘째 문단은 조심할 점, 다음에 확인할 조건, 보조지표를 어떻게 참고할지 설명합니다.
 - 반드시 한국어만 사용합니다. 일본어, 중국어, 히라가나, 가타카나는 절대 쓰지 않습니다.
 - 직접적인 진입 지시, 매수·매도 신호, 수익 보장, 확정적 표현은 금지합니다.
@@ -53,6 +53,29 @@ POC ${input.context.pocPosition}
 
 function buildMarketBriefingPrompt(input: MarketBriefingInput): string {
   const sym = input.symbol.replace("USDT.P", "");
+  const analysisScope = input.analysisScope ?? `${input.activeTimeframe} 타임프레임 기준`;
+  const aggregateBlock = input.aggregate
+    ? `전체 프레임 종합.
+종합 방향: ${input.aggregate.directionLabel}
+종합 점수: ${input.aggregate.compositeScore}
+정렬 상태: ${input.aggregate.alignment}
+단기 구조: ${input.aggregate.shortTimeframeSummary}
+상위 구조: ${input.aggregate.higherTimeframeSummary}
+변동성: ${input.aggregate.volatility}
+거래량: ${input.aggregate.volume}
+핵심 신호: ${input.aggregate.keySignals.join("\n") || "없음"}`
+    : `선택 TF 구조.
+확정 구조: ${input.active.msb}
+전환 신호: ${input.active.choch}`;
+  const pressureBlock = input.pressure
+    ? `롱/숏 우세 압력.
+우세 상태: ${input.pressure.dominantLabel}
+롱 점수: ${input.pressure.longScore}
+숏 점수: ${input.pressure.shortScore}
+압력 요약: ${input.pressure.summary}
+구조와 압력 해석: ${input.pressure.structurePressureRead}
+압력 근거: ${input.pressure.evidence.join("\n") || "없음"}`
+    : "롱/숏 우세 압력: 미확인";
   const tfLines = input.timeframes
     .map((item) => `${item.timeframe}: 확정 구조 ${item.msb}, 전환 신호 ${item.choch}, 점수 ${item.score}, ${item.summary}`)
     .join("\n");
@@ -64,8 +87,7 @@ function buildMarketBriefingPrompt(input: MarketBriefingInput): string {
 
 기본.
 종목: ${sym}
-선택 타임프레임: ${input.activeTimeframe}
-레이더 기준: ${input.activeTimeframe} 타임프레임
+분석 기준: ${analysisScope}
 현재가: ${input.price}
 판정: ${input.verdict}
 방향: ${input.bias}
@@ -76,7 +98,11 @@ function buildMarketBriefingPrompt(input: MarketBriefingInput): string {
 현재 위치: ${input.currentLocationLabel}
 킬존: ${input.killzone}
 
-선택 TF 구조.
+${aggregateBlock}
+
+${pressureBlock}
+
+대표 세부 구조.
 확정 구조: ${input.active.msb}
 전환 신호: ${input.active.choch}
 수급 구간: ${input.active.ob}

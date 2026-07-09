@@ -41,18 +41,23 @@ export function generateFallbackMarketBriefing(input: MarketBriefingInput): stri
   const riskFlags = input.riskFlags.slice(0, 3);
   const opportunity = opportunityFlags.length ? `${opportunityFlags.join(", ")}가 확인됩니다` : "뚜렷한 강점 신호는 제한적입니다";
   const risk = riskFlags.length ? `${riskFlags.join(", ")}입니다` : "큰 리스크 플래그는 많지 않습니다";
-  const aligned = input.timeframes
-    .filter((item) => item.msb === active.msb || item.choch === active.choch)
-    .map((item) => item.timeframe)
-    .join(", ");
+  const keySignals = input.aggregate?.keySignals.slice(0, 3).join(", ") ?? "";
+  const scope = input.analysisScope ?? `${input.activeTimeframe} 기준`;
+  const pressureSummary = input.pressure
+    ? `${input.pressure.summary} ${input.pressure.structurePressureRead}`
+    : "롱/숏 압력 데이터는 아직 함께 확인되지 않았습니다.";
+  const pressureEvidence = input.pressure?.evidence.length ? ` 압력 근거는 ${input.pressure.evidence.slice(0, 2).join(", ")}입니다.` : "";
 
   const first =
-    `${input.symbol.replace("USDT.P", "")} ${input.activeTimeframe} 기준 현재 판독은 ${input.verdict}이며, 구조 기울기값은 ${input.biasScore}입니다. ` +
-    `${direction}. 선택 타임프레임의 확정 구조는 ${active.msb}, 전환 신호는 ${active.choch}입니다. 수급 구간은 ${active.ob}, 가격 공백은 ${active.fvg}입니다. 핵심 매물대 기준은 ${active.poc}, 가격 위치는 ${active.pd}입니다. ` +
-    `${aligned ? `${aligned} 시간대가 현재 구조와 일부 정렬되어 있습니다.` : "다중 시간대 정렬은 아직 강하게 확인되지 않습니다."}`;
+    input.aggregate
+      ? `${input.symbol.replace("USDT.P", "")} ${scope} 현재 판독은 ${input.verdict}이며, 종합 점수는 ${input.aggregate.compositeScore}점입니다. ` +
+        `${direction}. ${input.aggregate.alignment} 단기 구조는 ${input.aggregate.shortTimeframeSummary}, 상위 구조는 ${input.aggregate.higherTimeframeSummary}입니다. ${pressureSummary} ` +
+        `${keySignals ? `핵심 신호는 ${keySignals}입니다.` : "다중 시간대 정렬은 아직 강하게 확인되지 않습니다."}`
+      : `${input.symbol.replace("USDT.P", "")} ${scope} 현재 판독은 ${input.verdict}이며, 구조 기울기값은 ${input.biasScore}입니다. ` +
+        `${direction}. 대표 세부 구조는 확정 구조 ${active.msb}, 전환 신호 ${active.choch}입니다. ${pressureSummary} 수급 구간은 ${active.ob}, 가격 공백은 ${active.fvg}입니다. 핵심 매물대 기준은 ${active.poc}, 가격 위치는 ${active.pd}입니다.`;
 
   const second =
-    `강점 신호는 ${opportunity}. 주의할 점은 ${risk}. RSI는 ${active.rsi}, MACD는 ${active.macd}, 변동성은 ${active.volatility}, 거래량은 ${active.volume} 상태라 보조지표는 방향 신호라기보다 추세 과열과 변동성 확인용으로 참고하는 편이 좋습니다. ` +
+    `강점 신호는 ${opportunity}. 주의할 점은 ${risk}.${pressureEvidence} ${input.aggregate ? `전체 변동성은 ${input.aggregate.volatility}, 거래량은 ${input.aggregate.volume}입니다. 대표 ` : ""}보조지표는 RSI ${active.rsi}, MACD ${active.macd} 상태라 방향 신호보다 추세 과열과 변동성 확인용으로 참고하는 편이 좋습니다. ` +
     `${input.scenario ? `현재 분석 시나리오는 ${input.scenario.title}이며 관찰 구간은 ${input.scenario.entry}, 리스크 기준은 ${input.scenario.invalidation}입니다. ` : "아직 명확한 분석 시나리오는 생성되지 않았습니다. "}` +
     `다음 캔들에서 확정 구조와 전환 신호 변화, 수급 구간과 가격 공백 반응이 유지되는지 확인하면 판단 우선순위를 더 선명하게 잡을 수 있습니다.`;
 

@@ -607,12 +607,12 @@ export default function JournalPage({ searchParams }: { searchParams?: { market?
 
   return (
     <main className="journal-page min-h-[100dvh] w-full max-w-full overflow-x-hidden px-3 pb-[calc(18rem+env(safe-area-inset-bottom))] sm:px-4 sm:pb-[calc(10rem+env(safe-area-inset-bottom))]">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 pt-3 sm:pt-0">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 sm:gap-3">
         <Header market={market} />
         <RadarTopNav market={market} />
 
         <AppSurface tone="panel" variant="flat" padding="none" radius="none" className="overflow-hidden">
-          <div className="border-b border-ui-line px-1 py-5 sm:px-0 sm:py-6">
+          <div className="border-b border-ui-line px-1 py-3 sm:px-0 sm:py-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div className="min-w-0 max-w-3xl">
                 <div className="mb-2 flex min-w-0 flex-wrap items-center gap-2">

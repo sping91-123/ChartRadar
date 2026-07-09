@@ -35,6 +35,7 @@ export interface CommentaryOutput {
 
 export interface MarketBriefingInput {
   symbol: string;
+  analysisScope?: string;
   activeTimeframe: ChartTimeframe;
   tradingMode: "scalp" | "swing";
   price: number;
@@ -65,6 +66,25 @@ export interface MarketBriefingInput {
     volatility: string;
     volume: string;
     bollinger: string;
+  };
+  aggregate?: {
+    directionLabel: string;
+    compositeScore: number;
+    alignment: string;
+    shortTimeframeSummary: string;
+    higherTimeframeSummary: string;
+    volatility: string;
+    volume: string;
+    keySignals: string[];
+  };
+  pressure?: {
+    dominant: "long" | "short" | "balanced";
+    dominantLabel: string;
+    longScore: number;
+    shortScore: number;
+    summary: string;
+    structurePressureRead: string;
+    evidence: string[];
   };
   timeframes: Array<{
     timeframe: ChartTimeframe;

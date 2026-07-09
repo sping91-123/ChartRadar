@@ -167,11 +167,11 @@ button {
 }
 
 body:has(.radar-bottom-nav) .app-scroll-root {
-  padding-bottom: calc(5.6rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(3.65rem + env(safe-area-inset-bottom));
 }
 
 .radar-bottom-nav {
-  padding-bottom: calc(0.55rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(0.35rem + env(safe-area-inset-bottom));
   border-top: 1px solid var(--cr-color-line);
   background: rgba(23, 24, 30, 0.94);
   backdrop-filter: blur(18px) saturate(1.15);

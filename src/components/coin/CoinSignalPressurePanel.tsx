@@ -239,6 +239,8 @@ export function CoinFuturesSignalPressurePanel({ mode, symbols: customSymbols }:
   const isAltMode = mode === "alts";
   const symbols = useMemo(() => (customSymbols?.length ? customSymbols : futuresSymbols[mode]), [customSymbols, mode]);
   const symbolLabelText = useMemo(() => symbols.map((item) => item.label).join(", "), [symbols]);
+  const hasSingleMajorSymbol = !isAltMode && symbols.length === 1;
+  const panelTitle = isAltMode ? "알트 롱/숏 쏠림" : hasSingleMajorSymbol ? `${symbolLabelText} 롱/숏 쏠림` : "BTC/ETH 롱/숏 쏠림";
   const [status, setStatus] = useState<LoadStatus>("idle");
   const [reports, setReports] = useState<LiquidationPressureReport[]>([]);
   const [error, setError] = useState("");
@@ -279,13 +281,15 @@ export function CoinFuturesSignalPressurePanel({ mode, symbols: customSymbols }:
     ? `${topCard.label} ${sideTitle(topCard.report.dominantSide)} · ${mainTrigger(topCard.report)}`
     : isAltMode
       ? "알트 롱/숏 쏠림을 판단하는 중입니다."
-      : "BTC/ETH 롱/숏 쏠림을 판단하는 중입니다.";
+      : hasSingleMajorSymbol
+        ? `${symbolLabelText} 롱/숏 쏠림을 판단하는 중입니다.`
+        : "BTC/ETH 롱/숏 쏠림을 판단하는 중입니다.";
 
   return (
     <PanelCard variant="report" padding="md" className="space-y-4">
       <SectionHeader
         eyebrow="Binance 공개 선물 데이터"
-        title={isAltMode ? "알트 롱/숏 쏠림" : "BTC/ETH 롱/숏 쏠림"}
+        title={panelTitle}
         description={topSummary}
         action={
           <ActionButton tone="secondary" onClick={loadReports} disabled={status === "loading"}>
@@ -308,7 +312,7 @@ export function CoinFuturesSignalPressurePanel({ mode, symbols: customSymbols }:
       ) : null}
 
       {cards.length ? (
-        <div className="grid gap-2 md:grid-cols-2">
+        <div className={`grid gap-2 ${cards.length > 1 ? "md:grid-cols-2" : ""}`}>
           {cards.map(({ report, label }) => {
             const tone = pressureTone(report);
             const score = pressureScore(report);
@@ -350,7 +354,7 @@ export function CoinFuturesSignalPressurePanel({ mode, symbols: customSymbols }:
       <CompactHelp label="데이터 기준">
         {isAltMode
           ? `Binance 공개 선물 데이터에서 ${symbolLabelText}의 미결제약정, 펀딩비, 롱·숏 포지션 비율, 큰 매수/매도 체결을 묶어 진입 위험만 빠르게 보여줍니다.`
-          : "Binance 공개 선물 데이터에서 BTC와 ETH의 미결제약정, 펀딩비, 롱·숏 포지션 비율, 큰 매수/매도 체결을 묶어 진입 위험만 빠르게 보여줍니다."}
+          : `Binance 공개 선물 데이터에서 ${symbolLabelText}의 미결제약정, 펀딩비, 롱·숏 포지션 비율, 큰 매수/매도 체결을 묶어 진입 위험만 빠르게 보여줍니다.`}
       </CompactHelp>
     </PanelCard>
   );

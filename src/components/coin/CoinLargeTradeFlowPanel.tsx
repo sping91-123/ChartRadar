@@ -105,6 +105,8 @@ export function CoinLargeTradeFlowPanel({ mode, symbols: customSymbols }: { mode
   const isAltMode = mode === "alts";
   const symbols = useMemo(() => (customSymbols?.length ? customSymbols : flowSymbols[mode]), [customSymbols, mode]);
   const symbolLabelText = useMemo(() => symbols.map((item) => item.label).join(", "), [symbols]);
+  const hasSingleMajorSymbol = !isAltMode && symbols.length === 1;
+  const panelTitle = isAltMode ? "알트 큰 매수/매도 체결" : hasSingleMajorSymbol ? `${symbolLabelText} 큰 매수/매도 체결` : "BTC/ETH 큰 매수/매도 체결";
   const [status, setStatus] = useState<LoadStatus>("idle");
   const [reports, setReports] = useState<LargeTradeFlowReport[]>([]);
   const [error, setError] = useState("");
@@ -145,13 +147,15 @@ export function CoinLargeTradeFlowPanel({ mode, symbols: customSymbols }: { mode
     ? `${topCard.label} ${flowTitle(topCard.report)} · ${formatFlowNotional(topCard.report.totalLargeNotionalUsd)}`
     : isAltMode
       ? "알트 큰 매수/매도 체결 판단 중입니다."
-      : "BTC/ETH 큰 매수/매도 체결 판단 중입니다.";
+      : hasSingleMajorSymbol
+        ? `${symbolLabelText} 큰 매수/매도 체결 판단 중입니다.`
+        : "BTC/ETH 큰 매수/매도 체결 판단 중입니다.";
 
   return (
     <PanelCard variant="report" padding="md" className="space-y-4">
       <SectionHeader
         eyebrow="Binance 공개 선물 체결"
-        title={isAltMode ? "알트 큰 매수/매도 체결" : "BTC/ETH 큰 매수/매도 체결"}
+        title={panelTitle}
         description={topSummary}
         action={
           <ActionButton tone="secondary" onClick={loadReports} disabled={status === "loading"}>
@@ -174,7 +178,7 @@ export function CoinLargeTradeFlowPanel({ mode, symbols: customSymbols }: { mode
       ) : null}
 
       {cards.length ? (
-        <div className="grid gap-2 md:grid-cols-2">
+        <div className={`grid gap-2 ${cards.length > 1 ? "md:grid-cols-2" : ""}`}>
           {cards.map(({ report, label }) => {
             const tone = sideTone(report.dominantSide);
             return (
@@ -214,7 +218,7 @@ export function CoinLargeTradeFlowPanel({ mode, symbols: customSymbols }: { mode
       <CompactHelp label="데이터 기준">
         {isAltMode
           ? `Binance 공개 선물 체결에서 ${symbolLabelText}의 최근 aggregate trades를 읽어 큰 체결 방향과 반복·교대 체결 징후를 함께 봅니다. 계정 식별은 없으므로 이상 체결 가능성만 표시합니다.`
-          : "Binance 공개 선물 체결에서 BTC와 ETH의 최근 aggregate trades를 읽어 큰 체결 방향과 반복·교대 체결 징후를 함께 봅니다. 계정 식별은 없으므로 이상 체결 가능성만 표시합니다."}
+          : `Binance 공개 선물 체결에서 ${symbolLabelText}의 최근 aggregate trades를 읽어 큰 체결 방향과 반복·교대 체결 징후를 함께 봅니다. 계정 식별은 없으므로 이상 체결 가능성만 표시합니다.`}
       </CompactHelp>
     </PanelCard>
   );

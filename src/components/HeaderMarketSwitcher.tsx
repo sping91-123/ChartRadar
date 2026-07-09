@@ -1,8 +1,9 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { Bitcoin, ChevronDown, Loader2, TrendingUp } from "lucide-react";
+import { ChevronDown, Loader2, TrendingUp } from "lucide-react";
 import { savePreferredMarket, type PreferredMarket } from "@/lib/marketPreference";
 
 type HeaderMarket = "crypto" | "stocks";
@@ -25,14 +26,8 @@ function marketFromHeader(market?: HeaderMarket): PreferredMarket | null {
 
 function CoinRadarSymbol() {
   return (
-    <span
-      className="relative grid h-full w-full place-items-center overflow-hidden rounded-ui-sm bg-slate-950"
-      aria-hidden
-    >
-      <span className="absolute left-1.5 top-1.5 h-5 w-5 rounded-full border border-amber-200/45 bg-amber-400/25 shadow-[0_0_14px_rgba(245,158,11,0.25)]" />
-      <span className="absolute bottom-1.5 right-1.5 grid h-6 w-6 place-items-center rounded-full border border-amber-50/85 bg-[linear-gradient(135deg,#fde68a_0%,#f59e0b_48%,#b45309_100%)] shadow-[0_0_16px_rgba(251,191,36,0.48)]">
-        <Bitcoin size={14} strokeWidth={2.7} className="text-slate-950" />
-      </span>
+    <span className="grid h-full w-full place-items-center overflow-hidden rounded-ui-sm bg-slate-950" aria-hidden>
+      <Image src="/brand/chart-radar-icon.png" alt="" width={40} height={40} className="h-full w-full object-cover" draggable={false} />
     </span>
   );
 }
