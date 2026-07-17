@@ -31,9 +31,20 @@ export async function POST(request: Request) {
   }
 
   const eventId = payload.event?.id?.trim() ?? "";
-  const userIds = extractRevenueCatWebhookUserIds(payload.event);
-  if (!/^[a-zA-Z0-9._:-]{1,180}$/.test(eventId) || userIds.length === 0) {
+  const eventType = typeof payload.event?.type === "string" ? payload.event.type.trim() : "";
+  if (!/^[a-zA-Z0-9._:-]{1,180}$/.test(eventId)) {
     return NextResponse.json({ error: "Webhook event identity is invalid." }, { status: 400 });
+  }
+  // RevenueCat's signed dashboard TEST payload is intentionally synthetic and
+  // is not attached to a real subscriber. Accept it only after signature and
+  // event-id validation, without touching the entitlement ledger.
+  if (eventType === "TEST") {
+    return NextResponse.json({ received: true, test: true });
+  }
+
+  const userIds = extractRevenueCatWebhookUserIds(payload.event);
+  if (userIds.length === 0) {
+    return NextResponse.json({ error: "Webhook subscriber identity is invalid." }, { status: 400 });
   }
   const apiKey = process.env.REVENUECAT_REST_API_KEY ?? "";
   if (!apiKey) return NextResponse.json({ error: "RevenueCat server configuration is missing." }, { status: 503 });
