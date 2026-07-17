@@ -214,3 +214,11 @@ Security advisor의 남은 항목은 append-only 내부 원장과 Apple OAuth cr
 - RevenueCat 장애·unknown product·stale/missing snapshot은 기존 entitlement를 덮거나 철회하지 않는다.
 - iOS Apple server credentials와 Xcode Team 설정이 없으면 iOS release gate를 실패시킨다.
 - 실제 사용자나 beta 12명으로 계정 삭제를 검증하지 않는다.
+
+## 2026-07-17 provider cutover 완료 상태
+
+- RevenueCat webhook은 production/sandbox 이벤트에 대해 `https://chartradar.kr/api/billing/app-store/webhook`으로 활성화했고 HMAC signing secret은 Vercel Production sensitive 변수로 배치했다.
+- dashboard signed `TEST`는 HTTP 200을 받았고 TEST 분기는 snapshot 조회나 entitlement RPC를 실행하지 않는다. 테스트 직후 subscriptions/events는 기존 `legacy_beta` 12/12건 그대로였고 RevenueCat 행은 0건이었다.
+- 실제 RevenueCat 이벤트는 raw body HMAC 검증, event ID 검증, subscriber snapshot 재조회 순서를 통과해야 하며 raw webhook product payload로 권한을 부여하거나 철회하지 않는다.
+- 운영 deployment는 main `f3772145471d31d52243bb4f6b762a250c339169`, Vercel `dpl_BEhuUNepvK4W9tJdxFrfCFmArAEr`에서 READY다.
+- `ACCOUNT_DELETION_PROCESSING_ENABLED=true`가 production에 배치되었고 무인증 processor/request 접근은 401이다. 실제 사용자 및 beta 계정 삭제 검증은 계속 금지한다.
