@@ -29,7 +29,7 @@ const sections = [
   {
     title: "4. 유료 구독과 Pro 이용",
     body:
-      "Chart Radar Pro는 코인, 글로벌, 올마켓 구독으로 나뉩니다. 앱 결제는 Google Play 정책을 따르고, 웹 결제는 결제 대행사의 정책을 따릅니다. 결제가 확인된 계정은 선택한 시장의 Pro 기능을 이용할 수 있습니다."
+      "Chart Radar Pro는 코인, 글로벌, 올마켓 구독으로 나뉩니다. Android와 iOS 앱 결제는 각각 Google Play와 App Store 정책을 따르며 Toss 웹 결제는 현재 제공하지 않습니다. 유효한 구독이 확인된 계정은 선택한 시장의 Pro 기능을 이용할 수 있고, 취소한 구독은 결제 종료 시각까지 유지됩니다. 미납, 환불, 철회 또는 만료된 구독은 즉시 제한될 수 있습니다."
   },
   {
     title: "5. 금지 행위",
@@ -44,7 +44,7 @@ const sections = [
   {
     title: "7. 계정 삭제",
     body:
-      "사용자는 언제든 계정과 저장 데이터를 삭제 요청할 수 있습니다. 계정 삭제 후 복기, 관심 종목, 알림 조건 등 계정 기반 데이터가 삭제되며, 법령상 보관이 필요한 결제·분쟁 관련 기록은 필요한 기간 동안 별도로 보관될 수 있습니다."
+      "사용자는 Google, Kakao, Apple 등 로그인 제공자와 관계없이 앱 또는 웹 안내 경로에서 계정 삭제를 요청할 수 있습니다. 요청은 7일 안에 처리하며 처리 시작 전에는 취소할 수 있습니다. 계정 삭제 후 복기, 관심 종목, 알림 조건 등 계정 기반 데이터가 삭제되며, 법령상 보관이 필요한 결제·분쟁 관련 기록은 필요한 기간 동안 별도로 보관될 수 있습니다. 계정 삭제만으로 스토어 구독이 자동 취소되지는 않습니다."
   }
 ];
 
@@ -65,7 +65,7 @@ export default function TermsPage() {
             </div>
             <div>
               <h1 className="text-2xl font-black text-white">이용약관</h1>
-              <p className="mt-2 text-sm leading-6 text-slate-400">시행일 2026년 5월 13일.</p>
+              <p className="mt-2 text-sm leading-6 text-slate-400">시행일 2026년 7월 16일.</p>
             </div>
           </div>
 

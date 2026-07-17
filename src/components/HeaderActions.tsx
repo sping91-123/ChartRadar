@@ -2,7 +2,7 @@
 // 헤더 오른쪽에서 알림, 보조 기능, 계정 액션을 정리하는 메뉴입니다.
 
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowLeft,
@@ -22,7 +22,7 @@ type HeaderMarket = "crypto" | "stocks";
 type AuthState = ReturnType<typeof useSupabaseAuth>;
 
 function marketAlertHref(market?: HeaderMarket) {
-  return market === "stocks" ? "/alerts?market=global" : "/crypto/alertlist";
+  return market === "stocks" ? "/global/alertlist" : "/crypto/alertlist";
 }
 
 function marketAlertSettingsHref(market?: HeaderMarket) {
@@ -154,6 +154,8 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
   const alertBadgeCount: number | null = null;
   const [loginHref, setLoginHref] = useState("/login");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const settingsTriggerRef = useRef<HTMLButtonElement>(null);
+  const settingsDialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const currentPath = `${window.location.pathname}${window.location.search}`;
@@ -162,6 +164,7 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
 
   useEffect(() => {
     if (!isSettingsOpen) return;
+    const settingsTrigger = settingsTriggerRef.current;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -170,11 +173,37 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
         } else {
           setIsSettingsOpen(false);
         }
+        return;
+      }
+
+      if (event.key === "Tab") {
+        const focusable = Array.from(
+          settingsDialogRef.current?.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          ) ?? []
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
       }
     };
 
+    const focusFrame = window.requestAnimationFrame(() => {
+      settingsDialogRef.current?.querySelector<HTMLElement>("button, a[href]")?.focus();
+    });
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      window.removeEventListener("keydown", handleKeyDown);
+      settingsTrigger?.focus();
+    };
   }, [isSettingsOpen]);
 
   useEffect(() => {
@@ -213,16 +242,21 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
         ) : null}
       </Link>
       <button
+        ref={settingsTriggerRef}
         type="button"
         onClick={() => setIsSettingsOpen(true)}
         className="grid min-h-9 min-w-9 place-items-center rounded-full bg-transparent text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
         aria-label="설정 열기"
+        aria-expanded={isSettingsOpen}
+        aria-controls="settings-panel"
         title="설정"
       >
         <Menu size={20} aria-hidden />
       </button>
       {isSettingsOpen ? createPortal(
         <div
+          id="settings-panel"
+          ref={settingsDialogRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby="settings-panel-title"

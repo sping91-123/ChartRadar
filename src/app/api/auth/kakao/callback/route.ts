@@ -1,6 +1,7 @@
 // Kakao 인가코드를 ID token으로 바꾸고 Supabase 세션으로 교환합니다.
 import { NextRequest, NextResponse } from "next/server";
 import { kakaoRestApiKey, supabasePublishableKey, supabaseUrl } from "@/lib/supabase";
+import { safeReturnTo, trustedRequestOrigin } from "@/lib/authRedirect";
 
 const kakaoAuthStateCookie = "chartRadar.kakao.state";
 const kakaoAuthReturnToCookie = "chartRadar.kakao.returnTo";
@@ -22,18 +23,6 @@ interface SupabaseTokenResponse {
   msg?: string;
 }
 
-function safeReturnTo(value: string | null | undefined) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/crypto";
-  return value;
-}
-
-function getRequestOrigin(request: NextRequest) {
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
-  if (forwardedHost) return `${forwardedProto}://${forwardedHost}`;
-  return request.nextUrl.origin;
-}
-
 function redirectToLogin(origin: string, returnTo: string, error: string, description?: string) {
   const url = new URL("/login", origin);
   url.searchParams.set("returnTo", returnTo);
@@ -49,7 +38,12 @@ function clearKakaoCookies(response: NextResponse) {
 }
 
 export async function GET(request: NextRequest) {
-  const origin = getRequestOrigin(request);
+  let origin: string;
+  try {
+    origin = trustedRequestOrigin(request.url);
+  } catch {
+    return NextResponse.json({ error: "Trusted application origin is not configured." }, { status: 503 });
+  }
   const code = request.nextUrl.searchParams.get("code");
   const error = request.nextUrl.searchParams.get("error");
   const returnedState = request.nextUrl.searchParams.get("state");

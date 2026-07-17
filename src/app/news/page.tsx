@@ -3,8 +3,9 @@ import { RadarNewsPanel } from "@/components/RadarNewsPanel";
 import { RadarTopNav } from "@/components/RadarTopNav";
 import { redirect } from "next/navigation";
 
-export default function NewsPage({ searchParams }: { searchParams?: { market?: string } }) {
-  const market = searchParams?.market === "stocks" || searchParams?.market === "global" ? "stocks" : "crypto";
+export default async function NewsPage({ searchParams }: { searchParams: Promise<{ market?: string | string[] }> }) {
+  const { market: requestedMarket } = await searchParams;
+  const market = requestedMarket === "stocks" || requestedMarket === "global" ? "stocks" : "crypto";
   if (market === "crypto") redirect("/crypto/news");
 
   return (

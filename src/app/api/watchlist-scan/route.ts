@@ -37,6 +37,9 @@ function makeCacheKey(symbols: string[]): string {
 
 export async function POST(req: NextRequest) {
   const entitlement = await getRequestEntitlement(req, "crypto");
+  if (entitlement.state === "unavailable") {
+    return NextResponse.json({ error: "구독 권한을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요." }, { status: 503 });
+  }
   const limit = await rateLimit(req, {
     key: entitlementRateKey("watchlist-scan", entitlement),
     limit: entitlement.isPaid ? 100 : 20,

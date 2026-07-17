@@ -1,6 +1,7 @@
 // 전역 메타데이터와 테마 초기화를 담당하는 루트 레이아웃.
 import type { Metadata, Viewport } from "next";
 import { AuthHashRescue } from "@/components/AuthHashRescue";
+import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 import { RadarAlertMonitor } from "@/components/RadarAlertMonitor";
 import { SystemBarsThemeSync } from "@/components/SystemBarsThemeSync";
 import { getSiteUrlWithLocalFallback } from "@/lib/siteUrl";
@@ -67,7 +68,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
   viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: dark)", color: "#0a0a0d" },
@@ -115,6 +115,7 @@ export default function RootLayout({
           <div className="app-scroll-root">{children}</div>
         </div>
         <RadarAlertMonitor />
+        <PwaInstallPrompt />
       </body>
     </html>
   );

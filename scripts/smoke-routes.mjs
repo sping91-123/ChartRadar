@@ -1,114 +1,165 @@
-// 출시 전 핵심 페이지와 결제 보호 API가 정상 응답하는지 확인합니다.
+// 출시 전 모든 App Router page와 보호 API의 응답/redirect 목적지를 확인합니다.
+import { existsSync, readdirSync } from "node:fs";
+import { join, relative, sep } from "node:path";
+
+const root = process.cwd();
 const baseUrl = (process.env.SMOKE_BASE_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
-const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 15000);
+const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 15_000);
 const smokeClientIp = `127.0.1.${Math.floor(Math.random() * 200) + 20}`;
 
-const checks = [
-  { label: "홈", path: "/" },
-  { label: "코인 레이더 진입 리다이렉트", path: "/crypto", expectedStatus: [200, 307, 308] },
-  { label: "코인 홈", path: "/crypto/home" },
-  { label: "코인 현물", path: "/crypto/spot" },
-  { label: "코인 선물", path: "/crypto/perpetual" },
-  { label: "코인 알트 선물", path: "/crypto/perpetual/alts" },
-  { label: "코인 뉴스", path: "/crypto/news" },
-  { label: "코인 알림", path: "/crypto/alert" },
-  { label: "코인 복기", path: "/crypto/review" },
-  { label: "일정", path: "/schedule?market=crypto" },
-  { label: "메뉴", path: "/menu" },
-  { label: "회원정보관리", path: "/account" },
-  { label: "용어 안내", path: "/learn" },
-  { label: "자주 묻는 질문", path: "/faq" },
-  { label: "기존 메이저 주소 리다이렉트", path: "/majors", expectedStatus: [200, 307, 308] },
-  { label: "기존 알트코인 주소 리다이렉트", path: "/alts", expectedStatus: [200, 307, 308] },
-  { label: "글로벌", path: "/global" },
-  { label: "해외주식", path: "/stocks" },
-  { label: "기존 뉴스 주소 리다이렉트", path: "/news", expectedStatus: [200, 307, 308] },
-  { label: "기존 코인 뉴스 주소 리다이렉트", path: "/news?market=crypto", expectedStatus: [200, 307, 308] },
-  { label: "글로벌 뉴스", path: "/news?market=global" },
-  { label: "기존 알림 센터 주소 리다이렉트", path: "/alerts", expectedStatus: [200, 307, 308] },
-  { label: "기존 코인 알림 센터 주소 리다이렉트", path: "/alerts?market=crypto", expectedStatus: [200, 307, 308] },
-  { label: "글로벌 알림 센터", path: "/alerts?market=global" },
-  { label: "요금제", path: "/pro" },
-  { label: "코인 요금제", path: "/pro?market=crypto" },
-  { label: "글로벌 요금제", path: "/pro?market=stocks" },
-  { label: "로그인", path: "/login" },
-  { label: "매매 복기", path: "/journal" },
-  { label: "코인 매매 복기", path: "/journal?market=crypto" },
-  { label: "글로벌 매매 복기", path: "/journal?market=global" },
-  { label: "계산기 리다이렉트", path: "/calculator", expectedStatus: [200, 307, 308] },
-  { label: "코인 계산기 리다이렉트", path: "/calculator?market=crypto", expectedStatus: [200, 307, 308] },
-  { label: "글로벌 계산기 리다이렉트", path: "/calculator?market=global", expectedStatus: [200, 307, 308] },
-  { label: "이용약관", path: "/terms" },
-  { label: "개인정보 처리방침", path: "/privacy" },
-  { label: "계정 삭제 안내", path: "/account/delete" },
-  { label: "환불 안내", path: "/refund" },
-  { label: "로봇 정책", path: "/robots.txt" },
-  { label: "사이트맵", path: "/sitemap.xml" },
-  { label: "앱 매니페스트", path: "/manifest.webmanifest" },
-  { label: "운영 상태체크", path: "/api/health" },
+const pageChecks = [
+  "/",
+  "/account",
+  "/account/delete",
+  "/admin/entitlements",
+  "/alerts?market=global",
+  "/auth/callback",
+  "/checkout/fail",
+  "/checkout/success",
+  "/crypto/alert",
+  "/crypto/alertlist",
+  "/crypto/alertset",
+  "/crypto/home",
+  "/crypto/news",
+  "/crypto/perpetual",
+  "/crypto/perpetual/alts",
+  "/crypto/review",
+  "/crypto/spot",
+  "/faq",
+  "/global",
+  "/global/alertlist",
+  "/global/assets",
+  "/journal",
+  "/learn",
+  "/login",
+  "/menu",
+  "/news?market=global",
+  "/privacy",
+  "/pro",
+  "/refund",
+  "/schedule?market=crypto",
+  "/stocks",
+  "/terms"
+].map((path) => ({ label: path, path }));
+
+const redirectChecks = [
+  ["/crypto", "/crypto/home"],
+  ["/majors", "/crypto/perpetual"],
+  ["/alts", "/crypto/perpetual/alts"],
+  ["/coin", "/crypto/home"],
+  ["/spot", "/crypto/spot"],
+  ["/diagnosis", "/crypto/home"],
+  ["/report", "/crypto/home"],
+  ["/settings", "/menu"],
+  ["/pro/apply", "/pro"],
+  ["/calculator", "/crypto/home"],
+  ["/news?market=crypto", "/crypto/news"],
+  ["/alerts?market=crypto", "/crypto/alertlist"],
+  ["/macro-calendar?market=global", "/schedule?market=global"]
+].map(([path, expectedLocation]) => ({
+  label: `${path} → ${expectedLocation}`,
+  path,
+  expectedStatus: [307, 308],
+  expectedLocation
+}));
+
+const assetChecks = [
+  "/robots.txt",
+  "/sitemap.xml",
+  "/manifest.webmanifest",
+  "/api/health"
+].map((path) => ({ label: path, path }));
+
+const disabledBillingChecks = [
   {
-    label: "월간 결제 로그인 보호",
+    label: "Toss checkout disabled",
     path: "/api/billing/checkout",
     method: "POST",
     body: { planId: "crypto_monthly", platform: "web" },
-    expectedStatus: [401]
+    expectedStatus: [410]
   },
   {
-    label: "All Market 6개월 결제 로그인 보호",
-    path: "/api/billing/checkout",
-    method: "POST",
-    body: { planId: "bundle_yearly", platform: "web" },
-    expectedStatus: [401]
-  },
-  {
-    label: "결제 승인 로그인 보호",
+    label: "Toss confirm disabled",
     path: "/api/billing/confirm",
     method: "POST",
-    body: {
-      planId: "crypto_monthly",
-      orderId: "cr_crypto_monthly_smoke",
-      amount: 29000,
-      paymentKey: "smoke_payment_key"
-    },
-    expectedStatus: [401]
-  },
-  {
-    label: "결제 승인 금액 검증",
-    path: "/api/billing/confirm",
-    method: "POST",
-    body: {
-      planId: "crypto_monthly",
-      orderId: "cr_crypto_monthly_smoke",
-      amount: 1,
-      paymentKey: "smoke_payment_key"
-    },
-    expectedStatus: [400]
-  },
-  {
-    label: "결제 승인 플랜 불일치 검증",
-    path: "/api/billing/confirm",
-    method: "POST",
-    body: {
-      planId: "stocks_monthly",
-      orderId: "cr_crypto_monthly_smoke",
-      amount: 39000,
-      paymentKey: "smoke_payment_key"
-    },
-    expectedStatus: [400]
+    body: { planId: "crypto_monthly", orderId: "smoke", amount: 1, paymentKey: "smoke" },
+    expectedStatus: [410]
   }
 ];
 
-checks.splice(
-  checks.findIndex((check) => check.path === "/crypto/review"),
-  0,
-  { label: "Coin alert list", path: "/crypto/alertlist" },
-  { label: "Coin alert settings", path: "/crypto/alertset" }
-);
+const protectedApiChecks = [
+  {
+    label: "account deletion status requires login",
+    path: "/api/account/deletion",
+    expectedStatus: [401]
+  },
+  {
+    label: "account deletion request requires login",
+    path: "/api/account/deletion",
+    method: "POST",
+    body: {},
+    expectedStatus: [401]
+  },
+  {
+    label: "Apple authorization storage requires login",
+    path: "/api/auth/apple/authorization",
+    method: "POST",
+    body: { authorizationCode: "smoke" },
+    expectedStatus: [401]
+  },
+  {
+    label: "admin deletion queue requires login",
+    path: "/api/admin/account-deletions",
+    expectedStatus: [401]
+  },
+  {
+    label: "deletion worker requires cron secret",
+    path: "/api/account-deletions/process",
+    expectedStatus: [401]
+  },
+  {
+    label: "app-store sync requires login",
+    path: "/api/billing/app-store/sync",
+    method: "POST",
+    body: { appUserId: "smoke", platform: "android" },
+    expectedStatus: [401]
+  }
+];
+
+const checks = [...pageChecks, ...redirectChecks, ...assetChecks, ...disabledBillingChecks, ...protectedApiChecks];
+
+function walkPageFiles(directory) {
+  if (!existsSync(directory)) return [];
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const absolutePath = join(directory, entry.name);
+    return entry.isDirectory() ? walkPageFiles(absolutePath) : entry.name === "page.tsx" ? [absolutePath] : [];
+  });
+}
+
+function routeFromPageFile(filePath) {
+  const normalized = relative(join(root, "src", "app"), filePath).split(sep).join("/");
+  const route = normalized.replace(/(?:^|\/)page\.tsx$/, "").replace(/\([^/]+\)\//g, "");
+  return route ? `/${route}` : "/";
+}
+
+const manifestRoutes = new Set(checks.map((check) => new URL(check.path, baseUrl).pathname));
+const pageRoutes = walkPageFiles(join(root, "src", "app")).map(routeFromPageFile).sort();
+const missingRoutes = pageRoutes.filter((route) => !manifestRoutes.has(route));
+if (missingRoutes.length > 0) {
+  console.error(`FAIL smoke manifest에 없는 page route: ${missingRoutes.join(", ")}`);
+  process.exit(1);
+}
+console.log(`PASS page route manifest coverage (${pageRoutes.length})`);
+
+function normalizedLocation(location) {
+  if (!location) return "";
+  const url = new URL(location, baseUrl);
+  return `${url.pathname}${url.search}`;
+}
 
 async function fetchWithTimeout(check) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-
   try {
     const response = await fetch(`${baseUrl}${check.path}`, {
       method: check.method ?? "GET",
@@ -120,22 +171,19 @@ async function fetchWithTimeout(check) {
       signal: controller.signal,
       redirect: "manual"
     });
-
-    const text = await response.text();
+    const detail = (await response.text()).slice(0, 180).replace(/\s+/g, " ").trim();
     const expectedStatus = check.expectedStatus ?? [200, 201, 202, 204];
+    const actualLocation = normalizedLocation(response.headers.get("location"));
+    const locationMatches = !check.expectedLocation || actualLocation === check.expectedLocation;
     return {
       check,
-      ok: expectedStatus.includes(response.status),
       status: response.status,
-      detail: text.slice(0, 180).replace(/\s+/g, " ").trim()
+      actualLocation,
+      detail,
+      ok: expectedStatus.includes(response.status) && locationMatches
     };
   } catch (error) {
-    return {
-      check,
-      ok: false,
-      status: "ERR",
-      detail: error instanceof Error ? error.message : String(error)
-    };
+    return { check, status: "ERR", actualLocation: "", detail: error instanceof Error ? error.message : String(error), ok: false };
   } finally {
     clearTimeout(timer);
   }
@@ -143,19 +191,17 @@ async function fetchWithTimeout(check) {
 
 const results = await Promise.all(checks.map(fetchWithTimeout));
 const failures = results.filter((result) => !result.ok);
-
 for (const result of results) {
-  const mark = result.ok ? "PASS" : "FAIL";
-  console.log(`${mark.padEnd(4)} ${String(result.status).padEnd(4)} ${result.check.label} ${result.check.path}`);
-  if (!result.ok && result.detail) {
-    console.log(`     ${result.detail}`);
+  console.log(`${result.ok ? "PASS" : "FAIL"} ${String(result.status).padEnd(4)} ${result.check.label}`);
+  if (!result.ok) {
+    if (result.check.expectedLocation) console.log(`     Location expected=${result.check.expectedLocation} actual=${result.actualLocation || "missing"}`);
+    if (result.detail) console.log(`     ${result.detail}`);
   }
 }
 
 if (failures.length > 0) {
-  console.error(`\n${failures.length}개 경로가 스모크 테스트를 통과하지 못했습니다.`);
-  console.error(`개발 서버가 켜져 있는지 먼저 확인해 주세요. 기준 URL은 ${baseUrl}입니다.`);
+  console.error(`\n${failures.length}개 경로가 스모크 테스트를 통과하지 못했습니다. 기준 URL: ${baseUrl}`);
   process.exit(1);
 }
 
-console.log(`\n모든 출시 경로가 정상 응답했습니다. 기준 URL은 ${baseUrl}입니다.`);
+console.log(`\n모든 page route, redirect, 보호 API가 정상 응답했습니다. 기준 URL: ${baseUrl}`);

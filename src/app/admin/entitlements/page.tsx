@@ -56,6 +56,7 @@ export default function AdminEntitlementsPage() {
   const [selectedMemberId, setSelectedMemberId] = useState("");
   const [planId, setPlanId] = useState(planOptions[0].id);
   const [durationDays, setDurationDays] = useState(90);
+  const [reason, setReason] = useState("베타테스트 혜택 관리");
   const [members, setMembers] = useState<AdminMember[]>([]);
   const [memberQuery, setMemberQuery] = useState("");
   const [memberError, setMemberError] = useState("");
@@ -63,7 +64,7 @@ export default function AdminEntitlementsPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const isAdmin = isAdminAccount(profile?.plan, user?.app_metadata?.role ?? user?.app_metadata?.plan);
+  const isAdmin = user?.app_metadata?.role === "admin";
   const isBasicPlan = planId === "free";
 
   const loadMembers = useCallback(async (query: string) => {
@@ -113,7 +114,14 @@ export default function AdminEntitlementsPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.accessToken}`
         },
-        body: JSON.stringify({ email, userId: selectedMemberId || undefined, planId, durationDays })
+        body: JSON.stringify({
+          email,
+          userId: selectedMemberId || undefined,
+          planId,
+          durationDays,
+          reason,
+          requestId: crypto.randomUUID()
+        })
       });
       const payload = (await response.json()) as {
         ok?: boolean;
@@ -313,6 +321,19 @@ export default function AdminEntitlementsPage() {
                     Basic은 기본 플랜이라 유지기간을 설정하지 않습니다. 선택한 계정의 수동 Pro 권한을 제거합니다.
                   </p>
                 )}
+
+                <label className="grid gap-2 text-sm font-bold text-slate-300">
+                  변경 사유
+                  <input
+                    type="text"
+                    minLength={3}
+                    maxLength={240}
+                    value={reason}
+                    onChange={(event) => setReason(event.target.value)}
+                    required
+                    className="min-h-12 rounded-xl border border-surface-line bg-slate-950 px-4 text-base font-bold text-white outline-none transition focus:border-cyan-300/55"
+                  />
+                </label>
 
                 {error ? <p className="border-y border-rose-300/25 py-3 text-sm font-bold text-rose-100">{error}</p> : null}
                 {message ? <p className="border-y border-signal-success/25 py-3 text-sm font-bold text-signal-success">{message}</p> : null}

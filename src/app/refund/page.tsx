@@ -14,15 +14,15 @@ export const metadata: Metadata = {
 const refundSections = [
   {
     icon: CreditCard,
-    title: "앱 구독 결제",
+    title: "Google Play 구독",
     body:
       "Android 앱에서 결제한 구독은 Google Play 계정의 구독 관리 화면에서 해지하거나 환불을 요청할 수 있습니다. Google Play 결제는 Google의 구독·환불 정책과 심사 절차를 따릅니다."
   },
   {
     icon: ReceiptText,
-    title: "웹 결제",
+    title: "App Store 구독",
     body:
-      "웹에서 결제한 구독은 결제 대행사의 결제 기록과 서비스 사용 이력을 확인한 뒤 처리합니다. 결제 직후 사용 이력이 거의 없는 경우에는 고객센터 확인 후 환불이 가능할 수 있습니다."
+      "iOS 앱에서 결제한 구독은 Apple 계정의 구독 관리 화면에서 해지하거나 환불을 요청할 수 있습니다. App Store 결제는 Apple의 구독·환불 정책과 심사 절차를 따릅니다. Toss 웹 결제는 현재 제공하지 않습니다."
   },
   {
     icon: RotateCcw,
@@ -50,7 +50,7 @@ export default function RefundPage() {
             </div>
             <div>
               <h1 className="text-2xl font-black text-white">구독 해지·환불 안내</h1>
-              <p className="mt-2 text-sm leading-6 text-slate-400">시행일 2026년 5월 13일.</p>
+              <p className="mt-2 text-sm leading-6 text-slate-400">시행일 2026년 7월 16일.</p>
             </div>
           </div>
 

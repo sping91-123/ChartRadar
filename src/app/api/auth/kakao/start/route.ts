@@ -2,29 +2,23 @@
 import { randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { kakaoRestApiKey } from "@/lib/supabase";
+import { safeReturnTo, trustedRequestOrigin } from "@/lib/authRedirect";
 
 const kakaoAuthStateCookie = "chartRadar.kakao.state";
 const kakaoAuthReturnToCookie = "chartRadar.kakao.returnTo";
 const kakaoCookiePath = "/api/auth/kakao";
 
-function safeReturnTo(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/crypto";
-  return value;
-}
-
 function createToken() {
   return randomBytes(24).toString("base64url");
 }
 
-function getRequestOrigin(request: NextRequest) {
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
-  if (forwardedHost) return `${forwardedProto}://${forwardedHost}`;
-  return request.nextUrl.origin;
-}
-
 export async function GET(request: NextRequest) {
-  const origin = getRequestOrigin(request);
+  let origin: string;
+  try {
+    origin = trustedRequestOrigin(request.url);
+  } catch {
+    return NextResponse.json({ error: "Trusted application origin is not configured." }, { status: 503 });
+  }
   const returnTo = safeReturnTo(request.nextUrl.searchParams.get("returnTo"));
 
   if (!kakaoRestApiKey) {

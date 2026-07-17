@@ -6,11 +6,8 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { GoogleLoginButton } from "@/components/GoogleLoginButton";
 import { KakaoLoginButton } from "@/components/KakaoLoginButton";
-
-function safeReturnTo(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/crypto";
-  return value;
-}
+import { AppleLoginButton } from "@/components/AppleLoginButton";
+import { safeReturnTo } from "@/lib/authRedirect";
 
 function readReturnTo() {
   if (typeof window === "undefined") return "/crypto";
@@ -54,6 +51,7 @@ export default function LoginPage() {
           </p>
 
           <div className="mt-6">
+            <AppleLoginButton returnTo={returnTo} />
             <GoogleLoginButton returnTo={returnTo} />
             <div className="mt-2">
               <KakaoLoginButton returnTo={returnTo} />

@@ -105,6 +105,9 @@ function cacheKey(input: MarketBriefingInput) {
 
 export async function POST(request: Request) {
   const entitlement = await getRequestEntitlement(request, "crypto");
+  if (entitlement.state === "unavailable") {
+    return NextResponse.json({ error: "구독 권한을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요." }, { status: 503 });
+  }
   const limit = await rateLimit(request, {
     key: entitlementRateKey("ai-market-briefing", entitlement),
     limit: entitlement.isPaid ? 60 : 12,

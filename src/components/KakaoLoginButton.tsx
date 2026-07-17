@@ -4,13 +4,9 @@
 import { useEffect, useState } from "react";
 import { isAndroidNativeApp } from "@/lib/nativeGoogleSignIn";
 import { isKakaoOAuthConfigured } from "@/lib/supabase";
+import { safeReturnTo } from "@/lib/authRedirect";
 
 const authReturnToStorageKey = "chartRadar.auth.returnTo";
-
-function safeReturnTo(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/crypto";
-  return value;
-}
 
 export function KakaoLoginButton({ returnTo = "/crypto" }: { returnTo?: string }) {
   const configured = isKakaoOAuthConfigured();

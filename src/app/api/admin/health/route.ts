@@ -12,7 +12,7 @@ function bearerToken(request: Request) {
 }
 
 function isAdminUser(user: Awaited<ReturnType<typeof fetchSupabaseUserOnServer>>) {
-  return user.app_metadata?.role === "admin" || user.app_metadata?.plan === "admin";
+  return user.app_metadata?.role === "admin";
 }
 
 export async function GET(request: Request) {

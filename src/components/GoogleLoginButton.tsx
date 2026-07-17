@@ -4,14 +4,10 @@
 import { useEffect, useState } from "react";
 import { getNativeGoogleSignInErrorMessage, isAndroidNativeApp, nativeGoogleSignIn } from "@/lib/nativeGoogleSignIn";
 import { isGoogleOAuthConfigured, supabaseUrl } from "@/lib/supabase";
+import { safeReturnTo } from "@/lib/authRedirect";
 
 const authReturnToStorageKey = "chartRadar.auth.returnTo";
 const skipSplashAfterAuthKey = "chartRadar.skipSplashAfterAuth.v1";
-
-function safeReturnTo(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/crypto";
-  return value;
-}
 
 export function GoogleLoginButton({ returnTo = "/crypto" }: { returnTo?: string }) {
   const [platform, setPlatform] = useState<"unknown" | "android" | "web">("unknown");

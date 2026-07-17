@@ -8,6 +8,21 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
+  async redirects() {
+    return [
+      { source: "/crypto", destination: "/crypto/home", permanent: false },
+      { source: "/majors", destination: "/crypto/perpetual", permanent: false },
+      { source: "/alts", destination: "/crypto/perpetual/alts", permanent: false },
+      { source: "/coin", destination: "/crypto/home", permanent: false },
+      { source: "/spot", destination: "/crypto/spot", permanent: false },
+      { source: "/diagnosis", destination: "/crypto/home", permanent: false },
+      { source: "/report", destination: "/crypto/home", permanent: false },
+      { source: "/settings", destination: "/menu", permanent: false },
+      { source: "/pro/apply", destination: "/pro", permanent: false },
+      { source: "/calculator", destination: "/crypto/home", permanent: false },
+      { source: "/macro-calendar", destination: "/schedule", permanent: false }
+    ];
+  },
   async headers() {
     return [
       {

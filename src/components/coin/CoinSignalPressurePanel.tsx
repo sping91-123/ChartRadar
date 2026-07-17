@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BarChart3, RefreshCcw, Zap } from "lucide-react";
 import type { LiquidationPressureReport, LiquidationPressureSide } from "@/lib/liquidationPressure";
 import { ActionButton, AppSurface, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
@@ -122,8 +122,8 @@ function mainTrigger(report: LiquidationPressureReport) {
   return "롱/숏 쏠림 낮음";
 }
 
-async function fetchPressure(symbol: string) {
-  const response = await fetch(`/api/liquidation-pressure?symbol=${encodeURIComponent(symbol)}&period=1h`, { cache: "no-store" });
+async function fetchPressure(symbol: string, signal: AbortSignal) {
+  const response = await fetch(`/api/liquidation-pressure?symbol=${encodeURIComponent(symbol)}&period=1h`, { cache: "no-store", signal });
   const payload = (await response.json()) as FuturesPressurePayload;
   if (!response.ok || !payload.report) throw new Error(payload.error ?? "선물 압력 확인 실패");
   return payload.report;
@@ -244,12 +244,19 @@ export function CoinFuturesSignalPressurePanel({ mode, symbols: customSymbols }:
   const [status, setStatus] = useState<LoadStatus>("idle");
   const [reports, setReports] = useState<LiquidationPressureReport[]>([]);
   const [error, setError] = useState("");
+  const requestGenerationRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
 
   const loadReports = useCallback(async () => {
+    const generation = ++requestGenerationRef.current;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setStatus("loading");
     setError("");
     setReports([]);
-    const results = await Promise.allSettled(symbols.map((item) => fetchPressure(item.symbol)));
+    const results = await Promise.allSettled(symbols.map((item) => fetchPressure(item.symbol, controller.signal)));
+    if (controller.signal.aborted || generation !== requestGenerationRef.current) return;
     const nextReports = results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
 
     if (nextReports.length) {
@@ -264,6 +271,10 @@ export function CoinFuturesSignalPressurePanel({ mode, symbols: customSymbols }:
 
   useEffect(() => {
     void loadReports();
+    return () => {
+      requestGenerationRef.current += 1;
+      abortRef.current?.abort();
+    };
   }, [loadReports]);
 
   const cards = useMemo(() => {

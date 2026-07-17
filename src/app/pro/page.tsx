@@ -11,8 +11,9 @@ function normalizeBillingScope(market: string | undefined): BillingPageScope {
   return "all";
 }
 
-export default function ProPage({ searchParams }: { searchParams?: { market?: string } }) {
-  const marketScope = normalizeBillingScope(searchParams?.market);
+export default async function ProPage({ searchParams }: { searchParams: Promise<{ market?: string | string[] }> }) {
+  const { market } = await searchParams;
+  const marketScope = normalizeBillingScope(Array.isArray(market) ? market[0] : market);
   const navMarket = marketScope === "stocks" ? "stocks" : marketScope === "crypto" ? "crypto" : "all";
   const headerMarket = marketScope === "stocks" ? "stocks" : marketScope === "crypto" ? "crypto" : undefined;
 

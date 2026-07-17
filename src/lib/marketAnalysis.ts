@@ -330,7 +330,8 @@ function parseBinanceKlineRows(rows: BinanceKlineRow[]): Candle[] {
 export async function fetchBinanceCandles(
   symbol: string,
   timeframe: ChartTimeframe,
-  limit = 320
+  limit = 320,
+  signal?: AbortSignal
 ): Promise<Candle[]> {
   const normalizedSymbol = symbol.toUpperCase().replace(".P", "");
   const params = new URLSearchParams({
@@ -354,7 +355,7 @@ export async function fetchBinanceCandles(
 
     for (const endpoint of endpoints) {
       try {
-        const response = await fetch(endpoint);
+        const response = await fetch(endpoint, { signal });
         if (!response.ok) throw new Error(`Binance ${response.status}`);
         const candles = parseBinanceKlineRows((await response.json()) as BinanceKlineRow[]);
         if (candles.length > 0) return candles;
@@ -366,7 +367,7 @@ export async function fetchBinanceCandles(
 
     throw lastError ?? new Error("Binance candles unavailable");
   }
-  const response = await fetch(`/data/candles?${clientParams.toString()}`);
+  const response = await fetch(`/data/candles?${clientParams.toString()}`, { signal });
   if (!response.ok) {
     throw new Error("캔들 흐름을 잠시 확인하지 못했습니다.");
   }

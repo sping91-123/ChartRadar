@@ -1,9 +1,9 @@
-// 愿由ъ옄 ?꾩슜?쇰줈 ?뚯뒪??Pro 沅뚰븳???섎룞 遺?ы븯??API?낅땲??
 import { NextResponse } from "next/server";
 import { findBillingPlan, getMarketScopeForPlan, type BillingPlanId } from "@/lib/billing";
+import { resolveEffectiveEntitlement } from "@/lib/effectiveEntitlement";
+import { applyBillingEntitlement } from "@/lib/server/billingEntitlements";
 import {
   fetchSupabaseUserOnServer,
-  getSupabaseRestTableColumns,
   listSupabaseAuthUsers,
   supabaseAdminRest
 } from "@/lib/server/supabaseAdmin";
@@ -16,7 +16,6 @@ interface AdminProfileRow {
   id: string;
   email?: string | null;
   display_name?: string | null;
-  avatar_url?: string | null;
   plan?: string | null;
   membership_tier?: string | null;
   created_at?: string | null;
@@ -24,17 +23,12 @@ interface AdminProfileRow {
 }
 
 interface AdminSubscriptionRow {
-  id?: string;
   user_id: string;
-  plan?: string | null;
-  tier?: string | null;
-  market_scope?: string | null;
+  plan?: BillingPlanId | "premium" | null;
+  market_scope?: "crypto" | "stocks" | "bundle" | null;
   status?: string | null;
-  provider?: string | null;
-  provider_subscription_id?: string | null;
-  provider_order_id?: string | null;
   current_period_end?: string | null;
-  updated_at?: string | null;
+  revoked_at?: string | null;
 }
 
 function normalizeEmail(value: unknown) {
@@ -46,65 +40,32 @@ function normalizeUserId(value: unknown) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId) ? userId : "";
 }
 
+function normalizeRequestId(value: unknown) {
+  const requestId = typeof value === "string" ? value.trim() : "";
+  return /^[a-zA-Z0-9:_-]{8,160}$/.test(requestId) ? requestId : "";
+}
+
 function normalizeDurationDays(value: unknown) {
   const days = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(days)) return 90;
+  if (!Number.isFinite(days)) return null;
   return Math.min(365, Math.max(1, Math.floor(days)));
 }
 
 function isAdminUser(user: Awaited<ReturnType<typeof fetchSupabaseUserOnServer>>) {
-  return user.app_metadata?.role === "admin" || user.app_metadata?.plan === "admin";
+  return user.app_metadata?.role === "admin";
 }
 
 function getUserDisplayName(user: SupabaseUser) {
-  return (
-    user.user_metadata?.name ??
-    user.user_metadata?.full_name ??
-    user.user_metadata?.nickname ??
-    user.user_metadata?.preferred_username ??
-    null
-  );
-}
-
-function getUserAvatarUrl(user: SupabaseUser) {
-  return user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null;
-}
-
-function getProfilePlan(profile: AdminProfileRow | null) {
-  return profile?.plan ?? profile?.membership_tier ?? null;
-}
-
-function getSubscriptionPlan(subscription: AdminSubscriptionRow | undefined) {
-  return subscription?.plan ?? subscription?.tier ?? null;
-}
-
-function getSubscriptionMarketScope(subscription: AdminSubscriptionRow | undefined) {
-  const plan = getSubscriptionPlan(subscription);
-  if (subscription?.market_scope) return subscription.market_scope;
-  const billingPlan = findBillingPlan(plan);
-  return billingPlan ? getMarketScopeForPlan(billingPlan.id) : null;
-}
-
-function pickSchemaBody(columns: Set<string>, body: Record<string, unknown>) {
-  return Object.fromEntries(Object.entries(body).filter(([key, value]) => columns.has(key) && value !== undefined));
+  return user.user_metadata?.name ?? user.user_metadata?.full_name ?? user.user_metadata?.nickname ?? null;
 }
 
 async function requireAdmin(request: Request) {
-  const authorization = request.headers.get("authorization") ?? "";
-  const token = authorization.replace(/^Bearer\s+/i, "").trim();
-  if (!token) {
-    return {
-      error: NextResponse.json({ error: "濡쒓렇?몄씠 ?꾩슂?⑸땲??" }, { status: 401 })
-    };
-  }
-
+  const token = (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
+  if (!token) return { error: NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 }) };
   const requester = await fetchSupabaseUserOnServer(token);
   if (!isAdminUser(requester)) {
-    return {
-      error: NextResponse.json({ error: "愿由ъ옄 怨꾩젙留??ъ슜?????덉뒿?덈떎." }, { status: 403 })
-    };
+    return { error: NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 }) };
   }
-
   return { requester };
 }
 
@@ -112,241 +73,137 @@ export async function GET(request: Request) {
   try {
     const admin = await requireAdmin(request);
     if (admin.error) return admin.error;
-
-    const url = new URL(request.url);
-    const query = url.searchParams.get("q")?.trim().toLowerCase() ?? "";
-    const [authUsers, profiles] = await Promise.all([
+    const query = new URL(request.url).searchParams.get("q")?.trim().toLowerCase() ?? "";
+    const [authUsers, profiles, subscriptions] = await Promise.all([
       listSupabaseAuthUsers(memberListLimit),
-      supabaseAdminRest<AdminProfileRow[]>(`profiles?select=*&limit=${memberListLimit}`)
+      supabaseAdminRest<AdminProfileRow[]>(`profiles?select=*&limit=${memberListLimit}`),
+      supabaseAdminRest<AdminSubscriptionRow[]>(
+        "subscriptions?select=user_id,plan,market_scope,status,current_period_end,revoked_at&order=current_period_end.desc&limit=1000"
+      )
     ]);
-    const now = encodeURIComponent(new Date().toISOString());
-    const subscriptions = await supabaseAdminRest<AdminSubscriptionRow[]>(
-      `subscriptions?select=*&status=in.(active,trialing)&current_period_end=gt.${now}&order=current_period_end.desc&limit=1000`
-    );
     const profilesById = new Map(profiles.map((profile) => [profile.id, profile]));
-    const activeByUser = new Map<string, AdminSubscriptionRow>();
+    const subscriptionsByUser = new Map<string, AdminSubscriptionRow[]>();
     for (const subscription of subscriptions) {
-      if (!activeByUser.has(subscription.user_id)) {
-        activeByUser.set(subscription.user_id, subscription);
-      }
+      const rows = subscriptionsByUser.get(subscription.user_id) ?? [];
+      rows.push(subscription);
+      subscriptionsByUser.set(subscription.user_id, rows);
     }
 
-    const memberMap = new Map<string, {
-      id: string;
-      email: string | null;
-      displayName: string | null;
-      profilePlan: string | null;
-      createdAt: string | null;
-      updatedAt: string | null;
-      activePlan: string | null;
-      activeMarketScope: string | null;
-      activeStatus: string | null;
-      activeUntil: string | null;
-    }>();
-
-    for (const user of authUsers) {
-        const profile = profilesById.get(user.id) ?? null;
+    const members = authUsers
+      .map((user) => {
+        const profile = profilesById.get(user.id);
+        const effective = resolveEffectiveEntitlement({
+          isAuthenticated: true,
+          isAdmin: user.app_metadata?.role === "admin",
+          subscriptions: subscriptionsByUser.get(user.id) ?? []
+        });
         const email = user.email ?? profile?.email ?? null;
-        const displayName = profile?.display_name ?? getUserDisplayName(user);
-        const activeSubscription = activeByUser.get(user.id);
-        memberMap.set(user.id, {
+        return {
           id: user.id,
           email,
-          displayName,
-          profilePlan: getProfilePlan(profile) ?? (typeof user.app_metadata?.plan === "string" ? user.app_metadata.plan : null),
+          displayName: profile?.display_name ?? getUserDisplayName(user),
+          profilePlan: profile?.plan ?? profile?.membership_tier ?? null,
           createdAt: user.created_at ?? profile?.created_at ?? null,
           updatedAt: profile?.updated_at ?? profile?.created_at ?? user.last_sign_in_at ?? user.created_at ?? null,
-          activePlan: getSubscriptionPlan(activeSubscription),
-          activeMarketScope: getSubscriptionMarketScope(activeSubscription),
-          activeStatus: activeSubscription?.status ?? null,
-          activeUntil: activeSubscription?.current_period_end ?? null
-        });
-    }
-
-    for (const profile of profiles) {
-      if (memberMap.has(profile.id)) continue;
-      const activeSubscription = activeByUser.get(profile.id);
-      memberMap.set(profile.id, {
-        id: profile.id,
-        email: profile.email ?? null,
-        displayName: profile.display_name ?? null,
-        profilePlan: getProfilePlan(profile),
-        createdAt: profile.created_at ?? null,
-        updatedAt: profile.updated_at ?? profile.created_at ?? null,
-        activePlan: getSubscriptionPlan(activeSubscription),
-        activeMarketScope: getSubscriptionMarketScope(activeSubscription),
-        activeStatus: activeSubscription?.status ?? null,
-        activeUntil: activeSubscription?.current_period_end ?? null
-      });
-    }
-
-    const members = Array.from(memberMap.values())
+          activePlan: effective.state === "active" ? effective.plan : null,
+          activeMarketScope: effective.marketAccess.crypto && effective.marketAccess.stocks
+            ? "bundle"
+            : effective.marketAccess.crypto ? "crypto" : effective.marketAccess.stocks ? "stocks" : null,
+          activeStatus: effective.state,
+          activeUntil: effective.marketExpiresAt.crypto ?? effective.marketExpiresAt.stocks
+        };
+      })
       .filter((member) => {
         if (!member.email) return false;
         if (!query) return true;
-        return member.email?.toLowerCase().includes(query) || member.displayName?.toLowerCase().includes(query);
+        return member.email.toLowerCase().includes(query) || member.displayName?.toLowerCase().includes(query);
       })
-      .sort((left, right) => new Date(right.updatedAt ?? 0).getTime() - new Date(left.updatedAt ?? 0).getTime());
+      .sort((left, right) => Date.parse(right.updatedAt ?? "") - Date.parse(left.updatedAt ?? ""));
 
     return NextResponse.json({ members });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "?뚯썝 紐⑸줉??遺덈윭?ㅼ? 紐삵뻽?듬땲??"
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error instanceof Error ? error.message : "회원 목록을 불러오지 못했습니다." }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
     const admin = await requireAdmin(request);
-    if (admin.error) return admin.error;
-
+    if (admin.error || !admin.requester) return admin.error;
     const body = (await request.json()) as {
       email?: unknown;
       userId?: unknown;
       planId?: unknown;
       durationDays?: unknown;
+      requestId?: unknown;
+      reason?: unknown;
     };
     const email = normalizeEmail(body.email);
     const userId = normalizeUserId(body.userId);
-    const planId = typeof body.planId === "string" ? body.planId : "";
-    const plan = findBillingPlan(planId);
+    const requestId = normalizeRequestId(body.requestId);
+    const reason = typeof body.reason === "string" ? body.reason.trim() : "";
     const durationDays = normalizeDurationDays(body.durationDays);
+    const plan = findBillingPlan(typeof body.planId === "string" ? body.planId : "");
 
     if (!userId && (!email || !email.includes("@"))) {
-      return NextResponse.json({ error: "?뚯뒪???대찓?쇱쓣 ?낅젰??二쇱꽭??" }, { status: 400 });
+      return NextResponse.json({ error: "이메일 또는 사용자 ID가 필요합니다." }, { status: 400 });
+    }
+    if (!requestId || reason.length < 3 || reason.length > 240 || durationDays === null) {
+      return NextResponse.json({ error: "requestId, 3~240자 사유, 1~365일 기간이 필요합니다." }, { status: 400 });
     }
     if (!plan || (plan.id !== "free" && !grantablePlanIds.has(plan.id))) {
-      return NextResponse.json({ error: "遺?ы븷 Pro 沅뚰븳???좏깮??二쇱꽭??" }, { status: 400 });
+      return NextResponse.json({ error: "지원하지 않는 수동 권한입니다." }, { status: 400 });
     }
 
     const authUsers = await listSupabaseAuthUsers(memberListLimit);
     const target = authUsers.find((user) => (userId ? user.id === userId : user.email?.toLowerCase() === email));
-    if (!target) {
-      return NextResponse.json({ error: "?대떦 ?대찓?쇱쓽 媛??怨꾩젙??李얠? 紐삵뻽?듬땲?? ?뚯뒪?곌? 癒쇱? ??踰?濡쒓렇?명빐???⑸땲??" }, { status: 404 });
-    }
+    if (!target) return NextResponse.json({ error: "대상 계정을 찾지 못했습니다." }, { status: 404 });
 
-    const now = new Date();
-    const periodEnd = new Date(now);
-    periodEnd.setDate(periodEnd.getDate() + durationDays);
-    const providerOrderId = `manual_tester_${target.id}_${plan.id}`;
-    const targetIsAdmin = isAdminUser(target);
-    const [profileColumns, subscriptionColumns] = await Promise.all([
-      getSupabaseRestTableColumns("profiles"),
-      getSupabaseRestTableColumns("subscriptions")
-    ]);
-    const profileBody = pickSchemaBody(profileColumns, {
-      id: target.id,
-      email: (target.email ?? email) || undefined,
-      display_name: getUserDisplayName(target),
-      avatar_url: getUserAvatarUrl(target),
-      plan: targetIsAdmin ? "admin" : plan.id,
-      membership_tier: plan.id === "free" ? "free" : "premium",
-      updated_at: now.toISOString()
-    });
-    await supabaseAdminRest("profiles", {
-      method: "POST",
-      prefer: "resolution=merge-duplicates",
-      body: profileBody
-    });
-
+    const observedAt = new Date().toISOString();
+    let currentPeriodEnd: string | null = null;
     if (plan.id === "free") {
-      const deactivateBody = pickSchemaBody(subscriptionColumns, {
-        status: "canceled",
-        plan: "free",
-        tier: "free",
-        market_scope: "trial",
-        current_period_end: now.toISOString(),
-        updated_at: now.toISOString()
-      });
-      const deactivatePath = [
-        `subscriptions?user_id=eq.${encodeURIComponent(target.id)}`,
-        subscriptionColumns.has("provider") ? "provider=eq.manual" : "",
-        subscriptionColumns.has("status") ? "status=in.(active,trialing)" : ""
-      ]
-        .filter(Boolean)
-        .join("&");
-
-      if (Object.keys(deactivateBody).length > 0) {
-        await supabaseAdminRest(deactivatePath, {
-          method: "PATCH",
-          body: deactivateBody
-        });
-      }
-
-      return NextResponse.json({
-        ok: true,
-        email: (target.email ?? email) || null,
-        accountLabel: target.email ?? getUserDisplayName(target) ?? target.id,
+      await applyBillingEntitlement({
         userId: target.id,
-        planId: plan.id,
-        planName: plan.name,
-        marketScope: getMarketScopeForPlan(plan.id),
-        currentPeriodEnd: null
+        provider: "manual",
+        eventId: requestId,
+        observedAtIso: observedAt,
+        revoke: true,
+        revocationReason: reason,
+        actorUserId: admin.requester.id,
+        reason,
+        metadata: { source: "admin_api" }
       });
-    }
-
-    const canWriteDetailedSubscription =
-      subscriptionColumns.has("plan") || subscriptionColumns.has("market_scope") || subscriptionColumns.has("provider_order_id");
-    const subscriptionBody = pickSchemaBody(subscriptionColumns, {
-      user_id: target.id,
-      provider: "manual",
-      status: "active",
-      plan: plan.id,
-      tier: "premium",
-      market_scope: getMarketScopeForPlan(plan.id),
-      current_period_start: now.toISOString(),
-      current_period_end: periodEnd.toISOString(),
-      provider_subscription_id: "manual_tester",
-      provider_order_id: providerOrderId
-    });
-
-    if (canWriteDetailedSubscription) {
-      const existingSubscriptionPath = subscriptionColumns.has("provider_order_id")
-        ? `subscriptions?select=id&provider=eq.manual&provider_order_id=eq.${encodeURIComponent(providerOrderId)}&limit=1`
-        : [
-            `subscriptions?select=id`,
-            `user_id=eq.${encodeURIComponent(target.id)}`,
-            subscriptionColumns.has("provider") ? "provider=eq.manual" : "",
-            subscriptionColumns.has("provider_subscription_id") ? "provider_subscription_id=eq.manual_tester" : "",
-            "limit=1"
-          ]
-            .filter(Boolean)
-            .join("&");
-      const existing = await supabaseAdminRest<Array<{ id: string }>>(existingSubscriptionPath);
-
-      if (existing[0]?.id) {
-        await supabaseAdminRest(`subscriptions?id=eq.${encodeURIComponent(existing[0].id)}`, {
-          method: "PATCH",
-          body: subscriptionBody
-        });
-      } else {
-        await supabaseAdminRest("subscriptions", {
-          method: "POST",
-          body: subscriptionBody
-        });
-      }
+    } else {
+      const end = new Date(observedAt);
+      end.setUTCDate(end.getUTCDate() + durationDays);
+      currentPeriodEnd = end.toISOString();
+      await applyBillingEntitlement({
+        userId: target.id,
+        provider: "manual",
+        eventId: requestId,
+        planId: plan.id,
+        currentPeriodStartIso: observedAt,
+        currentPeriodEndIso: currentPeriodEnd,
+        providerProductId: "manual_admin_grant",
+        providerOrderId: `manual:${target.id}:${plan.id}`,
+        observedAtIso: observedAt,
+        actorUserId: admin.requester.id,
+        reason,
+        metadata: { source: "admin_api", durationDays }
+      });
     }
 
     return NextResponse.json({
       ok: true,
-      email: (target.email ?? email) || null,
+      email: target.email ?? email ?? null,
       accountLabel: target.email ?? getUserDisplayName(target) ?? target.id,
       userId: target.id,
       planId: plan.id,
       planName: plan.name,
       marketScope: getMarketScopeForPlan(plan.id),
-      currentPeriodEnd: subscriptionBody.current_period_end ?? periodEnd.toISOString()
+      currentPeriodEnd
     });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "?뚯뒪??沅뚰븳 遺?ъ뿉 ?ㅽ뙣?덉뒿?덈떎."
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error instanceof Error ? error.message : "권한을 변경하지 못했습니다." }, { status: 500 });
   }
 }

@@ -57,8 +57,8 @@ expectFile("mobile-shell/index.html", "Capacitor 모바일 shell", 500);
 expectFile("src/app/manifest.ts", "PWA manifest 소스", 500);
 expectFile("capacitor.config.ts", "Capacitor 설정", 200);
 expectFile("android/app/src/main/res/drawable/ic_stat_chart_radar.xml", "Android 푸시 알림 아이콘", 200);
-expectFile("supabase/migrations/20260519_push_tokens.sql", "앱 푸시 토큰 마이그레이션", 500);
-expectFile("supabase/migrations/20260519_android_push_platform_guard.sql", "앱 푸시 플랫폼 가드 마이그레이션", 500);
+expectFile("supabase/legacy-migrations/20260519_push_tokens.sql", "보관된 앱 푸시 토큰 마이그레이션", 500);
+expectFile("supabase/legacy-migrations/20260519_android_push_platform_guard.sql", "보관된 앱 푸시 플랫폼 가드 마이그레이션", 500);
 
 const iconSize = readPngSize("public/brand/chart-radar-icon.png");
 if (!iconSize) {
@@ -143,7 +143,7 @@ if (
   fail("Android 네이티브 Google 로그인", "GoogleSignIn.signIn 또는 Supabase id_token 교환이 빠져 있습니다.");
 }
 
-const pushPlatformGuard = readText("supabase/migrations/20260519_android_push_platform_guard.sql");
+const pushPlatformGuard = readText("supabase/legacy-migrations/20260519_android_push_platform_guard.sql");
 if (
   pushPlatformGuard.includes("push_tokens_provider_platform_check") &&
   pushPlatformGuard.includes("platform = 'android' and provider = 'fcm'") &&
@@ -177,6 +177,31 @@ if (mobileShell.includes("Chart Radar") && mobileShell.includes("CAPACITOR_SERVE
   pass("모바일 shell 안내", "Chart Radar와 CAPACITOR_SERVER_URL 안내를 포함합니다.");
 } else {
   fail("모바일 shell 안내", "모바일 shell에 앱 이름 또는 서버 URL 안내가 빠져 있습니다.");
+}
+
+const rootLayout = readText("src/app/layout.tsx");
+const pwaPrompt = readText("src/components/PwaInstallPrompt.tsx");
+if (rootLayout.includes('import { PwaInstallPrompt }') && rootLayout.includes("<PwaInstallPrompt />")) {
+  pass("PWA prompt root 연결", "root layout이 설치 안내를 렌더링합니다.");
+} else {
+  fail("PWA prompt root 연결", "root layout import 또는 render가 빠져 있습니다.");
+}
+
+if (!rootLayout.includes("maximumScale") && rootLayout.includes('viewportFit: "cover"')) {
+  pass("모바일 화면 확대 허용", "maximumScale 제한 없이 safe-area viewport를 사용합니다.");
+} else {
+  fail("모바일 화면 확대 허용", "viewport 확대 제한이 남아 있거나 viewportFit이 빠졌습니다.");
+}
+
+if (
+  pwaPrompt.includes("Capacitor.isNativePlatform()") &&
+  pwaPrompt.includes('document.readyState === "complete"') &&
+  pwaPrompt.includes('navigator.serviceWorker.register("/sw.js")') &&
+  pwaPrompt.includes('bottom-[calc(env(safe-area-inset-bottom)+5.5rem)]')
+) {
+  pass("PWA web-only 등록과 safe area", "native guard, 즉시 등록, safe-area 위치를 포함합니다.");
+} else {
+  fail("PWA web-only 등록과 safe area", "native guard, readyState 등록, safe-area 중 하나가 빠졌습니다.");
 }
 
 const failures = checks.filter((check) => !check.ok);

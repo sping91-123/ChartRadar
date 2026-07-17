@@ -346,12 +346,14 @@ function SpotChartEvidencePanel({
   payload,
   loading,
   error,
-  itemsByMarket
+  itemsByMarket,
+  onRetry
 }: {
   payload: SpotChartRadarPayload | null;
   loading: boolean;
   error: string | null;
   itemsByMarket: Map<string, SpotRadarItem>;
+  onRetry: () => void;
 }) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const visibleItems = (payload?.items ?? []).filter((item) => isReasonableBuyCandidate(itemsByMarket.get(item.market) ?? null, item));
@@ -398,10 +400,19 @@ function SpotChartEvidencePanel({
         </div>
       ) : null}
 
-      {loading ? (
+      {error && payload ? (
+        <CompactSpotState
+          icon={<AlertTriangle size={15} aria-hidden />}
+          title="최근 차트 유지 중"
+          body={error}
+          action={<ActionButton tone="ghost" onClick={onRetry}>다시 시도</ActionButton>}
+        />
+      ) : null}
+
+      {loading && !payload ? (
         <CompactSpotState title="차트 로딩 중" body="선택 후보의 1H 흐름을 불러옵니다." />
-      ) : error ? (
-        <CompactSpotState icon={<AlertTriangle size={15} aria-hidden />} title="차트 대기" body={error} />
+      ) : error && !payload ? (
+        <CompactSpotState icon={<AlertTriangle size={15} aria-hidden />} title="차트 대기" body={error} action={<ActionButton tone="ghost" onClick={onRetry}>다시 시도</ActionButton>} />
       ) : visibleItems.length > 0 ? (
         <div className="grid gap-2 md:grid-cols-2">
           {visibleItems.map((item) => {
@@ -561,9 +572,9 @@ function SpotPriorityPanel({
     <PanelCard variant="report" padding="md" className="space-y-4 rounded-ui-lg bg-ui-panel">
       <SectionHeader title="오늘 관찰 후보" action={action} />
 
-      {loading ? (
+      {loading && !payload ? (
         <CompactSpotState title="관찰 후보 로딩 중" body="거래대금과 1H 구조를 함께 정리합니다." />
-      ) : error ? (
+      ) : error && !payload ? (
         <CompactSpotState icon={<AlertTriangle size={15} aria-hidden />} title={error} body="거래소 public API 응답이 늦거나 제한될 수 있습니다." />
       ) : (
         <>
@@ -677,6 +688,7 @@ function PersonalSpotPanel({
   onQueryChange,
   onSelectMarket,
   onSubmit,
+  onRetry,
   onOpenPicker,
   onClosePicker
 }: {
@@ -692,6 +704,7 @@ function PersonalSpotPanel({
   onQueryChange: (value: string) => void;
   onSelectMarket: (market: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onRetry: () => void;
   onOpenPicker: () => void;
   onClosePicker: () => void;
 }) {
@@ -758,6 +771,14 @@ function PersonalSpotPanel({
       ) : null}
 
       <div className="border-t border-ui-line pt-2">
+        {error && chart ? (
+          <CompactSpotState
+            icon={<AlertTriangle size={15} aria-hidden />}
+            title="최근 관심 차트 유지 중"
+            body={error}
+            action={<ActionButton tone="ghost" onClick={onRetry}>다시 시도</ActionButton>}
+          />
+        ) : null}
         {!selectedMarket ? (
           <CompactSpotState
             title="관심 알트 조건 대기"
@@ -769,10 +790,10 @@ function PersonalSpotPanel({
               </ActionButton>
             }
           />
-        ) : loading ? (
+        ) : loading && !chart ? (
           <CompactSpotState title={`${personalSpotTitle(selectedMarket)} 차트 로딩`} body="관심 알트의 1H 흐름을 불러옵니다." />
-        ) : error ? (
-          <CompactSpotState icon={<AlertTriangle size={15} aria-hidden />} title="관심 알트 조건 대기" body={error} />
+        ) : error && !chart ? (
+          <CompactSpotState icon={<AlertTriangle size={15} aria-hidden />} title="관심 알트 조건 대기" body={error} action={<ActionButton tone="ghost" onClick={onRetry}>다시 시도</ActionButton>} />
         ) : chart ? (
           <article className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_12rem] sm:items-start">
             <div className="min-w-0">
@@ -882,6 +903,9 @@ export function SpotRadarPanel() {
   const [watchChartError, setWatchChartError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mainRetry, setMainRetry] = useState(0);
+  const [chartRetry, setChartRetry] = useState(0);
+  const [watchRetry, setWatchRetry] = useState(0);
 
   useEffect(() => {
     try {
@@ -920,7 +944,7 @@ export function SpotRadarPanel() {
     return () => {
       cancelled = true;
     };
-  }, [exchange]);
+  }, [exchange, mainRetry]);
 
   useEffect(() => {
     let cancelled = false;
@@ -958,7 +982,6 @@ export function SpotRadarPanel() {
         if (!cancelled) setChartPayload(nextPayload);
       } catch (loadError) {
         if (!cancelled) {
-          setChartPayload(null);
           setChartError(loadError instanceof Error ? loadError.message : "현물 차트를 확인하지 못했습니다.");
         }
       } finally {
@@ -970,7 +993,7 @@ export function SpotRadarPanel() {
     return () => {
       cancelled = true;
     };
-  }, [exchange, filter, payload]);
+  }, [chartRetry, exchange, filter, payload]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1001,7 +1024,6 @@ export function SpotRadarPanel() {
         }
       } catch (loadError) {
         if (!cancelled) {
-          setWatchChartPayload(null);
           setWatchChartError(loadError instanceof Error ? loadError.message : "관심 코인 차트를 확인하지 못했습니다.");
         }
       } finally {
@@ -1013,7 +1035,7 @@ export function SpotRadarPanel() {
     return () => {
       cancelled = true;
     };
-  }, [exchange, watchMarket]);
+  }, [exchange, watchMarket, watchRetry]);
 
   const chartByMarketForRows = useMemo(() => chartLookup(chartPayload), [chartPayload]);
   const visibleCandidateItems = useMemo(() => {
@@ -1054,7 +1076,11 @@ export function SpotRadarPanel() {
   const watchChart = watchChartPayload?.items[0] ?? null;
 
   function selectExchange(nextExchange: SpotExchange) {
+    if (nextExchange === exchange) return;
     setExchange(nextExchange);
+    setPayload(null);
+    setChartPayload(null);
+    setWatchChartPayload(null);
     try {
       window.localStorage.setItem(spotExchangeStorageKey, nextExchange);
     } catch {
@@ -1107,6 +1133,7 @@ export function SpotRadarPanel() {
       onQueryChange={setWatchQuery}
       onSelectMarket={selectWatchMarket}
       onSubmit={submitWatchSearch}
+      onRetry={() => setWatchRetry((value) => value + 1)}
       onOpenPicker={openWatchPicker}
       onClosePicker={closeWatchPicker}
     />
@@ -1121,7 +1148,12 @@ export function SpotRadarPanel() {
         chartPayload={chartPayload}
         loading={isLoading}
         error={error}
-        action={<SpotExchangeToggle exchange={exchange} onSelectExchange={selectExchange} />}
+        action={
+          <div className="flex items-center gap-2">
+            {error ? <ActionButton tone="ghost" onClick={() => setMainRetry((value) => value + 1)}>다시 시도</ActionButton> : null}
+            <SpotExchangeToggle exchange={exchange} onSelectExchange={selectExchange} />
+          </div>
+        }
       />
 
       <PanelCard variant="report" padding="lg" className="space-y-2">
@@ -1140,6 +1172,7 @@ export function SpotRadarPanel() {
               key={item.id}
               type="button"
               onClick={() => setFilter(item.id)}
+              aria-pressed={filter === item.id}
               className={`min-h-8 border-b border-ui-line px-2 text-xs font-semibold transition ${
                 filter === item.id ? "rounded-ui-sm bg-ui-active text-ui-text" : "text-ui-muted hover:bg-ui-inset/60 hover:text-ui-text"
               }`}
@@ -1154,12 +1187,16 @@ export function SpotRadarPanel() {
       <PanelCard variant="report" padding="lg" className="space-y-4">
         <SectionHeader title="세부 관찰 후보와 차트 근거" />
 
-        {payload ? <SpotChartEvidencePanel payload={chartPayload} loading={isChartLoading} error={chartError} itemsByMarket={spotItemsByMarket} /> : null}
+        {payload ? <SpotChartEvidencePanel payload={chartPayload} loading={isChartLoading} error={chartError} itemsByMarket={spotItemsByMarket} onRetry={() => setChartRetry((value) => value + 1)} /> : null}
 
-        {isLoading ? (
+        {error && payload ? (
+          <CompactSpotState icon={<AlertTriangle size={15} aria-hidden />} title="최근 현물 데이터 유지 중" body={error} action={<ActionButton tone="ghost" onClick={() => setMainRetry((value) => value + 1)}>다시 시도</ActionButton>} />
+        ) : null}
+
+        {isLoading && !payload ? (
           <CompactSpotState title="현물 시장 로딩" body="관찰 후보와 차트 근거를 함께 정리합니다." />
-        ) : error ? (
-          <CompactSpotState icon={<AlertTriangle size={15} aria-hidden />} title={error} body="거래소 public API 응답이 늦거나 제한될 수 있습니다." />
+        ) : error && !payload ? (
+          <CompactSpotState icon={<AlertTriangle size={15} aria-hidden />} title={error} body="거래소 public API 응답이 늦거나 제한될 수 있습니다." action={<ActionButton tone="ghost" onClick={() => setMainRetry((value) => value + 1)}>다시 시도</ActionButton>} />
         ) : visibleFilteredItems.length > 0 ? (
           <div>
             {visibleFilteredItems.map((item) => (

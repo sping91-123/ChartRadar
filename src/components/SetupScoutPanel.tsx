@@ -541,13 +541,13 @@ function SetupCard({
       if (session) {
         await createRemoteJournalEntry(session.accessToken, payload);
       } else {
-        appendJournalEntry(payload);
+        appendJournalEntry(payload, null);
       }
       setSaveState("saved");
       window.setTimeout(() => setSaveState("idle"), 1800);
     } catch {
       try {
-        appendJournalEntry(payload);
+        appendJournalEntry(payload, session ? session.userId : null);
         setSaveState("saved");
         window.setTimeout(() => setSaveState("idle"), 1800);
       } catch {

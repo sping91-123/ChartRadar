@@ -134,16 +134,23 @@ export function HomeEntryGate() {
     setBasicBrowse(true);
   };
 
-  if (!preferredMarketLoaded) {
-    return null;
-  }
+  const loadingView = (
+    <main className="grid min-h-screen place-items-center px-4" aria-live="polite" aria-busy="true">
+      <div className="text-center">
+        <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-ui-line border-t-ui-brand" aria-hidden />
+        <p className="mt-4 text-sm font-semibold text-ui-muted">로그인 상태와 시작 화면을 확인하고 있습니다.</p>
+      </div>
+    </main>
+  );
+
+  if (!preferredMarketLoaded) return loadingView;
 
   if (preferredMarket && (isLoading || user || basicBrowse || hasStoredSession || skipSplashAfterAuth)) {
-    return null;
+    return loadingView;
   }
 
   if (isLoading) {
-    return null;
+    return loadingView;
   }
 
   if (!user && !basicBrowse) {
@@ -151,7 +158,7 @@ export function HomeEntryGate() {
   }
 
   if (preferredMarketLoaded && preferredMarket) {
-    return null;
+    return loadingView;
   }
 
   return <MarketSelector />;

@@ -11,6 +11,12 @@
     "smoke:routes": "node scripts/smoke-routes.mjs",
     "smoke:mobile": "node scripts/smoke-mobile.mjs",
     "smoke:billing": "node scripts/smoke-billing.mjs",
+    "smoke:supabase-security": "node scripts/smoke-supabase-security.mjs",
+    "smoke:migrations": "node scripts/smoke-migrations.mjs",
+    "test:supabase-hotfix": "node scripts/test-supabase-profile-hotfix.mjs",
+    "test:entitlements": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-entitlements.js && node .verify-dist/scripts/test-revenuecat-webhook.js && node .verify-dist/scripts/test-account-deletion-contract.js && node scripts/test-entitlement-ledger.mjs && node scripts/test-account-deletion-ledger.mjs",
+    "test:auth-boundaries": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-auth-boundaries.js && node .verify-dist/scripts/test-user-storage.js",
+    "test:futures-brief": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-futures-brief.js",
     "smoke:api": "node scripts/smoke-api.mjs",
     "smoke:css": "node scripts/smoke-css.mjs",
     "smoke:copy": "node scripts/smoke-copy.mjs",
@@ -18,6 +24,7 @@
     "smoke:ops": "node scripts/smoke-ops.mjs",
     "smoke:all": "node scripts/smoke-all.mjs",
     "check:app-billing": "node scripts/check-app-billing-env.mjs",
+    "check:ios-billing": "node scripts/check-ios-billing.mjs",
     "backtest:btc": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/backtest-btc-regimes.js",
     "app:add:android": "npx cap add android",
     "app:sync": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-android-production.ps1",
@@ -36,23 +43,38 @@
     "fast-xml-parser": "^5.7.3",
     "lightweight-charts": "^5.2.0",
     "lucide-react": "^0.468.0",
-    "next": "^14.2.5",
+    "next": "^15.5.18",
     "protobufjs": "^8.6.4",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "@capacitor/android": "^8.3.3",
     "@capacitor/cli": "^8.3.3",
     "@capacitor/ios": "^8.3.3",
+    "@electric-sql/pglite": "0.5.4",
     "@types/node": "^20.14.10",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.19",
     "eslint": "^8.57.0",
-    "eslint-config-next": "^14.2.5",
+    "eslint-config-next": "^15.5.18",
     "postcss": "^8.4.39",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.5.3"
+  },
+  "overrides": {
+    "@capacitor/cli": {
+      "tar": "7.5.20"
+    },
+    "@typescript-eslint/typescript-estree": {
+      "brace-expansion": "5.0.7"
+    },
+    "eslint": {
+      "js-yaml": "4.3.0"
+    },
+    "next": {
+      "postcss": "8.5.19"
+    }
   }
 }

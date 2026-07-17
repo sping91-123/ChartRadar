@@ -21,7 +21,6 @@ import type {
   PushEventDiagnostic,
   PushEventDiagnosticSample,
   PushPreferenceSkippedSample,
-  PushProfileRow,
   PushSubscriptionRow,
   PushTokenRow,
   ScanContext
@@ -91,12 +90,9 @@ export async function runPushAlertScan(context: ScanContext) {
   }
 
   const userIds = Array.from(new Set(tokens.map((token) => token.user_id)));
-  const profiles = await readRows<PushProfileRow>("profiles", `profiles?select=*&id=in.(${userIds.join(",")})`);
-  const profileMap = new Map(profiles.map((profile) => [profile.id, profile]));
-  const now = encodeURIComponent(new Date().toISOString());
   const subscriptionRows = await readRows<PushSubscriptionRow>(
     "subscriptions",
-    `subscriptions?select=*&user_id=in.(${userIds.join(",")})&status=in.(active,trialing)&current_period_end=gt.${now}&order=current_period_end.desc&limit=1000`
+    `subscriptions?select=user_id,provider,status,plan,market_scope,current_period_end,revoked_at&user_id=in.(${userIds.join(",")})&order=current_period_end.desc&limit=1000`
   );
   const subscriptionsByUser = new Map<string, PushSubscriptionRow[]>();
   for (const subscription of subscriptionRows) {
@@ -161,7 +157,7 @@ export async function runPushAlertScan(context: ScanContext) {
       const recentSinceIso = new Date(Date.now() - maxRecentEventLookbackHours * 60 * 60000).toISOString();
       const recentRows = await recentSentEvents(userId, recentSinceIso);
       const recentRowsForUser = [...recentRows];
-      const plan = userPlan(profileMap, subscriptionsByUser, userId);
+      const plan = userPlan(subscriptionsByUser, userId);
       const userPresets = presetsByUser.get(userId) ?? [];
 
       const userGenericEvents = genericEvents.map((event) => personalizeEventForUser(event, userPresets));
@@ -278,7 +274,7 @@ export async function runPushAlertScan(context: ScanContext) {
     diagnostics: emptyDiagnostics({
       tokenCount: tokens.length,
       userCount: userIds.length,
-      profileCount: profiles.length,
+      profileCount: 0,
       subscriptionCount: subscriptionRows.length,
       presetCount: presetRows.length,
       cryptoPresetCount: presetCountForMarket(presetRows, "crypto"),

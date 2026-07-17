@@ -381,6 +381,10 @@ export function LiveMarketChart({
   const priceLinesRef = useRef<IPriceLine[]>([]);
   const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
   const pendingUserSelectedAltSymbolRef = useRef<string | null>(null);
+  const marketRequestGenerationRef = useRef(0);
+  const marketAbortRef = useRef<AbortController | null>(null);
+  const briefingRequestGenerationRef = useRef(0);
+  const briefingAbortRef = useRef<AbortController | null>(null);
 
   const [symbol, setSymbol] = useState(initialSymbol);
   const [activeTimeframe, setActiveTimeframe] = useState<ChartTimeframe>("15m");
@@ -561,6 +565,10 @@ export function LiveMarketChart({
   }, [analysis, cacheKey, candles.length]);
 
   const loadMarket = useCallback(async () => {
+    const generation = ++marketRequestGenerationRef.current;
+    marketAbortRef.current?.abort();
+    const controller = new AbortController();
+    marketAbortRef.current = controller;
     setIsLoading(true);
     setError("");
 
@@ -580,9 +588,10 @@ export function LiveMarketChart({
       const candleSets = await Promise.all(
         chartTimeframes.map(async (timeframe) => ({
           timeframe,
-          candles: await fetchBinanceCandles(symbol, timeframe, 320)
+          candles: await fetchBinanceCandles(symbol, timeframe, 320, controller.signal)
         }))
       );
+      if (controller.signal.aborted || generation !== marketRequestGenerationRef.current) return;
 
       const activeCandles = candleSets.find((item) => item.timeframe === activeTimeframe)?.candles ?? [];
       const fourHourCandles = candleSets.find((item) => item.timeframe === "4h")?.candles ?? [];
@@ -614,6 +623,7 @@ export function LiveMarketChart({
         pendingUserSelectedAltSymbolRef.current = null;
       }
     } catch (loadError) {
+      if (controller.signal.aborted || generation !== marketRequestGenerationRef.current) return;
       const fallback = readMarketCache(cacheKey);
 
       if (fallback) {
@@ -629,14 +639,18 @@ export function LiveMarketChart({
         setError(loadError instanceof Error ? loadError.message : "시장 흐름을 잠시 확인하지 못했습니다.");
       }
     } finally {
-      setIsLoading(false);
+      if (generation === marketRequestGenerationRef.current) setIsLoading(false);
     }
   }, [activeTimeframe, altOnly, analysisMode, cacheKey, effectiveTradingMode, hasCoinPro, msbMode, structureSensitivity, symbol]);
 
   useEffect(() => {
     loadMarket();
     const id = window.setInterval(() => loadMarket(), 30000);
-    return () => window.clearInterval(id);
+    return () => {
+      window.clearInterval(id);
+      marketRequestGenerationRef.current += 1;
+      marketAbortRef.current?.abort();
+    };
   }, [loadMarket]);
 
   useEffect(() => {
@@ -851,23 +865,33 @@ export function LiveMarketChart({
   const marketBriefingScopeKey = `${symbol}.${activeTimeframe}`;
 
   useEffect(() => {
+    briefingRequestGenerationRef.current += 1;
+    briefingAbortRef.current?.abort();
     setMarketBriefing({ status: "idle" });
+    return () => briefingAbortRef.current?.abort();
   }, [marketBriefingScopeKey]);
 
   const loadMarketBriefing = useCallback(async () => {
     if (!marketBriefingInput) return;
+    const generation = ++briefingRequestGenerationRef.current;
+    briefingAbortRef.current?.abort();
+    const controller = new AbortController();
+    briefingAbortRef.current = controller;
     setMarketBriefing({ status: "loading" });
 
     try {
+      const requestInit = await withSupabaseAuth({
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(marketBriefingInput),
+        signal: controller.signal
+      });
       const response = await fetch(
         "/api/ai/market-briefing",
-        await withSupabaseAuth({
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(marketBriefingInput)
-        })
+        requestInit
       );
       const payload = await readMarketBriefingResponse(response);
+      if (controller.signal.aborted || generation !== briefingRequestGenerationRef.current) return;
 
       setMarketBriefing({
         status: "ready",
@@ -876,6 +900,7 @@ export function LiveMarketChart({
         cached: Boolean(payload.cached)
       });
     } catch (briefingError) {
+      if (controller.signal.aborted || generation !== briefingRequestGenerationRef.current) return;
       setMarketBriefing({
         status: "error",
         message: briefingError instanceof Error ? briefingError.message : "AI 종합 피드백을 잠시 확인하지 못했습니다. 잠시 뒤 다시 시도해 주세요."
@@ -1509,7 +1534,7 @@ export function LiveMarketChart({
       }
     }
 
-    appendJournalEntry(payload);
+    appendJournalEntry(payload, session ? session.userId : null);
 
     if (!session) setSavedMessage("현재 레이더 판독을 복기에 저장했습니다.");
     window.setTimeout(() => setSavedMessage(""), 1800);
