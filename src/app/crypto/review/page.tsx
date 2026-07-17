@@ -1,5 +1,5 @@
-import JournalPage from "@/app/journal/page";
+import { JournalApp } from "@/components/JournalApp";
 
 export default function CryptoReviewPage() {
-  return <JournalPage searchParams={{ market: "crypto" }} />;
+  return <JournalApp initialMarket="crypto" />;
 }

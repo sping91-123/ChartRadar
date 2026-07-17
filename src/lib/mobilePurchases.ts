@@ -23,6 +23,8 @@ interface AppStoreSyncResponse {
   error?: string;
   message?: string;
   planId?: string;
+  status?: "active" | "not_active" | "pending" | "setup_required" | "login_required";
+  reconciliationStatus?: "active" | "not_active" | "duplicate" | "stale";
 }
 
 type RevenueCatCustomerInfo = {
@@ -73,10 +75,15 @@ export class NativePurchaseError extends Error {
   }
 }
 
-let configuredUserId: string | null = null;
+let configuredPlatform: NativePurchasePlatform | null = null;
+let identifiedUserId: string | null = null;
 let configurePromise: Promise<void> | null = null;
-let configurePromiseUserId: string | null = null;
+let identityPromise: Promise<void> = Promise.resolve();
+let reconciliationPromise: Promise<AppStoreSyncResponse | null> | null = null;
+let lastReconciliationKey = "";
+let lastReconciliationAt = 0;
 const CONFIGURE_TIMEOUT_MS = 20_000;
+const RECONCILIATION_THROTTLE_MS = 5 * 60 * 1000;
 
 export function getNativePurchasePlatform(): NativePurchasePlatform | null {
   if (!Capacitor.isNativePlatform()) return null;
@@ -117,7 +124,7 @@ function getRevenueCatApiKey(platform: NativePurchasePlatform) {
 }
 
 async function configurePurchases(platform: NativePurchasePlatform, userId: string, onStage?: NativePurchaseParams["onStage"]) {
-  if (configuredUserId === userId) {
+  if (configuredPlatform === platform && identifiedUserId === userId) {
     onStage?.({ stage: "configure_cached", details: { platform } });
     return;
   }
@@ -127,44 +134,70 @@ async function configurePurchases(platform: NativePurchasePlatform, userId: stri
   }
 
   onStage?.({ stage: "configure_start", details: { platform } });
-  if (!configurePromise || configurePromiseUserId !== userId) {
-    configurePromiseUserId = userId;
+  if (!configurePromise) {
     configurePromise = withNativePurchaseTimeout(
-      Purchases.configure({ apiKey, appUserID: userId }),
+      Purchases.configure({ apiKey }),
       CONFIGURE_TIMEOUT_MS,
       new NativePurchaseError("configure_timeout", "Native purchase configuration timed out.")
-    );
+    ).then(() => {
+      configuredPlatform = platform;
+    }).catch((error) => {
+      configurePromise = null;
+      configuredPlatform = null;
+      throw error;
+    });
   }
 
-  try {
-    await configurePromise;
-    configuredUserId = userId;
-    onStage?.({ stage: "configure_success", details: { platform } });
-  } finally {
-    if (configurePromiseUserId === userId) {
-      configurePromise = null;
-      configurePromiseUserId = null;
-    }
+  await configurePromise;
+  if (configuredPlatform !== platform) {
+    throw new NativePurchaseError("config_missing", "RevenueCat was configured for another platform.");
   }
+  await enqueueIdentityOperation(async () => {
+    if (identifiedUserId !== userId) {
+      await Purchases.logIn({ appUserID: userId });
+      identifiedUserId = userId;
+    }
+  });
+  onStage?.({ stage: "configure_success", details: { platform } });
+}
+
+function enqueueIdentityOperation(operation: () => Promise<void>) {
+  const next = identityPromise.catch(() => undefined).then(operation);
+  identityPromise = next.catch(() => undefined);
+  return next;
+}
+
+export async function logOutNativePurchases() {
+  if (!getNativePurchasePlatform() || !configuredPlatform) return;
+  await enqueueIdentityOperation(async () => {
+    if (!identifiedUserId) return;
+    await Purchases.logOut();
+    identifiedUserId = null;
+    lastReconciliationKey = "";
+    lastReconciliationAt = 0;
+  });
 }
 
 function hasActivePlan(customerInfo: RevenueCatCustomerInfo, plan: BillingPlan) {
   return hasStoreEntitlementForPlan(customerInfo.entitlements.active, plan);
 }
 
-function getNativeStoreProductIds(plan: BillingPlan) {
-  if (!plan.appStoreProductId) throw new NativePurchaseError("product_not_found", "Missing app store product id for plan.");
-  if (!plan.appStoreBasePlanId) throw new NativePurchaseError("base_plan_not_found", "Missing app store base plan id for plan.");
+function getNativeStoreProductIds(plan: BillingPlan, explicitPlatform?: NativePurchasePlatform) {
+  const platform = explicitPlatform ?? getNativePurchasePlatform() ?? "android";
+  if (!plan.storeProducts) throw new NativePurchaseError("product_not_found", "Missing app store product configuration for plan.");
+  const productId = platform === "android" ? plan.storeProducts.android.productId : plan.storeProducts.ios.productId;
+  const basePlanId = platform === "android" ? plan.storeProducts.android.basePlanId : "";
 
   return {
-    productId: plan.appStoreProductId,
-    basePlanId: plan.appStoreBasePlanId,
-    storeProductId: getStoreProductIdentifier(plan) ?? plan.appStoreProductId
+    productId,
+    basePlanId,
+    storeProductId: getStoreProductIdentifier(plan, platform) ?? productId
   };
 }
 
 function getRevenueCatPackageId(plan: BillingPlan) {
-  return plan.id === "bundle_yearly" ? "bundle_6month" : plan.id;
+  if (!plan.storeProducts) throw new NativePurchaseError("package_not_found", "Missing RevenueCat package id for plan.");
+  return plan.storeProducts.revenueCatPackageId;
 }
 
 function findStoreProduct(products: PurchasesStoreProduct[], plan: BillingPlan) {
@@ -233,7 +266,10 @@ async function syncAppStoreEntitlement(params: NativePurchaseParams & { platform
   return data;
 }
 
-async function syncAnyAppStoreEntitlement(params: NativeRestoreParams & { platform: NativePurchasePlatform }) {
+async function syncAnyAppStoreEntitlement(
+  params: NativeRestoreParams & { platform: NativePurchasePlatform },
+  options: { requireActive?: boolean } = {}
+) {
   const response = await fetch("/api/billing/app-store/sync", {
     method: "POST",
     headers: {
@@ -247,7 +283,7 @@ async function syncAnyAppStoreEntitlement(params: NativeRestoreParams & { platfo
   });
 
   const data = (await response.json().catch(() => ({}))) as AppStoreSyncResponse;
-  if (!response.ok || !data.active) {
+  if (!response.ok || (options.requireActive !== false && !data.active)) {
     throw new Error(data.error ?? data.message ?? "불러온 구독 권한을 계정에 연결하지 못했습니다. 잠시 후 다시 확인해 주세요.");
   }
 
@@ -256,6 +292,29 @@ async function syncAnyAppStoreEntitlement(params: NativeRestoreParams & { platfo
   }
 
   return data;
+}
+
+export async function refreshNativeEntitlement(params: NativeRestoreParams): Promise<AppStoreSyncResponse | null> {
+  const platform = getNativePurchasePlatform();
+  if (!platform) return null;
+  const key = `${platform}:${params.userId}`;
+  const now = Date.now();
+  if (key === lastReconciliationKey && now - lastReconciliationAt < RECONCILIATION_THROTTLE_MS) return null;
+  if (reconciliationPromise) {
+    await reconciliationPromise.catch(() => null);
+    return refreshNativeEntitlement(params);
+  }
+
+  reconciliationPromise = (async () => {
+    await configurePurchases(platform, params.userId);
+    const result = await syncAnyAppStoreEntitlement({ ...params, platform }, { requireActive: false });
+    lastReconciliationKey = key;
+    lastReconciliationAt = Date.now();
+    return result;
+  })().finally(() => {
+    reconciliationPromise = null;
+  });
+  return reconciliationPromise;
 }
 
 function normalizePurchaseError(error: unknown) {
@@ -469,8 +528,8 @@ export async function fetchNativePlanPriceLabels(plans: BillingPlan[], userId: s
   if (!platform) return {};
 
   await configurePurchases(platform, userId);
-  const paidPlans = plans.filter((plan) => plan.appStoreProductId);
-  const productIdentifiers = Array.from(new Set(paidPlans.map((plan) => plan.appStoreProductId).filter(Boolean))) as string[];
+  const paidPlans = plans.filter((plan) => plan.storeProducts);
+  const productIdentifiers = Array.from(new Set(paidPlans.map((plan) => getNativeStoreProductIds(plan, platform).productId)));
   const priceLabels: Partial<Record<BillingPlanId, string>> = {};
 
   const offerings = await Purchases.getOfferings().catch(() => null);
@@ -487,8 +546,7 @@ export async function fetchNativePlanPriceLabels(plans: BillingPlan[], userId: s
     new Set(
       paidPlans
         .filter((plan) => !priceLabels[plan.id])
-        .map((plan) => plan.appStoreProductId)
-        .filter(Boolean)
+        .map((plan) => getNativeStoreProductIds(plan, platform).productId)
     )
   ) as string[];
   if (missingProductIdentifiers.length === 0) return priceLabels;

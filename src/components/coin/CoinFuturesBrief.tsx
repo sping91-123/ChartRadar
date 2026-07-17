@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, ArrowDown, ArrowUp, Ban, CheckCircle2, Crosshair, RefreshCw } from "lucide-react";
 import { ActionButton, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import type { LargeTradeFlowReport, LargeTradeSide } from "@/lib/largeTradeFlow";
 import type { LiquidationPressureReport, LiquidationPressureSide } from "@/lib/liquidationPressure";
+import { futuresPressureScore, selectFuturesBriefCandidate } from "@/lib/futuresBriefSelection";
 
 type FuturesBriefMode = "major" | "alts";
 type PlanTone = "long" | "short" | "watch" | "risk" | "info";
@@ -61,11 +62,7 @@ function formatPercent(value: number | null | undefined, digits = 1) {
 }
 
 function pressureScore(report: LiquidationPressureReport) {
-  return Math.max(report.upsideShortPressure, report.downsideLongPressure);
-}
-
-function flowScore(report: LargeTradeFlowReport) {
-  return report.totalLargeNotionalUsd * (1 + Math.abs(report.imbalancePercent) / 100);
+  return futuresPressureScore(report);
 }
 
 function isHeatedPressure(report?: LiquidationPressureReport) {
@@ -210,15 +207,15 @@ function buildTradePlan({
   };
 }
 
-async function fetchPressure(symbol: string) {
-  const response = await fetch(`/api/liquidation-pressure?symbol=${encodeURIComponent(symbol)}&period=1h`, { cache: "no-store" });
+async function fetchPressure(symbol: string, signal: AbortSignal) {
+  const response = await fetch(`/api/liquidation-pressure?symbol=${encodeURIComponent(symbol)}&period=1h`, { cache: "no-store", signal });
   const payload = (await response.json()) as FuturesBriefPayload;
   if (!response.ok || !payload.report) throw new Error(payload.error ?? "선물 압력 확인 실패");
   return payload.report as LiquidationPressureReport;
 }
 
-async function fetchLargeTradeFlow(symbol: string) {
-  const response = await fetch(`/api/large-trade-flow?symbol=${encodeURIComponent(symbol)}`, { cache: "no-store" });
+async function fetchLargeTradeFlow(symbol: string, signal: AbortSignal) {
+  const response = await fetch(`/api/large-trade-flow?symbol=${encodeURIComponent(symbol)}`, { cache: "no-store", signal });
   const payload = (await response.json()) as FuturesBriefPayload;
   if (!response.ok || !payload.report) throw new Error(payload.error ?? "큰 체결 확인 실패");
   return payload.report as LargeTradeFlowReport;
@@ -230,16 +227,21 @@ export function CoinFuturesBrief({ mode, symbols: customSymbols }: { mode: Futur
   const [status, setStatus] = useState<LoadStatus>("idle");
   const [pressureReports, setPressureReports] = useState<LiquidationPressureReport[]>([]);
   const [flowReports, setFlowReports] = useState<LargeTradeFlowReport[]>([]);
+  const requestGeneration = useRef(0);
+  const activeController = useRef<AbortController | null>(null);
 
   const loadPlan = useCallback(async () => {
+    const generation = ++requestGeneration.current;
+    activeController.current?.abort();
+    const controller = new AbortController();
+    activeController.current = controller;
     setStatus("loading");
-    setPressureReports([]);
-    setFlowReports([]);
 
     const [pressureResults, flowResults] = await Promise.all([
-      Promise.allSettled(symbols.map((item) => fetchPressure(item.symbol))),
-      Promise.allSettled(symbols.map((item) => fetchLargeTradeFlow(item.symbol)))
+      Promise.allSettled(symbols.map((item) => fetchPressure(item.symbol, controller.signal))),
+      Promise.allSettled(symbols.map((item) => fetchLargeTradeFlow(item.symbol, controller.signal)))
     ]);
+    if (controller.signal.aborted || generation !== requestGeneration.current) return;
 
     const nextPressure = pressureResults.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
     const nextFlow = flowResults.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
@@ -251,19 +253,21 @@ export function CoinFuturesBrief({ mode, symbols: customSymbols }: { mode: Futur
 
   useEffect(() => {
     void loadPlan();
+    return () => {
+      requestGeneration.current += 1;
+      activeController.current?.abort();
+    };
   }, [loadPlan]);
 
-  const topPressure = useMemo(
-    () => pressureReports.slice().sort((a, b) => pressureScore(b) - pressureScore(a))[0],
-    [pressureReports]
+  const selectedCandidate = useMemo(
+    () => selectFuturesBriefCandidate(symbols, pressureReports, flowReports),
+    [flowReports, pressureReports, symbols]
   );
-  const topFlow = useMemo(
-    () => flowReports.slice().sort((a, b) => flowScore(b) - flowScore(a))[0],
-    [flowReports]
-  );
+  const topPressure = selectedCandidate?.pressure;
+  const topFlow = selectedCandidate?.flow;
   const plan = buildTradePlan({ mode, scopeLabel, status, pressure: topPressure, flow: topFlow });
-  const pressureLabel = topPressure?.symbol.replace(/USDT$/, "") ?? scopeLabel;
-  const flowLabelText = topFlow?.symbol.replace(/USDT$/, "") ?? pressureLabel;
+  const pressureLabel = selectedCandidate?.label ?? scopeLabel;
+  const flowLabelText = selectedCandidate?.label ?? pressureLabel;
 
   return (
     <PanelCard variant="report" padding="md" className="space-y-4 rounded-ui-lg">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RefreshCcw, Zap } from "lucide-react";
 import type { OptionsCurrency, OptionsMarketReport, OptionsMarketSide } from "@/lib/optionsMarket";
 import { ActionButton, AppSurface, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
@@ -74,8 +74,8 @@ function gradeLabel(report: OptionsMarketReport) {
   return "차분";
 }
 
-async function fetchOptionsMarket(currency: OptionsCurrency) {
-  const response = await fetch(`/api/options-market?currency=${currency}`, { cache: "no-store" });
+async function fetchOptionsMarket(currency: OptionsCurrency, signal: AbortSignal) {
+  const response = await fetch(`/api/options-market?currency=${currency}`, { cache: "no-store", signal });
   const payload = (await response.json()) as OptionsMarketPayload;
   if (!response.ok || !payload.report) throw new Error(payload.error ?? "옵션 시장 확인 실패");
   return payload.report;
@@ -85,13 +85,20 @@ export function CoinOptionsMarketPanel({ currencies = defaultCurrencies }: { cur
   const [status, setStatus] = useState<LoadStatus>("idle");
   const [reports, setReports] = useState<OptionsMarketReport[]>([]);
   const [error, setError] = useState("");
+  const requestGenerationRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
   const currencyLabel = currencies.join("/");
   const hasSingleCurrency = currencies.length === 1;
 
   const loadReports = useCallback(async () => {
+    const generation = ++requestGenerationRef.current;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setStatus("loading");
     setError("");
-    const results = await Promise.allSettled(currencies.map((currency) => fetchOptionsMarket(currency)));
+    const results = await Promise.allSettled(currencies.map((currency) => fetchOptionsMarket(currency, controller.signal)));
+    if (controller.signal.aborted || generation !== requestGenerationRef.current) return;
     const nextReports = results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
 
     if (nextReports.length) {
@@ -106,6 +113,10 @@ export function CoinOptionsMarketPanel({ currencies = defaultCurrencies }: { cur
 
   useEffect(() => {
     void loadReports();
+    return () => {
+      requestGenerationRef.current += 1;
+      abortRef.current?.abort();
+    };
   }, [loadReports]);
 
   const topReport = useMemo(() => {

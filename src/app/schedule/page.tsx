@@ -2,8 +2,9 @@ import { ArrowLeft } from "lucide-react";
 import { MacroTicker } from "@/components/MacroTicker";
 import { ActionButton, PanelCard } from "@/components/ui/DesignPrimitives";
 
-export default function SchedulePage({ searchParams }: { searchParams?: { market?: string } }) {
-  const market = searchParams?.market === "stocks" || searchParams?.market === "global" ? "stocks" : "crypto";
+export default async function SchedulePage({ searchParams }: { searchParams: Promise<{ market?: string | string[] }> }) {
+  const { market: requestedMarket } = await searchParams;
+  const market = requestedMarket === "stocks" || requestedMarket === "global" ? "stocks" : "crypto";
   const backHref = market === "stocks" ? "/global" : "/crypto/home";
 
   return (

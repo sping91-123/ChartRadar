@@ -427,7 +427,7 @@ function PlanCard({
 }
 
 export function ProPricingPanel({ marketScope = "all" }: { marketScope?: BillingPageScope } = {}) {
-  const { session, user, profile, isLoading } = useSupabaseAuth();
+  const { session, user, profile, entitlementState, isLoading } = useSupabaseAuth();
   const [checkoutState, setCheckoutState] = useState<CheckoutState>({ status: "idle" });
   const [nativePriceLabels, setNativePriceLabels] = useState<Partial<Record<BillingPlanId, string>>>({});
   const checkoutRunRef = useRef(0);
@@ -440,7 +440,15 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
   const copy = scopeCopy(marketScope);
   const nativePurchaseAvailable = isNativePurchaseAvailable();
   const currentPlanId = (profile?.plan ?? "free") as BillingEntitlementPlan;
-  const currentPlanLabel = isLoading ? "확인 중" : session ? getEntitlementLabel(currentPlanId) : "로그인 필요";
+  const currentPlanLabel = isLoading
+    ? "확인 중"
+    : entitlementState === "unavailable"
+      ? "권한 확인 지연"
+      : entitlementState === "deletion_pending"
+        ? "계정 삭제 처리 대기"
+        : session
+          ? getEntitlementLabel(currentPlanId)
+          : "로그인 필요";
   const hasCryptoAccess = hasMarketEntitlement(currentPlanId, "crypto");
   const hasGlobalAccess = hasMarketEntitlement(currentPlanId, "stocks");
   const plansDescription = nativePurchaseAvailable
@@ -482,6 +490,15 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
 
     if (isLoading) {
       setCheckoutState({ status: "message", tone: "info", text: "계정 상태를 확인하고 있습니다. 잠시 후 다시 눌러 주세요." });
+      return;
+    }
+
+    if (entitlementState === "unavailable") {
+      setCheckoutState({ status: "message", tone: "error", text: "구독 권한을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요." });
+      return;
+    }
+    if (entitlementState === "deletion_pending") {
+      setCheckoutState({ status: "message", tone: "info", text: "계정 삭제 요청이 처리 중이어서 새 구독을 시작할 수 없습니다." });
       return;
     }
 
@@ -534,6 +551,11 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
       return;
     }
 
+    if (entitlementState === "unavailable") {
+      setCheckoutState({ status: "message", tone: "error", text: "구독 권한을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요." });
+      return;
+    }
+
     if (!session?.accessToken || !user?.id) {
       setCheckoutState({ status: "message", tone: "info", text: "구독 권한을 불러오려면 먼저 구글 로그인이 필요합니다." });
       return;
@@ -551,6 +573,14 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
 
   return (
     <section className="flex flex-col gap-4 sm:gap-5">
+      {entitlementState === "unavailable" ? (
+        <div role="status">
+          <AppSurface tone="inset" variant="report" padding="md" className="text-ui-short">
+            <StatusPill tone="risk">권한 확인 지연</StatusPill>
+            <p className="mt-2 text-ui-body font-semibold">기존 구독 기록을 확인하는 중입니다. 무료 플랜으로 변경된 것이 아니며 잠시 후 다시 확인해 주세요.</p>
+          </AppSurface>
+        </div>
+      ) : null}
       <AppSurface tone="panel" variant="flat" padding="none" className="border-y border-ui-line py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <SectionHeader eyebrow={copy.eyebrow} title={copy.title} description={copy.body} />

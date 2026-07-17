@@ -6,15 +6,20 @@ import { Header } from "@/components/Header";
 import { RadarTopNav } from "@/components/RadarTopNav";
 
 interface CheckoutFailPageProps {
-  searchParams?: {
-    code?: string;
-    message?: string;
-  };
+  searchParams: Promise<{
+    code?: string | string[];
+    message?: string | string[];
+  }>;
 }
 
-export default function CheckoutFailPage({ searchParams }: CheckoutFailPageProps) {
-  const errorMessage = searchParams?.message;
-  const errorCode = searchParams?.code;
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function CheckoutFailPage({ searchParams }: CheckoutFailPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const errorMessage = firstValue(resolvedSearchParams.message);
+  const errorCode = firstValue(resolvedSearchParams.code);
 
   return (
     <main className="min-h-screen px-3 pb-10 sm:px-5">

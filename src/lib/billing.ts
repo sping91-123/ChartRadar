@@ -26,8 +26,11 @@ export interface BillingPlan {
   billingPeriodMonths: number;
   periodLabel: string;
   renewalText: string;
-  appStoreProductId?: string;
-  appStoreBasePlanId?: string;
+  storeProducts?: {
+    android: { productId: string; basePlanId: string };
+    ios: { productId: string };
+    revenueCatPackageId: string;
+  };
   description: string;
   highlights: string[];
   limits: {
@@ -74,8 +77,11 @@ export const billingPlans: BillingPlan[] = [
     billingPeriodMonths: 1,
     periodLabel: "월간 구독",
     renewalText: "매월 자동 갱신됩니다. 해지는 Google Play 구독 관리에서 언제든 가능합니다.",
-    appStoreProductId: "chart_radar_crypto_monthly",
-    appStoreBasePlanId: "monthly",
+    storeProducts: {
+      android: { productId: "chart_radar_crypto_monthly", basePlanId: "monthly" },
+      ios: { productId: "chart_radar_crypto_monthly" },
+      revenueCatPackageId: "crypto_monthly"
+    },
     description: "BTC/ETH 판단, 알트 기회와 위험 필터, 코인 상세 조건과 무효화 기준을 함께 확인합니다.",
     highlights: ["BTC/ETH·알트 추적 조건과 리스크 확인", "코인 상세 판단", "무효화 기준과 세부 리스크"],
     limits: {
@@ -98,8 +104,11 @@ export const billingPlans: BillingPlan[] = [
     billingPeriodMonths: 12,
     periodLabel: "연간 구독",
     renewalText: "매년 자동 갱신됩니다. 해지는 Google Play 구독 관리에서 언제든 가능합니다.",
-    appStoreProductId: "chart_radar_crypto_yearly",
-    appStoreBasePlanId: "year-1",
+    storeProducts: {
+      android: { productId: "chart_radar_crypto_yearly", basePlanId: "year-1" },
+      ios: { productId: "chart_radar_crypto_yearly" },
+      revenueCatPackageId: "crypto_yearly"
+    },
     description: "코인 시장을 꾸준히 추적하는 사용자를 위한 연간 플랜입니다. 월 10개월치 기준으로 2개월을 할인합니다.",
     highlights: ["Coin Pro 전체 기능", "월 환산 약 24,167원", "BTC/ETH·알트 리스크 반복 점검"],
     limits: {
@@ -122,8 +131,11 @@ export const billingPlans: BillingPlan[] = [
     billingPeriodMonths: 1,
     periodLabel: "월간 구독",
     renewalText: "매월 자동 갱신됩니다. 해지는 Google Play 구독 관리에서 언제든 가능합니다.",
-    appStoreProductId: "chart_radar_global_monthly",
-    appStoreBasePlanId: "monthly",
+    storeProducts: {
+      android: { productId: "chart_radar_global_monthly", basePlanId: "monthly" },
+      ios: { productId: "chart_radar_global_monthly" },
+      revenueCatPackageId: "stocks_monthly"
+    },
     description: "미국장 30초 체크, 지수선물, 매크로 압력, 이벤트 리스크, 섹터 로테이션과 대장주 레이더를 정리합니다.",
     highlights: ["지수선물·매크로·섹터 리스크 확인", "미국장 상세 판단", "이벤트 리스크와 대장주 레이더"],
     limits: {
@@ -146,8 +158,11 @@ export const billingPlans: BillingPlan[] = [
     billingPeriodMonths: 12,
     periodLabel: "연간 구독",
     renewalText: "매년 자동 갱신됩니다. 해지는 Google Play 구독 관리에서 언제든 가능합니다.",
-    appStoreProductId: "chart_radar_global_yearly",
-    appStoreBasePlanId: "yearly-1",
+    storeProducts: {
+      android: { productId: "chart_radar_global_yearly", basePlanId: "yearly-1" },
+      ios: { productId: "chart_radar_global_yearly" },
+      revenueCatPackageId: "stocks_yearly"
+    },
     description: "미국장과 매크로 흐름을 꾸준히 점검하는 사용자를 위한 연간 플랜입니다. 출시가 기준으로 월간보다 낮은 월 환산가를 제공합니다.",
     highlights: ["Global Pro 전체 기능", "월 환산 약 15,833원", "미국장 30초 체크 반복 확인"],
     limits: {
@@ -170,8 +185,11 @@ export const billingPlans: BillingPlan[] = [
     billingPeriodMonths: 1,
     periodLabel: "월간 구독",
     renewalText: "매월 자동 갱신됩니다. 해지는 Google Play 구독 관리에서 언제든 가능합니다.",
-    appStoreProductId: "chart_radar_bundle_monthly",
-    appStoreBasePlanId: "monthly",
+    storeProducts: {
+      android: { productId: "chart_radar_bundle_monthly", basePlanId: "monthly" },
+      ios: { productId: "chart_radar_bundle_monthly" },
+      revenueCatPackageId: "bundle_monthly"
+    },
     description: "Coin Pro와 Global Pro를 통합해 코인과 글로벌 전체 시장 판단을 한 번에 확인합니다.",
     highlights: ["코인과 미국장을 함께 보는 통합 플랜", "Coin Pro + Global Pro 통합", "두 시장을 함께 보는 사용자용"],
     limits: {
@@ -195,8 +213,11 @@ export const billingPlans: BillingPlan[] = [
     billingPeriodMonths: 6,
     periodLabel: "6개월 구독",
     renewalText: "6개월마다 자동 갱신됩니다. 해지는 Google Play 구독 관리에서 언제든 가능합니다.",
-    appStoreProductId: "chart_radar_bundle_6month",
-    appStoreBasePlanId: "month-6",
+    storeProducts: {
+      android: { productId: "chart_radar_bundle_6month", basePlanId: "month-6" },
+      ios: { productId: "chart_radar_bundle_6month" },
+      revenueCatPackageId: "bundle_6month"
+    },
     description: "코인과 글로벌 전체 시장 판단을 6개월 단위로 함께 쓰는 자동 갱신 통합 구독입니다.",
     highlights: ["All Market Pro 전체 기능", "월 환산 약 33,167원", "코인과 글로벌 전체 시장 판단"],
     limits: {
@@ -225,7 +246,12 @@ export interface StoreEntitlementMarkets {
 }
 
 const appStoreProductIdToPlanId = new Map(
-  paidBillingPlans.flatMap((plan) => (plan.appStoreProductId ? [[plan.appStoreProductId, plan.id] as const] : []))
+  paidBillingPlans.flatMap((plan) => plan.storeProducts
+    ? [
+        [plan.storeProducts.android.productId, plan.id] as const,
+        [plan.storeProducts.ios.productId, plan.id] as const
+      ]
+    : [])
 );
 
 const billingPlanPriorityByScope: Record<BillingPageScope, BillingPlanId[]> = {
@@ -255,9 +281,10 @@ export function getBillingPeriodMonths(planId: BillingPlanId) {
   return findBillingPlan(planId)?.billingPeriodMonths ?? 1;
 }
 
-export function getStoreProductIdentifier(plan: BillingPlan) {
-  if (!plan.appStoreProductId) return null;
-  return plan.appStoreBasePlanId ? `${plan.appStoreProductId}:${plan.appStoreBasePlanId}` : plan.appStoreProductId;
+export function getStoreProductIdentifier(plan: BillingPlan, platform: "android" | "ios" = "android") {
+  if (!plan.storeProducts) return null;
+  if (platform === "ios") return plan.storeProducts.ios.productId;
+  return `${plan.storeProducts.android.productId}:${plan.storeProducts.android.basePlanId}`;
 }
 
 export function normalizeStoreProductId(productId: string | null | undefined): NormalizedStoreProductId | null {
@@ -295,8 +322,8 @@ export function resolvePlanIdFromStoreProductId(productId: string | null | undef
   if (!subscriptionPlanId) return null;
 
   const plan = findBillingPlan(subscriptionPlanId);
-  if (!normalizedProductId.basePlanId || !plan?.appStoreBasePlanId) return subscriptionPlanId;
-  return normalizedProductId.basePlanId === plan.appStoreBasePlanId ? subscriptionPlanId : null;
+  if (!normalizedProductId.basePlanId || !plan?.storeProducts) return subscriptionPlanId;
+  return normalizedProductId.basePlanId === plan.storeProducts.android.basePlanId ? subscriptionPlanId : null;
 }
 
 export function resolveStoreEntitlementMarkets(activeEntitlements: Record<string, unknown> | null | undefined): StoreEntitlementMarkets {

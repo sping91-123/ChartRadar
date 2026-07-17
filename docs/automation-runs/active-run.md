@@ -225,3 +225,61 @@ Task 6 must select at most one follow-up candidate:
 - Commit hash.
 - Push status.
 - Final git status.
+
+## 2026-07-16 별도 대표 지시 실행 기록
+
+- 기존 `ios-first-local-build-readiness-run`은 그대로 `DONE`이며 이 기록은 active run 자동 실행이 아니라 대표가 승인한 ChartRadar 전체 안정화 계획의 별도 실행 결과다.
+- 로컬 구현 범위: entitlement/RLS/migration, RevenueCat/Auth/계정 삭제, 분석·라우팅, 복구 UX·접근성·PWA, iOS 정적 준비, 배포 smoke.
+- 검증: entitlement/auth/futures/hotfix 테스트, Supabase/billing/routes/mobile/ops/API/CSS smoke, `smoke:all`, TypeScript, production build, `git diff --check`, CLI Playwright 18개 모바일 화면.
+- 결과: 모든 로컬 필수 게이트 통과. iOS 외부 자격증명과 Xcode team 설정 7개는 release gate에서 의도대로 차단됐다.
+- 남은 위험: 운영 재집계와 migration 적용, RevenueCat/Apple 콘솔 설정, Mac archive/TestFlight, production deploy/release는 별도 승인 필요.
+- 운영 변경: 없음. beta 12명 mutation 없음. Android 뒤로가기 정책 변경 없음.
+- 커밋: 없음. push/deploy/release: 수행하지 않음.
+
+## 2026-07-17 운영 전 read-only 게이트
+
+- 운영 Supabase를 집계·catalog·advisor 쿼리로만 재확인했다.
+- 최신 기준선: profiles/auth users 62/62, free 50, beta premium 12, admin 1, subscriptions 0, signals 0.
+- beta 12명은 모두 2026-05 cohort이고 non-legacy subscription 충돌은 0건이다.
+- migration ledger table은 없으며 profile self-upgrade, broad signal ACL/RLS, 공개 SECURITY DEFINER 실행 위험이 아직 운영에 남아 있다.
+- `docs/production-entitlement-cutover-runbook.md`에 Gate A~D, dry-run hash, 검증과 중단 조건을 기록했다.
+- 로컬 migration/security/hotfix 회귀와 `git diff --check`는 통과했다.
+- production DDL/DML, beta mutation, migration 등록, push/deploy/release는 실행하지 않았다. 다음 단계는 별도 production 승인 게이트다.
+
+## 2026-07-17 운영 Gate A+B 적용
+
+- 대표의 명시적 승인 후 profile self-upgrade 차단과 signal fail-closed 두 migration만 운영에 적용했다.
+- ledger: `20260717092124 close_profile_entitlement_self_upgrade`, `20260717092324 close_signal_entitlement_gap`.
+- 실제 disposable Basic JWT에서 profile self-upgrade HTTP 403, anon signal SELECT 401, authenticated signal SELECT/DELETE 403을 확인했다.
+- signup trigger와 service-role profile UPDATE는 정상이며 disposable user/profile은 즉시 삭제됐다.
+- 최종 기준선 62 users/profiles, free 50, beta 12, subscriptions 0, signals 0 및 beta hash 불변을 확인했다.
+- Gate C, beta backfill, deploy/push/release는 수행하지 않았다.
+- Gate A+B advisor 이후 canonical migration의 production-missing-column signup 결함과 공개 trigger 함수 ACL을 로컬에서 보강했고 entitlement/migration/security 회귀를 통과했다. 이 Gate C 보강은 운영 미적용이다.
+
+## 2026-07-17 운영 Gate C schema/RPC와 beta dry-run
+
+- 대표 승인 범위: canonical schema/RPC 적용과 `backfill_legacy_beta_entitlements(12, true, null)` dry-run. 실제 beta DML은 제외했다.
+- 첫 적용은 missing `signals.triggered_at` 오류로 원자적으로 롤백됐다. production `fired_at` 보존 이관과 old subscription provider/tier constraint 제거를 추가하고 실제 운영형 PGlite fixture를 통과한 뒤 재적용했다.
+- ledger: `20260717131436 canonical_entitlement_ledger`.
+- 실제 JWT: signup/free profile 정상, self-upgrade 403, signal anon/Basic SELECT 200, authenticated DELETE 403, beta RPC anon 401/authenticated 403, disposable cleanup 완료.
+- dry-run: eligible 12, conflict 0, changed false, hash `23514409169df37bd42368113e94cb60`.
+- 사후 기준선: profiles/auth users 63/63, Basic 51, beta 12, subscriptions 0, entitlement events 0, signals 0.
+- advisor 후속: event ledger service-role privilege 최소화, duplicate legacy subscription policy 제거, entitlement helper SECURITY INVOKER 전환이 필요하다.
+- 후속 migration `20260717133500_gate_c_advisor_hardening.sql`과 cohort 경쟁을 막는 `20260717134000_lock_beta_backfill_cohort.sql`은 로컬 회귀만 완료했고 운영 미적용이다.
+- beta apply, Gate D, provider console, commit, push, deploy, release는 수행하지 않았다.
+
+## 2026-07-17 전체 안정화 최종 구현·운영 기록
+
+- 대표의 전체 승인 후 Gate C advisor hardening, beta cohort lock, beta backfill, Gate D 계정 삭제 원장, retry hardening을 단계별 검증과 함께 운영에 적용했다.
+- 운영 ledger는 총 7건이며, beta dry-run과 apply 모두 대상 12명·충돌 0건·hash `23514409169df37bd42368113e94cb60` 조건을 만족했다.
+- beta 12명에게 `profiles.created_at`부터 3개월인 `legacy_beta` subscription과 event를 각각 12건 생성했다. 최종 auth users/profiles 63/63, Basic 51, beta 12, subscriptions/events 12/12, signals/deletion requests/OAuth credentials 0/0/0이다.
+- 계정 삭제 요청의 7일 deadline 멱등성, pending 취소, processing lock, 실패 backoff, 수동 retry를 운영 JWT/RPC로 검증했다. 표시된 일회용 Basic 계정 하나만 단건 처리해 Auth/profile/request 제거와 기존 beta aggregate 불변을 확인했다.
+- 정상 권한은 subscriptions 단일 원장으로 통일했고 profile/app-metadata 유료 fallback, 비관리자 admin fallback, verified-empty 미철회, signal broad authenticated read를 제거했다.
+- 동일 symbol 선물 근거 선택, ETH canonical route, stale response 차단, 글로벌 알림 기록, same-origin auth redirect, Supabase/RevenueCat logout 경계, neutral 계정 삭제 UX, root 복구 boundary, Journal/Spot/Global 복구 상태, 확대·ARIA·PWA 연결을 구현했다.
+- Next.js `15.5.18`, React/DOM `19.2.7`로 보안 업그레이드하고 async `searchParams` 경계를 이관했다. production/full `npm audit`는 모두 취약점 0건이다.
+- 필수 entitlement/auth/futures/hotfix 테스트, migration/Supabase/billing/mobile/ops/routes smoke, TypeScript, lint, production build, `smoke:all`, `git diff --check`가 모두 통과했다.
+- CLI Playwright로 360×800과 390×844에서 `/crypto/home`, `/crypto/perpetual/alts`, `/global`, `/news?market=global`, `/journal`, `/pro`, `/global/alertlist`, `/account/delete` 총 16개 화면을 확인했다. 모든 화면에서 가로 overflow와 console error/warning은 0건이다. Codex in-app Browser는 사용하지 않았다.
+- iOS release gate는 iOS RevenueCat key, Apple Team/Key/Client ID, private key, token encryption key, Xcode `DEVELOPMENT_TEAM`의 7개 외부 조건을 의도대로 차단한다. Windows에서는 실제 archive/TestFlight를 완료할 수 없다.
+- Android 뒤로가기의 `/crypto/home` 이동은 대표 의도대로 변경하지 않았다.
+- Android release bundle을 clean build로 새로 생성했다. `com.staronlabs.chartradar`, versionCode `12`, versionName `1.0.8`, 운영 URL `https://chartradar.kr`, cleartext 비활성 상태다.
+- AAB: `android/app/build/outputs/bundle/release/app-release.aab`, 7,584,612 bytes, SHA-256 `4B9F9BEF40200F477DF78444C8FBC95B63AFF119D09F50F02CA2F6BE8F6F8F51`. Gradle `validateSigningRelease`와 `jarsigner -verify`가 통과했다. 업로드 키는 self-signed certificate이므로 jarsigner의 chain/timestamp warning은 남는다.

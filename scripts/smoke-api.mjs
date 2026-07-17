@@ -117,22 +117,22 @@ const checks = [
     expectedText: "관심코인"
   },
   {
-    label: "결제 시작 대용량 요청 차단",
+    label: "비활성 웹 결제는 본문을 해석하지 않고 종료",
     path: "/api/billing/checkout",
     method: "POST",
     rawBody: "x".repeat(8_001),
     headers: { "content-type": "text/plain" },
-    expectedStatus: [413],
-    expectedText: "너무 큽니다"
+    expectedStatus: [410],
+    expectedText: "제공하지 않습니다"
   },
   {
-    label: "결제 승인 대용량 요청 차단",
+    label: "비활성 결제 승인은 본문을 해석하지 않고 종료",
     path: "/api/billing/confirm",
     method: "POST",
     rawBody: "x".repeat(8_001),
     headers: { "content-type": "text/plain" },
-    expectedStatus: [413],
-    expectedText: "너무 큽니다"
+    expectedStatus: [410],
+    expectedText: "비활성화"
   }
 ];
 

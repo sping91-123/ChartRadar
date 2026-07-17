@@ -37,6 +37,8 @@ export function StockRadarApp() {
   const chartRef = useRef<HTMLDivElement | null>(null);
   const chartApiRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const requestGenerationRef = useRef(0);
+  const requestAbortRef = useRef<AbortController | null>(null);
   const [symbol, setSymbol] = useState("QQQ");
   const [timeframe, setTimeframe] = useState<ChartTimeframe>("1d");
   const [radarMode, setRadarMode] = useState<GlobalRadarMode>("combined");
@@ -81,6 +83,10 @@ export function StockRadarApp() {
   }, [watchlistLimit]);
 
   const load = useCallback(async () => {
+    const generation = ++requestGenerationRef.current;
+    requestAbortRef.current?.abort();
+    const controller = new AbortController();
+    requestAbortRef.current = controller;
     const usageGate = getUsageGate("stockRadar", isPaid);
     if (!usageGate.allowed) {
       setState({ status: "error", message: usageGate.message });
@@ -91,7 +97,7 @@ export function StockRadarApp() {
     try {
       const response = await fetch(
         `/api/stocks/candles?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}`,
-        await withSupabaseAuth({ cache: "no-store" })
+        await withSupabaseAuth({ cache: "no-store", signal: controller.signal })
       );
       const data = (await response.json().catch(() => ({}))) as {
         candles?: Candle[];
@@ -101,6 +107,7 @@ export function StockRadarApp() {
         error?: string;
       };
 
+      if (controller.signal.aborted || generation !== requestGenerationRef.current) return;
       if (Array.isArray(data.universe) && data.universe.length) setUniverse(data.universe);
       if (!response.ok) throw new Error("글로벌 시장 흐름을 잠시 확인하지 못했습니다. 잠시 뒤 다시 확인해 주세요.");
       if (!Array.isArray(data.candles) || data.candles.length === 0) {
@@ -115,6 +122,7 @@ export function StockRadarApp() {
       });
       recordUsageEvent("stockRadar");
     } catch (error) {
+      if (controller.signal.aborted || generation !== requestGenerationRef.current) return;
       const message = error instanceof Error ? error.message : "글로벌 시장 흐름을 잠시 확인하지 못했습니다.";
       setState({ status: "error", message });
     }
@@ -122,6 +130,10 @@ export function StockRadarApp() {
 
   useEffect(() => {
     void load();
+    return () => {
+      requestGenerationRef.current += 1;
+      requestAbortRef.current?.abort();
+    };
   }, [load]);
 
   useEffect(() => {

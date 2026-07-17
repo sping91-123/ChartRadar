@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { ChevronDown, LineChart, ShieldAlert } from "lucide-react";
 import { CoinOptionsMarketPanel } from "@/components/coin/CoinOptionsMarketPanel";
 import { CoinLargeTradeFlowPanel } from "@/components/coin/CoinLargeTradeFlowPanel";
@@ -14,44 +14,12 @@ import { Header } from "@/components/Header";
 import { LiveMarketChart } from "@/components/LiveMarketChart";
 import { RadarTopNav } from "@/components/RadarTopNav";
 import { SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
+import type { MajorAssetId } from "@/lib/majorAssetRoute";
 
 const majorAssetOptions = [
   { id: "btc", label: "비트", detail: "BTC", apiSymbol: "BTCUSDT", chartSymbol: "BTCUSDT.P" },
   { id: "eth", label: "이더", detail: "ETH", apiSymbol: "ETHUSDT", chartSymbol: "ETHUSDT.P" }
 ] as const;
-
-type MajorAssetId = (typeof majorAssetOptions)[number]["id"];
-
-function isMajorAssetId(value: string | null): value is MajorAssetId {
-  return value === "btc" || value === "eth";
-}
-
-function CoinMajorAssetSwitch({ active, onChange }: { active: MajorAssetId; onChange: (next: MajorAssetId) => void }) {
-  return (
-    <nav className="rounded-ui-lg bg-ui-panel p-1" aria-label="메이저 선물 코인 선택">
-      <div className="grid grid-cols-2 gap-1">
-        {majorAssetOptions.map((asset) => {
-          const isActive = asset.id === active;
-
-          return (
-            <button
-              key={asset.id}
-              type="button"
-              onClick={() => onChange(asset.id)}
-              aria-pressed={isActive}
-              className={`min-h-[3.3rem] min-w-0 rounded-ui-sm px-2 py-2 text-center transition ${
-                isActive ? "bg-ui-active text-ui-text" : "text-ui-muted hover:bg-ui-inset/60 hover:text-ui-text"
-              }`}
-            >
-              <span className="block text-sm font-semibold leading-5">{asset.label}</span>
-              <span className="block text-[11px] font-medium leading-4 text-ui-subtle">{asset.detail}</span>
-            </button>
-          );
-        })}
-      </div>
-    </nav>
-  );
-}
 
 function BackgroundEvidenceDisclosure({ children }: { children: ReactNode }) {
   return (
@@ -71,8 +39,8 @@ function BackgroundEvidenceDisclosure({ children }: { children: ReactNode }) {
   );
 }
 
-export function MajorsApp() {
-  const [activeAssetId, setActiveAssetId] = useState<MajorAssetId>("btc");
+export function MajorsApp({ initialAsset = "btc" }: { initialAsset?: MajorAssetId }) {
+  const [activeAssetId, setActiveAssetId] = useState<MajorAssetId>(initialAsset);
   const activeAsset = majorAssetOptions.find((asset) => asset.id === activeAssetId) ?? majorAssetOptions[0];
   const selectedSymbols = useMemo(
     () => [{ symbol: activeAsset.apiSymbol, label: activeAsset.detail }],
@@ -83,12 +51,9 @@ export function MajorsApp() {
     setActiveAssetId(next);
     const url = new URL(window.location.href);
     url.searchParams.set("asset", next);
+    url.searchParams.delete("symbol");
+    url.searchParams.delete("exchange");
     window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
-  }, []);
-
-  useEffect(() => {
-    const requestedAsset = new URLSearchParams(window.location.search).get("asset");
-    if (isMajorAssetId(requestedAsset)) setActiveAssetId(requestedAsset);
   }, []);
 
   return (
@@ -96,8 +61,7 @@ export function MajorsApp() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 sm:gap-3">
         <Header market="crypto" />
         <RadarTopNav />
-        <CoinFuturesSwitch active="major" />
-        <CoinMajorAssetSwitch active={activeAssetId} onChange={handleAssetChange} />
+        <CoinFuturesSwitch active={activeAssetId} onAssetChange={handleAssetChange} />
         <CoinFuturesBrief mode="major" symbols={selectedSymbols} />
 
         <section className="space-y-3 pt-1">

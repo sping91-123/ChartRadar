@@ -7,17 +7,24 @@ import { Header } from "@/components/Header";
 import { RadarTopNav } from "@/components/RadarTopNav";
 
 interface CheckoutSuccessPageProps {
-  searchParams?: {
-    orderId?: string;
-    paymentKey?: string;
-    amount?: string;
-    plan?: string;
-  };
+  searchParams: Promise<{
+    orderId?: string | string[];
+    paymentKey?: string | string[];
+    amount?: string | string[];
+    plan?: string | string[];
+  }>;
 }
 
-export default function CheckoutSuccessPage({ searchParams }: CheckoutSuccessPageProps) {
-  const orderId = searchParams?.orderId;
-  const amount = searchParams?.amount;
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function CheckoutSuccessPage({ searchParams }: CheckoutSuccessPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const orderId = firstValue(resolvedSearchParams.orderId);
+  const paymentKey = firstValue(resolvedSearchParams.paymentKey);
+  const amount = firstValue(resolvedSearchParams.amount);
+  const planId = firstValue(resolvedSearchParams.plan);
 
   return (
     <main className="min-h-screen px-3 pb-10 sm:px-5">
@@ -34,10 +41,10 @@ export default function CheckoutSuccessPage({ searchParams }: CheckoutSuccessPag
           </div>
 
           <CheckoutConfirmationPanel
-            orderId={searchParams?.orderId}
-            paymentKey={searchParams?.paymentKey}
-            amount={searchParams?.amount}
-            planId={searchParams?.plan}
+            orderId={orderId}
+            paymentKey={paymentKey}
+            amount={amount}
+            planId={planId}
           />
 
           <div className="mt-6 grid gap-3 border-y border-surface-line md:grid-cols-3 md:divide-x md:divide-surface-line">

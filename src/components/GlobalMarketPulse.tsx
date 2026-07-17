@@ -2,7 +2,7 @@
 // 글로벌 주요 자산의 미국장 30초 체크 판단을 보여주는 대시보드입니다.
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, BarChart3, CalendarClock, Gauge, LineChart, Loader2, Lock, Newspaper, RefreshCw, ShieldAlert, Sparkles, type LucideIcon } from "lucide-react";
 import { hasMarketEntitlement } from "@/lib/billing";
 import { withSupabaseAuth } from "@/lib/authFetch";
@@ -146,7 +146,7 @@ type DashboardPayload = {
 
 type PulseState =
   | { status: "loading" }
-  | { status: "ready"; payload: DashboardPayload }
+  | { status: "ready"; payload: DashboardPayload; refreshing?: boolean; warning?: string }
   | { status: "error"; message: string };
 
 const fallbackChecklist = ["QQQ와 SPY 방향 확인", "VIX 변동성 확인", "NVDA/SMH 반도체 주도력 확인", "GLD/CL 원자재·안전자산 흐름 확인", "오늘 주요 일정 확인"];
@@ -563,19 +563,35 @@ export function GlobalMarketPulse() {
   const { profile } = useSupabaseAuth();
   const isPaid = hasMarketEntitlement(profile?.plan, "stocks");
   const [state, setState] = useState<PulseState>({ status: "loading" });
+  const requestGenerationRef = useRef(0);
+  const requestAbortRef = useRef<AbortController | null>(null);
 
-  async function load(silent = false) {
-    if (!silent) setState({ status: "loading" });
+  const load = useCallback(async (silent = false) => {
+    const generation = ++requestGenerationRef.current;
+    requestAbortRef.current?.abort();
+    const controller = new AbortController();
+    requestAbortRef.current = controller;
+    if (!silent) {
+      setState((current) => current.status === "ready" ? { ...current, refreshing: true, warning: undefined } : { status: "loading" });
+    }
     try {
-      const response = await fetch(`/api/stocks/market-board?ts=${Date.now()}`, await withSupabaseAuth({ cache: "no-store" }));
+      const response = await fetch(
+        `/api/stocks/market-board?ts=${Date.now()}`,
+        await withSupabaseAuth({ cache: "no-store", signal: controller.signal })
+      );
       const data = (await response.json().catch(() => ({}))) as Partial<DashboardPayload> & { error?: string };
       if (!response.ok) throw new Error(data.error ?? "글로벌 시장 흐름을 잠시 확인하지 못했습니다.");
       if (!data.marketMode || !Array.isArray(data.corePressures)) throw new Error("글로벌 시장 흐름 데이터가 아직 준비되지 않았습니다.");
+      if (controller.signal.aborted || generation !== requestGenerationRef.current) return;
       setState({ status: "ready", payload: data as DashboardPayload });
     } catch (error) {
-      setState({ status: "error", message: error instanceof Error ? error.message : "글로벌 시장 흐름을 잠시 확인하지 못했습니다." });
+      if (controller.signal.aborted || generation !== requestGenerationRef.current) return;
+      const message = error instanceof Error ? error.message : "글로벌 시장 흐름을 잠시 확인하지 못했습니다.";
+      setState((current) => current.status === "ready"
+        ? { ...current, refreshing: false, warning: message }
+        : { status: "error", message });
     }
-  }
+  }, []);
 
   useEffect(() => {
     void load();
@@ -588,11 +604,13 @@ export function GlobalMarketPulse() {
     document.addEventListener("visibilitychange", handleFocusRefresh);
 
     return () => {
+      requestGenerationRef.current += 1;
+      requestAbortRef.current?.abort();
       window.clearInterval(interval);
       window.removeEventListener("focus", handleFocusRefresh);
       document.removeEventListener("visibilitychange", handleFocusRefresh);
     };
-  }, []);
+  }, [load]);
 
   const payload = state.status === "ready" ? state.payload : null;
   const corePressures = useMemo(() => payload?.corePressures.slice(0, 3) ?? [], [payload]);
@@ -627,11 +645,18 @@ export function GlobalMarketPulse() {
             onClick={() => load()}
             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-ui-sm bg-ui-elevated px-3 text-xs font-semibold text-ui-muted transition hover:bg-ui-inset hover:text-ui-text"
           >
-            <RefreshCw size={13} aria-hidden />
+            <RefreshCw className={state.status === "ready" && state.refreshing ? "animate-spin" : ""} size={13} aria-hidden />
             다시 확인
           </button>
         </div>
       </div>
+
+      {state.status === "ready" && state.warning ? (
+        <div className="mt-4 flex items-start gap-2 rounded-ui-sm border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs leading-5 text-amber-100" role="status">
+          <AlertTriangle className="mt-0.5 shrink-0" size={14} aria-hidden />
+          <span>최근 정상 데이터를 유지하고 있습니다. {state.warning}</span>
+        </div>
+      ) : null}
 
       {state.status === "loading" ? (
         <div className="mt-4 rounded-ui-lg bg-ui-elevated p-3">

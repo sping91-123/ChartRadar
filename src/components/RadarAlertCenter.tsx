@@ -506,7 +506,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
   }, [setupMatches]);
   const alertUsageBucketId = market === "stocks" ? "stocksAlertRule" : "cryptoAlertRule";
   const isAndroidAppPush = appPushState.supported && appPushState.platform === "android";
-  const isAdmin = profile?.plan === "admin" || user?.app_metadata?.role === "admin" || user?.app_metadata?.plan === "admin";
+  const isAdmin = user?.app_metadata?.role === "admin";
   const alertsMarketParam = market === "stocks" ? "global" : "crypto";
   const loginHref = `/login?returnTo=${encodeURIComponent(market === "stocks" ? `/alerts?market=${alertsMarketParam}` : "/crypto/alertset")}`;
   const isAppPushConnecting =

@@ -15,6 +15,7 @@ const allowLocalRefreshToken = process.env.NEXT_PUBLIC_ALLOW_LOCAL_REFRESH_TOKEN
 
 export interface SupabaseSession {
   accessToken: string;
+  userId?: string;
   refreshToken?: string;
   expiresAt?: number;
   tokenType?: string;
@@ -42,6 +43,14 @@ export interface SupabaseUser {
     avatar_url?: string;
     picture?: string;
   };
+  identities?: Array<{
+    id?: string;
+    provider?: string;
+    identity_data?: {
+      sub?: string;
+      [key: string]: unknown;
+    };
+  }>;
 }
 
 export interface SupabaseProfile {
@@ -66,6 +75,11 @@ export interface SupabaseSubscription {
   provider_customer_id: string | null;
   provider_subscription_id: string | null;
   provider_order_id: string | null;
+  provider_product_id: string | null;
+  provider_payment_id: string | null;
+  observed_at: string | null;
+  revoked_at: string | null;
+  revocation_reason: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -84,6 +98,11 @@ type SupabaseSubscriptionRow = Omit<SupabaseSubscription, "plan" | "market_scope
   current_period_start?: string | null;
   provider_customer_id?: string | null;
   provider_order_id?: string | null;
+  provider_product_id?: string | null;
+  provider_payment_id?: string | null;
+  observed_at?: string | null;
+  revoked_at?: string | null;
+  revocation_reason?: string | null;
   updated_at?: string | null;
 };
 
@@ -122,6 +141,7 @@ export function saveSupabaseSession(session: SupabaseSession) {
     ? session
     : {
         accessToken: session.accessToken,
+        userId: session.userId,
         expiresAt: session.expiresAt,
         tokenType: session.tokenType
       };
@@ -183,6 +203,20 @@ export function clearSupabaseSession() {
   window.localStorage.removeItem(legacySupabaseSessionStorageKey);
 }
 
+export async function signOutSupabaseSession(accessToken: string, scope: "local" | "global" = "local") {
+  if (!isSupabaseConfigured() || !accessToken) return;
+  const response = await fetch(`${supabaseUrl}/auth/v1/logout?scope=${scope}`, {
+    method: "POST",
+    headers: {
+      apikey: supabasePublishableKey,
+      Authorization: `Bearer ${accessToken}`
+    }
+  });
+  if (!response.ok && response.status !== 401) {
+    throw new Error("Supabase 로그아웃을 완료하지 못했습니다.");
+  }
+}
+
 export async function refreshSupabaseSession(session: SupabaseSession): Promise<SupabaseSession | null> {
   if (!isSupabaseConfigured() || !session.refreshToken) return null;
 
@@ -214,6 +248,7 @@ export async function refreshSupabaseSession(session: SupabaseSession): Promise<
 
   const nextSession: SupabaseSession = {
     accessToken: payload.access_token,
+    userId: session.userId,
     refreshToken: payload.refresh_token ?? session.refreshToken,
     expiresAt: payload.expires_in ? Math.floor(Date.now() / 1000) + payload.expires_in : undefined,
     tokenType: payload.token_type
@@ -265,6 +300,34 @@ export async function exchangeGoogleIdToken(idToken: string, nonce: string): Pro
   return nextSession;
 }
 
+export async function exchangeAppleIdToken(idToken: string, nonce: string): Promise<SupabaseSession> {
+  if (!isSupabaseConfigured()) throw new Error("로그인을 잠시 사용할 수 없습니다.");
+  if (!idToken || !nonce) throw new Error("Apple 로그인 정보가 올바르지 않습니다.");
+  const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=id_token`, {
+    method: "POST",
+    headers: { apikey: supabasePublishableKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ provider: "apple", id_token: idToken, nonce })
+  });
+  const payload = (await response.json().catch(() => ({}))) as {
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+    token_type?: string;
+    error_description?: string;
+  };
+  if (!response.ok || !payload.access_token) {
+    throw new Error(payload.error_description ?? "Apple 로그인을 완료하지 못했습니다.");
+  }
+  const session: SupabaseSession = {
+    accessToken: payload.access_token,
+    refreshToken: payload.refresh_token,
+    expiresAt: payload.expires_in ? Math.floor(Date.now() / 1000) + payload.expires_in : undefined,
+    tokenType: payload.token_type
+  };
+  saveSupabaseSession(session);
+  return session;
+}
+
 export async function fetchSupabaseUser(accessToken: string) {
   if (!isSupabaseConfigured()) throw new Error("로그인을 잠시 사용할 수 없습니다.");
 
@@ -306,9 +369,8 @@ export async function fetchSupabaseActiveSubscriptions(accessToken: string, user
   const resolvedUserId = userId ?? user?.id;
   if (!resolvedUserId) return [];
 
-  const now = encodeURIComponent(new Date().toISOString());
   const rows = await supabaseRest<SupabaseSubscriptionRow[]>(
-    `subscriptions?select=*&user_id=eq.${encodeURIComponent(resolvedUserId)}&status=in.(active,trialing)&current_period_end=gt.${now}&order=current_period_end.desc`,
+    `subscriptions?select=id,user_id,provider,status,plan,market_scope,current_period_start,current_period_end,revoked_at,created_at,updated_at&user_id=eq.${encodeURIComponent(resolvedUserId)}&order=current_period_end.desc`,
     { accessToken }
   );
 
@@ -324,9 +386,31 @@ export async function fetchSupabaseActiveSubscriptions(accessToken: string, user
     provider_customer_id: subscription.provider_customer_id ?? null,
     provider_subscription_id: subscription.provider_subscription_id ?? null,
     provider_order_id: subscription.provider_order_id ?? null,
+    provider_product_id: subscription.provider_product_id ?? null,
+    provider_payment_id: subscription.provider_payment_id ?? null,
+    observed_at: subscription.observed_at ?? null,
+    revoked_at: subscription.revoked_at ?? null,
+    revocation_reason: subscription.revocation_reason ?? null,
     created_at: subscription.created_at,
     updated_at: subscription.updated_at ?? subscription.created_at
   }));
+}
+
+export interface SupabaseAccountDeletionRequest {
+  id: string;
+  user_id: string;
+  status: "pending" | "processing" | "completed" | "canceled" | "failed";
+  requested_at: string;
+  process_after: string;
+  completed_at: string | null;
+}
+
+export async function fetchSupabaseAccountDeletionRequest(accessToken: string, userId: string) {
+  const rows = await supabaseRest<SupabaseAccountDeletionRequest[]>(
+    `account_deletion_requests?select=id,user_id,status,requested_at,process_after,completed_at&user_id=eq.${encodeURIComponent(userId)}&status=in.(pending,processing,failed)&order=requested_at.desc&limit=1`,
+    { accessToken }
+  );
+  return rows[0] ?? null;
 }
 
 export async function supabaseRest<T>(

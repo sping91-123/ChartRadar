@@ -4,14 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { parseSessionFromHash, saveSupabaseSession } from "@/lib/supabase";
+import { normalizeReturnTo } from "@/lib/authRedirect";
 
 const authReturnToStorageKey = "chartRadar.auth.returnTo";
 const skipSplashAfterAuthKey = "chartRadar.skipSplashAfterAuth.v1";
-
-function safeReturnTo(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
-  return value;
-}
 
 export default function AuthCallbackPage() {
   const [message, setMessage] = useState("로그인 정보를 확인하고 있습니다.");
@@ -20,7 +16,7 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const storedReturnTo = window.sessionStorage.getItem(authReturnToStorageKey);
-    const returnTo = safeReturnTo(params.get("returnTo")) ?? safeReturnTo(storedReturnTo) ?? "/crypto";
+    const returnTo = normalizeReturnTo(params.get("returnTo")) ?? normalizeReturnTo(storedReturnTo) ?? "/crypto";
     const session = parseSessionFromHash(window.location.hash);
 
     if (!session) {

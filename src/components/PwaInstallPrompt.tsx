@@ -2,6 +2,7 @@
 // 모바일 홈 화면 설치 안내와 서비스워커 등록을 관리하는 컴포넌트입니다.
 
 import { useEffect, useMemo, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { Download, X } from "lucide-react";
 
 type BeforeInstallPromptEvent = Event & {
@@ -33,6 +34,11 @@ function isLocalPreviewHost() {
   return ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
 }
 
+function isNativePwaContext() {
+  if (typeof window === "undefined") return false;
+  return Capacitor.isNativePlatform() || document.documentElement.dataset.nativeApp === "true";
+}
+
 async function clearLocalPwaCache() {
   if (!("serviceWorker" in navigator)) return;
   const registrations = await navigator.serviceWorker.getRegistrations();
@@ -49,20 +55,25 @@ export function PwaInstallPrompt() {
   const [isDismissed, setIsDismissed] = useState(true);
 
   useEffect(() => {
-    if (!("serviceWorker" in navigator)) return;
+    if (!("serviceWorker" in navigator) || isNativePwaContext()) return;
 
     if (process.env.NODE_ENV !== "production" || isLocalPreviewHost()) {
       void clearLocalPwaCache().catch(() => undefined);
       return;
     }
 
-    window.addEventListener("load", () => {
-      void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
-    });
+    const register = () => void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+    if (document.readyState === "complete") {
+      register();
+      return;
+    }
+
+    window.addEventListener("load", register, { once: true });
+    return () => window.removeEventListener("load", register);
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || isNativePwaContext()) return;
 
     const dismissed = window.localStorage.getItem(dismissedKey) === "1";
     setIsDismissed(dismissed || isStandalone());
@@ -100,7 +111,7 @@ export function PwaInstallPrompt() {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-md rounded-lg border border-accent-blue/30 bg-slate-950 p-3 text-white shadow-none sm:right-4 sm:left-auto">
+    <div role="region" aria-label="앱 설치 안내" className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] z-50 mx-auto max-w-md rounded-lg border border-accent-blue/30 bg-slate-950 p-3 text-white shadow-none sm:bottom-4 sm:right-4 sm:left-auto">
       <div className="flex items-start gap-3">
         <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-accent-blue/30 bg-accent-blue/10 text-accent-blue">
           <Download size={18} aria-hidden />

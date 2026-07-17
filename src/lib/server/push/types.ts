@@ -20,8 +20,13 @@ export interface PushProfileRow {
 
 export interface PushSubscriptionRow {
   user_id: string;
+  provider?: string | null;
+  status?: string | null;
   plan?: BillingEntitlementPlan;
   tier?: BillingEntitlementPlan;
+  market_scope?: "trial" | "crypto" | "stocks" | "bundle" | null;
+  current_period_end?: string | null;
+  revoked_at?: string | null;
 }
 
 export interface PushAlertPresetRow {

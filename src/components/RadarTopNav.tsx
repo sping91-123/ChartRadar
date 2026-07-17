@@ -70,6 +70,7 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
           <Link
             key={label}
             href={href}
+            aria-current={active ? "page" : undefined}
             className={`group flex min-h-[3.2rem] min-w-0 flex-col items-center justify-center gap-1 px-1.5 py-0.5 text-center text-xs font-semibold leading-none transition sm:min-h-[3.15rem] sm:px-2 ${
               isFixedGridNav ? "w-full" : "shrink-0 md:shrink"
             } ${
@@ -87,7 +88,7 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
   );
 
   return (
-    <nav className="radar-bottom-nav fixed inset-x-0 bottom-0 z-40 px-0 pt-0">
+    <nav aria-label={market === "stocks" ? "글로벌 시장 주요 메뉴" : market === "all" ? "주요 메뉴" : "코인 시장 주요 메뉴"} className="radar-bottom-nav fixed inset-x-0 bottom-0 z-40 px-0 pt-0">
       <div className="mx-auto max-w-md px-2">
         {navContent}
       </div>

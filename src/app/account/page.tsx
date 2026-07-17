@@ -129,7 +129,7 @@ export default function AccountPage() {
   const hasGlobalAccess = hasMarketEntitlement(plan, "stocks");
   const email = user?.email ?? profile?.email ?? null;
   const provider = user?.app_metadata?.provider ?? user?.app_metadata?.providers?.[0] ?? null;
-  const isAdmin = profile?.plan === "admin" || user?.app_metadata?.role === "admin" || user?.app_metadata?.plan === "admin";
+  const isAdmin = user?.app_metadata?.role === "admin";
   const createdAt = formatAccountDate(user?.created_at ?? profile?.created_at);
   const lastSignInAt = formatAccountDate(user?.last_sign_in_at);
   const displayName =

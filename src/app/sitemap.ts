@@ -20,6 +20,7 @@ const routes = [
   "/learn",
   "/faq",
   "/global",
+  "/global/alertlist",
   "/stocks",
   "/alerts",
   "/pro",

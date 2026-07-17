@@ -4,6 +4,17 @@ import { supabasePublishableKey, supabaseUrl, type SupabaseUser } from "@/lib/su
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 const restTableColumnsCache = new Map<string, Set<string>>();
 
+async function fetchWithOptionalTimeout(url: string, init: RequestInit, timeoutMs?: number) {
+  if (!timeoutMs) return fetch(url, init);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export function isSupabaseAdminConfigured() {
   return Boolean(supabaseUrl && supabaseServiceRoleKey);
 }
@@ -37,11 +48,12 @@ export async function supabaseAdminRest<T>(
     method?: "GET" | "POST" | "PATCH" | "DELETE";
     body?: unknown;
     prefer?: string;
+    timeoutMs?: number;
   } = {}
 ) {
   if (!isSupabaseAdminConfigured()) throw new Error("Supabase service role key가 설정되지 않았습니다.");
 
-  const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+  const response = await fetchWithOptionalTimeout(`${supabaseUrl}/rest/v1/${path}`, {
     method: options.method ?? "GET",
     headers: {
       apikey: supabaseServiceRoleKey,
@@ -51,7 +63,7 @@ export async function supabaseAdminRest<T>(
     },
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
     cache: "no-store"
-  });
+  }, options.timeoutMs);
 
   if (!response.ok) {
     const text = await response.text();
@@ -62,16 +74,27 @@ export async function supabaseAdminRest<T>(
   return readJsonOrNull<T>(response);
 }
 
+export async function supabaseAdminRpc<T>(
+  functionName: string,
+  body: Record<string, unknown>,
+  options: { timeoutMs?: number } = {}
+) {
+  if (!/^[a-z][a-z0-9_]*$/.test(functionName)) throw new Error("Invalid Supabase RPC name.");
+  return supabaseAdminRest<T>(`rpc/${functionName}`, { method: "POST", body, timeoutMs: options.timeoutMs });
+}
+
 export async function supabaseAdminAuth<T>(
   path: string,
   options: {
     method?: "GET" | "POST" | "PUT" | "DELETE";
     body?: unknown;
+    timeoutMs?: number;
+    allowNotFound?: boolean;
   } = {}
 ) {
   if (!isSupabaseAdminConfigured()) throw new Error("Supabase service role key가 설정되지 않았습니다.");
 
-  const response = await fetch(`${supabaseUrl}/auth/v1/${path}`, {
+  const response = await fetchWithOptionalTimeout(`${supabaseUrl}/auth/v1/${path}`, {
     method: options.method ?? "GET",
     headers: {
       apikey: supabaseServiceRoleKey,
@@ -80,8 +103,9 @@ export async function supabaseAdminAuth<T>(
     },
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
     cache: "no-store"
-  });
+  }, options.timeoutMs);
 
+  if (options.allowNotFound && response.status === 404) return null as T;
   if (!response.ok) {
     const text = await response.text();
     throw new Error(text || "Supabase Auth 관리자 요청에 실패했습니다.");

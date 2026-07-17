@@ -1,12 +1,22 @@
 // 출시 전 주요 스모크 테스트를 순서대로 실행하는 통합 점검 스크립트입니다.
 import { spawnSync } from "node:child_process";
 
+const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
+const npxCommand = process.platform === "win32" ? "npx.cmd" : "npx";
 const checks = [
+  ["smoke:migrations", "node", ["scripts/smoke-migrations.mjs"]],
+  ["test:entitlements", npmCommand, ["run", "test:entitlements"]],
+  ["test:futures-brief", npmCommand, ["run", "test:futures-brief"]],
+  ["test:auth-boundaries", npmCommand, ["run", "test:auth-boundaries"]],
   ["smoke:copy", "node", ["scripts/smoke-copy.mjs"]],
   ["smoke:launch", "node", ["scripts/launch-review.mjs"]],
   ["smoke:ops", "node", ["scripts/smoke-ops.mjs"]],
   ["smoke:mobile", "node", ["scripts/smoke-mobile.mjs"]],
   ["smoke:billing", "node", ["scripts/smoke-billing.mjs"]],
+  ["smoke:supabase-security", "node", ["scripts/smoke-supabase-security.mjs"]],
+  ["test:supabase-hotfix", "node", ["scripts/test-supabase-profile-hotfix.mjs"]],
+  ["typecheck", npxCommand, ["tsc", "--noEmit"]],
+  ["production build", npmCommand, ["run", "build"]],
   [
     "dev:clean",
     process.platform === "win32" ? "powershell" : "pwsh",
@@ -20,6 +30,22 @@ const serverBaseUrl = (process.env.SMOKE_BASE_URL ?? "http://127.0.0.1:3000").re
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function runCheck(command, args) {
+  const usesWindowsCommandShim =
+    process.platform === "win32" && command.toLowerCase().endsWith(".cmd");
+
+  return spawnSync(
+    usesWindowsCommandShim ? (process.env.ComSpec ?? "cmd.exe") : command,
+    usesWindowsCommandShim
+      ? ["/d", "/s", "/c", [command, ...args].join(" ")]
+      : args,
+    {
+      stdio: "inherit",
+      shell: false
+    }
+  );
 }
 
 async function waitForDevServer() {
@@ -42,10 +68,7 @@ async function waitForDevServer() {
 
 for (const [check, command, args] of checks) {
   console.log(`\n=== ${check} ===`);
-  const result = spawnSync(command, args, {
-    stdio: "inherit",
-    shell: false
-  });
+  const result = runCheck(command, args);
 
   if (result.status !== 0) {
     if (result.error) console.error(result.error);

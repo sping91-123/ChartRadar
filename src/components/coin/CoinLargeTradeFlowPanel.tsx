@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RefreshCcw, Waves } from "lucide-react";
 import type { LargeTradeAnomalyLevel, LargeTradeFlowReport, LargeTradeSide } from "@/lib/largeTradeFlow";
 import { ActionButton, AppSurface, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
@@ -94,8 +94,8 @@ function flowScore(report: LargeTradeFlowReport) {
   return report.totalLargeNotionalUsd * (1 + Math.abs(report.imbalancePercent) / 100);
 }
 
-async function fetchLargeTradeFlow(symbol: string) {
-  const response = await fetch(`/api/large-trade-flow?symbol=${encodeURIComponent(symbol)}`, { cache: "no-store" });
+async function fetchLargeTradeFlow(symbol: string, signal: AbortSignal) {
+  const response = await fetch(`/api/large-trade-flow?symbol=${encodeURIComponent(symbol)}`, { cache: "no-store", signal });
   const payload = (await response.json()) as LargeTradePayload;
   if (!response.ok || !payload.report) throw new Error(payload.error ?? "큰 매수/매도 체결 확인 실패");
   return payload.report;
@@ -110,12 +110,19 @@ export function CoinLargeTradeFlowPanel({ mode, symbols: customSymbols }: { mode
   const [status, setStatus] = useState<LoadStatus>("idle");
   const [reports, setReports] = useState<LargeTradeFlowReport[]>([]);
   const [error, setError] = useState("");
+  const requestGenerationRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
 
   const loadReports = useCallback(async () => {
+    const generation = ++requestGenerationRef.current;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setStatus("loading");
     setError("");
     setReports([]);
-    const results = await Promise.allSettled(symbols.map((item) => fetchLargeTradeFlow(item.symbol)));
+    const results = await Promise.allSettled(symbols.map((item) => fetchLargeTradeFlow(item.symbol, controller.signal)));
+    if (controller.signal.aborted || generation !== requestGenerationRef.current) return;
     const nextReports = results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
 
     if (nextReports.length) {
@@ -130,6 +137,10 @@ export function CoinLargeTradeFlowPanel({ mode, symbols: customSymbols }: { mode
 
   useEffect(() => {
     void loadReports();
+    return () => {
+      requestGenerationRef.current += 1;
+      abortRef.current?.abort();
+    };
   }, [loadReports]);
 
   const cards = useMemo(() => {

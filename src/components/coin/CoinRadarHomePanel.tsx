@@ -124,8 +124,11 @@ function detailedSymbol(coin: HomeInterestCoin) {
 
 function detailedAnalysisHref(coin: HomeInterestCoin) {
   const symbol = detailedSymbol(coin);
-  const params = new URLSearchParams({ symbol, exchange: coin.exchangeId });
-  const path = symbol === "BTCUSDT.P" || symbol === "ETHUSDT.P" ? "/crypto/perpetual" : "/crypto/perpetual/alts";
+  const isMajor = symbol === "BTCUSDT.P" || symbol === "ETHUSDT.P";
+  const params = isMajor
+    ? new URLSearchParams({ asset: symbol === "ETHUSDT.P" ? "eth" : "btc" })
+    : new URLSearchParams({ symbol, exchange: coin.exchangeId });
+  const path = isMajor ? "/crypto/perpetual" : "/crypto/perpetual/alts";
   return `${path}?${params.toString()}`;
 }
 
@@ -1044,6 +1047,10 @@ export function CoinRadarHomePanel() {
   const [tickerState, setTickerState] = useState<CryptoHomeTicker | null>(null);
   const [aiStatus, setAiStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [aiText, setAiText] = useState("");
+  const snapshotGenerationRef = useRef(0);
+  const snapshotAbortRef = useRef<AbortController | null>(null);
+  const evidenceGenerationRef = useRef(0);
+  const evidenceAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const stored = readHomeInterestCoins(isPaid);
@@ -1051,21 +1058,38 @@ export function CoinRadarHomePanel() {
     setActiveCoin((current) => stored.find((coin) => sameHomeCoin(coin, current)) ?? stored[0] ?? defaultHomeInterestCoin);
   }, [isPaid]);
 
-  const loadSnapshot = useCallback(async (coin: HomeInterestCoin, options: { silent?: boolean } = {}) => {
-    if (!options.silent) {
+  const loadSnapshot = useCallback(async (
+    coin: HomeInterestCoin,
+    options: { silent?: boolean; commit?: boolean; signal?: AbortSignal } = {}
+  ) => {
+    const shouldCommit = options.commit !== false;
+    const generation = shouldCommit ? ++snapshotGenerationRef.current : snapshotGenerationRef.current;
+    let signal = options.signal;
+    if (shouldCommit) {
+      snapshotAbortRef.current?.abort();
+      const controller = new AbortController();
+      snapshotAbortRef.current = controller;
+      signal = controller.signal;
+    }
+
+    if (shouldCommit && !options.silent) {
       setState({ status: "loading" });
       setAiText("");
       setAiStatus("idle");
     }
     try {
       const params = new URLSearchParams({ exchange: coin.exchangeId, symbol: coin.symbol });
-      const response = await fetch(`/api/crypto-home-snapshot?${params.toString()}`, { cache: "no-store" });
+      const response = await fetch(`/api/crypto-home-snapshot?${params.toString()}`, { cache: "no-store", signal });
       const payload = (await response.json()) as { snapshot?: CryptoHomeSnapshot; error?: string };
       if (!response.ok || !payload.snapshot) throw new Error(payload.error ?? "홈 분석을 불러오지 못했습니다.");
-      setState({ status: "ready", snapshot: payload.snapshot });
+      if (shouldCommit) {
+        if (signal?.aborted || generation !== snapshotGenerationRef.current) return null;
+        setState({ status: "ready", snapshot: payload.snapshot });
+      }
       return payload.snapshot;
     } catch (error) {
-      if (!options.silent) {
+      if (signal?.aborted) return null;
+      if (shouldCommit && generation === snapshotGenerationRef.current && !options.silent) {
         setState({ status: "error", message: error instanceof Error ? error.message : "홈 분석을 불러오지 못했습니다." });
       }
       return null;
@@ -1074,7 +1098,13 @@ export function CoinRadarHomePanel() {
 
   useEffect(() => {
     void loadSnapshot(activeCoin);
+    return () => {
+      snapshotGenerationRef.current += 1;
+      snapshotAbortRef.current?.abort();
+    };
   }, [activeCoin, loadSnapshot]);
+
+  useEffect(() => () => evidenceAbortRef.current?.abort(), []);
 
   useEffect(() => {
     if (state.status !== "ready") {
@@ -1146,9 +1176,14 @@ export function CoinRadarHomePanel() {
   };
 
   const openPressureEvidence = () => {
+    const generation = ++evidenceGenerationRef.current;
+    evidenceAbortRef.current?.abort();
+    const controller = new AbortController();
+    evidenceAbortRef.current = controller;
     setEvidenceOpen(true);
     setEvidenceState({ status: "loading" });
-    void loadSnapshot(activeCoin, { silent: true }).then((snapshot) => {
+    void loadSnapshot(activeCoin, { silent: true, commit: false, signal: controller.signal }).then((snapshot) => {
+      if (controller.signal.aborted || generation !== evidenceGenerationRef.current) return;
       if (snapshot) {
         setEvidenceState({ status: "ready", snapshot });
         return;
