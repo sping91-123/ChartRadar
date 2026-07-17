@@ -283,3 +283,16 @@ Task 6 must select at most one follow-up candidate:
 - Android 뒤로가기의 `/crypto/home` 이동은 대표 의도대로 변경하지 않았다.
 - Android release bundle을 clean build로 새로 생성했다. `com.staronlabs.chartradar`, versionCode `12`, versionName `1.0.8`, 운영 URL `https://chartradar.kr`, cleartext 비활성 상태다.
 - AAB: `android/app/build/outputs/bundle/release/app-release.aab`, 7,584,612 bytes, SHA-256 `4B9F9BEF40200F477DF78444C8FBC95B63AFF119D09F50F02CA2F6BE8F6F8F51`. Gradle `validateSigningRelease`와 `jarsigner -verify`가 통과했다. 업로드 키는 self-signed certificate이므로 jarsigner의 chain/timestamp warning은 남는다.
+
+## 2026-07-17 production 배포·provider 최종 검증
+
+- 전체 안정화 구현은 PR `#6`으로 squash merge되었고 main SHA는 `c73a108e456f32389b38ef0096cf9b7e234fcef6`이다. 첫 production deployment `dpl_BMb67HUCbo4UcnF4Z2WLgyTJQPMa`가 READY가 된 뒤 운영 QA를 시작했다.
+- RevenueCat production/sandbox 공용 webhook `ChartRadar production reconciliation`을 `https://chartradar.kr/api/billing/app-store/webhook`에 등록했다. HMAC signing을 활성화했고 노출 가능성이 생긴 최초 one-time secret은 즉시 회전해 폐기한 뒤 회전된 값만 Vercel Production sensitive 환경 변수로 저장했다.
+- Vercel Production에 `REVENUECAT_WEBHOOK_SIGNING_SECRET`과 `ACCOUNT_DELETION_PROCESSING_ENABLED=true`를 추가했다. 기존 `CRON_SECRET`, RevenueCat REST key, Supabase service-role key가 배치되어 있음을 값 노출 없이 확인했다.
+- RevenueCat dashboard의 합성 `TEST` 이벤트가 실제 subscriber UUID를 보장하지 않는 점을 반영해, 서명과 event ID를 먼저 검증한 뒤 entitlement mutation 없이 200을 반환하도록 PR `#7`을 추가했다. main SHA `f3772145471d31d52243bb4f6b762a250c339169`, production deployment `dpl_BEhuUNepvK4W9tJdxFrfCFmArAEr`가 `chartradar.kr` 별칭과 함께 READY다.
+- RevenueCat dashboard에서 signed `TEST`를 한 번 전송해 `Response 200`을 확인했다. 직후 원장은 subscriptions 12건, `legacy_beta` 12건, entitlement events 12건, RevenueCat subscription/event 0건으로 불변이었다.
+- 운영 API 경계는 unsigned webhook 401, account-deletion processor 무인증 401, account-deletion request 무인증 401, Toss checkout/confirm 410을 반환했다. `/crypto/home`, `/global`, `/pro`, `/account/delete`는 200이었다.
+- production CLI Playwright를 다시 실행해 두 viewport의 16개 핵심 화면이 모두 200, canonical path 유지, horizontal overflow 없음, console warning/error 없음임을 확인했다. 검증 직후 임시 browser session과 QA 스크립트를 제거했다.
+- 최근 1시간 Vercel runtime error cluster는 0건이었다.
+- Supabase security advisor의 남은 WARN은 leaked-password protection 비활성화다. 현재 외부 Chrome 세션이 Supabase/GitHub에 로그인되어 있지 않아 자격증명 없이 dashboard 설정을 변경하지 않았다. `billing_entitlement_events`와 `oauth_provider_credentials`의 no-policy INFO는 외부 역할에 fail-closed인 내부 테이블 설계다.
+- push, Play Console 업로드, App Store 제출은 수행하지 않았다. iOS 7개 외부 자격증명/Xcode 조건과 macOS archive/TestFlight는 계속 release gate로 남는다.
