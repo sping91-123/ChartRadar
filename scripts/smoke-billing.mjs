@@ -93,6 +93,13 @@ includes(files.revenueCatSnapshot, "billing_issues_detected_at", "RevenueCat bil
 includes(files.revenueCatSnapshot, "refunded_at", "RevenueCat refund is fail-closed");
 includes(files.revenueCatSnapshot, "transferred_from", "RevenueCat transfer source is reconciled");
 includes(files.webhook, "Webhook payload is not valid JSON", "webhook rejects malformed JSON");
+includes(files.webhook, 'eventType === "TEST"', "signed RevenueCat dashboard test is accepted without ledger mutation");
+const signatureGuardIndex = files.webhook.indexOf("if (!signatureValid)");
+const eventIdGuardIndex = files.webhook.indexOf("Webhook event identity is invalid.");
+const dashboardTestIndex = files.webhook.indexOf('eventType === "TEST"');
+signatureGuardIndex >= 0 && eventIdGuardIndex > signatureGuardIndex && dashboardTestIndex > eventIdGuardIndex
+  ? pass("dashboard test follows signature and event-id validation")
+  : fail("dashboard test follows signature and event-id validation");
 excludes(files.webhook, "payload.event?.product_id", "webhook does not authorize raw product event");
 
 includes(files.mobile, "Purchases.configure({ apiKey })", "RevenueCat configure has no user id");
