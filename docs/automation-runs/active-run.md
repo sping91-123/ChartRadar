@@ -309,3 +309,17 @@ Task 6 must select at most one follow-up candidate:
 - 필수 신규/기존 테스트, Supabase·billing·ops·migration·mobile·route smoke, TypeScript, production build, `smoke:all`, `git diff --check`가 통과했다.
 - 남은 외부 게이트: production migration, `shadow/on` Vercel flag와 deploy, 실제 5분 cron·disposable Android FCM, authenticated Basic/Pro E2E, 14일 beta 관찰. beta 12명 mutation, 실제 Push, AAB, 스토어, iOS, commit, push는 수행하지 않았다.
 - 상세 기록: `docs/work-items/home-perpetual-revenue-core-v1.md`.
+
+## 2026-07-20 Home → Perpetual 수익화 코어 v1 운영 활성화·최종 검증
+
+- 운영 Supabase에 `20260720045112 perpetual_revenue_core_v1`, `20260720053641 reconcile_journal_columns`를 적용했다. Journal drift reconciler는 반복 적용 가능하며 production catalog·RLS·advisor 검증을 통과했다.
+- Vercel Production의 `PERPETUAL_REVENUE_CORE_V1`을 `on`으로 활성화했다. 기능 PR `#11`은 main SHA `e660e5a897b307eb1fd2e42e5240f4f61af17e6c`로 squash merge됐고 deployment `dpl_5r2RZD7HcDSpgCipNKiy3rqLKHXb`가 `chartradar.kr`·`www.chartradar.kr` 별칭과 `iad1`·`sin1` 함수 배치로 READY다.
+- production snapshot API는 BTC `quality=ready`, `continuity=current`, HTTP 200 JSON을 반환했다. Binance 451과 Journal `PGRST204`는 최종 deployment에서 재발하지 않았다.
+- disposable Basic/Pro 운영 E2E를 다시 실행했다. Basic limit 1과 두 번째 `monitor_limit_reached`, Pro limit 20·invalidation monitor·pause/resume·Journal 201을 확인했다. beta 12명 fingerprint는 전후 불변이고 일회용 Auth·profile·subscription·monitor·Journal은 즉시 purge했다.
+- 실제 scheduled `/api/push-cron`을 2회 관찰했다. 두 번 모두 HTTP 200, optional source `failed=[]`, `lookupErrorCount=0`, `scannerErrorCount=0`으로 protection HTML JSON 오류가 사라졌다. 첫 실행은 FCM API 성공 4건을 기록했으며 일부 기존 토큰 발송 실패가 남아 물리 단말 receipt와 stale token 상태는 베타 관찰 항목으로 둔다.
+- CLI Playwright 운영 QA에서 360×800 BTC CTA bottom 530px, 390×844 ETH CTA bottom 482px로 첫 viewport 안에 들어왔다. BTC·ETH 모두 Home/detail asset·snapshot이 동일했고 각 화면의 `scrollWidth === innerWidth`, console error/warning 0건이었다. Codex in-app Browser는 사용하지 않았다.
+- 최종 정리 후 운영 집계는 Auth users/profiles 66/66, subscriptions 12, `legacy_beta` 12, active scenario monitor 0, Journal 0, disposable Auth user 0이다. cohort dry-run hash `23514409169df37bd42368113e94cb60`과 E2E fingerprint 불변을 확인했다.
+- 신규·기존 단위 테스트, Supabase·billing·ops·migration·mobile·route smoke, `smoke:all`, TypeScript, production build, `git diff --check`가 모두 통과했다.
+- 베타 reporter preflight는 2026-07-21 KST 시작, 기능 release SHA `e660e5a897b307eb1fd2e42e5240f4f61af17e6c` 기준으로 cohort 12명·중복 0·Day 14 이후 entitlement 세 gate를 통과했다. Day 7은 2026-07-28, Day 14 종료는 2026-08-04 00:00 KST다.
+- 시간·외부 장치 의존 잔여: Android 실기기 FCM receipt, 14일 사용 데이터, B01~B12 정성 인터뷰, 실제 RevenueCat 구매 표본의 2분·99% 판정. iOS·AAB·스토어 제출은 합의된 제외 범위다.
+- Supabase advisor의 leaked-password protection WARN과 intentional fail-closed no-policy INFO, Vercel dashboard의 overdue/payment 경고는 잔여 운영 리스크다. 이번 작업에서 계정 결제 설정은 변경하지 않았다.
