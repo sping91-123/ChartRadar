@@ -21,6 +21,7 @@ import { isSupabaseAdminConfigured } from "@/lib/server/supabaseAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
 
 const listableStatuses = new Set<PerpetualMonitorStatus>([
   "active",

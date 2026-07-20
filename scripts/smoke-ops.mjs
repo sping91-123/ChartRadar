@@ -268,6 +268,7 @@ expectIncludes(pushTokensRoute, 'provider: "fcm"', "Android FCM provider 저장"
 expectIncludes(pushTokensRoute, "replaceScopedRuleIds", "푸시 규칙 선호도 최신값 저장", "src/app/api/push-tokens/route.ts");
 expectIncludes(pushTokensRoute, "replace_crypto_push_presets", "Crypto preset and monitor shared quota RPC", "src/app/api/push-tokens/route.ts");
 expectIncludes(pushCronRoute, "CRON_SECRET", "푸시 크론 인증", "src/app/api/push-cron/route.ts");
+expectIncludes(pushCronRoute, 'preferredRegion = "sin1"', "Perpetual scanner Binance-compatible region", "src/app/api/push-cron/route.ts");
 expectIncludes(pushAlertScanner, "runPushAlertScan", "푸시 자동 감시 스캐너", "src/lib/server/pushAlertScanner.ts");
 expectIncludes(pushAlertScanner, "runPerpetualMonitorScan", "Perpetual monitor evaluation before generic Push delivery", "src/lib/server/pushAlertScanner.ts");
 expectIncludes(perpetualMonitorScanner, "claimPerpetualMonitorTrigger", "Perpetual trigger atomic claim", "src/lib/server/perpetualMonitorScanner.ts");
@@ -334,7 +335,9 @@ expectIncludes(perpetualSnapshotRoute, "serializeBasicPerpetualSnapshot", "Basic
 expectIncludes(perpetualSnapshotRoute, "isPerpetualSnapshotGenerationEnabled", "Perpetual off-mode kill switch", "src/app/api/crypto/perpetual/snapshot/route.ts");
 expectIncludes(perpetualSnapshotRoute, "allowExpiredRequestedSnapshot", "Alert-time snapshot continuity", "src/app/api/crypto/perpetual/snapshot/route.ts");
 expectIncludes(perpetualSnapshotRoute, "sharedCryptoConditionUsage", "Snapshot capabilities use the shared preset and scenario quota", "src/app/api/crypto/perpetual/snapshot/route.ts");
+expectIncludes(perpetualSnapshotRoute, 'preferredRegion = "sin1"', "Perpetual snapshot Binance-compatible region", "src/app/api/crypto/perpetual/snapshot/route.ts");
 expectIncludes(perpetualMonitorsRoute, "condition_already_met", "Already-met monitor rejection", "src/app/api/crypto/perpetual/monitors/route.ts");
+expectIncludes(perpetualMonitorsRoute, 'preferredRegion = "sin1"', "Perpetual monitor Binance-compatible region", "src/app/api/crypto/perpetual/monitors/route.ts");
 expectIncludes(perpetualMonitorStore, "status=in.(active,paused)&", "Shared quota counts active and user-paused monitors", "src/lib/server/perpetualMonitorStore.ts");
 expectIncludes(perpetualMonitorStore, "status=in.(active,paused,paused_entitlement)", "Monitor manager fetches live rows without terminal-history starvation", "src/lib/server/perpetualMonitorStore.ts");
 expectIncludes(productEventStore, "findRecentPurchaseAttribution", "Verified billing attribution lookup", "src/lib/server/productEventStore.ts");
