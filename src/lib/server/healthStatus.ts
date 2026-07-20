@@ -1,5 +1,10 @@
 import { paidBillingPlans } from "@/lib/billing";
 import { getMacroCalendarPayload } from "@/lib/macroCalendar";
+import { productAnalyticsConfigured } from "@/lib/server/productEventStore";
+import {
+  isPerpetualRevenueCoreScannerEnabled,
+  perpetualRevenueCoreMode
+} from "@/lib/server/perpetualRevenueCore";
 import { supabaseAdminRest } from "@/lib/server/supabaseAdmin";
 import { getConfiguredSiteUrl } from "@/lib/siteUrl";
 
@@ -132,6 +137,18 @@ export async function getDetailedHealthPayload() {
   const hasAppPaymentProvider = hasRevenueCatRest && hasVerifiedSupabaseAdmin && (hasRevenueCatAndroid || hasRevenueCatIos);
   const hasAndroidBillingProvider = hasRevenueCatAndroid && hasRevenueCatRest && hasVerifiedSupabaseAdmin;
   const hasIosBillingProvider = hasRevenueCatIos && hasRevenueCatRest && hasVerifiedSupabaseAdmin;
+  const perpetualMode = perpetualRevenueCoreMode();
+  const perpetualMutationEnabled = isPerpetualRevenueCoreScannerEnabled(perpetualMode);
+  const hasProductAnalytics = productAnalyticsConfigured();
+  const hasCronSecret = hasValue(process.env.CRON_SECRET);
+  const hasFirebaseServer = hasValue(process.env.FIREBASE_SERVICE_ACCOUNT_JSON) || (
+    hasValue(process.env.FIREBASE_PROJECT_ID) &&
+    hasValue(process.env.FIREBASE_CLIENT_EMAIL) &&
+    hasValue(process.env.FIREBASE_PRIVATE_KEY)
+  );
+  const perpetualRevenueCoreReady = !perpetualMutationEnabled || (
+    hasVerifiedSupabaseAdmin && hasProductAnalytics && hasCronSecret && hasFirebaseServer
+  );
   const planPaymentLinks = paidBillingPlans.map((plan) => {
     const directUrl = getDirectPaymentUrl(plan.id);
     const fallbackUrl = getFallbackPaymentUrl(plan.id);
@@ -156,9 +173,9 @@ export async function getDetailedHealthPayload() {
   const readyForAndroidBilling = hasAndroidBillingProvider;
   const readyForIosBilling = hasIosBillingProvider;
   const readyForWebPaidLaunch = coreReady && hasSiteUrl && readyForWebCheckout;
-  const readyForAndroidLaunch = coreReady && hasSiteUrl && readyForAndroidBilling;
+  const readyForAndroidLaunch = coreReady && hasSiteUrl && readyForAndroidBilling && perpetualRevenueCoreReady;
   const readyForIosLaunch = coreReady && hasSiteUrl && readyForIosBilling;
-  const readyForPaidLaunch = readyForWebPaidLaunch || readyForAndroidLaunch || readyForIosLaunch;
+  const readyForPaidLaunch = (readyForWebPaidLaunch || readyForAndroidLaunch || readyForIosLaunch) && perpetualRevenueCoreReady;
   const hasPrimaryPaymentChannel = readyForWebCheckout || readyForAndroidBilling || readyForIosBilling;
   const hasMultiPlatformPayment = readyForWebCheckout || (readyForAndroidBilling && readyForIosBilling);
   const launchScore = scoreLaunchReadiness({
@@ -202,6 +219,14 @@ export async function getDetailedHealthPayload() {
           label: "Macro calendar refresh",
           env: "Public economic calendar or official statistics source",
           reason: "Stale macro events reduce first-screen trust."
+        },
+    perpetualRevenueCoreReady
+      ? null
+      : {
+          area: "perpetual_revenue_core",
+          label: "Perpetual revenue-core activation",
+          env: "PRODUCT_ANALYTICS_HMAC_SECRET, CRON_SECRET, Firebase server credentials",
+          reason: "On mode requires measurable product events and an authenticated five-minute Push worker."
         }
   ].filter((item): item is { area: string; label: string; env: string; reason: string } => Boolean(item));
   const warnings = [
@@ -216,7 +241,8 @@ export async function getDetailedHealthPayload() {
       ? "App subscription billing is ready, but web checkout links are still missing."
       : null,
     fallbackPlanPaymentLinks.length === 0 ? null : `Some plans use fallback checkout links: ${fallbackPlanPaymentLinks.join(", ")}`,
-    !macroReady ? "Macro calendar automatic refresh requires attention." : null
+    !macroReady ? "Macro calendar automatic refresh requires attention." : null,
+    perpetualRevenueCoreReady ? null : "Perpetual revenue core is on without its analytics, cron, Firebase, or Supabase activation prerequisites."
   ].filter((item): item is string => Boolean(item));
 
   return {
@@ -254,6 +280,14 @@ export async function getDetailedHealthPayload() {
         revenueCatRest: hasRevenueCatRest,
         supabaseAdmin: hasSupabaseAdmin,
         supabaseAdminRest: supabaseAdminRestCheck
+      },
+      perpetualRevenueCore: {
+        mode: perpetualMode,
+        canary: perpetualMode === "shadow" && perpetualMutationEnabled,
+        ready: perpetualRevenueCoreReady,
+        productAnalyticsHmac: hasProductAnalytics,
+        cronSecret: hasCronSecret,
+        firebaseServer: hasFirebaseServer
       }
     },
     macroCalendar: {

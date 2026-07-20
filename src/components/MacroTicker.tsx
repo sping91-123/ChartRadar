@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CalendarClock, ChevronDown, ChevronRight, ExternalLink, Minus, Radio, TrendingDown, TrendingUp } from "lucide-react";
 import { type MacroEventItem } from "@/data/macroEvents";
+import { isHighImpactMacroEvent, isHomePriorityMacro } from "@/lib/homeMacroPriority";
 import { getMacroCalendarFallbackPayload, type MacroCalendarPayload } from "@/lib/macroCalendar";
 import { StatusPill } from "@/components/ui/DesignPrimitives";
 
@@ -167,24 +168,7 @@ function compactStateClass(item: MacroEventItem) {
 }
 
 function isHighImpactMacro(item: MacroEventItem) {
-  const lower = item.label.toLowerCase();
-  return (
-    item.importance === 3 ||
-    lower.includes("cpi") ||
-    lower.includes("fomc") ||
-    lower.includes("fed") ||
-    lower.includes("rate") ||
-    lower.includes("payroll") ||
-    lower.includes("non-farm") ||
-    lower.includes("nonfarm") ||
-    lower.includes("employment") ||
-    lower.includes("jobless") ||
-    lower.includes("unemployment") ||
-    lower.includes("claims") ||
-    lower.includes("ppi") ||
-    lower.includes("pce") ||
-    lower.includes("gdp")
-  );
+  return isHighImpactMacroEvent(item);
 }
 
 function impactLabel(item: MacroEventItem) {
@@ -480,6 +464,12 @@ function getCompactItem(items: MacroEventItem[]) {
   return recentReleased ?? upcomingWithin24Hours ?? previousReleased ?? nearestUpcoming ?? visibleItems[0];
 }
 
+function getHomePriorityItem(items: MacroEventItem[], now = Date.now()) {
+  return items
+    .filter((item) => isHomePriorityMacro(item, now))
+    .sort((left, right) => Math.abs(eventTime(left) - now) - Math.abs(eventTime(right) - now))[0];
+}
+
 function MacroNewsValue({ label, value, pending = false, blankWhenMissing = false }: { label: string; value?: string; pending?: boolean; blankWhenMissing?: boolean }) {
   return (
     <span className={`inline-flex min-w-0 max-w-full flex-wrap items-center gap-1 px-0 py-0.5 text-[11px] font-semibold ${
@@ -529,7 +519,17 @@ function MacroNewsItem({ item, sectionLabel, subdued = false, released = false }
   );
 }
 
-export function MacroTicker({ compact = false, market = "crypto" }: { compact?: boolean; market?: "crypto" | "stocks" } = {}) {
+export function MacroTicker({
+  compact = false,
+  market = "crypto",
+  homePriorityAware = false,
+  onHomePriorityChange
+}: {
+  compact?: boolean;
+  market?: "crypto" | "stocks";
+  homePriorityAware?: boolean;
+  onHomePriorityChange?: (priority: boolean) => void;
+} = {}) {
   const pathname = usePathname();
   const [calendar, setCalendar] = useState<MacroCalendarPayload>(fallbackCalendar);
   const [hasLoadedCalendar, setHasLoadedCalendar] = useState(false);
@@ -546,6 +546,12 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
   const featuredUpcomingItems = upcomingItems.slice(0, isUpcomingExpanded ? 8 : 2);
   const laterUpcomingItems = upcomingItems.slice(1, 7);
   const isNewsMacroReport = compact && pathname === "/news";
+  const homePriorityItem = homePriorityAware ? getHomePriorityItem(displayItems) : undefined;
+
+  useEffect(() => {
+    if (!homePriorityAware || !onHomePriorityChange) return;
+    onHomePriorityChange(Boolean(homePriorityItem));
+  }, [homePriorityAware, homePriorityItem, onHomePriorityChange]);
 
   useEffect(() => {
     let cancelled = false;
@@ -642,7 +648,7 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
   }
 
   if (compact) {
-    const item = getCompactItem(displayItems);
+    const item = homePriorityItem ?? getCompactItem(displayItems);
     if (!item) {
       return (
         <div className="py-2 text-xs font-bold leading-5 text-slate-500 [word-break:keep-all]">
@@ -659,6 +665,19 @@ export function MacroTicker({ compact = false, market = "crypto" }: { compact?: 
     const ImpactIcon = impactRead === "호재" ? TrendingUp : impactRead === "악재" ? TrendingDown : impactRead === "중립" ? Minus : null;
     const impactToneClass = impactRead === "호재" ? "text-emerald-400" : impactRead === "악재" ? "text-rose-400" : "text-slate-400";
     const href = market === "stocks" ? "/schedule?market=global" : "/schedule?market=crypto";
+
+    if (homePriorityAware && !homePriorityItem) {
+      const summary = `다음 매크로 · ${macroLabel(item.label)} · ${compactStatusLabel(item)}`;
+      return (
+        <Link
+          href={href}
+          aria-label={`${summary} · 한국시간 ${item.dateKst}`}
+          className="block min-h-9 rounded-ui-sm bg-ui-panel px-3 py-2 text-[11px] font-bold leading-5 text-ui-muted transition hover:bg-ui-elevated hover:text-ui-text"
+        >
+          <span className="block truncate">{summary}</span>
+        </Link>
+      );
+    }
 
     return (
       <div className="space-y-1.5">

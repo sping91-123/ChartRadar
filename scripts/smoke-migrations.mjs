@@ -59,6 +59,52 @@ for (const marker of [
   if (!betaLock.includes(marker)) failures.push(`beta backfill lock migration is missing ${marker}`);
 }
 
+const perpetualCoreName = active.find((name) => name.endsWith("_perpetual_revenue_core_v1.sql"));
+const perpetualCore = perpetualCoreName ? readFileSync(join(activeDir, perpetualCoreName), "utf8") : "";
+for (const marker of [
+  "create table if not exists public.perpetual_decision_snapshots",
+  "create table if not exists public.perpetual_scenario_monitors",
+  "create table if not exists public.perpetual_decision_outcomes",
+  "create table if not exists public.product_events",
+  "create_perpetual_monitor",
+  "claim_perpetual_monitor_trigger",
+  "lease_perpetual_alert_delivery",
+  "replace_crypto_push_presets",
+  "purge_perpetual_revenue_core_retention",
+  "purge_account_application_data",
+  "'product_events', 'perpetual_scenario_monitors'",
+  "revoke all privileges on table public.perpetual_scenario_monitors from public, anon, authenticated",
+  "revoke all privileges on table public.perpetual_scenario_monitors from service_role",
+  "perpetual_scenario_monitors_snapshot_idx",
+  "perpetual_scenario_monitors_last_snapshot_idx",
+  "product_events_snapshot_idx",
+  "product_events_monitor_idx",
+  "journals_decision_snapshot_idx",
+  "journals_monitor_idx",
+  'create policy "push_alert_events_select_own"\non public.push_alert_events for select\nto authenticated\nusing ((select auth.uid()) = user_id)',
+  "revoke all on function public.purge_account_application_data(uuid) from public, anon, authenticated",
+  "grant execute on function public.purge_account_application_data(uuid) to service_role"
+]) {
+  if (!perpetualCore.includes(marker)) failures.push(`perpetual revenue core migration is missing ${marker}`);
+}
+
+const canonicalSchema = readFileSync(join(root, "supabase", "schema.sql"), "utf8");
+for (const marker of [
+  "perpetual_scenario_monitors_live_condition_idx",
+  "create or replace function public.create_perpetual_monitor",
+  "create or replace function public.claim_perpetual_monitor_trigger",
+  "create or replace function public.lease_perpetual_alert_delivery",
+  "create or replace function public.reconcile_perpetual_monitor_limit",
+  "create or replace function public.purge_perpetual_revenue_core_retention",
+  'create policy "push_alert_events_select_own"\non public.push_alert_events for select\nto authenticated\nusing ((select auth.uid()) = user_id)',
+  "revoke all privileges on table public.perpetual_scenario_monitors from service_role",
+  "perpetual_scenario_monitors_snapshot_idx",
+  "product_events_snapshot_idx",
+  "journals_decision_snapshot_idx"
+]) {
+  if (!canonicalSchema.includes(marker)) failures.push(`canonical schema is missing ${marker}`);
+}
+
 if (failures.length) {
   failures.forEach((failure) => console.error(`FAIL ${failure}`));
   process.exitCode = 1;
@@ -74,5 +120,16 @@ if (failures.length) {
     process.exitCode = replay.status ?? 1;
   } else {
     console.log("PASS executable PGlite migration replay matrix.");
+    const perpetualReplay = spawnSync(process.execPath, ["scripts/test-perpetual-monitors.mjs"], {
+      cwd: root,
+      stdio: "inherit",
+      shell: false
+    });
+    if (perpetualReplay.status !== 0) {
+      console.error("FAIL executable Perpetual revenue core migration matrix");
+      process.exitCode = perpetualReplay.status ?? 1;
+    } else {
+      console.log("PASS executable Perpetual revenue core migration matrix.");
+    }
   }
 }

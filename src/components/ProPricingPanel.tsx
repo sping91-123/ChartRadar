@@ -15,6 +15,7 @@ import {
 } from "@/lib/billing";
 import { fetchNativePlanPriceLabels, isNativePurchaseAvailable, NativePurchaseError, purchaseNativePlan, restoreNativeEntitlement, type NativePurchaseStageEvent } from "@/lib/mobilePurchases";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
+import { trackProductEvent } from "@/lib/trackProductEvent";
 import { ActionButton, AppSurface, DataRow, MetricRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 
 type CheckoutState =
@@ -118,7 +119,7 @@ function scopeCopy(scope: BillingPageScope) {
     return {
       eyebrow: "COIN PRO",
       title: "Coin Pro에서 확인할 코인 기준",
-      body: "Basic은 오늘 결론과 핵심 리스크를 먼저 보여주고, Coin Pro는 코인 홈·현물·선물의 조건, 무효화 기준, 알림·복기 연결까지 엽니다."
+      body: "Basic은 BTC·ETH 상태와 핵심 위험, 다음 조건 1개를 보여줍니다. Coin Pro는 Binance USDT-M 확인·판단 변경 조건을 최대 20개까지 감시해 알림·복기로 이어갑니다."
     };
   }
 
@@ -172,7 +173,7 @@ const planDepthRows: Array<{ label: string; value: string; detail: string; tone:
   {
     label: "Coin Pro",
     value: "코인 기준과 리스크",
-    detail: "코인 홈, 현물, 메이저 선물, 알트 선물의 조건과 무효화 기준을 엽니다.",
+    detail: "Binance USDT-M BTC·ETH의 확인 조건, 판단 변경 기준, 시간대별 근거를 엽니다.",
     tone: "info"
   },
   {
@@ -225,8 +226,8 @@ const planDisplayCopy: Partial<Record<BillingPlanId, { description: string; high
     highlights: ["첫 판단 요약", "핵심 리스크 확인", "판단 보조용 기본 알림"]
   },
   crypto_monthly: {
-    description: "BTC/ETH, 알트, 현물·선물의 조건과 리스크를 기준 중심으로 확인합니다.",
-    highlights: ["BTC/ETH·알트 조건과 리스크 확인", "무효화 기준과 세부 근거", "코인 알림과 복기 흐름 연결"]
+    description: "Binance USDT-M BTC·ETH의 상태, 위험, 확인 조건을 같은 snapshot으로 보고 최대 5분 간격 감시와 알림·복기로 이어갑니다.",
+    highlights: ["BTC·ETH 선물 리스크 snapshot", "확인·판단 변경 조건 최대 20개", "알림에서 같은 snapshot 복기"]
   },
   crypto_yearly: {
     description: "코인 조건과 리스크를 반복 점검하는 사용자를 위한 연간 플랜입니다.",
@@ -257,8 +258,8 @@ function getPlanDisplayCopy(plan: BillingPlan) {
 function getPlanPayoffCopy(plan: BillingPlan) {
   if (plan.marketScope === "crypto") {
     return {
-      title: "오늘 코인 판단을 다시 볼 기준까지 열립니다.",
-      items: ["추적 조건과 무효화 기준", "코인 Pro 알림 기준", "같은 기준의 복기 흐름"]
+      title: "BTC·ETH 판단을 놓치지 않는 감시 흐름이 열립니다.",
+      items: ["확인·판단 변경 조건", "최대 5분 간격 감시", "같은 snapshot의 알림·복기"]
     };
   }
 
@@ -410,34 +411,46 @@ function PlanCard({
           {checkoutCtaLabel(plan, nativePurchaseAvailable)}
         </ActionButton>
         {isBusy && busyStageText ? (
-          <AppSurface tone="inset" variant="report" padding="md" className="mt-3 text-ui-muted">
-            <StatusPill tone="info">결제 진행</StatusPill>
-            <p className="mt-2 text-ui-body font-semibold [word-break:keep-all]">{busyStageText}</p>
-          </AppSurface>
+          <div role="status" aria-live="polite">
+            <AppSurface tone="inset" variant="report" padding="md" className="mt-3 text-ui-muted">
+              <StatusPill tone="info">결제 진행</StatusPill>
+              <p className="mt-2 text-ui-body font-semibold [word-break:keep-all]">{busyStageText}</p>
+            </AppSurface>
+          </div>
         ) : null}
         {message ? (
-          <AppSurface tone="inset" variant="report" padding="md" className={`mt-3 ${message.tone === "error" ? "text-ui-short" : "text-ui-muted"}`}>
-            <StatusPill tone={message.tone === "error" ? "risk" : "info"}>{message.tone === "error" ? "확인 필요" : "결제 상태"}</StatusPill>
-            <p className="mt-2 text-ui-body font-semibold [word-break:keep-all]">{message.text}</p>
-          </AppSurface>
+          <div role={message.tone === "error" ? "alert" : "status"} aria-live="polite">
+            <AppSurface tone="inset" variant="report" padding="md" className={`mt-3 ${message.tone === "error" ? "text-ui-short" : "text-ui-muted"}`}>
+              <StatusPill tone={message.tone === "error" ? "risk" : "info"}>{message.tone === "error" ? "확인 필요" : "결제 상태"}</StatusPill>
+              <p className="mt-2 text-ui-body font-semibold [word-break:keep-all]">{message.text}</p>
+            </AppSurface>
+          </div>
         ) : null}
       </div>
     </AppSurface>
   );
 }
 
-export function ProPricingPanel({ marketScope = "all" }: { marketScope?: BillingPageScope } = {}) {
+export function ProPricingPanel({
+  marketScope = "all",
+  attributionSource = null
+}: {
+  marketScope?: BillingPageScope;
+  attributionSource?: string | null;
+} = {}) {
   const { session, user, profile, entitlementState, isLoading } = useSupabaseAuth();
   const [checkoutState, setCheckoutState] = useState<CheckoutState>({ status: "idle" });
   const [nativePriceLabels, setNativePriceLabels] = useState<Partial<Record<BillingPlanId, string>>>({});
   const checkoutRunRef = useRef(0);
   const isMountedRef = useRef(true);
   const lastNativeStageRef = useRef<NativePurchaseStageEvent | undefined>(undefined);
+  const trackedPaywallRef = useRef<string | null>(null);
   const visiblePlans = useMemo(() => getBillingPlansForPage(marketScope), [marketScope]);
   const freePlan = visiblePlans.find((plan) => plan.id === "free");
   const paidPlans = visiblePlans.filter((plan) => plan.id !== "free");
   const visiblePlanIds = useMemo(() => visiblePlans.map((plan) => plan.id).join("|"), [visiblePlans]);
   const copy = scopeCopy(marketScope);
+  const eventSource = attributionSource ?? (marketScope === "crypto" ? "crypto" : marketScope === "stocks" ? "stocks" : "all");
   const nativePurchaseAvailable = isNativePurchaseAvailable();
   const currentPlanId = (profile?.plan ?? "free") as BillingEntitlementPlan;
   const currentPlanLabel = isLoading
@@ -456,11 +469,23 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
     : "표시된 가격은 앱 구독 기준입니다. 웹 결제는 준비 중이며 Android 앱에서 Google Play 구독으로 결제할 수 있습니다.";
 
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
       checkoutRunRef.current += 1;
     };
   }, []);
+
+  useEffect(() => {
+    if (trackedPaywallRef.current !== eventSource) {
+      trackedPaywallRef.current = eventSource;
+      void trackProductEvent({
+        eventName: "paywall_viewed",
+        surface: "paywall",
+        properties: { source: eventSource }
+      });
+    }
+  }, [eventSource]);
 
   useEffect(() => {
     if (!nativePurchaseAvailable || !user?.id) {
@@ -508,9 +533,16 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
     }
 
     const checkoutRunId = checkoutRunRef.current + 1;
+    const purchaseAttributionId = crypto.randomUUID();
     checkoutRunRef.current = checkoutRunId;
     lastNativeStageRef.current = undefined;
     setCheckoutState({ status: "loading", planId: plan.id, stageText: "결제 단계: Android 결제 요청을 시작합니다." });
+    void trackProductEvent({
+      eventId: purchaseAttributionId,
+      eventName: "purchase_started",
+      surface: "billing",
+      properties: { source: eventSource, planId: plan.id, provider: "revenuecat" }
+    });
     logNativeCheckout("native purchase start", { planId: plan.id });
     const handleNativeStage = (event: NativePurchaseStageEvent) => {
       lastNativeStageRef.current = event;
@@ -524,7 +556,14 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
     try {
       if (!user?.id) throw new Error("앱 구독을 연결하려면 로그인 정보를 먼저 확인해야 합니다.");
       const result = await withTimeout(
-        purchaseNativePlan({ plan, userId: user.id, accessToken: session.accessToken, onStage: handleNativeStage }),
+        purchaseNativePlan({
+          plan,
+          userId: user.id,
+          accessToken: session.accessToken,
+          attributionId: purchaseAttributionId,
+          attributionSource: eventSource,
+          onStage: handleNativeStage
+        }),
         NATIVE_CHECKOUT_TIMEOUT_MS,
         NATIVE_CHECKOUT_TIMEOUT_MESSAGE
       );
@@ -538,6 +577,18 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
         planId: plan.id,
         timeout: isTimeout,
         errorCode: error instanceof NativePurchaseError ? error.code : "unknown"
+      });
+      const cancelled = error instanceof NativePurchaseError && error.code === "purchase_cancelled";
+      void trackProductEvent({
+        attributionId: purchaseAttributionId,
+        eventName: cancelled ? "purchase_cancelled" : "purchase_failed",
+        surface: "billing",
+        properties: {
+          source: eventSource,
+          planId: plan.id,
+          provider: "revenuecat",
+          ...(cancelled ? {} : { code: error instanceof NativePurchaseError ? error.code : isTimeout ? "timeout" : "unknown" })
+        }
       });
       setCheckoutState({ status: "message", tone: "error", text: nativeCheckoutErrorMessage(error, lastNativeStageRef.current), planId: plan.id });
     }
@@ -629,7 +680,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
           />
           <div className="mt-4">
             <DataRow label="현재 플랜" value={currentPlanLabel} detail={session ? "구독 권한은 계정 기준으로 적용됩니다." : "결제 전 Google 로그인이 필요합니다."} />
-            <DataRow label="코인 Pro" value={<AccessValue open={hasCryptoAccess} />} detail="BTC/ETH, 알트 추적 조건, 무효화 기준." />
+            <DataRow label="코인 Pro" value={<AccessValue open={hasCryptoAccess} />} detail="Binance USDT-M BTC·ETH 조건 감시, 알림, 복기." />
             <DataRow label="글로벌 Pro" value={<AccessValue open={hasGlobalAccess} />} detail="미국장 30초 체크, 지수선물, 매크로 압력." />
           </div>
           {freePlan ? (
@@ -646,7 +697,7 @@ export function ProPricingPanel({ marketScope = "all" }: { marketScope?: Billing
             description="코인만 보거나 미국장만 보는 날도 있지만, 리스크가 커지는 날에는 두 시장의 조건과 알림, 복기를 한 흐름으로 확인하는 편이 끊기지 않습니다."
           />
           <div className="mt-4">
-            <DataRow label="코인 리스크" value="Coin Pro" detail="코인 홈, 현물, 메이저 선물, 알트 선물의 세부 조건을 확인합니다." />
+            <DataRow label="코인 리스크" value="Coin Pro" detail="BTC·ETH 선물 상태, 위험, 확인·판단 변경 조건을 확인합니다." />
             <DataRow label="글로벌 맥락" value="Global Pro" detail="지수선물, 달러·금리, 섹터와 대장주 흐름을 확인합니다." />
             <DataRow label="통합 리뷰" value="All Market" detail="두 시장의 리스크, 알림 조건, 복기 흐름을 한곳에서 이어 봅니다." />
           </div>

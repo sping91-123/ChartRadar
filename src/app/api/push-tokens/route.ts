@@ -1,7 +1,11 @@
 // Android 앱 푸시 토큰을 로그인 사용자 계정에 연결합니다.
 import { NextResponse } from "next/server";
+import { cryptoAlertConditionLimit } from "@/lib/billing";
 import { radarAlertRules, type RadarAlertRule, type RadarAlertRuleId } from "@/lib/radarAlerts";
-import { fetchSupabaseUserOnServer, isSupabaseAdminConfigured, supabaseAdminRest } from "@/lib/server/supabaseAdmin";
+import { isPerpetualRevenueCoreUserEnabled } from "@/lib/server/perpetualRevenueCore";
+import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
+import { rateLimit, readJsonBodyLimited } from "@/lib/server/rateLimit";
+import { isSupabaseAdminConfigured, supabaseAdminRest, supabaseAdminRpc } from "@/lib/server/supabaseAdmin";
 
 type PushPlatform = "android" | "ios" | "web";
 type PushMarket = "crypto" | "stocks";
@@ -133,8 +137,21 @@ export async function POST(request: Request) {
 
   const accessToken = bearerToken(request);
   if (!accessToken) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  const entitlement = await getRequestEntitlement(request, "crypto");
+  if (!entitlement.userId || !entitlement.isAuthenticated) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  if (entitlement.state === "deletion_pending") return NextResponse.json({ error: "계정 삭제 대기 중에는 알림 설정을 변경할 수 없습니다." }, { status: 409 });
+  if (entitlement.state === "unavailable") return NextResponse.json({ error: "구독 권한을 확인하지 못해 알림 설정을 변경하지 않았습니다." }, { status: 503 });
 
-  const body = (await request.json().catch(() => ({}))) as PushTokenRequestBody;
+  const limited = await rateLimit(request, {
+    key: entitlementRateKey("push-token-register", entitlement),
+    limit: 30,
+    windowMs: 5 * 60 * 1000
+  });
+  if (!limited.allowed) return NextResponse.json({ error: "알림 설정 요청이 많습니다." }, { status: 429 });
+
+  const parsed = await readJsonBodyLimited<PushTokenRequestBody>(request, 64_000);
+  if (!parsed.ok && parsed.tooLarge) return NextResponse.json({ error: "알림 설정 요청이 너무 큽니다." }, { status: 413 });
+  const body = parsed.ok ? parsed.value : {};
   const token = typeof body.token === "string" ? body.token.trim() : "";
   const rawPlatform = typeof body.platform === "string" ? body.platform : "android";
   if (rawPlatform !== "android") {
@@ -155,10 +172,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "앱 푸시 알림 연결 정보가 올바르지 않습니다." }, { status: 400 });
   }
 
-  const user = await fetchSupabaseUserOnServer(accessToken);
+  const userId = entitlement.userId;
   const now = new Date().toISOString();
   const existingRows = await supabaseAdminRest<ExistingPushTokenRow[]>(
-    `push_tokens?select=id,user_id,markets,rule_ids&token=eq.${encodeURIComponent(token)}&user_id=eq.${encodeURIComponent(user.id)}&limit=1`
+    `push_tokens?select=id,user_id,markets,rule_ids&token=eq.${encodeURIComponent(token)}&user_id=eq.${encodeURIComponent(userId)}&limit=1`
   );
   const existing = existingRows[0] ?? null;
   const mergedMarkets = mergePushMarkets(existing?.markets, markets);
@@ -168,7 +185,7 @@ export async function POST(request: Request) {
     method: "POST",
     prefer: "resolution=merge-duplicates,return=representation",
     body: {
-      user_id: user.id,
+      user_id: userId,
       token,
       platform,
       provider: "fcm",
@@ -183,21 +200,51 @@ export async function POST(request: Request) {
 
   if (shouldSyncPresets) {
     const marketsToSync = markets.length > 0 ? markets : [fallbackMarket];
-    await Promise.all(
-      marketsToSync.map((market) =>
-        supabaseAdminRest(`push_alert_presets?user_id=eq.${encodeURIComponent(user.id)}&market=eq.${market}`, {
+    try {
+      if (marketsToSync.includes("crypto") && isPerpetualRevenueCoreUserEnabled(userId)) {
+        await supabaseAdminRpc("expire_perpetual_monitors", {
+          p_evaluator_version: "perpetual-v1.0.0"
+        });
+        await supabaseAdminRpc("reconcile_perpetual_monitor_limit", {
+          p_user_id: userId,
+          p_monitor_limit: cryptoAlertConditionLimit(entitlement.plan)
+        });
+        await supabaseAdminRpc("replace_crypto_push_presets", {
+          p_user_id: userId,
+          p_presets: presets.filter((preset) => preset.market === "crypto"),
+          p_monitor_limit: cryptoAlertConditionLimit(entitlement.plan)
+        });
+      } else if (marketsToSync.includes("crypto")) {
+        await supabaseAdminRest(`push_alert_presets?user_id=eq.${encodeURIComponent(userId)}&market=eq.crypto`, {
           method: "DELETE"
-        })
-      )
-    );
+        });
+      }
+      if (marketsToSync.includes("stocks")) {
+        await supabaseAdminRest(`push_alert_presets?user_id=eq.${encodeURIComponent(userId)}&market=eq.stocks`, {
+          method: "DELETE"
+        });
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("monitor_limit_reached")) {
+        return NextResponse.json({
+          error: "시나리오 감시와 기존 코인 알림을 합친 저장 한도를 초과했습니다.",
+          code: "monitor_limit_reached",
+          upgrade: { href: "/pro?market=crypto&source=alert-limit" }
+        }, { status: 403 });
+      }
+      throw error;
+    }
   }
 
-  if (presets.length > 0) {
+  const directPresets = isPerpetualRevenueCoreUserEnabled(userId)
+    ? presets.filter((preset) => preset.market === "stocks")
+    : presets;
+  if (directPresets.length > 0) {
     await supabaseAdminRest("push_alert_presets?on_conflict=user_id,preset_id", {
       method: "POST",
       prefer: "resolution=merge-duplicates",
-      body: presets.map((preset) => ({
-        user_id: user.id,
+      body: directPresets.map((preset) => ({
+        user_id: userId,
         ...preset,
         enabled: true
       }))
@@ -215,16 +262,25 @@ export async function DELETE(request: Request) {
   const accessToken = bearerToken(request);
   if (!accessToken) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
 
-  const body = (await request.json().catch(() => ({}))) as PushTokenRequestBody;
+  const entitlement = await getRequestEntitlement(request, "crypto");
+  if (!entitlement.userId || !entitlement.isAuthenticated) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  const limited = await rateLimit(request, {
+    key: entitlementRateKey("push-token-delete", entitlement),
+    limit: 30,
+    windowMs: 5 * 60 * 1000
+  });
+  if (!limited.allowed) return NextResponse.json({ error: "알림 해제 요청이 많습니다." }, { status: 429 });
+
+  const parsed = await readJsonBodyLimited<PushTokenRequestBody>(request, 8_192);
+  if (!parsed.ok && parsed.tooLarge) return NextResponse.json({ error: "알림 해제 요청이 너무 큽니다." }, { status: 413 });
+  const body = parsed.ok ? parsed.value : {};
   const token = typeof body.token === "string" ? body.token.trim() : "";
   if (!token) return NextResponse.json({ error: "해제할 앱 푸시 알림 연결 정보가 없습니다." }, { status: 400 });
   const rawPlatform = typeof body.platform === "string" ? body.platform : "android";
   if (rawPlatform !== "android") {
     return NextResponse.json({ error: "현재 앱 푸시 알림만 해제할 수 있습니다." }, { status: 400 });
   }
-
-  const user = await fetchSupabaseUserOnServer(accessToken);
-  await supabaseAdminRest(`push_tokens?token=eq.${encodeURIComponent(token)}&user_id=eq.${encodeURIComponent(user.id)}&platform=eq.android&provider=eq.fcm`, {
+  await supabaseAdminRest(`push_tokens?token=eq.${encodeURIComponent(token)}&user_id=eq.${encodeURIComponent(entitlement.userId)}&platform=eq.android&provider=eq.fcm`, {
     method: "PATCH",
     body: {
       enabled: false,

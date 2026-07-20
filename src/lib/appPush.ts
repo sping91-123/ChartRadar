@@ -2,6 +2,7 @@
 import { Capacitor } from "@capacitor/core";
 import { getActiveSupabaseSession } from "@/lib/supabase";
 import { resolvePushTargetPath } from "@/lib/pushTargetPath";
+import { rememberPerpetualAlertContext } from "@/lib/perpetualAlertContext";
 import type { PushTestKind } from "@/lib/pushTestMessages";
 import type { SetupAlertPreset } from "@/lib/setupAlertPresets";
 
@@ -556,6 +557,7 @@ export async function registerAppPushListeners() {
 
   await PushNotifications.addListener("pushNotificationActionPerformed", (event) => {
     const pushData = pushActionData(event as PushNotificationActionEvent);
+    rememberPerpetualAlertContext(pushData);
     const targetPath = resolvePushTargetPath(pushData);
     console.info("[app-push] notification action performed", {
       targetPath,

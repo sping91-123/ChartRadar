@@ -296,3 +296,16 @@ Task 6 must select at most one follow-up candidate:
 - 최근 1시간 Vercel runtime error cluster는 0건이었다.
 - Supabase security advisor의 남은 WARN은 leaked-password protection 비활성화다. 현재 외부 Chrome 세션이 Supabase/GitHub에 로그인되어 있지 않아 자격증명 없이 dashboard 설정을 변경하지 않았다. `billing_entitlement_events`와 `oauth_provider_credentials`의 no-policy INFO는 외부 역할에 fail-closed인 내부 테이블 설계다.
 - push, Play Console 업로드, App Store 제출은 수행하지 않았다. iOS 7개 외부 자격증명/Xcode 조건과 macOS archive/TestFlight는 계속 release gate로 남는다.
+
+## 2026-07-20 Home → Perpetual 수익화 코어 v1 로컬 구현
+
+- 대표 승인 계획에 따라 Binance USDT-M BTC·ETH의 공통 `PerpetualDecisionSnapshot`과 Home → Perpetual → monitor → 알림 → Journal 흐름을 구현했다.
+- Home 첫 화면은 상태·가장 큰 위험·이유 2개·다음 조건·단일 CTA로 압축했고, 관심 거래소·알트 시세와 유료 판단 범위를 분리했다.
+- Perpetual Hero·차트·압력·대형 체결·다중 시간대 근거는 하나의 snapshot을 공유한다. 유효 snapshot은 유지하고 만료·없는 ID와 asset 불일치는 최신 선택 자산 snapshot으로 교체하면서 갱신 안내를 표시한다.
+- Basic 1개, Coin Pro·bundle·admin 20개인 preset+scenario shared quota, pause/resume/cancel, atomic scanner claim, 앱 내 알림, structured push target, Journal snapshot/monitor 연결을 구현했다.
+- 신규 snapshot/monitor/outcome/product event 구조와 service-role RPC·RLS·retention·계정 삭제 purge migration을 추가했다. 운영 DDL은 적용하지 않았다.
+- 익명 HMAC product analytics, RevenueCat verified purchase attribution, `off|shadow|on` preflight를 추가했다. 현재 local mode는 `off`이고 Vercel flag·deploy는 변경하지 않았다.
+- 모바일 CLI Playwright에서 360×800·390×844 Home, BTC/ETH 동일 snapshot 이동, Home/alert 갱신, asset mismatch를 확인했다. 최종 session의 overflow·console error는 0건이다. 증거는 `output/playwright/perpetual-revenue-core-v1/`에 있다.
+- 필수 신규/기존 테스트, Supabase·billing·ops·migration·mobile·route smoke, TypeScript, production build, `smoke:all`, `git diff --check`가 통과했다.
+- 남은 외부 게이트: production migration, `shadow/on` Vercel flag와 deploy, 실제 5분 cron·disposable Android FCM, authenticated Basic/Pro E2E, 14일 beta 관찰. beta 12명 mutation, 실제 Push, AAB, 스토어, iOS, commit, push는 수행하지 않았다.
+- 상세 기록: `docs/work-items/home-perpetual-revenue-core-v1.md`.

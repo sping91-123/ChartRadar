@@ -1,46 +1,109 @@
 "use client";
 
-import { useCallback, useMemo, useState, type ReactNode } from "react";
-import { ChevronDown, LineChart, ShieldAlert } from "lucide-react";
-import { CoinOptionsMarketPanel } from "@/components/coin/CoinOptionsMarketPanel";
-import { CoinLargeTradeFlowPanel } from "@/components/coin/CoinLargeTradeFlowPanel";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
 import { CoinFuturesBrief } from "@/components/coin/CoinFuturesBrief";
 import { CoinFuturesSwitch } from "@/components/coin/CoinFuturesSwitch";
-import { CoinOnchainPulsePanel } from "@/components/coin/CoinOnchainPulsePanel";
-import { CoinFuturesSignalPressurePanel } from "@/components/coin/CoinSignalPressurePanel";
-import { CoinStablecoinLiquidityPanel } from "@/components/coin/CoinStablecoinLiquidityPanel";
 import { CoinMarketEnvironmentPanel } from "@/components/coin/CoinMarketEnvironmentPanel";
+import { CoinOnchainPulsePanel } from "@/components/coin/CoinOnchainPulsePanel";
+import { CoinOptionsMarketPanel } from "@/components/coin/CoinOptionsMarketPanel";
+import { PerpetualDecisionExperience } from "@/components/coin/PerpetualDecisionExperience";
+import { CoinStablecoinLiquidityPanel } from "@/components/coin/CoinStablecoinLiquidityPanel";
 import { Header } from "@/components/Header";
-import { LiveMarketChart } from "@/components/LiveMarketChart";
 import { RadarTopNav } from "@/components/RadarTopNav";
-import { SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
+import { withSupabaseAuth } from "@/lib/authFetch";
 import type { MajorAssetId } from "@/lib/majorAssetRoute";
+import type { PerpetualRevenueCoreMode } from "@/lib/server/perpetualRevenueCore";
+import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 const majorAssetOptions = [
-  { id: "btc", label: "비트", detail: "BTC", apiSymbol: "BTCUSDT", chartSymbol: "BTCUSDT.P" },
-  { id: "eth", label: "이더", detail: "ETH", apiSymbol: "ETHUSDT", chartSymbol: "ETHUSDT.P" }
+  { id: "btc", label: "비트", detail: "BTC", apiSymbol: "BTCUSDT" },
+  { id: "eth", label: "이더", detail: "ETH", apiSymbol: "ETHUSDT" }
 ] as const;
 
 function BackgroundEvidenceDisclosure({ children }: { children: ReactNode }) {
+  const [opened, setOpened] = useState(false);
   return (
-    <details className="group border-t border-ui-line pt-4">
+    <details className="group border-t border-ui-line pt-4" onToggle={(event) => setOpened(event.currentTarget.open)}>
       <summary className="flex cursor-pointer list-none items-start justify-between gap-3 py-2 marker:hidden [&::-webkit-details-marker]:hidden">
         <span className="min-w-0">
-          <span className="block text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">보조 데이터</span>
+          <span className="block text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">배경 정보</span>
           <span className="mt-1 block text-ui-heading font-semibold tracking-tight text-ui-text">시장 환경, 온체인, 옵션은 접어 둡니다</span>
           <span className="mt-1 block max-w-3xl text-ui-body text-ui-muted [word-break:keep-all]">
-            매매 판단은 상단 플랜과 차트 확인을 우선하고, 이 값들은 필요할 때만 참고합니다.
+            판단은 상단 리스크 스냅샷과 조건 확인을 우선하고, 이 값들은 필요할 때만 참고합니다.
           </span>
         </span>
         <ChevronDown className="mt-1 shrink-0 text-ui-subtle transition group-open:rotate-180" size={18} aria-hidden />
       </summary>
-      <div className="mt-3 grid gap-3">{children}</div>
+      {opened ? <div className="mt-3 grid gap-3">{children}</div> : null}
     </details>
   );
 }
 
-export function MajorsApp({ initialAsset = "btc" }: { initialAsset?: MajorAssetId }) {
+function ShadowPerpetualCanaryGate({
+  asset,
+  selectedSymbols,
+  requestedSnapshotId,
+  source,
+  attributionId
+}: {
+  asset: MajorAssetId;
+  selectedSymbols: Array<{ symbol: string; label: string }>;
+  requestedSnapshotId: string | null;
+  source: "home" | "alert" | null;
+  attributionId: string | null;
+}) {
+  const { session, isLoading } = useSupabaseAuth();
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    if (isLoading || !session?.accessToken) {
+      setEnabled(false);
+      return () => controller.abort();
+    }
+    void (async () => {
+      try {
+        const response = await fetch(
+          "/api/crypto/perpetual/access",
+          await withSupabaseAuth({ cache: "no-store", signal: controller.signal })
+        );
+        const payload = (await response.json().catch(() => ({}))) as { enabled?: boolean };
+        if (!controller.signal.aborted) setEnabled(response.ok && payload.enabled === true);
+      } catch {
+        if (!controller.signal.aborted) setEnabled(false);
+      }
+    })();
+    return () => controller.abort();
+  }, [asset, isLoading, session?.accessToken]);
+
+  if (!enabled) return <CoinFuturesBrief mode="major" symbols={selectedSymbols} />;
+  return (
+    <PerpetualDecisionExperience
+      key={asset}
+      asset={asset}
+      requestedSnapshotId={requestedSnapshotId}
+      source={source}
+      attributionId={attributionId}
+    />
+  );
+}
+
+export function MajorsApp({
+  initialAsset = "btc",
+  initialSnapshotId = null,
+  initialSource = null,
+  initialAttributionId = null,
+  revenueCoreMode = "off"
+}: {
+  initialAsset?: MajorAssetId;
+  initialSnapshotId?: string | null;
+  initialSource?: "home" | "alert" | null;
+  initialAttributionId?: string | null;
+  revenueCoreMode?: PerpetualRevenueCoreMode;
+}) {
   const [activeAssetId, setActiveAssetId] = useState<MajorAssetId>(initialAsset);
+  const [initialContinuityAvailable, setInitialContinuityAvailable] = useState(true);
   const activeAsset = majorAssetOptions.find((asset) => asset.id === activeAssetId) ?? majorAssetOptions[0];
   const selectedSymbols = useMemo(
     () => [{ symbol: activeAsset.apiSymbol, label: activeAsset.detail }],
@@ -48,11 +111,16 @@ export function MajorsApp({ initialAsset = "btc" }: { initialAsset?: MajorAssetI
   );
   const selectedOptionCurrencies = useMemo(() => [activeAsset.detail], [activeAsset.detail]);
   const handleAssetChange = useCallback((next: MajorAssetId) => {
+    setInitialContinuityAvailable(false);
     setActiveAssetId(next);
     const url = new URL(window.location.href);
     url.searchParams.set("asset", next);
+    url.searchParams.set("timeframe", "15m");
     url.searchParams.delete("symbol");
     url.searchParams.delete("exchange");
+    url.searchParams.delete("snapshot");
+    url.searchParams.delete("source");
+    url.searchParams.delete("attribution");
     window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
   }, []);
 
@@ -62,38 +130,25 @@ export function MajorsApp({ initialAsset = "btc" }: { initialAsset?: MajorAssetI
         <Header market="crypto" />
         <RadarTopNav />
         <CoinFuturesSwitch active={activeAssetId} onAssetChange={handleAssetChange} />
-        <CoinFuturesBrief mode="major" symbols={selectedSymbols} />
-
-        <section className="space-y-3 pt-1">
-          <SectionHeader
-            eyebrow="실시간 수치"
-            title={`${activeAsset.label} 플랜에 쓰인 쏠림과 체결입니다`}
-            description={`${activeAsset.detail} 선물 상세 수치가 필요할 때만 확인합니다. 매매 방향은 상단의 롱/숏 플랜을 먼저 봅니다.`}
-            action={
-              <StatusPill tone="risk" icon={ShieldAlert}>
-                상세
-              </StatusPill>
-            }
+        {revenueCoreMode === "on" ? (
+          <PerpetualDecisionExperience
+            key={activeAssetId}
+            asset={activeAssetId}
+            requestedSnapshotId={initialContinuityAvailable && activeAssetId === initialAsset ? initialSnapshotId : null}
+            source={initialContinuityAvailable && activeAssetId === initialAsset ? initialSource : null}
+            attributionId={initialContinuityAvailable && activeAssetId === initialAsset ? initialAttributionId : null}
           />
-          <div className="grid gap-3 xl:grid-cols-2">
-            <CoinFuturesSignalPressurePanel mode="major" symbols={selectedSymbols} />
-            <CoinLargeTradeFlowPanel mode="major" symbols={selectedSymbols} />
-          </div>
-        </section>
-
-        <section className="space-y-3 pt-1">
-          <SectionHeader
-            eyebrow="가격 확인"
-            title="플랜이 맞는 가격 자리만 확인합니다"
-            description="롱은 돌파 유지, 숏은 이탈 유지처럼 상단 플랜의 조건이 차트에서도 이어지는지만 봅니다."
-            action={
-              <StatusPill tone="watch" icon={LineChart}>
-                차트
-              </StatusPill>
-            }
+        ) : revenueCoreMode === "shadow" ? (
+          <ShadowPerpetualCanaryGate
+            asset={activeAssetId}
+            selectedSymbols={selectedSymbols}
+            requestedSnapshotId={initialContinuityAvailable && activeAssetId === initialAsset ? initialSnapshotId : null}
+            source={initialContinuityAvailable && activeAssetId === initialAsset ? initialSource : null}
+            attributionId={initialContinuityAvailable && activeAssetId === initialAsset ? initialAttributionId : null}
           />
-          <LiveMarketChart majorOnly selectedSymbol={activeAsset.chartSymbol} hideSymbolSelector />
-        </section>
+        ) : (
+          <CoinFuturesBrief mode="major" symbols={selectedSymbols} />
+        )}
 
         <BackgroundEvidenceDisclosure>
           <CoinMarketEnvironmentPanel mode="major" />

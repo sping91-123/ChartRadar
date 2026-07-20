@@ -1,10 +1,12 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Bell, Clock3, Inbox, Loader2, RefreshCw, Settings } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Bell, ChevronRight, Clock3, Inbox, Loader2, RefreshCw, Settings } from "lucide-react";
 import { ActionButton, AppSurface, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import { withSupabaseAuth } from "@/lib/authFetch";
+import { resolvePushTargetPath } from "@/lib/pushTargetPath";
+import { rememberPerpetualAlertContext } from "@/lib/perpetualAlertContext";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 type AlertMarket = "crypto" | "stocks";
@@ -65,14 +67,14 @@ function marketCopy(market: AlertMarket) {
   if (market === "stocks") {
     return {
       title: "글로벌 알림 기록",
-      description: "최근 발송된 글로벌 알림을 시간순으로 확인합니다.",
+      description: "최근 확인된 글로벌 알림을 시간순으로 확인합니다.",
       settingsHref: "/alerts?market=global"
     };
   }
 
   return {
     title: "코인 알림 기록",
-    description: "여태까지 도착한 코인 알림을 최신순으로 확인합니다.",
+    description: "조건 충족과 판단 변경 기록을 최신순으로 확인합니다.",
     settingsHref: "/crypto/alertset"
   };
 }
@@ -83,7 +85,10 @@ export function RadarAlertList({ market = "crypto" }: { market?: AlertMarket }) 
   const [status, setStatus] = useState<LoadStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [loginHref, setLoginHref] = useState("/login");
+  const requestGeneration = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
   const copy = useMemo(() => marketCopy(market), [market]);
+  const accessToken = session?.accessToken;
 
   useEffect(() => {
     const currentPath = `${window.location.pathname}${window.location.search}`;
@@ -91,34 +96,46 @@ export function RadarAlertList({ market = "crypto" }: { market?: AlertMarket }) 
   }, []);
 
   const loadEvents = useCallback(async () => {
-    if (!session) return;
+    if (!accessToken) return;
 
+    const generation = ++requestGeneration.current;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setStatus("loading");
     setError(null);
     try {
       const response = await fetch(
         `/api/push-alert-events?market=${market === "stocks" ? "global" : "crypto"}&limit=50`,
-        await withSupabaseAuth({ cache: "no-store" })
+        await withSupabaseAuth({ cache: "no-store", signal: controller.signal })
       );
       const payload = (await response.json().catch(() => ({}))) as PushAlertEventsResponse;
       if (!response.ok) throw new Error(payload.error ?? "알림 기록을 불러오지 못했습니다.");
+      if (controller.signal.aborted || generation !== requestGeneration.current) return;
       setEvents(payload.events ?? []);
       setStatus("ready");
     } catch (loadError) {
+      if (controller.signal.aborted || generation !== requestGeneration.current) return;
       setError(loadError instanceof Error ? loadError.message : "알림 기록을 불러오지 못했습니다.");
       setStatus("error");
     }
-  }, [market, session]);
+  }, [accessToken, market]);
 
   useEffect(() => {
     if (isAuthLoading) return;
-    if (!session) {
+    if (!accessToken) {
+      requestGeneration.current += 1;
+      abortRef.current?.abort();
       setStatus("idle");
       setEvents([]);
       return;
     }
     void loadEvents();
-  }, [isAuthLoading, loadEvents, session]);
+    return () => {
+      requestGeneration.current += 1;
+      abortRef.current?.abort();
+    };
+  }, [accessToken, isAuthLoading, loadEvents]);
 
   if (isAuthLoading) {
     return (
@@ -199,10 +216,17 @@ export function RadarAlertList({ market = "crypto" }: { market?: AlertMarket }) 
           {events.map((event) => {
             const symbol = payloadString(event.payload, ["symbol", "ticker", "asset"]);
             const score = alertScoreLabel(event.payload);
-            const kind = alertKindLabel(event.payload, event.rule_id);
+            const kind = event.rule_id === "perpetual_scenario"
+              ? event.title
+              : alertKindLabel(event.payload, event.rule_id);
+            const targetPath = resolvePushTargetPath(event.payload);
             return (
               <article key={event.id} className="py-4">
-                <div className="flex items-start justify-between gap-3">
+                <Link
+                  href={targetPath}
+                  onClick={() => rememberPerpetualAlertContext(event.payload)}
+                  className="group flex items-start justify-between gap-3 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ui-brand/50"
+                >
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <StatusPill tone="info" className="min-h-0 px-2 py-1 text-[11px]">
@@ -225,8 +249,9 @@ export function RadarAlertList({ market = "crypto" }: { market?: AlertMarket }) 
                   <div className="shrink-0 text-right text-ui-label font-semibold text-ui-subtle">
                     <Clock3 className="ml-auto mb-1" size={13} aria-hidden />
                     {formatAlertTime(event.sent_at ?? event.created_at)}
+                    <ChevronRight className="ml-auto mt-2 transition-transform group-hover:translate-x-0.5" size={14} aria-hidden />
                   </div>
-                </div>
+                </Link>
               </article>
             );
           })}

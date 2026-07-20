@@ -1,5 +1,6 @@
 "use client";
 // 매매 복기 흐름을 레이더 저장, 결과 확인, 원칙 점검으로 연결하는 페이지.
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -41,6 +42,7 @@ import {
   migrateLocalJournalEntries,
   updateRemoteJournalOutcome
 } from "@/lib/remoteJournal";
+import { isUuid } from "@/lib/perpetualMonitor";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 type MarketScope = "crypto" | "stocks";
@@ -241,7 +243,20 @@ function buildFeedback(params: {
 
 function SourceBadge({ entry }: { entry: JournalEntry }) {
   const sourceLabel =
-    entry.source === "scout" ? "레이더 저장" : entry.source === "chart" ? "차트 저장" : "직접 기록";
+    entry.source === "scout"
+      ? "레이더 저장"
+      : entry.source === "chart"
+        ? "차트 저장"
+        : entry.source === "snapshot"
+          ? "판단 스냅샷"
+          : entry.source === "alert"
+            ? "알림 복기"
+            : "직접 기록";
+  const normalizedSymbol = entry.symbol?.toUpperCase() ?? "";
+  const snapshotAsset = normalizedSymbol.includes("ETH") ? "eth" : normalizedSymbol.includes("BTC") ? "btc" : null;
+  const snapshotHref = entry.decisionSnapshotId && isUuid(entry.decisionSnapshotId) && snapshotAsset
+    ? `/crypto/perpetual?asset=${snapshotAsset}&timeframe=15m&snapshot=${encodeURIComponent(entry.decisionSnapshotId)}${entry.source === "alert" ? "&source=alert" : ""}`
+    : null;
 
   return (
     <div className="flex min-w-0 max-w-full flex-wrap gap-1.5 sm:gap-2">
@@ -260,6 +275,11 @@ function SourceBadge({ entry }: { entry: JournalEntry }) {
         <StatusPill tone="info" className="max-w-full whitespace-normal break-keep leading-snug">
           {entry.timeframe}
         </StatusPill>
+      ) : null}
+      {snapshotHref ? (
+        <Link href={snapshotHref} className="inline-flex min-h-7 items-center border-b border-ui-brand/60 px-1 text-xs font-black text-ui-brand hover:border-ui-brand">
+          판단 snapshot 보기
+        </Link>
       ) : null}
     </div>
   );

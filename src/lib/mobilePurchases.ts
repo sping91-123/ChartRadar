@@ -10,6 +10,8 @@ interface NativePurchaseParams {
   plan: BillingPlan;
   userId: string;
   accessToken: string;
+  attributionId?: string;
+  attributionSource?: string;
   onStage?: (stage: NativePurchaseStageEvent) => void;
 }
 
@@ -250,7 +252,9 @@ async function syncAppStoreEntitlement(params: NativePurchaseParams & { platform
       planId: params.plan.id,
       productId,
       basePlanId,
-      platform: params.platform
+      platform: params.platform,
+      attributionId: params.attributionId,
+      attributionSource: params.attributionSource
     })
   });
 
