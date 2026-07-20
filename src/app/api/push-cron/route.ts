@@ -6,6 +6,7 @@ import { runPushAlertScan } from "@/lib/server/pushAlertScanner";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
 
 function isAuthorized(request: Request) {
   const secret = process.env.CRON_SECRET;
