@@ -40,12 +40,12 @@ export async function GET(request: Request) {
   if (!isSupabaseAdminConfigured()) {
     return NextResponse.json({ error: "Supabase 관리자 환경변수가 필요합니다." }, { status: 503 });
   }
-  if (!dryRun && !isFirebaseMessagingConfigured()) {
-    return NextResponse.json({ error: "Firebase 메시징 환경변수가 필요합니다." }, { status: 503 });
-  }
-
   const origin = url.origin;
-  const result = await runPushAlertScan({ origin, dryRun });
+  const result = await runPushAlertScan({
+    origin,
+    dryRun,
+    pushDeliveryEnabled: dryRun || isFirebaseMessagingConfigured()
+  });
   const scannedAt = new Date().toISOString();
   console.info("[push-cron] scan summary", JSON.stringify(scanSummaryLog(result, scannedAt, dryRun)));
   return NextResponse.json({

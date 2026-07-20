@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { resolveCombinedBillingEntitlementPlan } from "@/lib/billing";
 import { reconcileProviderEntitlements } from "@/lib/server/billingEntitlements";
+import { findRecentPurchaseAttribution, recordServerProductEvent } from "@/lib/server/productEventStore";
 import {
   buildRevenueCatSnapshot,
   extractRevenueCatWebhookUserIds,
@@ -67,6 +69,22 @@ export async function POST(request: Request) {
         observedAtIso: observedAt,
         verifiedEmpty: snapshot.length === 0
       });
+      if (snapshot.length > 0 && result.changed) {
+        const planIds = snapshot.map((entry) => entry.plan);
+        const primaryPlan = resolveCombinedBillingEntitlementPlan(planIds, "all") ?? planIds[0] ?? null;
+        const attributionId = await findRecentPurchaseAttribution({
+          userId,
+          provider: "revenuecat",
+          planId: primaryPlan
+        });
+        await recordServerProductEvent({
+          eventName: "entitlement_activated",
+          userId,
+          surface: "billing",
+          attributionId,
+          properties: { provider: "revenuecat", source: "webhook", planId: primaryPlan }
+        });
+      }
       reconciliations.push({
         status: result.status,
         active: snapshot.length > 0,

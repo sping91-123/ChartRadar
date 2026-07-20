@@ -29,6 +29,36 @@ function normalizedSymbol(value: unknown) {
   return stringValue(value).toUpperCase();
 }
 
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+export interface PerpetualAlertContext {
+  asset: "btc" | "eth";
+  snapshotId: string;
+  monitorId: string;
+  conditionId: string | null;
+}
+
+export function perpetualAlertContextFromPushData(data: PushTargetData): PerpetualAlertContext | null {
+  if (normalizedValue(data.destination) !== "perpetual_snapshot") return null;
+  if (normalizedValue(data.type) !== "perpetual_scenario") return null;
+  const asset = normalizedValue(data.asset);
+  const snapshotId = stringValue(data.snapshotId ?? data.snapshot_id);
+  const monitorId = stringValue(data.monitorId ?? data.monitor_id);
+  const conditionId = stringValue(data.conditionId ?? data.condition_id);
+  if ((asset !== "btc" && asset !== "eth") || !isUuid(snapshotId) || !isUuid(monitorId)) return null;
+  return { asset, snapshotId, monitorId, conditionId: conditionId || null };
+}
+
+function perpetualSnapshotTarget(data: PushTargetData) {
+  const context = perpetualAlertContextFromPushData(data);
+  if (!context) return null;
+  const { asset, snapshotId } = context;
+  const params = new URLSearchParams({ asset, snapshot: snapshotId, source: "alert" });
+  return `/crypto/perpetual?${params.toString()}`;
+}
+
 export function sanitizePushTargetPath(value: unknown) {
   const path = stringValue(value);
   if (!path) return null;
@@ -82,6 +112,11 @@ function routeFromPushMetadata(data: PushTargetData) {
 
 export function resolvePushTargetPath(data: PushTargetData | null | undefined) {
   const payload = data ?? {};
+  const perpetualTarget = perpetualSnapshotTarget(payload);
+  if (perpetualTarget) return perpetualTarget;
+  if (normalizedValue(payload.destination) === "perpetual_snapshot" || normalizedValue(payload.type) === "perpetual_scenario") {
+    return "/alerts";
+  }
   const explicitTargetPath = sanitizePushTargetPath(payload.targetPath);
   if (explicitTargetPath && explicitTargetPath !== "/alerts") return explicitTargetPath;
 

@@ -5,7 +5,6 @@ const FETCH_TIMEOUT_MS = 4500;
 const BINANCE_FAPI = "https://fapi.binance.com";
 const BINANCE_WEB = "https://www.binance.com";
 const BINANCE_INFO = "https://www.binance.info";
-const BINANCE_SPOT_DATA_API = "https://data-api.binance.vision";
 
 interface PremiumIndexPayload {
   symbol: string;
@@ -280,10 +279,7 @@ async function fetchFallbackMarkPrice(symbol: string, period: string) {
     interval: period,
     limit: "2"
   });
-  const endpoints = [
-    `${BINANCE_FAPI}/fapi/v1/klines?${params.toString()}`,
-    `${BINANCE_SPOT_DATA_API}/api/v3/klines?${params.toString()}`
-  ];
+  const endpoints = [`${BINANCE_FAPI}/fapi/v1/klines?${params.toString()}`];
 
   for (const endpoint of endpoints) {
     try {
@@ -359,7 +355,13 @@ export async function fetchLiquidationPressureReport(symbol: string, period: str
   const topPositionPayload = settledValue(topPositionResult, "topLongShortPositionRatio");
   const takerPayload = settledValue(takerResult, "takerlongshortRatio");
   const oi = openInterestChange(unwrapRows<OpenInterestHistRow>(openInterestPayload));
-  const latestFunding = latestFundingRate(unwrapRows<FundingRateRow>(fundingRatePayload));
+  const fundingRows = unwrapRows<FundingRateRow>(fundingRatePayload);
+  const openInterestRows = unwrapRows<OpenInterestHistRow>(openInterestPayload);
+  const globalLongShortRows = unwrapRows<LongShortRow>(globalLongShortPayload);
+  const topAccountRows = unwrapRows<LongShortRow>(topAccountPayload);
+  const topPositionRows = unwrapRows<LongShortRow>(topPositionPayload);
+  const takerRows = unwrapRows<TakerLongShortRow>(takerPayload);
+  const latestFunding = latestFundingRate(fundingRows);
   const premiumMarkPrice = toNumber(premiumIndexPayload?.markPrice);
   const fundingMarkPrice = toNumber(latestFunding?.markPrice);
   const fallbackMarkPrice = premiumMarkPrice === null && fundingMarkPrice === null ? await fetchFallbackMarkPrice(symbol, period) : null;
@@ -369,6 +371,14 @@ export async function fetchLiquidationPressureReport(symbol: string, period: str
   }
   const binanceFundingRate = toNumber(premiumIndexPayload?.lastFundingRate) ?? toNumber(latestFunding?.fundingRate);
   const supplementalFundingRate = binanceFundingRate === null ? await fetchSupplementalFundingRate(symbol) : null;
+  const observedAt = [
+    ...fundingRows.map((row) => Number(row.fundingTime)),
+    ...openInterestRows.map((row) => Number(row.timestamp)),
+    ...globalLongShortRows.map((row) => Number(row.timestamp)),
+    ...topAccountRows.map((row) => Number(row.timestamp)),
+    ...topPositionRows.map((row) => Number(row.timestamp)),
+    ...takerRows.map((row) => Number(row.timestamp))
+  ].reduce((latest, timestamp) => (Number.isFinite(timestamp) ? Math.max(latest, timestamp) : latest), 0);
 
   return buildLiquidationPressureReport({
     symbol,
@@ -380,10 +390,10 @@ export async function fetchLiquidationPressureReport(symbol: string, period: str
     nextFundingTime: premiumIndexPayload?.nextFundingTime ?? supplementalFundingRate?.nextFundingTime ?? null,
     openInterestValue: oi.value,
     openInterestChangePercent: oi.changePercent,
-    globalLongShort: parseLongShort(unwrapRows<LongShortRow>(globalLongShortPayload)[0] ?? null),
-    topAccountLongShort: parseLongShort(unwrapRows<LongShortRow>(topAccountPayload)[0] ?? null),
-    topPositionLongShort: parseLongShort(unwrapRows<LongShortRow>(topPositionPayload)[0] ?? null),
-    takerFlow: parseTakerFlow(unwrapRows<TakerLongShortRow>(takerPayload)[0] ?? null),
-    updatedAt: Date.now()
+    globalLongShort: parseLongShort(globalLongShortRows[0] ?? null),
+    topAccountLongShort: parseLongShort(topAccountRows[0] ?? null),
+    topPositionLongShort: parseLongShort(topPositionRows[0] ?? null),
+    takerFlow: parseTakerFlow(takerRows[0] ?? null),
+    updatedAt: observedAt || Date.now()
   });
 }

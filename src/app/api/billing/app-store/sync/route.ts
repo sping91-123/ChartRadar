@@ -2,8 +2,10 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { resolveCombinedBillingEntitlementPlan, resolvePlanIdFromStoreProductId } from "@/lib/billing";
 import { resolveEffectiveEntitlement } from "@/lib/effectiveEntitlement";
+import { isUuid } from "@/lib/perpetualMonitor";
 import { reconcileProviderEntitlements } from "@/lib/server/billingEntitlements";
-import { isBodyTooLarge, rateLimit } from "@/lib/server/rateLimit";
+import { findRecentPurchaseAttribution, recordServerProductEvent } from "@/lib/server/productEventStore";
+import { isBodyTooLarge, rateLimit, readJsonBodyLimited } from "@/lib/server/rateLimit";
 import {
   buildRevenueCatSnapshot,
   fetchRevenueCatSubscriber,
@@ -14,6 +16,8 @@ import { fetchSupabaseActiveSubscriptions } from "@/lib/supabase";
 
 interface AppStoreSyncRequest {
   appUserId?: string;
+  attributionId?: string;
+  attributionSource?: string;
   basePlanId?: string;
   planId?: string;
   productId?: string;
@@ -55,7 +59,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ active: false, status: "pending", message: "요청이 너무 큽니다." }, { status: 413 });
   }
 
-  const body = (await request.json().catch(() => ({}))) as AppStoreSyncRequest;
+  const parsed = await readJsonBodyLimited<AppStoreSyncRequest | null>(request, 8_000);
+  if (!parsed.ok) {
+    return NextResponse.json(
+      { active: false, status: "pending", message: parsed.tooLarge ? "Request body is too large." : "Request body is invalid." },
+      { status: parsed.tooLarge ? 413 : 400 }
+    );
+  }
+  const body = parsed.value ?? {};
+  const allowedKeys = new Set(["appUserId", "attributionId", "attributionSource", "basePlanId", "planId", "productId", "platform"]);
+  if (typeof body !== "object" || Array.isArray(body) || Object.keys(body).some((key) => !allowedKeys.has(key))) {
+    return NextResponse.json({ active: false, status: "pending", message: "Request fields are invalid." }, { status: 400 });
+  }
+  if (body.attributionId !== undefined && !isUuid(body.attributionId)) {
+    return NextResponse.json({ active: false, status: "pending", message: "Purchase attribution is invalid." }, { status: 400 });
+  }
+  if (body.attributionSource !== undefined && !/^[a-z0-9_-]{1,60}$/i.test(body.attributionSource)) {
+    return NextResponse.json({ active: false, status: "pending", message: "Purchase attribution source is invalid." }, { status: 400 });
+  }
   const accessToken = getBearerToken(request);
   if (!accessToken) {
     return NextResponse.json({ active: false, status: "login_required", message: "로그인이 필요합니다." }, { status: 401 });
@@ -81,6 +102,9 @@ export async function POST(request: Request) {
   if (body.planId && requestPlanId && body.planId !== requestPlanId) {
     return NextResponse.json({ active: false, status: "setup_required", message: "상품 매핑이 일치하지 않습니다." }, { status: 409 });
   }
+  if (body.attributionId && (!body.planId || !requestPlanId)) {
+    return NextResponse.json({ active: false, status: "pending", message: "Purchase attribution requires a mapped product." }, { status: 400 });
+  }
   if (!isSupabaseAdminConfigured()) {
     return NextResponse.json({ active: false, status: "setup_required", message: "구독 원장 연결이 준비되지 않았습니다." }, { status: 503 });
   }
@@ -90,6 +114,15 @@ export async function POST(request: Request) {
   }
 
   const observedAt = new Date().toISOString();
+  if (body.attributionId && requestPlanId) {
+    await recordServerProductEvent({
+      eventId: body.attributionId,
+      eventName: "purchase_started",
+      userId: user.id,
+      surface: "billing",
+      properties: { provider: "revenuecat", planId: requestPlanId, source: body.attributionSource ?? "pro_page" }
+    });
+  }
   let snapshot: ReturnType<typeof buildRevenueCatSnapshot>;
   try {
     const payload = await fetchRevenueCatSubscriber({ appUserId: body.appUserId, apiKey: revenueCatApiKey });
@@ -129,6 +162,20 @@ export async function POST(request: Request) {
     const planIds = snapshot.map((entry) => entry.plan);
     const primaryPlan = resolveCombinedBillingEntitlementPlan(planIds, "all") ?? planIds[0] ?? null;
     const active = snapshot.length > 0;
+    if (active && result.changed) {
+      const attributionId = body.attributionId ?? await findRecentPurchaseAttribution({
+        userId: user.id,
+        provider: "revenuecat",
+        planId: primaryPlan
+      });
+      await recordServerProductEvent({
+        eventName: "entitlement_activated",
+        userId: user.id,
+        surface: "billing",
+        attributionId,
+        properties: { provider: "revenuecat", planId: primaryPlan }
+      });
+    }
     return NextResponse.json({
       active,
       status: active ? "active" : "not_active",

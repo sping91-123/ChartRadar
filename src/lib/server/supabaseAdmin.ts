@@ -1,4 +1,5 @@
 // 서버에서 결제 권한을 반영할 때만 사용하는 Supabase 관리자 REST 클라이언트입니다.
+import { collectPaginatedRows } from "@/lib/pagination";
 import { supabasePublishableKey, supabaseUrl, type SupabaseUser } from "@/lib/supabase";
 
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
@@ -72,6 +73,14 @@ export async function supabaseAdminRest<T>(
 
   if (response.status === 204) return null as T;
   return readJsonOrNull<T>(response);
+}
+
+export async function supabaseAdminRestAll<T>(path: string, pageSize = 500): Promise<T[]> {
+  const separator = path.includes("?") ? "&" : "?";
+  return collectPaginatedRows<T>(
+    (offset, limit) => supabaseAdminRest<T[]>(`${path}${separator}limit=${limit}&offset=${offset}`),
+    pageSize
+  );
 }
 
 export async function supabaseAdminRpc<T>(

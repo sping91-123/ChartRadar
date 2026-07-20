@@ -71,7 +71,7 @@ export const billingPlans: BillingPlan[] = [
     name: "Coin Pro",
     displayName: "Chart Radar Coin Pro 월간 구독",
     badge: "코인",
-    priceLabel: "출시가 29,000원 / 월",
+    priceLabel: "29,000원 / 월",
     billingAmount: 29000,
     monthlyValue: 29000,
     billingPeriodMonths: 1,
@@ -82,14 +82,14 @@ export const billingPlans: BillingPlan[] = [
       ios: { productId: "chart_radar_crypto_monthly" },
       revenueCatPackageId: "crypto_monthly"
     },
-    description: "BTC/ETH 판단, 알트 기회와 위험 필터, 코인 상세 조건과 무효화 기준을 함께 확인합니다.",
-    highlights: ["BTC/ETH·알트 추적 조건과 리스크 확인", "코인 상세 판단", "무효화 기준과 세부 리스크"],
+    description: "Binance USDT-M BTC·ETH의 상태, 위험, 확인 조건을 같은 snapshot으로 보고 감시·알림·복기로 이어갑니다.",
+    highlights: ["BTC·ETH 선물 리스크 snapshot", "확인·판단 변경 조건 감시", "알림에서 같은 판단 복기"],
     limits: {
-      radarScans: "코인 레이더 200회",
-      aiBriefings: "코인 브리핑 30회",
-      watchlist: "코인 50개",
+      radarScans: "BTC·ETH 판단 snapshot",
+      aiBriefings: "결정론적 판단 근거",
+      watchlist: "관심 시세 5개",
       alerts: "코인 조건 20개",
-      markets: "코인"
+      markets: "Binance USDT-M BTC·ETH"
     }
   },
   {
@@ -109,14 +109,14 @@ export const billingPlans: BillingPlan[] = [
       ios: { productId: "chart_radar_crypto_yearly" },
       revenueCatPackageId: "crypto_yearly"
     },
-    description: "코인 시장을 꾸준히 추적하는 사용자를 위한 연간 플랜입니다. 월 10개월치 기준으로 2개월을 할인합니다.",
-    highlights: ["Coin Pro 전체 기능", "월 환산 약 24,167원", "BTC/ETH·알트 리스크 반복 점검"],
+    description: "기존 연간 구독 복원과 권한 확인을 위해 유지되는 내부 상품입니다.",
+    highlights: ["기존 Coin Pro 연간 권한", "BTC·ETH 조건 감시", "알림과 복기 연결"],
     limits: {
-      radarScans: "코인 레이더 200회",
-      aiBriefings: "코인 브리핑 40회",
-      watchlist: "코인 100개",
-      alerts: "코인 조건 30개",
-      markets: "코인"
+      radarScans: "BTC·ETH 판단 snapshot",
+      aiBriefings: "결정론적 판단 근거",
+      watchlist: "관심 시세 5개",
+      alerts: "코인 조건 20개",
+      markets: "Binance USDT-M BTC·ETH"
     }
   },
   {
@@ -191,12 +191,12 @@ export const billingPlans: BillingPlan[] = [
       revenueCatPackageId: "bundle_monthly"
     },
     description: "Coin Pro와 Global Pro를 통합해 코인과 글로벌 전체 시장 판단을 한 번에 확인합니다.",
-    highlights: ["코인과 미국장을 함께 보는 통합 플랜", "Coin Pro + Global Pro 통합", "두 시장을 함께 보는 사용자용"],
+    highlights: ["BTC·ETH와 미국장을 함께 보는 통합 플랜", "Coin Pro + Global Pro 통합", "두 시장 알림과 복기"],
     limits: {
-      radarScans: "코인 200회, 알트 300개, 글로벌 100회",
+      radarScans: "BTC·ETH snapshot, 글로벌 100회",
       aiBriefings: "총 60회",
       watchlist: "코인 100개, 글로벌 100개",
-      alerts: "시장별 조건 30개",
+      alerts: "시장별 조건 20개",
       markets: "코인과 글로벌"
     }
   },
@@ -221,10 +221,10 @@ export const billingPlans: BillingPlan[] = [
     description: "코인과 글로벌 전체 시장 판단을 6개월 단위로 함께 쓰는 자동 갱신 통합 구독입니다.",
     highlights: ["All Market Pro 전체 기능", "월 환산 약 33,167원", "코인과 글로벌 전체 시장 판단"],
     limits: {
-      radarScans: "코인 200회, 알트 300개, 글로벌 100회",
+      radarScans: "BTC·ETH snapshot, 글로벌 100회",
       aiBriefings: "총 80회",
       watchlist: "코인 150개, 글로벌 150개",
-      alerts: "시장별 조건 40개",
+      alerts: "시장별 조건 20개",
       markets: "코인, 글로벌, 확장 시장"
     }
   }
@@ -388,14 +388,14 @@ export function resolveCombinedBillingEntitlementPlan(
 
 export function getBillingPlansForPage(scope: BillingPageScope) {
   if (scope === "crypto") {
-    return billingPlans.filter((plan) => plan.marketScope === "trial" || plan.marketScope === "crypto" || plan.marketScope === "bundle");
+    return billingPlans.filter((plan) => plan.id === "free" || plan.id === "crypto_monthly");
   }
 
   if (scope === "stocks") {
     return billingPlans.filter((plan) => plan.marketScope === "trial" || plan.marketScope === "stocks" || plan.marketScope === "bundle");
   }
 
-  return billingPlans;
+  return billingPlans.filter((plan) => plan.id !== "crypto_yearly");
 }
 
 export function formatKrw(value: number) {
@@ -426,6 +426,14 @@ export function hasMarketEntitlement(planId: BillingEntitlementPlan, scope: Excl
 export function hasScopedEntitlement(planId: BillingEntitlementPlan, scope: BillingPageScope) {
   if (scope === "all") return hasAnyPaidEntitlement(planId);
   return hasMarketEntitlement(planId, scope);
+}
+
+/**
+ * Crypto alert presets and Perpetual scenario monitors share one quota.
+ * This numeric contract is the server-side source of truth; UI copy must not be parsed.
+ */
+export function cryptoAlertConditionLimit(planId: BillingEntitlementPlan) {
+  return hasMarketEntitlement(planId, "crypto") ? 20 : 1;
 }
 
 export function getEntitlementLabel(planId: BillingEntitlementPlan) {

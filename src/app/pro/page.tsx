@@ -11,9 +11,14 @@ function normalizeBillingScope(market: string | undefined): BillingPageScope {
   return "all";
 }
 
-export default async function ProPage({ searchParams }: { searchParams: Promise<{ market?: string | string[] }> }) {
-  const { market } = await searchParams;
+function normalizeAttributionSource(source: string | undefined) {
+  return source && /^[a-z0-9_-]{1,60}$/i.test(source) ? source : null;
+}
+
+export default async function ProPage({ searchParams }: { searchParams: Promise<{ market?: string | string[]; source?: string | string[] }> }) {
+  const { market, source } = await searchParams;
   const marketScope = normalizeBillingScope(Array.isArray(market) ? market[0] : market);
+  const attributionSource = normalizeAttributionSource(Array.isArray(source) ? source[0] : source);
   const navMarket = marketScope === "stocks" ? "stocks" : marketScope === "crypto" ? "crypto" : "all";
   const headerMarket = marketScope === "stocks" ? "stocks" : marketScope === "crypto" ? "crypto" : undefined;
 
@@ -22,7 +27,7 @@ export default async function ProPage({ searchParams }: { searchParams: Promise<
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-5">
         <Header market={headerMarket} />
         <RadarTopNav market={navMarket} />
-        <ProPricingPanel marketScope={marketScope} />
+        <ProPricingPanel marketScope={marketScope} attributionSource={attributionSource} />
         <AppFooter />
       </div>
     </main>

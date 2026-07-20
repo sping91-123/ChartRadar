@@ -1,3 +1,5 @@
+import type { PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
+
 /** Scout 셋업 저장 시 결과 추적용 구조화 데이터 */
 export interface ScoutSnapshot {
   entryLow: number;
@@ -14,6 +16,40 @@ export interface ScoutSnapshot {
 /** W/L/BE 결과 기록 */
 export type OutcomeType = "win" | "loss" | "breakeven" | "missed";
 
+export interface DecisionJournalContext {
+  asset: "btc" | "eth";
+  symbol: "BTCUSDT" | "ETHUSDT";
+  snapshotId: string;
+  generatedAt: string;
+  quality: "ready" | "partial" | "stale" | "unavailable";
+  state: "neutral" | "upside_watch" | "downside_watch" | "risk";
+  headline: string;
+  topRisk: string;
+  primaryCondition: {
+    id: string;
+    label: string;
+    role: "primary" | "confirmation" | "invalidation";
+  };
+}
+
+export function decisionJournalContextFromSnapshot(snapshot: PerpetualDecisionSnapshot): DecisionJournalContext {
+  return {
+    asset: snapshot.asset,
+    symbol: snapshot.symbol,
+    snapshotId: snapshot.id,
+    generatedAt: snapshot.generatedAt,
+    quality: snapshot.quality,
+    state: snapshot.summary.state,
+    headline: snapshot.summary.headline,
+    topRisk: snapshot.summary.topRisk,
+    primaryCondition: {
+      id: snapshot.summary.primaryCondition.id,
+      label: snapshot.summary.primaryCondition.label,
+      role: snapshot.summary.primaryCondition.role
+    }
+  };
+}
+
 export interface JournalEntry {
   id: string;
   title: string;
@@ -21,7 +57,7 @@ export interface JournalEntry {
   note: string;
   createdAt: string;
   market?: "crypto" | "stocks";
-  source?: "manual" | "chart" | "scout";
+  source?: "manual" | "chart" | "scout" | "snapshot" | "alert";
   symbol?: string;
   timeframe?: string;
   verdict?: string;
@@ -31,6 +67,9 @@ export interface JournalEntry {
   outcome?: OutcomeType;
   /** 결과 기록 시각 */
   outcomeAt?: string;
+  decisionSnapshotId?: string;
+  monitorId?: string;
+  decisionContext?: DecisionJournalContext;
 }
 
 export const journalStorageKey = "chartRadar.journal";

@@ -13,6 +13,7 @@ import { scanLiquidationEvent } from "@/lib/server/push/scanners/liquidationScan
 import { scanMacroCalendarEvent, scanNewsEvent } from "@/lib/server/push/scanners/macroScanner";
 import { scanCryptoSetups, scanStockSetups, stockMomentumSymbols } from "@/lib/server/push/scanners/setupScanner";
 import { sendEventToUser } from "@/lib/server/push/sendPush";
+import { runPerpetualMonitorScan, type PerpetualMonitorScanResult } from "@/lib/server/perpetualMonitorScanner";
 import { scanOptionalEventSource } from "@/lib/server/push/sourceResults";
 import type {
   PushAlertEvent,
@@ -67,17 +68,43 @@ export async function runPushAlertScan(context: ScanContext) {
     }
   };
 
+  let perpetual: PerpetualMonitorScanResult;
+  try {
+    perpetual = await runPerpetualMonitorScan({
+      dryRun,
+      deliveryEnabled: context.pushDeliveryEnabled !== false
+    });
+    warnings.push(...perpetual.warnings);
+  } catch (error) {
+    const message = safeErrorMessage(error);
+    warnings.push(`perpetual-monitors: ${message}`);
+    perpetual = {
+      enabled: false,
+      evaluated: 0,
+      triggered: 0,
+      expired: 0,
+      inAppOnly: 0,
+      deliveryEvents: 0,
+      sent: 0,
+      failed: 0,
+      warnings: [message]
+    };
+  }
+
   const tokens = await readRows<PushTokenRow>(
     "push_tokens",
     "push_tokens?select=id,user_id,token,markets,rule_ids&enabled=eq.true&platform=eq.android&provider=eq.fcm&limit=500"
   );
-  if (tokens.length === 0) {
+  if (tokens.length === 0 || (!dryRun && context.pushDeliveryEnabled === false)) {
+    if (tokens.length > 0 && context.pushDeliveryEnabled === false) {
+      warnings.push("firebase: generic Push delivery skipped; in-app Perpetual monitor evaluation completed.");
+    }
     return {
       users: 0,
-      events: 0,
-      sent: 0,
+      events: perpetual.triggered,
+      sent: perpetual.sent,
       skipped: 0,
-      failed: 0,
+      failed: perpetual.failed,
       sources: {
         succeeded: [],
         skipped: [],
@@ -85,7 +112,8 @@ export async function runPushAlertScan(context: ScanContext) {
       },
       warnings,
       diagnostics: emptyDiagnostics({ lookupErrorCount, scannerErrorCount }),
-      eventDiagnostics
+      eventDiagnostics,
+      perpetual
     };
   }
 
@@ -261,10 +289,10 @@ export async function runPushAlertScan(context: ScanContext) {
 
   return {
     users: userIds.length,
-    events,
-    sent,
+    events: events + perpetual.triggered,
+    sent: sent + perpetual.sent,
     skipped,
-    failed,
+    failed: failed + perpetual.failed,
     sources: {
       succeeded: optionalEventSources.filter((source) => !source.warning && source.event).map((source) => source.label),
       skipped: optionalEventSources.filter((source) => !source.warning && !source.event).map((source) => source.label),
@@ -309,6 +337,7 @@ export async function runPushAlertScan(context: ScanContext) {
         .sort((a, b) => (b.score ?? -1) - (a.score ?? -1))
         .slice(0, 8)
     }),
-    eventDiagnostics
+    eventDiagnostics,
+    perpetual
   };
 }

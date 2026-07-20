@@ -75,6 +75,7 @@ export interface ScanContext {
   origin: string;
   dryRun?: boolean;
   diagnosticsLimit?: number;
+  pushDeliveryEnabled?: boolean;
 }
 
 export interface OptionalEventSourceResult {

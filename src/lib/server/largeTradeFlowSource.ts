@@ -31,5 +31,10 @@ export async function fetchLargeTradeFlowReport(symbol: string): Promise<LargeTr
     limit: "1000"
   });
   const rows = await fetchJson<BinanceAggregateTradeRow[]>(`${BINANCE_FAPI}/fapi/v1/aggTrades?${params.toString()}`);
-  return buildLargeTradeFlowReport(symbol, Array.isArray(rows) ? rows : []);
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const latestTradeAt = safeRows.reduce((latest, row) => {
+    const timestamp = Number(row.T);
+    return Number.isFinite(timestamp) ? Math.max(latest, timestamp) : latest;
+  }, 0);
+  return buildLargeTradeFlowReport(symbol, safeRows, latestTradeAt || Date.now());
 }

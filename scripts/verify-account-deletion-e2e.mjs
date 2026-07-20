@@ -235,6 +235,8 @@ async function verifyDeleted() {
   for (const table of [
     "subscriptions",
     "journals",
+    "perpetual_scenario_monitors",
+    "product_events",
     "push_alert_events",
     "push_alert_presets",
     "push_tokens",

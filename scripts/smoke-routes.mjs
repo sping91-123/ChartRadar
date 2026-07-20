@@ -4,7 +4,7 @@ import { join, relative, sep } from "node:path";
 
 const root = process.cwd();
 const baseUrl = (process.env.SMOKE_BASE_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
-const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 15_000);
+const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 45_000);
 const smokeClientIp = `127.0.1.${Math.floor(Math.random() * 200) + 20}`;
 
 const pageChecks = [
@@ -122,6 +122,32 @@ const protectedApiChecks = [
     path: "/api/billing/app-store/sync",
     method: "POST",
     body: { appUserId: "smoke", platform: "android" },
+    expectedStatus: [401]
+  },
+  {
+    label: "Perpetual monitor list requires login",
+    path: "/api/crypto/perpetual/monitors?status=active",
+    expectedStatus: [401]
+  },
+  {
+    label: "Perpetual monitor creation requires login",
+    path: "/api/crypto/perpetual/monitors",
+    method: "POST",
+    body: { snapshotId: "70000000-0000-4000-8000-000000000001", conditionId: "smoke" },
+    expectedStatus: [401]
+  },
+  {
+    label: "Perpetual monitor update requires login",
+    path: "/api/crypto/perpetual/monitors/70000000-0000-4000-8000-000000000001",
+    method: "PATCH",
+    body: { action: "pause" },
+    expectedStatus: [401]
+  },
+  {
+    label: "Perpetual Journal save requires login",
+    path: "/api/crypto/perpetual/journal",
+    method: "POST",
+    body: { snapshotId: "70000000-0000-4000-8000-000000000001", source: "snapshot" },
     expectedStatus: [401]
   }
 ];

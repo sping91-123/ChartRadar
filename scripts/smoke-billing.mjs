@@ -23,6 +23,8 @@ const files = {
   checkout: read("src/app/api/billing/checkout/route.ts"),
   confirm: read("src/app/api/billing/confirm/route.ts"),
   mobile: read("src/lib/mobilePurchases.ts"),
+  proPricing: read("src/components/ProPricingPanel.tsx"),
+  productEventStore: read("src/lib/server/productEventStore.ts"),
   adminHealth: read("src/app/api/admin/health/route.ts"),
   adminPushDiagnostics: read("src/app/api/admin/push-diagnostics/route.ts"),
   pushTest: read("src/app/api/push-test/route.ts"),
@@ -86,9 +88,13 @@ includes(files.sync, "reconcileProviderEntitlements", "RevenueCat sync reconcile
 includes(files.sync, "verifiedEmpty", "RevenueCat sync distinguishes verified empty");
 includes(files.sync, "setup_required", "RevenueCat sync preserves unknown setup state");
 includes(files.sync, "observedAt", "RevenueCat sync carries observation time");
+includes(files.sync, "findRecentPurchaseAttribution", "RevenueCat sync links verified activation to a purchase attempt");
+includes(files.sync, "attributionId", "RevenueCat sync accepts a scoped purchase-attribution id");
+includes(files.sync, "attributionSource", "RevenueCat sync preserves the validated paywall source under idempotent attribution");
 
 includes(files.webhook, "verifyRevenueCatWebhookSignature", "webhook verifies raw-body HMAC");
 includes(files.webhook, "fetchRevenueCatSubscriber", "webhook refetches latest subscriber snapshot");
+includes(files.webhook, "findRecentPurchaseAttribution", "webhook links verified activation to a recent purchase attempt");
 includes(files.revenueCatSnapshot, "billing_issues_detected_at", "RevenueCat billing issue is fail-closed");
 includes(files.revenueCatSnapshot, "refunded_at", "RevenueCat refund is fail-closed");
 includes(files.revenueCatSnapshot, "transferred_from", "RevenueCat transfer source is reconciled");
@@ -107,6 +113,11 @@ includes(files.mobile, "Purchases.logIn({ appUserID: userId })", "RevenueCat acc
 includes(files.mobile, "Purchases.logOut()", "RevenueCat account logout");
 includes(files.mobile, "enqueueIdentityOperation", "RevenueCat identity operations are serialized and recoverable");
 includes(files.mobile, "refreshNativeEntitlement", "RevenueCat startup and foreground reconciliation");
+includes(files.mobile, "attributionId: params.attributionId", "native purchase forwards attribution to verified sync");
+includes(files.mobile, "attributionSource: params.attributionSource", "native purchase forwards the validated paywall source");
+includes(files.proPricing, "purchaseAttributionId", "paywall creates one purchase-attribution id per attempt");
+includes(files.proPricing, "attributionSource: eventSource", "Perpetual paywall source reaches verified billing sync");
+includes(files.productEventStore, "selectRecentPurchaseAttribution", "server purchase attribution is bounded by provider, plan, and time");
 excludes(files.mobile, "Purchases.configure({ apiKey, appUserID", "RevenueCat is not reconfigured per user");
 
 for (const marker of [

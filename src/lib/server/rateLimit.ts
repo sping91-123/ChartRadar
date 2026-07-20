@@ -113,3 +113,17 @@ export function isBodyTooLarge(request: Request, maxBytes: number) {
   const length = Number(request.headers.get("content-length") ?? 0);
   return Number.isFinite(length) && length > maxBytes;
 }
+
+export async function readJsonBodyLimited<T>(request: Request, maxBytes: number): Promise<
+  | { ok: true; value: T }
+  | { ok: false; tooLarge: boolean }
+> {
+  if (isBodyTooLarge(request, maxBytes)) return { ok: false, tooLarge: true };
+  const text = await request.text();
+  if (new TextEncoder().encode(text).byteLength > maxBytes) return { ok: false, tooLarge: true };
+  try {
+    return { ok: true, value: JSON.parse(text) as T };
+  } catch {
+    return { ok: false, tooLarge: false };
+  }
+}

@@ -1,9 +1,40 @@
 // AI와 공개 API의 입력 검증이 출시 전 안전하게 막히는지 확인하는 스모크 테스트입니다.
 const baseUrl = (process.env.SMOKE_BASE_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
-const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 15000);
+const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 45_000);
 const smokeClientIp = `127.0.0.${Math.floor(Math.random() * 200) + 20}`;
 
 const checks = [
+  {
+    label: "Perpetual invalid asset rejection",
+    path: "/api/crypto/perpetual/snapshot?asset=doge",
+    method: "GET",
+    expectedStatus: [400]
+  },
+  {
+    label: "Perpetual monitor authentication boundary",
+    path: "/api/crypto/perpetual/monitors?status=active",
+    method: "GET",
+    expectedStatus: [401]
+  },
+  {
+    label: "Product event server-only name rejection",
+    path: "/api/product-events",
+    method: "POST",
+    body: {
+      eventId: "70000000-0000-4000-8000-000000000001",
+      eventName: "monitor_created",
+      surface: "perpetual"
+    },
+    expectedStatus: [400]
+  },
+  {
+    label: "Product event body byte limit",
+    path: "/api/product-events",
+    method: "POST",
+    rawBody: "x".repeat(4_097),
+    headers: { "content-type": "text/plain" },
+    expectedStatus: [413]
+  },
   {
     label: "AI 카드 코멘트 빈 요청 차단",
     path: "/api/ai/commentary",
