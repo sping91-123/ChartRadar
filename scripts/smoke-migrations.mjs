@@ -9,6 +9,10 @@ const active = readdirSync(activeDir).filter((name) => name.endsWith(".sql")).so
 const legacy = existsSync(legacyDir) ? readdirSync(legacyDir).filter((name) => name.endsWith(".sql")).sort() : [];
 const failures = [];
 
+function readNormalized(path) {
+  return readFileSync(path, "utf8").replace(/\r\n?/g, "\n");
+}
+
 for (const name of active) {
   const version = /^([0-9]{14})_/.exec(name)?.[1];
   if (!version || version < "20260714120423") failures.push(`active migration is not forward-only: ${name}`);
@@ -27,7 +31,7 @@ const versions = active.map((name) => name.split("_")[0]);
 if (new Set(versions).size !== versions.length) failures.push("active migration versions are duplicated");
 
 const canonicalName = active.find((name) => name.endsWith("_canonical_entitlement_ledger.sql"));
-const canonical = canonicalName ? readFileSync(join(activeDir, canonicalName), "utf8") : "";
+const canonical = canonicalName ? readNormalized(join(activeDir, canonicalName)) : "";
 for (const marker of [
   "apply_billing_entitlement",
   "reconcile_provider_entitlements",
@@ -39,7 +43,7 @@ for (const marker of [
 }
 
 const gateCAdvisorName = active.find((name) => name.endsWith("_gate_c_advisor_hardening.sql"));
-const gateCAdvisor = gateCAdvisorName ? readFileSync(join(activeDir, gateCAdvisorName), "utf8") : "";
+const gateCAdvisor = gateCAdvisorName ? readNormalized(join(activeDir, gateCAdvisorName)) : "";
 for (const marker of [
   "revoke all privileges on table public.billing_entitlement_events",
   'drop policy if exists "본인 구독 읽기"',
@@ -49,7 +53,7 @@ for (const marker of [
 }
 
 const betaLockName = active.find((name) => name.endsWith("_lock_beta_backfill_cohort.sql"));
-const betaLock = betaLockName ? readFileSync(join(activeDir, betaLockName), "utf8") : "";
+const betaLock = betaLockName ? readNormalized(join(activeDir, betaLockName)) : "";
 for (const marker of [
   "lock table auth.users in share mode",
   "lock table public.profiles in share mode",
@@ -60,7 +64,7 @@ for (const marker of [
 }
 
 const perpetualCoreName = active.find((name) => name.endsWith("_perpetual_revenue_core_v1.sql"));
-const perpetualCore = perpetualCoreName ? readFileSync(join(activeDir, perpetualCoreName), "utf8") : "";
+const perpetualCore = perpetualCoreName ? readNormalized(join(activeDir, perpetualCoreName)) : "";
 for (const marker of [
   "create table if not exists public.perpetual_decision_snapshots",
   "create table if not exists public.perpetual_scenario_monitors",
@@ -89,7 +93,7 @@ for (const marker of [
 }
 
 const journalReconcileName = active.find((name) => name.endsWith("_reconcile_journal_columns.sql"));
-const journalReconcile = journalReconcileName ? readFileSync(join(activeDir, journalReconcileName), "utf8") : "";
+const journalReconcile = journalReconcileName ? readNormalized(join(activeDir, journalReconcileName)) : "";
 for (const marker of [
   "add column if not exists market text",
   "add column if not exists scout_snapshot jsonb",
@@ -103,7 +107,7 @@ for (const marker of [
   if (!journalReconcile.includes(marker)) failures.push(`Journal reconciler migration is missing ${marker}`);
 }
 
-const canonicalSchema = readFileSync(join(root, "supabase", "schema.sql"), "utf8");
+const canonicalSchema = readNormalized(join(root, "supabase", "schema.sql"));
 for (const marker of [
   "perpetual_scenario_monitors_live_condition_idx",
   "create or replace function public.create_perpetual_monitor",
