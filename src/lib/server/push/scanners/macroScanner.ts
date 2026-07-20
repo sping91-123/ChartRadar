@@ -1,12 +1,16 @@
 // 푸시 크론용 뉴스와 매크로 일정 optional source 이벤트를 생성한다.
 import type { SetupAlertMarket } from "@/lib/setupAlertPresets";
 import { eventBucket } from "@/lib/server/push/duplicateGuard";
+import { readOptionalJson } from "@/lib/server/push/optionalJson";
 import type { PushAlertEvent } from "@/lib/server/push/types";
 
 export async function scanNewsEvent(origin: string, market: SetupAlertMarket): Promise<PushAlertEvent | null> {
   const response = await fetch(`${origin}/api/radar-news?market=${market}`, { cache: "no-store" });
-  if (!response.ok) return null;
-  const payload = (await response.json()) as { briefing?: { headline?: string; keyIssues?: Array<{ title?: string }> } };
+  const payload = await readOptionalJson<{ briefing?: { headline?: string; keyIssues?: Array<{ title?: string }> } }>(
+    response,
+    `radar-news-${market}`
+  );
+  if (!payload) return null;
   const headline = payload.briefing?.headline;
   const firstIssue = payload.briefing?.keyIssues?.[0]?.title;
   if (!headline && !firstIssue) return null;
@@ -32,8 +36,7 @@ export async function scanNewsEvent(origin: string, market: SetupAlertMarket): P
 
 export async function scanMacroCalendarEvent(origin: string): Promise<PushAlertEvent | null> {
   const response = await fetch(`${origin}/api/macro-calendar`, { cache: "no-store" });
-  if (!response.ok) return null;
-  const payload = (await response.json()) as {
+  const payload = await readOptionalJson<{
     items?: Array<{
       label?: string;
       releaseAt?: string;
@@ -41,7 +44,8 @@ export async function scanMacroCalendarEvent(origin: string): Promise<PushAlertE
       importance?: number;
       state?: string;
     }>;
-  };
+  }>(response, "macro-calendar");
+  if (!payload) return null;
   const now = Date.now();
   const upcoming = (payload.items ?? [])
     .filter((item) => {

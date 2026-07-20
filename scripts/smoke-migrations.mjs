@@ -88,6 +88,21 @@ for (const marker of [
   if (!perpetualCore.includes(marker)) failures.push(`perpetual revenue core migration is missing ${marker}`);
 }
 
+const journalReconcileName = active.find((name) => name.endsWith("_reconcile_journal_columns.sql"));
+const journalReconcile = journalReconcileName ? readFileSync(join(activeDir, journalReconcileName), "utf8") : "";
+for (const marker of [
+  "add column if not exists market text",
+  "add column if not exists scout_snapshot jsonb",
+  "add column if not exists outcome text",
+  "add column if not exists outcome_at timestamptz",
+  "add column if not exists updated_at timestamptz",
+  "journals_market_check",
+  "journals_outcome_check",
+  "set_journals_updated_at"
+]) {
+  if (!journalReconcile.includes(marker)) failures.push(`Journal reconciler migration is missing ${marker}`);
+}
+
 const canonicalSchema = readFileSync(join(root, "supabase", "schema.sql"), "utf8");
 for (const marker of [
   "perpetual_scenario_monitors_live_condition_idx",

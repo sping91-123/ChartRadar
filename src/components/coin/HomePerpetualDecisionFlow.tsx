@@ -13,7 +13,11 @@ import type { CryptoHomeTicker } from "@/lib/server/cryptoExchangeData";
 import type { PerpetualAsset, PerpetualDecisionSnapshot, SnapshotQuality } from "@/lib/perpetualDecisionSnapshot";
 import type { PerpetualSnapshotCapabilities, PerpetualSnapshotResponse } from "@/lib/perpetualApi";
 import { comparePerpetualShadowDecision, type LegacyPerpetualDirection } from "@/lib/perpetualShadowComparison";
-import { buildStalePerpetualDecisionFallback } from "@/lib/perpetualSnapshotContinuity";
+import {
+  buildStalePerpetualDecisionFallback,
+  PERPETUAL_SNAPSHOT_REQUEST_TIMEOUT_MS,
+  perpetualSnapshotRefreshDelay
+} from "@/lib/perpetualSnapshotContinuity";
 import type { PerpetualRevenueCoreMode } from "@/lib/server/perpetualRevenueCore";
 import { trackProductEvent } from "@/lib/trackProductEvent";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
@@ -131,23 +135,32 @@ function HomeDecisionHero() {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
+    let timedOut = false;
+    const timeout = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, PERPETUAL_SNAPSHOT_REQUEST_TIMEOUT_MS);
     if (!silent) setState({ status: "loading", snapshot: null, capabilities: null });
     try {
       const result = await requestSnapshot(nextAsset, controller.signal);
-      if (controller.signal.aborted || generation !== requestGeneration.current) return;
+      if (controller.signal.aborted || generation !== requestGeneration.current) return null;
       setState({
         status: "ready",
         snapshot: result.snapshot,
         capabilities: result.capabilities
       });
+      return result.snapshot;
     } catch (error) {
-      if (controller.signal.aborted || generation !== requestGeneration.current) return;
+      if (generation !== requestGeneration.current || (controller.signal.aborted && !timedOut)) return null;
       setState((current) => ({
         status: "error",
         snapshot: current.snapshot,
         capabilities: current.capabilities,
         message: error instanceof Error ? error.message : "선물 판단 스냅샷을 불러오지 못했습니다."
       }));
+      return null;
+    } finally {
+      window.clearTimeout(timeout);
     }
   }, []);
 
@@ -162,10 +175,20 @@ function HomeDecisionHero() {
   }, [asset]);
 
   useEffect(() => {
-    void load(asset);
-    const timer = window.setInterval(() => void load(asset, true), 60_000);
+    let cancelled = false;
+    let timer: number | undefined;
+    async function refresh(silent: boolean) {
+      const nextSnapshot = await load(asset, silent);
+      if (cancelled) return;
+      timer = window.setTimeout(
+        () => void refresh(true),
+        perpetualSnapshotRefreshDelay(nextSnapshot?.expiresAt)
+      );
+    }
+    void refresh(false);
     return () => {
-      window.clearInterval(timer);
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
       requestGeneration.current += 1;
       abortRef.current?.abort();
     };

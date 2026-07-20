@@ -16,7 +16,10 @@ import {
 import {
   buildStalePerpetualDecisionFallback,
   canReuseRequestedPerpetualSnapshot,
-  choosePersistedSnapshotWinner
+  choosePersistedSnapshotWinner,
+  PERPETUAL_SNAPSHOT_REQUEST_TIMEOUT_MS,
+  perpetualSnapshotRefreshDelay,
+  shouldContinuePerpetualSnapshotRefresh
 } from "../src/lib/perpetualSnapshotContinuity";
 import {
   buildPerpetualDecisionSnapshot,
@@ -31,6 +34,16 @@ import {
 
 const generatedAt = "2026-07-19T12:00:00.000Z";
 const ready: SourceStatus = { status: "ready", observedAt: "2026-07-19T11:59:00.000Z", detail: "fixture" };
+
+const refreshNow = Date.parse(generatedAt);
+assert.equal(perpetualSnapshotRefreshDelay("2026-07-19T12:02:00.000Z", refreshNow), 60_000, "far expiry must retain the one-minute refresh ceiling");
+assert.equal(perpetualSnapshotRefreshDelay("2026-07-19T12:00:20.000Z", refreshNow), 20_500, "near expiry must refresh immediately after the validity boundary");
+assert.equal(perpetualSnapshotRefreshDelay("2026-07-19T11:59:59.000Z", refreshNow), 15_000, "expired snapshots must use a bounded retry instead of hot polling");
+assert.equal(perpetualSnapshotRefreshDelay("invalid", refreshNow), 15_000, "invalid expiry must use the bounded retry delay");
+assert.equal(shouldContinuePerpetualSnapshotRefresh("2026-07-19T11:59:59.000Z", true, refreshNow), false, "an expired exact alert snapshot must stop polling");
+assert.equal(shouldContinuePerpetualSnapshotRefresh("2026-07-19T12:00:01.000Z", true, refreshNow), true, "a fresh exact alert snapshot may refresh once at expiry");
+assert.equal(shouldContinuePerpetualSnapshotRefresh("2026-07-19T11:59:59.000Z", false, refreshNow), true, "current snapshots must continue bounded refresh recovery");
+assert.equal(PERPETUAL_SNAPSHOT_REQUEST_TIMEOUT_MS, 12_000, "snapshot requests must have a watchdog shorter than the retry window");
 
 const canaryUserId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const canaryIds = perpetualRevenueCoreCanaryUserIds(`${canaryUserId.toUpperCase()}, ${canaryUserId}`);

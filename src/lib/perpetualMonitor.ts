@@ -123,3 +123,20 @@ export function monitorLinksSnapshot(
 ) {
   return monitor.snapshot_id === snapshotId || (allowLastEvaluated && monitor.last_snapshot_id === snapshotId);
 }
+
+export function journalMonitorIdForSnapshot(
+  snapshotId: string,
+  savedMonitor: { monitorId: string; snapshotId: string } | null,
+  alertMonitorId: string | null,
+  exactAlertContext: boolean
+) {
+  if (savedMonitor?.snapshotId === snapshotId) return savedMonitor.monitorId;
+  return exactAlertContext ? alertMonitorId : null;
+}
+
+export function isPerpetualSnapshotScopedStateCurrent(
+  snapshotId: string,
+  state: { snapshotId: string } | null
+) {
+  return state?.snapshotId === snapshotId;
+}
