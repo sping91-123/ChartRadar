@@ -22,6 +22,7 @@
     "test:product-events": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-product-events.js",
     "test:push-targets": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-push-targets.js",
     "test:perpetual-beta-report": "node scripts/test-perpetual-beta-report.mjs",
+    "verify:perpetual-production": "node scripts/verify-perpetual-revenue-core-production.mjs",
     "report:perpetual-beta": "node scripts/report-perpetual-beta.mjs",
     "smoke:api": "node scripts/smoke-api.mjs",
     "smoke:css": "node scripts/smoke-css.mjs",
