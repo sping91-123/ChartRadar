@@ -133,3 +133,10 @@ export function journalMonitorIdForSnapshot(
   if (savedMonitor?.snapshotId === snapshotId) return savedMonitor.monitorId;
   return exactAlertContext ? alertMonitorId : null;
 }
+
+export function isPerpetualSnapshotScopedStateCurrent(
+  snapshotId: string,
+  state: { snapshotId: string } | null
+) {
+  return state?.snapshotId === snapshotId;
+}

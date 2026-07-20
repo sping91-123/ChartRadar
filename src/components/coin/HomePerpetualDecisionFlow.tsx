@@ -13,7 +13,11 @@ import type { CryptoHomeTicker } from "@/lib/server/cryptoExchangeData";
 import type { PerpetualAsset, PerpetualDecisionSnapshot, SnapshotQuality } from "@/lib/perpetualDecisionSnapshot";
 import type { PerpetualSnapshotCapabilities, PerpetualSnapshotResponse } from "@/lib/perpetualApi";
 import { comparePerpetualShadowDecision, type LegacyPerpetualDirection } from "@/lib/perpetualShadowComparison";
-import { buildStalePerpetualDecisionFallback, perpetualSnapshotRefreshDelay } from "@/lib/perpetualSnapshotContinuity";
+import {
+  buildStalePerpetualDecisionFallback,
+  PERPETUAL_SNAPSHOT_REQUEST_TIMEOUT_MS,
+  perpetualSnapshotRefreshDelay
+} from "@/lib/perpetualSnapshotContinuity";
 import type { PerpetualRevenueCoreMode } from "@/lib/server/perpetualRevenueCore";
 import { trackProductEvent } from "@/lib/trackProductEvent";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
@@ -131,6 +135,11 @@ function HomeDecisionHero() {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
+    let timedOut = false;
+    const timeout = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, PERPETUAL_SNAPSHOT_REQUEST_TIMEOUT_MS);
     if (!silent) setState({ status: "loading", snapshot: null, capabilities: null });
     try {
       const result = await requestSnapshot(nextAsset, controller.signal);
@@ -142,7 +151,7 @@ function HomeDecisionHero() {
       });
       return result.snapshot;
     } catch (error) {
-      if (controller.signal.aborted || generation !== requestGeneration.current) return null;
+      if (generation !== requestGeneration.current || (controller.signal.aborted && !timedOut)) return null;
       setState((current) => ({
         status: "error",
         snapshot: current.snapshot,
@@ -150,6 +159,8 @@ function HomeDecisionHero() {
         message: error instanceof Error ? error.message : "선물 판단 스냅샷을 불러오지 못했습니다."
       }));
       return null;
+    } finally {
+      window.clearTimeout(timeout);
     }
   }, []);
 

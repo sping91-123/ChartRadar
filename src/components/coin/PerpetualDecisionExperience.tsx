@@ -8,11 +8,16 @@ import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import { appendJournalEntry, decisionJournalContextFromSnapshot } from "@/lib/journal";
 import { readPerpetualAlertContext } from "@/lib/perpetualAlertContext";
-import { journalMonitorIdForSnapshot } from "@/lib/perpetualMonitor";
+import { isPerpetualSnapshotScopedStateCurrent, journalMonitorIdForSnapshot } from "@/lib/perpetualMonitor";
 import type { CryptoHomeTicker } from "@/lib/server/cryptoExchangeData";
 import type { MonitorCondition, PerpetualAsset, PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
 import type { PerpetualSnapshotCapabilities, PerpetualSnapshotResponse } from "@/lib/perpetualApi";
-import { buildStalePerpetualDecisionFallback, perpetualSnapshotRefreshDelay } from "@/lib/perpetualSnapshotContinuity";
+import {
+  buildStalePerpetualDecisionFallback,
+  PERPETUAL_SNAPSHOT_REQUEST_TIMEOUT_MS,
+  perpetualSnapshotRefreshDelay,
+  shouldContinuePerpetualSnapshotRefresh
+} from "@/lib/perpetualSnapshotContinuity";
 import { trackProductEvent } from "@/lib/trackProductEvent";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
@@ -34,15 +39,15 @@ type DecisionLoadState =
 
 type MonitorState =
   | { status: "idle" }
-  | { status: "saving"; conditionId: string }
+  | { status: "saving"; conditionId: string; snapshotId: string }
   | { status: "saved"; conditionId: string; monitorId: string; snapshotId: string; message: string }
-  | { status: "error"; conditionId: string; message: string };
+  | { status: "error"; conditionId: string; snapshotId: string; message: string };
 
 type JournalState =
   | { status: "idle" }
-  | { status: "saving" }
-  | { status: "saved"; message: string }
-  | { status: "error"; message: string };
+  | { status: "saving"; snapshotId: string }
+  | { status: "saved"; snapshotId: string; message: string }
+  | { status: "error"; snapshotId: string; message: string };
 
 class JournalRouteError extends Error {
   allowLocalFallback: boolean;
@@ -118,7 +123,7 @@ function MonitorAction({
   actionable: boolean;
   snapshotId: string;
 }) {
-  const busy = monitorState.status === "saving" && monitorState.conditionId === condition.id;
+  const operationBusy = monitorState.status === "saving";
   const saved = monitorState.status === "saved" && monitorState.snapshotId === snapshotId && monitorState.conditionId === condition.id;
   const disabled = !capabilities.monitorEnabled || !actionable || capabilities.setupRequired || capabilities.activeMonitorCount >= capabilities.monitorLimit;
 
@@ -153,12 +158,12 @@ function MonitorAction({
   return (
     <ActionButton
       tone={saved ? "secondary" : "primary"}
-      disabled={disabled || busy || saved}
+      disabled={disabled || operationBusy || saved}
       onClick={() => onCreate(condition)}
       className="w-full sm:w-auto"
     >
-      {busy ? <Loader2 className="animate-spin" size={15} aria-hidden /> : saved ? <CheckCircle2 size={15} aria-hidden /> : <Bell size={15} aria-hidden />}
-      {saved ? "감시 저장됨" : capabilities.setupRequired ? "저장소 준비 필요" : !actionable ? "데이터 정상화 후 가능" : "이 조건 감시하기"}
+      {operationBusy ? <Loader2 className="animate-spin" size={15} aria-hidden /> : saved ? <CheckCircle2 size={15} aria-hidden /> : <Bell size={15} aria-hidden />}
+      {operationBusy ? "조건 저장 중" : saved ? "감시 저장됨" : capabilities.setupRequired ? "저장소 준비 필요" : !actionable ? "데이터 정상화 후 가능" : "이 조건 감시하기"}
     </ActionButton>
   );
 }
@@ -203,6 +208,11 @@ export function PerpetualDecisionExperience({
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
+    let timedOut = false;
+    const timeout = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, PERPETUAL_SNAPSHOT_REQUEST_TIMEOUT_MS);
     if (!silent) setState({ status: "loading", snapshot: null, capabilities: null, continuity: null });
     else setState((current) => {
       if (!current.snapshot || !current.capabilities || !current.continuity) return current;
@@ -248,7 +258,7 @@ export function PerpetualDecisionExperience({
       window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
       return nextSnapshot;
     } catch (error) {
-      if (controller.signal.aborted || generation !== generationRef.current) return null;
+      if (generation !== generationRef.current || (controller.signal.aborted && !timedOut)) return null;
       setState((current) => ({
         status: "error",
         snapshot: current.snapshot,
@@ -257,6 +267,8 @@ export function PerpetualDecisionExperience({
         message: error instanceof Error ? error.message : "선물 판단 스냅샷을 불러오지 못했습니다."
       }));
       return null;
+    } finally {
+      window.clearTimeout(timeout);
     }
   }, [asset]);
 
@@ -267,6 +279,10 @@ export function PerpetualDecisionExperience({
     async function refresh(silent: boolean) {
       const nextSnapshot = await load(silent);
       if (cancelled) return;
+      if (!shouldContinuePerpetualSnapshotRefresh(
+        nextSnapshot?.expiresAt,
+        effectiveSourceRef.current === "alert"
+      )) return;
       timer = window.setTimeout(
         () => void refresh(true),
         perpetualSnapshotRefreshDelay(nextSnapshot?.expiresAt)
@@ -339,7 +355,8 @@ export function PerpetualDecisionExperience({
 
   const createMonitor = useCallback(async (condition: MonitorCondition) => {
     if (!snapshot) return;
-    setMonitorState({ status: "saving", conditionId: condition.id });
+    const monitorSnapshotId = snapshot.id;
+    setMonitorState({ status: "saving", conditionId: condition.id, snapshotId: monitorSnapshotId });
     let failureTracked = false;
     try {
       const response = await fetch(
@@ -394,7 +411,7 @@ export function PerpetualDecisionExperience({
           properties: { code: "network_error", conditionRole: condition.role, source: effectiveSource ?? "direct" }
         });
       }
-      setMonitorState({ status: "error", conditionId: condition.id, message: error instanceof Error ? error.message : "조건 감시를 저장하지 못했습니다." });
+      setMonitorState({ status: "error", conditionId: condition.id, snapshotId: monitorSnapshotId, message: error instanceof Error ? error.message : "조건 감시를 저장하지 못했습니다." });
     }
   }, [effectiveSource, snapshot]);
 
@@ -410,8 +427,9 @@ export function PerpetualDecisionExperience({
 
   const saveJournal = useCallback(async () => {
     if (!snapshot || !session) return;
+    const journalSnapshotId = snapshot.id;
     const monitorId = journalMonitorIdForSnapshot(
-      snapshot.id,
+      journalSnapshotId,
       monitorState.status === "saved"
         ? { monitorId: monitorState.monitorId, snapshotId: monitorState.snapshotId }
         : null,
@@ -419,7 +437,7 @@ export function PerpetualDecisionExperience({
       exactAlertContext
     );
     const journalSource = exactAlertContext ? "alert" : "snapshot";
-    setJournalState({ status: "saving" });
+    setJournalState({ status: "saving", snapshotId: journalSnapshotId });
     try {
       const response = await fetch(
         "/api/crypto/perpetual/journal",
@@ -434,10 +452,10 @@ export function PerpetualDecisionExperience({
         throw new JournalRouteError(payload.error ?? "복기를 저장하지 못했습니다.", response.status >= 500);
       }
       if (!payload.journal) throw new JournalRouteError("복기 저장 응답을 확인하지 못했습니다.", false);
-      setJournalState({ status: "saved", message: "판단 당시 snapshot을 복기에 연결했습니다." });
+      setJournalState({ status: "saved", snapshotId: journalSnapshotId, message: "판단 당시 snapshot을 복기에 연결했습니다." });
     } catch (error) {
       if (error instanceof JournalRouteError && !error.allowLocalFallback) {
-        setJournalState({ status: "error", message: error.message });
+        setJournalState({ status: "error", snapshotId: journalSnapshotId, message: error.message });
         return;
       }
       try {
@@ -454,9 +472,9 @@ export function PerpetualDecisionExperience({
           monitorId: monitorId ?? undefined,
           decisionContext: decisionJournalContextFromSnapshot(snapshot)
         }, session.userId);
-        setJournalState({ status: "saved", message: "서버 연결이 불안정해 이 기기에 미동기화 복기로 보관했습니다." });
+        setJournalState({ status: "saved", snapshotId: journalSnapshotId, message: "서버 연결이 불안정해 이 기기에 미동기화 복기로 보관했습니다." });
       } catch {
-        setJournalState({ status: "error", message: error instanceof Error ? error.message : "복기를 저장하지 못했습니다." });
+        setJournalState({ status: "error", snapshotId: journalSnapshotId, message: error instanceof Error ? error.message : "복기를 저장하지 못했습니다." });
       }
     }
   }, [alertMonitorId, exactAlertContext, monitorState, session, snapshot]);
@@ -494,6 +512,14 @@ export function PerpetualDecisionExperience({
   const conditions = displaySnapshot.pro
     ? [displaySnapshot.summary.primaryCondition, ...displaySnapshot.pro.confirmationConditions, ...displaySnapshot.pro.invalidationConditions]
     : [displaySnapshot.summary.primaryCondition];
+  const currentJournalState = journalState.status === "idle" || isPerpetualSnapshotScopedStateCurrent(
+    displaySnapshot.id,
+    journalState
+  ) ? journalState : { status: "idle" } as const;
+  const currentMonitorState = monitorState.status === "idle" || isPerpetualSnapshotScopedStateCurrent(
+    displaySnapshot.id,
+    monitorState
+  ) ? monitorState : { status: "idle" } as const;
 
   return (
     <div className="space-y-3">
@@ -545,22 +571,22 @@ export function PerpetualDecisionExperience({
             {session ? (
               <ActionButton
                 tone="secondary"
-                disabled={state.status === "error" || journalState.status === "saving" || journalState.status === "saved"}
+                disabled={state.status === "error" || journalState.status === "saving" || currentJournalState.status === "saved"}
                 onClick={() => void saveJournal()}
                 className="w-full sm:w-auto"
               >
                 {journalState.status === "saving" ? <Loader2 className="animate-spin" size={15} aria-hidden /> : <BookOpen size={15} aria-hidden />}
-                {journalState.status === "saved" ? "복기 저장됨" : "복기에 저장"}
+                {journalState.status === "saving" ? "복기 저장 중" : currentJournalState.status === "saved" ? "복기 저장됨" : "복기에 저장"}
               </ActionButton>
             ) : null}
           </div>
         </div>
-        {monitorState.status === "saved" || monitorState.status === "error" ? (
-          <p role={monitorState.status === "error" ? "alert" : "status"} aria-live="polite" className={`mt-2 text-xs font-semibold ${monitorState.status === "saved" ? "text-ui-long" : "text-ui-risk"}`}>{monitorState.message}</p>
+        {currentMonitorState.status === "saved" || currentMonitorState.status === "error" ? (
+          <p role={currentMonitorState.status === "error" ? "alert" : "status"} aria-live="polite" className={`mt-2 text-xs font-semibold ${currentMonitorState.status === "saved" ? "text-ui-long" : "text-ui-risk"}`}>{currentMonitorState.message}</p>
         ) : null}
-        {journalState.status === "saved" || journalState.status === "error" ? (
-          <p role={journalState.status === "error" ? "alert" : "status"} aria-live="polite" className={`mt-2 text-xs font-semibold ${journalState.status === "saved" ? "text-ui-long" : "text-ui-risk"}`}>
-            {journalState.message} {journalState.status === "saved" ? <a href="/journal?market=crypto" className="underline">복기 보기</a> : null}
+        {currentJournalState.status === "saved" || currentJournalState.status === "error" ? (
+          <p role={currentJournalState.status === "error" ? "alert" : "status"} aria-live="polite" className={`mt-2 text-xs font-semibold ${currentJournalState.status === "saved" ? "text-ui-long" : "text-ui-risk"}`}>
+            {currentJournalState.message} {currentJournalState.status === "saved" ? <a href="/journal?market=crypto" className="underline">복기 보기</a> : null}
           </p>
         ) : null}
       </section>

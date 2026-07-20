@@ -323,10 +323,15 @@ expectIncludes(majorsApp, "CoinOptionsMarketPanel", "Options market panel on maj
 expectNotIncludes(majorsApp, "CoinFuturesSignalPressurePanel", "Independent major pressure request removed", "src/components/MajorsApp.tsx");
 expectNotIncludes(majorsApp, "CoinLargeTradeFlowPanel", "Independent major flow request removed", "src/components/MajorsApp.tsx");
 expectIncludes(homePerpetualDecisionFlow, "HomeDecisionHero", "Home decision hero", "src/components/coin/HomePerpetualDecisionFlow.tsx");
+expectIncludes(homePerpetualDecisionFlow, "PERPETUAL_SNAPSHOT_REQUEST_TIMEOUT_MS", "Home snapshot request watchdog", "src/components/coin/HomePerpetualDecisionFlow.tsx");
 expectIncludes(homePerpetualDecisionFlow, "comparePerpetualShadowDecision", "Privacy-safe shadow agreement comparison", "src/components/coin/HomePerpetualDecisionFlow.tsx");
 expectIncludes(homePerpetualDecisionFlow, "snapshot=${encodeURIComponent(displaySnapshot.id)}", "Home CTA snapshot continuity", "src/components/coin/HomePerpetualDecisionFlow.tsx");
 expectNotIncludes(homePerpetualDecisionFlow, "current.snapshot?.id === result.snapshot.id", "Home entitlement payload refresh", "src/components/coin/HomePerpetualDecisionFlow.tsx");
 expectIncludes(perpetualDecisionExperience, "PerpetualDecisionChart", "Snapshot-bound Perpetual chart", "src/components/coin/PerpetualDecisionExperience.tsx");
+expectIncludes(perpetualDecisionExperience, "PERPETUAL_SNAPSHOT_REQUEST_TIMEOUT_MS", "Perpetual snapshot request watchdog", "src/components/coin/PerpetualDecisionExperience.tsx");
+expectIncludes(perpetualDecisionExperience, "shouldContinuePerpetualSnapshotRefresh", "Expired alert snapshot polling stop", "src/components/coin/PerpetualDecisionExperience.tsx");
+expectIncludes(perpetualDecisionExperience, "currentJournalState", "Journal completion state stays bound to its snapshot", "src/components/coin/PerpetualDecisionExperience.tsx");
+expectIncludes(perpetualDecisionExperience, "currentMonitorState", "Monitor completion state stays bound to its snapshot", "src/components/coin/PerpetualDecisionExperience.tsx");
 expectIncludes(perpetualDecisionExperience, "multiTimeframeEvidence", "Snapshot-bound multi-timeframe evidence", "src/components/coin/PerpetualDecisionExperience.tsx");
 expectIncludes(perpetualDecisionExperience, 'params.set("source", "alert")', "Alert snapshot is preserved through the snapshot API", "src/components/coin/PerpetualDecisionExperience.tsx");
 expectIncludes(perpetualDecisionExperience, 'url.searchParams.delete("source")', "Refreshed alert context is normalized to a current snapshot", "src/components/coin/PerpetualDecisionExperience.tsx");

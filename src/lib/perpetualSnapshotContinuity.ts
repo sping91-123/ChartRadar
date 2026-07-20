@@ -3,14 +3,26 @@ import type { PerpetualAsset, PerpetualDecisionSnapshot } from "@/lib/perpetualD
 const SNAPSHOT_REFRESH_MAX_DELAY_MS = 60_000;
 const SNAPSHOT_REFRESH_RETRY_DELAY_MS = 15_000;
 const SNAPSHOT_REFRESH_EXPIRY_BUFFER_MS = 500;
+export const PERPETUAL_SNAPSHOT_REQUEST_TIMEOUT_MS = 12_000;
 
 export function perpetualSnapshotRefreshDelay(expiresAt: string | null | undefined, now = Date.now()) {
   const expiry = Date.parse(expiresAt ?? "");
   if (!Number.isFinite(expiry)) return SNAPSHOT_REFRESH_RETRY_DELAY_MS;
+  if (expiry <= now) return SNAPSHOT_REFRESH_RETRY_DELAY_MS;
   return Math.min(
     SNAPSHOT_REFRESH_MAX_DELAY_MS,
     Math.max(SNAPSHOT_REFRESH_EXPIRY_BUFFER_MS, expiry - now + SNAPSHOT_REFRESH_EXPIRY_BUFFER_MS)
   );
+}
+
+export function shouldContinuePerpetualSnapshotRefresh(
+  expiresAt: string | null | undefined,
+  preserveExpiredSnapshot: boolean,
+  now = Date.now()
+) {
+  if (!preserveExpiredSnapshot) return true;
+  const expiry = Date.parse(expiresAt ?? "");
+  return !Number.isFinite(expiry) || expiry > now;
 }
 
 export function choosePersistedSnapshotWinner<T>(insertedRows: readonly T[], conflictRows: readonly T[]) {

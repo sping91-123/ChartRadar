@@ -4,7 +4,7 @@ import {
   resolvePushTargetPath,
   sanitizePushTargetPath
 } from "../src/lib/pushTargetPath";
-import { allowsPerpetualPushMarket, journalMonitorIdForSnapshot, monitorLinksSnapshot, pendingEventNeedsDelivery, perpetualPushDeliveryStatus } from "../src/lib/perpetualMonitor";
+import { allowsPerpetualPushMarket, isPerpetualSnapshotScopedStateCurrent, journalMonitorIdForSnapshot, monitorLinksSnapshot, pendingEventNeedsDelivery, perpetualPushDeliveryStatus } from "../src/lib/perpetualMonitor";
 import {
   isPerpetualSnapshotGenerationEnabled,
   shouldRunPerpetualRevenueMaintenance
@@ -88,6 +88,12 @@ assert.equal(
   journalMonitorIdForSnapshot("snapshot-refreshed", null, "monitor-alert", false),
   null,
   "refreshed alert continuity must drop its stale monitor link"
+);
+assert.equal(isPerpetualSnapshotScopedStateCurrent("snapshot-a", { snapshotId: "snapshot-a" }), true);
+assert.equal(
+  isPerpetualSnapshotScopedStateCurrent("snapshot-b", { snapshotId: "snapshot-a" }),
+  false,
+  "a Journal result from snapshot A must not appear as the saved state for refreshed snapshot B"
 );
 
 assert.equal(isPerpetualSnapshotGenerationEnabled("off"), false, "off must be a real snapshot generation kill switch");
