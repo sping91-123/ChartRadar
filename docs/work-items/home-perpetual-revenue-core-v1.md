@@ -2,21 +2,21 @@
 
 ## 상태
 
-- 상태: `LOCAL_IMPLEMENTATION_COMPLETE / EXTERNAL_GATES_PENDING`
+- 상태: `PRODUCTION_ON / BETA_OBSERVATION_SCHEDULED`
 - 우선순위: P0 수익화 코어
 - 구현·검증일: 2026-07-20 KST
-- 운영 DB 변경: 없음
-- 실제 Push 발송: 없음
-- Vercel flag·deploy: 없음
-- AAB·스토어·iOS 작업: 없음
-- beta 12명 mutation: 없음
-- commit·push: 없음
+- 운영 DB: migration 2건 적용·검증 완료
+- 실제 Push: scheduled scanner 2회와 FCM API 성공 4건 확인, 실기기 수신은 미확인
+- Vercel: `PERPETUAL_REVENUE_CORE_V1=on`, production READY
+- AAB·스토어·iOS 작업: 이번 범위에서 제외
+- beta 12명 추가 mutation: 없음, E2E 전후 cohort 불변
+- commit·push: PR `#11` squash merge 완료
 
 ## 결과
 
-Home과 Perpetual이 같은 `PerpetualDecisionSnapshot`을 사용해 `상태 → 위험 → 다음 조건 → 최대 5분 간격 감시 → 알림 → 복기`로 이어지는 로컬 구현을 완료했다. 유료 판단 범위는 Binance USDT-M BTC·ETH, 15분 확정 구조와 1시간·4시간 맥락으로 제한했다. Basic 응답에는 현재 상태·위험·이유 2개·primary condition만 포함하고 `pro` 속성은 반환하지 않는다.
+Home과 Perpetual이 같은 `PerpetualDecisionSnapshot`을 사용해 `상태 → 위험 → 다음 조건 → 최대 5분 간격 감시 → 알림 → 복기`로 이어지는 흐름을 운영에 활성화했다. 유료 판단 범위는 Binance USDT-M BTC·ETH, 15분 확정 구조와 1시간·4시간 맥락으로 제한했다. Basic 응답에는 현재 상태·위험·이유 2개·primary condition만 포함하고 `pro` 속성은 반환하지 않는다.
 
-기능 플래그는 `off | shadow | on`을 지원한다. production에서 값이 없으면 `off`이며, `.env.example`의 rollout 예시는 `shadow`다. 현재 `.env.local`의 `off` 값은 변경하지 않았다.
+기능 플래그는 `off | shadow | on`을 지원한다. production은 `on`이며 로컬 `.env.local`의 `off` 값은 변경하지 않았다. 기능 구현 PR `#11`의 main SHA는 `e660e5a897b307eb1fd2e42e5240f4f61af17e6c`, production deployment는 `dpl_5r2RZD7HcDSpgCipNKiy3rqLKHXb`이고 `chartradar.kr` 별칭과 함께 READY다.
 
 ## 완료 범위
 
@@ -26,7 +26,7 @@ Home과 Perpetual이 같은 `PerpetualDecisionSnapshot`을 사용해 `상태 →
 - 미완성 캔들을 제외하고 Binance USDT-M의 15분·1시간·4시간 캔들, 청산 압력, 대형 체결 흐름을 사용한다.
 - 동일 1분 bucket을 중복 제거하고 유효한 요청 snapshot은 그대로 재사용한다.
 - 저장소 장애 시 마지막 정상 상태를 유지하되 `stale`로 fail-closed하며 monitor 생성을 막는다.
-- 신규 DB가 아직 없는 로컬 환경에서는 읽기 QA를 위한 process memory fallback을 사용한다. Next 개발 서버의 route 재컴파일 뒤에도 ID 연속성이 유지되도록 global store로 고정했다. monitor 저장은 DB/RPC가 없으면 계속 fail-closed다.
+- 신규 DB가 없는 로컬 개발 환경에서는 읽기 QA를 위한 process memory fallback을 사용한다. 운영은 Supabase 원장을 사용하며 monitor 저장은 DB/RPC가 없으면 계속 fail-closed다.
 
 ### 2. Home
 
@@ -101,6 +101,7 @@ Codex in-app Browser는 사용하지 않고 CLI Playwright만 사용했다.
 - `npm.cmd run test:perpetual-monitors`
 - `npm.cmd run test:product-events`
 - `npm.cmd run test:push-targets`
+- `npm.cmd run test:perpetual-beta-report`
 - `npm.cmd run smoke:supabase-security`
 - `npm.cmd run smoke:billing`
 - `npm.cmd run smoke:ops`
@@ -112,16 +113,24 @@ Codex in-app Browser는 사용하지 않고 CLI Playwright만 사용했다.
 - `npm.cmd run build`: Next.js 64개 static page 생성 및 전체 route build 통과
 - `git diff --check`
 
-## 외부 게이트와 남은 검증
+## 운영 활성화 결과
 
-다음은 구현 완료 범위가 아니며 실행하지 않았다.
+- Supabase migration `20260720045112 perpetual_revenue_core_v1`, `20260720053641 reconcile_journal_columns`를 적용하고 catalog·RLS·advisor를 재검증했다.
+- disposable Basic은 monitor 1개와 두 번째 요청의 `monitor_limit_reached`, disposable Coin Pro는 limit 20·pause/resume·Journal 저장을 운영에서 통과했다. 모든 일회용 계정과 앱 데이터는 즉시 삭제했다.
+- 실제 5분 schedule을 두 번 확인했다. 두 실행 모두 HTTP 200, `sources.failed=[]`, `lookupErrorCount=0`, `scannerErrorCount=0`이었고 이전 protection HTML JSON 오류는 재발하지 않았다.
+- 첫 실행에서 FCM API 성공 4건을 확인했다. 일부 기존 토큰 발송 실패도 있어 실기기 receipt와 stale token 상태는 베타 기간에 함께 관찰한다.
+- 360×800 BTC와 390×844 ETH에서 Home CTA가 첫 viewport 안에 있고 Home/detail asset·snapshot이 같으며 horizontal overflow와 console error/warning이 0건임을 운영에서 재확인했다.
+- 최종 정리 후 운영 집계는 Auth users/profiles 66/66, subscriptions 12, `legacy_beta` 12, active scenario monitor 0, Journal 0, disposable Auth user 0이다. 기존 beta cohort hash `23514409169df37bd42368113e94cb60` 조건과 E2E 전후 subscription fingerprint는 불변이다.
+- 베타 preflight는 12명, 중복 0, 전원 혜택 종료일이 관찰 종료 이후라는 세 gate를 통과했다. 관찰 창은 2026-07-21 00:00 KST부터 2026-08-04 00:00 KST 직전까지다.
 
-- production Supabase migration 적용과 advisor/JWT RLS 재검증
-- Vercel `PERPETUAL_REVENUE_CORE_V1=shadow|on` 변경 및 production deploy
-- 실제 5분 cron 실행과 disposable Android 계정 FCM 수신
-- authenticated disposable Basic의 1개 monitor·두 번째 Pro 안내 실동작
-- disposable Coin Pro의 20개 조건, Push → Perpetual → Journal 실동작
-- 14일 beta 관찰과 활성화 기준 집계
-- AAB, Play Console, App Store, iOS
+## 시간·외부 장치 의존 잔여
 
-운영 활성화 순서는 migration 적용·검증 → HMAC 등 preflight → `shadow` 비교 → 실제 cron/FCM disposable 검증 → 승인 후 `on`이다. DB가 적용되지 않은 상태에서 monitor 저장은 의도적으로 실패한다. FCM은 외부 provider 특성상 at-least-once 잔여 위험이 있으므로 atomic claim·delivery lease와 앱 내 기록을 기준으로 관찰해야 한다.
+아래 항목은 코드나 운영 설정 미완료가 아니라 시간이 지나거나 실제 장치·구매 표본이 있어야 판정할 수 있다.
+
+- 연결된 Android 기기에서 disposable 계정의 물리 FCM 수신 확인
+- 2026-07-28 Day 7 중간 집계와 2026-08-04 Day 14 최종 집계
+- beta 12명의 5초 이해·Pro 가치·투자 지시 오해 여부 인터뷰
+- 실제 RevenueCat 신규 구매 표본의 2분 내 entitlement 반영률 99% 판정
+- iOS, AAB, Play Console·App Store 작업은 합의된 제외 범위다.
+
+FCM은 외부 provider 특성상 at-least-once 잔여 위험이 있으므로 atomic claim·delivery lease와 앱 내 기록을 기준으로 관찰한다. 운영 결제·Vercel 계정의 외부 상태는 별도 운영 리스크이며, 현재 Vercel dashboard의 overdue/payment 경고는 결제 설정을 변경하지 않고 남겨 두었다.
