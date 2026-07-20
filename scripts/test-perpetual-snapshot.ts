@@ -16,7 +16,8 @@ import {
 import {
   buildStalePerpetualDecisionFallback,
   canReuseRequestedPerpetualSnapshot,
-  choosePersistedSnapshotWinner
+  choosePersistedSnapshotWinner,
+  perpetualSnapshotRefreshDelay
 } from "../src/lib/perpetualSnapshotContinuity";
 import {
   buildPerpetualDecisionSnapshot,
@@ -31,6 +32,12 @@ import {
 
 const generatedAt = "2026-07-19T12:00:00.000Z";
 const ready: SourceStatus = { status: "ready", observedAt: "2026-07-19T11:59:00.000Z", detail: "fixture" };
+
+const refreshNow = Date.parse(generatedAt);
+assert.equal(perpetualSnapshotRefreshDelay("2026-07-19T12:02:00.000Z", refreshNow), 60_000, "far expiry must retain the one-minute refresh ceiling");
+assert.equal(perpetualSnapshotRefreshDelay("2026-07-19T12:00:20.000Z", refreshNow), 20_500, "near expiry must refresh immediately after the validity boundary");
+assert.equal(perpetualSnapshotRefreshDelay("2026-07-19T11:59:59.000Z", refreshNow), 500, "expired snapshots must retry promptly");
+assert.equal(perpetualSnapshotRefreshDelay("invalid", refreshNow), 15_000, "invalid expiry must use the bounded retry delay");
 
 const canaryUserId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const canaryIds = perpetualRevenueCoreCanaryUserIds(`${canaryUserId.toUpperCase()}, ${canaryUserId}`);

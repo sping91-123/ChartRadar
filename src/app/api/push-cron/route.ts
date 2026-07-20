@@ -1,6 +1,7 @@
 // Vercel Cron에서 호출해 서버가 알림 조건을 스캔하고 Android 앱 푸시를 발송합니다.
 import { NextResponse } from "next/server";
 import { isFirebaseMessagingConfigured } from "@/lib/server/firebaseMessaging";
+import { resolvePushScannerOrigin } from "@/lib/server/push/scannerOrigin";
 import { isSupabaseAdminConfigured } from "@/lib/server/supabaseAdmin";
 import { runPushAlertScan } from "@/lib/server/pushAlertScanner";
 
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
   if (!isSupabaseAdminConfigured()) {
     return NextResponse.json({ error: "Supabase 관리자 환경변수가 필요합니다." }, { status: 503 });
   }
-  const origin = url.origin;
+  const origin = resolvePushScannerOrigin(request.url);
   const result = await runPushAlertScan({
     origin,
     dryRun,

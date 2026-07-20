@@ -13,8 +13,14 @@
     "src/app/api/large-trade-flow/route.ts": {
       "regions": ["icn1"]
     },
+    "src/app/api/crypto/perpetual/snapshot/route.ts": {
+      "regions": ["sin1"]
+    },
+    "src/app/api/crypto/perpetual/monitors/route.ts": {
+      "regions": ["sin1"]
+    },
     "src/app/api/push-cron/route.ts": {
-      "regions": ["icn1"]
+      "regions": ["sin1"]
     },
     "src/app/api/macro-sync/route.ts": {
       "regions": ["icn1"]

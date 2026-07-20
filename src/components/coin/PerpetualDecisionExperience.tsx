@@ -8,10 +8,11 @@ import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import { appendJournalEntry, decisionJournalContextFromSnapshot } from "@/lib/journal";
 import { readPerpetualAlertContext } from "@/lib/perpetualAlertContext";
+import { journalMonitorIdForSnapshot } from "@/lib/perpetualMonitor";
 import type { CryptoHomeTicker } from "@/lib/server/cryptoExchangeData";
 import type { MonitorCondition, PerpetualAsset, PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
 import type { PerpetualSnapshotCapabilities, PerpetualSnapshotResponse } from "@/lib/perpetualApi";
-import { buildStalePerpetualDecisionFallback } from "@/lib/perpetualSnapshotContinuity";
+import { buildStalePerpetualDecisionFallback, perpetualSnapshotRefreshDelay } from "@/lib/perpetualSnapshotContinuity";
 import { trackProductEvent } from "@/lib/trackProductEvent";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
@@ -34,7 +35,7 @@ type DecisionLoadState =
 type MonitorState =
   | { status: "idle" }
   | { status: "saving"; conditionId: string }
-  | { status: "saved"; conditionId: string; monitorId: string; message: string }
+  | { status: "saved"; conditionId: string; monitorId: string; snapshotId: string; message: string }
   | { status: "error"; conditionId: string; message: string };
 
 type JournalState =
@@ -106,7 +107,8 @@ function MonitorAction({
   monitorState,
   onCreate,
   isAuthenticated,
-  actionable
+  actionable,
+  snapshotId
 }: {
   condition: MonitorCondition;
   capabilities: PerpetualSnapshotCapabilities;
@@ -114,9 +116,10 @@ function MonitorAction({
   onCreate: (condition: MonitorCondition) => void;
   isAuthenticated: boolean;
   actionable: boolean;
+  snapshotId: string;
 }) {
   const busy = monitorState.status === "saving" && monitorState.conditionId === condition.id;
-  const saved = monitorState.status === "saved" && monitorState.conditionId === condition.id;
+  const saved = monitorState.status === "saved" && monitorState.snapshotId === snapshotId && monitorState.conditionId === condition.id;
   const disabled = !capabilities.monitorEnabled || !actionable || capabilities.setupRequired || capabilities.activeMonitorCount >= capabilities.monitorLimit;
 
   if (!capabilities.monitorEnabled) {
@@ -220,7 +223,7 @@ export function PerpetualDecisionExperience({
       if (!response.ok || !payload.snapshot || !payload.capabilities || !payload.continuity) {
         throw new Error(payload.error ?? "선물 판단 스냅샷을 불러오지 못했습니다.");
       }
-      if (controller.signal.aborted || generation !== generationRef.current) return;
+      if (controller.signal.aborted || generation !== generationRef.current) return null;
       const nextSnapshot = payload.snapshot;
       const nextCapabilities = payload.capabilities;
       const nextContinuity = payload.continuity;
@@ -243,8 +246,9 @@ export function PerpetualDecisionExperience({
       if (nextEffectiveSource) url.searchParams.set("source", nextEffectiveSource);
       else url.searchParams.delete("source");
       window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+      return nextSnapshot;
     } catch (error) {
-      if (controller.signal.aborted || generation !== generationRef.current) return;
+      if (controller.signal.aborted || generation !== generationRef.current) return null;
       setState((current) => ({
         status: "error",
         snapshot: current.snapshot,
@@ -252,15 +256,26 @@ export function PerpetualDecisionExperience({
         continuity: current.continuity,
         message: error instanceof Error ? error.message : "선물 판단 스냅샷을 불러오지 못했습니다."
       }));
+      return null;
     }
   }, [asset]);
 
   useEffect(() => {
     setMonitorState({ status: "idle" });
-    void load();
-    const timer = window.setInterval(() => void load(true), 60_000);
+    let cancelled = false;
+    let timer: number | undefined;
+    async function refresh(silent: boolean) {
+      const nextSnapshot = await load(silent);
+      if (cancelled) return;
+      timer = window.setTimeout(
+        () => void refresh(true),
+        perpetualSnapshotRefreshDelay(nextSnapshot?.expiresAt)
+      );
+    }
+    void refresh(false);
     return () => {
-      window.clearInterval(timer);
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
       generationRef.current += 1;
       abortRef.current?.abort();
     };
@@ -352,7 +367,7 @@ export function PerpetualDecisionExperience({
         });
         throw new Error(payload.error ?? "조건 감시를 저장하지 못했습니다.");
       }
-      setMonitorState({ status: "saved", conditionId: condition.id, monitorId: payload.monitor.id, message: "최대 5분 간격 감시가 시작됐습니다." });
+      setMonitorState({ status: "saved", conditionId: condition.id, monitorId: payload.monitor.id, snapshotId: snapshot.id, message: "최대 5분 간격 감시가 시작됐습니다." });
       setMonitorRefreshKey((current) => current + 1);
       setState((current) => current.capabilities ? {
         ...current,
@@ -395,7 +410,14 @@ export function PerpetualDecisionExperience({
 
   const saveJournal = useCallback(async () => {
     if (!snapshot || !session) return;
-    const monitorId = monitorState.status === "saved" ? monitorState.monitorId : alertMonitorId;
+    const monitorId = journalMonitorIdForSnapshot(
+      snapshot.id,
+      monitorState.status === "saved"
+        ? { monitorId: monitorState.monitorId, snapshotId: monitorState.snapshotId }
+        : null,
+      alertMonitorId,
+      exactAlertContext
+    );
     const journalSource = exactAlertContext ? "alert" : "snapshot";
     setJournalState({ status: "saving" });
     try {
@@ -519,7 +541,7 @@ export function PerpetualDecisionExperience({
         <div className="mt-4 flex flex-col gap-2 border-t border-ui-line pt-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs leading-5 text-ui-muted">감시는 실시간 체결 지시가 아니라 조건 변화를 최대 5분 간격으로 확인합니다.</p>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <MonitorAction condition={displaySnapshot.summary.primaryCondition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} />
+            <MonitorAction condition={displaySnapshot.summary.primaryCondition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} />
             {session ? (
               <ActionButton
                 tone="secondary"
@@ -571,7 +593,7 @@ export function PerpetualDecisionExperience({
             {conditions.slice(1).map((condition) => (
               <div key={condition.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div><p className="text-xs font-black text-ui-text">{condition.role === "confirmation" ? "추가 확인" : "판단 변경 기준"}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{condition.label}</p></div>
-                <MonitorAction condition={condition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} />
+                <MonitorAction condition={condition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} />
               </div>
             ))}
           </div>

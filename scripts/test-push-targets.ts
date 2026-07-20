@@ -4,12 +4,14 @@ import {
   resolvePushTargetPath,
   sanitizePushTargetPath
 } from "../src/lib/pushTargetPath";
-import { allowsPerpetualPushMarket, monitorLinksSnapshot, pendingEventNeedsDelivery, perpetualPushDeliveryStatus } from "../src/lib/perpetualMonitor";
+import { allowsPerpetualPushMarket, journalMonitorIdForSnapshot, monitorLinksSnapshot, pendingEventNeedsDelivery, perpetualPushDeliveryStatus } from "../src/lib/perpetualMonitor";
 import {
   isPerpetualSnapshotGenerationEnabled,
   shouldRunPerpetualRevenueMaintenance
 } from "../src/lib/server/perpetualRevenueCore";
 import { collectPaginatedRows } from "../src/lib/pagination";
+import { readOptionalJson } from "../src/lib/server/push/optionalJson";
+import { resolvePushScannerOrigin } from "../src/lib/server/push/scannerOrigin";
 
 const payload = {
   type: "perpetual_scenario",
@@ -67,22 +69,82 @@ assert.equal(
   true,
   "alert Journal and scenario events must accept the evaluated trigger snapshot"
 );
+assert.equal(
+  journalMonitorIdForSnapshot("snapshot-current", { monitorId: "monitor-current", snapshotId: "snapshot-current" }, null, false),
+  "monitor-current",
+  "Journal may link a monitor created from the current snapshot"
+);
+assert.equal(
+  journalMonitorIdForSnapshot("snapshot-refreshed", { monitorId: "monitor-old", snapshotId: "snapshot-old" }, null, false),
+  null,
+  "Journal must not link a monitor from an older refreshed snapshot"
+);
+assert.equal(
+  journalMonitorIdForSnapshot("snapshot-alert", null, "monitor-alert", true),
+  "monitor-alert",
+  "exact alert continuity may preserve its monitor link"
+);
+assert.equal(
+  journalMonitorIdForSnapshot("snapshot-refreshed", null, "monitor-alert", false),
+  null,
+  "refreshed alert continuity must drop its stale monitor link"
+);
 
 assert.equal(isPerpetualSnapshotGenerationEnabled("off"), false, "off must be a real snapshot generation kill switch");
 assert.equal(isPerpetualSnapshotGenerationEnabled("shadow"), true);
 assert.equal(shouldRunPerpetualRevenueMaintenance("shadow"), true, "shadow data must still receive retention maintenance");
 assert.equal(shouldRunPerpetualRevenueMaintenance("off"), true, "retention must continue after the feature kill switch is turned off");
+assert.equal(
+  resolvePushScannerOrigin("https://protected-deployment.vercel.app/api/push-cron", "https://chartradar.kr/", "production"),
+  "https://chartradar.kr",
+  "production optional sources must use the public canonical host"
+);
+assert.equal(
+  resolvePushScannerOrigin("http://127.0.0.1:3000/api/push-cron", undefined, "development"),
+  "http://127.0.0.1:3000",
+  "local development may self-fetch its request origin"
+);
+assert.throws(
+  () => resolvePushScannerOrigin("https://protected-deployment.vercel.app/api/push-cron", "http://chartradar.kr", "production"),
+  /canonical HTTPS production host/
+);
+assert.throws(
+  () => resolvePushScannerOrigin("https://protected-deployment.vercel.app/api/push-cron", "https://chartradar.ai", "production"),
+  /canonical HTTPS production host/
+);
+assert.throws(
+  () => resolvePushScannerOrigin("https://protected-deployment.vercel.app/api/push-cron", "not a URL", "production"),
+  /Invalid URL/
+);
 
 const paginationSource = Array.from({ length: 1_001 }, (_, index) => index);
 const pageOffsets: number[] = [];
-void collectPaginatedRows(async (offset, limit) => {
-  pageOffsets.push(offset);
-  return paginationSource.slice(offset, offset + limit);
-}, 500).then((paginated) => {
+async function runAsyncAssertions() {
+  const paginated = await collectPaginatedRows(async (offset, limit) => {
+    pageOffsets.push(offset);
+    return paginationSource.slice(offset, offset + limit);
+  }, 500);
   assert.equal(paginated.length, 1_001, "service-role scans must not silently stop at the REST 1,000-row boundary");
   assert.deepEqual(pageOffsets, [0, 500, 1_000]);
+
+  const jsonPayload = await readOptionalJson<{ briefing?: { headline?: string } }>(new Response(
+    JSON.stringify({ briefing: { headline: "fixture headline" } }),
+    { status: 200, headers: { "content-type": "application/json; charset=utf-8" } }
+  ), "radar-news-crypto");
+  assert.equal(jsonPayload?.briefing?.headline, "fixture headline", "a JSON optional source must remain readable");
+  await assert.rejects(
+    () => readOptionalJson(new Response("<!doctype html><title>Vercel Login</title>", {
+      status: 200,
+      headers: { "content-type": "text/html; charset=utf-8" }
+    }), "radar-news-crypto"),
+    /non-JSON response/,
+    "deployment protection HTML must be reported as a controlled optional-source failure"
+  );
+
   console.log("Structured Perpetual push target and delivery recovery contract passed.");
-}).catch((error) => {
+}
+
+void runAsyncAssertions().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });

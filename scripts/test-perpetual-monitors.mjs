@@ -7,6 +7,10 @@ const migration = readFileSync(
   join(process.cwd(), "supabase/migrations/20260719145731_perpetual_revenue_core_v1.sql"),
   "utf8"
 );
+const journalReconcileMigration = readFileSync(
+  join(process.cwd(), "supabase/migrations/20260720053200_reconcile_journal_columns.sql"),
+  "utf8"
+);
 const ids = {
   basic: "30000000-0000-4000-8000-000000000001",
   paid: "30000000-0000-4000-8000-000000000002",
@@ -150,6 +154,36 @@ try {
 
   await db.exec(migration);
   await db.exec(migration);
+  await db.exec(journalReconcileMigration);
+  await db.exec(journalReconcileMigration);
+
+  for (const columnName of ["market", "scout_snapshot", "outcome", "outcome_at", "updated_at"]) {
+    assert.equal(
+      (await db.query(
+        "select count(*)::int as count from information_schema.columns where table_schema='public' and table_name='journals' and column_name=$1",
+        [columnName]
+      )).rows[0].count,
+      1,
+      `journals.${columnName} must be reconciled`
+    );
+  }
+  for (const constraintName of ["journals_market_check", "journals_outcome_check"]) {
+    assert.equal(
+      (await db.query(
+        "select count(*)::int as count from pg_constraint where conrelid='public.journals'::regclass and conname=$1",
+        [constraintName]
+      )).rows[0].count,
+      1,
+      `${constraintName} must exist once`
+    );
+  }
+  assert.equal(
+    (await db.query(
+      "select count(*)::int as count from pg_trigger where tgrelid='public.journals'::regclass and tgname='set_journals_updated_at' and not tgisinternal"
+    )).rows[0].count,
+    1,
+    "Journal updated_at trigger must exist once"
+  );
 
   const revenueTables = [
     "perpetual_decision_snapshots",

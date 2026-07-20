@@ -1,5 +1,18 @@
 import type { PerpetualAsset, PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
 
+const SNAPSHOT_REFRESH_MAX_DELAY_MS = 60_000;
+const SNAPSHOT_REFRESH_RETRY_DELAY_MS = 15_000;
+const SNAPSHOT_REFRESH_EXPIRY_BUFFER_MS = 500;
+
+export function perpetualSnapshotRefreshDelay(expiresAt: string | null | undefined, now = Date.now()) {
+  const expiry = Date.parse(expiresAt ?? "");
+  if (!Number.isFinite(expiry)) return SNAPSHOT_REFRESH_RETRY_DELAY_MS;
+  return Math.min(
+    SNAPSHOT_REFRESH_MAX_DELAY_MS,
+    Math.max(SNAPSHOT_REFRESH_EXPIRY_BUFFER_MS, expiry - now + SNAPSHOT_REFRESH_EXPIRY_BUFFER_MS)
+  );
+}
+
 export function choosePersistedSnapshotWinner<T>(insertedRows: readonly T[], conflictRows: readonly T[]) {
   const winner = insertedRows[0] ?? conflictRows[0];
   if (!winner) throw new Error("Perpetual snapshot persistence returned no canonical bucket winner.");
