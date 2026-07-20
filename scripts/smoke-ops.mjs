@@ -6,7 +6,7 @@ const root = process.cwd();
 const checks = [];
 
 function read(file) {
-  return readFileSync(path.join(root, file), "utf8");
+  return readFileSync(path.join(root, file), "utf8").replace(/\r\n?/g, "\n");
 }
 
 function pass(label, detail) {
