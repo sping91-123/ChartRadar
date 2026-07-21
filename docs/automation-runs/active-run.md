@@ -398,3 +398,17 @@ Task 6 must select at most one follow-up candidate:
 - CLI Playwright로 360×800 Home과 390×844 Perpetual을 확인했다. Home의 일정·결론·위험·확인 가격·상세 CTA가 첫 화면 안에 들어왔고, Perpetual의 차트·MSB/CHoCH 쉬운 설명·Basic/Pro 경계가 보이며 가로 overflow는 없었다. 증거는 `output/playwright/home-perpetual-beginner-v1/`에 있다.
 - 검증: `test:perpetual-snapshot`, `test:perpetual-briefing`, `test:perpetual-monitors`, `test:futures-brief`, `test:push-targets`, `smoke:copy`, `smoke:ops`, `smoke:mobile`, `smoke:routes`, TypeScript, production build, CLI Playwright, 전체 `smoke:all` 통과.
 - 운영 DB, Vercel 환경변수, 실제 Push, deploy, AAB, 스토어 제출은 수행하지 않았다. 커밋·push도 수행하지 않았다.
+
+## 2026-07-21 News Impact v1·초보자 판단 과정 운영 반영
+
+- 기능 PR `#14`를 squash merge했고 main SHA는 `98fc2fdea599ee4dff2663ab479d35909a5abc18`이다. production deployment `dpl_BsVFZCPw2EiW6pBpHzcqJ42Lq7dQ`가 `chartradar.kr`·`www.chartradar.kr` 별칭과 함께 READY가 됐다.
+- 운영 Supabase에 `20260721101117 news_impact_v1`, `20260721101128 harden_news_impact_v1`, `20260721101323 reconcile_macro_event_status`를 적용했다. 신규 뉴스 테이블은 RLS 활성화, 사용자 정책 0개, `PUBLIC`·`anon`·`authenticated` 직접 grant 없음, service-role 전용 CRUD/RPC 상태다.
+- Vercel Production은 `NEWS_IMPACT_V1=shadow`, `NEWS_IMPACT_PUSH_ENABLED=false`다. 공식 수집·반응 원장만 동작하며 News Impact UI와 실제 Push는 Gate B/C 전까지 활성화하지 않는다.
+- 첫 shadow 주기에서 30일 보관 범위를 지난 정상 Fed RSS·SEC EDGAR 항목이 source 오류로 계산되는 문제를 발견했다. PR `#15`, main SHA `6da28553b10d340458fc69d7afc05b098baa977e`, production deployment `dpl_4u9RF5hqtE2pcmoFSHzkKCKWYixJ`로 과거 정상 항목은 건너뛰되 미래·잘못된 시각은 계속 fail-closed로 거부하도록 보완했다.
+- 보완 후 2026-07-21 19:45 KST scheduled sync는 `stored`: Fed·SEC RSS·SEC EDGAR·CFTC·공식 macro store와 BTC·ETH·Global observation이 모두 `succeeded`, fetched 232, accepted 9, source failure 0, circuit open 0이었다.
+- 운영 shadow 집계는 macro event 18, source item 13, impact event 21, market reaction 62다. News Impact Push 원장은 0건이고 `would_send_count=0`으로 실제 FCM은 발송하지 않았다.
+- production API는 `/api/health` 200, 익명 snapshot 200과 Basic 직렬화, `/api/news-sync` 무인증 401, `/api/crypto/perpetual/briefing` 무인증 401, `/api/news-impact` shadow 응답을 확인했다. 최근 30분 Vercel runtime error cluster는 0건이다.
+- production CLI Playwright에서 360×800 Home의 풍부한 경제 일정·위험·확인 가격·CTA와 390×844 Perpetual의 동일 분석 이동, 차트, MSB/CHoCH 쉬운 설명, 포지션 쏠림·큰 체결, Pro 심화 가치 카드를 확인했다. 가로 overflow와 console error/warning은 0건이다. 증거는 `output/playwright/production-gate-a/`에 있다.
+- 검증: 신규 뉴스 테스트 전체, 기존 Perpetual·Push·Supabase·billing·ops·routes·mobile smoke, `smoke:all`, TypeScript, production build, `git diff --check` 통과. 보관 범위 보완 뒤 `test:news-sources`, `test:news-impact`, TypeScript, production build를 다시 통과했다.
+- Gate A는 완료했다. Gate B는 2026-07-21 19:45 KST부터 최소 72시간 동안 출처 없는 사건 0, 미허가 payload 0, 중복률·관련성 기준을 관찰한 뒤 별도 전환한다. Gate C는 최소 7일과 eligible 사건 10건, 실제 disposable Android FCM 검증 조건이므로 Push OFF를 유지한다.
+- AAB, Play Console, iOS, 스토어 제출은 수행하지 않았다. Vercel dashboard의 overdue/payment 경고와 Supabase leaked-password protection WARN은 별도 계정 운영 리스크로 남는다.
