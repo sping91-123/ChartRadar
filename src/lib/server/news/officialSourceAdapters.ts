@@ -4,7 +4,7 @@ import { supabaseAdminRest } from "@/lib/server/supabaseAdmin";
 import { admitOfficialNews, officialRssPayloadFailure } from "@/lib/server/news/officialNewsAdmission";
 import { officialNewsCanonicalEventId, officialNewsSemanticSubject } from "@/lib/server/news/officialNewsIdentity";
 import { isAllowedOfficialMacroEvent, isAllowedOfficialMacroUrl, isAllowedUrlForHosts, runtimeAllowedNewsSourcesForPolicies, type NewsSourceDefinition } from "@/lib/server/news/sourceCatalog";
-import { normalizeNewsSourceItem, type NormalizedNewsSourceItem } from "@/lib/server/news/normalizeNewsSourceItem";
+import { classifyNewsSourceTimestamp, normalizeNewsSourceItem, type NormalizedNewsSourceItem } from "@/lib/server/news/normalizeNewsSourceItem";
 import { readEnabledNewsSourcePolicies, readNewsSourceHealth, recordNewsSourceFailure, recordNewsSourceSuccess } from "@/lib/server/news/newsImpactStore";
 
 export interface NewsSourceFetchResult {
@@ -188,7 +188,13 @@ async function fetchRssSource(source: NewsSourceDefinition, now: Date) {
     }
     const admission = admitOfficialNews({ sourceId: source.id, title });
     if (!admission.accepted || !admission.eventKind) continue;
+    const timestampStatus = classifyNewsSourceTimestamp(publishedAt, now);
+    if (timestampStatus === "expired") continue;
     admittedCount += 1;
+    if (timestampStatus !== "valid") {
+      invalidAdmittedCount += 1;
+      continue;
+    }
     try {
       const normalized = normalizeNewsSourceItem({
         sourceId: source.id,
@@ -337,7 +343,13 @@ async function fetchEdgar(source: NewsSourceDefinition, now: Date) {
         if (!trackedForms.has(form)) return [];
         const publishedAt = normalizeEdgarAcceptanceDateTime(recent.acceptanceDateTime?.[rowIndex], recent.filingDate?.[rowIndex]);
         const primaryDocument = recent.primaryDocument?.[rowIndex];
-        if (!publishedAt || !primaryDocument) {
+        if (!publishedAt) {
+          invalidTrackedCount += 1;
+          return [];
+        }
+        const timestampStatus = classifyNewsSourceTimestamp(publishedAt, now);
+        if (timestampStatus === "expired") return [];
+        if (timestampStatus !== "valid" || !primaryDocument) {
           invalidTrackedCount += 1;
           return [];
         }
