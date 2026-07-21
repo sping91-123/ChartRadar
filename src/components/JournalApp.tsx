@@ -43,6 +43,7 @@ import {
   updateRemoteJournalOutcome
 } from "@/lib/remoteJournal";
 import { isUuid } from "@/lib/perpetualMonitor";
+import { newsImpactClassificationLabel } from "@/lib/newsImpactPresentation";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 type MarketScope = "crypto" | "stocks";
@@ -248,14 +249,16 @@ function SourceBadge({ entry }: { entry: JournalEntry }) {
       : entry.source === "chart"
         ? "차트 저장"
         : entry.source === "snapshot"
-          ? "판단 스냅샷"
+          ? "선물 분석 저장"
           : entry.source === "alert"
             ? "알림 복기"
+            : entry.source === "news"
+              ? "뉴스 판단 복기"
             : "직접 기록";
   const normalizedSymbol = entry.symbol?.toUpperCase() ?? "";
   const snapshotAsset = normalizedSymbol.includes("ETH") ? "eth" : normalizedSymbol.includes("BTC") ? "btc" : null;
   const snapshotHref = entry.decisionSnapshotId && isUuid(entry.decisionSnapshotId) && snapshotAsset
-    ? `/crypto/perpetual?asset=${snapshotAsset}&timeframe=15m&snapshot=${encodeURIComponent(entry.decisionSnapshotId)}${entry.source === "alert" ? "&source=alert" : ""}`
+    ? `/crypto/perpetual?asset=${snapshotAsset}&timeframe=15m&snapshot=${encodeURIComponent(entry.decisionSnapshotId)}${entry.source === "alert" ? "&source=alert" : entry.source === "news" && entry.newsReactionId ? `&impact=${encodeURIComponent(entry.newsReactionId)}&source=news` : ""}`
     : null;
 
   return (
@@ -278,7 +281,7 @@ function SourceBadge({ entry }: { entry: JournalEntry }) {
       ) : null}
       {snapshotHref ? (
         <Link href={snapshotHref} className="inline-flex min-h-7 items-center border-b border-ui-brand/60 px-1 text-xs font-black text-ui-brand hover:border-ui-brand">
-          판단 snapshot 보기
+          당시 시장 분석 보기
         </Link>
       ) : null}
     </div>
@@ -366,7 +369,7 @@ function ChipGroup({
   );
 }
 
-export function JournalApp({ initialMarket = "crypto" }: { initialMarket?: MarketScope }) {
+export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false }: { initialMarket?: MarketScope; newsImpactEnabled?: boolean }) {
   const { session, user } = useSupabaseAuth();
   const journalOwnerId = session?.accessToken ? user?.id : null;
   const [market, setMarket] = useState<MarketScope>(initialMarket);
@@ -641,7 +644,7 @@ export function JournalApp({ initialMarket = "crypto" }: { initialMarket?: Marke
     <main className="journal-page min-h-[100dvh] w-full max-w-full overflow-x-hidden px-3 pb-[calc(18rem+env(safe-area-inset-bottom))] sm:px-4 sm:pb-[calc(10rem+env(safe-area-inset-bottom))]">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 sm:gap-3">
         <Header market={market} />
-        <RadarTopNav market={market} />
+        <RadarTopNav market={market} newsImpactEnabled={newsImpactEnabled} />
 
         {syncNotice ? (
           <div
@@ -730,7 +733,7 @@ export function JournalApp({ initialMarket = "crypto" }: { initialMarket?: Marke
                   {pendingRadarEntries.map((entry) => {
                     const checkpoint =
                       entry.scoutSnapshot
-                          ? `손절/무효화 기준 ${entry.scoutSnapshot.invalidation.toLocaleString()} 확인`
+                          ? `손절·해석을 다시 볼 가격 ${entry.scoutSnapshot.invalidation.toLocaleString()} 확인`
                         : entry.verdict || "저장 당시 근거와 결과를 확인하세요.";
                     return (
                       <AppSurface as="article" key={entry.id} tone="inset" variant="flat" padding="none" radius="none" className="py-4 lg:px-4 lg:first:pl-0 lg:last:pr-0">
@@ -1000,6 +1003,16 @@ export function JournalApp({ initialMarket = "crypto" }: { initialMarket?: Marke
                         {expanded ? (
                           <AppSurface tone="panel" variant="report" padding="md" className="mt-3">
                             <div className="grid gap-3 text-sm leading-6 text-ui-muted">
+                              {entry.decisionContext?.news ? (
+                                <div className="border-l-2 border-ui-brand bg-ui-inset/60 px-3 py-2.5">
+                                  <p className="text-[11px] font-black uppercase tracking-[0.08em] text-ui-brand">판단 당시 뉴스 맥락</p>
+                                  <p className="mt-1 font-semibold text-ui-text">{entry.decisionContext.news.headline}</p>
+                                  <p className="mt-1"><span className="font-semibold text-ui-text">공식 사실.</span> {entry.decisionContext.news.factSummary}</p>
+                                  <p><span className="font-semibold text-ui-text">관측 반응.</span> {entry.decisionContext.news.reactionSummary}</p>
+                                  <p><span className="font-semibold text-ui-text">판단 영향.</span> {newsImpactClassificationLabel(entry.decisionContext.news.classification)}</p>
+                                  <p><span className="font-semibold text-ui-text">다음 확인.</span> {entry.decisionContext.news.nextCheckAt ? formatDateTime(entry.decisionContext.news.nextCheckAt) : "최종 반응 확인 완료"}</p>
+                                </div>
+                              ) : null}
                               <p>
                                 <span className="font-semibold text-ui-text">들어간 이유.</span>{" "}
                                 {parsed.entryReasons.length ? parsed.entryReasons.join(", ") : "기록 대기"}

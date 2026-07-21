@@ -1,6 +1,7 @@
 // Android 앱 푸시 토큰을 로그인 사용자 계정에 연결합니다.
 import { NextResponse } from "next/server";
 import { cryptoAlertConditionLimit } from "@/lib/billing";
+import { perpetualDecisionEngineVersion } from "@/lib/perpetualDecisionSnapshot";
 import { radarAlertRules, type RadarAlertRule, type RadarAlertRuleId } from "@/lib/radarAlerts";
 import { isPerpetualRevenueCoreUserEnabled } from "@/lib/server/perpetualRevenueCore";
 import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
@@ -203,7 +204,7 @@ export async function POST(request: Request) {
     try {
       if (marketsToSync.includes("crypto") && isPerpetualRevenueCoreUserEnabled(userId)) {
         await supabaseAdminRpc("expire_perpetual_monitors", {
-          p_evaluator_version: "perpetual-v1.0.0"
+          p_evaluator_version: perpetualDecisionEngineVersion
         });
         await supabaseAdminRpc("reconcile_perpetual_monitor_limit", {
           p_user_id: userId,

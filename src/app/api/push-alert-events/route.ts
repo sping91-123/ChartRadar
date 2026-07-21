@@ -1,6 +1,8 @@
 ﻿import { NextResponse } from "next/server";
-import { fetchSupabaseUserOnServer, isSupabaseAdminConfigured, supabaseAdminRest } from "@/lib/server/supabaseAdmin";
+import { fetchSupabaseUserOnServer, isSupabaseAdminConfigured, supabaseAdminRest, supabaseAdminRpc } from "@/lib/server/supabaseAdmin";
 import { rateLimit } from "@/lib/server/rateLimit";
+import { isUuid } from "@/lib/perpetualMonitor";
+import { newsImpactRuntimePolicy } from "@/lib/server/newsImpactMode";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,6 +17,9 @@ interface PushAlertEventRow {
   payload: Record<string, unknown> | null;
   sent_at: string;
   created_at: string;
+  notification_kind: string | null;
+  delivery_status: string | null;
+  read_at: string | null;
 }
 
 function bearerToken(request: Request) {
@@ -52,14 +57,34 @@ export async function GET(request: Request) {
     const market = normalizeMarket(url.searchParams.get("market"));
     const limit = normalizeLimit(url.searchParams.get("limit"));
     const rows = await supabaseAdminRest<PushAlertEventRow[]>(
-      `push_alert_events?select=id,market,rule_id,event_key,title,body,payload,sent_at,created_at&user_id=eq.${encodeURIComponent(
+      `push_alert_events?select=id,market,rule_id,event_key,title,body,payload,sent_at,created_at,notification_kind,delivery_status,read_at&user_id=eq.${encodeURIComponent(
         user.id
       )}&market=eq.${market}&order=sent_at.desc&limit=${limit}`
     );
 
-    return NextResponse.json({ events: rows, market });
+    const events = newsImpactRuntimePolicy().expose
+      ? rows
+      : rows.filter((row) => row.notification_kind !== "news_impact" && row.rule_id !== "news-impact");
+    return NextResponse.json({ events, market });
   } catch (error) {
     console.error("[api/push-alert-events] error:", error);
     return NextResponse.json({ error: "알림 기록을 불러오지 못했습니다." }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  if (!isSupabaseAdminConfigured()) return NextResponse.json({ error: "알림 기록 저장소가 설정되어 있지 않습니다." }, { status: 503 });
+  const accessToken = bearerToken(request);
+  if (!accessToken) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  let body: { id?: unknown };
+  try { body = await request.json(); } catch { return NextResponse.json({ error: "요청 형식이 올바르지 않습니다." }, { status: 400 }); }
+  if (!isUuid(body.id)) return NextResponse.json({ error: "알림 ID를 확인해 주세요." }, { status: 400 });
+  try {
+    const user = await fetchSupabaseUserOnServer(accessToken);
+    const marked = await supabaseAdminRpc<boolean>("mark_push_alert_read", { p_user_id: user.id, p_event_id: body.id });
+    return NextResponse.json({ marked }, { headers: { "Cache-Control": "private, no-store, max-age=0" } });
+  } catch (error) {
+    console.error("[api/push-alert-events] mark read error:", error);
+    return NextResponse.json({ error: "알림 읽음 상태를 저장하지 못했습니다." }, { status: 503 });
   }
 }

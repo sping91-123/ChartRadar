@@ -10,20 +10,26 @@ export const clientProductEventNames = [
   "paywall_viewed",
   "purchase_started",
   "purchase_failed",
-  "purchase_cancelled"
+  "purchase_cancelled",
+  "news_impact_viewed",
+  "news_source_opened",
+  "news_to_market_opened",
+  "news_alert_opted_in",
+  "news_alert_opened"
 ] as const;
 
 export const serverProductEventNames = [
   "monitor_created",
   "scenario_triggered",
   "journal_saved",
-  "entitlement_activated"
+  "entitlement_activated",
+  "news_journal_saved"
 ] as const;
 
 export type ClientProductEventName = (typeof clientProductEventNames)[number];
 export type ServerProductEventName = (typeof serverProductEventNames)[number];
 export type ProductEventName = ClientProductEventName | ServerProductEventName;
-export type ProductEventSurface = "home" | "perpetual" | "alerts" | "journal" | "paywall" | "billing";
+export type ProductEventSurface = "home" | "perpetual" | "alerts" | "journal" | "paywall" | "billing" | "news";
 
 export interface ClientProductEventInput {
   eventId: string;
@@ -34,6 +40,8 @@ export interface ClientProductEventInput {
   asset?: PerpetualAsset;
   snapshotId?: string;
   monitorId?: string;
+  newsEventId?: string;
+  newsReactionId?: string;
   properties?: Record<string, unknown>;
 }
 
@@ -62,7 +70,7 @@ export function selectRecentPurchaseAttribution(
 }
 
 const clientNames = new Set<string>(clientProductEventNames);
-const surfaces = new Set<string>(["home", "perpetual", "alerts", "journal", "paywall", "billing"]);
+const surfaces = new Set<string>(["home", "perpetual", "alerts", "journal", "paywall", "billing", "news"]);
 const propertyKeys: Record<ClientProductEventName, ReadonlySet<string>> = {
   home_snapshot_viewed: new Set(["quality", "mode", "agreement"]),
   home_perpetual_opened: new Set(["quality", "source"]),
@@ -73,7 +81,12 @@ const propertyKeys: Record<ClientProductEventName, ReadonlySet<string>> = {
   paywall_viewed: new Set(["source", "planId"]),
   purchase_started: new Set(["source", "planId", "provider"]),
   purchase_failed: new Set(["source", "planId", "provider", "code"]),
-  purchase_cancelled: new Set(["source", "planId", "provider"])
+  purchase_cancelled: new Set(["source", "planId", "provider"]),
+  news_impact_viewed: new Set(["market", "classification", "source"]),
+  news_source_opened: new Set(["market", "source"]),
+  news_to_market_opened: new Set(["market", "classification", "source"]),
+  news_alert_opted_in: new Set(["market", "enabled"]),
+  news_alert_opened: new Set(["market", "classification"])
 };
 
 function shortString(value: unknown, max = 80) {

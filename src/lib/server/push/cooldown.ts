@@ -6,10 +6,11 @@ const cryptoAltMarketScoutCooldownMinutes = 360;
 const setupSymbolCooldownMinutes = 120;
 const liquidationPressureCooldownMinutes = 180;
 const cryptoAltMarketScoutGlobalCooldownMinutes = 60;
+const macroReminderDailyLimit = 3;
 
 export interface CooldownDecision {
   blocked: boolean;
-  reason: "symbol_cooldown" | "market_scout_limit" | null;
+  reason: "symbol_cooldown" | "market_scout_limit" | "macro_daily_limit" | null;
   minutes: number;
 }
 
@@ -56,6 +57,14 @@ function cooldownMinutesForEvent(event: PushAlertEvent) {
 }
 
 export function cooldownDecisionForEvent(recentRows: RecentPushAlertEventRow[], event: PushAlertEvent): CooldownDecision {
+  if (event.ruleId === "macro-event-reminder") {
+    const recentMacroCount = recentRows.filter((row) => (
+      row.rule_id === "macro-event-reminder" && recentEventAgeMinutes(row) < 24 * 60
+    )).length;
+    if (recentMacroCount >= macroReminderDailyLimit) {
+      return { blocked: true, reason: "macro_daily_limit", minutes: 24 * 60 };
+    }
+  }
   const symbolCooldownMinutes = cooldownMinutesForEvent(event);
   if (symbolCooldownMinutes > 0) {
     const hasRecentSymbolEvent = recentRows.some((row) => recentRowMatchesEventSymbol(row, event) && recentEventAgeMinutes(row) < symbolCooldownMinutes);

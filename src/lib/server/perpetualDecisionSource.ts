@@ -294,6 +294,73 @@ async function loadLatestStoredSnapshot(asset: PerpetualAsset) {
   }
 }
 
+export async function getReadyPerpetualSnapshotBefore(
+  asset: PerpetualAsset,
+  beforeAt: string,
+  withinMinutes = 10
+) {
+  const beforeMs = Date.parse(beforeAt);
+  if (!Number.isFinite(beforeMs)) return null;
+  const lowerAt = new Date(beforeMs - withinMinutes * 60_000).toISOString();
+  const memory = Array.from(memorySnapshotsById.values())
+    .filter((snapshot) => snapshot.asset === asset && snapshot.quality === "ready" && snapshot.engineVersion === perpetualDecisionEngineVersion)
+    .filter((snapshot) => snapshot.generatedAt <= beforeAt && snapshot.generatedAt >= lowerAt)
+    .sort((left, right) => right.generatedAt.localeCompare(left.generatedAt))[0];
+  if (memory) return memory;
+  if (!isSupabaseAdminConfigured()) return null;
+  try {
+    const rows = await supabaseAdminRest<StoredSnapshotRow[]>(
+      `perpetual_decision_snapshots?select=*&asset=eq.${asset}&quality=eq.ready&engine_version=eq.${encodeURIComponent(perpetualDecisionEngineVersion)}&generated_at=lte.${encodeURIComponent(beforeAt)}&generated_at=gte.${encodeURIComponent(lowerAt)}&order=generated_at.desc&limit=1`
+    );
+    if (!rows[0]) return null;
+    const snapshot = snapshotFromRow(rows[0]);
+    rememberSnapshot(snapshot);
+    return snapshot;
+  } catch (error) {
+    persistenceWarning(error);
+    return null;
+  }
+}
+
+export async function getReadyPerpetualSnapshotAfter(
+  asset: PerpetualAsset,
+  afterAt: string,
+  withinMinutes = 10
+) {
+  const afterMs = Date.parse(afterAt);
+  if (!Number.isFinite(afterMs)) return null;
+  const upperAt = new Date(afterMs + withinMinutes * 60_000).toISOString();
+  const memory = Array.from(memorySnapshotsById.values())
+    .filter((snapshot) => snapshot.asset === asset && snapshot.quality === "ready" && snapshot.engineVersion === perpetualDecisionEngineVersion)
+    .filter((snapshot) => snapshot.generatedAt >= afterAt && snapshot.generatedAt <= upperAt)
+    .sort((left, right) => left.generatedAt.localeCompare(right.generatedAt))[0];
+  if (memory) return memory;
+  if (!isSupabaseAdminConfigured()) return null;
+  try {
+    const rows = await supabaseAdminRest<StoredSnapshotRow[]>(
+      `perpetual_decision_snapshots?select=*&asset=eq.${asset}&quality=eq.ready&engine_version=eq.${encodeURIComponent(perpetualDecisionEngineVersion)}&generated_at=gte.${encodeURIComponent(afterAt)}&generated_at=lte.${encodeURIComponent(upperAt)}&order=generated_at.asc&limit=1`
+    );
+    if (!rows[0]) return null;
+    const snapshot = snapshotFromRow(rows[0]);
+    rememberSnapshot(snapshot);
+    return snapshot;
+  } catch (error) {
+    persistenceWarning(error);
+    return null;
+  }
+}
+
+export async function generatePeriodicPerpetualDecisionSnapshots(asOf = new Date()) {
+  const settled = await Promise.allSettled((['btc', 'eth'] as const).map(async (asset) => (
+    await resolvePerpetualDecisionSnapshot({ asset, asOf })
+  ).snapshot));
+  return settled.map((result, index) => ({
+    asset: (['btc', 'eth'] as const)[index],
+    snapshot: result.status === "fulfilled" ? result.value : null,
+    error: result.status === "rejected" ? (result.reason instanceof Error ? result.reason.message : String(result.reason)) : null
+  }));
+}
+
 async function loadStoredSnapshotBucketRows(asset: PerpetualAsset, bucketAt: string) {
   return supabaseAdminRest<StoredSnapshotRow[]>(
     `perpetual_decision_snapshots?select=*&asset=eq.${asset}&bucket_at=eq.${encodeURIComponent(bucketAt)}&engine_version=eq.${encodeURIComponent(perpetualDecisionEngineVersion)}&limit=1`
@@ -386,7 +453,8 @@ async function generateSnapshot(asset: PerpetualAsset, asOf: Date, previousSnaps
     observedAt: row.observedAt,
     closedPrice: row.closedPrice,
     rangeHigh: row.rangeHigh,
-    rangeLow: row.rangeLow
+    rangeLow: row.rangeLow,
+    candleTimes: row.candles.map((candle) => candle.time)
   })) as [PerpetualTimeframeObservation, PerpetualTimeframeObservation, PerpetualTimeframeObservation];
   const sourceStatus = {
     candles: candleSourceStatus(candleRows, asOfMs, priceFallback),

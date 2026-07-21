@@ -23,6 +23,10 @@ const BRIEFING_SYSTEM_INSTRUCTION = `당신은 코인 시장 구조를 설명하
 - 500자에서 900자 사이의 한국어 문단 2개로 작성하고, 문단 사이는 빈 줄 하나로 구분합니다.
 - 첫 문단은 현재 차트 요약으로 전체 구조 흐름과 롱/숏 우세 압력이 같은 방향인지, 엇갈리는지 함께 설명합니다.
 - 둘째 문단은 조심할 점, 다음에 확인할 조건, 보조지표를 어떻게 참고할지 설명합니다.
+- 코인을 처음 배우는 사람을 기준으로 씁니다. 쉬운 설명을 먼저 쓰고 전문 용어와 약어는 괄호 안에 보조로만 씁니다.
+- MSB는 "중요한 고점·저점을 넘은 추세 확인", CHoCH는 "기존 흐름이 바뀔 가능성", OB는 "큰 주문이 반응했던 가격 구간"처럼 처음 등장할 때 뜻을 바로 풉니다.
+- "상방 구조가 확인 중", "유지 조건"처럼 주어와 기준이 빠진 문장은 쓰지 않습니다. 어느 시간대의 가격 또는 체결이 무엇을 보여주는지 명확히 씁니다.
+- 첫 두 문장만 읽어도 현재 어느 쪽 힘이 더 강한지, 아직 확정인지 아닌지, 왜 그런지 이해할 수 있게 씁니다.
 - 반드시 한국어만 사용합니다. 일본어, 중국어, 히라가나, 가타카나는 절대 쓰지 않습니다.
 - 직접적인 진입 지시, 매수·매도 신호, 수익 보장, 확정적 표현은 금지합니다.
 - 손절가·익절가를 지시하지 말고, 입력된 시나리오는 참고 구간으로만 설명합니다.
@@ -57,7 +61,7 @@ function buildMarketBriefingPrompt(input: MarketBriefingInput): string {
   const aggregateBlock = input.aggregate
     ? `전체 프레임 종합.
 종합 방향: ${input.aggregate.directionLabel}
-종합 점수: ${input.aggregate.compositeScore}
+${input.hideNumericScores ? "" : `종합 점수: ${input.aggregate.compositeScore}`}
 정렬 상태: ${input.aggregate.alignment}
 단기 구조: ${input.aggregate.shortTimeframeSummary}
 상위 구조: ${input.aggregate.higherTimeframeSummary}
@@ -70,14 +74,13 @@ function buildMarketBriefingPrompt(input: MarketBriefingInput): string {
   const pressureBlock = input.pressure
     ? `롱/숏 우세 압력.
 우세 상태: ${input.pressure.dominantLabel}
-롱 점수: ${input.pressure.longScore}
-숏 점수: ${input.pressure.shortScore}
+${input.hideNumericScores ? "" : `롱 점수: ${input.pressure.longScore}\n숏 점수: ${input.pressure.shortScore}`}
 압력 요약: ${input.pressure.summary}
 구조와 압력 해석: ${input.pressure.structurePressureRead}
 압력 근거: ${input.pressure.evidence.join("\n") || "없음"}`
     : "롱/숏 우세 압력: 미확인";
   const tfLines = input.timeframes
-    .map((item) => `${item.timeframe}: 확정 구조 ${item.msb}, 전환 신호 ${item.choch}, 점수 ${item.score}, ${item.summary}`)
+    .map((item) => `${item.timeframe}: 확정 구조 ${item.msb}, 전환 신호 ${item.choch}, ${input.hideNumericScores ? "" : `점수 ${item.score}, `}${item.summary}`)
     .join("\n");
   const scenario = input.scenario
     ? `분석 시나리오: ${input.scenario.title}, ${input.scenario.reason}, 관찰 구간 ${input.scenario.entry}, 리스크 기준 ${input.scenario.invalidation}, 참고 목표 ${input.scenario.targets}, 검토 ${input.scenario.confidence}%`
@@ -91,7 +94,7 @@ function buildMarketBriefingPrompt(input: MarketBriefingInput): string {
 현재가: ${input.price}
 판정: ${input.verdict}
 방향: ${input.bias}
-구조 기울기값: ${input.biasScore} (${input.scoreRange})
+${input.hideNumericScores ? "" : `구조 기울기값: ${input.biasScore} (${input.scoreRange})`}
 판독 상태: ${input.readiness}
 요약: ${input.summaryLine}
 행동 가이드: ${input.actionGuide}

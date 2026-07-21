@@ -11,6 +11,7 @@ assert.equal(isClientProductEventName("home_snapshot_viewed"), true);
 assert.equal(isClientProductEventName("entitlement_activated"), false, "server-authoritative events must not be accepted from clients");
 assert.equal(isClientProductEventName("monitor_created"), false);
 assert.equal(isProductEventSurface("perpetual"), true);
+assert.equal(isProductEventSurface("news"), true);
 assert.equal(isProductEventSurface("admin"), false);
 
 assert.deepEqual(
@@ -28,6 +29,17 @@ assert.deepEqual(
     conditionRole: "primary",
     source: "perpetual"
   }
+);
+
+assert.deepEqual(
+  sanitizeProductEventProperties("news_impact_viewed", {
+    market: "crypto",
+    classification: "risk_increase",
+    source: "news",
+    headline: "must-not-survive",
+    token: "must-not-survive"
+  }),
+  { market: "crypto", classification: "risk_increase", source: "news" }
 );
 
 assert.deepEqual(

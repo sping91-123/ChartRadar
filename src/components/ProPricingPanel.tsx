@@ -119,7 +119,7 @@ function scopeCopy(scope: BillingPageScope) {
     return {
       eyebrow: "COIN PRO",
       title: "Coin Pro에서 확인할 코인 기준",
-      body: "Basic은 BTC·ETH 상태와 핵심 위험, 다음 조건 1개를 보여줍니다. Coin Pro는 Binance USDT-M 확인·판단 변경 조건을 최대 20개까지 감시해 알림·복기로 이어갑니다."
+      body: "Basic은 BTC·ETH의 현재 흐름, 가장 큰 위험, 다음 확인 가격 1개를 보여줍니다. Coin Pro는 15분·1시간·4시간 근거와 해석을 다시 볼 가격을 열고, 중요한 조건을 최대 20개까지 앱이 대신 확인해 알림·복기로 이어갑니다."
     };
   }
 
@@ -134,7 +134,7 @@ function scopeCopy(scope: BillingPageScope) {
   return {
     eyebrow: "ALL MARKET PRO",
     title: "Pro에서 확인할 시장 기준",
-    body: "Basic은 오늘 결론과 핵심 리스크를 확인하는 흐름입니다. Pro는 조건, 무효화 기준, 알림·복기 맥락을 열어 코인과 글로벌 리스크를 함께 비교하도록 돕습니다."
+    body: "Basic은 오늘 결론과 가장 큰 위험을 확인하는 흐름입니다. Pro는 결론이 강해지는 조건과 해석을 다시 볼 조건, 알림·복기 맥락을 열어 코인과 글로벌 위험을 함께 비교하도록 돕습니다."
   };
 }
 
@@ -173,7 +173,7 @@ const planDepthRows: Array<{ label: string; value: string; detail: string; tone:
   {
     label: "Coin Pro",
     value: "코인 기준과 리스크",
-    detail: "Binance USDT-M BTC·ETH의 확인 조건, 판단 변경 기준, 시간대별 근거를 엽니다.",
+    detail: "Binance USDT-M BTC·ETH의 중요한 확인 가격, 해석을 다시 볼 가격, 15분·1시간·4시간 근거를 엽니다.",
     tone: "info"
   },
   {
@@ -198,8 +198,8 @@ const proUnlockItems: Array<{ icon: LucideIcon; title: string; detail: string }>
   },
   {
     icon: ShieldAlert,
-    title: "무효화 기준",
-    detail: "후보나 시나리오를 계속 볼지 낮춰 볼지 판단하는 기준을 분리해서 확인합니다."
+    title: "해석을 다시 볼 조건",
+    detail: "지금 보고 있는 흐름을 계속 참고해도 되는지, 어떤 가격에서 다시 확인해야 하는지 분리해서 보여줍니다."
   },
   {
     icon: BookOpen,
@@ -226,8 +226,8 @@ const planDisplayCopy: Partial<Record<BillingPlanId, { description: string; high
     highlights: ["첫 판단 요약", "핵심 리스크 확인", "판단 보조용 기본 알림"]
   },
   crypto_monthly: {
-    description: "Binance USDT-M BTC·ETH의 상태, 위험, 확인 조건을 같은 snapshot으로 보고 최대 5분 간격 감시와 알림·복기로 이어갑니다.",
-    highlights: ["BTC·ETH 선물 리스크 snapshot", "확인·판단 변경 조건 최대 20개", "알림에서 같은 snapshot 복기"]
+    description: "Binance USDT-M BTC·ETH의 상태, 위험, 확인 가격을 같은 분석 기준으로 보고 최대 5분 간격 감시와 알림·판단 기록으로 이어갑니다.",
+    highlights: ["BTC·ETH 선물 위험 분석", "확인 가격·다시 볼 가격 최대 20개", "알림에서 당시 분석 다시 보기"]
   },
   crypto_yearly: {
     description: "코인 조건과 리스크를 반복 점검하는 사용자를 위한 연간 플랜입니다.",
@@ -259,7 +259,7 @@ function getPlanPayoffCopy(plan: BillingPlan) {
   if (plan.marketScope === "crypto") {
     return {
       title: "BTC·ETH 판단을 놓치지 않는 감시 흐름이 열립니다.",
-      items: ["확인·판단 변경 조건", "최대 5분 간격 감시", "같은 snapshot의 알림·복기"]
+      items: ["흐름 확인 가격과 다시 볼 가격", "최대 5분 간격 감시", "같은 분석을 이어 보는 알림·복기"]
     };
   }
 
@@ -279,7 +279,7 @@ function getPlanPayoffCopy(plan: BillingPlan) {
 
   return {
     title: "Pro 판단 보조 기준이 열립니다.",
-    items: ["추적 조건", "무효화 기준", "알림·복기 흐름"]
+    items: ["확인할 가격", "해석을 다시 볼 조건", "알림·복기 흐름"]
   };
 }
 
@@ -644,7 +644,7 @@ export function ProPricingPanel({
           </div>
           <div className="border-t border-ui-line pt-3">
             <StatusPill tone="info">Pro</StatusPill>
-            <p className="mt-2 text-sm font-semibold leading-6 text-ui-text [word-break:keep-all]">추적 조건, 무효화 기준, 세부 근거까지 확인</p>
+            <p className="mt-2 text-sm font-semibold leading-6 text-ui-text [word-break:keep-all]">확인할 가격, 해석을 다시 볼 조건, 세부 근거까지 확인</p>
           </div>
           <div className="border-t border-ui-line pt-3">
             <StatusPill tone="watch" icon={Sparkles}>All Market</StatusPill>

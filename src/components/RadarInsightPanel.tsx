@@ -103,7 +103,7 @@ function InsightList({
       )}
       {locked ? (
         <p className="mt-2 text-[11px] font-bold leading-5 text-slate-500 [word-break:keep-all]">
-          {previewText ?? "상세 조건, 무효화 기준, 세부 리스크는 Pro에서 확인할 수 있습니다."}
+          {previewText ?? "확인할 가격, 해석을 다시 볼 조건, 세부 위험은 Pro에서 확인할 수 있습니다."}
         </p>
       ) : null}
     </div>
@@ -117,7 +117,7 @@ function LockedValue({ label }: { label: string }) {
         <p className="text-xs font-black text-slate-200">{label}</p>
         <Lock size={14} className="text-cyan-200" aria-hidden />
       </div>
-      <p className="mt-2 text-xs font-bold leading-5 text-slate-500">상세 조건, 무효화 기준, 세부 리스크는 Pro에서 확인할 수 있습니다.</p>
+      <p className="mt-2 text-xs font-bold leading-5 text-slate-500">확인할 가격, 해석을 다시 볼 조건, 세부 위험은 Pro에서 확인할 수 있습니다.</p>
     </div>
   );
 }
@@ -372,7 +372,7 @@ export function RadarInsightPanel({
           title="리스크"
           items={risks}
           locked={!isPro && insight.risks.length > 1}
-          previewText="상세 조건, 무효화 기준, 세부 리스크는 Pro에서 확인할 수 있습니다."
+          previewText="확인할 가격, 해석을 다시 볼 조건, 세부 위험은 Pro에서 확인할 수 있습니다."
           showLockedPreviewItems
         />
       </div>
@@ -380,7 +380,7 @@ export function RadarInsightPanel({
       <div className="mt-3 grid gap-3 lg:grid-cols-3">
         <InsightList title="상방 추적 조건" items={insight.longConditions} locked={!isPro} />
         <InsightList title="하방 추적 조건" items={insight.shortConditions} locked={!isPro} />
-        <InsightList title="무효화 기준" items={insight.invalidationConditions} locked={!isPro} />
+        <InsightList title="이 조건이면 해석을 다시 확인" items={insight.invalidationConditions} locked={!isPro} />
       </div>
 
       <div className="mt-3 grid gap-3 lg:grid-cols-2">

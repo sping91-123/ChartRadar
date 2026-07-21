@@ -8,6 +8,7 @@ import { withSupabaseAuth } from "@/lib/authFetch";
 import { resolvePushTargetPath } from "@/lib/pushTargetPath";
 import { rememberPerpetualAlertContext } from "@/lib/perpetualAlertContext";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
+import { trackProductEvent } from "@/lib/trackProductEvent";
 
 type AlertMarket = "crypto" | "stocks";
 type LoadStatus = "idle" | "loading" | "ready" | "error";
@@ -22,6 +23,9 @@ interface PushAlertEvent {
   payload: Record<string, unknown> | null;
   sent_at: string;
   created_at: string;
+  notification_kind?: string | null;
+  delivery_status?: string | null;
+  read_at?: string | null;
 }
 
 interface PushAlertEventsResponse {
@@ -89,6 +93,30 @@ export function RadarAlertList({ market = "crypto" }: { market?: AlertMarket }) 
   const abortRef = useRef<AbortController | null>(null);
   const copy = useMemo(() => marketCopy(market), [market]);
   const accessToken = session?.accessToken;
+
+  const openAlert = useCallback((event: PushAlertEvent) => {
+    rememberPerpetualAlertContext(event.payload);
+    if (accessToken && !event.read_at) {
+      void fetch("/api/push-alert-events", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ id: event.id }),
+        keepalive: true
+      });
+      setEvents((current) => current.map((item) => item.id === event.id ? { ...item, read_at: new Date().toISOString() } : item));
+    }
+    if (event.notification_kind === "news_impact" || event.rule_id === "news-impact") {
+      const eventId = payloadString(event.payload, ["eventId", "event_id"]);
+      const reactionId = payloadString(event.payload, ["reactionId", "reaction_id"]);
+      if (eventId) void trackProductEvent({
+        eventName: "news_alert_opened",
+        surface: "alerts",
+        newsEventId: eventId,
+        newsReactionId: reactionId ?? undefined,
+        properties: { market: event.market === "stocks" ? "global" : "crypto", classification: "alert_eligible" }
+      });
+    }
+  }, [accessToken]);
 
   useEffect(() => {
     const currentPath = `${window.location.pathname}${window.location.search}`;
@@ -224,7 +252,7 @@ export function RadarAlertList({ market = "crypto" }: { market?: AlertMarket }) 
               <article key={event.id} className="py-4">
                 <Link
                   href={targetPath}
-                  onClick={() => rememberPerpetualAlertContext(event.payload)}
+                    onClick={() => openAlert(event)}
                   className="group flex items-start justify-between gap-3 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ui-brand/50"
                 >
                   <div className="min-w-0">
@@ -243,7 +271,7 @@ export function RadarAlertList({ market = "crypto" }: { market?: AlertMarket }) 
                         </StatusPill>
                       ) : null}
                     </div>
-                    <h3 className="mt-3 text-sm font-semibold leading-5 text-ui-text">{event.title}</h3>
+                    <h3 className={`mt-3 text-sm font-semibold leading-5 ${event.read_at ? "text-ui-muted" : "text-ui-text"}`}>{event.title}</h3>
                     <p className="mt-1 text-sm leading-6 text-ui-muted [word-break:keep-all]">{event.body}</p>
                   </div>
                   <div className="shrink-0 text-right text-ui-label font-semibold text-ui-subtle">

@@ -42,12 +42,15 @@ function inferMarket(pathname: string): MarketScope {
   return "crypto";
 }
 
-function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) {
+function RadarTopNavContent({ market: forcedMarket, newsImpactEnabled }: { market?: MarketScope; newsImpactEnabled: boolean }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const marketParam = searchParams.get("market");
   const market = forcedMarket ?? inferMarket(pathname);
-  const navItems = market === "all" ? allNavItems : market === "stocks" ? stockNavItems : cryptoNavItems;
+  const baseNavItems = market === "all" ? allNavItems : market === "stocks" ? stockNavItems : cryptoNavItems;
+  const navItems = newsImpactEnabled
+    ? baseNavItems
+    : baseNavItems.filter((item) => item.href !== "/crypto/news" && !item.href.startsWith("/news?"));
   const isGlobalNav = market === "stocks";
   const isCryptoNav = market === "crypto";
   const isFixedGridNav = isGlobalNav || isCryptoNav;
@@ -96,10 +99,10 @@ function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope }) 
   );
 }
 
-export function RadarTopNav({ market }: { market?: MarketScope } = {}) {
+export function RadarTopNav({ market, newsImpactEnabled = false }: { market?: MarketScope; newsImpactEnabled?: boolean } = {}) {
   return (
     <Suspense fallback={<div className="radar-bottom-nav fixed inset-x-0 bottom-0 z-40 h-12" />}>
-      <RadarTopNavContent market={market} />
+      <RadarTopNavContent market={market} newsImpactEnabled={newsImpactEnabled} />
     </Suspense>
   );
 }

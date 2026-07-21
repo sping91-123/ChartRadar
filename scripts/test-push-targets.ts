@@ -10,6 +10,7 @@ import {
   shouldRunPerpetualRevenueMaintenance
 } from "../src/lib/server/perpetualRevenueCore";
 import { collectPaginatedRows } from "../src/lib/pagination";
+import { remainingNewsPushTargets, resolveNewsDeliveryStatus, selectLatestNewsReaction } from "../src/lib/newsImpactDelivery";
 import { readOptionalJson } from "../src/lib/server/push/optionalJson";
 import { resolvePushScannerOrigin } from "../src/lib/server/push/scannerOrigin";
 
@@ -58,6 +59,22 @@ assert.equal(perpetualPushDeliveryStatus(0, 0), "in_app_only", "a monitor withou
 assert.equal(perpetualPushDeliveryStatus(2, 2), "sent");
 assert.equal(perpetualPushDeliveryStatus(2, 1), "partial");
 assert.equal(perpetualPushDeliveryStatus(2, 0), "failed");
+
+const stagedReactions = [
+  { id: "detected", stage: "detected" as const, created_at: "2026-07-20T12:00:00.000Z" },
+  { id: "provisional", stage: "provisional_15m" as const, created_at: "2026-07-20T12:15:00.000Z" },
+  { id: "final", stage: "final_60m" as const, created_at: "2026-07-20T13:00:00.000Z" }
+];
+assert.equal(selectLatestNewsReaction(stagedReactions)?.id, "final", "delivery revalidation must use the latest reaction stage");
+assert.deepEqual(
+  remainingNewsPushTargets([{ id: "token-a" }, { id: "token-b" }], ["token-a"]),
+  [{ id: "token-b" }],
+  "a retry must not resend to a token that already succeeded"
+);
+assert.equal(resolveNewsDeliveryStatus({ deliveryEnabled: true, targetCount: 2, sentBefore: 1, sentNow: 0, failedNow: 1, attempt: 2 }), "failed");
+assert.equal(resolveNewsDeliveryStatus({ deliveryEnabled: true, targetCount: 2, sentBefore: 1, sentNow: 0, failedNow: 1, attempt: 3 }), "partial");
+assert.equal(resolveNewsDeliveryStatus({ deliveryEnabled: true, targetCount: 1, sentBefore: 0, sentNow: 0, failedNow: 1, attempt: 3 }), "in_app_only");
+assert.equal(resolveNewsDeliveryStatus({ deliveryEnabled: false, targetCount: 2, sentBefore: 0, sentNow: 0, failedNow: 0, attempt: 1 }), "in_app_only");
 
 const monitorLink = {
   snapshot_id: "70000000-0000-4000-8000-000000000010",

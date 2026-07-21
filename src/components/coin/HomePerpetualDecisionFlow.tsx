@@ -9,9 +9,12 @@ import { PerpetualDecisionChart } from "@/components/coin/PerpetualDecisionChart
 import { MacroTicker } from "@/components/MacroTicker";
 import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
 import { withSupabaseAuth } from "@/lib/authFetch";
+import { beginnerTerm, decisionStateLabel, flowDirectionLabel, plainDirection, pressureDirectionLabel, qualityLabel } from "@/lib/perpetualDecisionCopy";
 import type { CryptoHomeTicker } from "@/lib/server/cryptoExchangeData";
 import type { PerpetualAsset, PerpetualDecisionSnapshot, SnapshotQuality } from "@/lib/perpetualDecisionSnapshot";
 import type { PerpetualSnapshotCapabilities, PerpetualSnapshotResponse } from "@/lib/perpetualApi";
+import type { NewsImpactListResponse } from "@/lib/newsImpact";
+import { newsImpactClassificationLabel, newsImpactTone } from "@/lib/newsImpactPresentation";
 import { comparePerpetualShadowDecision, type LegacyPerpetualDirection } from "@/lib/perpetualShadowComparison";
 import {
   buildStalePerpetualDecisionFallback,
@@ -32,18 +35,23 @@ const assetCopy = {
   eth: { label: "ETH", symbol: "ETH/USDT:USDT" }
 } as const;
 
+const sourceCopy: Record<keyof PerpetualDecisionSnapshot["sourceStatus"], string> = {
+  candles: "차트 흐름",
+  pressure: "몰린 포지션",
+  flow: "큰 금액 체결"
+};
+
 function qualityCopy(quality: SnapshotQuality) {
-  if (quality === "ready") return { label: "데이터 정상", tone: "long" as const };
-  if (quality === "partial") return { label: "일부 근거 부족", tone: "watch" as const };
-  if (quality === "stale") return { label: "갱신 지연", tone: "risk" as const };
-  return { label: "데이터 확인 필요", tone: "risk" as const };
+  if (quality === "ready") return { label: qualityLabel(quality), tone: "long" as const };
+  if (quality === "partial") return { label: qualityLabel(quality), tone: "watch" as const };
+  return { label: qualityLabel(quality), tone: "risk" as const };
 }
 
 function stateCopy(state: PerpetualDecisionSnapshot["summary"]["state"]) {
-  if (state === "upside_watch") return { label: "상방 확인 중", tone: "long" as const };
-  if (state === "downside_watch") return { label: "하방 확인 중", tone: "short" as const };
-  if (state === "risk") return { label: "리스크 우선", tone: "risk" as const };
-  return { label: "범위 확인", tone: "watch" as const };
+  if (state === "upside_watch") return { label: decisionStateLabel(state), tone: "long" as const };
+  if (state === "downside_watch") return { label: decisionStateLabel(state), tone: "short" as const };
+  if (state === "risk") return { label: decisionStateLabel(state), tone: "risk" as const };
+  return { label: decisionStateLabel(state), tone: "watch" as const };
 }
 
 function formatAsOf(value: string) {
@@ -56,6 +64,11 @@ function formatPrice(value: number) {
   return value.toLocaleString("en-US", { maximumFractionDigits: value >= 10_000 ? 0 : 2 });
 }
 
+function formatChange(value: number | null) {
+  if (value === null || !Number.isFinite(value)) return "24시간 변동 확인 중";
+  return `24시간 ${value > 0 ? "+" : ""}${value.toFixed(2)}%`;
+}
+
 async function requestSnapshot(asset: PerpetualAsset, signal?: AbortSignal) {
   const response = await fetch(
     `/api/crypto/perpetual/snapshot?asset=${asset}`,
@@ -63,7 +76,7 @@ async function requestSnapshot(asset: PerpetualAsset, signal?: AbortSignal) {
   );
   const payload = (await response.json().catch(() => ({}))) as PerpetualSnapshotResponse;
   if (!response.ok || !payload.snapshot || !payload.capabilities) {
-    throw new Error(payload.error ?? "선물 판단 스냅샷을 불러오지 못했습니다.");
+    throw new Error(payload.error ?? "선물 시장 분석을 불러오지 못했습니다.");
   }
   return { snapshot: payload.snapshot, capabilities: payload.capabilities };
 }
@@ -100,30 +113,94 @@ function SnapshotShadowProbe() {
   return null;
 }
 
-function MarketWatchDisclosure() {
-  const [opened, setOpened] = useState(false);
+function HomeMarketWatch() {
   return (
-    <details
-      className="group border-t border-ui-line pt-3"
-      onToggle={(event) => setOpened(event.currentTarget.open)}
-    >
-      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-2 marker:hidden [&::-webkit-details-marker]:hidden">
-        <span>
-          <span className="block text-sm font-black text-ui-text">관심코인 시세</span>
-          <span className="mt-0.5 block text-xs leading-5 text-ui-muted">다른 거래소와 알트는 시장 관찰용이며 BTC·ETH 유료 판단과 분리됩니다.</span>
-        </span>
-        <ChevronDown size={18} className="shrink-0 text-ui-subtle transition group-open:rotate-180" aria-hidden />
-      </summary>
-      {opened ? <HomeInterestCoinPrices /> : null}
-    </details>
+    <section className="border-t border-ui-line pt-3" aria-labelledby="home-market-watch-title">
+      <h2 id="home-market-watch-title" className="text-sm font-black text-ui-text">관심코인 시세</h2>
+      <p className="mt-0.5 text-xs leading-5 text-ui-muted">다른 거래소와 알트는 시장 관찰용 시세이며, 위의 BTC·ETH 선물 분석과는 분리해 보여드립니다.</p>
+      <div className="mt-3"><HomeInterestCoinPrices /></div>
+    </section>
   );
 }
 
-function HomeDecisionHero() {
+function HomeNewsImpactStrip({ asset, snapshotId }: {
+  asset: PerpetualAsset;
+  snapshotId: string;
+}) {
+  const { session } = useSupabaseAuth();
+  const [payload, setPayload] = useState<NewsImpactListResponse | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setPayload(null);
+    void (async () => {
+      try {
+        const params = new URLSearchParams({ market: "crypto", asset, limit: "3", snapshot: snapshotId });
+        const response = await fetch(`/api/news-impact?${params.toString()}`, await withSupabaseAuth({ cache: "no-store", signal: controller.signal }));
+        const next = (await response.json().catch(() => ({}))) as NewsImpactListResponse;
+        if (!controller.signal.aborted && response.ok) {
+          setPayload(next);
+        }
+      } catch {
+        // Home decision remains primary when the optional official-event overlay is unavailable.
+      }
+    })();
+    return () => controller.abort();
+  }, [asset, session?.accessToken, snapshotId]);
+
+  const event = payload?.events[0];
+  if (!event?.reaction || event.reaction.classification === "insufficient_data") return null;
+  return (
+    <Link
+      href={`/crypto/news?asset=${asset}&event=${event.id}&source=home&snapshot=${encodeURIComponent(snapshotId)}`}
+      className="mt-2 flex min-h-9 min-w-0 items-center gap-2 border-l-2 border-ui-brand bg-ui-inset/55 px-2.5 py-1.5 text-[11px] font-semibold text-ui-muted transition hover:bg-ui-inset"
+    >
+      <StatusPill tone={newsImpactTone(event.reaction.classification)} className="min-h-5 shrink-0 px-1.5 text-[10px]">{newsImpactClassificationLabel(event.reaction.classification)}</StatusPill>
+      <span className="min-w-0 flex-1 truncate">공식 발표·공시 · {event.headline}</span>
+      <ArrowRight size={13} className="shrink-0 text-ui-brand" aria-hidden />
+    </Link>
+  );
+}
+
+function HomeEvidenceSummary({ snapshot }: { snapshot: PerpetualDecisionSnapshot }) {
+  const evidence = snapshot.publicEvidence;
+  if (!evidence) {
+    return <p className="mt-3 bg-ui-inset/55 px-3 py-3 text-xs leading-5 text-ui-muted">이전 분석이라 쉬운 근거 카드가 없습니다. 다음 자동 분석부터 표시됩니다.</p>;
+  }
+  const cards = [
+    { label: beginnerTerm("msb"), value: plainDirection(evidence.structure), detail: "최근 중요한 고점·저점을 넘은 방향" },
+    { label: beginnerTerm("choch"), value: plainDirection(evidence.transition), detail: "기존 흐름이 바뀌기 시작한 방향" },
+    { label: "몰린 포지션", value: evidence.pressure ? pressureDirectionLabel(evidence.pressure.dominantSide) : "확인 중", detail: "반대 움직임 때 강제 청산이 커질 수 있는 쪽" },
+    { label: "큰 금액 체결", value: evidence.flow ? flowDirectionLabel(evidence.flow.dominantSide) : "확인 중", detail: "최근 큰 금액 매수와 매도 중 더 강한 쪽" }
+  ];
+  return (
+    <section className="mt-3 border-t border-ui-line pt-3" aria-labelledby="home-evidence-title">
+      <h2 id="home-evidence-title" className="text-sm font-black text-ui-text">왜 이렇게 보나요?</h2>
+      <p className="mt-0.5 text-[11px] leading-5 text-ui-muted">결론에 사용한 네 가지 근거를 숨기지 않고 보여드립니다.</p>
+      <div className="mt-2 grid grid-cols-2 gap-1.5">
+        {cards.map((card) => (
+          <article key={card.label} className="min-w-0 bg-ui-inset/55 px-2.5 py-2.5">
+            <p className="text-[10px] font-black leading-4 text-ui-subtle [word-break:keep-all]">{card.label}</p>
+            <p className="mt-1 text-xs font-black leading-5 text-ui-text [word-break:keep-all]">{card.value}</p>
+            <p className="mt-0.5 text-[10px] leading-4 text-ui-muted [word-break:keep-all]">{card.detail}</p>
+          </article>
+        ))}
+      </div>
+      <p className="mt-2 bg-ui-brand/8 px-2.5 py-2 text-[11px] font-semibold leading-5 text-ui-muted">
+        <span className="font-black text-ui-text">지난 분석 이후</span> · {evidence.previousChange
+          ? `${decisionStateLabel(evidence.previousChange.from)}에서 ${decisionStateLabel(evidence.previousChange.to)}로 바뀌었습니다.`
+          : "바로 전 분석과 비교해 큰 방향 변화는 없습니다."}
+      </p>
+    </section>
+  );
+}
+
+function HomeDecisionHero({ newsImpactEnabled }: { newsImpactEnabled: boolean }) {
   const { session } = useSupabaseAuth();
   const [asset, setAsset] = useState<PerpetualAsset>("btc");
   const [state, setState] = useState<LoadState>({ status: "loading", snapshot: null, capabilities: null });
   const [livePrice, setLivePrice] = useState<number | null>(null);
+  const [liveChange, setLiveChange] = useState<number | null>(null);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [journeyId, setJourneyId] = useState<string | null>(null);
   const requestGeneration = useRef(0);
@@ -156,7 +233,7 @@ function HomeDecisionHero() {
         status: "error",
         snapshot: current.snapshot,
         capabilities: current.capabilities,
-        message: error instanceof Error ? error.message : "선물 판단 스냅샷을 불러오지 못했습니다."
+        message: error instanceof Error ? error.message : "선물 시장 분석을 불러오지 못했습니다."
       }));
       return null;
     } finally {
@@ -170,6 +247,7 @@ function HomeDecisionHero() {
     abortRef.current?.abort();
     setState({ status: "loading", snapshot: null, capabilities: null });
     setLivePrice(null);
+    setLiveChange(null);
     setEvidenceOpen(false);
     setAsset(nextAsset);
   }, [asset]);
@@ -217,7 +295,10 @@ function HomeDecisionHero() {
         const params = new URLSearchParams({ exchange: "binance", symbol: assetCopy[asset].symbol });
         const response = await fetch(`/api/crypto-home-ticker?${params.toString()}`, { cache: "no-store" });
         const payload = (await response.json()) as { ticker?: CryptoHomeTicker };
-        if (!cancelled && response.ok && payload.ticker?.price) setLivePrice(payload.ticker.price);
+        if (!cancelled && response.ok && payload.ticker?.price) {
+          setLivePrice(payload.ticker.price);
+          setLiveChange(typeof payload.ticker.changePercent === "number" ? payload.ticker.changePercent : null);
+        }
       } catch {
         // Snapshot price remains visible when the lightweight ticker is unavailable.
       }
@@ -233,11 +314,22 @@ function HomeDecisionHero() {
 
   if (!snapshot && state.status === "loading") {
     return (
-      <section className="min-h-[330px] bg-ui-panel px-4 py-5" aria-busy="true">
-        <div className="flex items-center gap-2 text-sm font-semibold text-ui-muted">
-          <Loader2 className="animate-spin text-ui-brand" size={18} aria-hidden />
-          BTC·ETH 선물 상태와 위험을 같은 시점으로 묶는 중입니다.
+      <section className="bg-ui-panel px-3 py-4 sm:px-4" aria-busy="true" aria-label="BTC와 ETH 선물 시장 분석을 불러오는 중">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex gap-1 rounded-ui-sm bg-ui-inset p-1" aria-hidden>
+            <span className="min-w-12 rounded-ui-sm bg-ui-brand/70 px-3 py-2 text-center text-xs font-black text-white">BTC</span>
+            <span className="min-w-12 px-3 py-2 text-center text-xs font-black text-ui-subtle">ETH</span>
+          </div>
+          <span className="inline-flex items-center gap-1 text-xs font-black text-ui-brand"><Loader2 className="animate-spin" size={14} aria-hidden /> 분석 중</span>
         </div>
+        <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.12em] text-ui-subtle">바이낸스 무기한 선물 · 15분 봉 기준</p>
+        <div className="mt-2 h-7 w-4/5 animate-pulse bg-ui-inset" />
+        <div className="mt-2 h-7 w-3/5 animate-pulse bg-ui-inset" />
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className="min-h-20 animate-pulse bg-ui-risk/10 px-3 py-3 text-[11px] font-bold text-ui-risk">가장 큰 위험 확인 중</div>
+          <div className="min-h-20 animate-pulse bg-ui-brand/8 px-3 py-3 text-[11px] font-bold text-ui-brand">확인할 가격 계산 중</div>
+        </div>
+        <p className="mt-3 text-xs leading-5 text-ui-muted">차트 흐름, 몰린 포지션, 큰 금액 체결을 같은 시각으로 맞추고 있습니다.</p>
       </section>
     );
   }
@@ -245,7 +337,7 @@ function HomeDecisionHero() {
   if (!snapshot) {
     return (
       <section className="bg-ui-panel px-4 py-5">
-        <p className="text-base font-black text-ui-text">선물 판단 스냅샷을 준비하지 못했습니다.</p>
+        <p className="text-base font-black text-ui-text">선물 시장 분석을 준비하지 못했습니다.</p>
         <p className="mt-2 text-sm leading-6 text-ui-muted">{state.status === "error" ? state.message : "잠시 뒤 다시 확인해 주세요."}</p>
         <ActionButton tone="secondary" className="mt-4" onClick={() => void load(asset)}>
           <RefreshCw size={15} aria-hidden /> 다시 불러오기
@@ -291,15 +383,16 @@ function HomeDecisionHero() {
 
       <div className="mt-2 flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ui-subtle">Binance USDT-M · 15분 확정 기준</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ui-subtle">바이낸스 무기한 선물 · 15분 봉 기준</p>
           <h1 id="home-decision-title" className="mt-1 text-[1.35rem] font-black leading-7 tracking-tight text-ui-text [word-break:keep-all]">
             {displaySnapshot.summary.headline}
           </h1>
         </div>
         <div className="shrink-0 text-right">
           <p className="text-xl font-black tabular-nums text-ui-text">{formatPrice(livePrice ?? displaySnapshot.price)}</p>
+          <p className={`mt-0.5 text-[10px] font-black tabular-nums ${liveChange === null ? "text-ui-subtle" : liveChange > 0 ? "text-ui-long" : liveChange < 0 ? "text-ui-short" : "text-ui-muted"}`}>{formatChange(liveChange)}</p>
           <p className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-semibold text-ui-subtle">
-            <Clock3 size={11} aria-hidden /> 판단 {formatAsOf(displaySnapshot.generatedAt)}
+            <Clock3 size={11} aria-hidden /> {formatAsOf(displaySnapshot.generatedAt)} 기준 분석
           </p>
         </div>
       </div>
@@ -312,7 +405,7 @@ function HomeDecisionHero() {
           <p className="mt-1 text-xs font-semibold leading-5 text-ui-text [word-break:keep-all]">{displaySnapshot.summary.topRisk}</p>
         </div>
         <div className="bg-ui-inset/65 px-3 py-2.5">
-          <p className="text-[10px] font-black uppercase tracking-[0.1em] text-ui-brand">다음 확인 조건</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.1em] text-ui-brand">지금 확인할 가격</p>
           <p className="mt-1 text-xs font-black leading-5 text-ui-text [word-break:keep-all]">{displaySnapshot.summary.primaryCondition.label}</p>
         </div>
       </div>
@@ -321,7 +414,7 @@ function HomeDecisionHero() {
         {displaySnapshot.summary.reasons.map((reason) => <li key={reason}>· {reason}</li>)}
       </ul>
 
-      {state.status === "error" ? <p className="mt-2 text-[11px] font-semibold text-ui-risk">최신 갱신 실패 · 마지막 정상 스냅샷은 맥락용으로만 표시합니다.</p> : null}
+      {state.status === "error" ? <p className="mt-2 text-[11px] font-semibold text-ui-risk">최신 갱신 실패 · 마지막 정상 분석을 참고용으로 보여드립니다.</p> : null}
 
       <Link
         href={detailHref}
@@ -335,20 +428,23 @@ function HomeDecisionHero() {
         })}
         className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-ui-sm bg-ui-brand px-4 text-sm font-black text-white transition hover:brightness-110"
       >
-        선물 시나리오 자세히 보기 <ArrowRight size={16} aria-hidden />
+        차트와 근거 자세히 보기 <ArrowRight size={16} aria-hidden />
       </Link>
+      {newsImpactEnabled ? <HomeNewsImpactStrip asset={asset} snapshotId={displaySnapshot.id} /> : null}
       <p className="mt-1.5 text-center text-[10.5px] font-semibold leading-4 text-ui-muted">
         {capabilities?.canSeeProDetail
-          ? "Pro 상세에는 확인·판단 변경 조건과 시간대별 근거가 함께 표시됩니다."
-          : "Pro는 확인·판단 변경 조건을 최대 5분 간격으로 감시하고 알림·복기로 이어집니다."}
+          ? "상세 화면에서 1시간·4시간 흐름, 신호 발생 가격, 수급 수치와 AI 설명을 함께 확인할 수 있습니다."
+          : "Pro는 더 깊은 근거를 보여주고 중요한 가격을 최대 5분 간격으로 확인해 알림과 당시 판단 기록으로 이어줍니다."}
       </p>
+
+      <HomeEvidenceSummary snapshot={displaySnapshot} />
 
       <details
         className="group mt-2 border-t border-ui-line pt-2"
         onToggle={(event) => setEvidenceOpen(event.currentTarget.open)}
       >
         <summary className="flex min-h-9 cursor-pointer list-none items-center justify-between gap-2 text-xs font-black text-ui-muted marker:hidden [&::-webkit-details-marker]:hidden">
-          동일 스냅샷 판단 근거
+          15분 차트로 직접 확인하기
           <ChevronDown size={15} className="transition group-open:rotate-180" aria-hidden />
         </summary>
         {evidenceOpen ? (
@@ -356,7 +452,7 @@ function HomeDecisionHero() {
             <PerpetualDecisionChart snapshot={displaySnapshot} compact />
             <div className="mt-2 grid gap-1 text-[10.5px] leading-4 text-ui-muted sm:grid-cols-3">
               {Object.entries(displaySnapshot.sourceStatus).map(([key, source]) => (
-                <p key={key}><span className="font-black text-ui-text">{key}</span> · {source.detail}</p>
+                <p key={key}><span className="font-black text-ui-text">{sourceCopy[key as keyof typeof sourceCopy]}</span> · {qualityLabel(source.status)}</p>
               ))}
             </div>
             {displaySnapshot.pro ? (
@@ -364,13 +460,13 @@ function HomeDecisionHero() {
                 <div className="grid gap-1 sm:grid-cols-3">
                   {displaySnapshot.pro.multiTimeframeEvidence.map((evidence) => (
                     <p key={evidence.timeframe} className="bg-ui-inset/45 px-2 py-2">
-                      <span className="font-black text-ui-text">{evidence.label}</span> · 구조 {evidence.structure} · 전환 {evidence.transition}
+                      <span className="font-black text-ui-text">{evidence.label}</span> · 추세 {plainDirection(evidence.structure)} · 전환 가능성 {plainDirection(evidence.transition)}
                     </p>
                   ))}
                 </div>
                 <div className="grid gap-1 sm:grid-cols-2">
-                  <p>{displaySnapshot.pro.pressure?.summary ?? "청산 압력 근거가 부족합니다."}</p>
-                  <p>{displaySnapshot.pro.flow?.summary ?? "큰 체결 근거가 부족합니다."}</p>
+                  <p>{displaySnapshot.publicEvidence?.pressure?.summary ?? "몰린 포지션 데이터가 부족합니다."}</p>
+                  <p>{displaySnapshot.publicEvidence?.flow?.summary ?? "큰 금액 체결 데이터가 부족합니다."}</p>
                 </div>
               </div>
             ) : null}
@@ -381,29 +477,17 @@ function HomeDecisionHero() {
   );
 }
 
-function HomeRevenueCoreExperience() {
-  const [priorityMacro, setPriorityMacro] = useState(false);
-  const macro = (
-    <MacroTicker
-      key="home-macro"
-      compact
-      market="crypto"
-      homePriorityAware
-      onHomePriorityChange={setPriorityMacro}
-    />
-  );
-
+function HomeRevenueCoreExperience({ newsImpactEnabled }: { newsImpactEnabled: boolean }) {
   return (
     <div className="flex flex-col gap-2 pt-1">
-      {priorityMacro ? macro : null}
-      <div key="home-decision"><HomeDecisionHero /></div>
-      {!priorityMacro ? macro : null}
-      <div key="market-watch"><MarketWatchDisclosure /></div>
+      <MacroTicker compact market="crypto" homePriorityAware />
+      <HomeDecisionHero newsImpactEnabled={newsImpactEnabled} />
+      <HomeMarketWatch />
     </div>
   );
 }
 
-function ShadowHomeCanaryGate() {
+function ShadowHomeCanaryGate({ newsImpactEnabled }: { newsImpactEnabled: boolean }) {
   const { session, isLoading } = useSupabaseAuth();
   const [enabled, setEnabled] = useState(false);
 
@@ -428,16 +512,16 @@ function ShadowHomeCanaryGate() {
     return () => controller.abort();
   }, [isLoading, session?.accessToken]);
 
-  if (enabled) return <HomeRevenueCoreExperience />;
+  if (enabled) return <HomeRevenueCoreExperience newsImpactEnabled={newsImpactEnabled} />;
   return <><SnapshotShadowProbe /><MacroTicker compact /><CoinRadarHomePanel /></>;
 }
 
-export function HomePerpetualDecisionFlow({ mode }: { mode: PerpetualRevenueCoreMode }) {
+export function HomePerpetualDecisionFlow({ mode, newsImpactEnabled = false }: { mode: PerpetualRevenueCoreMode; newsImpactEnabled?: boolean }) {
   if (mode === "off") {
     return <><MacroTicker compact /><CoinRadarHomePanel /></>;
   }
   if (mode === "shadow") {
-    return <ShadowHomeCanaryGate />;
+    return <ShadowHomeCanaryGate newsImpactEnabled={newsImpactEnabled} />;
   }
-  return <HomeRevenueCoreExperience />;
+  return <HomeRevenueCoreExperience newsImpactEnabled={newsImpactEnabled} />;
 }

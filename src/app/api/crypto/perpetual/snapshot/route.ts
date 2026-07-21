@@ -13,6 +13,8 @@ import {
   perpetualRevenueCoreMode
 } from "@/lib/server/perpetualRevenueCore";
 import { sharedCryptoConditionUsage } from "@/lib/server/perpetualMonitorStore";
+import { readNewsDecisionContext } from "@/lib/server/news/newsImpactStore";
+import { newsImpactRuntimePolicy } from "@/lib/server/newsImpactMode";
 import { rateLimit } from "@/lib/server/rateLimit";
 import { isSupabaseAdminConfigured } from "@/lib/server/supabaseAdmin";
 
@@ -63,7 +65,11 @@ export async function GET(request: Request) {
   if (!asset) return privateJson({ error: "BTC 또는 ETH 자산을 선택해 주세요." }, { status: 400 });
   const requestedSnapshotId = url.searchParams.get("snapshot");
   const requestSource = url.searchParams.get("source");
-  const preserveAlertSnapshot = requestSource === "alert" && Boolean(requestedSnapshotId);
+  const impactId = url.searchParams.get("impact");
+  const newsPolicy = newsImpactRuntimePolicy();
+  const preserveLinkedSnapshot = (
+    requestSource === "alert" || (requestSource === "news" && newsPolicy.expose)
+  ) && Boolean(requestedSnapshotId);
   const mode = perpetualRevenueCoreMode();
   if (!isPerpetualSnapshotGenerationEnabled(mode)) {
     return privateJson({ error: "Perpetual revenue core is disabled." }, { status: 404 });
@@ -73,7 +79,7 @@ export async function GET(request: Request) {
     const resolution = await resolvePerpetualDecisionSnapshot({
       asset,
       requestedSnapshotId,
-      allowExpiredRequestedSnapshot: preserveAlertSnapshot
+      allowExpiredRequestedSnapshot: preserveLinkedSnapshot
     });
     const hydratedSnapshot = await hydratePerpetualDecisionChart(resolution.snapshot);
     const failClosed = entitlement.state === "unavailable" || entitlement.state === "deletion_pending";
@@ -87,6 +93,9 @@ export async function GET(request: Request) {
     const snapshotActionable =
       resolution.snapshot.quality === "ready" &&
       new Date(resolution.snapshot.expiresAt).getTime() > Date.now();
+    const newsContext = newsPolicy.expose && canSeeProDetail && requestSource === "news" && impactId
+      ? await readNewsDecisionContext(impactId, asset, resolution.snapshot.id).catch(() => null)
+      : null;
 
     return privateJson({
       snapshot,
@@ -108,10 +117,11 @@ export async function GET(request: Request) {
         requiresAuth: !entitlement.userId,
         setupRequired: Boolean(entitlement.userId) && monitorEnabled && !alerts.available
       },
+      newsContext,
       mode
     });
   } catch (error) {
     console.error("[api/crypto/perpetual/snapshot] error:", error);
-    return privateJson({ error: "현재 BTC·ETH 선물 판단 스냅샷을 만들지 못했습니다." }, { status: 503 });
+    return privateJson({ error: "현재 BTC·ETH 선물 시장 분석을 만들지 못했습니다." }, { status: 503 });
   }
 }

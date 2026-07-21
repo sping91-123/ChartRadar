@@ -4,13 +4,14 @@ import { Header } from "@/components/Header";
 import { MacroTicker } from "@/components/MacroTicker";
 import { RadarTopNav } from "@/components/RadarTopNav";
 import { StockRadarApp } from "@/components/StockRadarApp";
+import { isNewsImpactUiEnabled, newsImpactMode } from "@/lib/server/newsImpactMode";
 
 export default function GlobalAssetsPage() {
   return (
     <main className="min-h-screen px-3 pb-28 sm:px-5 sm:pb-24 lg:pb-20">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 sm:gap-4">
         <Header market="stocks" />
-        <RadarTopNav market="stocks" />
+        <RadarTopNav market="stocks" newsImpactEnabled={isNewsImpactUiEnabled(newsImpactMode())} />
         <MacroTicker compact market="stocks" />
         <section className="rounded-ui-lg bg-ui-panel p-4 sm:p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ui-brand">Global Asset Radar</p>

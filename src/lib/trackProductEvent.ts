@@ -23,6 +23,8 @@ export async function trackProductEvent(params: {
   asset?: PerpetualAsset;
   snapshotId?: string;
   monitorId?: string;
+  newsEventId?: string;
+  newsReactionId?: string;
   properties?: Record<string, string | number | boolean>;
 }) {
   try {
@@ -36,6 +38,8 @@ export async function trackProductEvent(params: {
       asset: params.asset,
       snapshotId: params.snapshotId,
       monitorId: params.monitorId,
+      newsEventId: params.newsEventId,
+      newsReactionId: params.newsReactionId,
       properties: params.properties
     };
     await fetch("/api/product-events", {

@@ -27,7 +27,7 @@ const sourceFiles = [
   "src/components/RadarTopNav.tsx",
   "src/components/UsageMeterPanel.tsx",
   "src/components/ProPricingPanel.tsx",
-  "src/components/RadarNewsPanel.tsx",
+  "src/components/news/NewsImpactPanel.tsx",
   "src/components/StockRadarApp.tsx",
   "src/components/LiveMarketChart.tsx"
 ].filter(exists);
@@ -95,8 +95,11 @@ const checks = [
   {
     area: "News",
     weight: 8,
-    pass: includes("src/app/api/radar-news/route.ts", "translateTitlesWithGroq") && includes("src/components/RadarNewsPanel.tsx", "레이더"),
-    detail: "뉴스는 번역과 시장 영향 브리핑 흐름을 갖추고 있습니다."
+    pass:
+      includes("src/app/api/radar-news/route.ts", "readNewsImpactEvents") &&
+      includes("src/components/news/NewsImpactPanel.tsx", "실제 시장 반응") &&
+      includes("src/lib/server/news/sourceCatalog.ts", 'policyStatus: "blocked"'),
+    detail: "뉴스는 공식 사건, 실제 반응, 판단 영향, 다음 확인 흐름을 갖추고 있습니다."
   },
   {
     area: "Alerts",

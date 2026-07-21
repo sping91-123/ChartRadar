@@ -62,6 +62,11 @@ const laterMigrationSql = migrationMatches.length === 1
     )
   : "";
 const schema = read("supabase/schema.sql");
+const newsMigrationName = migrationNames.find((name) => name.endsWith("_news_impact_v1.sql"));
+const newsMigration = newsMigrationName ? read(join("supabase", "migrations", newsMigrationName)) : "";
+const newsHardeningName = migrationNames.find((name) => name.endsWith("_harden_news_impact_v1.sql"));
+const newsHardening = newsHardeningName ? read(join("supabase", "migrations", newsHardeningName)) : "";
+const newsRpcSql = `${newsMigration}\n${newsHardening}`;
 
 for (const [label, source] of [
   ["migration", migration],
@@ -151,6 +156,76 @@ expectNoMatch(
   "후속 migration profile UPDATE policy 차단",
   "hotfix 이후 migration도 공개 profile UPDATE policy를 다시 만들지 않아야 합니다."
 );
+
+for (const [table, label] of [
+  ["news_source_catalog", "출처 catalog"],
+  ["news_source_items", "출처 item"],
+  ["news_impact_events", "뉴스 사건"],
+  ["news_market_reactions", "시장 반응"],
+  ["news_alert_preferences", "뉴스 알림 설정"]
+]) {
+  expectMatch(
+    newsRpcSql,
+    new RegExp(`alter\\s+table\\s+public\\.${table}\\s+enable\\s+row\\s+level\\s+security`, "i"),
+    `${label} RLS 활성화`,
+    `public.${table}은 service route 밖에서 직접 읽거나 쓸 수 없습니다.`
+  );
+  expectMatch(
+    newsMigration,
+    new RegExp(`revoke\\s+all\\s+privileges\\s+on\\s+table\\s+public\\.${table}\\s+from\\s+public\\s*,\\s*anon\\s*,\\s*authenticated\\s*,\\s*service_role`, "i"),
+    `${label} 역할 권한 초기화`,
+    "PUBLIC/anon/authenticated와 기존 service grant를 먼저 fail-closed로 초기화합니다."
+  );
+  expectNoMatch(
+    newsMigration,
+    new RegExp(`grant\\s+(?:select|insert|update|delete|all)\\s+on\\s+(?:table\\s+)?public\\.${table}\\s+to\\s+(?:public|anon|authenticated)`, "i"),
+    `${label} Data API 직접 grant 차단`,
+    "브라우저 역할에 신규 뉴스 테이블 권한을 부여하지 않습니다."
+  );
+}
+
+for (const functionName of [
+  "claim_news_sync_run",
+  "renew_news_sync_run",
+  "set_news_alert_preference",
+  "claim_news_impact_alert",
+  "lease_news_impact_delivery",
+  "complete_news_impact_delivery",
+  "retire_stale_news_reactions",
+  "finalize_exhausted_news_impact_deliveries",
+  "expire_news_impact_delivery",
+  "purge_news_impact_retention"
+]) {
+  expectMatch(
+    newsRpcSql,
+    new RegExp(`revoke\\s+all\\s+on\\s+function\\s+public\\.${functionName}\\(`, "i"),
+    `${functionName} 공개 실행 회수`,
+    "뉴스 원장 RPC는 service role 경계 안에서만 실행됩니다."
+  );
+}
+
+expectMatch(
+  schema,
+  /create\s+table\s+if\s+not\s+exists\s+public\.news_market_reactions/i,
+  "기준 schema News Impact 반영",
+  "forward migration과 canonical schema가 같은 뉴스 원장을 선언합니다."
+);
+
+for (const marker of [
+  /add\s+column\s+if\s+not\s+exists\s+allowed_hosts\s+text\[\]/i,
+  /before\s+insert\s+or\s+update\s+of\s+source_id\s*,\s*policy_status\s*,\s*canonical_url/i,
+  /evaluated\.generated_at\s*>\s*baseline\.generated_at/i,
+  /account_deletion_requests[\s\S]*status\s+in\s*\('pending',\s*'processing',\s*'failed'\)/i,
+  /create\s+or\s+replace\s+function\s+public\.renew_news_sync_run\(/i,
+  /create\s+or\s+replace\s+function\s+public\.retire_stale_news_reactions\(\)/i,
+  /delivery_succeeded_token_ids\s+uuid\[\]/i,
+  /create\s+or\s+replace\s+function\s+public\.finalize_exhausted_news_impact_deliveries\(\)/i,
+  /create\s+or\s+replace\s+function\s+public\.expire_news_impact_delivery\(/i,
+  /complete_news_impact_delivery\([\s\S]*p_success_token_ids\s+uuid\[\]/i
+]) {
+  expectMatch(newsHardening, marker, `News Impact hardening ${marker.source}`, "보강 migration이 출처·개정·재시도 경계를 선언합니다.");
+  expectMatch(schema, marker, `기준 schema hardening ${marker.source}`, "canonical schema가 forward hardening과 같은 최종 catalog를 선언합니다.");
+}
 
 let failed = 0;
 for (const check of checks) {

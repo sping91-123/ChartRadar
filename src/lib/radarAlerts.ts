@@ -4,6 +4,8 @@ export type RadarAlertRuleId =
   | "liquidation-pressure"
   | "watchlist-surge"
   | "macro-news"
+  | "macro-event-reminder"
+  | "news-impact"
   | "stock-momentum";
 
 export type RadarAlertCategory = "crypto" | "stocks" | "news" | "system";
@@ -59,15 +61,15 @@ export const radarAlertRules: RadarAlertRule[] = [
     defaultEnabled: true
   },
   {
-    id: "macro-news",
-    category: "news",
+    id: "macro-event-reminder",
+    category: "system",
     tier: "free",
-    title: "뉴스와 시장 이벤트 리마인더",
+    title: "주요 경제 일정 리마인더",
     shortTitle: "이벤트 리마인더",
-    description: "시장에 영향을 줄 수 있는 뉴스와 CPI, FOMC, 고용 등 주요 이벤트를 요약합니다.",
-    trigger: "주요 뉴스 묶음이 갱신되거나 시장 이벤트 리스크가 커집니다.",
-    cadence: "하루 여러 번 확인",
-    value: "차트만 보다가 놓치기 쉬운 변동성 이벤트를 먼저 확인하게 해줍니다.",
+    description: "CPI, FOMC, 고용 등 중요도가 높은 공식 경제 일정만 미리 알립니다.",
+    trigger: "중요 공식 발표가 24시간 안에 예정됐을 때 사건당 한 번 알립니다.",
+    cadence: "사건당 1회 · 하루 최대 3회",
+    value: "차트만 보다가 놓치기 쉬운 공식 발표 시각을 먼저 확인하게 해줍니다.",
     defaultEnabled: true
   },
   {
@@ -103,6 +105,6 @@ export function summarizeRadarAlerts(enabledIds: RadarAlertRuleId[]) {
         ? "주요 변화 대부분을 놓치지 않도록 넓게 감시하는 설정입니다."
         : enabledRules.length >= 2
           ? "기본 감시가 켜져 있습니다. Pro 알림을 더 켜면 중요한 변화만 더 촘촘하게 받을 수 있습니다."
-          : "아직 알림이 적습니다. 최소 뉴스 브리핑과 레이더 감지는 켜두는 편이 좋습니다."
+          : "아직 알림이 적습니다. 주요 경제 일정 리마인더와 필요한 감시 조건을 확인해 보세요."
   };
 }

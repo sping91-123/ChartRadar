@@ -11,6 +11,7 @@ import { hashAnonymousProductId } from "@/lib/server/productEventStore";
 import { anonymousProductRateKey } from "@/lib/server/productEventPrivacy";
 import { rateLimit } from "@/lib/server/rateLimit";
 import { isSupabaseAdminConfigured, supabaseAdminRest } from "@/lib/server/supabaseAdmin";
+import { newsImpactRuntimePolicy } from "@/lib/server/newsImpactMode";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "이벤트 형식이 올바르지 않습니다." }, { status: 400 });
   }
-  const allowedKeys = new Set(["eventId", "eventName", "attributionId", "anonymousId", "surface", "asset", "snapshotId", "monitorId", "properties"]);
+  const allowedKeys = new Set(["eventId", "eventName", "attributionId", "anonymousId", "surface", "asset", "snapshotId", "monitorId", "newsEventId", "newsReactionId", "properties"]);
   if (!body || typeof body !== "object" || Object.keys(body).some((key) => !allowedKeys.has(key))) {
     return NextResponse.json({ error: "허용되지 않은 제품 이벤트 필드입니다." }, { status: 400 });
   }
@@ -49,10 +50,13 @@ export async function POST(request: Request) {
     !isProductEventSurface(body.surface) ||
     (body.asset !== undefined && body.asset !== "btc" && body.asset !== "eth") ||
     (body.snapshotId !== undefined && !isUuid(body.snapshotId)) ||
-    (body.monitorId !== undefined && !isUuid(body.monitorId))
+    (body.monitorId !== undefined && !isUuid(body.monitorId)) ||
+    (body.newsEventId !== undefined && !isUuid(body.newsEventId)) ||
+    (body.newsReactionId !== undefined && !isUuid(body.newsReactionId))
   ) {
     return NextResponse.json({ error: "허용되지 않은 제품 이벤트입니다." }, { status: 400 });
   }
+  if (body.eventName.startsWith("news_") && !newsImpactRuntimePolicy().mutate) return accepted();
 
   const entitlement = await getRequestEntitlement(request, "crypto");
   let anonymousIdHash: string | null = null;
@@ -86,6 +90,22 @@ export async function POST(request: Request) {
       );
       if (!monitor || !linkedToSnapshot) return accepted();
     }
+    if (body.newsEventId || body.newsReactionId) {
+      const reactions = body.newsReactionId
+        ? await supabaseAdminRest<Array<{ id: string; event_id: string; target: string; evaluated_snapshot_id: string | null }>>(
+            `news_market_reactions?select=id,event_id,target,evaluated_snapshot_id&id=eq.${encodeURIComponent(body.newsReactionId)}&limit=1`
+          )
+        : [];
+      const reaction = reactions[0];
+      const eventId = body.newsEventId ?? reaction?.event_id;
+      if (!eventId || (body.newsEventId && reaction && reaction.event_id !== body.newsEventId)) return accepted();
+      const events = await supabaseAdminRest<Array<{ id: string }>>(
+        `news_impact_events?select=id&id=eq.${encodeURIComponent(eventId)}&status=neq.retracted&limit=1`
+      );
+      if (!events[0]) return accepted();
+      if (body.newsReactionId && !reaction) return accepted();
+      if (body.snapshotId && reaction?.evaluated_snapshot_id !== body.snapshotId) return accepted();
+    }
     await supabaseAdminRest("product_events", {
       method: "POST",
       prefer: "resolution=ignore-duplicates",
@@ -100,6 +120,8 @@ export async function POST(request: Request) {
         snapshot_id: body.snapshotId ?? null,
         monitor_id: body.monitorId ?? null,
         attribution_id: body.attributionId ?? null,
+        news_event_id: body.newsEventId ?? null,
+        news_reaction_id: body.newsReactionId ?? null,
         properties: sanitizeProductEventProperties(body.eventName, body.properties),
         occurred_at: new Date().toISOString()
       }

@@ -56,9 +56,9 @@ export function buildStalePerpetualDecisionFallback(snapshot: PerpetualDecisionS
     summary: {
       state: "risk",
       headline: "최신 데이터 확인이 지연되어 방향 판단을 보류합니다.",
-      topRisk: "마지막 정상 스냅샷 이후 필수 데이터가 갱신되지 않았습니다.",
+      topRisk: "마지막 정상 분석 이후 필수 데이터가 갱신되지 않았습니다.",
       reasons: [
-        "이전 스냅샷은 맥락 확인용이며 현재 방향 근거로 사용할 수 없습니다.",
+        "이전 분석은 맥락 확인용이며 현재 방향 근거로 사용할 수 없습니다.",
         "캔들·청산 압력·대형 체결이 다시 정상화된 뒤 조건을 확인합니다."
       ],
       primaryCondition: {
@@ -78,6 +78,12 @@ export function buildStalePerpetualDecisionFallback(snapshot: PerpetualDecisionS
       flow: { ...snapshot.sourceStatus.flow, status: "stale", detail: "최신 갱신 실패로 마지막 대형 체결 관측값을 맥락용으로만 표시합니다." }
     }
   };
-  delete fallback.pro;
+  if (fallback.pro) {
+    fallback.pro = {
+      ...fallback.pro,
+      confirmationConditions: [],
+      invalidationConditions: []
+    };
+  }
   return fallback;
 }

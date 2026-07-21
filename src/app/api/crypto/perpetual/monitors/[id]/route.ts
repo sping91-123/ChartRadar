@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cryptoAlertConditionLimit } from "@/lib/billing";
 import { isUuid } from "@/lib/perpetualMonitor";
+import { perpetualDecisionEngineVersion } from "@/lib/perpetualDecisionSnapshot";
 import { markExpiredPerpetualMonitors, reconcilePerpetualMonitorLimit, setPerpetualMonitorAction } from "@/lib/server/perpetualMonitorStore";
 import { isPerpetualRevenueCoreUserEnabled } from "@/lib/server/perpetualRevenueCore";
 import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
@@ -58,7 +59,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   }
   try {
     const monitorLimit = cryptoAlertConditionLimit(entitlement.plan);
-    await markExpiredPerpetualMonitors("perpetual-v1.0.0");
+    await markExpiredPerpetualMonitors(perpetualDecisionEngineVersion);
     await reconcilePerpetualMonitorLimit(entitlement.userId, monitorLimit);
     const monitor = await setPerpetualMonitorAction({
       userId: entitlement.userId,

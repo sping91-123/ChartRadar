@@ -85,7 +85,7 @@ function takerInterpretation(report: LiquidationPressureReport) {
   const sell = report.takerFlow.sellPercent;
   if (buy === null || sell === null) return "큰 매수/매도 체결 쏠림은 아직 확인되지 않았습니다.";
   if (buy >= sell + 8) return "큰 매수 체결이 우세합니다. 과열 구간에서는 추격 매수 금지 기준도 같이 봅니다.";
-  if (sell >= buy + 8) return "큰 매도 체결이 우세합니다. 지지 구간 근처에서는 손절/무효화 기준을 먼저 봅니다.";
+  if (sell >= buy + 8) return "큰 매도 체결이 우세합니다. 지지 구간 근처에서는 손절·해석을 다시 볼 기준을 먼저 봅니다.";
   return "큰 매수/매도 체결이 한쪽으로 크게 기울지 않았습니다.";
 }
 

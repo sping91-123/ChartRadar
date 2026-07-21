@@ -13,9 +13,12 @@ interface FcmMessageParams {
   body: string;
   data?: Record<string, string>;
   channelId?: string;
+  tag?: string;
 }
 
 let cachedAccessToken: { value: string; expiresAt: number } | null = null;
+let accessTokenRequest: Promise<string> | null = null;
+const FIREBASE_REQUEST_TIMEOUT_MS = 15_000;
 
 function base64Url(value: string) {
   return Buffer.from(value)
@@ -58,10 +61,8 @@ export function isFirebaseMessagingConfigured() {
   return Boolean(getFirebaseServiceAccount());
 }
 
-async function getFirebaseAccessToken() {
+async function requestFirebaseAccessToken() {
   const now = Math.floor(Date.now() / 1000);
-  if (cachedAccessToken && cachedAccessToken.expiresAt - 60 > now) return cachedAccessToken.value;
-
   const serviceAccount = getFirebaseServiceAccount();
   if (!serviceAccount) throw new Error("Firebase 서비스 계정 환경변수가 설정되지 않았습니다.");
 
@@ -86,7 +87,8 @@ async function getFirebaseAccessToken() {
       grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
       assertion
     }),
-    cache: "no-store"
+    cache: "no-store",
+    signal: AbortSignal.timeout(FIREBASE_REQUEST_TIMEOUT_MS)
   });
 
   if (!response.ok) throw new Error("Firebase access token 발급에 실패했습니다.");
@@ -100,38 +102,58 @@ async function getFirebaseAccessToken() {
   return cachedAccessToken.value;
 }
 
+async function getFirebaseAccessToken() {
+  const now = Math.floor(Date.now() / 1000);
+  if (cachedAccessToken && cachedAccessToken.expiresAt - 60 > now) return cachedAccessToken.value;
+  if (!accessTokenRequest) {
+    accessTokenRequest = requestFirebaseAccessToken().finally(() => {
+      accessTokenRequest = null;
+    });
+  }
+  return accessTokenRequest;
+}
+
 export async function sendFcmMessage(params: FcmMessageParams) {
   const serviceAccount = getFirebaseServiceAccount();
   if (!serviceAccount) throw new Error("Firebase 서비스 계정 환경변수가 설정되지 않았습니다.");
 
   const accessToken = await getFirebaseAccessToken();
-  const response = await fetch(`https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      message: {
-        token: params.token,
-        notification: {
-          title: params.title,
-          body: params.body
-        },
-        data: params.data ?? {},
-        android: {
-          priority: "HIGH",
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FIREBASE_REQUEST_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(`https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: {
+          token: params.token,
           notification: {
-            channel_id: params.channelId ?? "radar-alerts",
-            icon: "ic_stat_chart_radar",
-            color: "#0284c7",
-            click_action: "OPEN_ALERTS"
+            title: params.title,
+            body: params.body
+          },
+          data: params.data ?? {},
+          android: {
+            priority: "HIGH",
+            notification: {
+              channel_id: params.channelId ?? "radar-alerts",
+              icon: "ic_stat_chart_radar",
+              color: "#0284c7",
+              click_action: "OPEN_ALERTS",
+              ...(params.tag ? { tag: params.tag } : {})
+            }
           }
         }
-      }
-    }),
-    cache: "no-store"
-  });
+      }),
+      cache: "no-store",
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     const text = await response.text();

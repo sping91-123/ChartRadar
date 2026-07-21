@@ -5,7 +5,14 @@ const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const npxCommand = process.platform === "win32" ? "npx.cmd" : "npx";
 const checks = [
   ["smoke:migrations", "node", ["scripts/smoke-migrations.mjs"]],
+  ["test:news-sources", npmCommand, ["run", "test:news-sources"]],
+  ["test:news-impact", npmCommand, ["run", "test:news-impact"]],
+  ["test:news-reactions", npmCommand, ["run", "test:news-reactions"]],
+  ["test:news-alerts", npmCommand, ["run", "test:news-alerts"]],
+  ["test:push-outbox", npmCommand, ["run", "test:push-outbox"]],
+  ["test:alert-preferences", npmCommand, ["run", "test:alert-preferences"]],
   ["test:perpetual-snapshot", npmCommand, ["run", "test:perpetual-snapshot"]],
+  ["test:perpetual-briefing", npmCommand, ["run", "test:perpetual-briefing"]],
   ["test:perpetual-monitors", npmCommand, ["run", "test:perpetual-monitors"]],
   ["test:product-events", npmCommand, ["run", "test:product-events"]],
   ["test:push-targets", npmCommand, ["run", "test:push-targets"]],

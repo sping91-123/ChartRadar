@@ -59,6 +59,21 @@ function perpetualSnapshotTarget(data: PushTargetData) {
   return `/crypto/perpetual?${params.toString()}`;
 }
 
+function newsImpactTarget(data: PushTargetData) {
+  const type = normalizedValue(data.type);
+  const destination = normalizedValue(data.destination);
+  if (type !== "news_impact" && destination !== "news_impact") return null;
+  const eventId = stringValue(data.eventId ?? data.event_id);
+  if (!isUuid(eventId)) return null;
+  const market = normalizedValue(data.market);
+  if (market === "global" || market === "stocks") {
+    return `/news?market=global&event=${encodeURIComponent(eventId)}&source=alert`;
+  }
+  const asset = normalizedValue(data.asset);
+  const safeAsset = asset === "eth" ? "eth" : "btc";
+  return `/crypto/news?asset=${safeAsset}&event=${encodeURIComponent(eventId)}&source=alert`;
+}
+
 export function sanitizePushTargetPath(value: unknown) {
   const path = stringValue(value);
   if (!path) return null;
@@ -112,6 +127,8 @@ function routeFromPushMetadata(data: PushTargetData) {
 
 export function resolvePushTargetPath(data: PushTargetData | null | undefined) {
   const payload = data ?? {};
+  const newsTarget = newsImpactTarget(payload);
+  if (newsTarget) return newsTarget;
   const perpetualTarget = perpetualSnapshotTarget(payload);
   if (perpetualTarget) return perpetualTarget;
   if (normalizedValue(payload.destination) === "perpetual_snapshot" || normalizedValue(payload.type) === "perpetual_scenario") {

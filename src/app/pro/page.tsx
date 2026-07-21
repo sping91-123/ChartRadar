@@ -4,6 +4,7 @@ import { Header } from "@/components/Header";
 import { ProPricingPanel } from "@/components/ProPricingPanel";
 import { RadarTopNav } from "@/components/RadarTopNav";
 import type { BillingPageScope } from "@/lib/billing";
+import { isNewsImpactUiEnabled, newsImpactMode } from "@/lib/server/newsImpactMode";
 
 function normalizeBillingScope(market: string | undefined): BillingPageScope {
   if (market === "crypto" || market === "coin") return "crypto";
@@ -26,7 +27,7 @@ export default async function ProPage({ searchParams }: { searchParams: Promise<
     <main className="min-h-full px-3 pb-[calc(3rem+env(safe-area-inset-bottom))] sm:px-5">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-5">
         <Header market={headerMarket} />
-        <RadarTopNav market={navMarket} />
+        <RadarTopNav market={navMarket} newsImpactEnabled={isNewsImpactUiEnabled(newsImpactMode())} />
         <ProPricingPanel marketScope={marketScope} attributionSource={attributionSource} />
         <AppFooter />
       </div>

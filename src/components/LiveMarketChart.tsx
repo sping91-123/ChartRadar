@@ -154,7 +154,7 @@ function userFacingRiskLabel(analysis: MarketAnalysis | null) {
 function userFacingNextStep(analysis: MarketAnalysis | null) {
   if (!analysis) return "레이더가 차트 데이터를 감지하는 중";
   if (analysis.bias === "neutral") return "진입 대기 · 구조 판단";
-  if (analysis.readiness === "high") return "손절/무효화 기준 먼저 확인";
+  if (analysis.readiness === "high") return "손절·해석을 다시 볼 기준 먼저 확인";
   return "확인가 반응 후 판단";
 }
 
@@ -211,8 +211,8 @@ function buildRadarPulse(analysis: MarketAnalysis, active?: TimeframeAnalysis): 
     (active?.condition.rsiState === "overbought"
       ? "과열권에 가까워 추격 매수 금지 기준을 먼저 봅니다."
       : active?.condition.volatilityState === "expanded"
-        ? "진입 위험이 커져 손절/무효화 기준을 먼저 봅니다."
-        : "뚜렷한 위험 플래그는 적지만, 손절/무효화 기준 없이는 판단 의미가 약합니다.");
+        ? "진입 위험이 커져 손절·해석을 다시 볼 기준을 먼저 봅니다."
+        : "뚜렷한 위험 신호는 적지만, 손절·해석을 다시 볼 기준 없이는 판단 의미가 약합니다.");
   const nextText =
     analysis.checkpoints[0] ??
     (analysis.bias === "neutral"
@@ -1742,13 +1742,13 @@ export function LiveMarketChart({
                   : [
                       "최종 판단과 판단 강도를 먼저 확인",
                       "공개된 핵심 내용과 리스크 1개만 확인",
-                      "진입 대기 조건, 손절/무효화 기준, 다음 판단 기준은 잠금 영역으로 분리"
+                      "진입 대기 조건, 손절·해석을 다시 볼 기준, 다음 판단 기준은 잠금 영역으로 분리"
                     ]
               }
               help={
                 hasCoinPro
                   ? "판단 엔진은 차트 구조, 현재 위치, 위험 플래그, 데이터 신뢰도를 합쳐 행동 순서를 정리합니다. 점수가 좋아도 손절과 수량을 정하지 않았다면 아직 준비가 끝난 상태가 아닙니다."
-                  : "Basic 안내는 판단 보조 요약입니다. 실제 판단에 필요한 조건, 손절/무효화 기준, 상세 리스크는 Pro에서 전체 맥락으로 확인합니다."
+                  : "Basic 안내는 판단 보조 요약입니다. 실제 판단에 필요한 조건, 손절·해석을 다시 볼 기준, 세부 위험은 Pro에서 전체 맥락으로 확인합니다."
               }
             />
           </div>
@@ -2810,7 +2810,7 @@ export function LiveMarketChart({
                   <div className="mt-4 rounded-ui-lg bg-ui-inset p-3">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <h4 className="text-sm font-bold text-white">Pine 스냅샷 일치율</h4>
+                        <h4 className="text-sm font-bold text-white">Pine 기준값 일치율</h4>
                         <p className="mt-1 text-xs leading-5 text-slate-400">
                           Pine 지표에서 복사한 값이나 직접 적은 key=value 값을 넣으면 Chart Radar 판독값과 바로 비교합니다.
                         </p>

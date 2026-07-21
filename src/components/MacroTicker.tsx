@@ -461,7 +461,7 @@ function getCompactItem(items: MacroEventItem[]) {
   const upcomingWithin24Hours = getUpcomingWithinCompactWindowItems(visibleItems)[0];
   const previousReleased = getPreviousReleasedItems(visibleItems)[0];
   const nearestUpcoming = getUpcomingItems(visibleItems)[0];
-  return recentReleased ?? upcomingWithin24Hours ?? previousReleased ?? nearestUpcoming ?? visibleItems[0];
+  return recentReleased ?? upcomingWithin24Hours ?? nearestUpcoming ?? previousReleased ?? visibleItems[0];
 }
 
 function getHomePriorityItem(items: MacroEventItem[], now = Date.now()) {
@@ -522,17 +522,17 @@ function MacroNewsItem({ item, sectionLabel, subdued = false, released = false }
 export function MacroTicker({
   compact = false,
   market = "crypto",
-  homePriorityAware = false,
-  onHomePriorityChange
+  homePriorityAware = false
 }: {
   compact?: boolean;
   market?: "crypto" | "stocks";
   homePriorityAware?: boolean;
-  onHomePriorityChange?: (priority: boolean) => void;
 } = {}) {
   const pathname = usePathname();
   const [calendar, setCalendar] = useState<MacroCalendarPayload>(fallbackCalendar);
   const [hasLoadedCalendar, setHasLoadedCalendar] = useState(false);
+  const [calendarLoadFailed, setCalendarLoadFailed] = useState(false);
+  const [calendarRetryKey, setCalendarRetryKey] = useState(0);
   const [isPastExpanded, setIsPastExpanded] = useState(false);
   const [isUpcomingExpanded, setIsUpcomingExpanded] = useState(false);
   const calendarItems = compact && !hasLoadedCalendar ? [] : calendar.items;
@@ -549,11 +549,6 @@ export function MacroTicker({
   const homePriorityItem = homePriorityAware ? getHomePriorityItem(displayItems) : undefined;
 
   useEffect(() => {
-    if (!homePriorityAware || !onHomePriorityChange) return;
-    onHomePriorityChange(Boolean(homePriorityItem));
-  }, [homePriorityAware, homePriorityItem, onHomePriorityChange]);
-
-  useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -563,6 +558,7 @@ export function MacroTicker({
     };
 
     const loadCalendar = async () => {
+      if (!cancelled) setCalendarLoadFailed(false);
       try {
         const response = await fetch(`/api/macro-calendar?market=${market}&ts=${Date.now()}`, { cache: "no-store" });
         if (response.ok) {
@@ -570,6 +566,7 @@ export function MacroTicker({
           if (!cancelled) {
             setCalendar(payload);
             setHasLoadedCalendar(true);
+            setCalendarLoadFailed(false);
             scheduleNextLoad(Math.max(30_000, Math.min(payload.nextRefreshMs ?? 600_000, 10 * 60_000)));
             return;
           }
@@ -578,7 +575,10 @@ export function MacroTicker({
         // Keep the current calendar visible and retry soon.
       }
 
-      if (!cancelled) scheduleNextLoad(3 * 60_000);
+      if (!cancelled) {
+        setCalendarLoadFailed(true);
+        scheduleNextLoad(3 * 60_000);
+      }
     };
 
     const handleFocusRefresh = () => {
@@ -594,7 +594,7 @@ export function MacroTicker({
       document.removeEventListener("visibilitychange", handleFocusRefresh);
       if (timer) clearTimeout(timer);
     };
-  }, [market]);
+  }, [calendarRetryKey, market]);
 
   if (isNewsMacroReport) {
     const previousRelease = previousReleasedItems[0];
@@ -651,9 +651,18 @@ export function MacroTicker({
     const item = homePriorityItem ?? getCompactItem(displayItems);
     if (!item) {
       return (
-        <div className="py-2 text-xs font-bold leading-5 text-slate-500 [word-break:keep-all]">
-          자동 캘린더에서 이번 주 주요 일정을 확인하는 중입니다.
-        </div>
+        <section className="space-y-1.5" aria-labelledby={homePriorityAware ? "home-macro-title" : undefined}>
+          {homePriorityAware ? (
+            <div className="flex items-center justify-between gap-2 px-1">
+              <h2 id="home-macro-title" className="inline-flex items-center gap-1.5 text-xs font-black text-ui-text"><CalendarClock size={14} className="text-ui-brand" aria-hidden /> 오늘 거래 전 확인</h2>
+              <span className="text-[10px] font-semibold text-ui-subtle">공식 경제 일정</span>
+            </div>
+          ) : null}
+          <div className="flex min-h-12 items-center justify-between gap-3 rounded-ui-lg bg-ui-panel px-3 py-2 text-xs font-bold leading-5 text-slate-500 [word-break:keep-all]">
+            <span>{calendarLoadFailed ? "공식 일정을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." : "자동 캘린더에서 이번 주 주요 일정을 확인하는 중입니다."}</span>
+            {calendarLoadFailed ? <button type="button" onClick={() => setCalendarRetryKey((value) => value + 1)} className="shrink-0 font-black text-ui-brand underline">다시 시도</button> : null}
+          </div>
+        </section>
       );
     }
 
@@ -666,21 +675,16 @@ export function MacroTicker({
     const impactToneClass = impactRead === "호재" ? "text-emerald-400" : impactRead === "악재" ? "text-rose-400" : "text-slate-400";
     const href = market === "stocks" ? "/schedule?market=global" : "/schedule?market=crypto";
 
-    if (homePriorityAware && !homePriorityItem) {
-      const summary = `다음 매크로 · ${macroLabel(item.label)} · ${compactStatusLabel(item)}`;
-      return (
-        <Link
-          href={href}
-          aria-label={`${summary} · 한국시간 ${item.dateKst}`}
-          className="block min-h-9 rounded-ui-sm bg-ui-panel px-3 py-2 text-[11px] font-bold leading-5 text-ui-muted transition hover:bg-ui-elevated hover:text-ui-text"
-        >
-          <span className="block truncate">{summary}</span>
-        </Link>
-      );
-    }
-
     return (
-      <div className="space-y-1.5">
+      <section className="space-y-1.5" aria-labelledby={homePriorityAware ? "home-macro-title" : undefined}>
+        {homePriorityAware ? (
+          <div className="flex items-center justify-between gap-2 px-1">
+            <h2 id="home-macro-title" className="inline-flex items-center gap-1.5 text-xs font-black text-ui-text">
+              <CalendarClock size={14} className="text-ui-brand" aria-hidden /> 오늘 거래 전 확인
+            </h2>
+            <span className="text-[10px] font-semibold text-ui-subtle">공식 경제 일정</span>
+          </div>
+        ) : null}
         <Link href={href} className="group flex min-h-10 items-start gap-1.5 rounded-ui-lg bg-ui-panel px-2.5 py-2 transition hover:bg-ui-elevated">
           <div className={`flex w-10 shrink-0 flex-col items-center justify-start gap-0.5 text-center text-[10px] font-black leading-3 ${isReleased ? "text-signal-warning" : "text-accent-blue"}`}>
             <span>{eventKind}</span>
@@ -708,7 +712,7 @@ export function MacroTicker({
           </div>
           <ChevronRight size={14} className="shrink-0 text-slate-600 transition group-hover:text-accent-blue" aria-hidden />
         </Link>
-      </div>
+      </section>
     );
   }
 

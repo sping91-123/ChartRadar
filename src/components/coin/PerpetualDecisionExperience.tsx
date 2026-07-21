@@ -3,14 +3,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Activity, AlertTriangle, Bell, BookOpen, CheckCircle2, Clock3, Database, History, Loader2, RefreshCw, ShieldAlert } from "lucide-react";
 import { PerpetualDecisionChart } from "@/components/coin/PerpetualDecisionChart";
+import { PerpetualEvidenceWorkbench } from "@/components/coin/PerpetualEvidenceWorkbench";
 import { PerpetualMonitorManager } from "@/components/coin/PerpetualMonitorManager";
+import { NewsImpactContextCard } from "@/components/news/NewsImpactContextCard";
 import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import { appendJournalEntry, decisionJournalContextFromSnapshot } from "@/lib/journal";
 import { readPerpetualAlertContext } from "@/lib/perpetualAlertContext";
+import { decisionStateLabel, qualityLabel } from "@/lib/perpetualDecisionCopy";
 import { isPerpetualSnapshotScopedStateCurrent, journalMonitorIdForSnapshot } from "@/lib/perpetualMonitor";
 import type { CryptoHomeTicker } from "@/lib/server/cryptoExchangeData";
 import type { MonitorCondition, PerpetualAsset, PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
+import type { NewsDecisionContext } from "@/lib/newsImpact";
 import type { PerpetualSnapshotCapabilities, PerpetualSnapshotResponse } from "@/lib/perpetualApi";
 import {
   buildStalePerpetualDecisionFallback,
@@ -87,20 +91,6 @@ function decisionTone(state: PerpetualDecisionSnapshot["summary"]["state"]) {
   return "watch" as const;
 }
 
-function decisionLabel(state: PerpetualDecisionSnapshot["summary"]["state"]) {
-  if (state === "upside_watch") return "상방 확인 시나리오";
-  if (state === "downside_watch") return "하방 확인 시나리오";
-  if (state === "risk") return "리스크 우선";
-  return "범위 확인";
-}
-
-function qualityLabel(quality: PerpetualDecisionSnapshot["quality"]) {
-  if (quality === "ready") return "데이터 정상";
-  if (quality === "partial") return "일부 근거 부족";
-  if (quality === "stale") return "갱신 지연";
-  return "데이터 확인 필요";
-}
-
 function currentReturnTo() {
   if (typeof window === "undefined") return "/crypto/perpetual";
   return `${window.location.pathname}${window.location.search}`;
@@ -172,25 +162,28 @@ export function PerpetualDecisionExperience({
   asset,
   requestedSnapshotId,
   source,
-  attributionId
+  attributionId,
+  impactId
 }: {
   asset: PerpetualAsset;
   requestedSnapshotId?: string | null;
-  source?: "home" | "alert" | null;
+  source?: "home" | "alert" | "news" | null;
   attributionId?: string | null;
+  impactId?: string | null;
 }) {
   const { session } = useSupabaseAuth();
   const [state, setState] = useState<DecisionLoadState>({ status: "loading", snapshot: null, capabilities: null, continuity: null });
   const [monitorState, setMonitorState] = useState<MonitorState>({ status: "idle" });
   const [journalState, setJournalState] = useState<JournalState>({ status: "idle" });
   const [alertMonitorId, setAlertMonitorId] = useState<string | null>(null);
-  const [effectiveSource, setEffectiveSource] = useState<"home" | "alert" | null>(source ?? null);
+  const [effectiveSource, setEffectiveSource] = useState<"home" | "alert" | "news" | null>(source ?? null);
+  const [newsContext, setNewsContext] = useState<NewsDecisionContext | null>(null);
   const [monitorRefreshKey, setMonitorRefreshKey] = useState(0);
   const [livePrice, setLivePrice] = useState<number | null>(null);
   const generationRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const initialRequestRef = useRef(requestedSnapshotId ?? null);
-  const effectiveSourceRef = useRef<"home" | "alert" | null>(source ?? null);
+  const effectiveSourceRef = useRef<"home" | "alert" | "news" | null>(source ?? null);
   const trackedViewRef = useRef(false);
   const trackedGateRef = useRef(false);
 
@@ -199,9 +192,10 @@ export function PerpetualDecisionExperience({
     effectiveSourceRef.current = source ?? null;
     setEffectiveSource(source ?? null);
     setAlertMonitorId(null);
+    setNewsContext(null);
     trackedViewRef.current = false;
     trackedGateRef.current = false;
-  }, [asset, requestedSnapshotId, source]);
+  }, [asset, requestedSnapshotId, source, impactId]);
 
   const load = useCallback(async (silent = false) => {
     const generation = ++generationRef.current;
@@ -227,22 +221,27 @@ export function PerpetualDecisionExperience({
       const requestSource = effectiveSourceRef.current;
       const params = new URLSearchParams({ asset });
       if (initialRequestRef.current) params.set("snapshot", initialRequestRef.current);
-      if (requestSource === "alert") params.set("source", "alert");
+      if (requestSource === "alert" || requestSource === "news") params.set("source", requestSource);
+      if (requestSource === "news" && impactId) params.set("impact", impactId);
       const response = await fetch(`/api/crypto/perpetual/snapshot?${params.toString()}`, await withSupabaseAuth({ cache: "no-store", signal: controller.signal }));
       const payload = (await response.json().catch(() => ({}))) as PerpetualSnapshotResponse;
       if (!response.ok || !payload.snapshot || !payload.capabilities || !payload.continuity) {
-        throw new Error(payload.error ?? "선물 판단 스냅샷을 불러오지 못했습니다.");
+        throw new Error(payload.error ?? "선물 시장 분석을 불러오지 못했습니다.");
       }
       if (controller.signal.aborted || generation !== generationRef.current) return null;
       const nextSnapshot = payload.snapshot;
       const nextCapabilities = payload.capabilities;
       const nextContinuity = payload.continuity;
-      const nextEffectiveSource = requestSource === "alert" && nextContinuity.status !== "same"
-        ? null
-        : requestSource;
+      const exactLinkedContext = nextContinuity.status === "same";
+      const nextEffectiveSource = requestSource === "news"
+        ? exactLinkedContext && payload.newsContext ? "news" : null
+        : requestSource === "alert"
+          ? exactLinkedContext ? "alert" : null
+          : requestSource;
       initialRequestRef.current = nextSnapshot.id;
       effectiveSourceRef.current = nextEffectiveSource;
       setEffectiveSource(nextEffectiveSource);
+      setNewsContext(nextEffectiveSource === "news" ? payload.newsContext ?? null : null);
       setState({
         status: "ready",
         snapshot: nextSnapshot,
@@ -255,6 +254,8 @@ export function PerpetualDecisionExperience({
       url.searchParams.set("snapshot", payload.snapshot.id);
       if (nextEffectiveSource) url.searchParams.set("source", nextEffectiveSource);
       else url.searchParams.delete("source");
+      if (nextEffectiveSource === "news" && payload.newsContext) url.searchParams.set("impact", payload.newsContext.reactionId);
+      else url.searchParams.delete("impact");
       window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
       return nextSnapshot;
     } catch (error) {
@@ -264,13 +265,13 @@ export function PerpetualDecisionExperience({
         snapshot: current.snapshot,
         capabilities: current.capabilities,
         continuity: current.continuity,
-        message: error instanceof Error ? error.message : "선물 판단 스냅샷을 불러오지 못했습니다."
+        message: error instanceof Error ? error.message : "선물 시장 분석을 불러오지 못했습니다."
       }));
       return null;
     } finally {
       window.clearTimeout(timeout);
     }
-  }, [asset]);
+  }, [asset, impactId]);
 
   useEffect(() => {
     setMonitorState({ status: "idle" });
@@ -281,7 +282,7 @@ export function PerpetualDecisionExperience({
       if (cancelled) return;
       if (!shouldContinuePerpetualSnapshotRefresh(
         nextSnapshot?.expiresAt,
-        effectiveSourceRef.current === "alert"
+        effectiveSourceRef.current === "alert" || effectiveSourceRef.current === "news"
       )) return;
       timer = window.setTimeout(
         () => void refresh(true),
@@ -436,7 +437,8 @@ export function PerpetualDecisionExperience({
       alertMonitorId,
       exactAlertContext
     );
-    const journalSource = exactAlertContext ? "alert" : "snapshot";
+    const exactNewsContext = effectiveSource === "news" && newsContext !== null && newsContext.evaluatedSnapshotId === snapshot.id;
+    const journalSource = exactNewsContext ? "news" : exactAlertContext ? "alert" : "snapshot";
     setJournalState({ status: "saving", snapshotId: journalSnapshotId });
     try {
       const response = await fetch(
@@ -444,24 +446,37 @@ export function PerpetualDecisionExperience({
         await withSupabaseAuth({
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ snapshotId: snapshot.id, monitorId, source: journalSource })
+          body: JSON.stringify({
+            snapshotId: snapshot.id,
+            monitorId,
+            source: journalSource,
+            ...(exactNewsContext ? { reactionId: newsContext?.reactionId } : {})
+          })
         })
       );
       const payload = (await response.json().catch(() => ({}))) as { journal?: { id: string }; error?: string };
       if (!response.ok) {
-        throw new JournalRouteError(payload.error ?? "복기를 저장하지 못했습니다.", response.status >= 500);
+        throw new JournalRouteError(payload.error ?? "판단 기록을 저장하지 못했습니다.", response.status >= 500);
       }
-      if (!payload.journal) throw new JournalRouteError("복기 저장 응답을 확인하지 못했습니다.", false);
-      setJournalState({ status: "saved", snapshotId: journalSnapshotId, message: "판단 당시 snapshot을 복기에 연결했습니다." });
+      if (!payload.journal) throw new JournalRouteError("판단 기록 저장 응답을 확인하지 못했습니다.", false);
+      setJournalState({ status: "saved", snapshotId: journalSnapshotId, message: "지금 보고 있는 분석을 판단 기록에 저장했습니다." });
     } catch (error) {
+      if (journalSource === "news") {
+        setJournalState({
+          status: "error",
+          snapshotId: journalSnapshotId,
+          message: error instanceof Error ? error.message : "뉴스 발표와 연결된 판단 기록을 저장하지 못했습니다. 연결이 복구된 뒤 다시 시도해 주세요."
+        });
+        return;
+      }
       if (error instanceof JournalRouteError && !error.allowLocalFallback) {
         setJournalState({ status: "error", snapshotId: journalSnapshotId, message: error.message });
         return;
       }
       try {
         appendJournalEntry({
-          title: `${snapshot.symbol} 선물 리스크 스냅샷`,
-          bias: decisionLabel(snapshot.summary.state),
+          title: `${snapshot.symbol} 선물 시장 분석`,
+          bias: decisionStateLabel(snapshot.summary.state),
           note: `${snapshot.summary.topRisk}\n다음 확인: ${snapshot.summary.primaryCondition.label}`,
           market: "crypto",
           source: journalSource,
@@ -472,18 +487,25 @@ export function PerpetualDecisionExperience({
           monitorId: monitorId ?? undefined,
           decisionContext: decisionJournalContextFromSnapshot(snapshot)
         }, session.userId);
-        setJournalState({ status: "saved", snapshotId: journalSnapshotId, message: "서버 연결이 불안정해 이 기기에 미동기화 복기로 보관했습니다." });
+        setJournalState({ status: "saved", snapshotId: journalSnapshotId, message: "서버 연결이 불안정해 이 기기에 아직 동기화되지 않은 판단 기록으로 보관했습니다." });
       } catch {
-        setJournalState({ status: "error", snapshotId: journalSnapshotId, message: error instanceof Error ? error.message : "복기를 저장하지 못했습니다." });
+        setJournalState({ status: "error", snapshotId: journalSnapshotId, message: error instanceof Error ? error.message : "판단 기록을 저장하지 못했습니다." });
       }
     }
-  }, [alertMonitorId, exactAlertContext, monitorState, session, snapshot]);
+  }, [alertMonitorId, effectiveSource, exactAlertContext, monitorState, newsContext, session, snapshot]);
 
   if (!snapshot && state.status === "loading") {
     return (
-      <section className="min-h-[360px] bg-ui-panel px-4 py-6" aria-busy="true">
-        <div className="flex items-center gap-2 text-sm font-semibold text-ui-muted">
-          <Loader2 className="animate-spin text-ui-brand" size={18} aria-hidden /> Home과 같은 선물 판단 스냅샷을 확인하고 있습니다.
+      <section className="bg-ui-panel px-4 py-5" aria-busy="true" aria-label="선물 시장 분석을 불러오는 중">
+        <div className="flex items-center justify-between gap-3 text-sm font-semibold text-ui-muted">
+          <span>Home에서 본 것과 같은 분석을 확인하고 있습니다.</span>
+          <Loader2 className="shrink-0 animate-spin text-ui-brand" size={18} aria-hidden />
+        </div>
+        <div className="mt-5 h-8 w-5/6 animate-pulse bg-ui-inset" />
+        <div className="mt-2 h-8 w-2/3 animate-pulse bg-ui-inset" />
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          <div className="min-h-24 animate-pulse bg-ui-risk/10 px-3 py-3 text-xs font-bold text-ui-risk">가장 큰 위험 확인 중</div>
+          <div className="min-h-24 animate-pulse bg-ui-brand/8 px-3 py-3 text-xs font-bold text-ui-brand">확인할 가격 계산 중</div>
         </div>
       </section>
     );
@@ -492,7 +514,7 @@ export function PerpetualDecisionExperience({
   if (!snapshot || !state.capabilities) {
     return (
       <section className="bg-ui-panel px-4 py-6">
-        <p className="text-base font-black text-ui-text">선물 리스크 스냅샷을 불러오지 못했습니다.</p>
+        <p className="text-base font-black text-ui-text">선물 시장 분석을 불러오지 못했습니다.</p>
         <p className="mt-2 text-sm leading-6 text-ui-muted">{state.status === "error" ? state.message : "잠시 뒤 다시 확인해 주세요."}</p>
         <ActionButton tone="secondary" className="mt-4" onClick={() => void load()}><RefreshCw size={15} aria-hidden /> 다시 불러오기</ActionButton>
       </section>
@@ -527,20 +549,22 @@ export function PerpetualDecisionExperience({
         <div className="flex items-start gap-2 bg-ui-watch/10 px-3 py-2 text-xs font-semibold leading-5 text-ui-watch">
           <History size={15} className="mt-0.5 shrink-0" aria-hidden />
           {source === "alert"
-            ? "알림 당시 snapshot을 찾지 못해 최신 상태로 갱신했습니다. 조건을 다시 확인해 주세요."
-            : "Home에서 본 이후 데이터가 갱신되었습니다. 현재 snapshot으로 조건을 다시 확인해 주세요."}
+            ? "알림을 받았던 당시 분석이 만료되어 최신 분석으로 바꿨습니다. 확인 가격을 다시 봐주세요."
+            : source === "news"
+              ? "뉴스에서 연결한 당시 분석이 만료되어 최신 분석으로 바꿨습니다. 다른 시점의 뉴스 해석은 자동으로 섞지 않았습니다."
+              : "Home에서 본 뒤 시장 데이터가 달라져 최신 분석으로 바꿨습니다. 확인 가격을 다시 봐주세요."}
         </div>
       ) : null}
 
       <section className="bg-ui-panel px-3 py-4 sm:px-5" aria-labelledby="perpetual-decision-title">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-subtle">{assetSymbols[asset].label} · Binance USDT-M · 15분 확정</p>
-            <p className="mt-1 inline-flex items-center gap-1 text-[10.5px] font-semibold text-ui-muted"><Clock3 size={12} aria-hidden /> 판단 시각 {formatAsOf(displaySnapshot.generatedAt)}</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-subtle">{assetSymbols[asset].label} · 바이낸스 무기한 선물 · 15분 봉 기준</p>
+            <p className="mt-1 inline-flex items-center gap-1 text-[10.5px] font-semibold text-ui-muted"><Clock3 size={12} aria-hidden /> {formatAsOf(displaySnapshot.generatedAt)} 기준 분석</p>
           </div>
           <div className="flex gap-1">
             <StatusPill tone={displayQuality === "ready" ? "long" : "risk"} icon={Database}>{qualityLabel(displayQuality)}</StatusPill>
-            <StatusPill tone={decisionTone(displaySnapshot.summary.state)} icon={Activity}>{decisionLabel(displaySnapshot.summary.state)}</StatusPill>
+            <StatusPill tone={decisionTone(displaySnapshot.summary.state)} icon={Activity}>{decisionStateLabel(displaySnapshot.summary.state)}</StatusPill>
           </div>
         </div>
 
@@ -555,7 +579,7 @@ export function PerpetualDecisionExperience({
             <p className="mt-1 text-sm font-semibold leading-6 text-ui-text [word-break:keep-all]">{displaySnapshot.summary.topRisk}</p>
           </div>
           <div className="bg-ui-inset/65 px-3 py-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.1em] text-ui-brand">다음 확인 조건</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.1em] text-ui-brand">지금 확인할 가격</p>
             <p className="mt-1 text-sm font-black leading-6 text-ui-text [word-break:keep-all]">{displaySnapshot.summary.primaryCondition.label}</p>
           </div>
         </div>
@@ -565,7 +589,7 @@ export function PerpetualDecisionExperience({
         </ul>
 
         <div className="mt-4 flex flex-col gap-2 border-t border-ui-line pt-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs leading-5 text-ui-muted">감시는 실시간 체결 지시가 아니라 조건 변화를 최대 5분 간격으로 확인합니다.</p>
+          <p className="text-xs leading-5 text-ui-muted">알림은 주문을 실행하지 않습니다. 선택한 가격 조건을 최대 5분마다 확인합니다.</p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <MonitorAction condition={displaySnapshot.summary.primaryCondition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} />
             {session ? (
@@ -576,7 +600,7 @@ export function PerpetualDecisionExperience({
                 className="w-full sm:w-auto"
               >
                 {journalState.status === "saving" ? <Loader2 className="animate-spin" size={15} aria-hidden /> : <BookOpen size={15} aria-hidden />}
-                {journalState.status === "saving" ? "복기 저장 중" : currentJournalState.status === "saved" ? "복기 저장됨" : "복기에 저장"}
+                {journalState.status === "saving" ? "판단 기록 저장 중" : currentJournalState.status === "saved" ? "판단 기록 저장됨" : "판단 기록에 저장"}
               </ActionButton>
             ) : null}
           </div>
@@ -586,24 +610,22 @@ export function PerpetualDecisionExperience({
         ) : null}
         {currentJournalState.status === "saved" || currentJournalState.status === "error" ? (
           <p role={currentJournalState.status === "error" ? "alert" : "status"} aria-live="polite" className={`mt-2 text-xs font-semibold ${currentJournalState.status === "saved" ? "text-ui-long" : "text-ui-risk"}`}>
-            {currentJournalState.message} {currentJournalState.status === "saved" ? <a href="/journal?market=crypto" className="underline">복기 보기</a> : null}
+            {currentJournalState.message} {currentJournalState.status === "saved" ? <a href="/journal?market=crypto" className="underline">저장한 판단 보기</a> : null}
           </p>
         ) : null}
       </section>
 
-      <PerpetualMonitorManager
-        accessToken={session?.accessToken}
-        refreshKey={monitorRefreshKey}
-        onUsageChange={handleMonitorUsageChange}
-      />
+      {newsContext ? <NewsImpactContextCard context={newsContext} /> : null}
 
       <section className="bg-ui-panel px-3 py-4 sm:px-5">
         <div className="flex items-start justify-between gap-3">
-          <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-subtle">가격 확인</p><h2 className="mt-1 text-lg font-black text-ui-text">동일 snapshot의 조건선만 확인합니다</h2></div>
+          <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-subtle">가격 흐름</p><h2 className="mt-1 text-lg font-black text-ui-text">차트에서 흐름과 확인 가격을 같이 보세요</h2><p className="mt-1 text-xs leading-5 text-ui-muted">{displaySnapshot.pro ? "지금 분석에 사용한 15분 차트 위에 추세 확인·전환 신호와 중요한 가격을 표시합니다." : "지금 분석에 사용한 15분 봉과 먼저 확인할 가격을 함께 표시합니다."}</p></div>
           <StatusPill tone="watch">15분</StatusPill>
         </div>
         <div className="mt-3"><PerpetualDecisionChart snapshot={displaySnapshot} /></div>
       </section>
+
+      <PerpetualEvidenceWorkbench snapshot={displaySnapshot} />
 
       {state.status === "error" ? (
         <section className="bg-ui-panel px-3 py-4 text-sm leading-6 text-ui-muted sm:px-5">
@@ -612,40 +634,29 @@ export function PerpetualDecisionExperience({
       ) : displaySnapshot.pro ? (
         <section className="bg-ui-panel px-3 py-4 sm:px-5">
           <div className="flex items-start justify-between gap-3">
-            <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand">Coin Pro</p><h2 className="mt-1 text-lg font-black text-ui-text">확인·판단 변경 조건과 근거</h2></div>
+            <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand">Coin Pro</p><h2 className="mt-1 text-lg font-black text-ui-text">어떤 경우에 현재 해석이 더 강해지거나 바뀌나요?</h2><p className="mt-1 text-xs leading-5 text-ui-muted">원하는 가격 조건을 저장하면 최대 5분 간격으로 확인해 알려드립니다.</p></div>
             <StatusPill tone="long" icon={ShieldAlert}>{capabilities.activeMonitorCount}/{capabilities.monitorLimit}</StatusPill>
           </div>
           <div className="mt-3 divide-y divide-ui-line border-y border-ui-line">
             {conditions.slice(1).map((condition) => (
               <div key={condition.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <div><p className="text-xs font-black text-ui-text">{condition.role === "confirmation" ? "추가 확인" : "판단 변경 기준"}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{condition.label}</p></div>
+                <div><p className="text-xs font-black text-ui-text">{condition.role === "confirmation" ? "흐름이 더 강해지는 확인 가격" : "이 조건이 나오면 해석을 다시 봐야 해요"}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{condition.label}</p></div>
                 <MonitorAction condition={condition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} />
               </div>
             ))}
           </div>
-          <div className="mt-3 grid gap-2 md:grid-cols-3">
-            {displaySnapshot.pro.multiTimeframeEvidence.map((evidence) => (
-              <div key={evidence.timeframe} className="bg-ui-inset/55 px-3 py-3">
-                <p className="text-xs font-black text-ui-text">{evidence.label}</p>
-                <p className="mt-1 text-[11px] leading-5 text-ui-muted">구조 {evidence.structure} · 전환 {evidence.transition} · {evidence.regime}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-3 grid gap-2 text-xs leading-5 text-ui-muted md:grid-cols-2">
-            <p>{displaySnapshot.pro.pressure?.summary ?? "청산 압력 근거가 부족합니다."}</p>
-            <p>{displaySnapshot.pro.flow?.summary ?? "큰 체결 근거가 부족합니다."}</p>
-          </div>
         </section>
-      ) : (
-        <section className="flex flex-col gap-3 bg-ui-panel px-3 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-          <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand">Coin Pro</p><h2 className="mt-1 text-base font-black text-ui-text">확인·판단 변경 조건을 저장하고 알림·복기로 이어갑니다</h2><p className="mt-1 text-xs leading-5 text-ui-muted">현재 상태는 Basic에서도 확인할 수 있고, Pro는 최대 20개 조건을 최대 5분 간격으로 감시합니다.</p></div>
-          <ActionButton href="/pro?market=crypto&source=perpetual" tone="primary" className="w-full sm:w-auto">Pro 기준 보기</ActionButton>
-        </section>
-      )}
+      ) : null}
+
+      <PerpetualMonitorManager
+        accessToken={session?.accessToken}
+        refreshKey={monitorRefreshKey}
+        onUsageChange={handleMonitorUsageChange}
+      />
 
       {state.status === "error" ? (
         <div role="alert" className="flex items-center justify-between gap-3 bg-ui-risk/10 px-3 py-2 text-xs font-semibold text-ui-risk">
-          <span>최신 갱신에 실패해 마지막 정상 snapshot은 맥락용으로만 표시합니다.</span>
+          <span>최신 갱신에 실패해 마지막 정상 분석을 참고용으로 보여드립니다.</span>
           <button type="button" onClick={() => void load()} className="shrink-0 underline">다시 시도</button>
         </div>
       ) : null}

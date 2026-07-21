@@ -62,13 +62,13 @@ const initialUsageSnapshot: UsageSnapshot = { dateKey: "", counts: {} };
 
 const scopedUsageCopy: Record<BillingPageScope, { free: string; paid: string; proHref: string; ctaLabel: string }> = {
   all: {
-    free: "Basic에서는 방향 요약만 제공합니다. 상세 조건, 무효화 기준, 세부 리스크는 Pro에서 확인할 수 있습니다.",
+    free: "Basic에서는 방향 요약만 제공합니다. 확인할 가격, 해석을 다시 볼 조건, 세부 위험은 Pro에서 확인할 수 있습니다.",
     paid: "All Market Pro 판단 보조 모드입니다. 코인과 글로벌 전체 시장 판단, 리스크 점검, 알림을 함께 확인할 수 있습니다.",
     proHref: "/pro",
     ctaLabel: "All Market Pro 보기"
   },
   crypto: {
-    free: "Basic에서는 방향 요약만 제공합니다. BTC/ETH·알트 추적 조건, 무효화 기준, 세부 리스크는 Coin Pro에서 확인할 수 있습니다.",
+    free: "Basic에서는 방향 요약만 제공합니다. BTC·ETH와 알트의 확인할 가격, 해석을 다시 볼 조건, 세부 위험은 Coin Pro에서 확인할 수 있습니다.",
     paid: "Coin Pro 판단 보조 모드입니다. 코인 상세 판단, BTC/ETH·알트 리스크, 추적 조건을 반복 확인할 수 있습니다.",
     proHref: "/pro?market=crypto",
     ctaLabel: "Coin Pro 보기"

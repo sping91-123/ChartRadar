@@ -22,6 +22,8 @@ export async function recordServerProductEvent(params: {
   snapshotId?: string | null;
   monitorId?: string | null;
   attributionId?: string | null;
+  newsEventId?: string | null;
+  newsReactionId?: string | null;
   properties?: Record<string, string | number | boolean | null>;
 }) {
   if (!isSupabaseAdminConfigured()) return false;
@@ -40,6 +42,8 @@ export async function recordServerProductEvent(params: {
         snapshot_id: params.snapshotId ?? null,
         monitor_id: params.monitorId ?? null,
         attribution_id: params.attributionId ?? null,
+        news_event_id: params.newsEventId ?? null,
+        news_reaction_id: params.newsReactionId ?? null,
         properties: params.properties ?? {},
         occurred_at: new Date().toISOString()
       }
