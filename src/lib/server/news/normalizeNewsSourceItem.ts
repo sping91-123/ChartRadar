@@ -32,11 +32,19 @@ function normalizedToken(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-function validPublishedAt(value: string, nowMs: number) {
+export type NewsSourceTimestampStatus = "valid" | "expired" | "future" | "invalid";
+
+export function classifyNewsSourceTimestamp(value: string, now = new Date()): NewsSourceTimestampStatus {
   const parsed = Date.parse(value);
-  if (!Number.isFinite(parsed)) return null;
-  if (parsed > nowMs + 5 * 60_000) return null;
-  if (parsed < nowMs - 30 * 24 * 60 * 60_000) return null;
+  if (!Number.isFinite(parsed)) return "invalid";
+  if (parsed > now.getTime() + 5 * 60_000) return "future";
+  if (parsed < now.getTime() - 30 * 24 * 60 * 60_000) return "expired";
+  return "valid";
+}
+
+function validPublishedAt(value: string, nowMs: number) {
+  if (classifyNewsSourceTimestamp(value, new Date(nowMs)) !== "valid") return null;
+  const parsed = Date.parse(value);
   return new Date(parsed).toISOString();
 }
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { enabledNewsSources, isAllowedOfficialMacroEvent, isAllowedUrlForHosts, newsSourceCatalog, runtimeAllowedNewsSources, runtimeAllowedNewsSourcesForPolicies, validateNewsSourceCatalog } from "../src/lib/server/news/sourceCatalog";
-import { canonicalizeOfficialUrl, normalizeNewsSourceItem, semanticNewsEventKey } from "../src/lib/server/news/normalizeNewsSourceItem";
+import { canonicalizeOfficialUrl, classifyNewsSourceTimestamp, normalizeNewsSourceItem, semanticNewsEventKey } from "../src/lib/server/news/normalizeNewsSourceItem";
 import { admitOfficialNews, officialRssPayloadFailure } from "../src/lib/server/news/officialNewsAdmission";
 import { deterministicOfficialPresentation, validateOfficialPresentationJson } from "../src/lib/server/news/officialFactSummary";
 import { officialNewsCanonicalEventId, officialNewsSemanticSubject } from "../src/lib/server/news/officialNewsIdentity";
@@ -54,6 +54,10 @@ assert.equal(officialRssPayloadFailure({ candidateCount: 3, admittedCount: 2, in
 assert.equal(officialRssPayloadFailure({ candidateCount: 3, admittedCount: 0, invalidAdmittedCount: 0 }), null, "a healthy feed with no product-relevant item is not degraded");
 
 const now = new Date("2026-07-20T12:00:00.000Z");
+assert.equal(classifyNewsSourceTimestamp("2026-07-20T11:55:00.000Z", now), "valid");
+assert.equal(classifyNewsSourceTimestamp("2026-06-19T11:55:00.000Z", now), "expired", "official feed history outside retention is skipped without degrading the source");
+assert.equal(classifyNewsSourceTimestamp("2026-07-20T12:06:00.000Z", now), "future");
+assert.equal(classifyNewsSourceTimestamp("not-a-date", now), "invalid");
 const normalized = normalizeNewsSourceItem({
   sourceId: "sec_press_releases",
   externalId: "SEC-2026-001",
