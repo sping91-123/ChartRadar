@@ -36,6 +36,7 @@ export interface CommentaryOutput {
 export interface MarketBriefingInput {
   symbol: string;
   analysisScope?: string;
+  hideNumericScores?: boolean;
   activeTimeframe: ChartTimeframe;
   tradingMode: "scalp" | "swing";
   price: number;

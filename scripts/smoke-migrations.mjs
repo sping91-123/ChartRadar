@@ -107,6 +107,59 @@ for (const marker of [
   if (!journalReconcile.includes(marker)) failures.push(`Journal reconciler migration is missing ${marker}`);
 }
 
+const macroStatusReconcileName = active.find((name) => name.endsWith("_reconcile_macro_event_status.sql"));
+const macroStatusReconcile = macroStatusReconcileName ? readNormalized(join(activeDir, macroStatusReconcileName)) : "";
+for (const marker of [
+  "drop constraint if exists macro_events_status_check",
+  "released_pending_actual",
+  "actual_available"
+]) {
+  if (!macroStatusReconcile.includes(marker)) failures.push(`Macro event status reconciler is missing ${marker}`);
+}
+
+const newsImpactName = active.find((name) => name.endsWith("_news_impact_v1.sql"));
+const newsImpact = newsImpactName ? readNormalized(join(activeDir, newsImpactName)) : "";
+for (const marker of [
+  "create table if not exists public.macro_events",
+  "create table if not exists public.macro_sync_runs",
+  "create table if not exists public.news_source_catalog",
+  "create table if not exists public.news_impact_events",
+  "create table if not exists public.news_market_reactions",
+  "create table if not exists public.news_alert_preferences",
+  "claim_news_sync_run",
+  "claim_news_impact_alert",
+  "lease_news_impact_delivery",
+  "purge_news_impact_retention",
+  "revoke all privileges on table public.news_source_items from public, anon, authenticated, service_role",
+  "revoke all privileges on table public.macro_events from public, anon, authenticated, service_role",
+  "grant execute on function public.claim_news_impact_alert"
+]) {
+  if (!newsImpact.includes(marker)) failures.push(`News Impact migration is missing ${marker}`);
+}
+
+const newsHardeningName = active.find((name) => name.endsWith("_harden_news_impact_v1.sql"));
+const newsHardening = newsHardeningName ? readNormalized(join(activeDir, newsHardeningName)) : "";
+for (const marker of [
+  "add column if not exists allowed_hosts",
+  "where allowed_hosts is null",
+  "existing_news_source_item_not_allowed",
+  "before insert or update of source_id, policy_status, canonical_url",
+  "evaluated.generated_at > baseline.generated_at",
+  "deletion.status in ('pending', 'processing', 'failed')",
+  "news_sync_runs_active_lease_idx",
+  "renew_news_sync_run",
+  "retire_stale_news_reactions",
+  "evaluated.generated_at > baseline.generated_at",
+  "deletion.status in ('pending', 'processing', 'failed')",
+  "pg_advisory_xact_lock",
+  "delivery_succeeded_token_ids",
+  "finalize_exhausted_news_impact_deliveries",
+  "expire_news_impact_delivery",
+  "complete_news_impact_delivery(uuid, integer, text, integer, integer, text, uuid[])"
+]) {
+  if (!newsHardening.includes(marker)) failures.push(`News Impact hardening migration is missing ${marker}`);
+}
+
 const canonicalSchema = readNormalized(join(root, "supabase", "schema.sql"));
 for (const marker of [
   "perpetual_scenario_monitors_live_condition_idx",
@@ -119,9 +172,38 @@ for (const marker of [
   "revoke all privileges on table public.perpetual_scenario_monitors from service_role",
   "perpetual_scenario_monitors_snapshot_idx",
   "product_events_snapshot_idx",
-  "journals_decision_snapshot_idx"
+  "journals_decision_snapshot_idx",
+  "create table if not exists public.news_source_catalog",
+  "create table if not exists public.news_impact_events",
+  "create table if not exists public.news_market_reactions",
+  "create or replace function public.claim_news_sync_run",
+  "create or replace function public.claim_news_impact_alert",
+  "create or replace function public.lease_news_impact_delivery",
+  "create or replace function public.purge_news_impact_retention",
+  "revoke all privileges on table public.news_source_items from public, anon, authenticated, service_role",
+  "revoke all privileges on table public.macro_events from public, anon, authenticated, service_role",
+  "grant execute on function public.claim_news_impact_alert",
+  "add column if not exists allowed_hosts",
+  "retire_stale_news_reactions",
+  "news_sync_runs_active_lease_idx",
+  "renew_news_sync_run",
+  "delivery_succeeded_token_ids",
+  "finalize_exhausted_news_impact_deliveries",
+  "expire_news_impact_delivery",
+  "complete_news_impact_delivery(uuid, integer, text, integer, integer, text, uuid[])"
 ]) {
   if (!canonicalSchema.includes(marker)) failures.push(`canonical schema is missing ${marker}`);
+}
+
+const newsSchemaBaseMarker = "-- News Impact v1 canonical schema mirror.";
+const newsSchemaHardeningMarker = "-- News Impact v1 forward-only hardening mirror.";
+const newsSchemaBaseIndex = canonicalSchema.indexOf(newsSchemaBaseMarker);
+const newsSchemaHardeningIndex = canonicalSchema.indexOf(newsSchemaHardeningMarker);
+if (newsSchemaBaseIndex < 0 || newsSchemaHardeningIndex <= newsSchemaBaseIndex) {
+  failures.push("canonical schema must declare the News Impact base before its hardening mirror");
+}
+if (canonicalSchema.indexOf(newsSchemaHardeningMarker, newsSchemaHardeningIndex + 1) >= 0) {
+  failures.push("canonical schema contains more than one News Impact hardening mirror");
 }
 
 if (failures.length) {
@@ -149,6 +231,17 @@ if (failures.length) {
       process.exitCode = perpetualReplay.status ?? 1;
     } else {
       console.log("PASS executable Perpetual revenue core migration matrix.");
+      const newsReplay = spawnSync(process.execPath, ["scripts/test-news-impact-ledger.mjs"], {
+        cwd: root,
+        stdio: "inherit",
+        shell: false
+      });
+      if (newsReplay.status !== 0) {
+        console.error("FAIL executable News Impact migration matrix");
+        process.exitCode = newsReplay.status ?? 1;
+      } else {
+        console.log("PASS executable News Impact migration matrix.");
+      }
     }
   }
 }

@@ -1,9 +1,12 @@
 // 글로벌 주요 자산의 하루 변동률과 미국장 30초 체크 대시보드 데이터를 제공하는 API 라우트입니다.
 import { NextResponse } from "next/server";
-import { XMLParser } from "fast-xml-parser";
+import { globalMarketModeFromScore, type GlobalMarketMode } from "@/lib/globalMarketMode";
+import { isUuid } from "@/lib/perpetualMonitor";
 import { getMacroCalendarPayload } from "@/lib/macroCalendar";
 import type { MacroEventItem } from "@/data/macroEvents";
-import { localizeNewsSourceText, marketNewsDisplayTitle } from "@/lib/radarNews";
+import { newsImpactClassificationLabel } from "@/lib/newsImpactPresentation";
+import { readNewsImpactEvents } from "@/lib/server/news/newsImpactStore";
+import { isNewsImpactUiEnabled, newsImpactMode } from "@/lib/server/newsImpactMode";
 import { fetchStockCandles, findStockSymbol } from "@/lib/stockMarket";
 import { rateLimit } from "@/lib/server/rateLimit";
 import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
@@ -18,7 +21,7 @@ const noStoreHeaders = {
   Expires: "0"
 };
 
-type MarketMode = "Risk-On" | "Neutral" | "Risk-Off";
+type MarketMode = GlobalMarketMode;
 type PressureTone = "supportive" | "burden" | "mixed";
 type DashboardRole = "index_future" | "macro_proxy" | "sector" | "leader" | "core";
 
@@ -34,11 +37,6 @@ type BoardItem = {
   pressure: PressureTone;
   interpretation: string;
   proxyNote?: string;
-};
-
-type NewsFeed = {
-  source: string;
-  url: string;
 };
 
 type EventRiskPayload = {
@@ -82,17 +80,6 @@ const CORE_SYMBOLS = ["QQQ", "SPY"] as const;
 const pulseSymbols = Array.from(new Set([...INDEX_FUTURES, ...MACRO_PROXIES, ...SECTOR_SYMBOLS, ...LEADER_SYMBOLS, ...CORE_SYMBOLS]));
 const MARKET_BOARD_BATCH_SIZE = 8;
 
-const newsFeeds = [
-  { source: "CNBC Markets", url: "https://www.cnbc.com/id/100003114/device/rss/rss.html" },
-  { source: "MarketWatch", url: "https://feeds.content.dowjones.io/public/rss/mw_topstories" }
-] satisfies readonly NewsFeed[];
-
-const parser = new XMLParser({
-  ignoreAttributes: false,
-  attributeNamePrefix: "",
-  textNodeName: "text"
-});
-
 function classifyChange(changePercent: number) {
   if (changePercent >= 1.2) return "strong_up";
   if (changePercent >= 0.25) return "up";
@@ -105,23 +92,6 @@ function signedChange(value: number) {
   if (value >= 0.25) return 1;
   if (value <= -0.25) return -1;
   return 0;
-}
-
-function asArray<T>(value: T | T[] | undefined): T[] {
-  if (!value) return [];
-  return Array.isArray(value) ? value : [value];
-}
-
-function cleanText(value: unknown) {
-  if (typeof value !== "string") return "";
-  return value
-    .replace(/<!\[CDATA\[(.*?)\]\]>/g, "$1")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, " ")
-    .trim();
 }
 
 function itemRole(symbol: string): DashboardRole {
@@ -258,13 +228,6 @@ function scoreItem(item: BoardItem) {
 function average(items: BoardItem[]) {
   if (!items.length) return 0;
   return items.reduce((sum, item) => sum + item.changePercent, 0) / items.length;
-}
-
-function modeFromScore(score: number, availableCount: number): MarketMode {
-  if (availableCount < 6) return "Neutral";
-  if (score >= 3.2) return "Risk-On";
-  if (score <= -3.2) return "Risk-Off";
-  return "Neutral";
 }
 
 function toneFromMode(mode: MarketMode): PressureTone {
@@ -681,77 +644,46 @@ async function buildEventRisk(): Promise<EventRiskPayload> {
   }
 }
 
-function newsDirection(title: string) {
-  const lower = title.toLowerCase();
-  if (/rally|record|surge|rebounds|rate cut|soft landing|dovish|beat|raised guidance|ai demand|chip demand/.test(lower)) return "supportive" as const;
-  if (/sell-off|plunge|slump|higher yield|hawkish|sticky inflation|miss|cuts guidance|recession|tariff|lawsuit/.test(lower)) return "burden" as const;
-  if (/fed|fomc|powell|cpi|ppi|pce|jobs|payroll|yield|dollar|vix|oil|earnings/.test(lower)) return "mixed" as const;
-  return null;
+function impactTone(classification: string, riskEffect: string | undefined): PressureTone {
+  if (classification === "supports_existing_state") return "supportive";
+  if (classification === "risk_increase" || classification === "conflicts_with_existing_state" || riskEffect === "increased") return "burden";
+  return "mixed";
 }
 
-function newsDisplayTitle(title: string) {
-  return marketNewsDisplayTitle(title, localizeNewsSourceText(title), "stocks");
-}
-
-async function loadNewsFeed(feed: NewsFeed) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 5000);
-  try {
-    const response = await fetch(feed.url, {
-      headers: { "user-agent": "ChartRadarBot/1.0" },
-      cache: "no-store",
-      signal: controller.signal
-    });
-    if (!response.ok) return [];
-    const xml = await response.text();
-    const parsed = parser.parse(xml) as { rss?: { channel?: { item?: unknown } }; feed?: { entry?: unknown } };
-    const records = asArray((parsed.rss?.channel?.item ?? parsed.feed?.entry) as Record<string, unknown> | Record<string, unknown>[] | undefined);
-    return records
-      .map((record) => {
-        const title = cleanText(record.title);
-        const direction = newsDirection(title);
-        if (!title || !direction) return null;
-        return {
-          source: feed.source,
-          title: newsDisplayTitle(title),
-          originalTitle: title,
-          tone: direction,
-          summary:
-            direction === "supportive"
-              ? "이벤트와 뉴스 흐름은 위험자산에 우호적인 쪽입니다."
-              : direction === "burden"
-                ? "이벤트와 뉴스 흐름은 리스크 점검 쪽입니다."
-                : "이벤트와 뉴스는 변동성 확대 요인으로 분류됩니다."
-        };
-      })
-      .filter((item): item is { source: string; title: string; originalTitle: string; tone: PressureTone; summary: string } => Boolean(item))
-      .slice(0, 6);
-  } catch {
-    return [];
-  } finally {
-    clearTimeout(timer);
+async function buildNewsPressure(requestedEventId?: string | null, canSeeProDetail = false) {
+  if (!isNewsImpactUiEnabled(newsImpactMode())) {
+    return { title: "공식 사건 임팩트", summary: "공식 사건과 시장 반응 연결을 검증 중입니다.", tone: "mixed" as PressureTone, items: [] };
   }
-}
-
-async function buildNewsPressure() {
-  const settled = await Promise.allSettled(newsFeeds.map(loadNewsFeed));
-  const items = settled.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
-  const supportive = items.filter((item) => item.tone === "supportive").length;
-  const burden = items.filter((item) => item.tone === "burden").length;
-  const tone: PressureTone = supportive > burden ? "supportive" : burden > supportive ? "burden" : "mixed";
-  return {
-    title: tone === "supportive" ? "오늘의 이벤트 압력 우호" : tone === "burden" ? "오늘의 이벤트 압력 부담" : "오늘의 이벤트 압력 중립",
-    summary:
-      items.length === 0
-        ? "강한 공개 이벤트 압력은 아직 제한적입니다. 일정과 가격 반응을 함께 확인하세요."
-        : tone === "supportive"
-          ? "공개 일정과 뉴스 흐름은 위험자산에 우호적인 재료가 조금 더 많습니다."
-          : tone === "burden"
-            ? "공개 일정과 뉴스 흐름은 리스크 점검 재료가 조금 더 많습니다."
-            : "공개 일정과 뉴스 흐름은 방향보다 변동성 점검에 가깝습니다.",
-    tone,
-    items: items.slice(0, 3)
-  };
+  try {
+    const events = await readNewsImpactEvents({
+      market: "global",
+      eventId: requestedEventId,
+      since: new Date(Date.now() - (canSeeProDetail ? 30 : 1) * 24 * 60 * 60_000).toISOString(),
+      limit: requestedEventId ? 1 : 3
+    });
+    const items = events.map((event) => ({
+      eventId: event.id,
+      reactionId: event.reaction?.reactionId ?? null,
+      classification: event.reaction?.classification ?? "pending",
+      source: event.primarySource.name,
+      sourceUrl: event.primarySource.url,
+      title: event.headline,
+      originalTitle: event.headline,
+      tone: impactTone(event.reaction?.classification ?? "pending", event.reaction?.riskEffect),
+      summary: event.reaction?.reactionSummary ?? "공식 발표 이후 시장 반응을 확인 중입니다."
+    }));
+    const lead = events[0];
+    const tone = items[0]?.tone ?? "mixed";
+    const label = lead?.reaction ? newsImpactClassificationLabel(lead.reaction.classification) : "반응 확인 중";
+    return {
+      title: `공식 사건 임팩트 · ${label}`,
+      summary: lead?.reaction?.reactionSummary ?? (lead ? "공식 발표 이후 시장 반응을 확인 중입니다." : "현재 판단을 바꿀 공식 이슈가 없습니다."),
+      tone,
+      items
+    };
+  } catch {
+    return { title: "공식 사건 임팩트", summary: "저장된 마지막 공식 사건 결과를 확인하지 못했습니다.", tone: "mixed" as PressureTone, items: [] };
+  }
 }
 
 function topRisk(eventRisk: Awaited<ReturnType<typeof buildEventRisk>>, macroBlock: ReturnType<typeof buildMacroBlock>, futuresBlock: ReturnType<typeof buildFuturesBlock>) {
@@ -762,6 +694,7 @@ function topRisk(eventRisk: Awaited<ReturnType<typeof buildEventRisk>>, macroBlo
 }
 
 type MarketBoardPayload = {
+  capabilities: { canSeeProDetail: boolean; newsImpactEnabled: boolean };
   updatedAt: string;
   headline: string;
   marketMode: MarketMode;
@@ -826,7 +759,7 @@ function shapeBasicPayload(payload: MarketBoardPayload): MarketBoardPayload {
     },
     newsPressure: {
       ...payload.newsPressure,
-      items: payload.newsPressure.items.slice(0, 1)
+      items: payload.newsPressure.items.slice(0, 1).map((item) => ({ ...item, reactionId: null }))
     },
     items: []
   };
@@ -850,10 +783,12 @@ export async function GET(request: Request) {
     );
   }
 
+  const requestedEvent = new URL(request.url).searchParams.get("event");
+  const requestedEventId = isUuid(requestedEvent) ? requestedEvent : null;
   const [settled, eventRisk, newsPressure] = await Promise.all([
     loadBoardItemsInBatches(pulseSymbols),
     buildEventRisk(),
-    buildNewsPressure()
+    buildNewsPressure(requestedEventId, entitlement.isPaid)
   ]);
 
   const items = settled.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
@@ -876,7 +811,7 @@ export async function GET(request: Request) {
   const core = items.filter((item) => item.role === "core");
   const qqqOrNq = items.find((item) => item.symbol === "NQ=F") ?? items.find((item) => item.symbol === "QQQ") ?? null;
   const score = items.reduce((sum, item) => sum + scoreItem(item), 0);
-  const marketMode = modeFromScore(score, items.length);
+  const marketMode = globalMarketModeFromScore(score, items.length);
   const strength = Math.min(96, Math.max(35, Math.round(44 + Math.abs(score) * 6 + items.length / 3)));
   const macroSummary = macro.tone === "burden" ? "매크로 압력은 부담이 남아 있습니다." : macro.tone === "supportive" ? "매크로 압력은 완화 쪽입니다." : "매크로 압력은 중립권입니다.";
   const headline = buildHeadline(marketMode, futures.summary, macroSummary);
@@ -885,6 +820,10 @@ export async function GET(request: Request) {
   const flatCount = Math.max(0, items.length - upCount - downCount);
 
   const responsePayload: MarketBoardPayload = {
+    capabilities: {
+      canSeeProDetail: entitlement.isPaid,
+      newsImpactEnabled: isNewsImpactUiEnabled(newsImpactMode())
+    },
     updatedAt: new Date().toISOString(),
     headline,
     marketMode,

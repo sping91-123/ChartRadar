@@ -191,7 +191,7 @@ function AltProCta({ compact = false }: { compact?: boolean }) {
         <div>
           <p className="text-xs font-black text-cyan-100">Coin Pro 알트 상세 판단</p>
           <p className="mt-1 text-sm leading-6 text-slate-300 [word-break:keep-all]">
-            BTC/ETH·알트 리스크, 추적 조건, 무효화 기준, 세부 리스크는 Coin Pro에서 확인할 수 있습니다.
+            BTC·ETH와 알트의 위험, 확인할 가격, 해석을 다시 볼 조건, 세부 근거는 Coin Pro에서 확인할 수 있습니다.
           </p>
         </div>
         <Link
@@ -614,7 +614,7 @@ function SetupCard({
           <p className="text-[11px] font-bold text-slate-400">요약 리스크</p>
           <p className="mt-1 text-sm font-black text-white">{altSummaryRisk}</p>
           <p className="mt-1 text-[11px] leading-5 text-slate-500">
-            Basic에서는 방향 요약만 제공합니다. 상세 조건, 무효화 기준, 세부 리스크는 Pro에서 확인할 수 있습니다.
+            Basic에서는 방향 요약만 제공합니다. 확인할 가격, 해석을 다시 볼 조건, 세부 위험은 Pro에서 확인할 수 있습니다.
           </p>
         </div>
       ) : null}
@@ -1114,7 +1114,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
 
       <p className="mt-3 text-[11px] leading-5 text-slate-500">
         {excludeMajor
-          ? "레이더 결과는 5분 단위로 갱신됩니다. Basic에서는 방향 요약만 제공합니다. 추적 조건, 무효화 기준, 세부 리스크는 Coin Pro에서 확인할 수 있습니다."
+          ? "레이더 결과는 5분 단위로 갱신됩니다. Basic에서는 방향 요약만 제공합니다. 확인할 가격, 해석을 다시 볼 조건, 세부 위험은 Coin Pro에서 확인할 수 있습니다."
           : "레이더 결과는 5분 단위로 갱신됩니다. 감지 카드는 오늘 먼저 확인할 순서를 줄여주는 기준이며, 관찰 구간과 무효 기준은 본인의 손절 원칙과 포지션 크기에 맞춰 다시 확인하세요."}
       </p>
     </section>

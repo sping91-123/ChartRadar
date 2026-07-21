@@ -138,7 +138,7 @@ export function PerpetualMonitorManager({
           </div>
         ) : null}
         {monitors.length === 0 && !loading ? (
-          <p className="text-xs leading-5 text-ui-muted">저장된 조건이 없습니다. 최신 정상 스냅샷에서 확인할 조건을 선택할 수 있습니다.</p>
+          <p className="text-xs leading-5 text-ui-muted">저장된 조건이 없습니다. 최신 정상 분석에서 확인할 가격을 선택할 수 있습니다.</p>
         ) : (
           <div className="divide-y divide-ui-line">
             {monitors.map((monitor) => {

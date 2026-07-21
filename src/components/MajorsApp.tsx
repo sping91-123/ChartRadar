@@ -30,7 +30,7 @@ function BackgroundEvidenceDisclosure({ children }: { children: ReactNode }) {
           <span className="block text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">배경 정보</span>
           <span className="mt-1 block text-ui-heading font-semibold tracking-tight text-ui-text">시장 환경, 온체인, 옵션은 접어 둡니다</span>
           <span className="mt-1 block max-w-3xl text-ui-body text-ui-muted [word-break:keep-all]">
-            판단은 상단 리스크 스냅샷과 조건 확인을 우선하고, 이 값들은 필요할 때만 참고합니다.
+            판단은 상단의 현재 분석과 확인 가격을 우선하고, 이 값들은 필요할 때만 참고합니다.
           </span>
         </span>
         <ChevronDown className="mt-1 shrink-0 text-ui-subtle transition group-open:rotate-180" size={18} aria-hidden />
@@ -45,13 +45,15 @@ function ShadowPerpetualCanaryGate({
   selectedSymbols,
   requestedSnapshotId,
   source,
-  attributionId
+  attributionId,
+  impactId
 }: {
   asset: MajorAssetId;
   selectedSymbols: Array<{ symbol: string; label: string }>;
   requestedSnapshotId: string | null;
-  source: "home" | "alert" | null;
+  source: "home" | "alert" | "news" | null;
   attributionId: string | null;
+  impactId: string | null;
 }) {
   const { session, isLoading } = useSupabaseAuth();
   const [enabled, setEnabled] = useState(false);
@@ -85,6 +87,7 @@ function ShadowPerpetualCanaryGate({
       requestedSnapshotId={requestedSnapshotId}
       source={source}
       attributionId={attributionId}
+      impactId={impactId}
     />
   );
 }
@@ -94,13 +97,17 @@ export function MajorsApp({
   initialSnapshotId = null,
   initialSource = null,
   initialAttributionId = null,
-  revenueCoreMode = "off"
+  initialImpactId = null,
+  revenueCoreMode = "off",
+  newsImpactEnabled = false
 }: {
   initialAsset?: MajorAssetId;
   initialSnapshotId?: string | null;
-  initialSource?: "home" | "alert" | null;
+  initialSource?: "home" | "alert" | "news" | null;
   initialAttributionId?: string | null;
+  initialImpactId?: string | null;
   revenueCoreMode?: PerpetualRevenueCoreMode;
+  newsImpactEnabled?: boolean;
 }) {
   const [activeAssetId, setActiveAssetId] = useState<MajorAssetId>(initialAsset);
   const [initialContinuityAvailable, setInitialContinuityAvailable] = useState(true);
@@ -121,6 +128,7 @@ export function MajorsApp({
     url.searchParams.delete("snapshot");
     url.searchParams.delete("source");
     url.searchParams.delete("attribution");
+    url.searchParams.delete("impact");
     window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
   }, []);
 
@@ -128,7 +136,7 @@ export function MajorsApp({
     <main className="min-h-screen max-w-full overflow-x-hidden px-3 pb-28 sm:px-5 sm:pb-16">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 sm:gap-3">
         <Header market="crypto" />
-        <RadarTopNav />
+        <RadarTopNav newsImpactEnabled={newsImpactEnabled} />
         <CoinFuturesSwitch active={activeAssetId} onAssetChange={handleAssetChange} />
         {revenueCoreMode === "on" ? (
           <PerpetualDecisionExperience
@@ -137,6 +145,7 @@ export function MajorsApp({
             requestedSnapshotId={initialContinuityAvailable && activeAssetId === initialAsset ? initialSnapshotId : null}
             source={initialContinuityAvailable && activeAssetId === initialAsset ? initialSource : null}
             attributionId={initialContinuityAvailable && activeAssetId === initialAsset ? initialAttributionId : null}
+            impactId={initialContinuityAvailable && activeAssetId === initialAsset ? initialImpactId : null}
           />
         ) : revenueCoreMode === "shadow" ? (
           <ShadowPerpetualCanaryGate
@@ -145,6 +154,7 @@ export function MajorsApp({
             requestedSnapshotId={initialContinuityAvailable && activeAssetId === initialAsset ? initialSnapshotId : null}
             source={initialContinuityAvailable && activeAssetId === initialAsset ? initialSource : null}
             attributionId={initialContinuityAvailable && activeAssetId === initialAsset ? initialAttributionId : null}
+            impactId={initialContinuityAvailable && activeAssetId === initialAsset ? initialImpactId : null}
           />
         ) : (
           <CoinFuturesBrief mode="major" symbols={selectedSymbols} />

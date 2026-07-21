@@ -1,10 +1,73 @@
 # Active Automation Run
 
-## Run Title
+## Current Run — `news-impact-v1-local-implementation`
+
+### Run State
+
+- Status: `GATE_A_APPLIED / SHADOW_STARTING`
+- Completion date: 2026-07-20
+- Scope completed: 공식 출처 catalog, 사건 정규화·개정 병합, 15분·60분 반응 분류, 저장 원장과 RLS, 원자적 뉴스 알림 outbox, Crypto·Global NEWS, Home strip, Perpetual·Global·Journal 연결, 구형 `/api/radar-news` 저장 기반 호환 응답.
+- Safe defaults: `NEWS_IMPACT_V1=shadow`, `NEWS_IMPACT_PUSH_ENABLED=false`.
+- Explicitly not executed: News Impact UI `on`, 실제 News Impact FCM 발송, AAB/iOS/store 작업.
+
+### 2026-07-21 Gate A Production Application
+
+- 운영 Supabase에 `news_impact_v1` (`20260721101117`), `harden_news_impact_v1` (`20260721101128`), `reconcile_macro_event_status` (`20260721101323`)를 forward-only로 적용했다.
+- 운영에 누락돼 있던 `macro_events`와 `macro_sync_runs`는 과거 migration replay 없이 News Impact migration이 additive bootstrap하도록 보완했다. 실제 런타임 상태 `released_pending_actual`, `actual_available`까지 별도 reconciler로 허용한다.
+- 신규 12개 service-role 테이블은 모두 RLS 활성화·사용자 policy 0개이며, `PUBLIC`·`anon`·`authenticated` 직접 grant 0개, service role CRUD와 RPC 실행만 허용됨을 운영 catalog에서 확인했다.
+- 적용 직후 News 원장 데이터는 0건이고 subscription 12건은 불변이었다. 공식 source allowlist 5개만 활성화됐고 CoinDesk·Cointelegraph·CNBC·MarketWatch는 blocked 상태다.
+- Vercel Production 변수는 `NEWS_IMPACT_V1=shadow`, `NEWS_IMPACT_PUSH_ENABLED=false`로 저장했다. 5분 cron은 코드 배포 후 would-send 관찰만 시작하며 실제 News Push는 Gate C 전까지 발송하지 않는다.
+- 로컬 재검증: `test:news-impact`, `smoke:migrations`, `smoke:all`, TypeScript, production build, `git diff --check` PASS.
+- 남은 외부 게이트: Gate B 72시간 shadow 품질 관찰 뒤 UI `on` 여부 결정, Gate C 7일·eligible 10건·disposable Android FCM 검증 뒤 Push 별도 승인.
+
+### Source And Decision Boundaries
+
+- 활성 adapter는 Fed, SEC RSS·EDGAR, CFTC, 기존 공식 `macro_events`로 제한했다.
+- CoinDesk, Cointelegraph, CNBC, MarketWatch는 `blocked_pending_license`이며 endpoint 없이 fail-closed로 유지한다.
+- 뉴스는 Perpetual 점수·방향을 수정하지 않고 `강화·충돌·상태 변화·리스크 증가·무반응·데이터 부족` 오버레이만 제공한다.
+- Basic 응답은 24시간 최대 3건과 공개 요약만, Pro는 30일 근거·반응·복기·명시적 opt-in 알림을 사용한다.
+- `news-impact` 알림은 기본 OFF이며 ready 반응과 허용 공식 출처가 없으면 claim·발송할 수 없다.
+
+### Local Verification
+
+- PASS: `test:news-sources`, `test:news-impact`, `test:news-reactions`, `test:news-alerts`, `test:push-outbox`, `test:alert-preferences`.
+- PASS: `test:perpetual-snapshot`, `test:perpetual-monitors`, `test:push-targets`.
+- PASS: `smoke:migrations` production/repository/fresh 반복 적용, News RLS·revision·reaction integrity·quota·outbox·retention·account purge matrix.
+- PASS: `smoke:supabase-security`, `smoke:ops`, `smoke:routes`, `smoke:mobile`, `smoke:all`, TypeScript, production build, `git diff --check`.
+- PASS: canonical `supabase/schema.sql` News Impact block equals `20260720141318_news_impact_v1.sql` exactly.
+- PASS: CLI Playwright 360×800 and 390×844 — Crypto NEWS, Global NEWS, Home strip, 알림→NEWS→동일 Perpetual snapshot→Journal, News→Global, stale·empty·error. 가로 넘침 0, 정상 상태 console/page error 0.
+- QA evidence: `output/playwright/news-impact-v1/` (gitignored local artifacts).
+
+### 2026-07-21 Re-audit Hardening
+
+- 공식 출처 URL은 수집 시점뿐 아니라 catalog host 정책 변경, API 직렬화, Perpetual·Journal 문맥 조회, Push claim·발송 직전에도 다시 검증한다. 운영 `allowed_hosts` 축소는 기존 허용 item을 같은 트랜잭션에서 `blocked`로 전환한다.
+- 5분 sync는 인접 bucket 사이에도 단일 lease를 사용하고 주기적으로 갱신한다. 기준 snapshot·observation보다 빠른 평가 시각은 DB와 순수 classifier 양쪽에서 거부한다.
+- 매크로를 포함한 개정 사건은 최초 발표가 아니라 개정 감지 시각을 기준으로 재평가한다. 철회 사건과 현재 event version이 아닌 과거 reaction은 Perpetual·Journal에 다시 연결할 수 없다.
+- SEC·CFTC 공동 발표는 실제 admission 경로에서 공통 event kind와 기관명 제거 semantic subject를 사용한다. 서로 다른 공식 URL도 같은 사건이면 병합되고, 제목 주제가 다르면 별도 사건으로 유지된다.
+- 외부 요약 모델의 문자열은 결정론적으로 승인된 한국어 사실 문구와 정확히 일치할 때만 통과한다. 원문에 없는 수치·승인·인물 변동·시장 방향 문구는 저장되지 않는다.
+- 계정 삭제가 pending·processing·failed인 사용자는 새 알림 claim과 기존 outbox 발송 대상에서 제외한다. 다만 기존 opt-in은 권한 종료 뒤에도 사용자가 직접 끌 수 있다.
+- Push OAuth·FCM 요청에 timeout과 OAuth token 동시 요청 단일화를 적용했다. 만료·재시도 소진 시 일부 token 성공 기록은 `partial`과 `delivered_at`으로 보존한다.
+- route smoke는 `off|shadow|on`에 따라 `/crypto/news`, `/news`, canonical redirect의 정확한 `Location`을 검증한다. `on` 호환 링크는 `asset`·`event`·`snapshot`·`source`만 보존하고 나머지 query를 제거하며, 로컬에서 `off`와 `on` 행렬을 모두 통과했다.
+- CLI Chromium QA는 snapshot을 고정한 pagination과 늦은 BTC 응답 뒤 ETH 전환 race를 추가로 검증했다. 360×800·390×844 핵심 화면의 overflow와 예상 밖 console/page error는 0건이다.
+- 최종 재검증: `smoke:all`, 독립 production build, TypeScript, `git diff --check` 모두 PASS. 첫 독립 병렬 시도에서 build와 `tsc`가 `.next/types`를 동시에 갱신해 일시 충돌했으나 올바른 순차 실행에서 재현되지 않았다.
+- 운영 DDL·cron·Vercel flag·deploy·실제 FCM·AAB·스토어 변경은 이번 재감사에서 수행하지 않았다.
+
+### Operational Gates Not Yet Run
+
+- Gate A: 운영 DDL·5분 cron 적용 승인 후 production catalog/RLS 재검증과 `shadow` 수집 시작.
+- Gate B: 최소 72시간 shadow 관찰에서 출처 없는 사건 0, 미허가 payload 0, 중복률 5% 이하, 수동 관련성 90% 이상일 때 UI `on` 검토.
+- Gate C: 최소 7일과 eligible 사건 10건, 중복·snapshot 불일치·부적절 후보 0, disposable Android FCM 확인 후 별도 승인.
+- 위 운영 시간 기반 기준은 로컬 구현 완료로 대체하거나 통과로 기록하지 않는다.
+
+---
+
+## Previous Completed Run
+
+### Run Title
 
 - `ios-first-local-build-readiness-run`
 
-## Run State
+### Run State
 
 - Status: `DONE`
 - Setup date: 2026-06-10
@@ -323,3 +386,15 @@ Task 6 must select at most one follow-up candidate:
 - 베타 reporter preflight는 2026-07-21 KST 시작, 기능 release SHA `e660e5a897b307eb1fd2e42e5240f4f61af17e6c` 기준으로 cohort 12명·중복 0·Day 14 이후 entitlement 세 gate를 통과했다. Day 7은 2026-07-28, Day 14 종료는 2026-08-04 00:00 KST다.
 - 시간·외부 장치 의존 잔여: Android 실기기 FCM receipt, 14일 사용 데이터, B01~B12 정성 인터뷰, 실제 RevenueCat 구매 표본의 2분·99% 판정. iOS·AAB·스토어 제출은 합의된 제외 범위다.
 - Supabase advisor의 leaked-password protection WARN과 intentional fail-closed no-policy INFO, Vercel dashboard의 overdue/payment 경고는 잔여 운영 리스크다. 이번 작업에서 계정 결제 설정은 변경하지 않았다.
+
+## 2026-07-21 Home·Perpetual 초보자 판단 과정 복원
+
+- 사용자 피드백에 따라 결론만 남기던 축약을 되돌리고, Home과 Perpetual이 같은 분석 ID를 유지한 채 `결론 → 위험 → 확인 가격 → 차트 → 판단 과정 → 포지션 쏠림·큰 체결 → Pro 심화 근거·AI·알림·판단 기록`으로 이어지게 재구성했다.
+- 기존 분석 자산을 삭제하지 않고 MSB·CHoCH를 `추세 방향 확인`, `추세 전환 가능성`으로 먼저 설명한 뒤 전문 약어를 괄호에 남겼다. Pro에는 15분·1시간·4시간별 정확한 발생 시각·가격, OB·FVG·Sweep·CISD·POC·PD, 청산 압력·큰 체결 상세 수치, 저장된 동일 분석 기반 AI 설명을 복원했다.
+- Basic은 15분 차트, 중요한 확인 가격, 추세·전환 과정, 정성적 포지션 쏠림과 큰 체결을 계속 볼 수 있다. Pro 소개는 한 카드로 통합하고 다중 시간대·고급 가격 구간·상세 수급 수치·AI 설명·전체 조건 감시라는 실제 차이를 명시했다.
+- Home 최상단의 풍부한 공식 경제 일정 카드를 복원해 사건명, 중요도, 한국시간 날짜·시각, 실제·예측·이전 값을 유지했다. 뉴스 반응이 있어도 일정을 숨기지 않으며, 관심코인 시세는 별도 관찰 영역에서 바로 보인다.
+- 사용자 표면의 `스냅샷`, `상방/하방 시나리오`, `무효화 기준`, 설명 없는 `ICT`, `공식 사건`을 각각 `시장 분석`, `가격이 오를 때/내릴 때 확인할 흐름`, `해석을 다시 볼 조건`, `고급 가격 구조`, `공식 발표·공시`처럼 쉬운 말로 정리했다.
+- 분석 상세 계약은 `perpetual-v1.1.0`으로 분리해 구형 저장 결과와 섞이지 않게 했고, 이미 저장된 조건 감시 ID는 `perpetual-v1.0.0` 호환을 유지했다. 일시적 갱신 실패 시 Pro 근거는 읽기 전용으로 보존하고 조건 감시만 막는다.
+- CLI Playwright로 360×800 Home과 390×844 Perpetual을 확인했다. Home의 일정·결론·위험·확인 가격·상세 CTA가 첫 화면 안에 들어왔고, Perpetual의 차트·MSB/CHoCH 쉬운 설명·Basic/Pro 경계가 보이며 가로 overflow는 없었다. 증거는 `output/playwright/home-perpetual-beginner-v1/`에 있다.
+- 검증: `test:perpetual-snapshot`, `test:perpetual-briefing`, `test:perpetual-monitors`, `test:futures-brief`, `test:push-targets`, `smoke:copy`, `smoke:ops`, `smoke:mobile`, `smoke:routes`, TypeScript, production build, CLI Playwright, 전체 `smoke:all` 통과.
+- 운영 DB, Vercel 환경변수, 실제 Push, deploy, AAB, 스토어 제출은 수행하지 않았다. 커밋·push도 수행하지 않았다.

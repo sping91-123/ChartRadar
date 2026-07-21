@@ -52,8 +52,8 @@ const barClass: Record<CoinSignalPressureTone, string> = {
 };
 
 const pillLabel: Record<CoinSignalPressureTone, string> = {
-  long: "상방",
-  short: "하방",
+  long: "위쪽",
+  short: "아래쪽",
   watch: "보기",
   risk: "위험",
   info: "참고"
@@ -133,16 +133,16 @@ const futuresPressureItems: Record<FuturesPressureMode, CoinSignalPressureItem[]
   major: [
     {
       label: "롱/숏 쏠림",
-      title: "레버리지·펀딩·포지션",
-      detail: "방향보다 롱/숏 과열과 진입 위험을 먼저 분리합니다.",
+      title: "몰린 포지션과 강제 청산 위험",
+      detail: "어느 쪽 포지션이 과하게 몰렸는지 보고, 가격이 반대로 움직일 때 커질 위험을 먼저 확인합니다.",
       tone: "risk",
       percent: 88,
       value: "우선"
     },
     {
-      label: "롱/숏 구조",
-      title: "MSB·CHoCH·OB·FVG",
-      detail: "구조 신호는 롱 우세/숏 우세 판단을 보조하는 값으로만 둡니다.",
+      label: "가격 흐름",
+      title: "추세·전환·반응 구간",
+      detail: "중요한 고점·저점과 큰 주문이 반응한 구간을 보고, 전문 지표명은 상세 화면에서 함께 설명합니다.",
       tone: "info",
       percent: 68
     },
@@ -348,9 +348,9 @@ export function CoinFuturesSignalPressurePanel({ mode, symbols: customSymbols }:
                   <span>{sideAction(report.dominantSide)}</span>
                   <span className="text-right text-ui-text">{mainTrigger(report)}</span>
                   <span>롱 포지션 {formatPlainPercent(report.globalLongShort.longPercent)}</span>
-                  <span className="text-right">계약 변화 {formatPercent(report.openInterestChangePercent)}</span>
-                  <span>숏 우세 압력 {report.downsideLongPressure}점</span>
-                  <span className="text-right">롱 우세 압력 {report.upsideShortPressure}점</span>
+                  <span className="text-right">열린 선물 규모 변화 {formatPercent(report.openInterestChangePercent)}</span>
+                  <span>가격 하락 시 롱 청산 위험 {report.downsideLongPressure}점</span>
+                  <span className="text-right">가격 상승 시 숏 청산 위험 {report.upsideShortPressure}점</span>
                 </div>
               </article>
             );
@@ -364,8 +364,8 @@ export function CoinFuturesSignalPressurePanel({ mode, symbols: customSymbols }:
 
       <CompactHelp label="데이터 기준">
         {isAltMode
-          ? `Binance 공개 선물 데이터에서 ${symbolLabelText}의 미결제약정, 펀딩비, 롱·숏 포지션 비율, 큰 매수/매도 체결을 묶어 진입 위험만 빠르게 보여줍니다.`
-          : `Binance 공개 선물 데이터에서 ${symbolLabelText}의 미결제약정, 펀딩비, 롱·숏 포지션 비율, 큰 매수/매도 체결을 묶어 진입 위험만 빠르게 보여줍니다.`}
+          ? `Binance 공개 선물 데이터에서 ${symbolLabelText}의 열린 선물 규모(OI), 롱·숏 균형 비용(펀딩비), 포지션 비율, 큰 매수·매도 체결을 묶어 가격이 급하게 움직일 위험을 보여줍니다.`
+          : `Binance 공개 선물 데이터에서 ${symbolLabelText}의 열린 선물 규모(OI), 롱·숏 균형 비용(펀딩비), 포지션 비율, 큰 매수·매도 체결을 묶어 가격이 급하게 움직일 위험을 보여줍니다.`}
       </CompactHelp>
     </PanelCard>
   );

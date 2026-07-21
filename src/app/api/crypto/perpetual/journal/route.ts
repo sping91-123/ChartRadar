@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { decisionJournalContextFromSnapshot } from "@/lib/journal";
+import { decisionStateLabel } from "@/lib/perpetualDecisionCopy";
 import { isUuid, monitorLinksSnapshot } from "@/lib/perpetualMonitor";
 import { getPerpetualDecisionSnapshotById } from "@/lib/server/perpetualDecisionSource";
 import { isPerpetualRevenueCoreUserEnabled } from "@/lib/server/perpetualRevenueCore";
+import { readNewsDecisionContext } from "@/lib/server/news/newsImpactStore";
+import { newsImpactRuntimePolicy } from "@/lib/server/newsImpactMode";
 import { recordServerProductEvent } from "@/lib/server/productEventStore";
 import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
 import { rateLimit, readJsonBodyLimited } from "@/lib/server/rateLimit";
@@ -23,13 +26,6 @@ function privateJson(body: unknown, init?: ResponseInit) {
   response.headers.set("Cache-Control", "private, no-store, max-age=0");
   response.headers.set("Vary", "Authorization");
   return response;
-}
-
-function biasLabel(state: string) {
-  if (state === "upside_watch") return "상방 확인 시나리오";
-  if (state === "downside_watch") return "하방 확인 시나리오";
-  if (state === "risk") return "리스크 우선";
-  return "범위 확인";
 }
 
 export async function POST(request: Request) {
@@ -59,6 +55,7 @@ export async function POST(request: Request) {
     snapshotId?: unknown;
     monitorId?: unknown;
     source?: unknown;
+    reactionId?: unknown;
   } | null>(request, 1_024);
   if (!parsed.ok && parsed.tooLarge) {
     return privateJson({ error: "복기 저장 요청이 너무 큽니다." }, { status: 413 });
@@ -68,16 +65,29 @@ export async function POST(request: Request) {
     !body ||
     typeof body !== "object" ||
     Array.isArray(body) ||
-    Object.keys(body).some((key) => key !== "snapshotId" && key !== "monitorId" && key !== "source") ||
+    Object.keys(body).some((key) => key !== "snapshotId" && key !== "monitorId" && key !== "source" && key !== "reactionId") ||
     !isUuid(body.snapshotId) ||
     (body.monitorId !== undefined && body.monitorId !== null && !isUuid(body.monitorId)) ||
-    (body.source !== undefined && body.source !== "snapshot" && body.source !== "alert")
+    (body.source !== undefined && body.source !== "snapshot" && body.source !== "alert" && body.source !== "news") ||
+    (body.reactionId !== undefined && body.reactionId !== null && !isUuid(body.reactionId))
   ) {
-    return privateJson({ error: "복기에 연결할 snapshot을 다시 확인해 주세요." }, { status: 400 });
+    return privateJson({ error: "복기에 연결할 분석을 다시 확인해 주세요." }, { status: 400 });
   }
-  const source = body.source === "alert" ? "alert" : "snapshot";
+  const source = body.source === "alert" ? "alert" : body.source === "news" ? "news" : "snapshot";
+  if (source === "news" && !newsImpactRuntimePolicy().mutate) {
+    return privateJson({ error: "뉴스 임팩트 복기는 아직 공개되지 않았습니다.", code: "news_impact_not_active" }, { status: 409 });
+  }
   const snapshot = await getPerpetualDecisionSnapshotById(body.snapshotId);
-  if (!snapshot) return privateJson({ error: "복기에 연결할 snapshot을 찾지 못했습니다." }, { status: 404 });
+  if (!snapshot) return privateJson({ error: "복기에 연결할 분석을 찾지 못했습니다." }, { status: 404 });
+  if (source === "news" && !entitlement.isPaid) {
+    return privateJson({ error: "뉴스 판단 복기는 Coin Pro에서 사용할 수 있습니다.", upgradePath: "/pro?market=crypto&source=news" }, { status: 403 });
+  }
+  const newsContext = source === "news" && body.reactionId
+    ? await readNewsDecisionContext(body.reactionId, snapshot.asset, snapshot.id).catch(() => null)
+    : null;
+  if (source === "news" && !newsContext) {
+    return privateJson({ error: "뉴스 사건과 동일한 자산·분석 연결을 확인하지 못했습니다." }, { status: 400 });
+  }
 
   let monitorId: string | null = null;
   if (body.monitorId) {
@@ -87,7 +97,7 @@ export async function POST(request: Request) {
     const monitor = rows[0];
     const linkedToSnapshot = Boolean(monitor && monitorLinksSnapshot(monitor, snapshot.id, source === "alert"));
     if (!monitor || !linkedToSnapshot) {
-      return privateJson({ error: "이 계정의 조건 감시와 snapshot 연결을 확인하지 못했습니다." }, { status: 400 });
+      return privateJson({ error: "이 계정의 조건 감시와 분석 연결을 확인하지 못했습니다." }, { status: 400 });
     }
     monitorId = monitor.id;
   }
@@ -98,8 +108,8 @@ export async function POST(request: Request) {
       prefer: "return=representation",
       body: {
         user_id: entitlement.userId,
-        title: `${snapshot.symbol} 선물 리스크 스냅샷`,
-        bias: biasLabel(snapshot.summary.state),
+        title: `${snapshot.symbol} ${source === "news" ? "뉴스 판단 복기" : "선물 시장 분석"}`,
+        bias: decisionStateLabel(snapshot.summary.state),
         note: `${snapshot.summary.topRisk}\n다음 확인: ${snapshot.summary.primaryCondition.label}`,
         market: "crypto",
         source,
@@ -108,19 +118,26 @@ export async function POST(request: Request) {
         verdict: snapshot.summary.headline,
         decision_snapshot_id: snapshot.id,
         monitor_id: monitorId,
-        decision_context: decisionJournalContextFromSnapshot(snapshot)
+        decision_context: {
+          ...decisionJournalContextFromSnapshot(snapshot),
+          ...(newsContext ? { news: newsContext } : {})
+        },
+        news_event_id: newsContext?.eventId ?? null,
+        news_reaction_id: newsContext?.reactionId ?? null
       }
     });
     const journal = rows[0];
     if (!journal) throw new Error("journal_create_empty");
     await recordServerProductEvent({
-      eventName: "journal_saved",
+      eventName: source === "news" ? "news_journal_saved" : "journal_saved",
       userId: entitlement.userId,
       surface: "journal",
       asset: snapshot.asset,
       snapshotId: snapshot.id,
       monitorId,
-      properties: { source }
+      properties: { source },
+      newsEventId: newsContext?.eventId,
+      newsReactionId: newsContext?.reactionId
     });
     return privateJson({ journal }, { status: 201 });
   } catch (error) {

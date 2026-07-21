@@ -133,7 +133,7 @@ function SpotPlanGrid({
           <p className="mt-1 truncate text-xs font-semibold text-ui-text">{formatOptionalPrice(plan.secondPrice)}</p>
         </div>
         <div className="min-w-0 text-right">
-          <p className="text-[10px] font-semibold text-ui-subtle">무효화 기준</p>
+          <p className="text-[10px] font-semibold text-ui-subtle">이 가격이면 해석을 다시 확인</p>
           <p className="mt-1 truncate text-xs font-semibold text-ui-short">{formatOptionalPrice(plan.invalidationPrice)}</p>
         </div>
       </div>

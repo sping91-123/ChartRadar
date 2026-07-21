@@ -4,9 +4,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, BarChart3, CalendarClock, Gauge, LineChart, Loader2, Lock, Newspaper, RefreshCw, ShieldAlert, Sparkles, type LucideIcon } from "lucide-react";
-import { hasMarketEntitlement } from "@/lib/billing";
 import { withSupabaseAuth } from "@/lib/authFetch";
-import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
+import { newsImpactClassificationLabel, newsImpactTone } from "@/lib/newsImpactPresentation";
 
 type MarketMode = "Risk-On" | "Neutral" | "Risk-Off";
 type PressureTone = "supportive" | "burden" | "mixed";
@@ -45,7 +44,11 @@ type EventRiskItem = {
 };
 
 type NewsPressureItem = {
+  eventId: string;
+  reactionId: string | null;
+  classification: import("@/lib/newsImpact").NewsImpactClassification;
   source: string;
+  sourceUrl: string;
   title: string;
   originalTitle?: string;
   tone: PressureTone;
@@ -77,6 +80,7 @@ type RelationshipCheck = {
 };
 
 type DashboardPayload = {
+  capabilities: { canSeeProDetail: boolean; newsImpactEnabled: boolean };
   updatedAt: string;
   headline: string;
   marketMode: MarketMode;
@@ -475,7 +479,7 @@ function FuturesBlock({ payload, isPaid }: { payload: DashboardPayload; isPaid: 
       ) : (
         <p className="border-t border-ui-line/60 py-3 text-xs font-medium text-ui-subtle">지수선물 데이터 일부 확인 제한입니다.</p>
       )}
-      {!isPaid ? <LockedDetail title="NQ / ES / YM / RTY 상세">Global Pro에서는 지수선물 전체, 지수선물 엇갈림, 조건과 무효화 기준을 확인합니다.</LockedDetail> : null}
+      {!isPaid ? <LockedDetail title="미국 지수선물 상세">Global Pro에서는 주요 미국 지수선물 전체, 서로 엇갈리는 흐름, 확인 조건과 해석을 다시 볼 조건을 확인합니다.</LockedDetail> : null}
     </SectionShell>
   );
 }
@@ -534,35 +538,36 @@ function NewsBlock({ payload, isPaid }: { payload: DashboardPayload; isPaid: boo
   const items = isPaid ? payload.newsPressure.items : payload.newsPressure.items.slice(0, 1);
 
   return (
-    <SectionShell icon={Newspaper} title="오늘의 이벤트 압력" summary={payload.newsPressure.summary}>
+    <SectionShell icon={Newspaper} title="공식 사건 임팩트" summary={payload.newsPressure.summary}>
       {items.length ? (
         <div className="space-y-2">
           {items.map((item) => (
             <div key={`${item.source}-${item.title}`} className="border-t border-ui-line/60 py-3 first:border-t-0">
               <div className="flex items-start justify-between gap-2">
                 <p className="min-w-0 text-xs font-semibold text-ui-text">{item.title}</p>
-                {itemToneBadge({ tone: item.tone })}
+                <span className={`shrink-0 text-[10px] font-semibold ${newsImpactTone(item.classification) === "risk" ? "text-ui-risk" : newsImpactTone(item.classification) === "long" ? "text-ui-long" : "text-ui-watch"}`}>{newsImpactClassificationLabel(item.classification)}</span>
               </div>
               <p className="mt-1 text-[11px] font-medium text-ui-muted">{item.source}</p>
               {isPaid && item.originalTitle && item.originalTitle !== item.title ? (
                 <p className="mt-1 text-[10px] font-medium leading-4 text-ui-subtle [word-break:break-word]">원문: {item.originalTitle}</p>
               ) : null}
               {isPaid ? <p className="mt-2 text-[11px] font-medium leading-5 text-ui-muted [word-break:keep-all]">{item.summary}</p> : null}
+              <div className="mt-2 flex flex-wrap gap-3 text-[11px] font-semibold"><a className="text-ui-brand underline" href={`/news?market=global&event=${item.eventId}&source=global`}>사건 상세</a><a className="text-ui-muted underline" href={item.sourceUrl} target="_blank" rel="noreferrer">공식 원문</a></div>
             </div>
           ))}
         </div>
       ) : (
         <p className="border-t border-ui-line/60 py-3 text-xs font-medium text-ui-subtle">강한 이벤트 압력은 아직 제한적입니다.</p>
       )}
-      {!isPaid ? <LockedDetail title="이벤트 압력 상세">Global Pro에서는 핵심 일정과 뉴스 1~3개를 Risk-On, Risk-Off, 변동성 확대 요인으로 나눠 봅니다.</LockedDetail> : null}
+      {!isPaid ? <LockedDetail title="공식 사건 반응 상세">Global Pro에서는 전체 공식 출처, 15분·60분 시장 반응과 당시 판단 변화를 비교합니다.</LockedDetail> : null}
     </SectionShell>
   );
 }
 
-export function GlobalMarketPulse() {
-  const { profile } = useSupabaseAuth();
-  const isPaid = hasMarketEntitlement(profile?.plan, "stocks");
+export function GlobalMarketPulse({ requestedEventId = null }: { requestedEventId?: string | null }) {
   const [state, setState] = useState<PulseState>({ status: "loading" });
+  const isPaid = state.status === "ready" && state.payload.capabilities.canSeeProDetail;
+  const showPaywall = state.status === "ready" && !state.payload.capabilities.canSeeProDetail;
   const requestGenerationRef = useRef(0);
   const requestAbortRef = useRef<AbortController | null>(null);
 
@@ -576,7 +581,7 @@ export function GlobalMarketPulse() {
     }
     try {
       const response = await fetch(
-        `/api/stocks/market-board?ts=${Date.now()}`,
+        `/api/stocks/market-board?ts=${Date.now()}${requestedEventId ? `&event=${encodeURIComponent(requestedEventId)}` : ""}`,
         await withSupabaseAuth({ cache: "no-store", signal: controller.signal })
       );
       const data = (await response.json().catch(() => ({}))) as Partial<DashboardPayload> & { error?: string };
@@ -591,7 +596,7 @@ export function GlobalMarketPulse() {
         ? { ...current, refreshing: false, warning: message }
         : { status: "error", message });
     }
-  }, []);
+  }, [requestedEventId]);
 
   useEffect(() => {
     void load();
@@ -615,6 +620,9 @@ export function GlobalMarketPulse() {
   const payload = state.status === "ready" ? state.payload : null;
   const corePressures = useMemo(() => payload?.corePressures.slice(0, 3) ?? [], [payload]);
   const focusAssets = useMemo(() => (payload ? focusAssetsForPayload(payload) : []), [payload]);
+  const linkedNewsImpact = requestedEventId && payload
+    ? payload.newsPressure.items.find((item) => item.eventId === requestedEventId) ?? null
+    : null;
 
   return (
     <section className="min-w-0 overflow-hidden rounded-ui-lg bg-ui-panel p-4 sm:p-5">
@@ -639,7 +647,7 @@ export function GlobalMarketPulse() {
             <BarChart3 size={13} aria-hidden />
             자산레이더 보기
           </Link>
-          {!isPaid ? <ProCta /> : null}
+          {showPaywall ? <ProCta /> : null}
           <button
             type="button"
             onClick={() => load()}
@@ -681,6 +689,18 @@ export function GlobalMarketPulse() {
         </div>
       ) : payload ? (
         <>
+          {payload.capabilities.newsImpactEnabled && linkedNewsImpact ? (
+            <article className="mt-4 border-l-2 border-ui-brand bg-ui-elevated px-3 py-3" aria-label="뉴스에서 연결된 공식 사건">
+              <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-[10px] font-black uppercase tracking-[0.1em] text-ui-brand">뉴스에서 연결된 공식 사건</p><span className="text-xs font-semibold text-ui-watch">{newsImpactClassificationLabel(linkedNewsImpact.classification)}</span></div>
+              <h3 className="mt-2 text-sm font-semibold leading-6 text-ui-text [word-break:keep-all]">{linkedNewsImpact.title}</h3>
+              <p className="mt-1 text-xs leading-5 text-ui-muted [word-break:keep-all]">{linkedNewsImpact.summary}</p>
+              <Link href={`/news?market=global&event=${linkedNewsImpact.eventId}`} className="mt-2 inline-flex text-xs font-semibold text-ui-brand underline">공식 사건 상세 보기</Link>
+            </article>
+          ) : payload.capabilities.newsImpactEnabled && requestedEventId ? (
+            <div className="mt-4 border-l-2 border-ui-risk bg-ui-risk/10 px-3 py-2 text-xs font-semibold leading-5 text-ui-risk" role="alert">
+              요청한 공식 사건이 Global 시장 범위와 일치하지 않거나 현재 사용할 수 없습니다. 다른 사건으로 자동 전환하지 않았습니다.
+            </div>
+          ) : null}
           <div className="mt-4 grid gap-3 lg:grid-cols-[1.1fr_1fr]">
             <article className="rounded-ui-lg bg-ui-elevated p-3">
               <div className="flex items-start justify-between gap-3">
@@ -716,10 +736,10 @@ export function GlobalMarketPulse() {
             <PrimaryRiskBlock payload={payload} pressures={corePressures} />
           </div>
 
-          {!isPaid ? (
+          {showPaywall ? (
             <div className="mt-3 rounded-ui-lg border border-ui-brand/20 bg-ui-brand/10 p-3 sm:flex sm:items-center sm:justify-between sm:gap-4">
               <p className="text-xs font-medium leading-5 text-ui-brand [word-break:keep-all]">
-                Basic에서는 방향 요약만 제공합니다. 상세 조건, 무효화 기준, 세부 리스크는 Global Pro에서 확인할 수 있습니다. 이 정보는 투자 권유가 아니라 판단 보조용입니다.
+                Basic에서는 방향 요약만 제공합니다. 확인할 조건, 해석을 다시 볼 조건, 세부 위험은 Global Pro에서 확인할 수 있습니다. 이 정보는 투자 권유가 아니라 판단 보조용입니다.
               </p>
               <div className="mt-3 shrink-0 sm:mt-0">
                 <ProCta compact />
@@ -731,7 +751,7 @@ export function GlobalMarketPulse() {
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ui-subtle">세부 근거</p>
             <h3 className="mt-1 text-base font-semibold text-ui-text">판정 근거</h3>
             <p className="mt-2 text-xs font-medium leading-5 text-ui-muted [word-break:keep-all]">
-              시장 온도계, 자산 관계성, 지수선물, 매크로, 섹터, 일정/뉴스 압력을 나눠 봅니다.
+              시장 온도계, 자산 관계성, 지수선물, 매크로, 섹터, 일정과 공식 사건 반응을 나눠 봅니다.
             </p>
           </div>
 
@@ -748,7 +768,7 @@ export function GlobalMarketPulse() {
             <MacroBlock payload={payload} isPaid={isPaid} />
             <SectorBlock payload={payload} isPaid={isPaid} />
             <LeaderBlock payload={payload} isPaid={isPaid} />
-            <NewsBlock payload={payload} isPaid={isPaid} />
+            {payload.capabilities.newsImpactEnabled ? <NewsBlock payload={payload} isPaid={isPaid} /> : null}
           </div>
         </>
       ) : null}

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cryptoAlertConditionLimit } from "@/lib/billing";
-import { findSnapshotCondition, isMonitorConditionMet, type PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
+import { findSnapshotCondition, isMonitorConditionMet, perpetualDecisionEngineVersion, type PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
 import { isUuid, type PerpetualMonitorStatus } from "@/lib/perpetualMonitor";
 import {
   getPerpetualDecisionSnapshotById,
@@ -68,7 +68,7 @@ function storeFailure(error: unknown) {
     return privateJson({ error: "완료되거나 취소된 1회성 조건은 같은 snapshot에서 다시 시작할 수 없습니다.", code: "snapshot_not_actionable" }, { status: 409 });
   }
   if (message.includes("snapshot_not_found")) {
-    return privateJson({ error: "저장된 snapshot을 찾지 못했습니다. 최신 상태를 다시 확인해 주세요.", code: "snapshot_not_actionable" }, { status: 409 });
+    return privateJson({ error: "저장된 분석을 찾지 못했습니다. 최신 상태를 다시 확인해 주세요.", code: "snapshot_not_actionable" }, { status: 409 });
   }
   console.error("[api/crypto/perpetual/monitors] store error", error);
   return privateJson({ error: "조건 감시 저장소를 사용할 수 없습니다.", code: "monitor_store_unavailable" }, { status: 503 });
@@ -96,7 +96,7 @@ export async function GET(request: Request) {
     : undefined;
   try {
     const monitorLimit = cryptoAlertConditionLimit(entitlement.plan);
-    await markExpiredPerpetualMonitors("perpetual-v1.0.0");
+    await markExpiredPerpetualMonitors(perpetualDecisionEngineVersion);
     await reconcilePerpetualMonitorLimit(entitlement.userId!, monitorLimit);
     const [monitors, usage] = await Promise.all([
       listUserPerpetualMonitors(entitlement.userId!, status),
@@ -151,7 +151,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await markExpiredPerpetualMonitors("perpetual-v1.0.0");
+    await markExpiredPerpetualMonitors(perpetualDecisionEngineVersion);
     await reconcilePerpetualMonitorLimit(entitlement.userId!, cryptoAlertConditionLimit(entitlement.plan));
   } catch (error) {
     return storeFailure(error);

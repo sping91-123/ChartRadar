@@ -1,8 +1,16 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { CandlestickSeries, ColorType, LineStyle, createChart } from "lightweight-charts";
+import { CandlestickSeries, ColorType, LineStyle, createChart, createSeriesMarkers, type SeriesMarker, type Time } from "lightweight-charts";
 import type { PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
+
+function markerTime(occurredAt: string | null, candleTimes: Set<number>) {
+  if (!occurredAt) return null;
+  const parsed = Date.parse(occurredAt);
+  if (!Number.isFinite(parsed)) return null;
+  const seconds = Math.floor(parsed / 1000);
+  return candleTimes.has(seconds) ? (seconds as Time) : null;
+}
 
 export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot: PerpetualDecisionSnapshot; compact?: boolean }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -12,7 +20,7 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
     if (!container) return;
     const chart = createChart(container, {
       width: container.clientWidth,
-      height: compact ? 172 : 280,
+      height: compact ? 190 : 360,
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
         textColor: "#94a3b8",
@@ -54,9 +62,66 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
         lineWidth: 1,
         lineStyle: condition.role === "primary" ? LineStyle.Solid : LineStyle.Dashed,
         axisLabelVisible: true,
-        title: condition.role === "primary" ? "다음 확인" : condition.role === "confirmation" ? "추가 확인" : "판단 변경"
+        title: condition.role === "primary" ? "먼저 확인" : condition.role === "confirmation" ? "추가 확인" : "해석 재확인"
       });
     });
+
+    const primaryEvidence = snapshot.pro?.multiTimeframeEvidence.find((item) => item.timeframe === "15m");
+    const details = primaryEvidence?.details;
+    if (details) {
+      const candleTimes = new Set(snapshot.chart.candles.map((candle) => candle.time));
+      const markers: SeriesMarker<Time>[] = [];
+      const msbTime = markerTime(details.events.msb?.occurredAt ?? null, candleTimes);
+      if (msbTime && details.events.msb) {
+        markers.push({
+          time: msbTime,
+          position: details.events.msb.direction === "bullish" ? "belowBar" : "aboveBar",
+          color: details.events.msb.direction === "bullish" ? "#34d399" : "#fb7185",
+          shape: details.events.msb.direction === "bullish" ? "arrowUp" : "arrowDown",
+          text: "추세 확인"
+        });
+      }
+      const chochTime = markerTime(details.events.choch?.occurredAt ?? null, candleTimes);
+      if (chochTime && details.events.choch) {
+        markers.push({
+          time: chochTime,
+          position: details.events.choch.direction === "bullish" ? "belowBar" : "aboveBar",
+          color: "#fbbf24",
+          shape: "circle",
+          text: "전환 가능"
+        });
+      }
+      if (markers.length) {
+        markers.sort((left, right) => Number(left.time) - Number(right.time));
+        createSeriesMarkers(series, markers);
+      }
+
+      const zoneLines = [
+        ...(details.zones.orderBlock
+          ? [
+              { price: details.zones.orderBlock.top, color: "#2dd4bf", title: "큰 주문 구간 위" },
+              { price: details.zones.orderBlock.bottom, color: "#2dd4bf", title: "큰 주문 구간 아래" }
+            ]
+          : []),
+        ...(details.zones.fvg
+          ? [
+              { price: details.zones.fvg.top, color: "#38bdf8", title: "빠른 이동 구간 위" },
+              { price: details.zones.fvg.bottom, color: "#38bdf8", title: "빠른 이동 구간 아래" }
+            ]
+          : []),
+        details.location.poc
+          ? { price: details.location.poc.poc, color: "#f59e0b", title: "거래 집중 가격" }
+          : null
+      ].filter((line): line is { price: number; color: string; title: string } => Boolean(line && Number.isFinite(line.price)));
+      zoneLines.forEach((line) => series.createPriceLine({
+        price: line.price,
+        color: line.color,
+        lineWidth: 1,
+        lineStyle: LineStyle.Dotted,
+        axisLabelVisible: true,
+        title: line.title
+      }));
+    }
     chart.timeScale().fitContent();
 
     const observer = new ResizeObserver(() => {
@@ -77,5 +142,5 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
     );
   }
 
-  return <div ref={containerRef} className="w-full" role="img" aria-label={`${snapshot.symbol} 15분 확정 캔들과 판단 조건 차트`} />;
+  return <div ref={containerRef} className="w-full" role="img" aria-label={`${snapshot.symbol} 15분 캔들, 추세 변화, 확인 가격 차트`} />;
 }

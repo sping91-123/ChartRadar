@@ -1,7 +1,7 @@
 "use client";
 // 사용자가 받을 레이더 알림 조건을 설정하고 Pro 가치를 확인하는 패널입니다.
 import { useEffect, useMemo, useState } from "react";
-import { BellRing, CheckCircle2, Clock3, Crown, Loader2, Radar, ShieldCheck } from "lucide-react";
+import { BellRing, CheckCircle2, Clock3, Crown, Loader2, Newspaper, Radar, ShieldCheck } from "lucide-react";
 import { ActionButton, AppSurface, DataRow, MetricRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import {
   getDefaultRadarAlertRuleIds,
@@ -137,7 +137,8 @@ function readStoredRuleIds(market: AlertMarket): RadarAlertRuleId[] {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return defaults;
     const allowed = new Set(radarAlertRules.map((rule) => rule.id));
-    return parsed
+    const migrated = parsed.map((id) => id === "macro-news" ? "macro-event-reminder" : id);
+    return migrated
       .filter((id): id is RadarAlertRuleId => typeof id === "string" && allowed.has(id as RadarAlertRuleId))
       .filter((id) => {
         const rule = radarAlertRules.find((item) => item.id === id);
@@ -392,7 +393,7 @@ function RuleCard({
   );
 }
 
-export function RadarAlertCenter({ compact = false, market = "crypto" }: { compact?: boolean; market?: AlertMarket }) {
+export function RadarAlertCenter({ compact = false, market = "crypto", newsImpactEnabled = false }: { compact?: boolean; market?: AlertMarket; newsImpactEnabled?: boolean }) {
   const { session, user, profile, isLoading: isAuthLoading } = useSupabaseAuth();
   const isPaid = hasMarketEntitlement(profile?.plan, market);
   const copy = alertMarketCopy[market];
@@ -968,6 +969,23 @@ export function RadarAlertCenter({ compact = false, market = "crypto" }: { compa
           })}
         </div>
       </PanelCard>
+
+      {newsImpactEnabled ? (
+        <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
+          <SectionHeader
+            title="News Impact 알림"
+            description="공식 사건 자체가 아니라, 발표 이후 기존 판단과 충돌하거나 리스크가 커진 경우만 별도로 알립니다. 기본값은 OFF입니다."
+            action={<StatusPill tone={isPaid ? "watch" : "locked"}>{isPaid ? "Pro · 직접 선택" : "Pro 필요"}</StatusPill>}
+          />
+          <ActionButton
+            href={market === "stocks" ? "/news?market=global" : "/crypto/news"}
+            tone="secondary"
+            className="mt-3 w-full sm:w-auto"
+          >
+            <Newspaper size={14} aria-hidden /> 뉴스 화면에서 알림 설정
+          </ActionButton>
+        </PanelCard>
+      ) : null}
 
       {isAdmin ? (
         <AppSurface tone="inset" padding="md" className="space-y-4 border-amber-400/24 shadow-none">

@@ -9,13 +9,14 @@ import { LiveMarketChart } from "@/components/LiveMarketChart";
 import { RadarTopNav } from "@/components/RadarTopNav";
 import { SetupScoutPanel } from "@/components/SetupScoutPanel";
 import { WatchlistPanel } from "@/components/WatchlistPanel";
+import { isNewsImpactUiEnabled, newsImpactMode } from "@/lib/server/newsImpactMode";
 
 export default function CryptoPerpetualAltsPage() {
   return (
     <main className="min-h-screen px-3 pb-28 sm:px-5 sm:pb-16">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 sm:gap-3">
         <Header market="crypto" />
-        <RadarTopNav />
+        <RadarTopNav newsImpactEnabled={isNewsImpactUiEnabled(newsImpactMode())} />
         <CoinFuturesSwitch active="alts" />
         <CoinFuturesBrief mode="alts" />
         <AltFuturesSignalSection />

@@ -1,4 +1,5 @@
 import type { PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
+import type { NewsDecisionContext } from "@/lib/newsImpact";
 
 /** Scout 셋업 저장 시 결과 추적용 구조화 데이터 */
 export interface ScoutSnapshot {
@@ -30,6 +31,7 @@ export interface DecisionJournalContext {
     label: string;
     role: "primary" | "confirmation" | "invalidation";
   };
+  news?: NewsDecisionContext;
 }
 
 export function decisionJournalContextFromSnapshot(snapshot: PerpetualDecisionSnapshot): DecisionJournalContext {
@@ -57,7 +59,7 @@ export interface JournalEntry {
   note: string;
   createdAt: string;
   market?: "crypto" | "stocks";
-  source?: "manual" | "chart" | "scout" | "snapshot" | "alert";
+  source?: "manual" | "chart" | "scout" | "snapshot" | "alert" | "news";
   symbol?: string;
   timeframe?: string;
   verdict?: string;
@@ -69,6 +71,8 @@ export interface JournalEntry {
   outcomeAt?: string;
   decisionSnapshotId?: string;
   monitorId?: string;
+  newsEventId?: string;
+  newsReactionId?: string;
   decisionContext?: DecisionJournalContext;
 }
 

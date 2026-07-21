@@ -7,13 +7,7 @@ const restTableColumnsCache = new Map<string, Set<string>>();
 
 async function fetchWithOptionalTimeout(url: string, init: RequestInit, timeoutMs?: number) {
   if (!timeoutMs) return fetch(url, init);
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(timeoutId);
-  }
+  return fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
 }
 
 export function isSupabaseAdminConfigured() {

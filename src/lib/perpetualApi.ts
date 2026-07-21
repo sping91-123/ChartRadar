@@ -1,4 +1,5 @@
 import type { PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
+import type { NewsDecisionContext } from "@/lib/newsImpact";
 import type { PerpetualRevenueCoreMode } from "@/lib/server/perpetualRevenueCore";
 
 export interface PerpetualSnapshotCapabilities {
@@ -20,6 +21,7 @@ export interface PerpetualSnapshotResponse {
     requestedSnapshotId?: string;
   };
   capabilities?: PerpetualSnapshotCapabilities;
+  newsContext?: NewsDecisionContext | null;
   mode?: PerpetualRevenueCoreMode;
   error?: string;
 }

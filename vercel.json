@@ -24,6 +24,9 @@
     },
     "src/app/api/macro-sync/route.ts": {
       "regions": ["icn1"]
+    },
+    "src/app/api/news-sync/route.ts": {
+      "regions": ["sin1"]
     }
   },
   "crons": [
@@ -34,6 +37,10 @@
     {
       "path": "/api/macro-sync",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/news-sync",
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/account-deletions/process",

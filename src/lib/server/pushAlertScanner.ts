@@ -10,7 +10,9 @@ import { tokenPreferenceDecision } from "@/lib/server/push/preferences";
 import { buildUserPresetEvents } from "@/lib/server/push/presetEvents";
 import { groupPresetsByUser, presetCountForMarket, presetScanInputsForMarket } from "@/lib/server/push/presets";
 import { scanLiquidationEvent } from "@/lib/server/push/scanners/liquidationScanner";
-import { scanMacroCalendarEvent, scanNewsEvent } from "@/lib/server/push/scanners/macroScanner";
+import { scanMacroCalendarEvent } from "@/lib/server/push/scanners/macroScanner";
+import { deliverNewsImpactOutbox } from "@/lib/server/news/newsImpactAlertOutbox";
+import { isNewsImpactPushEnabled, newsImpactMode } from "@/lib/server/newsImpactMode";
 import { scanCryptoSetups, scanStockSetups, stockMomentumSymbols } from "@/lib/server/push/scanners/setupScanner";
 import { sendEventToUser } from "@/lib/server/push/sendPush";
 import { runPerpetualMonitorScan, type PerpetualMonitorScanResult } from "@/lib/server/perpetualMonitorScanner";
@@ -91,6 +93,18 @@ export async function runPushAlertScan(context: ScanContext) {
     };
   }
 
+  let newsImpact = { events: 0, sent: 0, failed: 0, inAppOnly: 0 };
+  if (!dryRun) {
+    try {
+      newsImpact = await deliverNewsImpactOutbox(
+        context.pushDeliveryEnabled !== false && newsImpactMode() === "on" && isNewsImpactPushEnabled()
+      );
+    } catch (error) {
+      const message = safeErrorMessage(error);
+      warnings.push(`news-impact-outbox: ${message}`);
+    }
+  }
+
   const tokens = await readRows<PushTokenRow>(
     "push_tokens",
     "push_tokens?select=id,user_id,token,markets,rule_ids&enabled=eq.true&platform=eq.android&provider=eq.fcm&limit=500"
@@ -101,10 +115,10 @@ export async function runPushAlertScan(context: ScanContext) {
     }
     return {
       users: 0,
-      events: perpetual.triggered,
-      sent: perpetual.sent,
+      events: perpetual.triggered + newsImpact.events,
+      sent: perpetual.sent + newsImpact.sent,
       skipped: 0,
-      failed: perpetual.failed,
+      failed: perpetual.failed + newsImpact.failed,
       sources: {
         succeeded: [],
         skipped: [],
@@ -113,7 +127,8 @@ export async function runPushAlertScan(context: ScanContext) {
       warnings,
       diagnostics: emptyDiagnostics({ lookupErrorCount, scannerErrorCount }),
       eventDiagnostics,
-      perpetual
+      perpetual,
+      newsImpact
     };
   }
 
@@ -143,9 +158,8 @@ export async function runPushAlertScan(context: ScanContext) {
   );
   const optionalEventSources = await Promise.all([
     scanOptionalEventSource("liquidation-pressure", scanLiquidationEvent),
-    scanOptionalEventSource("radar-news-crypto", () => scanNewsEvent(context.origin, "crypto")),
-    scanOptionalEventSource("radar-news-stocks", () => scanNewsEvent(context.origin, "stocks")),
-    scanOptionalEventSource("macro-calendar-stocks", () => scanMacroCalendarEvent(context.origin))
+    scanOptionalEventSource("macro-calendar-crypto", () => scanMacroCalendarEvent(context.origin, "crypto")),
+    scanOptionalEventSource("macro-calendar-stocks", () => scanMacroCalendarEvent(context.origin, "stocks"))
   ]);
   warnings.push(
     ...optionalEventSources
@@ -289,10 +303,10 @@ export async function runPushAlertScan(context: ScanContext) {
 
   return {
     users: userIds.length,
-    events: events + perpetual.triggered,
-    sent: sent + perpetual.sent,
+    events: events + perpetual.triggered + newsImpact.events,
+    sent: sent + perpetual.sent + newsImpact.sent,
     skipped,
-    failed: failed + perpetual.failed,
+    failed: failed + perpetual.failed + newsImpact.failed,
     sources: {
       succeeded: optionalEventSources.filter((source) => !source.warning && source.event).map((source) => source.label),
       skipped: optionalEventSources.filter((source) => !source.warning && !source.event).map((source) => source.label),
@@ -338,6 +352,7 @@ export async function runPushAlertScan(context: ScanContext) {
         .slice(0, 8)
     }),
     eventDiagnostics,
-    perpetual
+    perpetual,
+    newsImpact
   };
 }

@@ -7,6 +7,23 @@ const baseUrl = (process.env.SMOKE_BASE_URL ?? "http://127.0.0.1:3000").replace(
 const timeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 45_000);
 const smokeClientIp = `127.0.1.${Math.floor(Math.random() * 200) + 20}`;
 
+async function detectNewsImpactMode() {
+  const override = process.env.SMOKE_NEWS_IMPACT_MODE;
+  if (override === "off" || override === "shadow" || override === "on") return override;
+  try {
+    const response = await fetch(`${baseUrl}/api/news-impact?market=crypto&asset=btc`, {
+      headers: { "x-forwarded-for": smokeClientIp }
+    });
+    const payload = await response.json();
+    if (payload?.mode === "off" || payload?.mode === "shadow" || payload?.mode === "on") return payload.mode;
+  } catch {}
+  const configured = process.env.NEWS_IMPACT_V1;
+  return configured === "shadow" || configured === "on" ? configured : "off";
+}
+
+const newsImpactRuntimeMode = await detectNewsImpactMode();
+console.log(`News Impact runtime mode: ${newsImpactRuntimeMode}`);
+
 const pageChecks = [
   "/",
   "/account",
@@ -20,7 +37,6 @@ const pageChecks = [
   "/crypto/alertlist",
   "/crypto/alertset",
   "/crypto/home",
-  "/crypto/news",
   "/crypto/perpetual",
   "/crypto/perpetual/alts",
   "/crypto/review",
@@ -33,7 +49,6 @@ const pageChecks = [
   "/learn",
   "/login",
   "/menu",
-  "/news?market=global",
   "/privacy",
   "/pro",
   "/refund",
@@ -41,6 +56,13 @@ const pageChecks = [
   "/stocks",
   "/terms"
 ].map((path) => ({ label: path, path }));
+
+const newsPageChecks = newsImpactRuntimeMode === "on"
+  ? ["/crypto/news", "/news?market=global"].map((path) => ({ label: `${path} (on)`, path }))
+  : [
+      { label: `/crypto/news (${newsImpactRuntimeMode})`, path: "/crypto/news", expectedStatus: [307, 308], expectedLocation: "/crypto/home" },
+      { label: `/news?market=global (${newsImpactRuntimeMode})`, path: "/news?market=global", expectedStatus: [307, 308], expectedLocation: "/global" }
+    ];
 
 const redirectChecks = [
   ["/crypto", "/crypto/home"],
@@ -53,7 +75,6 @@ const redirectChecks = [
   ["/settings", "/menu"],
   ["/pro/apply", "/pro"],
   ["/calculator", "/crypto/home"],
-  ["/news?market=crypto", "/crypto/news"],
   ["/alerts?market=crypto", "/crypto/alertlist"],
   ["/macro-calendar?market=global", "/schedule?market=global"]
 ].map(([path, expectedLocation]) => ({
@@ -63,12 +84,36 @@ const redirectChecks = [
   expectedLocation
 }));
 
+redirectChecks.push({
+  label: `/news?market=crypto → ${newsImpactRuntimeMode === "on" ? "/crypto/news" : "/crypto/home"}`,
+  path: "/news?market=crypto",
+  expectedStatus: [307, 308],
+  expectedLocation: newsImpactRuntimeMode === "on" ? "/crypto/news" : "/crypto/home"
+});
+
+if (newsImpactRuntimeMode === "on") {
+  const eventId = "20000000-0000-4000-8000-000000000001";
+  const snapshotId = "10000000-0000-4000-8000-000000000001";
+  redirectChecks.push({
+    label: "/news crypto compatibility link preserves decision context",
+    path: `/news?market=crypto&asset=eth&event=${eventId}&snapshot=${snapshotId}&source=alert&ignored=drop-me`,
+    expectedStatus: [307, 308],
+    expectedLocation: `/crypto/news?asset=eth&event=${eventId}&snapshot=${snapshotId}&source=alert`
+  });
+}
+
 const assetChecks = [
   "/robots.txt",
   "/sitemap.xml",
   "/manifest.webmanifest",
   "/api/health"
 ].map((path) => ({ label: path, path }));
+
+assetChecks.push({
+  label: "/api/news-impact?market=crypto&asset=btc",
+  path: "/api/news-impact?market=crypto&asset=btc",
+  expectedStatus: newsImpactRuntimeMode === "on" ? [200, 503] : [200]
+});
 
 const disabledBillingChecks = [
   {
@@ -88,6 +133,21 @@ const disabledBillingChecks = [
 ];
 
 const protectedApiChecks = [
+  {
+    label: "News Impact sync requires cron secret",
+    path: "/api/news-sync",
+    expectedStatus: [401]
+  },
+  {
+    label: "News Impact preference requires login",
+    path: "/api/news-impact/preferences?market=crypto",
+    expectedStatus: [401]
+  },
+  {
+    label: "News Impact detail rejects invalid IDs",
+    path: "/api/news-impact/not-a-uuid?market=crypto&asset=btc",
+    expectedStatus: [400]
+  },
   {
     label: "account deletion status requires login",
     path: "/api/account/deletion",
@@ -149,10 +209,17 @@ const protectedApiChecks = [
     method: "POST",
     body: { snapshotId: "70000000-0000-4000-8000-000000000001", source: "snapshot" },
     expectedStatus: [401]
+  },
+  {
+    label: "Perpetual AI explanation requires Coin Pro",
+    path: "/api/crypto/perpetual/briefing",
+    method: "POST",
+    body: { snapshotId: "70000000-0000-4000-8000-000000000001" },
+    expectedStatus: [401]
   }
 ];
 
-const checks = [...pageChecks, ...redirectChecks, ...assetChecks, ...disabledBillingChecks, ...protectedApiChecks];
+const checks = [...pageChecks, ...newsPageChecks, ...redirectChecks, ...assetChecks, ...disabledBillingChecks, ...protectedApiChecks];
 
 function walkPageFiles(directory) {
   if (!existsSync(directory)) return [];

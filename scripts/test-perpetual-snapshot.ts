@@ -106,7 +106,8 @@ function observation(timeframe: "15m" | "1h" | "4h", seconds: number, slope = 2)
     observedAt: "2026-07-19T11:59:00.000Z",
     closedPrice: latest.close,
     rangeHigh: latest.high,
-    rangeLow: latest.low
+    rangeLow: latest.low,
+    candleTimes: rows.map((candle) => candle.time)
   };
 }
 
@@ -135,6 +136,17 @@ const flow = buildLargeTradeFlowReport(
   new Date("2026-07-19T11:59:30.000Z").getTime()
 );
 
+const sellFlow = buildLargeTradeFlowReport(
+  "BTCUSDT",
+  Array.from({ length: 80 }, (_, index) => ({
+    p: String(60_000 + index),
+    q: "12",
+    T: new Date("2026-07-19T11:59:00.000Z").getTime() + index,
+    m: true
+  })),
+  new Date("2026-07-19T11:59:30.000Z").getTime()
+);
+
 function input(overrides: Partial<BuildPerpetualDecisionInput> = {}): BuildPerpetualDecisionInput {
   const frames = [observation("15m", 15 * 60), observation("1h", 60 * 60), observation("4h", 4 * 60 * 60)] as const;
   return {
@@ -159,10 +171,61 @@ assert.deepEqual(first, second, "fixed input must produce a deterministic snapsh
 assert.equal(first.asset, "btc");
 assert.equal(first.symbol, "BTCUSDT");
 assert.equal(first.exchange, "binance");
+assert.equal(first.engineVersion, "perpetual-v1.1.0", "the additive evidence schema must not reuse v1.0 storage buckets from the deployed engine");
 assert.equal(first.chart.candles.length, 96);
 assert.equal(first.quality, "ready");
-assert.ok(first.summary.primaryCondition.id.includes("perpetual-v1.0.0"));
+assert.ok(first.publicEvidence, "Basic payload must retain useful 15m structure, pressure, and flow evidence");
+assert.ok(first.publicEvidence.pressure?.summary.includes("강제 청산"), "Basic pressure copy must explain the practical risk in plain language");
+assert.ok(first.publicEvidence.flow?.summary.includes("큰 금액"), "Basic flow copy must explain what the observed trades mean");
+assert.equal(first.pro?.detailVersion, 1, "new snapshots must include the snapshot-native detail contract");
+assert.ok(first.pro?.multiTimeframeEvidence.every((evidence) => evidence.details), "all paid timeframes must retain their detailed evidence");
+assert.doesNotMatch(first.summary.headline, /상방 구조|하방 구조|유지 조건|스냅샷/, "the main conclusion must be understandable without internal jargon");
+assert.ok(first.summary.primaryCondition.id.includes("perpetual-v1.0.0"), "monitor IDs must remain compatible with already saved v1.0 conditions");
 assert.ok(new Date(first.summary.primaryCondition.expiresAt).getTime() > new Date(generatedAt).getTime());
+
+const readyConflict = buildPerpetualDecisionSnapshot(input({
+  id: "11111111-1111-4111-8111-111111111114",
+  fingerprint: "ready-conflict-fixture",
+  flow: sellFlow
+}));
+assert.equal(readyConflict.quality, "ready");
+assert.equal(readyConflict.summary.state, "risk");
+assert.match(
+  readyConflict.summary.primaryCondition.label,
+  /15분 가격 흐름과 큰 금액 체결이 같은 방향/,
+  "a ready conflict must describe the conflicting evidence instead of claiming data is missing"
+);
+
+const timed15m = observation("15m", 15 * 60);
+timed15m.analysis = {
+  ...timed15m.analysis,
+  latestMsbEvent: { timeframe: "15m", type: "msb", direction: "bullish", index: 280, level: 60_560 },
+  latestChochEvent: { timeframe: "15m", type: "choch", direction: "bearish", index: 250, level: 60_500 }
+};
+const timedFrames = [timed15m, observation("1h", 60 * 60), observation("4h", 4 * 60 * 60)] as const;
+const timedSnapshot = buildPerpetualDecisionSnapshot(input({
+  id: "11111111-1111-4111-8111-111111111113",
+  fingerprint: "timed-evidence-fixture",
+  timeframes: [...timedFrames]
+}));
+let checkedTimedEvents = 0;
+timedFrames.forEach((frame, index) => {
+  const storedEvidence = timedSnapshot.pro?.multiTimeframeEvidence[index];
+  for (const [rawEvent, storedEvent] of [
+    [frame.analysis.latestMsbEvent, storedEvidence?.details?.events.msb],
+    [frame.analysis.latestChochEvent, storedEvidence?.details?.events.choch]
+  ] as const) {
+    if (!rawEvent) continue;
+    checkedTimedEvents += 1;
+    assert.ok(storedEvent, "a detected structure event must be retained in the paid evidence contract");
+    assert.equal(
+      storedEvent.occurredAt,
+      new Date(frame.candleTimes![rawEvent.index]! * 1_000).toISOString(),
+      "an analyzer candle index must be converted to the exact UTC candle time"
+    );
+  }
+});
+assert.ok(checkedTimedEvents > 0, "the fixture must exercise at least one timed MSB or CHoCH event");
 
 const ethSnapshot = buildPerpetualDecisionSnapshot(input({
   id: "11111111-1111-4111-8111-111111111112",
@@ -180,9 +243,13 @@ for (const condition of [ethSnapshot.summary.primaryCondition, ...ethSnapshot.pr
 
 const basic = serializeBasicPerpetualSnapshot(first);
 assert.equal(Object.prototype.hasOwnProperty.call(basic, "pro"), false, "Basic payload must omit the pro key entirely");
+assert.ok(basic.publicEvidence, "Basic serialization must not strip the useful public evidence");
 const stored = serializeStoredPerpetualSnapshot(first);
 assert.equal(Object.prototype.hasOwnProperty.call(stored, "pro"), false, "stored public payload must omit the pro key");
 assert.equal(stored.chart.candles.length, 0, "raw candles must not be stored in snapshot payloads");
+const storedPayloadText = JSON.stringify({ publicPayload: stored, proPayload: first.pro });
+assert.doesNotMatch(storedPayloadText, /"originIndex"\s*:/, "stored evidence must convert analyzer indexes into timestamps");
+assert.doesNotMatch(storedPayloadText, /"index"\s*:/, "stored evidence must not leak raw analyzer candle indexes");
 
 const canonicalConflictRow = {
   id: "22222222-2222-4222-8222-222222222222",
@@ -208,7 +275,11 @@ const staleFallback = buildStalePerpetualDecisionFallback(first);
 assert.equal(staleFallback.quality, "stale");
 assert.equal(staleFallback.summary.state, "risk", "stale fallback must not preserve a directional state");
 assert.equal(staleFallback.summary.primaryCondition.kind, "decision_state_change");
-assert.equal(Object.prototype.hasOwnProperty.call(staleFallback, "pro"), false, "stale fallback must not expose actionable Pro conditions");
+assert.ok(staleFallback.pro, "a transient refresh failure must retain paid evidence in read-only mode");
+assert.deepEqual(staleFallback.pro.confirmationConditions, [], "stale paid evidence must not retain actionable confirmation conditions");
+assert.deepEqual(staleFallback.pro.invalidationConditions, [], "stale paid evidence must not retain actionable invalidation conditions");
+const staleBasicFallback = buildStalePerpetualDecisionFallback(basic);
+assert.equal(Object.prototype.hasOwnProperty.call(staleBasicFallback, "pro"), false, "a Basic stale fallback must not gain paid evidence");
 
 const delayedAlertSnapshot = { ...first, expiresAt: "2026-07-19T12:01:00.000Z" };
 const delayedOpenAt = new Date("2026-07-19T14:00:00.000Z");
@@ -238,6 +309,7 @@ const partial = buildPerpetualDecisionSnapshot(input({
 assert.equal(partial.quality, "partial");
 assert.equal(partial.summary.state, "risk", "partial data must not force a directional watch state");
 assert.equal(partial.summary.primaryCondition.kind, "decision_state_change");
+assert.match(partial.summary.primaryCondition.label, /빠진 데이터/, "partial data must explain what needs to recover");
 assert.deepEqual(partial.pro?.confirmationConditions, [], "partial data must not expose confirmation thresholds");
 assert.deepEqual(partial.pro?.invalidationConditions, [], "partial data must not expose invalidation thresholds");
 
@@ -249,7 +321,7 @@ const priceConditions = [
 ].filter((condition) => condition.kind === "price_cross_above" || condition.kind === "price_cross_below");
 assert.deepEqual(new Set(priceConditions.map((condition) => condition.timeframe)), new Set(["15m", "1h", "4h"]));
 for (const condition of priceConditions) {
-  assert.match(condition.label, /확정 종가/);
+  assert.match(condition.label, /봉이 끝나는지 확인/, "monitor copy must explain the closed-candle rule in beginner language");
   const threshold = condition.threshold ?? first.price;
   const metPrice = condition.kind === "price_cross_above" ? threshold + 1 : threshold - 1;
   const notMetPrice = condition.kind === "price_cross_above" ? threshold - 1 : threshold + 1;
@@ -290,6 +362,11 @@ assert.match(source, /fapi\.binance\.com/);
 assert.doesNotMatch(source, /data-api\.binance\.vision|api\/v3\/klines/, "canonical source must not fall back to Binance spot");
 assert.match(source, /endTime: String\(asOfMs\)/, "historical alert snapshots must hydrate candles at their generated time");
 assert.match(source, /asOf = new Date\(snapshot\.generatedAt\)/);
+assert.match(
+  source,
+  /quality=eq\.ready&engine_version=eq\.\$\{encodeURIComponent\(perpetualDecisionEngineVersion\)\}/,
+  "historical ready lookups must not mix an older evidence engine into current news continuity"
+);
 assert.match(source, /persistenceWarning\(error\);\s*\/\/[^]*?rememberSnapshot\(snapshot\);\s*return snapshot;/, "snapshot reads must retain an in-memory fallback when storage is unavailable");
 assert.match(
   source,
@@ -302,5 +379,11 @@ assert.doesNotMatch(
   /data-api\.binance\.vision|api\/v3\/klines/,
   "the required pressure source must not silently substitute Binance spot prices"
 );
+const homeSource = readFileSync(join(process.cwd(), "src/components/coin/HomePerpetualDecisionFlow.tsx"), "utf8");
+assert.doesNotMatch(homeSource, />[^<{]*(스냅샷|상방 확인 중|하방 확인 중|다음 확인 조건)[^<{]*</, "Home must not render internal or unexplained decision jargon");
+const macroSource = readFileSync(join(process.cwd(), "src/components/MacroTicker.tsx"), "utf8");
+assert.doesNotMatch(macroSource, /다음 매크로 ·/, "Home macro must not collapse the rich calendar card into a one-line summary");
+assert.match(macroSource, /오늘 거래 전 확인/, "Home macro must retain a visible daily-calendar heading");
+assert.match(macroSource, /recentReleased \?\? upcomingWithin24Hours \?\? nearestUpcoming \?\? previousReleased/, "an upcoming official event must outrank an old release on the daily Home card");
 
 console.log("Perpetual decision snapshot matrix passed.");

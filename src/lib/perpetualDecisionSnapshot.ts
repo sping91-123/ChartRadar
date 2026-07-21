@@ -2,7 +2,9 @@ import type { Candle, DirectionState, MarketRegime, TimeframeAnalysis } from "@/
 import type { LargeTradeFlowReport, LargeTradeSide } from "@/lib/largeTradeFlow";
 import type { LiquidationPressureReport, LiquidationPressureSide } from "@/lib/liquidationPressure";
 
-export const perpetualDecisionEngineVersion = "perpetual-v1.0.0";
+export const perpetualDecisionEngineVersion = "perpetual-v1.1.0";
+// Monitor IDs remain stable across the additive evidence-contract upgrade so existing alerts keep working.
+export const perpetualMonitorConditionVersion = "perpetual-v1.0.0";
 
 export type PerpetualAsset = "btc" | "eth";
 export type PerpetualSymbol = "BTCUSDT" | "ETHUSDT";
@@ -36,6 +38,47 @@ export interface MonitorCondition {
   expiresAt: string;
 }
 
+export interface PerpetualTimedLevel {
+  direction: "bullish" | "bearish";
+  level: number;
+  occurredAt: string | null;
+  ageBars: number | null;
+}
+
+export interface PerpetualPriceZone {
+  direction: "bullish" | "bearish";
+  top: number;
+  bottom: number;
+  occurredAt: string | null;
+  ageBars: number | null;
+  isInside: boolean;
+  state?: "fvg" | "ifvg";
+}
+
+export interface PerpetualEvidenceDetails {
+  events: {
+    msb: PerpetualTimedLevel | null;
+    choch: PerpetualTimedLevel | null;
+    sweep: PerpetualTimedLevel | null;
+    cisd: PerpetualTimedLevel | null;
+  };
+  zones: {
+    orderBlock: PerpetualPriceZone | null;
+    fvg: PerpetualPriceZone | null;
+  };
+  location: {
+    premiumDiscount: TimeframeAnalysis["premiumDiscount"];
+    dealingRange: TimeframeAnalysis["dealingRange"];
+    poc: TimeframeAnalysis["volumeProfile"];
+    oteZone: TimeframeAnalysis["oteZone"];
+    oteLevels: TimeframeAnalysis["oteLevels"];
+  };
+  indicators: Pick<
+    TimeframeAnalysis["condition"],
+    "rsi14" | "rsiState" | "macdState" | "atrPercent" | "volatilityState" | "volumeRatio" | "volumeState" | "bollingerPosition"
+  >;
+}
+
 export interface PerpetualDecisionEvidence {
   timeframe: "15m" | "1h" | "4h";
   label: string;
@@ -45,6 +88,7 @@ export interface PerpetualDecisionEvidence {
   regime: MarketRegime;
   observedAt: string;
   closedPrice: number;
+  details?: PerpetualEvidenceDetails;
 }
 
 export interface SnapshotChange {
@@ -75,6 +119,14 @@ export interface PerpetualDecisionSnapshot {
     pressure: SourceStatus;
     flow: SourceStatus;
   };
+  publicEvidence?: {
+    timeframe: "15m";
+    structure: DirectionState;
+    transition: DirectionState;
+    pressure: Pick<LiquidationPressureReport, "dominantSide" | "grade" | "summary"> | null;
+    flow: Pick<LargeTradeFlowReport, "dominantSide" | "grade" | "summary"> | null;
+    previousChange?: SnapshotChange | null;
+  };
   summary: {
     state: DecisionState;
     headline: string;
@@ -83,6 +135,7 @@ export interface PerpetualDecisionSnapshot {
     primaryCondition: MonitorCondition;
   };
   pro?: {
+    detailVersion?: 1;
     confirmationConditions: MonitorCondition[];
     invalidationConditions: MonitorCondition[];
     multiTimeframeEvidence: PerpetualDecisionEvidence[];
@@ -92,6 +145,21 @@ export interface PerpetualDecisionSnapshot {
       upsideShortPressure: number;
       downsideLongPressure: number;
       summary: string;
+      details?: {
+        observedAt: string;
+        markPrice: number;
+        indexPrice: number | null;
+        fundingRatePercent: number | null;
+        nextFundingTime: string | null;
+        openInterestValue: number | null;
+        openInterestChangePercent: number | null;
+        globalLongShort: LiquidationPressureReport["globalLongShort"];
+        topAccountLongShort: LiquidationPressureReport["topAccountLongShort"];
+        topPositionLongShort: LiquidationPressureReport["topPositionLongShort"];
+        takerFlow: LiquidationPressureReport["takerFlow"];
+        bands: LiquidationPressureReport["bands"];
+        warning: string;
+      };
     } | null;
     flow: {
       dominantSide: LargeTradeSide;
@@ -100,6 +168,20 @@ export interface PerpetualDecisionSnapshot {
       largeTradeCount: number;
       totalLargeNotionalUsd: number;
       summary: string;
+      details?: {
+        observedAt: string;
+        thresholdUsd: number;
+        windowMinutes: number | null;
+        tradeCount: number;
+        buyNotionalUsd: number;
+        sellNotionalUsd: number;
+        buyCount: number;
+        sellCount: number;
+        anomalyLevel: LargeTradeFlowReport["anomalyLevel"];
+        anomalyScore: number;
+        trigger: string;
+        topTrades: LargeTradeFlowReport["topTrades"];
+      };
     } | null;
     previousChange: SnapshotChange | null;
   };
@@ -112,6 +194,7 @@ export interface PerpetualTimeframeObservation {
   closedPrice: number;
   rangeHigh: number;
   rangeLow: number;
+  candleTimes?: number[];
 }
 
 export interface BuildPerpetualDecisionInput {
@@ -154,9 +237,93 @@ function structureValue(observation: PerpetualTimeframeObservation, weight: numb
 }
 
 function structureLabel(direction: DirectionState) {
-  if (direction === "bullish") return "상방";
-  if (direction === "bearish") return "하방";
-  return "혼조";
+  if (direction === "bullish") return "오르는 흐름";
+  if (direction === "bearish") return "내리는 흐름";
+  return "방향이 뚜렷하지 않음";
+}
+
+function occurredAt(candleTimes: number[] | undefined, index: number) {
+  const raw = candleTimes?.[index];
+  if (!Number.isFinite(raw)) return null;
+  const milliseconds = Number(raw) > 10_000_000_000 ? Number(raw) : Number(raw) * 1000;
+  const parsed = new Date(milliseconds);
+  return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : null;
+}
+
+function ageBars(candleTimes: number[] | undefined, index: number, fallback?: number) {
+  if (Number.isFinite(fallback)) return Math.max(0, Number(fallback));
+  if (!candleTimes?.length || !Number.isInteger(index) || index < 0 || index >= candleTimes.length) return null;
+  return Math.max(0, candleTimes.length - 1 - index);
+}
+
+function timedLevel(
+  event: { direction: "bullish" | "bearish"; level: number; index: number; age?: number } | null,
+  candleTimes?: number[]
+): PerpetualTimedLevel | null {
+  if (!event || !Number.isFinite(event.level)) return null;
+  return {
+    direction: event.direction,
+    level: event.level,
+    occurredAt: occurredAt(candleTimes, event.index),
+    ageBars: ageBars(candleTimes, event.index, event.age)
+  };
+}
+
+function priceZone(
+  zone: {
+    direction: "bullish" | "bearish";
+    top: number;
+    bottom: number;
+    originIndex: number;
+    age: number;
+    isInside: boolean;
+    state?: "fvg" | "ifvg";
+  } | null,
+  candleTimes?: number[]
+): PerpetualPriceZone | null {
+  if (!zone || !Number.isFinite(zone.top) || !Number.isFinite(zone.bottom)) return null;
+  return {
+    direction: zone.direction,
+    top: zone.top,
+    bottom: zone.bottom,
+    occurredAt: occurredAt(candleTimes, zone.originIndex),
+    ageBars: ageBars(candleTimes, zone.originIndex, zone.age),
+    isInside: zone.isInside,
+    ...(zone.state ? { state: zone.state } : {})
+  };
+}
+
+function evidenceDetails(observation: PerpetualTimeframeObservation): PerpetualEvidenceDetails {
+  const { analysis, candleTimes } = observation;
+  return {
+    events: {
+      msb: timedLevel(analysis.latestMsbEvent, candleTimes),
+      choch: timedLevel(analysis.latestChochEvent, candleTimes),
+      sweep: timedLevel(analysis.latestSweep, candleTimes),
+      cisd: timedLevel(analysis.latestCisd, candleTimes)
+    },
+    zones: {
+      orderBlock: priceZone(analysis.latestOb, candleTimes),
+      fvg: priceZone(analysis.latestFvg, candleTimes)
+    },
+    location: {
+      premiumDiscount: analysis.premiumDiscount,
+      dealingRange: analysis.dealingRange,
+      poc: analysis.volumeProfile,
+      oteZone: analysis.oteZone,
+      oteLevels: analysis.oteLevels
+    },
+    indicators: {
+      rsi14: analysis.condition.rsi14,
+      rsiState: analysis.condition.rsiState,
+      macdState: analysis.condition.macdState,
+      atrPercent: analysis.condition.atrPercent,
+      volatilityState: analysis.condition.volatilityState,
+      volumeRatio: analysis.condition.volumeRatio,
+      volumeState: analysis.condition.volumeState,
+      bollingerPosition: analysis.condition.bollingerPosition
+    }
+  };
 }
 
 function conditionId(
@@ -167,7 +334,7 @@ function conditionId(
   threshold: number | null
 ) {
   const normalizedThreshold = threshold === null ? "state" : Math.round(threshold / tickSizes[asset]);
-  return [perpetualDecisionEngineVersion, asset, timeframe, role, kind, normalizedThreshold].join(":");
+  return [perpetualMonitorConditionVersion, asset, timeframe, role, kind, normalizedThreshold].join(":");
 }
 
 function priceCondition({
@@ -193,7 +360,7 @@ function priceCondition({
     kind,
     role,
     timeframe,
-    label: `${timeframeLabels[timeframe]} 확정 종가 ${normalized.toLocaleString("ko-KR")} ${direction === "above" ? "상향 확인" : "하향 확인"}`,
+    label: `${normalized.toLocaleString("ko-KR")} ${direction === "above" ? "위" : "아래"}에서 ${timeframeLabels[timeframe]} 봉이 끝나는지 확인`,
     threshold: normalized,
     expiresAt: addHours(generatedAt, hours)
   };
@@ -202,14 +369,15 @@ function priceCondition({
 function stateChangeCondition(
   asset: PerpetualAsset,
   generatedAt: string,
-  baselineState: DecisionState
+  baselineState: DecisionState,
+  label = "빠진 데이터가 다시 들어오고 방향 신호가 한쪽으로 모이는지 확인"
 ): MonitorCondition {
   return {
     id: conditionId(asset, "15m", "primary", "decision_state_change", null),
     kind: "decision_state_change",
     role: "primary",
     timeframe: "15m",
-    label: "데이터와 구조가 정상화되어 위험 상태가 바뀌는지 확인",
+    label,
     threshold: null,
     baselineState,
     expiresAt: addHours(generatedAt, 24)
@@ -230,6 +398,22 @@ function pressureValue(pressure: LiquidationPressureReport | null, status: Sourc
   if (pressure.dominantSide === "upsideShorts") return strength;
   if (pressure.dominantSide === "downsideLongs") return -strength;
   return 0;
+}
+
+function publicPressureSummary(pressure: LiquidationPressureReport) {
+  if (pressure.dominantSide === "upsideShorts") {
+    return "가격 하락에 건 숏 포지션이 더 몰려 있어 가격이 오르면 강제 청산이 움직임을 키울 수 있어요.";
+  }
+  if (pressure.dominantSide === "downsideLongs") {
+    return "가격 상승에 건 롱 포지션이 더 몰려 있어 가격이 내리면 강제 청산이 움직임을 키울 수 있어요.";
+  }
+  return "롱과 숏의 쏠림이 비슷해 강제 청산이 한쪽 방향을 강하게 밀고 있지는 않아요.";
+}
+
+function publicFlowSummary(flow: LargeTradeFlowReport) {
+  if (flow.dominantSide === "buy") return "최근 큰 금액 체결은 매수가 더 많아 위쪽 움직임을 확인하는 근거가 됩니다.";
+  if (flow.dominantSide === "sell") return "최근 큰 금액 체결은 매도가 더 많아 아래쪽 움직임을 확인하는 근거가 됩니다.";
+  return "최근 큰 금액 매수와 매도가 비슷해 체결만으로는 방향을 정하기 어렵습니다.";
 }
 
 export function resolveSnapshotQuality(statuses: PerpetualDecisionSnapshot["sourceStatus"]): SnapshotQuality {
@@ -304,37 +488,44 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
   const headline =
     safeHeadline ??
     (state === "upside_watch"
-      ? "상방 구조가 확인 중이지만 유지 조건을 먼저 봅니다."
+      ? "오르는 힘이 조금 더 강하지만 아직 확정된 흐름은 아닙니다."
       : state === "downside_watch"
-        ? "하방 구조가 확인 중이지만 이탈 지속 여부를 먼저 봅니다."
+        ? "내리는 힘이 조금 더 강하지만 아직 확정된 흐름은 아닙니다."
         : state === "risk"
-          ? "구조와 체결 근거가 엇갈려 판단 강도를 낮춥니다."
-          : "단기와 상위 구조가 섞여 있어 범위 확인이 먼저입니다.");
+          ? "가격 흐름과 큰 체결이 서로 달라 지금은 기다리는 구간입니다."
+          : "한쪽 힘이 뚜렷하지 않아 다음 움직임을 기다리는 구간입니다.");
 
   const topRisk =
     quality !== "ready"
-      ? "데이터 품질이 회복되기 전에는 조건 감시를 시작하지 않습니다."
+      ? "일부 데이터가 늦거나 비어 있어 현재 결론을 그대로 믿기 어렵습니다."
       : flowConflict
-        ? "15분 구조와 큰 체결 방향이 반대라 첫 움직임이 되돌려질 수 있습니다."
+        ? "15분 가격 흐름과 큰 금액 체결이 반대라 첫 움직임이 되돌려질 수 있습니다."
         : timeframeConflict
-          ? "15분과 상위 시간대 구조가 반대라 변동성이 커질 수 있습니다."
+          ? "15분 흐름과 1시간·4시간 흐름이 반대라 짧게 크게 흔들릴 수 있습니다."
           : input.pressure?.grade === "extreme"
-            ? "청산 압력이 매우 높아 짧은 시간에 가격 변동이 커질 수 있습니다."
+            ? "한쪽 포지션이 많이 몰려 있어 급격한 반대 움직임이 나올 수 있습니다."
             : primary.analysis.condition.volatilityState === "expanded"
-              ? "15분 변동폭이 확대되어 한 번의 가격 확인만으로 판단하기 어렵습니다."
-              : "확인 조건 전에 가격을 추격하면 현재 판단이 빠르게 무효화될 수 있습니다.";
+              ? "평소보다 움직임이 커 작은 변동에도 현재 해석이 자주 바뀔 수 있습니다."
+              : "확인 가격에 닿기 전에 따라가면 되돌림에 흔들릴 수 있습니다.";
 
   const reasons: [string, string] = [
-    `15분 구조는 ${structureLabel(primary.analysis.msb)}, 1시간·4시간 구조는 ${structureLabel(hourly.analysis.msb)}·${structureLabel(fourHourly.analysis.msb)}입니다.`,
+    `15분은 ${structureLabel(primary.analysis.msb)}, 1시간은 ${structureLabel(hourly.analysis.msb)}, 4시간은 ${structureLabel(fourHourly.analysis.msb)}입니다.`,
     input.flow && input.pressure
-      ? `큰 체결은 ${input.flow.dominantSide === "buy" ? "매수" : input.flow.dominantSide === "sell" ? "매도" : "균형"}, 청산 압력은 ${input.pressure.dominantSide === "upsideShorts" ? "위쪽" : input.pressure.dominantSide === "downsideLongs" ? "아래쪽" : "균형"} 쪽을 관찰합니다.`
-      : "청산 압력 또는 큰 체결 근거가 일부 부족해 구조 신호의 확정 강도를 낮췄습니다."
+      ? `${publicFlowSummary(input.flow)} ${publicPressureSummary(input.pressure)}`
+      : "몰린 포지션이나 큰 금액 체결 데이터가 부족해 차트 흐름만으로 단정하지 않습니다."
   ];
 
   const primaryDirection: "above" | "below" =
     state === "downside_watch" || (state === "neutral" && totalScore < 0) ? "below" : "above";
   const primaryCondition = state === "risk"
-    ? stateChangeCondition(input.asset, input.generatedAt, state)
+    ? stateChangeCondition(
+        input.asset,
+        input.generatedAt,
+        state,
+        quality === "ready"
+          ? "15분 가격 흐름과 큰 금액 체결이 같은 방향으로 모이는지 확인"
+          : "빠진 데이터가 다시 들어오고 방향 신호가 한쪽으로 모이는지 확인"
+      )
     : priceCondition({
         asset: input.asset,
         generatedAt: input.generatedAt,
@@ -401,6 +592,26 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
       candles: input.chartCandles.slice(-96)
     },
     sourceStatus: input.sourceStatus,
+    publicEvidence: {
+      timeframe: "15m",
+      structure: primary.analysis.msb,
+      transition: primary.analysis.choch,
+      pressure: input.pressure
+        ? {
+            dominantSide: input.pressure.dominantSide,
+            grade: input.pressure.grade,
+            summary: publicPressureSummary(input.pressure)
+          }
+        : null,
+      flow: input.flow
+        ? {
+            dominantSide: input.flow.dominantSide,
+            grade: input.flow.grade,
+            summary: publicFlowSummary(input.flow)
+          }
+        : null,
+      previousChange
+    },
     summary: {
       state,
       headline,
@@ -409,6 +620,7 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
       primaryCondition
     },
     pro: {
+      detailVersion: 1,
       confirmationConditions: quality === "ready" ? confirmationConditions : [],
       invalidationConditions: quality === "ready" ? invalidationConditions : [],
       multiTimeframeEvidence: input.timeframes.map((observation) => ({
@@ -419,7 +631,8 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
         score: observation.analysis.score,
         regime: observation.analysis.condition.regime,
         observedAt: observation.observedAt,
-        closedPrice: observation.closedPrice
+        closedPrice: observation.closedPrice,
+        details: evidenceDetails(observation)
       })),
       pressure: input.pressure
         ? {
@@ -427,7 +640,22 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
             grade: input.pressure.grade,
             upsideShortPressure: input.pressure.upsideShortPressure,
             downsideLongPressure: input.pressure.downsideLongPressure,
-            summary: input.pressure.summary
+            summary: input.pressure.summary,
+            details: {
+              observedAt: new Date(input.pressure.updatedAt).toISOString(),
+              markPrice: input.pressure.markPrice,
+              indexPrice: input.pressure.indexPrice,
+              fundingRatePercent: input.pressure.fundingRatePercent,
+              nextFundingTime: input.pressure.nextFundingTime ? new Date(input.pressure.nextFundingTime).toISOString() : null,
+              openInterestValue: input.pressure.openInterestValue,
+              openInterestChangePercent: input.pressure.openInterestChangePercent,
+              globalLongShort: input.pressure.globalLongShort,
+              topAccountLongShort: input.pressure.topAccountLongShort,
+              topPositionLongShort: input.pressure.topPositionLongShort,
+              takerFlow: input.pressure.takerFlow,
+              bands: input.pressure.bands,
+              warning: input.pressure.warning
+            }
           }
         : null,
       flow: input.flow
@@ -437,7 +665,21 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
             imbalancePercent: input.flow.imbalancePercent,
             largeTradeCount: input.flow.largeTradeCount,
             totalLargeNotionalUsd: input.flow.totalLargeNotionalUsd,
-            summary: input.flow.summary
+            summary: input.flow.summary,
+            details: {
+              observedAt: new Date(input.flow.updatedAt).toISOString(),
+              thresholdUsd: input.flow.thresholdUsd,
+              windowMinutes: input.flow.windowMinutes,
+              tradeCount: input.flow.tradeCount,
+              buyNotionalUsd: input.flow.buyNotionalUsd,
+              sellNotionalUsd: input.flow.sellNotionalUsd,
+              buyCount: input.flow.buyCount,
+              sellCount: input.flow.sellCount,
+              anomalyLevel: input.flow.anomalyLevel,
+              anomalyScore: input.flow.anomalyScore,
+              trigger: input.flow.trigger,
+              topTrades: input.flow.topTrades.slice(0, 8)
+            }
           }
         : null,
       previousChange
