@@ -1,19 +1,20 @@
 export type MarketMetricFreshness = "live" | "hourly" | "daily" | "stale" | "unavailable";
 export type MarketMetricCadence = "live" | "hourly" | "daily";
-export type UsdKrwSource = "exchangerate-dev" | "exchangerate-fun" | "frankfurter";
+export type BtcDominanceSource = "tradingview-scanner";
+export type UsdKrwSource = "tradingview-scanner" | "exchangerate-dev" | "exchangerate-fun" | "frankfurter";
 
 export interface CoinMarketMetricsPayload {
-  /**
-   * TradingView BTC.D does not expose a documented numeric REST contract.
-   * The exact value is rendered through the official widget instead of
-   * substituting a differently-defined global-market percentage here.
-   */
-  btcDominancePercent: null;
-  btcDominanceSource: "tradingview";
+  btcDominancePercent: number | null;
+  btcDominanceChangePercent: number | null;
+  btcDominanceSource: BtcDominanceSource | null;
   btcDominanceSymbol: "CRYPTOCAP:BTC.D";
+  btcDominanceRetrievedAt: string | null;
+  btcDominanceStale: boolean;
   usdKrw: number | null;
+  usdKrwChangePercent: number | null;
   usdKrwSource: UsdKrwSource | null;
   usdKrwObservedAt: string | null;
+  usdKrwRetrievedAt: string | null;
   usdKrwReferenceDate: string | null;
   usdKrwFreshness: MarketMetricFreshness;
   usdKrwCadence: MarketMetricCadence | null;
@@ -25,6 +26,7 @@ export interface CoinMarketMetricsPayload {
   kimchiFxRate: number | null;
   kimchiFxSource: UsdKrwSource | null;
   kimchiFxObservedAt: string | null;
+  kimchiFxRetrievedAt: string | null;
   kimchiFxReferenceDate: string | null;
   kimchiFxFreshness: MarketMetricFreshness;
   kimchiFxCadence: MarketMetricCadence | null;
@@ -42,8 +44,16 @@ export interface FxMetricObservation {
   value: number;
   source: UsdKrwSource;
   observedAt: string | null;
+  retrievedAt?: string | null;
   referenceDate: string | null;
   freshness: MarketMetricCadence;
+  changePercent?: number | null;
+}
+
+export interface BtcDominanceMetricObservation {
+  value: number;
+  changePercent: number | null;
+  retrievedAt: string;
 }
 
 export interface PriceMetricObservation {
@@ -52,6 +62,7 @@ export interface PriceMetricObservation {
 }
 
 export interface CoinMarketMetricObservations {
+  btcDominance: BtcDominanceMetricObservation | null;
   fx: FxMetricObservation | null;
   upbitBtc: PriceMetricObservation | null;
   binanceBtcUsdt: PriceMetricObservation | null;
@@ -64,6 +75,7 @@ const HOURLY_FX_MAX_AGE_MS = 90 * 60_000;
 const DAILY_FX_MAX_AGE_DAYS = 4;
 const CACHED_LIVE_FX_MAX_AGE_MS = 30 * 60_000;
 const CACHED_HOURLY_FX_MAX_AGE_MS = 3 * 60 * 60_000;
+const CACHED_DOMINANCE_MAX_AGE_MS = 15 * 60_000;
 const LAST_GOOD_KIMCHI_TTL_MS = 15 * 60_000;
 const MARKET_OBSERVATION_MAX_AGE_MS = 5 * 60_000;
 const MARKET_OBSERVATION_MAX_SKEW_MS = 2 * 60_000;
@@ -74,6 +86,54 @@ export function finitePositiveNumber(value: unknown): number | null {
 
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function finiteNumber(value: unknown): number | null {
+  if (typeof value !== "number") return null;
+  return Number.isFinite(value) ? value : null;
+}
+
+export function parseTradingViewScannerPayload(payload: unknown, retrievedAt: string): {
+  btcDominance: BtcDominanceMetricObservation | null;
+  usdKrw: FxMetricObservation | null;
+} {
+  const retrievedTimestamp = Date.parse(retrievedAt);
+  if (!Number.isFinite(retrievedTimestamp)) throw new Error("TradingView 서버 확인 시각 오류");
+  const normalizedRetrievedAt = new Date(retrievedTimestamp).toISOString();
+  const rows = payload && typeof payload === "object" && Array.isArray((payload as { data?: unknown }).data)
+    ? (payload as { data: unknown[] }).data
+    : [];
+
+  let btcDominance: BtcDominanceMetricObservation | null = null;
+  let usdKrw: FxMetricObservation | null = null;
+
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    const symbol = (row as { s?: unknown }).s;
+    const values = (row as { d?: unknown }).d;
+    if (typeof symbol !== "string" || !Array.isArray(values)) continue;
+
+    const close = finitePositiveNumber(values[0]);
+    const changePercent = finiteNumber(values[1]);
+    const updateMode = values[2];
+    if (updateMode !== "streaming") continue;
+    if (symbol === "CRYPTOCAP:BTC.D" && close !== null && close < 100) {
+      btcDominance = { value: close, changePercent, retrievedAt: normalizedRetrievedAt };
+    }
+    if (symbol === "FX_IDC:USDKRW" && close !== null && close >= 500 && close <= 3_000) {
+      usdKrw = {
+        value: close,
+        source: "tradingview-scanner",
+        observedAt: null,
+        retrievedAt: normalizedRetrievedAt,
+        referenceDate: null,
+        freshness: "live",
+        changePercent
+      };
+    }
+  }
+
+  return { btcDominance, usdKrw };
 }
 
 export function calculateKimchiPremium({
@@ -167,6 +227,9 @@ export function classifyExchangeRateDevFreshness(sourceClass: unknown): Extract<
 }
 
 export function isAcceptableFxObservation(observation: FxMetricObservation, nowMs: number): boolean {
+  if (observation.source === "tradingview-scanner") {
+    return observation.freshness === "live" && isRecentObservation(observation.retrievedAt, nowMs, LIVE_FX_MAX_AGE_MS, 5 * 60_000);
+  }
   if (observation.source === "frankfurter") {
     return observation.freshness === "daily" && isRecentReferenceDate(observation.referenceDate, nowMs);
   }
@@ -190,6 +253,9 @@ function inferCachedFxCadence(payload: CoinMarketMetricsPayload): MarketMetricCa
 export function canReuseCachedUsdKrw(payload: CoinMarketMetricsPayload, nowMs: number): boolean {
   if (finitePositiveNumber(payload.usdKrw) === null || payload.usdKrwSource === null) return false;
   const cadence = inferCachedFxCadence(payload);
+  if (payload.usdKrwSource === "tradingview-scanner") {
+    return isRecentObservation(payload.usdKrwRetrievedAt, nowMs, CACHED_LIVE_FX_MAX_AGE_MS, 5 * 60_000);
+  }
   if (payload.usdKrwSource === "frankfurter") {
     return isRecentReferenceDate(payload.usdKrwReferenceDate, nowMs);
   }
@@ -198,6 +264,17 @@ export function canReuseCachedUsdKrw(payload: CoinMarketMetricsPayload, nowMs: n
   }
   const maxAgeMs = cadence === "hourly" ? CACHED_HOURLY_FX_MAX_AGE_MS : CACHED_LIVE_FX_MAX_AGE_MS;
   return isRecentObservation(payload.usdKrwObservedAt, nowMs, maxAgeMs, 5 * 60_000);
+}
+
+function isAcceptableBtcDominance(observation: BtcDominanceMetricObservation, nowMs: number): boolean {
+  return observation.value > 0 && observation.value < 100 && isRecentObservation(observation.retrievedAt, nowMs, LIVE_FX_MAX_AGE_MS, 5 * 60_000);
+}
+
+export function canReuseCachedBtcDominance(payload: CoinMarketMetricsPayload, nowMs: number): boolean {
+  return payload.btcDominanceSource === "tradingview-scanner"
+    && finitePositiveNumber(payload.btcDominancePercent) !== null
+    && payload.btcDominancePercent! < 100
+    && isRecentObservation(payload.btcDominanceRetrievedAt, nowMs, CACHED_DOMINANCE_MAX_AGE_MS, 5 * 60_000);
 }
 
 export function canServeCoinMarketMetricsCache(
@@ -224,6 +301,24 @@ export function resolveCoinMarketMetrics({
   warnings?: string[];
 }): CoinMarketMetricsPayload {
   const warnings = [...initialWarnings];
+  let btcDominance = observations.btcDominance && isAcceptableBtcDominance(observations.btcDominance, nowMs)
+    ? observations.btcDominance
+    : null;
+  let btcDominanceStale = false;
+  if (observations.btcDominance && !btcDominance) warnings.push("TradingView BTC.D 범위 또는 확인 시각 오류");
+  if (!btcDominance) {
+    warnings.push("TradingView BTC.D 확인 제한");
+    if (cachedPayload && canReuseCachedBtcDominance(cachedPayload, nowMs)) {
+      btcDominance = {
+        value: cachedPayload.btcDominancePercent!,
+        changePercent: cachedPayload.btcDominanceChangePercent,
+        retrievedAt: cachedPayload.btcDominanceRetrievedAt!
+      };
+      btcDominanceStale = true;
+      warnings.push("TradingView BTC.D 마지막 정상값 유지");
+    }
+  }
+
   let fx = observations.fx && isAcceptableFxObservation(observations.fx, nowMs) ? observations.fx : null;
   let fxIsStale = false;
   if (observations.fx && !fx) warnings.push("USD/KRW 기준 시각 또는 출처 확인 제한");
@@ -235,8 +330,10 @@ export function resolveCoinMarketMetrics({
         value: cachedPayload.usdKrw!,
         source: cachedPayload.usdKrwSource!,
         observedAt: cachedPayload.usdKrwObservedAt,
+        retrievedAt: cachedPayload.usdKrwRetrievedAt,
         referenceDate: cachedPayload.usdKrwReferenceDate,
-        freshness: inferCachedFxCadence(cachedPayload)
+        freshness: inferCachedFxCadence(cachedPayload),
+        changePercent: cachedPayload.usdKrwChangePercent
       };
       fxIsStale = true;
       warnings.push("USD/KRW 마지막 정상값 유지");
@@ -254,6 +351,7 @@ export function resolveCoinMarketMetrics({
   let kimchiFxRate: number | null = null;
   let kimchiFxSource: UsdKrwSource | null = null;
   let kimchiFxObservedAt: string | null = null;
+  let kimchiFxRetrievedAt: string | null = null;
   let kimchiFxReferenceDate: string | null = null;
   let kimchiFxFreshness: MarketMetricFreshness = "unavailable";
   let kimchiFxCadence: MarketMetricCadence | null = null;
@@ -277,6 +375,7 @@ export function resolveCoinMarketMetrics({
       kimchiFxRate = fx.value;
       kimchiFxSource = fx.source;
       kimchiFxObservedAt = fx.observedAt;
+      kimchiFxRetrievedAt = fx.retrievedAt ?? null;
       kimchiFxReferenceDate = fx.referenceDate;
       kimchiFxFreshness = fxIsStale ? "stale" : fx.freshness;
       kimchiFxCadence = fx.freshness;
@@ -299,6 +398,7 @@ export function resolveCoinMarketMetrics({
     kimchiFxRate = cachedPayload.kimchiFxRate;
     kimchiFxSource = cachedPayload.kimchiFxSource;
     kimchiFxObservedAt = cachedPayload.kimchiFxObservedAt;
+    kimchiFxRetrievedAt = cachedPayload.kimchiFxRetrievedAt;
     kimchiFxReferenceDate = cachedPayload.kimchiFxReferenceDate;
     kimchiFxFreshness = "stale";
     kimchiFxCadence = cachedPayload.kimchiFxCadence;
@@ -311,12 +411,17 @@ export function resolveCoinMarketMetrics({
   }
 
   return {
-    btcDominancePercent: null,
-    btcDominanceSource: "tradingview",
+    btcDominancePercent: btcDominance?.value ?? null,
+    btcDominanceChangePercent: btcDominance?.changePercent ?? null,
+    btcDominanceSource: btcDominance ? "tradingview-scanner" : null,
     btcDominanceSymbol: "CRYPTOCAP:BTC.D",
+    btcDominanceRetrievedAt: btcDominance?.retrievedAt ?? null,
+    btcDominanceStale,
     usdKrw: fx?.value ?? null,
+    usdKrwChangePercent: fx?.changePercent ?? null,
     usdKrwSource: fx?.source ?? null,
     usdKrwObservedAt: fx?.observedAt ?? null,
+    usdKrwRetrievedAt: fx?.retrievedAt ?? null,
     usdKrwReferenceDate: fx?.referenceDate ?? null,
     usdKrwFreshness: fx ? (fxIsStale ? "stale" : fx.freshness) : "unavailable",
     usdKrwCadence: fx?.freshness ?? null,
@@ -328,6 +433,7 @@ export function resolveCoinMarketMetrics({
     kimchiFxRate,
     kimchiFxSource,
     kimchiFxObservedAt,
+    kimchiFxRetrievedAt,
     kimchiFxReferenceDate,
     kimchiFxFreshness,
     kimchiFxCadence,
@@ -337,7 +443,7 @@ export function resolveCoinMarketMetrics({
     binanceBtcObservedAt,
     cachedAt: nowMs,
     cached: false,
-    stale: fxIsStale || kimchiIsStale,
+    stale: btcDominanceStale || fxIsStale || kimchiIsStale,
     warnings: uniqueWarnings(warnings)
   };
 }

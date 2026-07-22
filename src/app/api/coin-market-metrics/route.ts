@@ -5,6 +5,7 @@ import {
   classifyExchangeRateDevFreshness,
   finitePositiveNumber,
   isAcceptableFxObservation,
+  parseTradingViewScannerPayload,
   resolveCoinMarketMetrics,
   type CoinMarketMetricsPayload,
   type FxMetricObservation,
@@ -17,6 +18,7 @@ export const dynamic = "force-dynamic";
 
 const RESPONSE_CACHE_TTL_MS = 60_000;
 const FETCH_TIMEOUT_MS = 5_000;
+const TRADINGVIEW_GLOBAL_SCAN_URL = "https://scanner.tradingview.com/global/scan";
 const EXCHANGE_RATE_DEV_URL = "https://api.exchangerate.dev/v1/latest/USD?symbols=KRW";
 const EXCHANGE_RATE_FUN_URL = "https://api.exchangerate.fun/latest?base=USD";
 const FRANKFURTER_USDKRW_URL = "https://api.frankfurter.app/latest?from=USD&to=KRW";
@@ -66,6 +68,36 @@ interface CoinbaseTickerPayload {
 }
 
 let cachedPayload: CoinMarketMetricsPayload | null = null;
+let inFlightPayload: Promise<CoinMarketMetricsPayload> | null = null;
+
+async function fetchTradingViewMarketMetrics(retrievedAt: string) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(TRADINGVIEW_GLOBAL_SCAN_URL, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "User-Agent": "ChartRadar/1.0 (+https://chartradar.kr)"
+      },
+      body: JSON.stringify({
+        symbols: {
+          tickers: ["CRYPTOCAP:BTC.D", "FX_IDC:USDKRW"],
+          query: { types: [] }
+        },
+        columns: ["close", "change", "update_mode"]
+      }),
+      cache: "no-store",
+      signal: controller.signal
+    });
+    if (!response.ok) throw new Error(`scanner.tradingview.com returned ${response.status}`);
+    return parseTradingViewScannerPayload(await response.json(), retrievedAt);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 function inRange(value: unknown, minimum: number, maximum: number, label: string): number {
   const parsed = finitePositiveNumber(value);
@@ -231,6 +263,61 @@ function logDegradedProviders(results: Array<{ provider: string; result: Promise
   if (failedProviders.length > 0) console.warn("[coin-market-metrics] provider degraded", failedProviders);
 }
 
+async function refreshCoinMarketMetrics(nowMs: number): Promise<CoinMarketMetricsPayload> {
+  const warnings: string[] = [];
+  const fallbackWarnings: string[] = [];
+  const retrievedAt = new Date(nowMs).toISOString();
+  const fallbackFxPromise: Promise<PromiseSettledResult<FxMetricObservation>> = fetchUsdKrw(fallbackWarnings).then(
+    (value) => ({ status: "fulfilled", value }),
+    (reason) => ({ status: "rejected", reason })
+  );
+  const [tradingViewResult, upbitResult, binanceResult, coinbaseResult] = await Promise.allSettled([
+    fetchTradingViewMarketMetrics(retrievedAt),
+    fetchUpbitBtc(),
+    fetchBinanceBtcSpot(),
+    fetchCoinbaseUsdtUsd()
+  ]);
+
+  const tradingViewMetrics = tradingViewResult.status === "fulfilled" ? tradingViewResult.value : null;
+  if (!tradingViewMetrics?.btcDominance) warnings.push("TradingView BTC.D 응답 확인 제한");
+  if (!tradingViewMetrics?.usdKrw) warnings.push("TradingView USD/KRW 응답 확인 제한");
+
+  let fxResult: PromiseSettledResult<FxMetricObservation>;
+  if (tradingViewMetrics?.usdKrw) {
+    fxResult = { status: "fulfilled", value: tradingViewMetrics.usdKrw };
+  } else {
+    fxResult = await fallbackFxPromise;
+    warnings.push(...fallbackWarnings);
+  }
+
+  logDegradedProviders([
+    { provider: "tradingview-market-metrics", result: tradingViewResult },
+    { provider: "usd-krw", result: fxResult },
+    { provider: "upbit-btc-krw", result: upbitResult },
+    { provider: "binance-btc-usdt", result: binanceResult },
+    { provider: "coinbase-usdt-usd", result: coinbaseResult }
+  ]);
+  if (warnings.length > 0) {
+    console.warn("[coin-market-metrics] source fallback", { warnings: Array.from(new Set(warnings)) });
+  }
+
+  const payload = resolveCoinMarketMetrics({
+    observations: {
+      btcDominance: tradingViewMetrics?.btcDominance ?? null,
+      fx: fxResult.status === "fulfilled" ? fxResult.value : null,
+      upbitBtc: upbitResult.status === "fulfilled" ? upbitResult.value : null,
+      binanceBtcUsdt: binanceResult.status === "fulfilled" ? binanceResult.value : null,
+      coinbaseUsdtUsd: coinbaseResult.status === "fulfilled" ? coinbaseResult.value : null
+    },
+    cachedPayload,
+    nowMs,
+    warnings
+  });
+
+  cachedPayload = payload;
+  return payload;
+}
+
 export async function GET(request: Request) {
   const limited = await rateLimit(request, { key: "coin-market-metrics", limit: 30, windowMs: 5 * 60 * 1_000 });
   if (!limited.allowed) {
@@ -245,36 +332,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ ...cachedPayload, cached: true });
   }
 
-  const warnings: string[] = [];
-  const [fxResult, upbitResult, binanceResult, coinbaseResult] = await Promise.allSettled([
-    fetchUsdKrw(warnings),
-    fetchUpbitBtc(),
-    fetchBinanceBtcSpot(),
-    fetchCoinbaseUsdtUsd()
-  ]);
-
-  logDegradedProviders([
-    { provider: "usd-krw", result: fxResult },
-    { provider: "upbit-btc-krw", result: upbitResult },
-    { provider: "binance-btc-usdt", result: binanceResult },
-    { provider: "coinbase-usdt-usd", result: coinbaseResult }
-  ]);
-  if (warnings.length > 0) {
-    console.warn("[coin-market-metrics] source fallback", { warnings: Array.from(new Set(warnings)) });
+  if (!inFlightPayload) {
+    inFlightPayload = refreshCoinMarketMetrics(nowMs).finally(() => {
+      inFlightPayload = null;
+    });
   }
-
-  const payload = resolveCoinMarketMetrics({
-    observations: {
-      fx: fxResult.status === "fulfilled" ? fxResult.value : null,
-      upbitBtc: upbitResult.status === "fulfilled" ? upbitResult.value : null,
-      binanceBtcUsdt: binanceResult.status === "fulfilled" ? binanceResult.value : null,
-      coinbaseUsdtUsd: coinbaseResult.status === "fulfilled" ? coinbaseResult.value : null
-    },
-    cachedPayload,
-    nowMs,
-    warnings
-  });
-
-  cachedPayload = payload;
+  const payload = await inFlightPayload;
   return NextResponse.json(payload);
 }

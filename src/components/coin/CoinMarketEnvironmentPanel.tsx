@@ -10,7 +10,6 @@ import type {
 } from "@/lib/coinMarketMetrics";
 import { ActionButton, AppSurface, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import { CompactHelp } from "@/components/ui/CompactHelp";
-import { TradingViewSingleTicker } from "@/components/coin/TradingViewSingleTicker";
 
 type LoadStatus = "idle" | "loading" | "ready" | "error";
 type MarketEnvironmentMode = "major" | "alts";
@@ -20,7 +19,7 @@ type CoinMarketMetricsResponse = Partial<CoinMarketMetricsPayload> & {
 };
 
 const AUTO_REFRESH_MS = 60_000;
-const USD_KRW_SOURCES = new Set<UsdKrwSource>(["exchangerate-dev", "exchangerate-fun", "frankfurter"]);
+const USD_KRW_SOURCES = new Set<UsdKrwSource>(["tradingview-scanner", "exchangerate-dev", "exchangerate-fun", "frankfurter"]);
 const FRESHNESS_VALUES = new Set<MarketMetricFreshness>(["live", "hourly", "daily", "stale", "unavailable"]);
 const CADENCE_VALUES = new Set<MarketMetricCadence>(["live", "hourly", "daily"]);
 const KST_DATE_TIME_FORMATTER = new Intl.DateTimeFormat("ko-KR", {
@@ -81,10 +80,65 @@ function freshnessLabel(value: MarketMetricFreshness, cadence?: MarketMetricCade
 }
 
 function fxSourceLabel(value: UsdKrwSource | null | undefined) {
+  if (value === "tradingview-scanner") return "TradingView USDKRW";
   if (value === "exchangerate-dev") return "exchangerate.dev";
   if (value === "exchangerate-fun") return "ExchangeRate.fun";
   if (value === "frankfurter") return "Frankfurter";
   return "환율 공급자 확인 중";
+}
+
+function metricChangeLabel(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "등락률 확인 중";
+  return `등락 ${formatPercent(value, 2)}`;
+}
+
+function metricChangeClass(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value) || value === 0) return "text-ui-subtle";
+  return value > 0 ? "text-ui-long" : "text-ui-short";
+}
+
+function metricReference({
+  source,
+  retrievedAt,
+  observedAt,
+  referenceDate,
+  freshness,
+  cadence
+}: {
+  source: UsdKrwSource | null | undefined;
+  retrievedAt: string | null | undefined;
+  observedAt: string | null | undefined;
+  referenceDate: string | null | undefined;
+  freshness: MarketMetricFreshness;
+  cadence?: MarketMetricCadence | null;
+}) {
+  if (source === "tradingview-scanner") {
+    return `${freshness === "stale" ? "마지막 정상값 · " : ""}서버 확인 ${formatObservedAt(retrievedAt)}`;
+  }
+  return `${freshnessLabel(freshness, cadence)} · ${formatReference(observedAt, referenceDate)}`;
+}
+
+function dominanceDetail(value: number | null | undefined, changePercent: number | null | undefined) {
+  if (value === null || value === undefined) return "전체 코인 시가총액에서 BTC가 차지하는 비중을 확인하는 중입니다.";
+  if (changePercent === null || changePercent === undefined) return "BTC 시가총액 비중은 확인됐지만 등락률은 다시 확인하는 중입니다.";
+  if (changePercent !== null && changePercent !== undefined && changePercent > 0.1) {
+    return "BTC 시가총액 비중이 전일보다 높아져 알트의 상대 강도를 보수적으로 확인할 구간입니다.";
+  }
+  if (changePercent !== null && changePercent !== undefined && changePercent < -0.1) {
+    return "BTC 시가총액 비중이 전일보다 낮아져 알트의 상대 강도 변화를 함께 확인할 구간입니다.";
+  }
+  return "BTC 시가총액 비중의 하루 변화가 크지 않은 구간입니다.";
+}
+
+function fxDetail(changePercent: number | null | undefined) {
+  if (changePercent === null || changePercent === undefined) return "현재 원·달러 값은 확인됐지만 등락률은 다시 확인하는 중입니다.";
+  if (changePercent !== null && changePercent !== undefined && changePercent > 0.1) {
+    return "달러가 원화 대비 강해져 같은 달러 가격도 원화로는 더 비싸진 구간입니다.";
+  }
+  if (changePercent !== null && changePercent !== undefined && changePercent < -0.1) {
+    return "달러가 원화 대비 약해져 같은 달러 가격의 원화 환산 부담이 낮아진 구간입니다.";
+  }
+  return "원·달러 환율의 하루 변화가 크지 않은 구간입니다.";
 }
 
 function kimchiMeta(value: number | null | undefined, stale = false) {
@@ -126,12 +180,17 @@ async function fetchCoinMarketMetrics(signal: AbortSignal) {
     : null;
 
   return {
-    btcDominancePercent: null,
-    btcDominanceSource: "tradingview",
+    btcDominancePercent: normalizedNumber(payload.btcDominancePercent),
+    btcDominanceChangePercent: normalizedNumber(payload.btcDominanceChangePercent),
+    btcDominanceSource: payload.btcDominanceSource === "tradingview-scanner" ? payload.btcDominanceSource : null,
     btcDominanceSymbol: "CRYPTOCAP:BTC.D",
+    btcDominanceRetrievedAt: typeof payload.btcDominanceRetrievedAt === "string" ? payload.btcDominanceRetrievedAt : null,
+    btcDominanceStale: Boolean(payload.btcDominanceStale),
     usdKrw: normalizedNumber(payload.usdKrw),
+    usdKrwChangePercent: normalizedNumber(payload.usdKrwChangePercent),
     usdKrwSource,
     usdKrwObservedAt: typeof payload.usdKrwObservedAt === "string" ? payload.usdKrwObservedAt : null,
+    usdKrwRetrievedAt: typeof payload.usdKrwRetrievedAt === "string" ? payload.usdKrwRetrievedAt : null,
     usdKrwReferenceDate: typeof payload.usdKrwReferenceDate === "string" ? payload.usdKrwReferenceDate : null,
     usdKrwFreshness,
     usdKrwCadence,
@@ -143,6 +202,7 @@ async function fetchCoinMarketMetrics(signal: AbortSignal) {
     kimchiFxRate: normalizedNumber(payload.kimchiFxRate),
     kimchiFxSource,
     kimchiFxObservedAt: typeof payload.kimchiFxObservedAt === "string" ? payload.kimchiFxObservedAt : null,
+    kimchiFxRetrievedAt: typeof payload.kimchiFxRetrievedAt === "string" ? payload.kimchiFxRetrievedAt : null,
     kimchiFxReferenceDate: typeof payload.kimchiFxReferenceDate === "string" ? payload.kimchiFxReferenceDate : null,
     kimchiFxFreshness,
     kimchiFxCadence,
@@ -185,6 +245,7 @@ export function CoinMarketEnvironmentPanel({ mode }: { mode: MarketEnvironmentMo
       setMetrics((current) => current ? {
         ...current,
         stale: true,
+        btcDominanceStale: current.btcDominancePercent !== null || current.btcDominanceStale,
         usdKrwFreshness: current.usdKrw === null ? current.usdKrwFreshness : "stale",
         kimchiStale: current.kimchiPremiumPercent !== null || current.kimchiStale,
         kimchiFxFreshness: current.kimchiFxRate === null ? current.kimchiFxFreshness : "stale"
@@ -224,7 +285,10 @@ export function CoinMarketEnvironmentPanel({ mode }: { mode: MarketEnvironmentMo
     if (metrics.stale) riskHints.push("일부 데이터 지연");
 
     if (riskHints.length) return `${riskHints.join(" · ")}을 가격 방향과 따로 확인하세요.`;
-    return "BTC.D의 하루 변화와 국내외 현물 가격 차이를 함께 보면 시장 쏠림을 더 쉽게 구분할 수 있습니다.";
+    if (metrics.btcDominanceChangePercent !== null && Math.abs(metrics.btcDominanceChangePercent) >= 0.1) {
+      return `BTC 비중이 전일보다 ${metrics.btcDominanceChangePercent > 0 ? "높아진" : "낮아진"} 흐름과 국내외 현물 가격 차이를 함께 확인합니다.`;
+    }
+    return "BTC 비중의 하루 변화와 국내외 현물 가격 차이를 함께 보면 시장 쏠림을 더 쉽게 구분할 수 있습니다.";
   }, [metrics, mode]);
 
   const kimchi = kimchiMeta(metrics?.kimchiPremiumPercent, metrics?.kimchiStale);
@@ -259,17 +323,24 @@ export function CoinMarketEnvironmentPanel({ mode }: { mode: MarketEnvironmentMo
         <article className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3">
           <div className="flex min-w-0 items-start justify-between gap-3">
             <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">BTC 도미넌스</p>
-            <StatusPill tone="info" icon={BadgePercent} className="shrink-0">
-              TradingView BTC.D
+            <StatusPill tone={metrics?.btcDominanceStale ? "watch" : "info"} icon={BadgePercent} className="shrink-0">
+              {metrics?.btcDominanceStale ? "마지막 정상값" : "BTC.D"}
             </StatusPill>
           </div>
-          <TradingViewSingleTicker
-            symbol="CRYPTOCAP:BTC.D"
-            label="TradingView BTC 도미넌스 최신 값"
-            href="https://www.tradingview.com/symbols/BTC.D/"
-          />
+          <div className="mt-3 flex items-end justify-between gap-3">
+            <p className="text-2xl font-black tabular-nums tracking-tight text-ui-text">
+              {metrics?.btcDominancePercent === null || metrics?.btcDominancePercent === undefined ? "-" : `${metrics.btcDominancePercent.toFixed(2)}%`}
+            </p>
+            <p className={`pb-0.5 text-xs font-bold tabular-nums ${metricChangeClass(metrics?.btcDominanceChangePercent)}`}>
+              {metricChangeLabel(metrics?.btcDominanceChangePercent)}
+            </p>
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-3 border-t border-ui-line pt-2 text-[11px] text-ui-subtle">
+            <span>{metrics?.btcDominanceStale ? "마지막 확인" : "서버 확인"} {formatObservedAt(metrics?.btcDominanceRetrievedAt)}</span>
+            <a className="shrink-0 font-semibold text-ui-muted underline decoration-ui-line underline-offset-4" href="https://www.tradingview.com/symbols/BTC.D/" target="_blank" rel="noreferrer">원문</a>
+          </div>
           <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">
-            전체 코인 시가총액에서 BTC 비중이 커진 상태로, 알트가 상대적으로 약할 수 있습니다.
+            {dominanceDetail(metrics?.btcDominancePercent, metrics?.btcDominanceChangePercent)}
           </p>
         </article>
 
@@ -287,24 +358,29 @@ export function CoinMarketEnvironmentPanel({ mode }: { mode: MarketEnvironmentMo
             <br />
             USDT/USD {formatUsd(metrics?.kimchiUsdtUsdRate)} · Coinbase 체결가 · {formatObservedAt(metrics?.kimchiUsdtUsdObservedAt)}
             <br />
-            계산 환율 {formatKrw(metrics?.kimchiFxRate)} · {fxSourceLabel(metrics?.kimchiFxSource)} · {freshnessLabel(metrics?.kimchiFxFreshness ?? "unavailable", metrics?.kimchiFxCadence)} · {formatReference(metrics?.kimchiFxObservedAt, metrics?.kimchiFxReferenceDate)}
+            계산 환율 {formatKrw(metrics?.kimchiFxRate)} · {fxSourceLabel(metrics?.kimchiFxSource)} · {metricReference({ source: metrics?.kimchiFxSource, retrievedAt: metrics?.kimchiFxRetrievedAt, observedAt: metrics?.kimchiFxObservedAt, referenceDate: metrics?.kimchiFxReferenceDate, freshness: metrics?.kimchiFxFreshness ?? "unavailable", cadence: metrics?.kimchiFxCadence })}
           </p>
         </article>
 
         <article className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3">
           <div className="flex min-w-0 items-start justify-between gap-3">
             <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">원·달러 환율</p>
-            <StatusPill tone="info" icon={Globe2} className="shrink-0">
-              TradingView 기준
+            <StatusPill tone={metrics?.usdKrwFreshness === "stale" ? "watch" : "info"} icon={Globe2} className="shrink-0">
+              {metrics?.usdKrwFreshness === "stale" ? "마지막 정상값" : metrics?.usdKrwSource === "tradingview-scanner" ? "USDKRW" : fxSourceLabel(metrics?.usdKrwSource)}
             </StatusPill>
           </div>
-          <TradingViewSingleTicker
-            symbol="FX_IDC:USDKRW"
-            label="TradingView 원달러 환율 최신 값"
-            href="https://www.tradingview.com/symbols/USDKRW/"
-          />
+          <div className="mt-3 flex items-end justify-between gap-3">
+            <p className="text-2xl font-black tabular-nums tracking-tight text-ui-text">{formatKrw(metrics?.usdKrw)}</p>
+            <p className={`pb-0.5 text-xs font-bold tabular-nums ${metricChangeClass(metrics?.usdKrwChangePercent)}`}>
+              {metricChangeLabel(metrics?.usdKrwChangePercent)}
+            </p>
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-3 border-t border-ui-line pt-2 text-[11px] text-ui-subtle">
+            <span>{metricReference({ source: metrics?.usdKrwSource, retrievedAt: metrics?.usdKrwRetrievedAt, observedAt: metrics?.usdKrwObservedAt, referenceDate: metrics?.usdKrwReferenceDate, freshness: metrics?.usdKrwFreshness ?? "unavailable", cadence: metrics?.usdKrwCadence })}</span>
+            {metrics?.usdKrwSource === "tradingview-scanner" ? <a className="shrink-0 font-semibold text-ui-muted underline decoration-ui-line underline-offset-4" href="https://www.tradingview.com/symbols/USDKRW/" target="_blank" rel="noreferrer">원문</a> : null}
+          </div>
           <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">
-            숫자가 오르면 같은 달러 가격도 원화로는 더 비싸집니다. 김프 계산 환율과 갱신 시각은 가운데 카드에 따로 표시합니다.
+            {fxDetail(metrics?.usdKrwChangePercent)}
           </p>
         </article>
       </div>
@@ -320,7 +396,7 @@ export function CoinMarketEnvironmentPanel({ mode }: { mode: MarketEnvironmentMo
       </p>
 
       <CompactHelp label="데이터 기준">
-        화면의 BTC 도미넌스는 TradingView CRYPTOCAP:BTC.D, 원·달러 환율은 TradingView USDKRW를 그대로 표시합니다. BTC 김프는 같은 시점의 Upbit BTC/KRW 현물, Binance BTC/USDT 현물, Coinbase USDT/USD 체결가를 함께 사용하고 USD/KRW로 원화 환산합니다. USDT를 무조건 1달러로 가정하지 않습니다. 환율 공급이 지연되면 전일 기준 또는 마지막 정상값임을 화면에 표시합니다. 이 값들은 매수·매도 지시가 아니라 선물 판단의 배경 위험입니다.
+        BTC 도미넌스와 원·달러 환율은 TradingView 화면이 사용하는 비공식 시세 응답에서 서버가 확인한 숫자를 ChartRadar 형식으로 표시합니다. 원천 관측시각은 제공되지 않아 서버 확인 시각을 표기하며, 실시간 상태가 아니거나 응답이 막히면 마지막 정상값과 기존 환율 공급자로 전환합니다. BTC 김프는 같은 시점의 Upbit BTC/KRW 현물, Binance BTC/USDT 현물, Coinbase USDT/USD 체결가와 화면에 표시한 USD/KRW를 사용합니다. 이 값들은 매수·매도 지시가 아니라 선물 판단의 배경 위험입니다.
       </CompactHelp>
     </PanelCard>
   );
