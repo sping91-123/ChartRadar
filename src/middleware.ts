@@ -1,9 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-function newsImpactUiEnabled() {
-  return process.env.NEWS_IMPACT_V1?.trim().toLowerCase() === "on";
-}
-
 export function middleware(request: NextRequest) {
   const target = request.nextUrl.clone();
   if (target.pathname === "/alerts") {
@@ -15,7 +11,7 @@ export function middleware(request: NextRequest) {
 
   if (target.pathname === "/news") {
     const market = target.searchParams.get("market");
-    if (newsImpactUiEnabled() && market !== "global" && market !== "stocks") {
+    if (market !== "global" && market !== "stocks") {
       const preserved = new URLSearchParams();
       for (const key of ["asset", "event", "snapshot", "source"] as const) {
         const value = target.searchParams.get(key);
@@ -26,16 +22,7 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(target);
     }
   }
-
-  if (newsImpactUiEnabled()) return NextResponse.next();
-  if (target.pathname === "/crypto/news") {
-    target.pathname = "/crypto/home";
-  } else {
-    const market = target.searchParams.get("market");
-    target.pathname = market === "global" || market === "stocks" ? "/global" : "/crypto/home";
-  }
-  target.search = "";
-  return NextResponse.redirect(target);
+  return NextResponse.next();
 }
 
 export const config = {

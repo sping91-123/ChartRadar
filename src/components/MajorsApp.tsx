@@ -28,9 +28,9 @@ function BackgroundEvidenceDisclosure({ children }: { children: ReactNode }) {
       <summary className="flex cursor-pointer list-none items-start justify-between gap-3 py-2 marker:hidden [&::-webkit-details-marker]:hidden">
         <span className="min-w-0">
           <span className="block text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">배경 정보</span>
-          <span className="mt-1 block text-ui-heading font-semibold tracking-tight text-ui-text">시장 환경, 온체인, 옵션은 접어 둡니다</span>
+          <span className="mt-1 block text-ui-heading font-semibold tracking-tight text-ui-text">온체인·옵션까지 더 깊게 확인</span>
           <span className="mt-1 block max-w-3xl text-ui-body text-ui-muted [word-break:keep-all]">
-            판단은 상단의 현재 분석과 확인 가격을 우선하고, 이 값들은 필요할 때만 참고합니다.
+            방향을 직접 결정하는 값은 아니지만 변동성 위험과 시장 배경을 교차 확인할 때 사용합니다.
           </span>
         </span>
         <ChevronDown className="mt-1 shrink-0 text-ui-subtle transition group-open:rotate-180" size={18} aria-hidden />
@@ -46,7 +46,8 @@ function ShadowPerpetualCanaryGate({
   requestedSnapshotId,
   source,
   attributionId,
-  impactId
+  impactId,
+  monitorId
 }: {
   asset: MajorAssetId;
   selectedSymbols: Array<{ symbol: string; label: string }>;
@@ -54,6 +55,7 @@ function ShadowPerpetualCanaryGate({
   source: "home" | "alert" | "news" | null;
   attributionId: string | null;
   impactId: string | null;
+  monitorId: string | null;
 }) {
   const { session, isLoading } = useSupabaseAuth();
   const [enabled, setEnabled] = useState(false);
@@ -88,6 +90,7 @@ function ShadowPerpetualCanaryGate({
       source={source}
       attributionId={attributionId}
       impactId={impactId}
+      initialAlertMonitorId={monitorId}
     />
   );
 }
@@ -98,6 +101,7 @@ export function MajorsApp({
   initialSource = null,
   initialAttributionId = null,
   initialImpactId = null,
+  initialMonitorId = null,
   revenueCoreMode = "off",
   newsImpactEnabled = false
 }: {
@@ -106,6 +110,7 @@ export function MajorsApp({
   initialSource?: "home" | "alert" | "news" | null;
   initialAttributionId?: string | null;
   initialImpactId?: string | null;
+  initialMonitorId?: string | null;
   revenueCoreMode?: PerpetualRevenueCoreMode;
   newsImpactEnabled?: boolean;
 }) {
@@ -129,6 +134,7 @@ export function MajorsApp({
     url.searchParams.delete("source");
     url.searchParams.delete("attribution");
     url.searchParams.delete("impact");
+    url.searchParams.delete("monitor");
     window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
   }, []);
 
@@ -146,6 +152,7 @@ export function MajorsApp({
             source={initialContinuityAvailable && activeAssetId === initialAsset ? initialSource : null}
             attributionId={initialContinuityAvailable && activeAssetId === initialAsset ? initialAttributionId : null}
             impactId={initialContinuityAvailable && activeAssetId === initialAsset ? initialImpactId : null}
+            initialAlertMonitorId={initialContinuityAvailable && activeAssetId === initialAsset ? initialMonitorId : null}
           />
         ) : revenueCoreMode === "shadow" ? (
           <ShadowPerpetualCanaryGate
@@ -155,14 +162,21 @@ export function MajorsApp({
             source={initialContinuityAvailable && activeAssetId === initialAsset ? initialSource : null}
             attributionId={initialContinuityAvailable && activeAssetId === initialAsset ? initialAttributionId : null}
             impactId={initialContinuityAvailable && activeAssetId === initialAsset ? initialImpactId : null}
+            monitorId={initialContinuityAvailable && activeAssetId === initialAsset ? initialMonitorId : null}
           />
         ) : (
           <CoinFuturesBrief mode="major" symbols={selectedSymbols} />
         )}
 
+        <section className="border-t border-ui-line pt-4" aria-labelledby="perpetual-market-context-title">
+          <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">시장 전체 환경</p>
+          <h2 id="perpetual-market-context-title" className="mt-1 text-ui-heading font-semibold tracking-tight text-ui-text">BTC 도미넌스·환율·스테이블코인 흐름도 함께 봅니다</h2>
+          <p className="mt-1 text-ui-body text-ui-muted [word-break:keep-all]">위의 같은 시각 분석을 우선하고, 시장 전체 자금 환경이 충돌하는지 아래에서 교차 확인합니다.</p>
+        </section>
+        <CoinMarketEnvironmentPanel mode="major" />
+        <CoinStablecoinLiquidityPanel />
+
         <BackgroundEvidenceDisclosure>
-          <CoinMarketEnvironmentPanel mode="major" />
-          <CoinStablecoinLiquidityPanel />
           {activeAsset.id === "btc" ? <CoinOnchainPulsePanel /> : null}
           <CoinOptionsMarketPanel currencies={selectedOptionCurrencies} />
         </BackgroundEvidenceDisclosure>

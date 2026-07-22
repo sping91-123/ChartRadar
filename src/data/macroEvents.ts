@@ -1,5 +1,5 @@
 // 자동 매크로 캘린더가 실패했을 때 보여줄 예비 경제 일정입니다.
-import { type MacroEventStatus, type MacroEventType, type MacroSourceType } from "@/lib/macro/types";
+import { type MacroEventStatus, type MacroEventType, type MacroSourceType, type MacroValueProvenance, type MacroValueProvider } from "@/lib/macro/types";
 
 export type MacroEventState = "upcoming" | "released" | "watch";
 export type MacroEventImportance = 1 | 2 | 3;
@@ -24,8 +24,17 @@ export type MacroEventItem = {
   forecast?: string;
   previous?: string;
   actualValue?: string;
+  actualProvenance?: MacroValueProvenance;
+  actualProvider?: MacroValueProvider;
+  actualSourceUrl?: string;
+  actualReportingPeriod?: string;
+  actualObservedAt?: string;
   consensusValue?: string;
+  consensusProvenance?: MacroValueProvenance;
+  consensusProvider?: MacroValueProvider;
+  consensusSourceUrl?: string;
   previousValue?: string;
+  previousProvenance?: MacroValueProvenance;
   unit?: string;
   summary: string;
   marketImpact: string;

@@ -8,6 +8,7 @@ export interface PerpetualSnapshotCapabilities {
   scenarioMonitorCount: number;
   presetCount: number;
   canSeeProDetail: boolean;
+  canSaveNewsJournal: boolean;
   monitorEnabled: boolean;
   canCreateMonitor: boolean;
   requiresAuth: boolean;

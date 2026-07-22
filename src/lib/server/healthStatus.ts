@@ -141,13 +141,14 @@ export async function getDetailedHealthPayload() {
   const perpetualMutationEnabled = isPerpetualRevenueCoreScannerEnabled(perpetualMode);
   const hasProductAnalytics = productAnalyticsConfigured();
   const hasCronSecret = hasValue(process.env.CRON_SECRET);
+  const hasSharedAiCostGuard = hasValue(process.env.UPSTASH_REDIS_REST_URL) && hasValue(process.env.UPSTASH_REDIS_REST_TOKEN);
   const hasFirebaseServer = hasValue(process.env.FIREBASE_SERVICE_ACCOUNT_JSON) || (
     hasValue(process.env.FIREBASE_PROJECT_ID) &&
     hasValue(process.env.FIREBASE_CLIENT_EMAIL) &&
     hasValue(process.env.FIREBASE_PRIVATE_KEY)
   );
   const perpetualRevenueCoreReady = !perpetualMutationEnabled || (
-    hasVerifiedSupabaseAdmin && hasProductAnalytics && hasCronSecret && hasFirebaseServer
+    hasVerifiedSupabaseAdmin && hasProductAnalytics && hasCronSecret && hasFirebaseServer && hasSharedAiCostGuard && hasAIProvider
   );
   const planPaymentLinks = paidBillingPlans.map((plan) => {
     const directUrl = getDirectPaymentUrl(plan.id);
@@ -225,8 +226,8 @@ export async function getDetailedHealthPayload() {
       : {
           area: "perpetual_revenue_core",
           label: "Perpetual revenue-core activation",
-          env: "PRODUCT_ANALYTICS_HMAC_SECRET, CRON_SECRET, Firebase server credentials",
-          reason: "On mode requires measurable product events and an authenticated five-minute Push worker."
+          env: "PRODUCT_ANALYTICS_HMAC_SECRET, CRON_SECRET, Firebase server credentials, UPSTASH_REDIS_REST_URL/TOKEN",
+          reason: "On mode requires measurable product events, an authenticated five-minute Push worker, and a cross-instance AI cost ceiling."
         }
   ].filter((item): item is { area: string; label: string; env: string; reason: string } => Boolean(item));
   const warnings = [
@@ -242,7 +243,7 @@ export async function getDetailedHealthPayload() {
       : null,
     fallbackPlanPaymentLinks.length === 0 ? null : `Some plans use fallback checkout links: ${fallbackPlanPaymentLinks.join(", ")}`,
     !macroReady ? "Macro calendar automatic refresh requires attention." : null,
-    perpetualRevenueCoreReady ? null : "Perpetual revenue core is on without its analytics, cron, Firebase, or Supabase activation prerequisites."
+    perpetualRevenueCoreReady ? null : "Perpetual revenue core is on without its AI provider, analytics, cron, Firebase, Supabase, or shared AI cost-limit prerequisites."
   ].filter((item): item is string => Boolean(item));
 
   return {
@@ -287,7 +288,9 @@ export async function getDetailedHealthPayload() {
         ready: perpetualRevenueCoreReady,
         productAnalyticsHmac: hasProductAnalytics,
         cronSecret: hasCronSecret,
-        firebaseServer: hasFirebaseServer
+        firebaseServer: hasFirebaseServer,
+        sharedAiCostGuard: hasSharedAiCostGuard,
+        aiProvider: hasAIProvider
       }
     },
     macroCalendar: {

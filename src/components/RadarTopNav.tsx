@@ -42,15 +42,13 @@ function inferMarket(pathname: string): MarketScope {
   return "crypto";
 }
 
-function RadarTopNavContent({ market: forcedMarket, newsImpactEnabled }: { market?: MarketScope; newsImpactEnabled: boolean }) {
+function RadarTopNavContent({ market: forcedMarket }: { market?: MarketScope; newsImpactEnabled: boolean }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const marketParam = searchParams.get("market");
   const market = forcedMarket ?? inferMarket(pathname);
   const baseNavItems = market === "all" ? allNavItems : market === "stocks" ? stockNavItems : cryptoNavItems;
-  const navItems = newsImpactEnabled
-    ? baseNavItems
-    : baseNavItems.filter((item) => item.href !== "/crypto/news" && !item.href.startsWith("/news?"));
+  const navItems = baseNavItems;
   const isGlobalNav = market === "stocks";
   const isCryptoNav = market === "crypto";
   const isFixedGridNav = isGlobalNav || isCryptoNav;

@@ -17,8 +17,10 @@ export type MacroEventStatus =
   | "past";
 
 export type MacroSourceType = "official_api" | "official_page" | "public_calendar" | "operator_fallback" | "derived";
+export type MacroValueProvenance = "official" | "public_calendar" | "operator_fallback" | "derived" | "unknown" | "mixed";
 
 export type MacroOfficialSource = "BLS" | "BEA" | "Fed" | "Census" | "DOL" | "NAR" | "ForexFactory" | "Official";
+export type MacroValueProvider = MacroOfficialSource | "TradingEconomics";
 
 export type MacroSourceEnrichment = {
   matcher: RegExp;
@@ -30,9 +32,19 @@ export type MacroSourceEnrichment = {
   isOfficial?: boolean;
   confidence?: number;
   actualValue?: string;
+  actualProvenance?: MacroValueProvenance;
+  actualProvider?: MacroValueProvider;
+  actualSourceUrl?: string;
+  actualReportingPeriod?: string;
+  actualObservedAt?: string;
   consensusValue?: string;
+  consensusProvenance?: MacroValueProvenance;
+  consensusProvider?: MacroValueProvider;
+  consensusSourceUrl?: string;
   previousValue?: string;
+  previousProvenance?: MacroValueProvenance;
   unit?: string;
+  matchReleasedAt?: string;
   releasedAt?: string;
   status?: MacroEventStatus;
   statusLabel?: string;

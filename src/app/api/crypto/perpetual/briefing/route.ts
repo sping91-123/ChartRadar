@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { AIProviderError, getAIProviderCandidates } from "@/lib/ai";
+import { type PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
 import { buildPerpetualBriefingInput, fallbackPerpetualBriefing } from "@/lib/server/perpetualBriefing";
+import {
+  acquireSharedPerpetualBriefingLease,
+  getSharedPerpetualBriefing,
+  releaseSharedPerpetualBriefingLease,
+  setSharedPerpetualBriefing
+} from "@/lib/server/perpetualBriefingCache";
 import { getPerpetualDecisionSnapshotById, isSnapshotId } from "@/lib/server/perpetualDecisionSource";
 import { isPerpetualRevenueCoreUserEnabled } from "@/lib/server/perpetualRevenueCore";
 import { rateLimit, readJsonBodyLimited } from "@/lib/server/rateLimit";
@@ -13,7 +20,16 @@ const PROMPT_VERSION = "perpetual-beginner-v1";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const PROVIDER_TIMEOUT_MS = 18_000;
 const CACHE_MAX_ENTRIES = 3_000;
+const DAILY_PROVIDER_GENERATION_LIMIT = 24;
+const DEFAULT_GLOBAL_DAILY_PROVIDER_GENERATION_LIMIT = 240;
 const cache = new Map<string, { briefing: string; model: string; expiresAt: number }>();
+
+function globalDailyProviderGenerationLimit() {
+  const configured = Number(process.env.PERPETUAL_AI_DAILY_PROVIDER_LIMIT);
+  return Number.isInteger(configured) && configured >= 1 && configured <= 5_000
+    ? configured
+    : DEFAULT_GLOBAL_DAILY_PROVIDER_GENERATION_LIMIT;
+}
 
 function privateJson(body: unknown, init?: ResponseInit) {
   const response = NextResponse.json(body, init);
@@ -90,25 +106,135 @@ export async function POST(request: Request) {
     return privateJson({ snapshotId: snapshot.id, generatedAt: snapshot.generatedAt, briefing: hit.briefing, model: hit.model, cached: true });
   }
 
-  let briefing = fallbackPerpetualBriefing(snapshot);
-  let model = "fallback";
-  try {
-    const input = buildPerpetualBriefingInput(snapshot);
-    for (const provider of getAIProviderCandidates()) {
-      try {
-        briefing = clean(await withTimeout(provider.generateMarketBriefing(input), PROVIDER_TIMEOUT_MS));
-        model = provider.model;
-        break;
-      } catch (error) {
-        if (error instanceof AIProviderError) console.warn(`[perpetual-briefing] ${error.provider} failed`, error.message);
-        else console.warn("[perpetual-briefing] provider failed", error);
-      }
-    }
-  } catch (error) {
-    console.warn("[perpetual-briefing] fallback used", error instanceof Error ? error.message : error);
+  const sharedHit = await getSharedPerpetualBriefing(cacheKey);
+  if (sharedHit) {
+    cache.set(cacheKey, { ...sharedHit, expiresAt: now + CACHE_TTL_MS });
+    pruneCache(now);
+    return privateJson({
+      snapshotId: snapshot.id,
+      generatedAt: snapshot.generatedAt,
+      briefing: sharedHit.briefing,
+      model: sharedHit.model,
+      cached: true
+    });
   }
-  briefing = clean(briefing);
-  cache.set(cacheKey, { briefing, model, expiresAt: now + CACHE_TTL_MS });
-  pruneCache(now);
-  return privateJson({ snapshotId: snapshot.id, generatedAt: snapshot.generatedAt, briefing, model, cached: false });
+
+  const lease = await acquireSharedPerpetualBriefingLease(cacheKey);
+  if (lease.status !== "acquired") {
+    if (lease.status === "busy") {
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      const completedByFirstRequest = await getSharedPerpetualBriefing(cacheKey);
+      if (completedByFirstRequest) {
+        cache.set(cacheKey, { ...completedByFirstRequest, expiresAt: Date.now() + CACHE_TTL_MS });
+        pruneCache(Date.now());
+        return privateJson({
+          snapshotId: snapshot.id,
+          generatedAt: snapshot.generatedAt,
+          briefing: completedByFirstRequest.briefing,
+          model: completedByFirstRequest.model,
+          cached: true
+        });
+      }
+      return deterministicResponse(snapshot, "deterministic_generation_in_progress");
+    }
+    return deterministicResponse(snapshot, "deterministic_cost_guard");
+  }
+
+  let releaseLease = true;
+  try {
+    // A previous request can populate the cache between our first GET and lease acquisition.
+    const lockedHit = await getSharedPerpetualBriefing(cacheKey);
+    if (lockedHit) {
+      cache.set(cacheKey, { ...lockedHit, expiresAt: Date.now() + CACHE_TTL_MS });
+      pruneCache(Date.now());
+      return privateJson({
+        snapshotId: snapshot.id,
+        generatedAt: snapshot.generatedAt,
+        briefing: lockedHit.briefing,
+        model: lockedHit.model,
+        cached: true
+      });
+    }
+
+    const dailyGenerationLimit = await rateLimit(request, {
+      key: entitlementRateKey("perpetual-briefing-provider-daily", entitlement),
+      limit: DAILY_PROVIDER_GENERATION_LIMIT,
+      windowMs: 24 * 60 * 60 * 1000,
+      includeClientIp: false,
+      requireSharedBackend: true
+    });
+    const globalGenerationLimit = dailyGenerationLimit.allowed
+      ? await rateLimit(request, {
+          key: "perpetual-briefing-provider-global-daily:v1",
+          limit: globalDailyProviderGenerationLimit(),
+          windowMs: 24 * 60 * 60 * 1000,
+          includeClientIp: false,
+          requireSharedBackend: true
+        })
+      : dailyGenerationLimit;
+    if (!dailyGenerationLimit.allowed || !globalGenerationLimit.allowed) {
+      return deterministicResponse(
+        snapshot,
+        dailyGenerationLimit.backend === "unavailable" || globalGenerationLimit.backend === "unavailable"
+          ? "deterministic_cost_guard"
+          : "deterministic_daily_limit"
+      );
+    }
+
+    let briefing = fallbackPerpetualBriefing(snapshot);
+    let model = "fallback";
+    try {
+      const input = buildPerpetualBriefingInput(snapshot);
+      const providerDeadline = Date.now() + PROVIDER_TIMEOUT_MS;
+      for (const provider of getAIProviderCandidates()) {
+        const remainingMs = providerDeadline - Date.now();
+        if (remainingMs <= 0) break;
+        try {
+          briefing = clean(await withTimeout(provider.generateMarketBriefing(input), remainingMs));
+          model = provider.model;
+          break;
+        } catch (error) {
+          if (error instanceof AIProviderError) console.warn(`[perpetual-briefing] ${error.provider} failed`, error.message);
+          else console.warn("[perpetual-briefing] provider failed", error);
+        }
+      }
+    } catch (error) {
+      console.warn("[perpetual-briefing] fallback used", error instanceof Error ? error.message : error);
+    }
+    briefing = clean(briefing);
+    const providerGenerated = model !== "fallback";
+    if (providerGenerated) {
+      const cachedAt = Date.now();
+      cache.set(cacheKey, { briefing, model, expiresAt: cachedAt + CACHE_TTL_MS });
+      pruneCache(cachedAt);
+      const sharedStored = await setSharedPerpetualBriefing(cacheKey, { briefing, model }, CACHE_TTL_MS / 1000);
+      // If the cache write failed, keep the short lease until its TTL expires so
+      // another instance cannot immediately pay for the same explanation again.
+      releaseLease = sharedStored;
+    }
+    return privateJson({
+      snapshotId: snapshot.id,
+      generatedAt: snapshot.generatedAt,
+      briefing,
+      model,
+      cached: false,
+      ...(!providerGenerated ? { providerSkipped: true } : {})
+    });
+  } finally {
+    if (releaseLease) await releaseSharedPerpetualBriefingLease(cacheKey, lease.token);
+  }
+}
+
+function deterministicResponse(
+  snapshot: PerpetualDecisionSnapshot,
+  model: "deterministic_cost_guard" | "deterministic_daily_limit" | "deterministic_generation_in_progress"
+) {
+  return privateJson({
+    snapshotId: snapshot.id,
+    generatedAt: snapshot.generatedAt,
+    briefing: clean(fallbackPerpetualBriefing(snapshot)),
+    model,
+    cached: false,
+    providerSkipped: true
+  });
 }

@@ -72,7 +72,7 @@ export function KakaoLoginButton({ returnTo = "/crypto" }: { returnTo?: string }
           Kakao REST API 키를 설정하면 Kakao 로그인을 사용할 수 있습니다.
         </p>
       ) : null}
-      {message ? <p className="text-center text-xs font-semibold leading-5 text-slate-400">{message}</p> : null}
+      {message ? <p role="status" aria-live="polite" className="text-center text-xs font-semibold leading-5 text-slate-400">{message}</p> : null}
     </div>
   );
 }

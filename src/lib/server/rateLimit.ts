@@ -3,6 +3,8 @@ interface RateLimitOptions {
   key: string;
   limit: number;
   windowMs: number;
+  includeClientIp?: boolean;
+  requireSharedBackend?: boolean;
 }
 
 interface RateLimitBucket {
@@ -13,13 +15,23 @@ interface RateLimitBucket {
 interface RateLimitResult {
   allowed: boolean;
   retryAfter: number;
-  backend: "upstash" | "memory";
+  backend: "upstash" | "memory" | "unavailable";
 }
 
-type UpstashNumberResponse = {
-  result?: number;
+type UpstashWindowResponse = {
+  result?: [number, number];
   error?: string;
 };
+
+const ATOMIC_WINDOW_SCRIPT = [
+  "local count = redis.call('INCR', KEYS[1])",
+  "local ttl = redis.call('PTTL', KEYS[1])",
+  "if ttl < 0 then",
+  "  redis.call('PEXPIRE', KEYS[1], ARGV[1])",
+  "  ttl = tonumber(ARGV[1])",
+  "end",
+  "return {count, ttl}"
+].join("\n");
 
 const buckets = new Map<string, RateLimitBucket>();
 
@@ -32,7 +44,7 @@ function clientIp(request: Request) {
 
 function memoryRateLimit(request: Request, options: RateLimitOptions): RateLimitResult {
   const now = Date.now();
-  const key = `${options.key}:${clientIp(request)}`;
+  const key = options.includeClientIp === false ? options.key : `${options.key}:${clientIp(request)}`;
   const bucket = buckets.get(key);
 
   if (!bucket || bucket.resetAt <= now) {
@@ -76,20 +88,27 @@ async function upstashCommand<T>(command: string, key: string, ...args: Array<st
 }
 
 async function upstashRateLimit(request: Request, options: RateLimitOptions): Promise<RateLimitResult> {
-  const key = `rate:${options.key}:${clientIp(request)}`;
-  const windowSeconds = Math.max(1, Math.ceil(options.windowMs / 1000));
-  const countPayload = await upstashCommand<UpstashNumberResponse>("incr", key);
-  const count = Number(countPayload.result ?? 0);
-
-  if (count <= 1) {
-    await upstashCommand<UpstashNumberResponse>("expire", key, windowSeconds);
+  const scopedKey = options.includeClientIp === false ? options.key : `${options.key}:${clientIp(request)}`;
+  const key = `rate:${scopedKey}`;
+  const windowMs = Math.max(1_000, Math.ceil(options.windowMs));
+  const windowPayload = await upstashCommand<UpstashWindowResponse>(
+    "eval",
+    ATOMIC_WINDOW_SCRIPT,
+    1,
+    key,
+    windowMs
+  );
+  const [rawCount, rawTtl] = Array.isArray(windowPayload.result) ? windowPayload.result : [0, windowMs];
+  const count = Number(rawCount);
+  const ttlMs = Number(rawTtl);
+  if (!Number.isFinite(count) || count < 1 || !Number.isFinite(ttlMs) || ttlMs < 0) {
+    throw new Error("Upstash rate limit returned an invalid atomic window.");
   }
 
   if (count > options.limit) {
-    const ttlPayload = await upstashCommand<UpstashNumberResponse>("ttl", key);
     return {
       allowed: false,
-      retryAfter: Math.max(1, Number(ttlPayload.result ?? windowSeconds)),
+      retryAfter: Math.max(1, Math.ceil(ttlMs / 1000)),
       backend: "upstash"
     };
   }
@@ -102,8 +121,16 @@ export async function rateLimit(request: Request, options: RateLimitOptions): Pr
     try {
       return await upstashRateLimit(request, options);
     } catch (error) {
+      if (options.requireSharedBackend) {
+        console.warn("[rateLimit] 공유 비용 제한을 확인하지 못해 공급자 호출을 차단합니다.", error);
+        return { allowed: false, retryAfter: 60, backend: "unavailable" };
+      }
       console.warn("[rateLimit] Upstash 제한 실패, 메모리 제한으로 대체합니다.", error);
     }
+  }
+
+  if (options.requireSharedBackend) {
+    return { allowed: false, retryAfter: 60, backend: "unavailable" };
   }
 
   return memoryRateLimit(request, options);

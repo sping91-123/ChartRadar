@@ -57,12 +57,10 @@ const pageChecks = [
   "/terms"
 ].map((path) => ({ label: path, path }));
 
-const newsPageChecks = newsImpactRuntimeMode === "on"
-  ? ["/crypto/news", "/news?market=global"].map((path) => ({ label: `${path} (on)`, path }))
-  : [
-      { label: `/crypto/news (${newsImpactRuntimeMode})`, path: "/crypto/news", expectedStatus: [307, 308], expectedLocation: "/crypto/home" },
-      { label: `/news?market=global (${newsImpactRuntimeMode})`, path: "/news?market=global", expectedStatus: [307, 308], expectedLocation: "/global" }
-    ];
+const newsPageChecks = ["/crypto/news", "/news?market=global"].map((path) => ({
+  label: `${path} (${newsImpactRuntimeMode} read view)`,
+  path
+}));
 
 const redirectChecks = [
   ["/crypto", "/crypto/home"],
@@ -85,13 +83,13 @@ const redirectChecks = [
 }));
 
 redirectChecks.push({
-  label: `/news?market=crypto → ${newsImpactRuntimeMode === "on" ? "/crypto/news" : "/crypto/home"}`,
+  label: "/news?market=crypto → /crypto/news",
   path: "/news?market=crypto",
   expectedStatus: [307, 308],
-  expectedLocation: newsImpactRuntimeMode === "on" ? "/crypto/news" : "/crypto/home"
+  expectedLocation: "/crypto/news"
 });
 
-if (newsImpactRuntimeMode === "on") {
+if (newsImpactRuntimeMode !== "off") {
   const eventId = "20000000-0000-4000-8000-000000000001";
   const snapshotId = "10000000-0000-4000-8000-000000000001";
   redirectChecks.push({
@@ -112,7 +110,7 @@ const assetChecks = [
 assetChecks.push({
   label: "/api/news-impact?market=crypto&asset=btc",
   path: "/api/news-impact?market=crypto&asset=btc",
-  expectedStatus: newsImpactRuntimeMode === "on" ? [200, 503] : [200]
+  expectedStatus: newsImpactRuntimeMode === "off" ? [200] : [200, 503]
 });
 
 const disabledBillingChecks = [

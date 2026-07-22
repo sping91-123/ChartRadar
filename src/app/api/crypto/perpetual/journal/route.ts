@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { decisionJournalContextFromSnapshot } from "@/lib/journal";
+import { decisionJournalContextFromSnapshot, type DecisionJournalContext } from "@/lib/journal";
 import { decisionStateLabel } from "@/lib/perpetualDecisionCopy";
 import { isUuid, monitorLinksSnapshot } from "@/lib/perpetualMonitor";
 import { getPerpetualDecisionSnapshotById } from "@/lib/server/perpetualDecisionSource";
@@ -19,6 +19,12 @@ interface OwnedMonitorRow {
   user_id: string;
   snapshot_id: string;
   last_snapshot_id: string | null;
+  condition_id: string;
+  condition: { label?: unknown };
+  timeframe: "15m" | "1h" | "4h";
+  condition_role: "primary" | "confirmation" | "invalidation";
+  last_evaluated_at: string | null;
+  triggered_at: string | null;
 }
 
 function privateJson(body: unknown, init?: ResponseInit) {
@@ -75,7 +81,7 @@ export async function POST(request: Request) {
   }
   const source = body.source === "alert" ? "alert" : body.source === "news" ? "news" : "snapshot";
   if (source === "news" && !newsImpactRuntimePolicy().mutate) {
-    return privateJson({ error: "뉴스 임팩트 복기는 아직 공개되지 않았습니다.", code: "news_impact_not_active" }, { status: 409 });
+    return privateJson({ error: "공식 뉴스와 연결한 복기는 아직 준비되지 않았습니다.", code: "news_impact_not_active" }, { status: 409 });
   }
   const snapshot = await getPerpetualDecisionSnapshotById(body.snapshotId);
   if (!snapshot) return privateJson({ error: "복기에 연결할 분석을 찾지 못했습니다." }, { status: 404 });
@@ -90,16 +96,26 @@ export async function POST(request: Request) {
   }
 
   let monitorId: string | null = null;
+  let monitorCondition: DecisionJournalContext["monitorCondition"];
   if (body.monitorId) {
     const rows = await supabaseAdminRest<OwnedMonitorRow[]>(
-      `perpetual_scenario_monitors?select=id,user_id,snapshot_id,last_snapshot_id&id=eq.${encodeURIComponent(body.monitorId)}&user_id=eq.${encodeURIComponent(entitlement.userId)}&limit=1`
+      `perpetual_scenario_monitors?select=id,user_id,snapshot_id,last_snapshot_id,condition_id,condition,timeframe,condition_role,last_evaluated_at,triggered_at&id=eq.${encodeURIComponent(body.monitorId)}&user_id=eq.${encodeURIComponent(entitlement.userId)}&limit=1`
     );
     const monitor = rows[0];
     const linkedToSnapshot = Boolean(monitor && monitorLinksSnapshot(monitor, snapshot.id, source === "alert"));
-    if (!monitor || !linkedToSnapshot) {
+    const conditionLabel = typeof monitor?.condition?.label === "string" ? monitor.condition.label.trim().slice(0, 240) : "";
+    if (!monitor || !linkedToSnapshot || !conditionLabel) {
       return privateJson({ error: "이 계정의 조건 감시와 분석 연결을 확인하지 못했습니다." }, { status: 400 });
     }
     monitorId = monitor.id;
+    monitorCondition = {
+      id: monitor.condition_id,
+      label: conditionLabel,
+      role: monitor.condition_role,
+      timeframe: monitor.timeframe,
+      ...(monitor.triggered_at ? { triggeredAt: monitor.triggered_at } : {}),
+      ...(monitor.last_evaluated_at ? { lastEvaluatedAt: monitor.last_evaluated_at } : {})
+    };
   }
 
   try {
@@ -110,7 +126,7 @@ export async function POST(request: Request) {
         user_id: entitlement.userId,
         title: `${snapshot.symbol} ${source === "news" ? "뉴스 판단 복기" : "선물 시장 분석"}`,
         bias: decisionStateLabel(snapshot.summary.state),
-        note: `${snapshot.summary.topRisk}\n다음 확인: ${snapshot.summary.primaryCondition.label}`,
+        note: `${snapshot.summary.topRisk}\n${monitorCondition ? "연결한 감시 조건" : "다음 확인"}: ${monitorCondition?.label ?? snapshot.summary.primaryCondition.label}`,
         market: "crypto",
         source,
         symbol: snapshot.symbol,
@@ -120,6 +136,7 @@ export async function POST(request: Request) {
         monitor_id: monitorId,
         decision_context: {
           ...decisionJournalContextFromSnapshot(snapshot),
+          ...(monitorCondition ? { monitorCondition } : {}),
           ...(newsContext ? { news: newsContext } : {})
         },
         news_event_id: newsContext?.eventId ?? null,

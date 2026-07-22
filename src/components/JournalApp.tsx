@@ -112,6 +112,14 @@ function detectEntryMarket(entry: JournalEntry): MarketScope | "unknown" {
   return stockSymbols.has(symbol) ? "stocks" : "crypto";
 }
 
+function isReviewableRadarEntry(entry: JournalEntry) {
+  return entry.source === "scout" ||
+    entry.source === "chart" ||
+    entry.source === "snapshot" ||
+    entry.source === "alert" ||
+    entry.source === "news";
+}
+
 function mergeJournalEntries(...entryGroups: JournalEntry[][]) {
   const entriesById = new Map<string, JournalEntry>();
 
@@ -452,7 +460,7 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
   );
 
   const pendingRadarEntries = useMemo(
-    () => marketEntries.filter((entry) => (entry.source === "scout" || entry.source === "chart") && !entry.outcome).slice(0, 4),
+    () => marketEntries.filter((entry) => isReviewableRadarEntry(entry) && !entry.outcome).slice(0, 4),
     [marketEntries]
   );
 
@@ -528,7 +536,7 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
 
   function startFromRadar(entry: JournalEntry) {
     const parsed = parseEntryMeta(entry);
-    setTitle(`${entry.symbol || parsed.symbol} 저장 레이더 복기`);
+    setTitle(`${entry.symbol || parsed.symbol} 저장 판단 복기`);
     setSymbol(entry.symbol || parsed.symbol.replace("시장 미기록", ""));
     setDirection(entry.bias === "숏" || entry.bias.toLowerCase().includes("short") ? "숏" : entry.bias === "롱" || entry.bias.toLowerCase().includes("long") ? "롱" : "관망");
     setMemo(entry.verdict || entry.note || "");
@@ -720,7 +728,8 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
             <section id="pending-radar" className="scroll-mt-4 scroll-mb-56">
             <PanelCard variant="report" padding="lg">
               <SectionHeader
-                title="저장한 레이더"
+                title="복기할 판단"
+                description="차트·조건 알림·공식 뉴스에서 저장한 당시 판단에 결과를 붙이고, 다음 매매 전에 다시 확인할 기준을 남깁니다."
                 action={
                   <StatusPill tone={pendingRadarEntries.length ? "risk" : "info"} icon={Target}>
                     {pendingRadarEntries.length ? `${pendingRadarEntries.length}건` : "없음"}
@@ -731,10 +740,10 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
               {pendingRadarEntries.length ? (
                 <div className="mt-4 divide-y divide-ui-line lg:grid lg:grid-cols-2 lg:divide-x lg:divide-y-0">
                   {pendingRadarEntries.map((entry) => {
-                    const checkpoint =
-                      entry.scoutSnapshot
-                          ? `손절·해석을 다시 볼 가격 ${entry.scoutSnapshot.invalidation.toLocaleString()} 확인`
-                        : entry.verdict || "저장 당시 근거와 결과를 확인하세요.";
+                    const checkpoint = entry.decisionContext?.monitorCondition?.label ?? entry.decisionContext?.primaryCondition.label ??
+                      (entry.scoutSnapshot
+                        ? `손절·해석을 다시 볼 가격 ${entry.scoutSnapshot.invalidation.toLocaleString()} 확인`
+                        : entry.verdict || "저장 당시 근거와 결과를 확인하세요.");
                     return (
                       <AppSurface as="article" key={entry.id} tone="inset" variant="flat" padding="none" radius="none" className="py-4 lg:px-4 lg:first:pl-0 lg:last:pr-0">
                         <SourceBadge entry={entry} />
@@ -757,7 +766,7 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
                 </div>
               ) : (
                 <AppSurface tone="inset" variant="flat" padding="sm" className="mt-4">
-                  <p className="text-xs font-medium leading-5 text-ui-muted">저장한 레이더가 생기면 여기서 바로 복기합니다.</p>
+                  <p className="text-xs font-medium leading-5 text-ui-muted">차트·조건 알림·공식 뉴스에서 판단을 저장하면 여기서 결과와 다음 기준을 이어서 복기할 수 있습니다.</p>
                 </AppSurface>
               )}
             </PanelCard>
@@ -987,10 +996,14 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
                               </span>
                             }
                           />
-                          <DataRow label="다음 판단 전 체크" value="확인" detail={parsed.nextCheckpoint} />
+                          <DataRow
+                            label={entry.decisionContext?.monitorCondition ? (entry.source === "alert" ? "알림이 울린 조건" : "연결한 감시 조건") : "다음 판단 전 체크"}
+                            value="확인"
+                            detail={entry.decisionContext?.monitorCondition?.label ?? entry.decisionContext?.primaryCondition.label ?? parsed.nextCheckpoint}
+                          />
                         </div>
 
-                        {(entry.source === "scout" || entry.source === "chart") ? <OutcomeButtons entry={entry} onOutcome={recordOutcome} /> : null}
+                        {isReviewableRadarEntry(entry) ? <OutcomeButtons entry={entry} onOutcome={recordOutcome} /> : null}
 
                         <ActionButton
                           onClick={() => setExpandedEntryId(expanded ? null : entry.id)}
@@ -1003,6 +1016,23 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
                         {expanded ? (
                           <AppSurface tone="panel" variant="report" padding="md" className="mt-3">
                             <div className="grid gap-3 text-sm leading-6 text-ui-muted">
+                              {entry.decisionContext ? (
+                                <div className="border-l-2 border-ui-watch bg-ui-inset/60 px-3 py-2.5">
+                                  <p className="text-[11px] font-black uppercase tracking-[0.08em] text-ui-watch">저장 당시 선물 판단</p>
+                                  <p className="mt-1 font-semibold text-ui-text">{entry.decisionContext.headline}</p>
+                                  <p className="mt-1"><span className="font-semibold text-ui-text">가장 큰 위험.</span> {entry.decisionContext.topRisk}</p>
+                                  <p>
+                                    <span className="font-semibold text-ui-text">
+                                      {entry.decisionContext.monitorCondition ? (entry.source === "alert" ? "알림이 울린 조건." : "연결한 감시 조건.") : "다음 확인."}
+                                    </span>{" "}
+                                    {entry.decisionContext.monitorCondition?.label ?? entry.decisionContext.primaryCondition.label}
+                                  </p>
+                                  {entry.decisionContext.monitorCondition?.triggeredAt ? (
+                                    <p className="text-xs text-ui-subtle">조건 확인 시각 {formatDateTime(entry.decisionContext.monitorCondition.triggeredAt)}</p>
+                                  ) : null}
+                                  <p className="mt-1 text-xs text-ui-subtle">분석 시각 {formatDateTime(entry.decisionContext.generatedAt)}</p>
+                                </div>
+                              ) : null}
                               {entry.decisionContext?.news ? (
                                 <div className="border-l-2 border-ui-brand bg-ui-inset/60 px-3 py-2.5">
                                   <p className="text-[11px] font-black uppercase tracking-[0.08em] text-ui-brand">판단 당시 뉴스 맥락</p>

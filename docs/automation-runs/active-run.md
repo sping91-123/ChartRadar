@@ -412,3 +412,54 @@ Task 6 must select at most one follow-up candidate:
 - 검증: 신규 뉴스 테스트 전체, 기존 Perpetual·Push·Supabase·billing·ops·routes·mobile smoke, `smoke:all`, TypeScript, production build, `git diff --check` 통과. 보관 범위 보완 뒤 `test:news-sources`, `test:news-impact`, TypeScript, production build를 다시 통과했다.
 - Gate A는 완료했다. Gate B는 2026-07-21 19:45 KST부터 최소 72시간 동안 출처 없는 사건 0, 미허가 payload 0, 중복률·관련성 기준을 관찰한 뒤 별도 전환한다. Gate C는 최소 7일과 eligible 사건 10건, 실제 disposable Android FCM 검증 조건이므로 Push OFF를 유지한다.
 - AAB, Play Console, iOS, 스토어 제출은 수행하지 않았다. Vercel dashboard의 overdue/payment 경고와 Supabase leaked-password protection WARN은 별도 계정 운영 리스크로 남는다.
+
+## 2026-07-21 Home·Perpetual·공식 NEWS 유료 가치 복구 (로컬)
+
+- 운영 화면을 다시 확인한 결과 결론 축약 과정에서 Home CTA가 아래로 밀리고, Perpetual의 MSB·CHoCH·시간대별 구조·상세 수급·AI 설명 가치가 약해졌다. 이를 삭제 전 자산을 되살리는 방향으로 로컬에서 복구했다. NEWS의 `shadow` 계약은 공식 발표·공시 사실만 사용자에게 제공하고, 검증 전 시장 반응·정확한 분석 연결·알림·NEWS 전용 복기는 계속 숨기는 것으로 분리했다.
+- Home은 공식 경제 일정의 날짜·시각·실제·예측·이전 값을 최상단에 유지하고, BTC/ETH 상태·가장 큰 위험·확인 가격·이유 2개·`전체 선물 분석과 조건 알림 보기`를 360×800 첫 화면 안에 배치했다. CTA 아래에는 같은 분석 시점의 공식 NEWS와 MSB·CHoCH·15분/1시간/4시간 근거·차트를 이어서 보여준다.
+- Perpetual은 Basic에도 정확한 15분 MSB·CHoCH 가격·시각, 다중 시간대 흐름, 포지션 쏠림, 큰 금액 체결을 남겼다. Coin Pro에는 OB·FVG·Sweep·CISD·POC·가격 구간, RSI·MACD·ATR·거래량, 계정별 롱·숏·OI·펀딩비·강제 청산 위험·큰 체결 상세, AI 설명, 최대 20개 조건 감시와 당시 판단 기록의 차이를 명시했다.
+- `/crypto/news`와 `/news?market=global`을 공식 사실 피드와 검증된 반응 화면으로 분리했다. `shadow`에서는 최근 공식 발표·공시 최대 3개의 사건명·시각·중요한 이유·공식 출처만 제공하고, `on`에서만 30일 이력·15분/60분 비교·전체 출처와 개정 이력을 연다. 미허가 매체 RSS·기사 스크래핑·뉴스 Push는 계속 차단했다.
+- NEWS 화면은 `무슨 일이 있었나 → 발표 뒤 실제 시장 반응 → 현재 판단과 같은가 → 다음에 확인할 것`으로 정리했다. `snapshot`, `News Impact`, `첫 완결`, `동일 품질`, `수급 원본` 같은 내부·전문 표현을 쉬운 한국어로 교체했다. `shadow`는 공식 사실 UI만 제공하고, 반응 분류·알림·정확한 Perpetual 연결·NEWS 전용 복기는 Gate B 전까지 fail-closed다.
+- NEWS→Perpetual→Journal 연결은 `on` 모드에서만 정확한 공식 뉴스 문맥을 저장한다. 미활성 모드에서는 버튼을 `선물 판단만 저장`으로 표시하고 뉴스 연결이 포함되지 않음을 안내해, 사용자가 NEWS 복기가 저장됐다고 오해하지 않게 했다.
+- Home 매크로 일정 지연 원인은 클라이언트가 매 요청마다 저장 캐시를 우회하고, 저장 원장 조회도 다시 외부 공식 adapter를 호출하던 구조였다. 캐시 우회를 제거하고 저장 조회를 순수 DB read로 바꿨으며 Supabase 2.5초 timeout, API 4.5초 예비 일정 deadline, 클라이언트 8초 timeout과 즉시 fallback을 추가했다. 로컬 API는 stored-cache 18건을 약 2.4초에 반환했다.
+- CLI Playwright 360×800·390×844에서 Home의 일정·위험·조건·CTA, 동일 분석으로 이동한 Perpetual의 MSB·CHoCH·다중 시간대·AI, Crypto/Global NEWS의 사실→반응→판단 영향→다음 확인, Coin Pro의 29,000원 가격·Google Play CTA, NEWS 문맥이 동결된 Journal 복기를 확인했다. Home CTA bottom 656px, Coin Pro CTA bottom 605px로 첫 화면 안에 있었고 모든 화면의 horizontal overflow와 console error/warning은 0건이었다. 출처 지연 상태도 마지막 정상 결과 확인 안내와 대체 행동을 표시했다. 증거는 `output/playwright/paid-flow-final-2026-07-21/`에 있다. Codex in-app Browser는 사용하지 않았다.
+- 최종 상태에서 신규 NEWS·Perpetual·Push·제품 이벤트 테스트, 기존 entitlement·auth·futures·Supabase 테스트, migration·security·ops·routes·mobile·billing smoke, TypeScript, production build, `smoke:all`, `git diff --check`를 모두 통과했다. route smoke의 첫 실행은 QA 서버가 3100인데 기본 주소 3000을 사용해 연결 실패했으며, 동일 빌드의 실제 3100 주소와 `on` UI 후보 모드로 재실행해 43개 page manifest와 66개 route/API 검사를 통과했다.
+- 웹 결제의 막힌 CTA를 실제 Android 패키지의 Google Play 경로로 연결하고, 이미 보유한 권한의 중복 구매를 막았으며, 로그인·구매 뒤 사용자가 보던 분석으로 돌아가는 `returnTo`를 보존했다. Basic과 Coin Pro의 차이는 `무료 결론·조건 감시 1개` 대 `1시간·4시간 신호 발생 가격·시각·심화 근거·AI 해설·20개 감시·알림 당시 판단 복기`로 실제 구현과 맞췄다. 예측 정확도를 보장하는 것으로 읽힐 수 있는 `정확한 신호` 표현은 제거했다.
+- 운영 DB, 실제 Push, Vercel flag, deploy, AAB, 스토어 제출은 변경하지 않았다. 현재 변경은 `codex/restore-paid-value` 로컬 브랜치에 있으며 commit·push하지 않았다. 운영은 계속 NEWS `shadow`이므로 `chartradar.kr`은 production deploy와 Gate B `on` 전환 전까지 이 로컬 후보와 다르다.
+
+## 2026-07-22 유료 가치 최종 회귀·모바일 신뢰도 보강 (로컬)
+
+- Home은 360×800에서 풍부한 경제 일정의 사건명·D-day·한국시간·실제·예측·이전을 유지하면서 상태·가장 큰 위험·확인 가격·`전체 선물 분석과 조건 알림 보기`가 첫 화면 안에 들어왔다. CTA bottom은 660px이고 horizontal overflow와 console warning/error는 0건이다.
+- Perpetual은 첫 화면의 결론·위험·확인 조건 다음에 조건 감시 CTA를 먼저 배치해 하단 탭에 가려지지 않게 했다. 360×800에서 CTA는 691~731px이고 하단 탭 위에 완전히 노출된다. 아래에는 15분 차트, MSB·CHoCH 발생 가격·시각, 15분·1시간·4시간 비교, 몰린 포지션, 큰 금액 체결, Coin Pro의 고급 구간·AI 설명·20개 감시·알림 당시 복기가 유지된다.
+- Coin Pro 화면은 360×800에서 29,000원/월 가격과 Google Play CTA가 첫 화면 안에 들어오며 overflow와 console warning/error가 0건이다. `정확한 신호`처럼 수익·정확도를 보장하는 표현은 제거하고 실제 제공 범위인 신호 발생 가격·시각, 고급 구간, AI 설명, 조건 감시, 당시 판단 복기만 판매 문구에 남겼다.
+- NEWS `shadow`는 공식 사실만 표시하고 검증 전 15분·60분 반응, 뉴스 알림, NEWS 전용 복기를 노출하지 않는다. 360×800에서 공식 출처 상태, `무슨 일이 있었나`, `왜 확인해야 하나`, `지금 할 일`, 선물 화면 CTA가 보이며 overflow와 console warning/error는 0건이다.
+- 같은 신규 실업수당 일정이 TradingEconomics·ForexFactory 계열 입력에서 두 번 보이던 문제를 데이터 projection에서 해결했다. source와 표시명 대신 semantic event family·발표 시각으로 합치고, 211K·212K처럼 전망치가 다르면 임의 선택 없이 `출처별 전망 상이`로 표시한다.
+- 공개 캘린더 행이 제목만으로 DOL 공식 데이터처럼 승격되던 provenance 오류를 차단했다. 공식 허용 host와 `official_api|official_page`가 함께 확인된 경우만 공식으로 표시하고, 과거 버그로 오염된 미래 DOL stored-cache는 live/fallback으로 우회한다.
+- DOL adapter는 Initial Claims와 Continuing Claims를 분리하고 각각 `initialClaimsSa`, `continuedClaimsSa`를 사용한다. 발표 전 일정에 최신 주간 actual을 복사하지 않으며, 공식 actual과 공개 캘린더 actual이 충돌하면 공식값을 우선한다.
+- AI 해설은 계정별 일일 한도와 전역 provider 일일 한도를 공유 Upstash backend에서 fail-closed로 적용한다. 예산 초과·provider 장애 fallback은 사용자별·전역 캐시에 저장하지 않아 정상 사용자의 유료 해설을 오염시키지 않는다.
+- Home의 조건 수는 저장 quota가 아니라 실제 scanner가 평가하는 running count를 표시한다. 조건 이력은 저장 당시 분석과 trigger/마지막 확인 분석을 함께 보여주고, Journal 이동에는 서버가 다시 검증하는 monitor UUID 문맥을 보존한다.
+- 검증: 신규 `test:macro-calendar`, NEWS·Perpetual·Push·제품 이벤트·entitlement·auth·futures·Supabase 테스트, migration·security·ops·copy·routes·mobile·billing smoke, TypeScript, production build, 전체 `smoke:all`, `git diff --check`가 통과했다.
+- CLI Playwright 증거는 `output/playwright/value-ready-2026-07-22/`에 있다. Codex in-app Browser는 사용하지 않았다.
+- 이 결과는 월 29,000원 제품의 로컬 출시 후보 품질을 의미하며 매출·수익을 보장하는 검증은 아니다. 운영 `chartradar.kr`, 운영 DB, 실제 Push, Vercel flag, deploy, AAB, 스토어는 변경하지 않았고 commit·push도 수행하지 않았다.
+
+## 2026-07-22 유료 가치 P1 최종 차단·모바일 재검증 (로컬)
+
+- 매크로 값 출처를 행 출처와 분리했다. 공개 캘린더 실제값·전망값은 공식 일정 링크가 붙어도 공식 수치로 승격되지 않으며, 숫자형 NEWS 사건은 `actualProvenance=official`인 경우만 공식 반응 원장에 들어간다.
+- DOL은 Initial·Continuing·4주 평균을 서로 다른 사건과 필드로 유지하고 정확한 발표 주차가 없으면 actual을 붙이지 않는다. Census Durable Goods actual은 전망과 같은 전월비 퍼센트로 맞췄다. actual 갱신 timeout에는 오래된 정적 일정 대신 마지막 정상 stored payload를 유지한다.
+- Upstash rate limit을 Lua `INCR+PTTL+PEXPIRE` 한 연산으로 바꿔 TTL 없는 영구 제한 키를 복구한다. 동일 분석 AI 생성은 60초 분산 lease와 전체 공급자 공용 18초 deadline으로 중복 비용을 막고, 공유 캐시 저장 실패 시 lease를 즉시 풀지 않는다.
+- AI 공급자를 사용하지 않은 fallback은 `규칙 기반 자동 설명`으로 표시한다. 유료 기능 `on`·canary 활성화는 Groq 또는 명시적으로 활성화된 Gemini가 없으면 실패하며 health readiness에도 같은 조건을 적용한다.
+- 알림 URL의 서버 검증 monitor ID를 sessionStorage보다 우선한다. Journal은 사용자 소유 monitor의 실제 조건·시간대·trigger/평가 시각을 서버에서 동결하며, 서버 장애 시 monitor 연결 복기를 불완전한 로컬 성공으로 저장하지 않고 재시도를 안내한다.
+- 검증: `test:macro-calendar`, `test:news-sources`, `test:news-reactions`, `test:perpetual-snapshot`, `test:perpetual-briefing`, `test:perpetual-monitors`, `smoke:ops`, TypeScript, production build, 최종 `smoke:all`을 모두 통과했다. AI 공급자 미설정 `on` fixture는 의도대로 activation gate 실패를 확인했다.
+- CLI Playwright로 360×800과 390×844의 Home·Perpetual·Coin Pro를 재확인했다. Home은 공식 일정 날짜·시각·실제값과 결론·위험·확인 조건·CTA가 첫 화면에 있고, Perpetual 조건 감시 CTA와 29,000원 Google Play CTA는 하단 탭 위에 노출된다. 증거는 `output/playwright/paid-value-final-2026-07-22/`에 있다. Codex in-app Browser는 사용하지 않았다.
+- 운영 `chartradar.kr`, 운영 DB, 실제 Push, Vercel flag, deploy, AAB, 스토어, commit·push는 변경하지 않았다. 이 완료는 로컬 제품 후보의 구현·회귀 품질이며 실제 매출을 보장하지 않는다.
+
+## 2026-07-22 매크로·NEWS 데이터 신뢰성 최종 보강 (로컬)
+
+- DOL Initial Claims·4주 평균은 발표에 대응하는 직전 토요일, Continuing Claims는 그보다 1주 전 보고 기간만 사용한다. 휴일 발표·연도 경계와 `Jobless Claims 4-week Average` 역순 라벨을 fixture로 고정하고 0.25K 정밀도를 보존했다.
+- Census Durable Goods는 공식 발표일을 동일 회차 매칭에만 사용하고 실제 사건 시각은 캘린더 발표 시각을 유지한다. `Core`, `Ex Transportation`, `Ex Transp`, `Nondefense Capital Goods` 같은 세부 지표에는 headline actual을 붙이지 않는다.
+- 실제값에는 provider·공식 URL·보고 기간·관측 시각을, 시장 예상에는 별도 provenance·provider·URL을 보존한다. Home의 호재·악재 해석과 숫자형 NEWS admission은 공식 actual, 유효한 값, `actual_available`, 허용 source type, DB/raw 값 일치를 모두 요구한다.
+- stale stored payload는 강제 갱신과 live timeout에서도 마지막 정상 fallback으로 유지하되 화면에 마지막 정상 확인 시각을 표시한다. 예비 일정과 일부 공식값 확인 지연은 stale과 다른 상태로 표시하며 모든 compact 경로에도 경고가 보인다.
+- 수집 결과가 비어 있는 live 응답은 `fallback/degraded`로 전환하고 정적 예비 일정이 정상 원장을 덮어쓰지 못하게 했다. macro sync degraded 응답은 HTTP 503과 실패 원장으로 드러난다.
+- 정상 동기화는 ISO `syncGeneration`을 모든 행에 함께 저장한다. 화면과 NEWS는 중요도 필터보다 먼저 최신 세대를 선택하므로 발표 시각 변경·취소 전 일정과 이전 세대의 고중요도 사건이 다시 나타나지 않는다. 최근 8일·향후 60일 조회와 90일 retention도 적용했다.
+- 검증: `test:macro-calendar`, `test:news-sources`, `test:news-reactions`, `test:news-impact`, `smoke:ops`, TypeScript, 64-page production build, 최종 전체 `smoke:all`이 통과했다. 독립 읽기 전용 감사에서 발견된 데이터 신뢰 P1을 모두 반영한 뒤 마지막 전체 회귀를 다시 실행했다.
+- 운영 `chartradar.kr`, 운영 DB, cron, Push, Vercel flag, deploy, AAB, 스토어, commit·push는 변경하지 않았다. 로컬 후보가 돈을 받을 만한 제품 구조에 가까워졌다는 의미이며 실제 결제 전환과 매출은 운영 배포 후 사용 데이터로 별도 검증해야 한다.

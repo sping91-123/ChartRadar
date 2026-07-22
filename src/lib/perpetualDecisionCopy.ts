@@ -1,7 +1,7 @@
 import type { DirectionState, MarketRegime } from "@/lib/marketAnalysis";
 import type { LargeTradeSide } from "@/lib/largeTradeFlow";
 import type { LiquidationPressureSide } from "@/lib/liquidationPressure";
-import type { DecisionState, SnapshotQuality } from "@/lib/perpetualDecisionSnapshot";
+import type { DecisionState, MonitorCondition, SnapshotQuality } from "@/lib/perpetualDecisionSnapshot";
 
 export function plainDirection(direction: DirectionState) {
   if (direction === "bullish") return "위쪽";
@@ -58,6 +58,14 @@ export function qualityLabel(quality: SnapshotQuality) {
   if (quality === "partial") return "일부 데이터 부족";
   if (quality === "stale") return "업데이트 지연";
   return "데이터 확인 필요";
+}
+
+export function monitorConditionHeading(condition: MonitorCondition) {
+  const isPriceCondition =
+    (condition.kind === "price_cross_above" || condition.kind === "price_cross_below") &&
+    typeof condition.threshold === "number" &&
+    Number.isFinite(condition.threshold);
+  return isPriceCondition ? "지금 확인할 가격" : "지금 확인할 조건";
 }
 
 export function beginnerTerm(term: "msb" | "choch" | "ob" | "fvg" | "sweep" | "cisd" | "poc" | "pd") {

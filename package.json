@@ -23,6 +23,7 @@
     "test:product-events": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-product-events.js",
     "test:push-targets": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-push-targets.js",
     "test:news-sources": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-news-sources.js",
+    "test:macro-calendar": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-macro-calendar.js",
     "test:news-impact": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-news-reactions.js && node scripts/test-news-impact-ledger.mjs",
     "test:news-reactions": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-news-reactions.js",
     "test:news-alerts": "node scripts/test-news-impact-ledger.mjs",

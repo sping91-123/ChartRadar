@@ -20,8 +20,29 @@ export interface NormalizedNewsSourceItem {
   structuredPayload: Record<string, unknown>;
 }
 
+function decodeHtmlEntities(value: string) {
+  const named: Record<string, string> = {
+    amp: "&",
+    apos: "'",
+    gt: ">",
+    lt: "<",
+    nbsp: " ",
+    quot: '"'
+  };
+  return value
+    .replace(/&#x([0-9a-f]+);/gi, (match, hex: string) => {
+      const codePoint = Number.parseInt(hex, 16);
+      return Number.isInteger(codePoint) && codePoint > 0 && codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : match;
+    })
+    .replace(/&#(\d+);/g, (match, digits: string) => {
+      const codePoint = Number.parseInt(digits, 10);
+      return Number.isInteger(codePoint) && codePoint > 0 && codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : match;
+    })
+    .replace(/&(amp|apos|gt|lt|nbsp|quot);/gi, (match, name: string) => named[name.toLowerCase()] ?? match);
+}
+
 function compactText(value: string, maxLength: number) {
-  return value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, maxLength);
+  return decodeHtmlEntities(value).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, maxLength);
 }
 
 function normalizedToken(value: string) {

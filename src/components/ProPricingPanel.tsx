@@ -27,7 +27,7 @@ type CheckoutState =
 type ValueCardTone = "info" | "watch" | "risk" | "long" | "locked";
 
 const NATIVE_CHECKOUT_TIMEOUT_MS = 60_000;
-const WEB_CHECKOUT_UNAVAILABLE_MESSAGE = "웹 결제는 준비 중입니다. Android 앱에서 Google Play 구독으로 결제해 주세요.";
+const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.staronlabs.chartradar";
 const NATIVE_CHECKOUT_TIMEOUT_MESSAGE = "Google Play 결제창을 여는 데 시간이 오래 걸리고 있습니다. 앱을 다시 열거나 잠시 후 다시 시도해 주세요.";
 
 class NativeCheckoutTimeoutError extends Error {
@@ -118,8 +118,8 @@ function scopeCopy(scope: BillingPageScope) {
   if (scope === "crypto") {
     return {
       eyebrow: "COIN PRO",
-      title: "Coin Pro에서 확인할 코인 기준",
-      body: "Basic은 BTC·ETH의 현재 흐름, 가장 큰 위험, 다음 확인 가격 1개를 보여줍니다. Coin Pro는 15분·1시간·4시간 근거와 해석을 다시 볼 가격을 열고, 중요한 조건을 최대 20개까지 앱이 대신 확인해 알림·복기로 이어갑니다."
+      title: "매일 확인하고, 조건이 오면 다시 보는 Coin Pro",
+      body: "Basic의 상태·위험·시간대별 방향 위에, 1시간·4시간 신호의 발생 가격·시각과 고급 구간·AI 해설·조건 20개·알림 당시 복기를 엽니다."
     };
   }
 
@@ -134,12 +134,14 @@ function scopeCopy(scope: BillingPageScope) {
   return {
     eyebrow: "ALL MARKET PRO",
     title: "Pro에서 확인할 시장 기준",
-    body: "Basic은 오늘 결론과 가장 큰 위험을 확인하는 흐름입니다. Pro는 결론이 강해지는 조건과 해석을 다시 볼 조건, 알림·복기 맥락을 열어 코인과 글로벌 위험을 함께 비교하도록 돕습니다."
+    body: "Basic은 오늘 결론과 가장 큰 위험을 확인하는 흐름입니다. Pro는 결론이 강해지는 조건과 현재 판단이 달라지는 조건, 알림과 당시 판단 기록을 열어 코인과 글로벌 위험을 함께 비교하도록 돕습니다."
   };
 }
 
-function checkoutCtaLabel(plan: BillingPlan, nativePurchaseAvailable: boolean) {
-  if (!nativePurchaseAvailable) return "Android 앱에서 결제 가능";
+function checkoutCtaLabel(plan: BillingPlan, nativePurchaseAvailable: boolean, isCovered: boolean, authenticated: boolean) {
+  if (isCovered) return "현재 권한으로 이용 중";
+  if (!nativePurchaseAvailable) return "Google Play에서 Chart Radar 열기";
+  if (!authenticated) return "로그인하고 Pro 시작";
   if (plan.marketScope === "crypto") return "Coin Pro로 코인 기준 보기";
   if (plan.marketScope === "stocks") return "Global Pro로 글로벌 맥락 보기";
   if (plan.marketScope === "bundle") return "All Market Pro로 시장 간 리스크 보기";
@@ -166,14 +168,14 @@ function AccessValue({ open }: { open: boolean }) {
 const planDepthRows: Array<{ label: string; value: string; detail: string; tone: ValueCardTone }> = [
   {
     label: "Basic",
-    value: "첫 판단 요약",
-    detail: "오늘 시장 상태와 핵심 리스크를 먼저 확인합니다.",
+    value: "매일 쓸 수 있는 핵심 판단",
+    detail: "현재 상태·위험·다음 조건, 시간대별 방향, 최근 15분 추세 신호, 조건 감시 1개를 제공합니다.",
     tone: "locked"
   },
   {
     label: "Coin Pro",
-    value: "코인 기준과 리스크",
-    detail: "Binance USDT-M BTC·ETH의 중요한 확인 가격, 해석을 다시 볼 가격, 15분·1시간·4시간 근거를 엽니다.",
+    value: "더 깊은 근거·감시·복기",
+    detail: "1시간·4시간 신호 가격과 시각, 고급 구간·수치, AI 해설, 조건 20개와 알림 당시 선물 판단 복기를 엽니다.",
     tone: "info"
   },
   {
@@ -198,7 +200,7 @@ const proUnlockItems: Array<{ icon: LucideIcon; title: string; detail: string }>
   },
   {
     icon: ShieldAlert,
-    title: "해석을 다시 볼 조건",
+    title: "현재 판단이 달라지는 조건",
     detail: "지금 보고 있는 흐름을 계속 참고해도 되는지, 어떤 가격에서 다시 확인해야 하는지 분리해서 보여줍니다."
   },
   {
@@ -208,8 +210,31 @@ const proUnlockItems: Array<{ icon: LucideIcon; title: string; detail: string }>
   },
   {
     icon: Bell,
-    title: "알림·복기 연결",
-    detail: "확인 조건을 알림과 복기 흐름으로 이어가며 같은 기준으로 다시 점검합니다."
+    title: "알림·판단 기록 연결",
+    detail: "확인 조건을 알림과 당시 판단 기록으로 이어가며 같은 기준으로 다시 점검합니다."
+  }
+];
+
+const cryptoProUnlockItems: Array<{ icon: LucideIcon; title: string; detail: string }> = [
+  {
+    icon: Gauge,
+    title: "1시간·4시간 신호의 발생 지점",
+    detail: "Basic의 방향 요약을 넘어 추세 확인(MSB)과 흐름 전환(CHoCH)이 나온 가격·시각을 시간대별로 확인합니다."
+  },
+  {
+    icon: ShieldAlert,
+    title: "중요 가격대와 위험 구간",
+    detail: "OB·FVG·Sweep·CISD·POC·고평가/저평가 구간을 쉬운 설명과 실제 가격으로 함께 봅니다."
+  },
+  {
+    icon: Sparkles,
+    title: "숫자를 연결하는 AI 해설",
+    detail: "구조·체결·청산·포지션 데이터를 따로 읽지 않아도 현재 판단을 지지하거나 방해하는 근거를 한 흐름으로 풉니다."
+  },
+  {
+    icon: Bell,
+    title: "20개 조건 감시와 판단 복기",
+    detail: "중요 조건을 최대 20개까지 감시하고, 알림 당시의 선물 분석과 확인 조건을 판단 기록에서 다시 확인합니다."
   }
 ];
 
@@ -222,12 +247,12 @@ const preSubscriptionNotes = [
 
 const planDisplayCopy: Partial<Record<BillingPlanId, { description: string; highlights: string[] }>> = {
   free: {
-    description: "Basic은 방향 요약과 핵심 리스크를 먼저 확인하는 첫 판단 흐름입니다.",
-    highlights: ["첫 판단 요약", "핵심 리스크 확인", "판단 보조용 기본 알림"]
+    description: "Basic도 현재 상태·위험·다음 조건과 시간대별 방향, 조건 감시 1개를 제공합니다.",
+    highlights: ["현재 상태와 핵심 위험", "15분·1시간·4시간 방향", "조건 감시 1개와 판단 기록"]
   },
   crypto_monthly: {
-    description: "Binance USDT-M BTC·ETH의 상태, 위험, 확인 가격을 같은 분석 기준으로 보고 최대 5분 간격 감시와 알림·판단 기록으로 이어갑니다.",
-    highlights: ["BTC·ETH 선물 위험 분석", "확인 가격·다시 볼 가격 최대 20개", "알림에서 당시 분석 다시 보기"]
+    description: "BTC·ETH의 시간대별 신호 발생 가격·시각, 고급 가격 구간과 AI 해설을 보고 최대 20개 조건 감시·알림·당시 판단 복기로 이어갑니다.",
+    highlights: ["1시간·4시간 신호 가격과 시각", "고급 구간·수치와 AI 해설", "조건 20개·알림 당시 판단 복기"]
   },
   crypto_yearly: {
     description: "코인 조건과 리스크를 반복 점검하는 사용자를 위한 연간 플랜입니다.",
@@ -258,8 +283,8 @@ function getPlanDisplayCopy(plan: BillingPlan) {
 function getPlanPayoffCopy(plan: BillingPlan) {
   if (plan.marketScope === "crypto") {
     return {
-      title: "BTC·ETH 판단을 놓치지 않는 감시 흐름이 열립니다.",
-      items: ["흐름 확인 가격과 다시 볼 가격", "최대 5분 간격 감시", "같은 분석을 이어 보는 알림·복기"]
+      title: "무료 판단 위에 더 깊은 근거와 반복 감시가 열립니다.",
+      items: ["1시간·4시간 신호 가격·시각", "고급 구간·AI 해설", "최대 20개 감시와 알림 당시 복기"]
     };
   }
 
@@ -303,7 +328,8 @@ function ValueCard({
   );
 }
 
-function ProUnlocksSection() {
+function ProUnlocksSection({ marketScope }: { marketScope: BillingPageScope }) {
+  const items = marketScope === "crypto" ? cryptoProUnlockItems : proUnlockItems;
   return (
     <section className="flex flex-col gap-3">
       <SectionHeader
@@ -312,7 +338,7 @@ function ProUnlocksSection() {
         description="가격보다 먼저 확인할 것은 Pro가 여는 판단 깊이입니다. 새 기능을 과장하지 않고, 이미 연결된 판단 보조 흐름을 기준으로 정리합니다."
       />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {proUnlockItems.map((item) => {
+        {items.map((item) => {
           const Icon = item.icon;
           return (
             <article key={item.title} className="border-t border-ui-line py-4">
@@ -331,6 +357,9 @@ function PlanCard({
   plan,
   isBusy,
   isCurrent,
+  isCovered,
+  authenticated,
+  loginHref,
   nativePurchaseAvailable,
   priceLabel,
   message,
@@ -340,6 +369,9 @@ function PlanCard({
   plan: BillingPlan;
   isBusy: boolean;
   isCurrent: boolean;
+  isCovered: boolean;
+  authenticated: boolean;
+  loginHref: string;
   nativePurchaseAvailable: boolean;
   priceLabel: string;
   message?: { tone: "info" | "error"; text: string };
@@ -363,6 +395,7 @@ function PlanCard({
           <div className="flex flex-wrap items-center gap-1.5">
             <StatusPill tone={planScopeTone(plan)}>{planScopeLabel(plan)}</StatusPill>
             {isCurrent ? <StatusPill tone="long">현재 플랜</StatusPill> : null}
+            {isCovered && !isCurrent ? <StatusPill tone="long">현재 권한에 포함</StatusPill> : null}
           </div>
           <h3 className="mt-3 break-keep text-ui-title font-semibold tracking-tight text-ui-text">{plan.displayName}</h3>
           <p className="mt-1 text-ui-label font-semibold text-ui-subtle">{plan.periodLabel}</p>
@@ -373,6 +406,27 @@ function PlanCard({
       {hasMonthlyValue ? (
         <p className="mt-1 text-ui-label font-semibold text-ui-muted">월 환산 {formatKrw(plan.monthlyValue)}</p>
       ) : null}
+      <div className="mt-4">
+        {isCovered ? (
+          <ActionButton tone="secondary" disabled className="w-full whitespace-normal break-keep px-2 text-center leading-5 min-[360px]:px-3">
+            {checkoutCtaLabel(plan, nativePurchaseAvailable, true, authenticated)}
+          </ActionButton>
+        ) : !nativePurchaseAvailable ? (
+          <ActionButton tone="primary" href={PLAY_STORE_URL} className="w-full whitespace-normal break-keep px-2 text-center leading-5 min-[360px]:px-3">
+            {checkoutCtaLabel(plan, false, false, authenticated)}
+          </ActionButton>
+        ) : !authenticated ? (
+          <ActionButton tone="primary" href={loginHref} className="w-full whitespace-normal break-keep px-2 text-center leading-5 min-[360px]:px-3">
+            {checkoutCtaLabel(plan, true, false, false)}
+          </ActionButton>
+        ) : (
+          <ActionButton tone="primary" onClick={() => onCheckout(plan)} disabled={isBusy} className="w-full whitespace-normal break-keep px-2 text-center leading-5 min-[360px]:px-3">
+            {isBusy ? <Loader2 className="mr-2 animate-spin" size={16} aria-hidden /> : null}
+            {checkoutCtaLabel(plan, true, false, true)}
+          </ActionButton>
+        )}
+      </div>
+
       <p className="mt-3 text-ui-body text-ui-muted [word-break:keep-all]">{displayCopy.description}</p>
       <p className="mt-3 text-xs font-semibold leading-5 text-ui-subtle [word-break:keep-all]">{plan.renewalText}</p>
 
@@ -406,10 +460,6 @@ function PlanCard({
       </AppSurface>
 
       <div className="mt-auto pt-5">
-        <ActionButton tone="primary" onClick={() => onCheckout(plan)} disabled={isBusy} className="w-full whitespace-normal break-keep px-2 text-center leading-5 min-[360px]:px-3">
-          {isBusy ? <Loader2 className="mr-2 animate-spin" size={16} aria-hidden /> : null}
-          {checkoutCtaLabel(plan, nativePurchaseAvailable)}
-        </ActionButton>
         {isBusy && busyStageText ? (
           <div role="status" aria-live="polite">
             <AppSurface tone="inset" variant="report" padding="md" className="mt-3 text-ui-muted">
@@ -433,10 +483,12 @@ function PlanCard({
 
 export function ProPricingPanel({
   marketScope = "all",
-  attributionSource = null
+  attributionSource = null,
+  returnTo = null
 }: {
   marketScope?: BillingPageScope;
   attributionSource?: string | null;
+  returnTo?: string | null;
 } = {}) {
   const { session, user, profile, entitlementState, isLoading } = useSupabaseAuth();
   const [checkoutState, setCheckoutState] = useState<CheckoutState>({ status: "idle" });
@@ -464,9 +516,29 @@ export function ProPricingPanel({
           : "로그인 필요";
   const hasCryptoAccess = hasMarketEntitlement(currentPlanId, "crypto");
   const hasGlobalAccess = hasMarketEntitlement(currentPlanId, "stocks");
+  const pageParams = new URLSearchParams();
+  if (marketScope !== "all") pageParams.set("market", marketScope);
+  if (attributionSource) pageParams.set("source", attributionSource);
+  if (returnTo) pageParams.set("returnTo", returnTo);
+  const paywallReturnTo = `/pro${pageParams.size > 0 ? `?${pageParams.toString()}` : ""}`;
+  const loginHref = `/login?returnTo=${encodeURIComponent(paywallReturnTo)}`;
   const plansDescription = nativePurchaseAvailable
     ? "표시된 가격과 결제 버튼은 기존 플랜 정보를 그대로 사용합니다. 필요한 시장 기준과 리뷰 흐름만 선택하세요."
-    : "표시된 가격은 앱 구독 기준입니다. 웹 결제는 준비 중이며 Android 앱에서 Google Play 구독으로 결제할 수 있습니다.";
+    : marketScope === "crypto"
+      ? "표시 가격은 앱 구독 기준이며, 버튼을 누르면 Google Play로 이동합니다."
+      : "표시된 가격은 앱 구독 기준입니다. 웹에서는 Google Play의 Chart Radar 앱으로 이동해 구독할 수 있습니다.";
+  const visibleDepthRows = marketScope === "crypto"
+    ? planDepthRows.filter((item) => item.label === "Basic" || item.label === "Coin Pro")
+    : marketScope === "stocks"
+      ? planDepthRows.filter((item) => item.label !== "Coin Pro")
+      : planDepthRows;
+
+  function isPlanCovered(plan: BillingPlan) {
+    if (plan.marketScope === "crypto") return hasCryptoAccess;
+    if (plan.marketScope === "stocks") return hasGlobalAccess;
+    if (plan.marketScope === "bundle") return hasCryptoAccess && hasGlobalAccess;
+    return false;
+  }
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -508,8 +580,12 @@ export function ProPricingPanel({
   }, [nativePurchaseAvailable, user?.id, visiblePlanIds, visiblePlans]);
 
   async function startCheckout(plan: BillingPlan) {
+    if (isPlanCovered(plan)) {
+      setCheckoutState({ status: "message", tone: "info", text: "현재 구독 권한에 이미 포함된 상품입니다. 중복 결제를 시작하지 않았습니다.", planId: plan.id });
+      return;
+    }
     if (!nativePurchaseAvailable) {
-      setCheckoutState({ status: "message", tone: "info", text: WEB_CHECKOUT_UNAVAILABLE_MESSAGE, planId: plan.id });
+      setCheckoutState({ status: "message", tone: "info", text: "Google Play의 Chart Radar 앱에서 구독을 시작해 주세요.", planId: plan.id });
       return;
     }
 
@@ -528,7 +604,7 @@ export function ProPricingPanel({
     }
 
     if (!session?.accessToken) {
-      setCheckoutState({ status: "message", tone: "info", text: "결제 후 Pro 기능을 바로 이용하려면 먼저 구글 로그인이 필요합니다. 로그인 후 다시 결제를 시작해 주세요." });
+      setCheckoutState({ status: "message", tone: "info", text: "결제 후 Pro 기능을 바로 이용하려면 먼저 로그인해야 합니다. 로그인 후 같은 화면에서 결제를 다시 시작해 주세요." });
       return;
     }
 
@@ -608,7 +684,7 @@ export function ProPricingPanel({
     }
 
     if (!session?.accessToken || !user?.id) {
-      setCheckoutState({ status: "message", tone: "info", text: "구독 권한을 불러오려면 먼저 구글 로그인이 필요합니다." });
+      setCheckoutState({ status: "message", tone: "info", text: "구독 권한을 불러오려면 먼저 로그인해야 합니다." });
       return;
     }
 
@@ -634,10 +710,14 @@ export function ProPricingPanel({
       ) : null}
       <AppSurface tone="panel" variant="flat" padding="none" className="border-y border-ui-line py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <SectionHeader eyebrow={copy.eyebrow} title={copy.title} description={copy.body} />
+          <div className="min-w-0">
+            <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">{copy.eyebrow}</p>
+            <h1 className="text-ui-heading font-semibold tracking-tight text-ui-text">{copy.title}</h1>
+            <p className="mt-1 max-w-3xl text-ui-body text-ui-muted [word-break:keep-all]">{copy.body}</p>
+          </div>
           <StatusPill tone={session ? "info" : "locked"} className="self-start">{currentPlanLabel}</StatusPill>
         </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        {marketScope !== "crypto" ? <div className="mt-5 grid gap-3 sm:grid-cols-3">
           <div className="border-t border-ui-line pt-3">
             <StatusPill tone="locked">Basic</StatusPill>
             <p className="mt-2 text-sm font-semibold leading-6 text-ui-text [word-break:keep-all]">오늘 결론과 핵심 리스크를 먼저 확인</p>
@@ -650,66 +730,11 @@ export function ProPricingPanel({
             <StatusPill tone="watch" icon={Sparkles}>All Market</StatusPill>
             <p className="mt-2 text-sm font-semibold leading-6 text-ui-text [word-break:keep-all]">코인과 미국장을 함께 보는 통합 판단 흐름</p>
           </div>
-        </div>
-        <ActionButton href="#pro-plans" tone="secondary" className="mt-5 min-h-10 w-full text-sm sm:w-auto">
+        </div> : null}
+        {marketScope !== "crypto" ? <ActionButton href="#pro-plans" tone="secondary" className="mt-5 min-h-10 w-full text-sm sm:w-auto">
           현재 플랜과 가격 보기
-        </ActionButton>
+        </ActionButton> : null}
       </AppSurface>
-
-      <section className="flex flex-col gap-3">
-        <SectionHeader
-          eyebrow="BASIC VS PRO"
-          title="가격보다 먼저 보는 차이"
-          description="Basic은 첫 판단을 빠르게 보여주고, Pro는 그 판단이 왜 나왔는지와 언제 다시 봐야 하는지를 더 깊게 엽니다."
-        />
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {planDepthRows.map((item) => (
-            <ValueCard key={item.label} label={item.label} value={item.value} detail={item.detail} tone={item.tone} />
-          ))}
-        </div>
-      </section>
-
-      <ProUnlocksSection />
-
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
-          <SectionHeader
-            eyebrow="CURRENT PLAN"
-            title="현재 이용 상태"
-            description="로그인된 계정에서 지금 열려 있는 시장 범위를 확인합니다."
-          />
-          <div className="mt-4">
-            <DataRow label="현재 플랜" value={currentPlanLabel} detail={session ? "구독 권한은 계정 기준으로 적용됩니다." : "결제 전 Google 로그인이 필요합니다."} />
-            <DataRow label="코인 Pro" value={<AccessValue open={hasCryptoAccess} />} detail="Binance USDT-M BTC·ETH 조건 감시, 알림, 복기." />
-            <DataRow label="글로벌 Pro" value={<AccessValue open={hasGlobalAccess} />} detail="미국장 30초 체크, 지수선물, 매크로 압력." />
-          </div>
-          {freePlan ? (
-            <ActionButton href="/crypto/home" tone="secondary" className="mt-4 w-full">
-              Basic으로 먼저 둘러보기
-            </ActionButton>
-          ) : null}
-        </PanelCard>
-
-        <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
-          <SectionHeader
-            eyebrow="WHY ALL MARKET"
-            title="All Market Pro가 필요한 흐름"
-            description="코인만 보거나 미국장만 보는 날도 있지만, 리스크가 커지는 날에는 두 시장의 조건과 알림, 복기를 한 흐름으로 확인하는 편이 끊기지 않습니다."
-          />
-          <div className="mt-4">
-            <DataRow label="코인 리스크" value="Coin Pro" detail="BTC·ETH 선물 상태, 위험, 확인·판단 변경 조건을 확인합니다." />
-            <DataRow label="글로벌 맥락" value="Global Pro" detail="지수선물, 달러·금리, 섹터와 대장주 흐름을 확인합니다." />
-            <DataRow label="통합 리뷰" value="All Market" detail="두 시장의 리스크, 알림 조건, 복기 흐름을 한곳에서 이어 봅니다." />
-          </div>
-        </PanelCard>
-      </div>
-
-      {checkoutState.status === "message" ? (
-        <AppSurface tone="inset" variant="report" padding="md" className={checkoutState.tone === "error" ? "text-ui-short" : "text-ui-muted"}>
-          <StatusPill tone={checkoutState.tone === "error" ? "risk" : "info"}>{checkoutState.tone === "error" ? "확인 필요" : "결제 상태"}</StatusPill>
-          <p className="mt-2 text-ui-body font-semibold [word-break:keep-all]">{checkoutState.text}</p>
-        </AppSurface>
-      ) : null}
 
       <div id="pro-plans" className="flex scroll-mt-24 flex-col gap-3">
         <SectionHeader eyebrow="AVAILABLE PLANS" title="현재 플랜과 가격 선택" description={plansDescription} />
@@ -720,6 +745,9 @@ export function ProPricingPanel({
               plan={plan}
               isBusy={checkoutState.status === "loading" && checkoutState.planId === plan.id}
               isCurrent={currentPlanId === plan.id}
+              isCovered={isPlanCovered(plan)}
+              authenticated={Boolean(session?.accessToken)}
+              loginHref={loginHref}
               nativePurchaseAvailable={nativePurchaseAvailable}
               priceLabel={nativePriceLabels[plan.id] ?? plan.priceLabel}
               busyStageText={checkoutState.status === "loading" && checkoutState.planId === plan.id ? checkoutState.stageText : undefined}
@@ -728,6 +756,73 @@ export function ProPricingPanel({
             />
           ))}
         </div>
+      </div>
+
+      {checkoutState.status === "message" ? (
+        <AppSurface tone="inset" variant="report" padding="md" className={checkoutState.tone === "error" ? "text-ui-short" : "text-ui-muted"}>
+          <StatusPill tone={checkoutState.tone === "error" ? "risk" : "info"}>{checkoutState.tone === "error" ? "확인 필요" : "결제 상태"}</StatusPill>
+          <p className="mt-2 text-ui-body font-semibold [word-break:keep-all]">{checkoutState.text}</p>
+          {checkoutState.tone === "info" && checkoutState.planId && returnTo ? <ActionButton href={returnTo} tone="primary" className="mt-3 w-full sm:w-auto">보던 분석으로 돌아가기</ActionButton> : null}
+        </AppSurface>
+      ) : null}
+
+      {marketScope === "crypto" ? (
+        <section className="flex flex-col gap-3" aria-labelledby="coin-pro-daily-flow">
+          <SectionHeader eyebrow="DAILY FLOW" title="Coin Pro를 매일 쓰는 세 단계" description="화면을 한 번 보고 끝내지 않고, 확인할 조건을 저장하고 결과를 복기하는 흐름입니다." />
+          <div className="grid gap-2 sm:grid-cols-3">
+            <ValueCard label="1 · 확인" value="Home에서 상태·위험 확인" detail="BTC 또는 ETH를 고르고 현재 시장과 가장 큰 위험을 5초 안에 확인합니다." tone="info" />
+            <ValueCard label="2 · 감시" value="중요 조건을 앱에 맡김" detail="확인할 가격과 판단 변경 조건을 최대 20개까지 저장해 최대 5분 간격으로 확인합니다." tone="watch" />
+            <ValueCard label="3 · 복기" value="알림 당시 근거를 다시 봄" detail="알림 당시의 선물 분석과 확인 조건을 판단 기록에서 다시 보며 다음 판단 기준을 다듬습니다." tone="long" />
+          </div>
+        </section>
+      ) : null}
+
+      <section className="flex flex-col gap-3">
+        <SectionHeader
+          eyebrow="BASIC VS PRO"
+          title="가격보다 먼저 보는 차이"
+          description="Basic은 첫 판단을 빠르게 보여주고, Pro는 그 판단이 왜 나왔는지와 언제 다시 봐야 하는지를 더 깊게 엽니다."
+        />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {visibleDepthRows.map((item) => (
+            <ValueCard key={item.label} label={item.label} value={item.value} detail={item.detail} tone={item.tone} />
+          ))}
+        </div>
+      </section>
+
+      <ProUnlocksSection marketScope={marketScope} />
+
+      <div className={`grid gap-4 ${marketScope === "crypto" ? "" : "lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"}`}>
+        <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
+          <SectionHeader
+            eyebrow="CURRENT PLAN"
+            title="현재 이용 상태"
+            description="로그인된 계정에서 지금 열려 있는 시장 범위를 확인합니다."
+          />
+          <div className="mt-4">
+            <DataRow label="현재 플랜" value={currentPlanLabel} detail={session ? "구독 권한은 계정 기준으로 적용됩니다." : "결제 전 Google 로그인이 필요합니다."} />
+            <DataRow label="코인 Pro" value={<AccessValue open={hasCryptoAccess} />} detail="Binance USDT-M BTC·ETH 조건 감시, 알림, 복기." />
+            {marketScope !== "crypto" ? <DataRow label="글로벌 Pro" value={<AccessValue open={hasGlobalAccess} />} detail="미국장 30초 체크, 지수선물, 매크로 압력." /> : null}
+          </div>
+          {freePlan ? (
+            <ActionButton href="/crypto/home" tone="secondary" className="mt-4 w-full">
+              Basic으로 먼저 둘러보기
+            </ActionButton>
+          ) : null}
+        </PanelCard>
+
+        {marketScope !== "crypto" ? <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
+          <SectionHeader
+            eyebrow="WHY ALL MARKET"
+            title="All Market Pro가 필요한 흐름"
+            description="코인만 보거나 미국장만 보는 날도 있지만, 리스크가 커지는 날에는 두 시장의 조건과 알림, 복기를 한 흐름으로 확인하는 편이 끊기지 않습니다."
+          />
+          <div className="mt-4">
+            <DataRow label="코인 리스크" value="Coin Pro" detail="BTC·ETH 선물 상태, 위험, 확인·판단 변경 조건을 확인합니다." />
+            <DataRow label="글로벌 맥락" value="Global Pro" detail="지수선물, 달러·금리, 섹터와 대장주 흐름을 확인합니다." />
+            <DataRow label="통합 리뷰" value="All Market" detail="두 시장의 리스크, 알림 조건, 복기 흐름을 한곳에서 이어 봅니다." />
+          </div>
+        </PanelCard> : null}
       </div>
 
       {nativePurchaseAvailable ? (

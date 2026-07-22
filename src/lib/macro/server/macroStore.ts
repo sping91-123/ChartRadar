@@ -2,11 +2,11 @@
 import { type MacroCalendarPayload } from "@/lib/macroCalendar";
 import { isSupabaseAdminConfigured, supabaseAdminRest } from "@/lib/server/supabaseAdmin";
 import { type MacroEventItem } from "@/data/macroEvents";
+import { dedupeMacroCalendarItems } from "@/lib/macro/dedupeMacroCalendar";
+import { selectLatestMacroGenerationRows } from "@/lib/macro/generation";
 import { normalizeMacroEvents } from "@/lib/macro/normalizeMacroEvent";
-import { getBeaOfficialEnrichments } from "@/lib/macro/sourceAdapters/bea";
-import { getCensusOfficialEnrichments } from "@/lib/macro/sourceAdapters/census";
-import { fetchDolOfficialEnrichments } from "@/lib/macro/sourceAdapters/dol";
-import { fetchTradingEconomicsCalendarEnrichments } from "@/lib/macro/sourceAdapters/tradingEconomics";
+import { resolveMacroSourceTrust } from "@/lib/macro/sourceTrust";
+import { isStoredMacroPayloadStale } from "@/lib/macro/staleness";
 
 type MacroEventRow = {
   id?: string;
@@ -61,8 +61,25 @@ function formatKstShort(iso: string) {
   }).format(date);
 }
 
+function isLegacyFutureClaimsContamination(row: MacroEventRow, now = Date.now()) {
+  if (row.source !== "DOL" || !/claims|실업수당/i.test(row.title)) return false;
+  if (Date.parse(row.scheduled_at) <= now || row.released_at) return false;
+  const rawPayload = row.raw_payload && typeof row.raw_payload === "object" ? (row.raw_payload as Partial<MacroEventItem>) : {};
+  return rawPayload.sourceType === "official_api" || rawPayload.sourceType === "official_page";
+}
+
 function rowToItem(row: MacroEventRow): MacroEventItem {
   const rawPayload = row.raw_payload && typeof row.raw_payload === "object" ? (row.raw_payload as Partial<MacroEventItem>) : {};
+  const source = rowSource(row);
+  const sourceType = rawPayload.sourceType ?? "official_page";
+  const sourceUrl = row.source_url ?? rawPayload.sourceUrl ?? "";
+  const trust = resolveMacroSourceTrust({
+    source,
+    sourceUrl,
+    officialUrl: row.official_url ?? rawPayload.officialUrl,
+    itemOfficial: rawPayload.isOfficial,
+    sourceType
+  });
   return {
     ...rawPayload,
     id: row.source_event_id,
@@ -88,20 +105,20 @@ function rowToItem(row: MacroEventRow): MacroEventItem {
     unit: row.unit ?? undefined,
     summary: rawPayload.summary ?? "공식 출처 기준으로 확인한 매크로 일정입니다.",
     marketImpact: rawPayload.marketImpact ?? "발표 전후에는 가격 반응과 거래량 변화를 함께 확인하세요.",
-    source: rowSource(row),
-    sourceType: rawPayload.sourceType ?? "official_page",
-    sourceUrl: row.source_url ?? rawPayload.sourceUrl ?? "",
-    officialUrl: row.official_url ?? undefined,
+    source,
+    sourceType,
+    sourceUrl,
+    officialUrl: trust.officialUrl,
     confidence: row.confidence ?? undefined,
     staleReason: row.stale_reason ?? undefined,
-    isOfficial: rawPayload.isOfficial ?? row.source !== "ForexFactory",
+    isOfficial: trust.isOfficial,
     isDocumentEvent: rawPayload.isDocumentEvent,
     isNumericEvent: rawPayload.isNumericEvent,
     nextRefreshMs: rawPayload.nextRefreshMs
   };
 }
 
-function itemToRow(item: MacroEventItem): MacroEventRow {
+function itemToRow(item: MacroEventItem, syncGeneration: string): MacroEventRow {
   return {
     source: item.source,
     source_event_id: item.id ?? `${item.label}-${item.releaseAt}`,
@@ -122,34 +139,37 @@ function itemToRow(item: MacroEventItem): MacroEventRow {
     official_url: item.officialUrl ?? null,
     confidence: item.confidence ?? null,
     stale_reason: item.staleReason ?? null,
-    raw_payload: item
+    raw_payload: { ...item, syncGeneration }
   };
 }
 
-export async function readStoredMacroCalendarPayload(): Promise<MacroCalendarPayload | null> {
+export async function readStoredMacroCalendarPayload(options: { allowStale?: boolean } = {}): Promise<MacroCalendarPayload | null> {
   if (!isSupabaseAdminConfigured()) return null;
 
+  const now = Date.now();
+  const since = new Date(now - 8 * 24 * 60 * 60 * 1000).toISOString();
+  const until = new Date(now + 60 * 24 * 60 * 60 * 1000).toISOString();
   const rows = await supabaseAdminRest<MacroEventRow[]>(
-    "macro_events?select=*&order=scheduled_at.asc&limit=60",
-    {}
+    `macro_events?select=*&scheduled_at=gte.${encodeURIComponent(since)}&scheduled_at=lte.${encodeURIComponent(until)}&order=updated_at.desc,scheduled_at.asc&limit=240`,
+    { timeoutMs: 2_500 }
   ).catch(() => null);
   if (!rows?.length) return null;
+  const currentRows = selectLatestMacroGenerationRows(rows)
+    .sort((a, b) => Date.parse(a.scheduled_at) - Date.parse(b.scheduled_at));
+  if (currentRows.length === 0) return null;
+  if (currentRows.some((row) => isLegacyFutureClaimsContamination(row))) return null;
 
-  const updatedAt = rows
+  const updatedAt = currentRows
     .map((row) => row.updated_at)
     .filter((value): value is string => Boolean(value))
     .sort()
     .at(-1);
-  if (!updatedAt || Date.now() - Date.parse(updatedAt) > 60 * 60 * 1000) return null;
+  if (!updatedAt) return null;
+  const isStale = isStoredMacroPayloadStale(updatedAt);
+  if (isStale && !options.allowStale) return null;
 
-  const baseItems = rows.map(rowToItem);
-  const [beaEnrichments, censusEnrichments, dolEnrichments, tradingEconomicsEnrichments] = await Promise.all([
-    getBeaOfficialEnrichments().catch(() => []),
-    getCensusOfficialEnrichments().catch(() => []),
-    fetchDolOfficialEnrichments(baseItems).catch(() => []),
-    fetchTradingEconomicsCalendarEnrichments(baseItems).catch(() => [])
-  ]);
-  const items = normalizeMacroEvents(baseItems, [...beaEnrichments, ...censusEnrichments, ...dolEnrichments, ...tradingEconomicsEnrichments], Date.now());
+  const baseItems = currentRows.map(rowToItem);
+  const items = dedupeMacroCalendarItems(normalizeMacroEvents(baseItems, [], now));
   return {
     updatedAt,
     updatedAtLabel: "저장된 공식 확인 결과",
@@ -163,7 +183,9 @@ export async function readStoredMacroCalendarPayload(): Promise<MacroCalendarPay
     sourceNote: "공식 소스 동기화 결과를 우선 표시합니다. 일부 실제값은 공식 발표 확인 중으로 남을 수 있습니다.",
     isAutomatic: true,
     nextRefreshMs: Math.max(60_000, Math.min(...items.map((item) => item.nextRefreshMs ?? 30 * 60_000))),
-    items
+    items,
+    isStale,
+    ...(isStale ? { warning: "공식 일정 갱신이 지연되어 마지막 정상 일정을 표시합니다." } : {})
   };
 }
 
@@ -176,7 +198,16 @@ export async function writeStoredMacroCalendarPayload(payload: MacroCalendarPayl
     };
   }
 
-  const rows = payload.items.map(itemToRow);
+  if (payload.cacheMode === "fallback") {
+    return {
+      stored: false,
+      updatedCount: 0,
+      reason: "예비 일정은 마지막 정상 원장을 덮어쓰지 않습니다."
+    };
+  }
+
+  const syncGeneration = Number.isFinite(Date.parse(payload.updatedAt)) ? payload.updatedAt : new Date().toISOString();
+  const rows = payload.items.map((item) => itemToRow(item, syncGeneration));
   if (rows.length === 0) {
     return {
       stored: false,
@@ -190,6 +221,13 @@ export async function writeStoredMacroCalendarPayload(payload: MacroCalendarPayl
     body: rows,
     prefer: "resolution=merge-duplicates"
   });
+
+  const retentionCutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+  await supabaseAdminRest(`macro_events?scheduled_at=lt.${encodeURIComponent(retentionCutoff)}`, {
+    method: "DELETE",
+    prefer: "return=minimal",
+    timeoutMs: 2_500
+  }).catch(() => undefined);
 
   return {
     stored: true,

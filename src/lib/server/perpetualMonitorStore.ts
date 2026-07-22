@@ -61,6 +61,17 @@ export async function listUserPerpetualMonitors(
   return rows.map(toPerpetualScenarioMonitor);
 }
 
+export async function listRecentTerminalPerpetualMonitors(
+  userId: string,
+  limit = 5
+): Promise<PerpetualScenarioMonitor[]> {
+  const safeLimit = Math.max(1, Math.min(20, Math.round(limit)));
+  const rows = await supabaseAdminRest<PerpetualMonitorRow[]>(
+    `perpetual_scenario_monitors?select=${monitorSelect}&user_id=eq.${encodeURIComponent(userId)}&status=in.(triggered,expired,canceled)&order=updated_at.desc&limit=${safeLimit}`
+  );
+  return rows.map(toPerpetualScenarioMonitor);
+}
+
 export async function countSavedPerpetualMonitors(userId: string) {
   const rows = await supabaseAdminRest<Array<{ id: string }>>(
     `perpetual_scenario_monitors?select=id&user_id=eq.${encodeURIComponent(userId)}&status=in.(active,paused)&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&limit=100`

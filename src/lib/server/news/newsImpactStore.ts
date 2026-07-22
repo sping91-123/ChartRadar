@@ -12,6 +12,7 @@ import {
 } from "@/lib/newsImpact";
 import { isAllowedNewsSourceUrl, isAllowedUrlForHosts, newsSourceById, newsSourceCatalog } from "@/lib/server/news/sourceCatalog";
 import type { NormalizedNewsSourceItem } from "@/lib/server/news/normalizeNewsSourceItem";
+import { repairLegacyMacroPresentation } from "@/lib/newsImpactPresentationRules";
 import { isSupabaseAdminConfigured, supabaseAdminRest, supabaseAdminRpc } from "@/lib/server/supabaseAdmin";
 
 export interface NewsSourceItemRow {
@@ -115,6 +116,12 @@ function rowToReaction(row: NewsReactionRow, event: NewsImpactEventRow): NewsImp
   const frozen = row.metrics?.eventContext && typeof row.metrics.eventContext === "object"
     ? row.metrics.eventContext as { headline?: unknown; factSummary?: unknown }
     : null;
+  const presentation = repairLegacyMacroPresentation({
+    category: event.category,
+    macroEventKey: typeof event.metadata?.macro_source_event_id === "string" ? event.metadata.macro_source_event_id : null,
+    headline: typeof frozen?.headline === "string" ? frozen.headline : event.headline,
+    factSummary: typeof frozen?.factSummary === "string" ? frozen.factSummary : event.fact_summary
+  });
   return {
     eventId: row.event_id,
     reactionId: row.id,
@@ -126,8 +133,8 @@ function rowToReaction(row: NewsReactionRow, event: NewsImpactEventRow): NewsImp
     riskEffect: row.risk_effect,
     eventAt: row.event_at,
     evaluatedAt: row.evaluated_at,
-    headline: typeof frozen?.headline === "string" ? frozen.headline : event.headline,
-    factSummary: typeof frozen?.factSummary === "string" ? frozen.factSummary : event.fact_summary,
+    headline: presentation.headline,
+    factSummary: presentation.factSummary,
     reactionSummary: row.reaction_summary,
     nextCheckAt: row.next_check_at,
     ...(row.pre_snapshot_id ? { preSnapshotId: row.pre_snapshot_id } : {}),
@@ -308,15 +315,25 @@ export async function upsertNewsImpactEvent(input: {
       : null;
   const sourceAlreadyLinked = Boolean(previous && (previous.primary_source_item_id === input.sourceItem.id || existingLinks.length > 0));
   const changed = Boolean(previous && sourceAlreadyLinked && previousSourceHash !== input.item.contentHash);
+  const presentationChanged = Boolean(
+    previous &&
+    typeof input.metadata?.summary_rule_version === "string" &&
+    previous.metadata?.summary_rule_version !== input.metadata.summary_rule_version
+  );
   const previousHistory = Array.isArray(previous?.metadata?.revision_history)
     ? previous.metadata.revision_history as unknown[]
     : [];
+  const previousRevisionDetectedAt = typeof previous?.metadata?.revision_detected_at === "string"
+    ? previous.metadata.revision_detected_at
+    : null;
   const revisionHistory = previous && changed
     ? [...previousHistory, {
         version: previous.version,
         headline: previous.headline,
         factSummary: previous.fact_summary,
-        updatedAt: previous.updated_at
+        updatedAt: previous.version > 1
+          ? previousRevisionDetectedAt ?? previous.updated_at
+          : previous.first_seen_at
       }].slice(-20)
     : previousHistory;
   const scopedTargets = input.item.targets.filter((target) => input.market === "crypto" ? target !== "global" : target === "global");
@@ -334,13 +351,13 @@ export async function upsertNewsImpactEvent(input: {
     status: previous ? (changed ? "revised" : previous.status) : "active",
     occurred_at: changed || !previous ? input.item.publishedAt : previous.occurred_at,
     first_seen_at: previous?.first_seen_at ?? input.item.firstSeenAt,
-    headline: (changed || !previous ? input.headline : previous.headline).slice(0, 180),
-    fact_summary: (changed || !previous ? input.factSummary : previous.fact_summary).slice(0, 600),
+    headline: (changed || presentationChanged || !previous ? input.headline : previous.headline).slice(0, 180),
+    fact_summary: (changed || presentationChanged || !previous ? input.factSummary : previous.fact_summary).slice(0, 600),
     primary_source_item_id: previous?.primary_source_item_id ?? input.sourceItem.id,
     macro_event_id: input.macroEventId ?? previous?.macro_event_id ?? null,
     metadata: {
       ...(previous?.metadata ?? {}),
-      ...(changed || !previous ? input.metadata ?? {} : {}),
+      ...(changed || presentationChanged || !previous ? input.metadata ?? {} : {}),
       push_eligible: previous?.metadata?.push_eligible === true || input.metadata?.push_eligible === true,
       content_hash: previous?.primary_source_item_id && previous.primary_source_item_id !== input.sourceItem.id
         ? previous.metadata?.content_hash ?? input.item.contentHash
@@ -349,6 +366,9 @@ export async function upsertNewsImpactEvent(input: {
       macro_source_event_id: typeof input.item.structuredPayload.macroSourceEventId === "string"
         ? input.item.structuredPayload.macroSourceEventId
         : previous?.metadata?.macro_source_event_id ?? null,
+      revision_detected_at: changed
+        ? input.item.firstSeenAt
+        : previousRevisionDetectedAt,
       revision_history: revisionHistory
     }
   };
@@ -427,7 +447,7 @@ export function globalObservationFromRow(row: GlobalObservationRow): GlobalReact
 export async function findGlobalObservationBefore(beforeAt: string, withinMinutes = 10) {
   const lower = new Date(Date.parse(beforeAt) - withinMinutes * 60_000).toISOString();
   const rows = await supabaseAdminRest<GlobalObservationRow[]>(
-    `global_reaction_observations?quality=eq.ready&observed_at=lte.${encodeURIComponent(beforeAt)}&observed_at=gte.${encodeURIComponent(lower)}&order=observed_at.desc&limit=1`
+    `global_reaction_observations?quality=eq.ready&observed_at=lt.${encodeURIComponent(beforeAt)}&observed_at=gte.${encodeURIComponent(lower)}&order=observed_at.desc&limit=1`
   );
   return rows[0] ? globalObservationFromRow(rows[0]) : null;
 }
@@ -534,8 +554,12 @@ export async function readGlobalObservationById(id: string) {
   return rows[0] ? globalObservationFromRow(rows[0]) : null;
 }
 
-export async function readNewsSourceStatusSummary() {
-  const fallbackBlocked = newsSourceCatalog.filter((source) => source.policyStatus !== "allowed").length;
+export async function readNewsSourceStatusSummary(market?: NewsMarket) {
+  const relevantSources = market
+    ? newsSourceCatalog.filter((source) => source.markets.includes(market))
+    : [...newsSourceCatalog];
+  const relevantIds = new Set(relevantSources.map((source) => source.id));
+  const fallbackBlocked = relevantSources.filter((source) => source.policyStatus !== "allowed").length;
   if (!isSupabaseAdminConfigured()) return { active: 0, healthy: 0, degraded: 0, blocked: fallbackBlocked, latestRunAt: null as string | null };
   const [catalog, health, runs] = await Promise.all([
     supabaseAdminRest<Array<{ source_id: string; policy_status: "allowed" | "review" | "blocked"; enabled: boolean }>>(
@@ -548,7 +572,8 @@ export async function readNewsSourceStatusSummary() {
       "news_sync_runs?select=finished_at,status&order=finished_at.desc&limit=10"
     ).catch(() => [])
   ]);
-  const activeIds = new Set(catalog.filter((source) => source.policy_status === "allowed" && source.enabled).map((source) => source.source_id));
+  const relevantCatalog = catalog.filter((source) => relevantIds.has(source.source_id));
+  const activeIds = new Set(relevantCatalog.filter((source) => source.policy_status === "allowed" && source.enabled).map((source) => source.source_id));
   const degradedIds = new Set(health.filter((row) => activeIds.has(row.source_id) && (
     row.consecutive_failures > 0 || (row.circuit_open_until && Date.parse(row.circuit_open_until) > Date.now())
   )).map((row) => row.source_id));
@@ -560,7 +585,7 @@ export async function readNewsSourceStatusSummary() {
     active: activeIds.size,
     healthy: Math.max(0, activeIds.size - degraded),
     degraded,
-    blocked: catalog.length > 0 ? catalog.filter((source) => source.policy_status !== "allowed" || !source.enabled).length : fallbackBlocked,
+    blocked: relevantCatalog.length > 0 ? relevantCatalog.filter((source) => source.policy_status !== "allowed" || !source.enabled).length : fallbackBlocked,
     latestRunAt: latestUsableRun?.finished_at ?? null
   };
 }

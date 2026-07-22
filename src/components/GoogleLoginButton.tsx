@@ -102,7 +102,7 @@ export function GoogleLoginButton({ returnTo = "/crypto" }: { returnTo?: string 
             <span>Google 계정으로 계속하기</span>
           </span>
         </button>
-        {message ? <p className="text-center text-xs font-semibold leading-5 text-slate-400">{message}</p> : null}
+        {message ? <p role="status" aria-live="polite" className="text-center text-xs font-semibold leading-5 text-slate-400">{message}</p> : null}
       </div>
     );
   }

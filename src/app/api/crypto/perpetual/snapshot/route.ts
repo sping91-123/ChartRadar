@@ -14,7 +14,7 @@ import {
 } from "@/lib/server/perpetualRevenueCore";
 import { sharedCryptoConditionUsage } from "@/lib/server/perpetualMonitorStore";
 import { readNewsDecisionContext } from "@/lib/server/news/newsImpactStore";
-import { newsImpactRuntimePolicy } from "@/lib/server/newsImpactMode";
+import { isNewsImpactReadEnabled, newsImpactRuntimePolicy } from "@/lib/server/newsImpactMode";
 import { rateLimit } from "@/lib/server/rateLimit";
 import { isSupabaseAdminConfigured } from "@/lib/server/supabaseAdmin";
 
@@ -67,12 +67,13 @@ export async function GET(request: Request) {
   const requestSource = url.searchParams.get("source");
   const impactId = url.searchParams.get("impact");
   const newsPolicy = newsImpactRuntimePolicy();
+  const newsReadEnabled = isNewsImpactReadEnabled(newsPolicy.mode);
   const preserveLinkedSnapshot = (
-    requestSource === "alert" || (requestSource === "news" && newsPolicy.expose)
+    requestSource === "alert" || (requestSource === "news" && newsReadEnabled)
   ) && Boolean(requestedSnapshotId);
   const mode = perpetualRevenueCoreMode();
   if (!isPerpetualSnapshotGenerationEnabled(mode)) {
-    return privateJson({ error: "Perpetual revenue core is disabled." }, { status: 404 });
+    return privateJson({ error: "선물 시장 분석 기능이 비활성화되어 있습니다." }, { status: 404 });
   }
 
   try {
@@ -93,7 +94,7 @@ export async function GET(request: Request) {
     const snapshotActionable =
       resolution.snapshot.quality === "ready" &&
       new Date(resolution.snapshot.expiresAt).getTime() > Date.now();
-    const newsContext = newsPolicy.expose && canSeeProDetail && requestSource === "news" && impactId
+    const newsContext = newsReadEnabled && canSeeProDetail && requestSource === "news" && impactId
       ? await readNewsDecisionContext(impactId, asset, resolution.snapshot.id).catch(() => null)
       : null;
 
@@ -106,6 +107,7 @@ export async function GET(request: Request) {
         scenarioMonitorCount: alerts.scenarioMonitorCount,
         presetCount: alerts.presetCount,
         canSeeProDetail,
+        canSaveNewsJournal: Boolean(entitlement.userId) && canSeeProDetail && newsPolicy.mutate,
         monitorEnabled,
         canCreateMonitor:
           Boolean(entitlement.userId) &&

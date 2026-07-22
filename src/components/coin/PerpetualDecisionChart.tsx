@@ -68,24 +68,27 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
 
     const primaryEvidence = snapshot.pro?.multiTimeframeEvidence.find((item) => item.timeframe === "15m");
     const details = primaryEvidence?.details;
-    if (details) {
+    const publicEvents = snapshot.publicEvidence?.events;
+    if (details || publicEvents) {
       const candleTimes = new Set(snapshot.chart.candles.map((candle) => candle.time));
       const markers: SeriesMarker<Time>[] = [];
-      const msbTime = markerTime(details.events.msb?.occurredAt ?? null, candleTimes);
-      if (msbTime && details.events.msb) {
+      const msb = details?.events.msb ?? publicEvents?.msb;
+      const choch = details?.events.choch ?? publicEvents?.choch;
+      const msbTime = markerTime(msb?.occurredAt ?? null, candleTimes);
+      if (msbTime && msb) {
         markers.push({
           time: msbTime,
-          position: details.events.msb.direction === "bullish" ? "belowBar" : "aboveBar",
-          color: details.events.msb.direction === "bullish" ? "#34d399" : "#fb7185",
-          shape: details.events.msb.direction === "bullish" ? "arrowUp" : "arrowDown",
+          position: msb.direction === "bullish" ? "belowBar" : "aboveBar",
+          color: msb.direction === "bullish" ? "#34d399" : "#fb7185",
+          shape: msb.direction === "bullish" ? "arrowUp" : "arrowDown",
           text: "추세 확인"
         });
       }
-      const chochTime = markerTime(details.events.choch?.occurredAt ?? null, candleTimes);
-      if (chochTime && details.events.choch) {
+      const chochTime = markerTime(choch?.occurredAt ?? null, candleTimes);
+      if (chochTime && choch) {
         markers.push({
           time: chochTime,
-          position: details.events.choch.direction === "bullish" ? "belowBar" : "aboveBar",
+          position: choch.direction === "bullish" ? "belowBar" : "aboveBar",
           color: "#fbbf24",
           shape: "circle",
           text: "전환 가능"
@@ -96,7 +99,7 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
         createSeriesMarkers(series, markers);
       }
 
-      const zoneLines = [
+      const zoneLines = details ? [
         ...(details.zones.orderBlock
           ? [
               { price: details.zones.orderBlock.top, color: "#2dd4bf", title: "큰 주문 구간 위" },
@@ -112,7 +115,7 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
         details.location.poc
           ? { price: details.location.poc.poc, color: "#f59e0b", title: "거래 집중 가격" }
           : null
-      ].filter((line): line is { price: number; color: string; title: string } => Boolean(line && Number.isFinite(line.price)));
+      ].filter((line): line is { price: number; color: string; title: string } => Boolean(line && Number.isFinite(line.price))) : [];
       zoneLines.forEach((line) => series.createPriceLine({
         price: line.price,
         color: line.color,

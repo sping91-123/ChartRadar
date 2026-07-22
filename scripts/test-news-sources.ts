@@ -5,10 +5,25 @@ import { admitOfficialNews, officialRssPayloadFailure } from "../src/lib/server/
 import { deterministicOfficialPresentation, validateOfficialPresentationJson } from "../src/lib/server/news/officialFactSummary";
 import { officialNewsCanonicalEventId, officialNewsSemanticSubject } from "../src/lib/server/news/officialNewsIdentity";
 import { normalizeEdgarAcceptanceDateTime } from "../src/lib/officialNewsTime";
+import { resolveMacroSourceTrust } from "../src/lib/macro/sourceTrust";
+import { selectLatestMacroGenerationRows } from "../src/lib/macro/generation";
 
 assert.equal(validateNewsSourceCatalog(), true);
+assert.deepEqual(
+  selectLatestMacroGenerationRows([
+    { id: "old-high", importance: 3, raw_payload: { syncGeneration: "2026-07-20T10:00:00.000Z" } },
+    { id: "new-normal", importance: 2, raw_payload: { syncGeneration: "2026-07-20T11:00:00.000Z" } }
+  ]).filter((row) => row.importance === 3),
+  [],
+  "NEWS must select the latest macro generation before applying its high-importance filter"
+);
 assert.ok(enabledNewsSources("crypto").every((source) => source.policyStatus === "allowed"));
 assert.ok(enabledNewsSources("global").every((source) => source.policyStatus === "allowed"));
+assert.equal(
+  enabledNewsSources("crypto").some((source) => source.id === "sec_edgar_tracked"),
+  false,
+  "global company filings must not inflate the crypto source-health indicator"
+);
 assert.deepEqual(runtimeAllowedNewsSources(new Set(["fed_press_releases", "coindesk_rss"])).map((source) => source.id), ["fed_press_releases"], "the database allowlist cannot activate a code-blocked source");
 assert.equal(runtimeAllowedNewsSources(new Set()).length, 0, "an unavailable database catalog fails closed");
 assert.equal(isAllowedUrlForHosts("https://www.sec.gov/newsroom/release", ["sec.gov"]), true);
@@ -24,6 +39,39 @@ assert.deepEqual(
 assert.equal(isAllowedOfficialMacroEvent({ source: "Fed", status: "released", raw_payload: { isOfficial: true } }), true);
 assert.equal(isAllowedOfficialMacroEvent({ source: "Fed", status: "released", raw_payload: {} }), false, "legacy rows without an explicit official marker are rejected");
 assert.equal(isAllowedOfficialMacroEvent({ source: "Fed", status: "released", raw_payload: { isOfficial: true, sourceType: "public_calendar" } }), false);
+assert.equal(
+  isAllowedOfficialMacroEvent({ source: "BLS", status: "actual_available", event_type: "numeric_release", actual_value: "0.2%", raw_payload: { isOfficial: true, sourceType: "official_page", actualProvenance: "public_calendar", actualValue: "0.2%" } }),
+  false,
+  "a public-calendar actual cannot enter NEWS merely because the row also has an official reference URL"
+);
+assert.equal(
+  isAllowedOfficialMacroEvent({ source: "BLS", status: "actual_available", event_type: "numeric_release", actual_value: "0.2%", raw_payload: { isOfficial: true, sourceType: "official_api", actualProvenance: "official", actualValue: "0.2%" } }),
+  true
+);
+assert.equal(
+  isAllowedOfficialMacroEvent({ source: "BLS", status: "released", event_type: "numeric_release", actual_value: "0.2%", raw_payload: { isOfficial: true, sourceType: "official_api", actualProvenance: "official", actualValue: "0.2%" } }),
+  false,
+  "numeric releases are admitted only after the actual_available state"
+);
+assert.equal(
+  isAllowedOfficialMacroEvent({ source: "BLS", status: "actual_available", event_type: "numeric_release", actual_value: "발표 전", raw_payload: { isOfficial: true, sourceType: "official_api", actualProvenance: "official", actualValue: "발표 전" } }),
+  false,
+  "placeholder values can never become an official NEWS release"
+);
+assert.equal(
+  isAllowedOfficialMacroEvent({ source: "BLS", status: "actual_available", event_type: "numeric_release", actual_value: null, raw_payload: { isOfficial: true, sourceType: "official_api", actualProvenance: "official", actualValue: null } }),
+  false
+);
+assert.equal(
+  isAllowedOfficialMacroEvent({ source: "BLS", status: "actual_available", event_type: "numeric_release", actual_value: "0.2%", raw_payload: { isOfficial: true, sourceType: "derived", actualProvenance: "official", actualValue: "0.2%" } }),
+  false,
+  "derived numeric payloads remain fail-closed"
+);
+assert.equal(
+  isAllowedOfficialMacroEvent({ source: "BLS", status: "actual_available", event_type: "numeric_release", actual_value: "0.2%", raw_payload: { isOfficial: true, sourceType: "official_api", actualProvenance: "official", actualValue: "0.3%" } }),
+  false,
+  "the stored column and frozen official payload must agree"
+);
 for (const blocked of ["coindesk_rss", "cointelegraph_rss", "cnbc_rss", "marketwatch_rss"]) {
   const source = newsSourceCatalog.find((entry) => entry.id === blocked);
   assert.equal(source?.policyStatus, "blocked");
@@ -40,6 +88,11 @@ assert.throws(() => canonicalizeOfficialUrl("https://user@sec.gov/release", "sec
 assert.throws(() => canonicalizeOfficialUrl("https://sec.gov:444/release", "sec_press_releases"), /port/);
 
 assert.equal(admitOfficialNews({ sourceId: "fed_press_releases", title: "FOMC issues monetary policy statement" }).accepted, true);
+assert.equal(
+  admitOfficialNews({ sourceId: "fed_press_releases", title: "Minutes of the Board's discount rate meetings" }).eventKind,
+  "fed_discount_rate_minutes",
+  "discount-rate minutes must not be mislabeled as an FOMC policy statement"
+);
 assert.equal(admitOfficialNews({ sourceId: "fed_press_releases", title: "Federal Reserve approves bank merger" }).accepted, false, "routine agency releases stay out of the product");
 assert.equal(admitOfficialNews({ sourceId: "sec_press_releases", title: "SEC announces digital asset market structure action" }).accepted, true);
 assert.equal(admitOfficialNews({ sourceId: "sec_press_releases", title: "SEC names a new regional director" }).accepted, false);
@@ -54,6 +107,20 @@ assert.equal(officialRssPayloadFailure({ candidateCount: 3, admittedCount: 2, in
 assert.equal(officialRssPayloadFailure({ candidateCount: 3, admittedCount: 0, invalidAdmittedCount: 0 }), null, "a healthy feed with no product-relevant item is not degraded");
 
 const now = new Date("2026-07-20T12:00:00.000Z");
+const publicCalendarMacro = resolveMacroSourceTrust({
+  source: "Official",
+  sourceUrl: "https://tradingeconomics.com/united-states/manufacturing-pmi",
+  officialUrl: "https://tradingeconomics.com/united-states/manufacturing-pmi",
+  itemOfficial: false
+});
+assert.equal(publicCalendarMacro.isOfficial, false);
+assert.equal(publicCalendarMacro.officialUrl, undefined, "a public calendar or aggregator URL must not be labeled as an official source");
+const dolMacro = resolveMacroSourceTrust({
+  source: "DOL",
+  sourceUrl: "https://oui.doleta.gov/unemploy/claims.asp"
+});
+assert.equal(dolMacro.isOfficial, true);
+assert.equal(dolMacro.officialUrl, "https://oui.doleta.gov/unemploy/claims.asp");
 assert.equal(classifyNewsSourceTimestamp("2026-07-20T11:55:00.000Z", now), "valid");
 assert.equal(classifyNewsSourceTimestamp("2026-06-19T11:55:00.000Z", now), "expired", "official feed history outside retention is skipped without degrading the source");
 assert.equal(classifyNewsSourceTimestamp("2026-07-20T12:06:00.000Z", now), "future");
@@ -77,6 +144,64 @@ assert.ok(normalized);
 assert.equal(normalized.originalTitle, "SEC announces a digital asset enforcement action");
 assert.deepEqual(normalized.entities, ["digital-asset"]);
 assert.equal(normalized.firstSeenAt, now.toISOString());
+const entityNormalized = normalizeNewsSourceItem({
+  sourceId: "sec_press_releases",
+  externalId: "SEC-2026-ENTITY",
+  canonicalUrl: "https://www.sec.gov/news/entity-title",
+  originalTitle: "SEC Chair&#39;s statement &amp; market update",
+  publishedAt: "2026-07-20T11:54:00.000Z",
+  eventType: "release",
+  entities: ["SEC"],
+  action: "published",
+  markets: ["global"],
+  targets: ["global"],
+  category: "market_infrastructure",
+  importance: "normal",
+  structuredPayload: {}
+}, now);
+assert.equal(entityNormalized?.originalTitle, "SEC Chair's statement & market update", "official titles must decode HTML entities before display and identity hashing");
+const ppiPresentationItem = normalizeNewsSourceItem({
+  sourceId: "macro_official_store",
+  externalId: "BLS:PPI-MOM",
+  canonicalUrl: "https://www.bls.gov/news.release/ppi.nr0.htm",
+  originalTitle: "Core PPI MoM",
+  publishedAt: "2026-07-20T11:53:00.000Z",
+  eventType: "official_macro_release",
+  entities: ["BLS", "PPI"],
+  action: "released",
+  markets: ["crypto", "global"],
+  targets: ["btc", "eth", "global"],
+  category: "macro",
+  importance: "high",
+  structuredPayload: { details: "실제 0.2% · 예상 0.3%" }
+}, now);
+const ppiPresentation = deterministicOfficialPresentation(ppiPresentationItem!);
+assert.equal(ppiPresentation.headline, "미국 근원 생산자물가지수(PPI) 발표");
+assert.equal(ppiPresentation.ruleVersion, "official-summary-v3");
+assert.doesNotMatch(ppiPresentation.factSummary, /ChartRadar 공식 매크로 원장/);
+assert.match(ppiPresentation.factSummary, /공식 출처에서 확인/);
+const distinctMacroItem = normalizeNewsSourceItem({
+  sourceId: "macro_official_store",
+  externalId: "CENSUS:BUSINESS-INVENTORIES",
+  canonicalUrl: "https://www.census.gov/economic-indicators/",
+  originalTitle: "Business Inventories and Sales",
+  publishedAt: "2026-07-20T11:52:00.000Z",
+  eventType: "official_macro_release",
+  entities: ["Census"],
+  action: "released",
+  markets: ["crypto", "global"],
+  targets: ["btc", "eth", "global"],
+  category: "macro",
+  importance: "high",
+  structuredPayload: {}
+}, now);
+assert.equal(
+  deterministicOfficialPresentation(distinctMacroItem!).headline,
+  "미국 공식 경제지표 · Business Inventories and Sales",
+  "unmapped official indicators must remain distinguishable instead of collapsing into one generic headline"
+);
+const entityPresentation = deterministicOfficialPresentation(entityNormalized!);
+assert.match(entityPresentation.factSummary, /SEC Chair's statement & market update/, "SEC summaries keep the exact official title so different events are distinguishable");
 const injected = normalizeNewsSourceItem({
   sourceId: "sec_press_releases",
   externalId: "SEC-2026-INJECTION",

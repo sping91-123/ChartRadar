@@ -57,6 +57,7 @@ function accepted(input: Omit<OfficialNewsAdmission, "accepted" | "ruleVersion">
 }
 
 function fedEventKind(text: string) {
+  if (/\bminutes\b.*\bdiscount rate\b|\bdiscount rate\b.*\bminutes\b/i.test(text)) return "fed_discount_rate_minutes";
   if (/\b(fomc|federal open market committee)\b.*\bminutes\b|\bminutes\b.*\b(fomc|federal open market committee)\b/i.test(text)) return "fomc_minutes";
   if (/\bimplementation note\b/i.test(text)) return "fomc_implementation_note";
   if (/\b(fomc statement|monetary policy statement|federal funds rate|interest rate decision|target range|discount rate|balance sheet|open market operation|quantitative (?:tightening|easing))\b/i.test(text)) return "fomc_policy_statement";

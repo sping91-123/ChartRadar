@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { analyzeTimeframe, type Candle } from "../src/lib/marketAnalysis";
@@ -78,13 +79,84 @@ assert.match(routeSource, /Vary", "Authorization/);
 assert.match(routeSource, /snapshot\.pro\?\.detailVersion !== 1/);
 assert.match(routeSource, /code: "pro_required"/);
 assert.match(routeSource, /code: "snapshot_detail_unavailable"/);
+assert.match(routeSource, /DAILY_PROVIDER_GENERATION_LIMIT = 24/, "provider-backed AI must have a bounded daily account budget");
+assert.match(routeSource, /perpetual-briefing-provider-daily/, "provider generations must use a separate daily limiter");
+assert.match(routeSource, /perpetual-briefing-provider-global-daily:v1/, "provider-backed AI must also have a cross-account daily cost ceiling");
+assert.match(routeSource, /PERPETUAL_AI_DAILY_PROVIDER_LIMIT/, "the global provider ceiling must be operator configurable");
+assert.match(routeSource, /includeClientIp: false/, "the daily provider budget must follow the account rather than the current IP");
+assert.match(routeSource, /requireSharedBackend: true/g, "provider generation must fail closed when the cross-instance limiter is unavailable");
+assert.match(routeSource, /deterministic_daily_limit/, "the paid UI must fall back to a deterministic explanation when the provider budget is exhausted");
+assert.match(routeSource, /const providerDeadline = Date\.now\(\) \+ PROVIDER_TIMEOUT_MS/);
+assert.match(routeSource, /withTimeout\(provider\.generateMarketBriefing\(input\), remainingMs\)/, "multiple providers must share one total timeout budget");
+assert.match(routeSource, /getSharedPerpetualBriefing\(cacheKey\)/, "same-snapshot explanations must be shared across server instances when Upstash is available");
+assert.match(routeSource, /acquireSharedPerpetualBriefingLease\(cacheKey\)/, "same-snapshot provider generation must use a distributed singleflight lease");
+assert.match(routeSource, /await setSharedPerpetualBriefing\(cacheKey/, "the shared result must be committed before releasing the generation lease");
+assert.match(routeSource, /releaseLease = sharedStored/, "a failed shared-cache write must retain the short lease until TTL expiry");
+assert.ok(
+  routeSource.indexOf("const hit = cache.get(cacheKey)") < routeSource.indexOf("const sharedHit") &&
+    routeSource.indexOf("const sharedHit") < routeSource.indexOf("const lease") &&
+    routeSource.indexOf("const lease") < routeSource.indexOf("const dailyGenerationLimit"),
+  "cached explanations and the singleflight lease must be resolved before consuming the provider generation budget"
+);
+const budgetFallbackBlock = routeSource.slice(
+  routeSource.indexOf("if (!dailyGenerationLimit.allowed || !globalGenerationLimit.allowed)"),
+  routeSource.indexOf("let briefing = fallbackPerpetualBriefing(snapshot)")
+);
+assert.doesNotMatch(budgetFallbackBlock, /cache\.set|setSharedPerpetualBriefing/, "a user's budget fallback must never contaminate a snapshot-wide cache");
+assert.match(routeSource, /if \(providerGenerated\) \{[\s\S]*cache\.set[\s\S]*setSharedPerpetualBriefing/, "only provider-backed explanations may populate the shared snapshot cache");
+
+const rateLimitSource = readFileSync(join(process.cwd(), "src/lib/server/rateLimit.ts"), "utf8");
+assert.match(rateLimitSource, /requireSharedBackend\?: boolean/);
+assert.match(rateLimitSource, /backend: "unavailable"/, "a missing shared limiter must have an explicit fail-closed result");
+assert.match(rateLimitSource, /redis\.call\('INCR', KEYS\[1\]\)/, "shared cost limits must increment inside one Redis script");
+assert.match(rateLimitSource, /redis\.call\('PTTL', KEYS\[1\]\)/);
+assert.match(rateLimitSource, /redis\.call\('PEXPIRE', KEYS\[1\], ARGV\[1\]\)/, "a missing TTL must be repaired atomically on every request");
+assert.doesNotMatch(rateLimitSource, /upstashCommand<[^>]+>\("(?:incr|expire|ttl)"/, "shared windows must not use split INCR/EXPIRE commands");
+const activationGateSource = readFileSync(join(process.cwd(), "scripts/check-perpetual-revenue-core-env.mjs"), "utf8");
+assert.match(activationGateSource, /shared AI cost guard/);
+assert.match(activationGateSource, /PERPETUAL_AI_DAILY_PROVIDER_LIMIT/);
+assert.match(activationGateSource, /AI explanation provider/);
+
+const sharedCacheSource = readFileSync(join(process.cwd(), "src/lib/server/perpetualBriefingCache.ts"), "utf8");
+assert.match(sharedCacheSource, /SHARED_CACHE_PREFIX = "perpetual-briefing:v1"/);
+assert.match(sharedCacheSource, /SHARED_CACHE_TIMEOUT_MS = 1_500/, "a cache outage must not stall the paid AI experience");
+assert.match(sharedCacheSource, /body: JSON\.stringify\(command\)/, "shared explanations must use Upstash's body command form instead of placing generated text in the URL");
+assert.match(sharedCacheSource, /SHARED_LEASE_PREFIX = "perpetual-briefing-lease:v1"/);
+assert.match(sharedCacheSource, /SHARED_LEASE_TTL_MS = 60_000/, "the lease must outlive the complete provider attempt and cache write");
+assert.match(sharedCacheSource, /"NX",[\s\S]*"PX",[\s\S]*SHARED_LEASE_TTL_MS/, "the generation lease must be exclusive and self-expiring");
+assert.match(sharedCacheSource, /redis\.call\('GET', KEYS\[1\]\) == ARGV\[1\]/, "only the lease owner may release it");
+assert.doesNotMatch(sharedCacheSource, /userId|accessToken|Authorization: `Bearer \$\{.*user/, "shared AI cache values must not contain user identity or access tokens");
 
 const clientSource = readFileSync(join(process.cwd(), "src/components/coin/PerpetualSnapshotBriefing.tsx"), "utf8");
 assert.match(clientSource, /payload\.snapshotId !== snapshotId/, "a late AI response must not overwrite a newly selected analysis");
 assert.match(clientSource, /controllerRef\.current\?\.abort\(\)/, "asset or analysis changes must cancel the old AI request");
 assert.match(clientSource, /20_000/, "the client must stop an AI request that never returns");
+assert.match(clientSource, /providerSkipped \? "rules" : "ai"/, "the UI must preserve whether the provider was actually used");
+assert.match(clientSource, /규칙 기반 자동 설명/, "deterministic fallback must never be mislabeled as AI-generated");
 const workbenchSource = readFileSync(join(process.cwd(), "src/components/coin/PerpetualEvidenceWorkbench.tsx"), "utf8");
 assert.match(workbenchSource, /key=\{snapshot\.id\}/, "a new analysis must remount the explanation state before paint");
 assert.match(workbenchSource, /timeZone: "Asia\/Seoul"/, "structure events must show their actual KST occurrence time");
+
+const missingProviderGate = spawnSync(process.execPath, ["scripts/check-perpetual-revenue-core-env.mjs", "--require-on"], {
+  cwd: process.cwd(),
+  encoding: "utf8",
+  env: {
+    ...process.env,
+    PERPETUAL_REVENUE_CORE_V1: "on",
+    NEXT_PUBLIC_SUPABASE_URL: "https://fixture.supabase.co",
+    SUPABASE_SERVICE_ROLE_KEY: "fixture-service-role",
+    PRODUCT_ANALYTICS_HMAC_SECRET: "fixture-hmac",
+    CRON_SECRET: "fixture-cron",
+    UPSTASH_REDIS_REST_URL: "https://fixture.upstash.io",
+    UPSTASH_REDIS_REST_TOKEN: "fixture-upstash-token",
+    PERPETUAL_AI_DAILY_PROVIDER_LIMIT: "240",
+    FIREBASE_SERVICE_ACCOUNT_JSON: "fixture-service-account",
+    GROQ_API_KEY: "",
+    GEMINI_API_KEY: "",
+    ENABLE_GEMINI_AI_FALLBACK: "false"
+  }
+});
+assert.notEqual(missingProviderGate.status, 0, "paid Perpetual activation must fail when no AI provider is configured");
+assert.match(`${missingProviderGate.stdout}\n${missingProviderGate.stderr}`, /FAIL AI explanation provider/);
 
 console.log("Perpetual beginner briefing contract passed.");

@@ -6,11 +6,12 @@ import { PerpetualDecisionChart } from "@/components/coin/PerpetualDecisionChart
 import { PerpetualEvidenceWorkbench } from "@/components/coin/PerpetualEvidenceWorkbench";
 import { PerpetualMonitorManager } from "@/components/coin/PerpetualMonitorManager";
 import { NewsImpactContextCard } from "@/components/news/NewsImpactContextCard";
+import { PerpetualNewsContextStrip } from "@/components/news/PerpetualNewsContextStrip";
 import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import { appendJournalEntry, decisionJournalContextFromSnapshot } from "@/lib/journal";
 import { readPerpetualAlertContext } from "@/lib/perpetualAlertContext";
-import { decisionStateLabel, qualityLabel } from "@/lib/perpetualDecisionCopy";
+import { decisionStateLabel, flowDirectionLabel, monitorConditionHeading, plainDirection, pressureDirectionLabel, qualityLabel } from "@/lib/perpetualDecisionCopy";
 import { isPerpetualSnapshotScopedStateCurrent, journalMonitorIdForSnapshot } from "@/lib/perpetualMonitor";
 import type { CryptoHomeTicker } from "@/lib/server/cryptoExchangeData";
 import type { MonitorCondition, PerpetualAsset, PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
@@ -103,7 +104,8 @@ function MonitorAction({
   onCreate,
   isAuthenticated,
   actionable,
-  snapshotId
+  snapshotId,
+  upgradeHref
 }: {
   condition: MonitorCondition;
   capabilities: PerpetualSnapshotCapabilities;
@@ -112,6 +114,7 @@ function MonitorAction({
   isAuthenticated: boolean;
   actionable: boolean;
   snapshotId: string;
+  upgradeHref: string;
 }) {
   const operationBusy = monitorState.status === "saving";
   const saved = monitorState.status === "saved" && monitorState.snapshotId === snapshotId && monitorState.conditionId === condition.id;
@@ -142,7 +145,7 @@ function MonitorAction({
   }
 
   if (capabilities.activeMonitorCount >= capabilities.monitorLimit) {
-    return <ActionButton href="/pro?market=crypto&source=perpetual" tone="secondary" className="w-full sm:w-auto">감시 한도 확인</ActionButton>;
+    return <ActionButton href={upgradeHref} tone="secondary" className="w-full sm:w-auto">Coin Pro 감시 한도 보기</ActionButton>;
   }
 
   return (
@@ -163,13 +166,15 @@ export function PerpetualDecisionExperience({
   requestedSnapshotId,
   source,
   attributionId,
-  impactId
+  impactId,
+  initialAlertMonitorId
 }: {
   asset: PerpetualAsset;
   requestedSnapshotId?: string | null;
   source?: "home" | "alert" | "news" | null;
   attributionId?: string | null;
   impactId?: string | null;
+  initialAlertMonitorId?: string | null;
 }) {
   const { session } = useSupabaseAuth();
   const [state, setState] = useState<DecisionLoadState>({ status: "loading", snapshot: null, capabilities: null, continuity: null });
@@ -254,6 +259,8 @@ export function PerpetualDecisionExperience({
       url.searchParams.set("snapshot", payload.snapshot.id);
       if (nextEffectiveSource) url.searchParams.set("source", nextEffectiveSource);
       else url.searchParams.delete("source");
+      if (nextEffectiveSource === "alert" && initialAlertMonitorId) url.searchParams.set("monitor", initialAlertMonitorId);
+      else if (nextEffectiveSource !== "alert") url.searchParams.delete("monitor");
       if (nextEffectiveSource === "news" && payload.newsContext) url.searchParams.set("impact", payload.newsContext.reactionId);
       else url.searchParams.delete("impact");
       window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
@@ -271,7 +278,7 @@ export function PerpetualDecisionExperience({
     } finally {
       window.clearTimeout(timeout);
     }
-  }, [asset, impactId]);
+  }, [asset, impactId, initialAlertMonitorId]);
 
   useEffect(() => {
     setMonitorState({ status: "idle" });
@@ -302,19 +309,23 @@ export function PerpetualDecisionExperience({
   const exactAlertContext = effectiveSource === "alert" && state.continuity?.status === "same";
   useEffect(() => {
     if (!snapshot) return;
-    const context = source === "alert"
+    const storedContext = source === "alert"
       ? readPerpetualAlertContext(requestedSnapshotId ?? snapshot.id)
       : null;
-    const scenarioOpened = source === "alert" && Boolean(context);
-    setAlertMonitorId(exactAlertContext ? context?.monitorId ?? null : null);
+    // The server-validated URL identifies the alert the user actually opened.
+    // Session storage is only a fallback for older links without a monitor ID.
+    const linkedMonitorId = initialAlertMonitorId ?? storedContext?.monitorId ?? null;
+    const linkedSnapshotId = storedContext?.snapshotId ?? requestedSnapshotId ?? snapshot.id;
+    const scenarioOpened = source === "alert" && Boolean(linkedMonitorId);
+    setAlertMonitorId(exactAlertContext ? linkedMonitorId : null);
     if (!trackedViewRef.current) {
       trackedViewRef.current = true;
       void trackProductEvent({
         eventName: scenarioOpened ? "scenario_opened" : "perpetual_snapshot_viewed",
         surface: "perpetual",
         asset: snapshot.asset,
-        snapshotId: scenarioOpened ? context!.snapshotId : snapshot.id,
-        monitorId: context?.monitorId,
+        snapshotId: scenarioOpened ? linkedSnapshotId : snapshot.id,
+        monitorId: linkedMonitorId ?? undefined,
         attributionId: scenarioOpened ? undefined : attributionId ?? undefined,
         properties: scenarioOpened
           ? { source: exactAlertContext ? "alert" : "alert_refreshed" }
@@ -331,7 +342,7 @@ export function PerpetualDecisionExperience({
         properties: { source: effectiveSource ?? "direct", reason: "pro_conditions" }
       });
     }
-  }, [attributionId, effectiveSource, exactAlertContext, requestedSnapshotId, snapshot, source, state.continuity?.status]);
+  }, [attributionId, effectiveSource, exactAlertContext, initialAlertMonitorId, requestedSnapshotId, snapshot, source, state.continuity?.status]);
   useEffect(() => {
     if (!snapshot) return;
     let cancelled = false;
@@ -438,7 +449,8 @@ export function PerpetualDecisionExperience({
       exactAlertContext
     );
     const exactNewsContext = effectiveSource === "news" && newsContext !== null && newsContext.evaluatedSnapshotId === snapshot.id;
-    const journalSource = exactNewsContext ? "news" : exactAlertContext ? "alert" : "snapshot";
+    const canSaveExactNewsContext = exactNewsContext && Boolean(state.capabilities?.canSaveNewsJournal);
+    const journalSource = canSaveExactNewsContext ? "news" : exactAlertContext ? "alert" : "snapshot";
     setJournalState({ status: "saving", snapshotId: journalSnapshotId });
     try {
       const response = await fetch(
@@ -450,7 +462,7 @@ export function PerpetualDecisionExperience({
             snapshotId: snapshot.id,
             monitorId,
             source: journalSource,
-            ...(exactNewsContext ? { reactionId: newsContext?.reactionId } : {})
+            ...(canSaveExactNewsContext ? { reactionId: newsContext?.reactionId } : {})
           })
         })
       );
@@ -473,6 +485,14 @@ export function PerpetualDecisionExperience({
         setJournalState({ status: "error", snapshotId: journalSnapshotId, message: error.message });
         return;
       }
+      if (monitorId) {
+        setJournalState({
+          status: "error",
+          snapshotId: journalSnapshotId,
+          message: "실제로 감시한 조건을 정확히 남기려면 서버 연결이 필요합니다. 연결이 복구된 뒤 다시 저장해 주세요."
+        });
+        return;
+      }
       try {
         appendJournalEntry({
           title: `${snapshot.symbol} 선물 시장 분석`,
@@ -492,7 +512,7 @@ export function PerpetualDecisionExperience({
         setJournalState({ status: "error", snapshotId: journalSnapshotId, message: error instanceof Error ? error.message : "판단 기록을 저장하지 못했습니다." });
       }
     }
-  }, [alertMonitorId, effectiveSource, exactAlertContext, monitorState, newsContext, session, snapshot]);
+  }, [alertMonitorId, effectiveSource, exactAlertContext, monitorState, newsContext, session, snapshot, state.capabilities?.canSaveNewsJournal]);
 
   if (!snapshot && state.status === "loading") {
     return (
@@ -542,6 +562,11 @@ export function PerpetualDecisionExperience({
     displaySnapshot.id,
     monitorState
   ) ? monitorState : { status: "idle" } as const;
+  const quickEvidence = displaySnapshot.publicEvidence;
+  const analysisReturnTo = `/crypto/perpetual?asset=${asset}&timeframe=15m&snapshot=${encodeURIComponent(displaySnapshot.id)}`;
+  const monitorUpgradeHref = `/pro?market=crypto&source=perpetual-monitor&returnTo=${encodeURIComponent(analysisReturnTo)}`;
+  const savesNewsContext = effectiveSource === "news" && newsContext?.evaluatedSnapshotId === displaySnapshot.id && Boolean(capabilities.canSaveNewsJournal);
+  const savesSnapshotWithoutNews = effectiveSource === "news" && Boolean(newsContext) && !savesNewsContext;
 
   return (
     <div className="space-y-3">
@@ -559,7 +584,7 @@ export function PerpetualDecisionExperience({
       <section className="bg-ui-panel px-3 py-4 sm:px-5" aria-labelledby="perpetual-decision-title">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-subtle">{assetSymbols[asset].label} · 바이낸스 무기한 선물 · 15분 봉 기준</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-subtle">{assetSymbols[asset].label} · 바이낸스 만기 없는 선물 · 15분 흐름 기준</p>
             <p className="mt-1 inline-flex items-center gap-1 text-[10.5px] font-semibold text-ui-muted"><Clock3 size={12} aria-hidden /> {formatAsOf(displaySnapshot.generatedAt)} 기준 분석</p>
           </div>
           <div className="flex gap-1">
@@ -579,7 +604,7 @@ export function PerpetualDecisionExperience({
             <p className="mt-1 text-sm font-semibold leading-6 text-ui-text [word-break:keep-all]">{displaySnapshot.summary.topRisk}</p>
           </div>
           <div className="bg-ui-inset/65 px-3 py-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.1em] text-ui-brand">지금 확인할 가격</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.1em] text-ui-brand">{monitorConditionHeading(displaySnapshot.summary.primaryCondition)}</p>
             <p className="mt-1 text-sm font-black leading-6 text-ui-text [word-break:keep-all]">{displaySnapshot.summary.primaryCondition.label}</p>
           </div>
         </div>
@@ -588,10 +613,10 @@ export function PerpetualDecisionExperience({
           {displaySnapshot.summary.reasons.map((reason) => <li key={reason}>· {reason}</li>)}
         </ul>
 
-        <div className="mt-4 flex flex-col gap-2 border-t border-ui-line pt-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs leading-5 text-ui-muted">알림은 주문을 실행하지 않습니다. 선택한 가격 조건을 최대 5분마다 확인합니다.</p>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <MonitorAction condition={displaySnapshot.summary.primaryCondition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} />
+        <div className="mt-3 flex flex-col gap-2 border-t border-ui-line pt-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="order-2 text-xs leading-5 text-ui-muted sm:order-1">알림은 주문을 실행하지 않습니다. 선택한 가격 조건을 최대 5분마다 확인합니다.</p>
+          <div className="order-1 flex flex-col gap-2 sm:order-2 sm:flex-row">
+            <MonitorAction condition={displaySnapshot.summary.primaryCondition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} />
             {session ? (
               <ActionButton
                 tone="secondary"
@@ -600,11 +625,21 @@ export function PerpetualDecisionExperience({
                 className="w-full sm:w-auto"
               >
                 {journalState.status === "saving" ? <Loader2 className="animate-spin" size={15} aria-hidden /> : <BookOpen size={15} aria-hidden />}
-                {journalState.status === "saving" ? "판단 기록 저장 중" : currentJournalState.status === "saved" ? "판단 기록 저장됨" : "판단 기록에 저장"}
+                {journalState.status === "saving" ? "판단 기록 저장 중" : currentJournalState.status === "saved" ? "판단 기록 저장됨" : savesSnapshotWithoutNews ? "선물 판단만 저장" : "판단 기록에 저장"}
               </ActionButton>
             ) : null}
           </div>
         </div>
+        {savesSnapshotWithoutNews ? <p className="mt-2 text-[11px] font-semibold leading-5 text-ui-watch">현재 플랜에서는 선물 분석만 저장됩니다. 공식 뉴스와 발표 전후 비교까지 함께 복기하는 기능은 Coin Pro에서 열립니다.</p> : null}
+
+        {quickEvidence ? (
+          <div className="mt-3 grid grid-cols-2 gap-1.5 border-t border-ui-line pt-3 sm:grid-cols-4" aria-label="현재 판단 근거 요약">
+            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">추세 확인(MSB)</span>{plainDirection(quickEvidence.structure)}</p>
+            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">흐름 전환(CHoCH)</span>{plainDirection(quickEvidence.transition)}</p>
+            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">몰린 포지션</span>{quickEvidence.pressure ? pressureDirectionLabel(quickEvidence.pressure.dominantSide) : "확인 중"}</p>
+            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">큰 금액 체결</span>{quickEvidence.flow ? flowDirectionLabel(quickEvidence.flow.dominantSide) : "확인 중"}</p>
+          </div>
+        ) : null}
         {currentMonitorState.status === "saved" || currentMonitorState.status === "error" ? (
           <p role={currentMonitorState.status === "error" ? "alert" : "status"} aria-live="polite" className={`mt-2 text-xs font-semibold ${currentMonitorState.status === "saved" ? "text-ui-long" : "text-ui-risk"}`}>{currentMonitorState.message}</p>
         ) : null}
@@ -616,6 +651,7 @@ export function PerpetualDecisionExperience({
       </section>
 
       {newsContext ? <NewsImpactContextCard context={newsContext} /> : null}
+      {!newsContext ? <PerpetualNewsContextStrip asset={asset} snapshotId={displaySnapshot.id} /> : null}
 
       <section className="bg-ui-panel px-3 py-4 sm:px-5">
         <div className="flex items-start justify-between gap-3">
@@ -641,7 +677,7 @@ export function PerpetualDecisionExperience({
             {conditions.slice(1).map((condition) => (
               <div key={condition.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div><p className="text-xs font-black text-ui-text">{condition.role === "confirmation" ? "흐름이 더 강해지는 확인 가격" : "이 조건이 나오면 해석을 다시 봐야 해요"}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{condition.label}</p></div>
-                <MonitorAction condition={condition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} />
+                <MonitorAction condition={condition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} />
               </div>
             ))}
           </div>

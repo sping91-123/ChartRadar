@@ -1,4 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
+import { selectLatestMacroGenerationRows } from "@/lib/macro/generation";
 import { normalizeEdgarAcceptanceDateTime } from "@/lib/officialNewsTime";
 import { supabaseAdminRest } from "@/lib/server/supabaseAdmin";
 import { admitOfficialNews, officialRssPayloadFailure } from "@/lib/server/news/officialNewsAdmission";
@@ -241,6 +242,7 @@ interface MacroEventRow {
   scheduled_at: string;
   released_at: string | null;
   status: string;
+  event_type?: string | null;
   actual_value?: string | null;
   consensus_value?: string | null;
   previous_value?: string | null;
@@ -251,9 +253,10 @@ interface MacroEventRow {
 
 async function fetchMacroStore(now: Date) {
   const since = new Date(now.getTime() - 7 * 24 * 60 * 60_000).toISOString();
-  const rows = await supabaseAdminRest<MacroEventRow[]>(
-    `macro_events?scheduled_at=gte.${encodeURIComponent(since)}&importance=eq.3&order=scheduled_at.desc&limit=80`
+  const storedRows = await supabaseAdminRest<MacroEventRow[]>(
+    `macro_events?scheduled_at=gte.${encodeURIComponent(since)}&order=updated_at.desc,scheduled_at.desc&limit=160`
   );
+  const rows = selectLatestMacroGenerationRows(storedRows).filter((row) => row.importance === 3);
   let invalidOfficialCount = 0;
   const items = rows.flatMap((row) => {
     if (!isAllowedOfficialMacroEvent(row)) return [];
@@ -265,7 +268,7 @@ async function fetchMacroStore(now: Date) {
     }
     const details = [
       row.actual_value ? `실제 ${row.actual_value}` : null,
-      row.consensus_value ? `예상 ${row.consensus_value}` : null,
+      row.consensus_value ? `시장 예상 ${row.consensus_value}` : null,
       row.previous_value ? `이전 ${row.previous_value}` : null
     ].filter(Boolean).join(" · ");
     const fedAdmission = row.source === "Fed"
@@ -294,6 +297,14 @@ async function fetchMacroStore(now: Date) {
           actual: row.actual_value ?? null,
           consensus: row.consensus_value ?? null,
           previous: row.previous_value ?? null,
+          actualProvenance: row.raw_payload?.actualProvenance ?? null,
+          consensusProvenance: row.raw_payload?.consensusProvenance ?? null,
+          actualProvider: row.raw_payload?.actualProvider ?? null,
+          actualSourceUrl: row.raw_payload?.actualSourceUrl ?? null,
+          actualReportingPeriod: row.raw_payload?.actualReportingPeriod ?? null,
+          actualObservedAt: row.raw_payload?.actualObservedAt ?? null,
+          consensusProvider: row.raw_payload?.consensusProvider ?? null,
+          consensusSourceUrl: row.raw_payload?.consensusSourceUrl ?? null,
           details,
           eventKind,
           admissionReason: "official_macro",

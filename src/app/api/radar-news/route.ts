@@ -2,8 +2,9 @@
 import { NextResponse } from "next/server";
 import type { NewsImpactEvent } from "@/lib/newsImpact";
 import type { RadarNewsBriefing, RadarNewsItem, RadarNewsMarket } from "@/lib/radarNews";
+import { serializeOfficialNewsEvents } from "@/lib/server/news/newsImpactApi";
 import { readNewsImpactEvents, readNewsSourceStatusSummary } from "@/lib/server/news/newsImpactStore";
-import { isNewsImpactUiEnabled, newsImpactMode } from "@/lib/server/newsImpactMode";
+import { isNewsImpactReadEnabled, isOfficialNewsFeedEnabled, newsImpactMode } from "@/lib/server/newsImpactMode";
 import { rateLimit } from "@/lib/server/rateLimit";
 import { isSupabaseAdminConfigured } from "@/lib/server/supabaseAdmin";
 
@@ -60,7 +61,7 @@ export async function GET(request: Request) {
   if (!limited.allowed) return NextResponse.json({ error: "뉴스 레이더 요청이 잠시 많습니다." }, { status: 429 });
   const mode = newsImpactMode();
   const generatedAt = new Date().toISOString();
-  if (!isNewsImpactUiEnabled(mode) || !isSupabaseAdminConfigured()) {
+  if (!isOfficialNewsFeedEnabled(mode) || !isSupabaseAdminConfigured()) {
     return NextResponse.json({
       updatedAt: Date.now(),
       items: [],
@@ -74,27 +75,37 @@ export async function GET(request: Request) {
     }, { headers: { "Cache-Control": "private, no-store, max-age=0" } });
   }
   try {
-    const [events, health] = await Promise.all([
+    const [recentEvents, health] = await Promise.all([
       readNewsImpactEvents({
         market: market === "stocks" ? "global" : "crypto",
         asset: market === "crypto" ? "btc" : null,
         since: new Date(Date.now() - 24 * 60 * 60_000).toISOString(),
         limit: 3
       }),
-      readNewsSourceStatusSummary()
+      readNewsSourceStatusSummary(market === "stocks" ? "global" : "crypto")
     ]);
+    const events = recentEvents.length > 0
+      ? recentEvents
+      : await readNewsImpactEvents({
+          market: market === "stocks" ? "global" : "crypto",
+          asset: market === "crypto" ? "btc" : null,
+          since: new Date(Date.now() - 7 * 24 * 60 * 60_000).toISOString(),
+          limit: 3
+        });
+    const visibleEvents = isNewsImpactReadEnabled(mode) ? events : serializeOfficialNewsEvents(events);
     return NextResponse.json({
       updatedAt: Date.parse(health.latestRunAt ?? generatedAt),
-      items: events.map(legacyItem),
-      briefing: legacyBriefing(events, health.latestRunAt ?? generatedAt),
+      items: visibleEvents.map(legacyItem),
+      briefing: legacyBriefing(visibleEvents, health.latestRunAt ?? generatedAt),
       failedSources: health.degraded > 0 ? ["공식 출처 갱신 지연"] : [],
       market,
       cached: false,
       refreshIntervalMs: 5 * 60_000,
-      compatibility: "news-impact-v1"
+      compatibility: "news-impact-v1",
+      mode
     }, { headers: { "Cache-Control": "private, no-store, max-age=0" } });
   } catch (error) {
     console.error("[api/radar-news] compatibility error:", error);
-    return NextResponse.json({ error: "저장된 뉴스 임팩트를 불러오지 못했습니다." }, { status: 503 });
+    return NextResponse.json({ error: "저장된 공식 뉴스 분석을 불러오지 못했습니다." }, { status: 503 });
   }
 }

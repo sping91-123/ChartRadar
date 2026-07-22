@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Activity, AlertTriangle, ArrowRight, ChevronDown, Clock3, Database, Loader2, RefreshCw, ShieldCheck } from "lucide-react";
+import { Activity, AlertTriangle, ArrowRight, Bell, BookOpen, Clock3, Database, Loader2, Newspaper, RefreshCw, ShieldCheck } from "lucide-react";
 import { CoinRadarHomePanel } from "@/components/coin/CoinRadarHomePanel";
 import { HomeInterestCoinPrices } from "@/components/coin/HomeInterestCoinPrices";
 import { PerpetualDecisionChart } from "@/components/coin/PerpetualDecisionChart";
 import { MacroTicker } from "@/components/MacroTicker";
 import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
 import { withSupabaseAuth } from "@/lib/authFetch";
-import { beginnerTerm, decisionStateLabel, flowDirectionLabel, plainDirection, pressureDirectionLabel, qualityLabel } from "@/lib/perpetualDecisionCopy";
+import { beginnerTerm, decisionStateLabel, flowDirectionLabel, monitorConditionHeading, plainDirection, pressureDirectionLabel, qualityLabel } from "@/lib/perpetualDecisionCopy";
 import type { CryptoHomeTicker } from "@/lib/server/cryptoExchangeData";
 import type { PerpetualAsset, PerpetualDecisionSnapshot, SnapshotQuality } from "@/lib/perpetualDecisionSnapshot";
 import type { PerpetualSnapshotCapabilities, PerpetualSnapshotResponse } from "@/lib/perpetualApi";
@@ -149,7 +149,44 @@ function HomeNewsImpactStrip({ asset, snapshotId }: {
   }, [asset, session?.accessToken, snapshotId]);
 
   const event = payload?.events[0];
-  if (!event?.reaction || event.reaction.classification === "insufficient_data") return null;
+  if (!payload) return null;
+  if (!event) {
+    const delayed = payload.quality !== "ready";
+    return (
+      <Link
+        href={`/crypto/news?asset=${asset}&source=home`}
+        className="mt-2 flex min-h-9 min-w-0 items-center gap-2 border-l-2 border-ui-line bg-ui-inset/45 px-2.5 py-1.5 text-[11px] font-semibold text-ui-muted transition hover:bg-ui-inset"
+      >
+        <StatusPill tone={delayed ? "risk" : "watch"} className="min-h-5 shrink-0 px-1.5 text-[10px]">공식 뉴스</StatusPill>
+        <span className="min-w-0 flex-1 truncate">{delayed ? "공식 출처 갱신 지연 · 상태 확인" : "현재 분석과 직접 연결된 새 공식 이슈 없음 · 최근 발표 보기"}</span>
+        <ArrowRight size={13} className="shrink-0 text-ui-brand" aria-hidden />
+      </Link>
+    );
+  }
+  if (payload.mode === "shadow") {
+    return (
+      <Link
+        href={`/crypto/news?asset=${asset}&event=${event.id}&source=home`}
+        className="mt-2 flex min-h-9 min-w-0 items-center gap-2 border-l-2 border-ui-brand bg-ui-inset/55 px-2.5 py-1.5 text-[11px] font-semibold text-ui-muted transition hover:bg-ui-inset"
+      >
+        <StatusPill tone="watch" className="min-h-5 shrink-0 px-1.5 text-[10px]">공식 발표</StatusPill>
+        <span className="min-w-0 flex-1 truncate">{event.headline}</span>
+        <ArrowRight size={13} className="shrink-0 text-ui-brand" aria-hidden />
+      </Link>
+    );
+  }
+  if (!event.reaction || event.reaction.classification === "insufficient_data") {
+    return (
+      <Link
+        href={`/crypto/news?asset=${asset}&event=${event.id}&source=home&snapshot=${encodeURIComponent(snapshotId)}`}
+        className="mt-2 flex min-h-9 min-w-0 items-center gap-2 border-l-2 border-ui-watch bg-ui-inset/45 px-2.5 py-1.5 text-[11px] font-semibold text-ui-muted transition hover:bg-ui-inset"
+      >
+        <StatusPill tone="watch" className="min-h-5 shrink-0 px-1.5 text-[10px]">반응 확인 중</StatusPill>
+        <span className="min-w-0 flex-1 truncate">공식 발표 확인 · 발표 전후 시장 자료를 비교 중입니다</span>
+        <ArrowRight size={13} className="shrink-0 text-ui-brand" aria-hidden />
+      </Link>
+    );
+  }
   return (
     <Link
       href={`/crypto/news?asset=${asset}&event=${event.id}&source=home&snapshot=${encodeURIComponent(snapshotId)}`}
@@ -168,8 +205,8 @@ function HomeEvidenceSummary({ snapshot }: { snapshot: PerpetualDecisionSnapshot
     return <p className="mt-3 bg-ui-inset/55 px-3 py-3 text-xs leading-5 text-ui-muted">이전 분석이라 쉬운 근거 카드가 없습니다. 다음 자동 분석부터 표시됩니다.</p>;
   }
   const cards = [
-    { label: beginnerTerm("msb"), value: plainDirection(evidence.structure), detail: "최근 중요한 고점·저점을 넘은 방향" },
-    { label: beginnerTerm("choch"), value: plainDirection(evidence.transition), detail: "기존 흐름이 바뀌기 시작한 방향" },
+    { label: beginnerTerm("msb"), value: plainDirection(evidence.structure), detail: evidence.events?.msb ? `${formatPrice(evidence.events.msb.level)}에서 최근 추세 확인` : "최근 중요한 고점·저점을 넘은 방향" },
+    { label: beginnerTerm("choch"), value: plainDirection(evidence.transition), detail: evidence.events?.choch ? `${formatPrice(evidence.events.choch.level)}에서 전환 신호` : "기존 흐름이 바뀌기 시작한 방향" },
     { label: "몰린 포지션", value: evidence.pressure ? pressureDirectionLabel(evidence.pressure.dominantSide) : "확인 중", detail: "반대 움직임 때 강제 청산이 커질 수 있는 쪽" },
     { label: "큰 금액 체결", value: evidence.flow ? flowDirectionLabel(evidence.flow.dominantSide) : "확인 중", detail: "최근 큰 금액 매수와 매도 중 더 강한 쪽" }
   ];
@@ -186,9 +223,18 @@ function HomeEvidenceSummary({ snapshot }: { snapshot: PerpetualDecisionSnapshot
           </article>
         ))}
       </div>
+      {evidence.context?.length ? (
+        <div className="mt-2 grid grid-cols-3 gap-1" aria-label="시간대별 흐름">
+          {evidence.context.map((item) => (
+            <p key={item.timeframe} className="bg-ui-inset/40 px-2 py-1.5 text-center text-[10px] font-semibold text-ui-muted">
+              <span className="block font-black text-ui-text">{item.label}</span>{plainDirection(item.structure)}
+            </p>
+          ))}
+        </div>
+      ) : null}
       <p className="mt-2 bg-ui-brand/8 px-2.5 py-2 text-[11px] font-semibold leading-5 text-ui-muted">
         <span className="font-black text-ui-text">지난 분석 이후</span> · {evidence.previousChange
-          ? `${decisionStateLabel(evidence.previousChange.from)}에서 ${decisionStateLabel(evidence.previousChange.to)}로 바뀌었습니다.`
+          ? `이전에는 ${decisionStateLabel(evidence.previousChange.from)}, 지금은 ${decisionStateLabel(evidence.previousChange.to)}입니다.`
           : "바로 전 분석과 비교해 큰 방향 변화는 없습니다."}
       </p>
     </section>
@@ -201,7 +247,6 @@ function HomeDecisionHero({ newsImpactEnabled }: { newsImpactEnabled: boolean })
   const [state, setState] = useState<LoadState>({ status: "loading", snapshot: null, capabilities: null });
   const [livePrice, setLivePrice] = useState<number | null>(null);
   const [liveChange, setLiveChange] = useState<number | null>(null);
-  const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [journeyId, setJourneyId] = useState<string | null>(null);
   const requestGeneration = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
@@ -248,7 +293,6 @@ function HomeDecisionHero({ newsImpactEnabled }: { newsImpactEnabled: boolean })
     setState({ status: "loading", snapshot: null, capabilities: null });
     setLivePrice(null);
     setLiveChange(null);
-    setEvidenceOpen(false);
     setAsset(nextAsset);
   }, [asset]);
 
@@ -322,7 +366,7 @@ function HomeDecisionHero({ newsImpactEnabled }: { newsImpactEnabled: boolean })
           </div>
           <span className="inline-flex items-center gap-1 text-xs font-black text-ui-brand"><Loader2 className="animate-spin" size={14} aria-hidden /> 분석 중</span>
         </div>
-        <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.12em] text-ui-subtle">바이낸스 무기한 선물 · 15분 봉 기준</p>
+        <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.12em] text-ui-subtle">바이낸스 만기 없는 선물 · 15분 흐름 기준</p>
         <div className="mt-2 h-7 w-4/5 animate-pulse bg-ui-inset" />
         <div className="mt-2 h-7 w-3/5 animate-pulse bg-ui-inset" />
         <div className="mt-4 grid grid-cols-2 gap-2">
@@ -383,7 +427,7 @@ function HomeDecisionHero({ newsImpactEnabled }: { newsImpactEnabled: boolean })
 
       <div className="mt-2 flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ui-subtle">바이낸스 무기한 선물 · 15분 봉 기준</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ui-subtle">바이낸스 만기 없는 선물 · 15분 흐름 기준</p>
           <h1 id="home-decision-title" className="mt-1 text-[1.35rem] font-black leading-7 tracking-tight text-ui-text [word-break:keep-all]">
             {displaySnapshot.summary.headline}
           </h1>
@@ -405,7 +449,7 @@ function HomeDecisionHero({ newsImpactEnabled }: { newsImpactEnabled: boolean })
           <p className="mt-1 text-xs font-semibold leading-5 text-ui-text [word-break:keep-all]">{displaySnapshot.summary.topRisk}</p>
         </div>
         <div className="bg-ui-inset/65 px-3 py-2.5">
-          <p className="text-[10px] font-black uppercase tracking-[0.1em] text-ui-brand">지금 확인할 가격</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.1em] text-ui-brand">{monitorConditionHeading(displaySnapshot.summary.primaryCondition)}</p>
           <p className="mt-1 text-xs font-black leading-5 text-ui-text [word-break:keep-all]">{displaySnapshot.summary.primaryCondition.label}</p>
         </div>
       </div>
@@ -428,51 +472,82 @@ function HomeDecisionHero({ newsImpactEnabled }: { newsImpactEnabled: boolean })
         })}
         className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-ui-sm bg-ui-brand px-4 text-sm font-black text-white transition hover:brightness-110"
       >
-        차트와 근거 자세히 보기 <ArrowRight size={16} aria-hidden />
+        전체 선물 분석과 조건 알림 보기 <ArrowRight size={16} aria-hidden />
       </Link>
       {newsImpactEnabled ? <HomeNewsImpactStrip asset={asset} snapshotId={displaySnapshot.id} /> : null}
-      <p className="mt-1.5 text-center text-[10.5px] font-semibold leading-4 text-ui-muted">
-        {capabilities?.canSeeProDetail
-          ? "상세 화면에서 1시간·4시간 흐름, 신호 발생 가격, 수급 수치와 AI 설명을 함께 확인할 수 있습니다."
-          : "Pro는 더 깊은 근거를 보여주고 중요한 가격을 최대 5분 간격으로 확인해 알림과 당시 판단 기록으로 이어줍니다."}
-      </p>
 
       <HomeEvidenceSummary snapshot={displaySnapshot} />
 
-      <details
-        className="group mt-2 border-t border-ui-line pt-2"
-        onToggle={(event) => setEvidenceOpen(event.currentTarget.open)}
-      >
-        <summary className="flex min-h-9 cursor-pointer list-none items-center justify-between gap-2 text-xs font-black text-ui-muted marker:hidden [&::-webkit-details-marker]:hidden">
-          15분 차트로 직접 확인하기
-          <ChevronDown size={15} className="transition group-open:rotate-180" aria-hidden />
-        </summary>
-        {evidenceOpen ? (
-          <div className="mt-2">
-            <PerpetualDecisionChart snapshot={displaySnapshot} compact />
-            <div className="mt-2 grid gap-1 text-[10.5px] leading-4 text-ui-muted sm:grid-cols-3">
-              {Object.entries(displaySnapshot.sourceStatus).map(([key, source]) => (
-                <p key={key}><span className="font-black text-ui-text">{sourceCopy[key as keyof typeof sourceCopy]}</span> · {qualityLabel(source.status)}</p>
-              ))}
-            </div>
-            {displaySnapshot.pro ? (
-              <div className="mt-2 space-y-2 border-t border-ui-line pt-2 text-[10.5px] leading-4 text-ui-muted">
-                <div className="grid gap-1 sm:grid-cols-3">
-                  {displaySnapshot.pro.multiTimeframeEvidence.map((evidence) => (
-                    <p key={evidence.timeframe} className="bg-ui-inset/45 px-2 py-2">
-                      <span className="font-black text-ui-text">{evidence.label}</span> · 추세 {plainDirection(evidence.structure)} · 전환 가능성 {plainDirection(evidence.transition)}
-                    </p>
-                  ))}
-                </div>
-                <div className="grid gap-1 sm:grid-cols-2">
-                  <p>{displaySnapshot.publicEvidence?.pressure?.summary ?? "몰린 포지션 데이터가 부족합니다."}</p>
-                  <p>{displaySnapshot.publicEvidence?.flow?.summary ?? "큰 금액 체결 데이터가 부족합니다."}</p>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-      </details>
+      <div className="mt-3 bg-ui-inset/25 px-1 py-2">
+        <div className="mb-2 flex items-center justify-between gap-2 px-2">
+          <p className="text-[11px] font-black text-ui-text">15분 차트에서 직접 확인</p>
+          <span className="text-[10px] font-semibold text-ui-subtle">신호와 확인 가격 표시</span>
+        </div>
+        <PerpetualDecisionChart snapshot={displaySnapshot} compact />
+        <div className="mt-2 grid grid-cols-3 gap-1 px-2 text-[9.5px] leading-4 text-ui-muted">
+          {Object.entries(displaySnapshot.sourceStatus).map(([key, source]) => (
+            <p key={key} className="min-w-0"><span className="block truncate font-black text-ui-text">{sourceCopy[key as keyof typeof sourceCopy]}</span>{qualityLabel(source.status)}</p>
+          ))}
+        </div>
+      </div>
+
+      <p className="mt-1.5 text-center text-[10.5px] font-semibold leading-4 text-ui-muted">
+        {capabilities?.canSeeProDetail
+          ? "상세 화면에서 시간대별 신호 가격, 상세 포지션·큰 체결 수치, 고급 가격 구간과 AI 설명을 함께 확인할 수 있습니다."
+          : "Pro는 시간대별 신호가 나온 가격·시각과 상세 포지션·큰 체결 수치, AI 설명을 보여주고 중요한 조건을 최대 5분 간격으로 확인합니다."}
+      </p>
+
+    </section>
+  );
+}
+
+function HomeDailyActions({ newsImpactEnabled }: { newsImpactEnabled: boolean }) {
+  const { session, isLoading } = useSupabaseAuth();
+  const [monitorDetail, setMonitorDetail] = useState("조건 1개 무료 저장");
+
+  useEffect(() => {
+    const controller = new AbortController();
+    if (isLoading) {
+      setMonitorDetail("감시 상태 확인 중");
+      return () => controller.abort();
+    }
+    if (!session?.accessToken) {
+      setMonitorDetail("로그인 후 조건 저장");
+      return () => controller.abort();
+    }
+    void (async () => {
+      try {
+        const response = await fetch(
+          "/api/crypto/perpetual/monitors?status=active",
+          await withSupabaseAuth({ cache: "no-store", signal: controller.signal })
+        );
+        const payload = (await response.json().catch(() => ({}))) as {
+          capabilities?: { runningMonitorCount?: number };
+        };
+        if (controller.signal.aborted) return;
+        const count = response.ok ? Number(payload.capabilities?.runningMonitorCount ?? 0) : 0;
+        setMonitorDetail(count > 0 ? `${count}개 감시 중` : "조건 1개 무료 저장");
+      } catch {
+        if (!controller.signal.aborted) setMonitorDetail("조건 감시 관리");
+      }
+    })();
+    return () => controller.abort();
+  }, [isLoading, session?.accessToken]);
+
+  const actions = [
+    ...(newsImpactEnabled ? [{ href: "/crypto/news", label: "공식 뉴스", detail: "BTC·ETH 발표 반응", icon: Newspaper }] : []),
+    { href: "/crypto/alertlist", label: "조건 알림", detail: monitorDetail, icon: Bell },
+    { href: "/crypto/review", label: "판단 복기", detail: "저장한 분석", icon: BookOpen }
+  ];
+  return (
+    <section className="grid grid-cols-3 gap-1.5" aria-label="매일 쓰는 도구">
+      {actions.map(({ href, label, detail, icon: Icon }) => (
+        <Link key={href} href={href} className="min-w-0 bg-ui-panel px-2 py-2.5 text-center transition hover:bg-ui-elevated">
+          <Icon className="mx-auto text-ui-brand" size={15} aria-hidden />
+          <span className="mt-1 block text-[11px] font-black text-ui-text">{label}</span>
+          <span className="mt-0.5 block truncate text-[9.5px] text-ui-muted">{detail}</span>
+        </Link>
+      ))}
     </section>
   );
 }
@@ -482,6 +557,7 @@ function HomeRevenueCoreExperience({ newsImpactEnabled }: { newsImpactEnabled: b
     <div className="flex flex-col gap-2 pt-1">
       <MacroTicker compact market="crypto" homePriorityAware />
       <HomeDecisionHero newsImpactEnabled={newsImpactEnabled} />
+      <HomeDailyActions newsImpactEnabled={newsImpactEnabled} />
       <HomeMarketWatch />
     </div>
   );
