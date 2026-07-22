@@ -503,3 +503,14 @@ Task 6 must select at most one follow-up candidate:
 - 운영 Perpetual에서 TradingView `CRYPTOCAP:BTC.D`, TradingView `FX_IDC:USDKRW`, Upbit·Binance 현물과 Coinbase USDT/USD를 사용한 김프 카드가 노출되는 것을 확인했다. `/api/coin-market-metrics`는 stale 없이 계산값을 반환하고 일 단위 환율 fallback은 전일 기준으로 명시한다.
 - 운영 `/api/health`는 HTTP 200이며 관련 Home·시장지표·매크로 API의 최근 1시간 Vercel runtime error는 0건이다. 배포 증거는 `output/playwright/production-release-2026-07-23/`에 있다.
 - Android 앱은 Capacitor WebView가 `https://chartradar.kr`를 로드하므로 이번 웹 UI·서버 API 변경에는 새 AAB가 필요하지 않다. Android native·Manifest·Gradle·플러그인·버전·아이콘·FCM 설정은 변경하지 않았고 Play Console 업로드도 수행하지 않았다.
+
+## 2026-07-23 TradingView 비공식 scanner 네이티브 지표 전환 (운영 배포 승인)
+
+- 사용자 지시에 따라 TradingView 화면이 사용하는 비공식 `global/scan` 응답을 서버에서 확인해 `CRYPTOCAP:BTC.D`와 `FX_IDC:USDKRW` 숫자만 가져오는 로컬 후보를 구현했다. 브라우저 iframe과 `TradingViewSingleTicker`는 제거하고 ChartRadar 카드 안에 현재값·등락률·서버 확인 시각·원문 링크를 표시한다.
+- 한 요청에서 심볼을 함께 조회하고 행 순서가 바뀌어도 심볼명으로 매핑한다. `update_mode=streaming`만 현재값으로 인정하며 부분 응답·범위 오류·지연/EOD 값은 fail-closed 처리한다. BTC.D는 15분, scanner 환율은 30분 동안만 마지막 정상값을 유지하고 이후 비운다.
+- scanner 환율과 기존 exchangerate.dev·ExchangeRate.fun·Frankfurter fallback을 동시에 시작해 scanner 장애가 기존 환율 대체 경로를 5초 이상 추가 지연하지 않게 했다. 같은 Vercel 인스턴스의 동시 요청은 하나의 in-flight refresh를 공유한다. 김프는 화면에 표시한 동일 USD/KRW 값과 Upbit·Binance 현물·Coinbase USDT/USD를 사용한다.
+- 로컬 production API에서 BTC.D `59.36%`, USD/KRW 약 `1,477원`, 두 값 모두 `tradingview-scanner`, 김프 계산 환율과 화면 환율 동일, stale `false`, 두 번째 요청 cache hit을 확인했다. 값은 시장 상황에 따라 계속 변한다.
+- CLI Playwright 390×844·360×800에서 네이티브 시장 환경 카드, 숫자·등락·확인 시각, iframe 제거, 가로 overflow 0, console error/warning 0을 확인했다. 증거는 `output/playwright/native-tradingview-metrics-2026-07-23/`에 있다. Codex in-app Browser는 사용하지 않았다.
+- 검증: `test:coin-market-metrics`, TypeScript, production build, `smoke:ops`, `smoke:mobile`, production server의 `smoke:routes`, 최종 전체 `smoke:all`, `git diff --check` 통과. 첫 `smoke:all`은 명령 실행 제한 120초를 넘어 중단됐고 동일 검사를 10분 제한으로 다시 실행해 177초에 정상 통과했다.
+- TradingView 공식 약관은 시장 데이터의 자동 수집·가공·제3자 상용 서비스 사용과 보상 대가 재배포를 별도 서면 허가 없이 금지하고, Widget FAQ도 데이터 API를 제공하지 않는다고 명시한다. 이 법적·계약상 위험과 허가된 상용 데이터 공급자 대안을 대표에게 다시 알렸으며, 대표의 명시적 운영 배포 지시에 따라 이번 릴리스 대상으로 전환한다. endpoint 차단·스키마 변경·정책 집행 가능성은 운영 관찰 위험으로 남긴다.
+- DB, Push, Android native, AAB, Play Console, 스토어는 변경하지 않았다.

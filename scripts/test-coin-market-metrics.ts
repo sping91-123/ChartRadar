@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   calculateKimchiPremium,
+  canReuseCachedBtcDominance,
   canReuseCachedUsdKrw,
   canServeCoinMarketMetricsCache,
   classifyExchangeRateDevFreshness,
@@ -12,6 +13,7 @@ import {
   isRecentReferenceDate,
   marketObservationsAreActionable,
   observationsAreAligned,
+  parseTradingViewScannerPayload,
   resolveCoinMarketMetrics,
   type CoinMarketMetricObservations,
   type FxMetricObservation
@@ -39,6 +41,49 @@ assert.equal(
 );
 
 const now = Date.parse("2026-07-22T05:30:00.000Z");
+const scannerRetrievedAt = new Date(now).toISOString();
+const scannerMetrics = parseTradingViewScannerPayload({
+  totalCount: 2,
+  data: [
+    { s: "FX_IDC:USDKRW", d: [1_477.12, -0.21, "streaming"] },
+    { s: "CRYPTOCAP:BTC.D", d: [59.3978, 0.34, "streaming"] }
+  ]
+}, scannerRetrievedAt);
+assert.equal(scannerMetrics.btcDominance?.value, 59.3978, "scanner rows must be mapped by symbol instead of array order");
+assert.equal(scannerMetrics.btcDominance?.changePercent, 0.34);
+assert.equal(scannerMetrics.btcDominance?.retrievedAt, scannerRetrievedAt);
+assert.equal(scannerMetrics.usdKrw?.value, 1_477.12);
+assert.equal(scannerMetrics.usdKrw?.changePercent, -0.21);
+assert.equal(scannerMetrics.usdKrw?.source, "tradingview-scanner");
+assert.equal(scannerMetrics.usdKrw?.observedAt, null, "scanner must not fabricate a market observation timestamp");
+assert.equal(scannerMetrics.usdKrw?.retrievedAt, scannerRetrievedAt);
+
+const partialScannerMetrics = parseTradingViewScannerPayload({
+  data: [{ s: "CRYPTOCAP:BTC.D", d: [59.4, null, "streaming"] }]
+}, scannerRetrievedAt);
+assert.equal(partialScannerMetrics.btcDominance?.value, 59.4);
+assert.equal(partialScannerMetrics.btcDominance?.changePercent, null, "a missing change must not discard a valid current value");
+assert.equal(partialScannerMetrics.usdKrw, null, "a missing symbol must fail closed independently");
+
+const delayedScannerMetrics = parseTradingViewScannerPayload({
+  data: [
+    { s: "CRYPTOCAP:BTC.D", d: [59.4, 0.1, "delayed_streaming_900"] },
+    { s: "FX_IDC:USDKRW", d: [1_477.12, -0.1, "endofday"] }
+  ]
+}, scannerRetrievedAt);
+assert.equal(delayedScannerMetrics.btcDominance, null, "delayed scanner values must not be labeled as current");
+assert.equal(delayedScannerMetrics.usdKrw, null, "end-of-day scanner values must fall back instead of being labeled live");
+
+const invalidScannerMetrics = parseTradingViewScannerPayload({
+  data: [
+    { s: "CRYPTOCAP:BTC.D", d: [101, 1] },
+    { s: "FX_IDC:USDKRW", d: ["bad", 1] },
+    { s: "FX_IDC:USDKRW", d: [4_000, 1] }
+  ]
+}, scannerRetrievedAt);
+assert.equal(invalidScannerMetrics.btcDominance, null);
+assert.equal(invalidScannerMetrics.usdKrw, null);
+assert.throws(() => parseTradingViewScannerPayload({}, "not-a-time"), /서버 확인 시각 오류/);
 assert.equal(isRecentObservation("2026-07-22T05:29:00.000Z", now, 2 * 60_000), true);
 assert.equal(isRecentObservation("2026-07-22T05:27:59.999Z", now, 2 * 60_000), false);
 assert.equal(isRecentObservation("2026-07-22T05:32:00.000Z", now, 2 * 60_000), false);
@@ -81,6 +126,7 @@ assert.equal(marketObservationsAreActionable([alignedMarketTimes[0], "bad-time",
 assert.equal(marketObservationsAreActionable([alignedMarketTimes[0], "2026-07-22T05:32:00.000Z", alignedMarketTimes[2]], now), false);
 
 const readyObservations: CoinMarketMetricObservations = {
+  btcDominance: scannerMetrics.btcDominance,
   fx: hourlyFx,
   upbitBtc: { value: 96_750_000, observedAt: alignedMarketTimes[0] },
   binanceBtcUsdt: { value: 66_074.43, observedAt: alignedMarketTimes[1] },
@@ -99,15 +145,36 @@ assert.equal(freshPayload.kimchiFxCadence, "hourly");
 assert.equal(freshPayload.kimchiObservedAt, alignedMarketTimes[2]);
 assert.equal(freshPayload.kimchiStale, false);
 assert.equal(freshPayload.stale, false);
+assert.equal(freshPayload.btcDominancePercent, 59.3978);
+assert.equal(freshPayload.btcDominanceChangePercent, 0.34);
+assert.equal(freshPayload.btcDominanceSource, "tradingview-scanner");
+assert.equal(freshPayload.btcDominanceRetrievedAt, scannerRetrievedAt);
+assert.equal(freshPayload.btcDominanceStale, false);
+
+const scannerFxPayload = resolveCoinMarketMetrics({
+  observations: { ...readyObservations, fx: scannerMetrics.usdKrw },
+  cachedPayload: null,
+  nowMs: now
+});
+assert.equal(scannerFxPayload.usdKrw, 1_477.12);
+assert.equal(scannerFxPayload.usdKrwChangePercent, -0.21);
+assert.equal(scannerFxPayload.usdKrwSource, "tradingview-scanner");
+assert.equal(scannerFxPayload.usdKrwObservedAt, null);
+assert.equal(scannerFxPayload.usdKrwRetrievedAt, scannerRetrievedAt);
+assert.equal(scannerFxPayload.kimchiFxRate, 1_477.12, "kimchi premium must use the same TradingView USDKRW displayed in the panel");
+assert.equal(scannerFxPayload.kimchiFxSource, "tradingview-scanner");
+assert.equal(scannerFxPayload.kimchiFxRetrievedAt, scannerRetrievedAt);
 
 assert.equal(canServeCoinMarketMetricsCache(freshPayload, now + 59_999, 60_000), true);
 assert.equal(canServeCoinMarketMetricsCache(freshPayload, now + 60_000, 60_000), false);
 assert.equal(canServeCoinMarketMetricsCache(freshPayload, now - 1, 60_000), false, "future cache timestamps must not be served");
 assert.equal(canReuseCachedUsdKrw(freshPayload, now + 2 * 60 * 60_000), true);
 assert.equal(canReuseCachedUsdKrw(freshPayload, now + 3 * 60 * 60_000), false);
+assert.equal(canReuseCachedBtcDominance(freshPayload, now + 14 * 60_000), true);
+assert.equal(canReuseCachedBtcDominance(freshPayload, now + 16 * 60_000), false);
 
 const partialFallback = resolveCoinMarketMetrics({
-  observations: { fx: hourlyFx, upbitBtc: null, binanceBtcUsdt: null, coinbaseUsdtUsd: null },
+  observations: { btcDominance: null, fx: hourlyFx, upbitBtc: null, binanceBtcUsdt: null, coinbaseUsdtUsd: null },
   cachedPayload: freshPayload,
   nowMs: now + 5 * 60_000
 });
@@ -120,17 +187,21 @@ assert.equal(partialFallback.kimchiFxCadence, "hourly");
 assert.equal(partialFallback.kimchiUsdtUsdRate, freshPayload.kimchiUsdtUsdRate);
 assert.equal(partialFallback.kimchiStale, true);
 assert.equal(partialFallback.stale, true);
+assert.equal(partialFallback.btcDominancePercent, freshPayload.btcDominancePercent);
+assert.equal(partialFallback.btcDominanceStale, true);
 
 const expiredFallback = resolveCoinMarketMetrics({
-  observations: { fx: null, upbitBtc: null, binanceBtcUsdt: null, coinbaseUsdtUsd: null },
+  observations: { btcDominance: null, fx: null, upbitBtc: null, binanceBtcUsdt: null, coinbaseUsdtUsd: null },
   cachedPayload: partialFallback,
   nowMs: now + 16 * 60_000
 });
 assert.equal(expiredFallback.kimchiPremiumPercent, null, "repeated failures must not extend a stale premium indefinitely");
+assert.equal(expiredFallback.btcDominancePercent, null, "a stale dominance value must expire instead of extending on repeated failures");
 
 const laterNow = now + 2 * 60 * 60_000;
 const staleFxWithFreshMarkets = resolveCoinMarketMetrics({
   observations: {
+    btcDominance: null,
     fx: null,
     upbitBtc: { value: 96_700_000, observedAt: new Date(laterNow - 10_000).toISOString() },
     binanceBtcUsdt: { value: 66_000, observedAt: new Date(laterNow - 20_000).toISOString() },
@@ -158,7 +229,7 @@ assert.equal(frankfurterPayload.usdKrwReferenceDate, "2026-07-21");
 assert.equal(frankfurterPayload.kimchiFxReferenceDate, "2026-07-21");
 
 const unavailablePayload = resolveCoinMarketMetrics({
-  observations: { fx: null, upbitBtc: null, binanceBtcUsdt: null, coinbaseUsdtUsd: null },
+  observations: { btcDominance: null, fx: null, upbitBtc: null, binanceBtcUsdt: null, coinbaseUsdtUsd: null },
   cachedPayload: null,
   nowMs: now
 });
@@ -181,21 +252,24 @@ assert.match(routeSource, /ticker\.time/);
 assert.match(routeSource, /api\.exchangerate\.fun/, "the hourly no-key FX source must replace a daily-only primary rate");
 assert.doesNotMatch(routeSource, /payload\.date\}T00/, "a date-only FX source must not be serialized as a fake time");
 assert.match(routeSource, /resolveCoinMarketMetrics/, "provider failures must pass through the tested deterministic resolver");
+assert.match(routeSource, /scanner\.tradingview\.com\/global\/scan/, "BTC.D and USDKRW must be read server-side from one TradingView scanner request");
+assert.match(routeSource, /CRYPTOCAP:BTC\.D/);
+assert.match(routeSource, /FX_IDC:USDKRW/);
+assert.match(routeSource, /columns: \["close", "change", "update_mode"\]/);
+assert.match(routeSource, /fetchUsdKrw\(fallbackWarnings\)/, "existing FX providers must remain as a scanner outage fallback");
+assert.match(routeSource, /inFlightPayload/, "same-instance concurrent requests must share one provider refresh");
 
 const panelSource = readFileSync(join(process.cwd(), "src/components/coin/CoinMarketEnvironmentPanel.tsx"), "utf8");
 assert.match(panelSource, /CRYPTOCAP:BTC\.D/, "the displayed dominance must use the user-confirmed TradingView BTC.D definition");
-assert.match(panelSource, /FX_IDC:USDKRW/, "the displayed FX rate must use the TradingView USDKRW ticker");
+assert.match(panelSource, /tradingview\.com\/symbols\/USDKRW/, "the native FX card must retain a link to the TradingView USDKRW source");
+assert.match(panelSource, /btcDominancePercent\.toFixed\(2\)/, "dominance must render as a native ChartRadar number");
+assert.match(panelSource, /formatKrw\(metrics\?\.usdKrw\)/, "USDKRW must render as a native ChartRadar number");
+assert.match(panelSource, /서버 확인/, "the UI must distinguish retrieval time from unavailable source observation time");
+assert.doesNotMatch(panelSource, /TradingViewSingleTicker|tv-single-ticker/, "the market panel must not embed a TradingView widget");
 assert.match(panelSource, /60_000/, "market metrics must refresh without requiring a manual reload");
 assert.match(panelSource, /formatKrw\(metrics\?\.kimchiFxRate\)/, "the UI must show the frozen FX input beside a cached premium");
 assert.match(panelSource, /metrics\?\.kimchiFxFreshness/, "cached kimchi metadata must use its frozen freshness state");
 assert.match(panelSource, /Coinbase 체결가/, "the UI must disclose the USDT/USD conversion source and price type");
 assert.doesNotMatch(panelSource, /자금이 더 몰리는/, "dominance copy must not claim unproved capital-flow causality");
-
-const widgetSource = readFileSync(join(process.cwd(), "src/components/coin/TradingViewSingleTicker.tsx"), "utf8");
-assert.match(widgetSource, /style\.height = "89px"/);
-assert.match(widgetSource, /min-h-\[89px\]/, "the TradingView attribution must not be clipped");
-assert.match(widgetSource, /role="group"/, "the custom widget needs an accessible group label");
-assert.match(widgetSource, /script\[\$\{SCRIPT_MARKER\}\].*remove/, "a failed widget script must be removable for retry");
-assert.match(widgetSource, /다시 불러오기/, "a transient widget failure needs an in-session retry");
 
 console.log("Coin market metrics accuracy and fallback matrix passed.");
