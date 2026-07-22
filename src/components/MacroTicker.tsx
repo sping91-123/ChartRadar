@@ -7,6 +7,7 @@ import { CalendarClock, ChevronDown, ChevronRight, ExternalLink, Minus, Radio, T
 import { type MacroEventItem } from "@/data/macroEvents";
 import { isHighImpactMacroEvent, isHomePriorityMacro } from "@/lib/homeMacroPriority";
 import { getMacroCalendarFallbackPayload, type MacroCalendarPayload } from "@/lib/macroCalendar";
+import { assessMacroImpact, type MacroImpactAssessment } from "@/lib/macro/macroImpact";
 import { StatusPill } from "@/components/ui/DesignPrimitives";
 
 const RECENT_RELEASE_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -182,87 +183,44 @@ function isVisibleCompactImpact(item: MacroEventItem) {
   return isHighImpactMacro(item) || item.importance === 2;
 }
 
-function numericMacroValue(value?: string) {
-  if (isEmptyValue(value)) return null;
-  const match = value?.replace(/,/g, "").match(/(-?\d+(?:\.\d+)?)\s*([KMBT])?/i);
-  if (!match) return null;
-  const parsed = Number(match[1]);
-  const suffix = match[2]?.toUpperCase();
-  const multiplier = suffix === "K" ? 1_000 : suffix === "M" ? 1_000_000 : suffix === "B" ? 1_000_000_000 : suffix === "T" ? 1_000_000_000_000 : 1;
-  return Number.isFinite(parsed) ? parsed * multiplier : null;
+function macroImpactLensLabel(market: "crypto" | "stocks") {
+  return market === "crypto" ? "코인 단기 금리·달러 기준" : "위험자산 단기 금리·달러 기준";
 }
 
-function macroValueDimension(value?: string) {
-  if (isEmptyValue(value)) return null;
-  const normalized = value!.replace(/,/g, "").trim();
-  if (normalized.includes(";") || /출처별 .* 상이/.test(normalized)) return "mixed";
-  if (normalized.includes("%")) return "percent";
-  if (/\$\s*-?\d/.test(normalized)) return "currency";
-  if (/-?\d+(?:\.\d+)?\s*[KMBT]\b/i.test(normalized)) return "scaled-count";
-  return "plain";
+function macroImpactDisplayLabel(assessment: MacroImpactAssessment, market: "crypto" | "stocks") {
+  return `${market === "crypto" ? "코인" : "금리"} ${assessment.badgeLabel}`;
 }
 
-function macroSurprise(actual: number, expected: number) {
-  const diff = actual - expected;
-  if (Math.abs(diff) < 1e-9) return "same";
-  return diff > 0 ? "higher" : "lower";
+function macroSurpriseLabel(assessment: MacroImpactAssessment) {
+  if (assessment.surprise === "higher") return "예상보다 높음";
+  if (assessment.surprise === "lower") return "예상보다 낮음";
+  if (assessment.surprise === "same") return "예상과 같음";
+  return "세부 결과 엇갈림";
 }
 
-function cryptoImpactRead(item: MacroEventItem): "호재" | "악재" | "중립" | null {
-  if (!hasReleaseTimePassed(item) || isDocumentEvent(item)) return null;
-  if (item.actualProvenance !== "official") return null;
+function MacroImpactPill({ assessment, market }: { assessment: MacroImpactAssessment; market: "crypto" | "stocks" }) {
+  const ImpactIcon = assessment.verdict === "호재" ? TrendingUp : assessment.verdict === "악재" ? TrendingDown : Minus;
+  const tone = assessment.verdict === "호재" ? "long" : assessment.verdict === "악재" ? "risk" : "watch";
+  const confidenceLabel = assessment.confidence === "confirmed" ? "공식 발표값 기준" : "공식 발표값 확인 전 잠정 해석";
+  return (
+    <span title={`${macroImpactLensLabel(market)} · ${assessment.reason} ${confidenceLabel}`}>
+      <StatusPill tone={tone} icon={ImpactIcon} className="min-h-5 px-1.5 text-[10px]">
+        {macroImpactDisplayLabel(assessment, market)}
+      </StatusPill>
+    </span>
+  );
+}
 
-  const actualText = item.actualValue ?? item.actual;
-  const expectedText = item.consensusValue ?? item.forecast;
-  if (item.consensusProvenance === "mixed") return null;
-  if (macroValueDimension(actualText) !== macroValueDimension(expectedText)) return null;
-  const actual = numericMacroValue(actualText);
-  const expected = numericMacroValue(expectedText);
-  if (actual === null || expected === null) return null;
+function macroImpactToneClass(assessment: MacroImpactAssessment | null) {
+  if (assessment?.verdict === "호재") return "text-emerald-400";
+  if (assessment?.verdict === "악재") return "text-rose-400";
+  return "text-slate-400";
+}
 
-  const lower = item.label.toLowerCase();
-  const surprise = macroSurprise(actual, expected);
-  if (surprise === "same") return "중립";
-
-  if (
-    lower.includes("cpi") ||
-    lower.includes("ppi") ||
-    lower.includes("pce") ||
-    lower.includes("inflation") ||
-    lower.includes("average hourly earnings") ||
-    lower.includes("wage")
-  ) {
-    return surprise === "lower" ? "호재" : "악재";
-  }
-
-  if (lower.includes("jobless") || lower.includes("claims") || lower.includes("unemployment rate")) {
-    return surprise === "higher" ? "호재" : "악재";
-  }
-
-  if (
-    lower.includes("non-farm") ||
-    lower.includes("nonfarm") ||
-    lower.includes("payroll") ||
-    lower.includes("employment change") ||
-    lower.includes("jolts")
-  ) {
-    return surprise === "lower" ? "호재" : "악재";
-  }
-
-  if (
-    lower.includes("retail") ||
-    lower.includes("gdp") ||
-    lower.includes("pmi") ||
-    lower.includes("ism") ||
-    lower.includes("durable") ||
-    lower.includes("home sales") ||
-    lower.includes("consumer confidence") ||
-    lower.includes("consumer sentiment")
-  ) {
-    return surprise === "lower" ? "호재" : "악재";
-  }
-
-  return null;
+function macroImpactBadgeClass(assessment: MacroImpactAssessment) {
+  if (assessment.verdict === "호재") return "bg-emerald-500/10 text-emerald-300";
+  if (assessment.verdict === "악재") return "bg-rose-500/10 text-rose-300";
+  return "bg-slate-500/10 text-slate-300";
 }
 
 function macroLabel(label: string) {
@@ -397,6 +355,21 @@ function joinPriceMacroValues(items: MacroEventItem[], valueOf: (item: MacroEven
   return parts.length ? parts.join(" / ") : undefined;
 }
 
+function mergedMacroProvenance(
+  items: MacroEventItem[],
+  valueOf: (item: MacroEventItem) => string | undefined,
+  provenanceOf: (item: MacroEventItem) => MacroEventItem["actualProvenance"]
+) {
+  const provenances = new Set(
+    items
+      .filter((item) => !isEmptyValue(valueOf(item)))
+      .map((item) => provenanceOf(item) ?? "unknown")
+  );
+  if (provenances.size === 0) return undefined;
+  if (provenances.size > 1) return "mixed" as const;
+  return Array.from(provenances)[0];
+}
+
 function mergePriceMacroGroup(items: MacroEventItem[]) {
   const orderedItems = [...items].sort((a, b) => priceMacroPeriodSort(a) - priceMacroPeriodSort(b) || a.label.localeCompare(b.label));
   const primaryItem = orderedItems[0];
@@ -416,10 +389,13 @@ function mergePriceMacroGroup(items: MacroEventItem[]) {
     importance: orderedItems.reduce<MacroEventItem["importance"]>((max, item) => (item.importance > max ? item.importance : max), primaryItem.importance),
     actual: actualValue ?? primaryItem.actual,
     actualValue,
+    actualProvenance: mergedMacroProvenance(orderedItems, (item) => item.actualValue ?? item.actual, (item) => item.actualProvenance),
     forecast: consensusValue ?? primaryItem.forecast,
     consensusValue,
+    consensusProvenance: mergedMacroProvenance(orderedItems, (item) => item.consensusValue ?? item.forecast, (item) => item.consensusProvenance),
     previous: previousValue ?? primaryItem.previous,
-    previousValue
+    previousValue,
+    previousProvenance: mergedMacroProvenance(orderedItems, (item) => item.previousValue ?? item.previous, (item) => item.previousProvenance)
   };
 }
 
@@ -511,13 +487,11 @@ function MacroNewsValue({ label, value, pending = false, blankWhenMissing = fals
   );
 }
 
-function MacroNewsItem({ item, sectionLabel, subdued = false, released = false }: { item: MacroEventItem; sectionLabel: string; subdued?: boolean; released?: boolean }) {
+function MacroNewsItem({ item, sectionLabel, market, subdued = false, released = false }: { item: MacroEventItem; sectionLabel: string; market: "crypto" | "stocks"; subdued?: boolean; released?: boolean }) {
   const sourceUrl = item.officialUrl ?? item.sourceUrl;
   const pendingActual = !hasActualValue(item) && hasReleaseTimePassed(item) && !isDocumentEvent(item);
   const showSectionLabel = Boolean(sectionLabel && !(released && sectionLabel === "발표"));
-  const impactRead = released ? cryptoImpactRead(item) : null;
-  const ImpactIcon = impactRead === "호재" ? TrendingUp : impactRead === "악재" ? TrendingDown : impactRead === "중립" ? Minus : null;
-  const impactReadTone = impactRead === "호재" ? "long" : impactRead === "악재" ? "risk" : "watch";
+  const impactAssessment = assessMacroImpact(item);
 
   return (
     <article className={`py-2 first:pt-0 ${subdued ? "opacity-95" : ""}`}>
@@ -525,11 +499,7 @@ function MacroNewsItem({ item, sectionLabel, subdued = false, released = false }
         {showSectionLabel ? <StatusPill tone="info" className="min-h-5 px-1.5 text-[10px]">{sectionLabel}</StatusPill> : null}
         <StatusPill tone={hasReleaseTimePassed(item) ? "watch" : "info"} className="min-h-5 px-1.5 text-[10px]">{compactStatusLabel(item)}</StatusPill>
         <StatusPill tone={isHighImpactMacro(item) ? "risk" : "info"} className="min-h-5 px-1.5 text-[10px]">{impactLabel(item)}</StatusPill>
-        {impactRead && ImpactIcon ? (
-          <StatusPill tone={impactReadTone} icon={ImpactIcon} className="min-h-5 px-1.5 text-[10px]">
-            {impactRead}
-          </StatusPill>
-        ) : null}
+        {impactAssessment ? <MacroImpactPill assessment={impactAssessment} market={market} /> : null}
       </div>
       <h4 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{macroLabel(item.label)}</h4>
       <p className="mt-0.5 text-[11px] font-semibold leading-4 text-ui-muted">한국시간 {item.dateKst}</p>
@@ -538,6 +508,13 @@ function MacroNewsItem({ item, sectionLabel, subdued = false, released = false }
         <MacroNewsValue label="예측" value={displayItemConsensusValue(item)} pending={displayItemConsensusValue(item).startsWith("예측 확인")} />
         <MacroNewsValue label="이전" value={displayItemPreviousValue(item)} pending={displayItemPreviousValue(item) === "이전 확인 필요"} />
       </div>
+      {impactAssessment ? (
+        <p className="mt-1.5 text-[11px] font-semibold leading-5 text-ui-muted [word-break:keep-all]">
+          <span className={macroImpactToneClass(impactAssessment)}>{`${macroImpactLensLabel(market)} · ${impactAssessment.verdict}`}</span>
+          {` · ${impactAssessment.reason}`}
+          {impactAssessment.confidence === "provisional" ? " · 공식 발표값 확인 전 잠정 해석" : " · 공식 발표값 기준"}
+        </p>
+      ) : null}
       <p className="mt-1.5 min-w-0 whitespace-normal text-xs leading-relaxed text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]">{item.marketImpact}</p>
       {sourceUrl ? (
         <a href={sourceUrl} target="_blank" rel="noreferrer" className="mt-1.5 inline-flex max-w-full items-center gap-1 text-[11px] font-semibold text-ui-brand hover:underline">
@@ -579,7 +556,9 @@ export function MacroTicker({
   const homePriorityItem = homePriorityAware ? getHomePriorityItem(displayItems) : undefined;
   const homeVisibleItems = homePriorityAware ? displayItems.filter(isVisibleCompactImpact) : [];
   const homeNearestUpcoming = homePriorityAware ? getUpcomingItems(homeVisibleItems)[0] : undefined;
-  const homePreviousRelease = homePriorityAware ? getPreviousReleasedItems(homeVisibleItems)[0] : undefined;
+  const homePreviousRelease = getPreviousReleasedItems(
+    homePriorityAware ? homeVisibleItems : displayItems.filter(isVisibleCompactImpact)
+  )[0];
   const calendarWarning = calendar.warning?.trim();
   const sourceUpdatedAtLabel = compactSourceUpdatedAt(calendar.sourceUpdatedAt ?? calendar.updatedAt);
   const isLastKnownCalendar = calendar.isStale === true;
@@ -662,7 +641,7 @@ export function MacroTicker({
         ) : null}
         <div className="grid gap-2 md:grid-cols-2">
           {previousRelease ? (
-            <MacroNewsItem item={previousRelease} sectionLabel="직전 발표" />
+            <MacroNewsItem item={previousRelease} sectionLabel="직전 발표" market={market} released />
           ) : !hasLoadedCalendar ? (
             <div className="py-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">
               직전 발표를 확인하는 중입니다.
@@ -673,7 +652,7 @@ export function MacroTicker({
             </div>
           )}
           {nearestUpcoming ? (
-            <MacroNewsItem item={nearestUpcoming} sectionLabel="다음 일정" />
+            <MacroNewsItem item={nearestUpcoming} sectionLabel="다음 일정" market={market} />
           ) : (
             <div className="py-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">
               다가오는 주요 USD 일정을 확인하는 중입니다.
@@ -690,7 +669,7 @@ export function MacroTicker({
             <div className="grid gap-1.5 lg:grid-cols-2">
               {visibleLaterItems.map((item, index) => (
                 <div key={`${item.label}-${item.releaseAt}`} className={index >= 2 ? "hidden md:block" : ""}>
-                  <MacroNewsItem item={item} sectionLabel="이후 일정" subdued />
+                  <MacroNewsItem item={item} sectionLabel="이후 일정" market={market} subdued />
                 </div>
               ))}
             </div>
@@ -730,10 +709,139 @@ export function MacroTicker({
     const eventKind = compactEventKind(item);
     const primaryValueLabel = isDocumentEvent(item) ? "상태" : "실제";
     const primaryValue = displayActual(item);
-    const impactRead = cryptoImpactRead(item);
-    const ImpactIcon = impactRead === "호재" ? TrendingUp : impactRead === "악재" ? TrendingDown : impactRead === "중립" ? Minus : null;
-    const impactToneClass = impactRead === "호재" ? "text-emerald-400" : impactRead === "악재" ? "text-rose-400" : "text-slate-400";
+    const impactAssessment = assessMacroImpact(item);
+    const ImpactIcon = impactAssessment?.verdict === "호재" ? TrendingUp : impactAssessment?.verdict === "악재" ? TrendingDown : impactAssessment ? Minus : null;
+    const impactToneClass = macroImpactToneClass(impactAssessment);
+    const homePreviousImpact = homePreviousRelease ? assessMacroImpact(homePreviousRelease) : null;
     const href = market === "stocks" ? "/schedule?market=global" : "/schedule?market=crypto";
+
+    if (homePriorityAware) {
+      const sourceUrl = item.officialUrl ?? item.sourceUrl;
+      const sourceLabel = item.actualProvenance === "official"
+        ? "공식 발표값 출처"
+        : item.officialUrl ? "공식 일정 출처" : "출처";
+      const homePrimaryValue = primaryValue || (isReleased ? "확인 중" : "발표 전");
+      const impactSummary = impactAssessment
+        ? `${macroSurpriseLabel(impactAssessment)} · ${impactAssessment.confidence === "confirmed" ? "공식 확정" : "잠정 해석"}`
+        : `${compactStatusLabel(item)} · ${isReleased ? homeCalendarTrustLabel : "발표 후 호재·악재 판정"}`;
+
+      return (
+        <section aria-labelledby="home-macro-title">
+          <h2 id="home-macro-title" className="sr-only">오늘 거래 전 확인</h2>
+          <details
+            className="group overflow-hidden rounded-ui-lg border border-amber-400/25 bg-ui-panel"
+            data-testid="home-macro-compact"
+          >
+            <summary className="cursor-pointer list-none px-2.5 py-2 outline-none transition hover:bg-ui-elevated focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ui-brand [&::-webkit-details-marker]:hidden">
+              <div className="flex min-h-4 items-center justify-between gap-2 text-[10px] font-black leading-4">
+                <time dateTime={item.releaseAt} className="min-w-0 truncate text-ui-text">{item.dateKst}</time>
+                <span className="shrink-0 text-amber-300">{impactLabel(item)}</span>
+              </div>
+
+              <div className="mt-0.5 flex min-w-0 items-center gap-2">
+                <p className="min-w-0 flex-1 truncate text-[13px] font-black leading-[19px] text-white" title={macroLabel(item.label)}>
+                  {macroLabel(item.label)}
+                </p>
+                {impactAssessment ? (
+                  <span className={`shrink-0 text-[10px] font-black leading-4 ${impactToneClass}`}>
+                    {macroImpactDisplayLabel(impactAssessment, market)}
+                  </span>
+                ) : (
+                  <span className={`shrink-0 text-[10px] font-black leading-4 ${compactStateClass(item)}`}>
+                    {eventKind}
+                  </span>
+                )}
+              </div>
+
+              <dl className="mt-1 grid grid-cols-3 gap-1">
+                {[
+                  [primaryValueLabel, homePrimaryValue],
+                  ["예측", displayConsensusValue(item)],
+                  ["이전", displayPreviousValue(item)]
+                ].map(([label, value]) => (
+                  <div key={label} className="min-w-0 rounded-md bg-ui-inset/70 px-2 py-1">
+                    <dt className="text-[9px] font-bold leading-3 text-ui-subtle">{label}</dt>
+                    <dd className="truncate text-xs font-black leading-4 text-ui-text" title={value}>{value}</dd>
+                  </div>
+                ))}
+              </dl>
+
+              <div className="mt-1 flex min-h-[18px] items-center justify-between gap-2 text-[10px] font-bold leading-[18px]">
+                <span className={`min-w-0 truncate ${impactAssessment ? impactToneClass : homeCalendarTrustClass}`} title={impactAssessment?.reason ?? calendarWarning ?? homeCalendarTrustLabel}>
+                  {impactSummary}
+                </span>
+                <span className="inline-flex shrink-0 items-center gap-0.5 text-ui-subtle">
+                  상세
+                  <ChevronDown size={13} className="transition-transform group-open:rotate-180" aria-hidden />
+                </span>
+              </div>
+            </summary>
+
+            <div id="home-macro-detail" data-testid="home-macro-detail" className="space-y-2 border-t border-ui-border/70 px-2.5 py-2.5 text-[11px] leading-5 text-ui-muted">
+              <p className="font-black text-ui-text [word-break:keep-all]">{macroLabel(item.label)}</p>
+              {impactAssessment ? (
+                <p className="[word-break:keep-all]">
+                  <strong className={impactToneClass}>{macroImpactLensLabel(market)} · {impactAssessment.verdict}</strong>
+                  {` · ${impactAssessment.reason}`}
+                  {impactAssessment.confidence === "provisional" ? " · 공식 발표값 확인 전 잠정 해석" : " · 공식 발표값 기준"}
+                </p>
+              ) : (
+                <p className="[word-break:keep-all]">{item.marketImpact}</p>
+              )}
+
+              <dl className="grid grid-cols-3 gap-1">
+                {[
+                  [primaryValueLabel, homePrimaryValue],
+                  ["예측", displayConsensusValue(item)],
+                  ["이전", displayPreviousValue(item)]
+                ].map(([label, value]) => (
+                  <div key={label} className="min-w-0 rounded-md bg-ui-inset/60 px-2 py-1.5">
+                    <dt className="text-[9px] font-bold text-ui-subtle">{label}</dt>
+                    <dd className="break-words font-black text-ui-text">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+
+              {calendarWarningText ? (
+                <p className="rounded-md bg-amber-400/[0.06] px-2 py-1.5 font-semibold text-amber-200" role="status">
+                  {calendarWarningText}
+                </p>
+              ) : null}
+
+              {!isReleased && homePreviousRelease && homePreviousRelease.id !== item.id ? (
+                <div className="rounded-md bg-ui-inset/45 px-2 py-1.5">
+                  <div className="flex flex-wrap items-center justify-between gap-1">
+                    <strong className="text-ui-text">직전 발표 · {macroLabel(homePreviousRelease.label)}</strong>
+                    {homePreviousImpact ? (
+                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-black ${macroImpactBadgeClass(homePreviousImpact)}`}>
+                        {macroImpactDisplayLabel(homePreviousImpact, market)}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-0.5 [word-break:keep-all]">
+                    {homePreviousRelease.dateKst} · 실제 {displayActual(homePreviousRelease) || "확인 중"} · 예측 {displayConsensusValue(homePreviousRelease)} · 이전 {displayPreviousValue(homePreviousRelease)}
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-ui-border/60 pt-2">
+                <span className={`font-semibold ${homeCalendarTrustClass}`}>{homeCalendarTrustLabel}</span>
+                <span className="inline-flex items-center gap-3">
+                  {sourceUrl ? (
+                    <a href={sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-black text-ui-brand hover:underline">
+                      {sourceLabel} <ExternalLink size={11} aria-hidden />
+                    </a>
+                  ) : null}
+                  <Link href={href} className="inline-flex items-center gap-1 font-black text-ui-brand hover:underline">
+                    전체 일정 <ChevronRight size={12} aria-hidden />
+                  </Link>
+                </span>
+              </div>
+            </div>
+          </details>
+        </section>
+      );
+    }
 
     return (
       <section className="space-y-1.5" aria-labelledby={homePriorityAware ? "home-macro-title" : undefined}>
@@ -748,10 +856,10 @@ export function MacroTicker({
         <Link href={href} className="group flex min-h-10 items-start gap-1.5 rounded-ui-lg bg-ui-panel px-2.5 py-2 transition hover:bg-ui-elevated">
           <div className={`flex w-10 shrink-0 flex-col items-center justify-start gap-0.5 text-center text-[10px] font-black leading-3 ${isReleased ? "text-signal-warning" : "text-accent-blue"}`}>
             <span>{eventKind}</span>
-            {impactRead && ImpactIcon ? (
-              <span className={`inline-flex flex-col items-center justify-center gap-0.5 ${impactToneClass}`} aria-label={impactRead}>
+            {impactAssessment && ImpactIcon ? (
+              <span className={`inline-flex flex-col items-center justify-center gap-0.5 ${impactToneClass}`} aria-label={macroImpactDisplayLabel(impactAssessment, market)}>
                 <ImpactIcon size={14} aria-hidden />
-                <span className="text-[10px] font-black leading-none">{impactRead}</span>
+                <span className="text-[9px] font-black leading-none">{impactAssessment.badgeLabel}</span>
               </span>
             ) : (
               <Radio size={12} aria-hidden />
@@ -772,10 +880,17 @@ export function MacroTicker({
           </div>
           <ChevronRight size={14} className="shrink-0 text-slate-600 transition group-hover:text-accent-blue" aria-hidden />
         </Link>
-        {homePriorityAware && !isReleased && homePreviousRelease && homePreviousRelease.id !== item.id ? (
-          <Link href={href} className="flex min-h-8 items-center justify-between gap-2 rounded-ui-lg bg-ui-inset/35 px-2.5 py-1.5 text-[10.5px] font-semibold text-ui-muted transition hover:bg-ui-inset">
-            <span className="min-w-0 truncate"><strong className="text-ui-text">직전 발표</strong> · {macroLabel(homePreviousRelease.label)} · 실제 {displayActual(homePreviousRelease) || "확인 중"}</span>
-            <span className="shrink-0 text-ui-subtle">{homePreviousRelease.dateKst}</span>
+        {!isReleased && homePreviousRelease && homePreviousRelease.id !== item.id ? (
+          <Link href={href} className="flex min-h-8 flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-ui-lg bg-ui-inset/35 px-2.5 py-1.5 text-[10.5px] font-semibold text-ui-muted transition hover:bg-ui-inset">
+            <span className="min-w-0 flex-[1_1_210px] truncate"><strong className="text-ui-text">직전 발표</strong> · {macroLabel(homePreviousRelease.label)} · 실제 {displayActual(homePreviousRelease) || "확인 중"}</span>
+            <span className="inline-flex shrink-0 items-center gap-2">
+              {homePreviousImpact ? (
+                <span className={`rounded px-1.5 py-0.5 font-black ${macroImpactBadgeClass(homePreviousImpact)}`} title={`${macroImpactLensLabel(market)} · ${homePreviousImpact.reason}`}>
+                  {macroImpactDisplayLabel(homePreviousImpact, market)}
+                </span>
+              ) : null}
+              <span className="text-ui-subtle">{homePreviousRelease.dateKst}</span>
+            </span>
           </Link>
         ) : null}
         {!homePriorityAware && calendarWarningText ? (
@@ -817,7 +932,7 @@ export function MacroTicker({
           {visibleReleasedItems.length ? (
             <div className="mt-2">
               {visibleReleasedItems.map((item) => (
-                <MacroNewsItem key={`${item.label}-${item.releaseAt}`} item={item} sectionLabel="발표" subdued released />
+                <MacroNewsItem key={`${item.label}-${item.releaseAt}`} item={item} sectionLabel="발표" market={market} subdued released />
               ))}
             </div>
           ) : !hasLoadedCalendar ? (
@@ -847,7 +962,7 @@ export function MacroTicker({
           </button>
           {featuredUpcomingItems.length ? (
             featuredUpcomingItems.map((item) => (
-              <MacroNewsItem key={`${item.label}-${item.releaseAt}`} item={item} sectionLabel="예정" />
+              <MacroNewsItem key={`${item.label}-${item.releaseAt}`} item={item} sectionLabel="예정" market={market} />
             ))
           ) : (
             <p className="py-3 text-xs leading-5 text-ui-muted [word-break:keep-all]">다가오는 주요 USD 일정을 확인하는 중입니다.</p>

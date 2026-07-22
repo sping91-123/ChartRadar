@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { type MacroEventItem } from "../src/data/macroEvents";
 import { dedupeMacroCalendarItems, semanticMacroEventFamily } from "../src/lib/macro/dedupeMacroCalendar";
 import { selectLatestMacroGenerationRows } from "../src/lib/macro/generation";
-import { censusDurableGoodsActual, isCensusDurableGoodsHeadline, parseCensusReleaseDateIso } from "../src/lib/macro/sourceAdapters/census";
+import { censusDurableGoodsActual, censusRetailSalesActual, isCensusDurableGoodsHeadline, isCensusRetailSalesHeadline, parseCensusReleaseDateIso } from "../src/lib/macro/sourceAdapters/census";
 import { dolClaimsValueForKind, expectedDolWeekEndedIso, fetchDolOfficialEnrichments, formatDolClaimsK } from "../src/lib/macro/sourceAdapters/dol";
 import { resolveMacroSourceTrust } from "../src/lib/macro/sourceTrust";
 import { isStoredMacroPayloadStale } from "../src/lib/macro/staleness";
@@ -109,6 +109,8 @@ assert.equal(officialPreferred[0].consensusProvenance, "mixed");
 
 assert.equal(censusDurableGoodsActual({ change: "-1.2" }), "-1.2%", "Durable Goods actual must stay in the forecast's percentage dimension");
 assert.equal(censusDurableGoodsActual(undefined), undefined);
+assert.equal(censusRetailSalesActual({ change: "0.2" }), "0.2%", "Retail Sales actual must stay in the forecast's monthly percentage dimension");
+assert.equal(censusRetailSalesActual(undefined), undefined);
 assert.equal(parseCensusReleaseDateIso("June 25th, 2026"), "2026-06-25T00:00:00.000Z");
 assert.equal(parseCensusReleaseDateIso("not a release date"), undefined);
 assert.equal(isCensusDurableGoodsHeadline("Durable Goods Orders"), true);
@@ -116,6 +118,10 @@ assert.equal(isCensusDurableGoodsHeadline("Core Durable Goods Orders"), false);
 assert.equal(isCensusDurableGoodsHeadline("Durable Goods Orders Ex Transportation"), false);
 assert.equal(isCensusDurableGoodsHeadline("Durable Goods Orders Ex Transp MoM"), false);
 assert.equal(isCensusDurableGoodsHeadline("Nondefense Capital Goods Orders"), false);
+assert.equal(isCensusRetailSalesHeadline("Retail Sales MoM"), true);
+assert.equal(isCensusRetailSalesHeadline("Core Retail Sales MoM"), false);
+assert.equal(isCensusRetailSalesHeadline("Retail Sales Control Group MoM"), false);
+assert.equal(isCensusRetailSalesHeadline("Retail Sales Ex Autos MoM"), false);
 
 const stalenessNow = Date.parse("2026-07-22T12:00:00.000Z");
 assert.equal(isStoredMacroPayloadStale("2026-07-22T11:01:00.000Z", stalenessNow), false);
@@ -168,12 +174,14 @@ assert.match(
   "an actual-refresh timeout must keep the latest stored calendar instead of replacing it with an old static fallback"
 );
 const macroTickerSource = readFileSync("src/components/MacroTicker.tsx", "utf8");
-assert.match(macroTickerSource, /actualProvenance !== "official"/, "Home surprise labels require an official actual value");
+assert.match(macroTickerSource, /assessMacroImpact/, "Home and schedule use the provenance-aware tested impact assessment");
 assert.match(macroTickerSource, /마지막 정상/, "stale calendar state is visible to the user");
 assert.match(macroTickerSource, /isFallbackCalendar/, "fallback and stale calendars use different user-facing states");
 assert.match(macroTickerSource, /!homePriorityAware && calendarWarningText/, "compact non-Home surfaces also disclose calendar warnings");
 const censusSource = readFileSync("src/lib/macro/sourceAdapters/census.ts", "utf8");
 assert.match(censusSource, /matchReleasedAt: homeSalesReleasedAt/, "Census release dates constrain matching without replacing the scheduled event time");
+assert.match(censusSource, /indicators\.MARTS/, "Census MARTS is the official headline Retail Sales actual");
+assert.match(censusSource, /matchReleasedAt: retailSalesReleasedAt/, "Retail Sales official actual is constrained to the matching Census release date");
 assert.doesNotMatch(censusSource, /^\s*releasedAt: homeSalesReleasedAt/m, "Census date-only metadata must not become the market event timestamp");
 const macroStoreSource = readFileSync("src/lib/macro/server/macroStore.ts", "utf8");
 assert.match(macroStoreSource, /scheduled_at=gte\./, "stored calendar reads use an explicit recent window");

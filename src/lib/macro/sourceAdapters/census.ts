@@ -3,7 +3,9 @@ import { type MacroSourceEnrichment } from "@/lib/macro/types";
 const CENSUS_ECONOMIC_INDICATORS_URL = "https://www.census.gov/economic-indicators/calendar-listview";
 const CENSUS_NEW_HOME_SALES_URL = "https://www.census.gov/construction/nrs/current/index.html";
 const CENSUS_DURABLE_GOODS_URL = "https://www.census.gov/manufacturing/m3/adv/current/index.html";
+const CENSUS_RETAIL_SALES_URL = "https://www.census.gov/retail/sales.html";
 const DURABLE_GOODS_HEADLINE_MATCHER = /^(?!.*(?:\bcore\b|\bex(?:cluding)?\s+(?:transp(?:ortation)?|defen[cs]e)\b|\bexcluding\b|\bnondefense\b|\bcapital goods\b)).*durable goods/i;
+const RETAIL_SALES_HEADLINE_MATCHER = /^(?!.*(?:\bcore\b|\bcontrol\b|\bex\b|\bexcluding\b)).*retail sales/i;
 
 type CensusIndicator = {
   value?: string;
@@ -66,6 +68,10 @@ export function censusDurableGoodsActual(indicator: Pick<CensusIndicator, "chang
   return formatChange(indicator?.change);
 }
 
+export function censusRetailSalesActual(indicator: Pick<CensusIndicator, "change"> | undefined) {
+  return formatChange(indicator?.change);
+}
+
 export function parseCensusReleaseDateIso(value: string | undefined) {
   if (!value) return undefined;
   const normalized = value.replace(/(\d{1,2})(?:st|nd|rd|th)\b/gi, "$1").trim();
@@ -75,6 +81,10 @@ export function parseCensusReleaseDateIso(value: string | undefined) {
 
 export function isCensusDurableGoodsHeadline(label: string) {
   return DURABLE_GOODS_HEADLINE_MATCHER.test(label);
+}
+
+export function isCensusRetailSalesHeadline(label: string) {
+  return RETAIL_SALES_HEADLINE_MATCHER.test(label);
 }
 
 function indicatorActual(indicator: CensusIndicator | undefined) {
@@ -90,10 +100,13 @@ export async function getCensusOfficialEnrichments(): Promise<MacroSourceEnrichm
   const indicators = parseIndicators(html);
   const homeSales = indicators.RESSALES;
   const durableGoods = indicators.M3ADV;
+  const retailSales = indicators.MARTS;
   const homeSalesReleasedAt = parseCensusReleaseDateIso(homeSales?.relDate);
   const durableGoodsReleasedAt = parseCensusReleaseDateIso(durableGoods?.relDate);
+  const retailSalesReleasedAt = parseCensusReleaseDateIso(retailSales?.relDate);
   const homeSalesActual = homeSalesReleasedAt ? indicatorActual(homeSales) : undefined;
   const durableGoodsActual = durableGoodsReleasedAt ? censusDurableGoodsActual(durableGoods) : undefined;
+  const retailSalesActual = retailSalesReleasedAt ? censusRetailSalesActual(retailSales) : undefined;
   const observedAt = new Date().toISOString();
 
   return [
@@ -118,6 +131,26 @@ export async function getCensusOfficialEnrichments(): Promise<MacroSourceEnrichm
       matchReleasedAt: homeSalesReleasedAt,
       staleReason: homeSalesActual ? undefined : "Census economic indicators page was reachable, but New Home Sales release date or actual value was not parsed.",
       rawPayload: homeSales
+    },
+    {
+      matcher: RETAIL_SALES_HEADLINE_MATCHER,
+      eventType: "numeric_release",
+      source: "Census",
+      sourceType: "official_page",
+      sourceUrl: CENSUS_RETAIL_SALES_URL,
+      officialUrl: CENSUS_RETAIL_SALES_URL,
+      isOfficial: true,
+      confidence: retailSalesActual ? 0.95 : 0.7,
+      actualValue: retailSalesActual,
+      actualProvenance: retailSalesActual ? "official" : undefined,
+      actualProvider: "Census",
+      actualSourceUrl: CENSUS_RETAIL_SALES_URL,
+      actualReportingPeriod: retailSalesActual ? retailSales?.statPeriod : undefined,
+      actualObservedAt: retailSalesActual ? observedAt : undefined,
+      unit: "%",
+      matchReleasedAt: retailSalesReleasedAt,
+      staleReason: retailSalesActual ? undefined : "Census economic indicators page was reachable, but Retail Sales release date or monthly change was not parsed.",
+      rawPayload: retailSales
     },
     {
       matcher: DURABLE_GOODS_HEADLINE_MATCHER,
