@@ -57,7 +57,7 @@ export default function LoginPage() {
               <KakaoLoginButton returnTo={returnTo} />
             </div>
           </div>
-          {loginError ? <p className="mt-3 text-center text-xs font-semibold text-signal-warning">{loginError}</p> : null}
+          {loginError ? <p role="alert" aria-live="assertive" className="mt-3 text-center text-xs font-semibold text-signal-warning">{loginError}</p> : null}
         </section>
       </div>
     </main>

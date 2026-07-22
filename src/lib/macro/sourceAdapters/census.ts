@@ -3,6 +3,7 @@ import { type MacroSourceEnrichment } from "@/lib/macro/types";
 const CENSUS_ECONOMIC_INDICATORS_URL = "https://www.census.gov/economic-indicators/calendar-listview";
 const CENSUS_NEW_HOME_SALES_URL = "https://www.census.gov/construction/nrs/current/index.html";
 const CENSUS_DURABLE_GOODS_URL = "https://www.census.gov/manufacturing/m3/adv/current/index.html";
+const DURABLE_GOODS_HEADLINE_MATCHER = /^(?!.*(?:\bcore\b|\bex(?:cluding)?\s+(?:transp(?:ortation)?|defen[cs]e)\b|\bexcluding\b|\bnondefense\b|\bcapital goods\b)).*durable goods/i;
 
 type CensusIndicator = {
   value?: string;
@@ -61,6 +62,21 @@ function formatChange(value: string | undefined) {
   return `${value.endsWith("%") ? value : `${value}%`}`;
 }
 
+export function censusDurableGoodsActual(indicator: Pick<CensusIndicator, "change"> | undefined) {
+  return formatChange(indicator?.change);
+}
+
+export function parseCensusReleaseDateIso(value: string | undefined) {
+  if (!value) return undefined;
+  const normalized = value.replace(/(\d{1,2})(?:st|nd|rd|th)\b/gi, "$1").trim();
+  const ms = Date.parse(`${normalized} 00:00:00 UTC`);
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : undefined;
+}
+
+export function isCensusDurableGoodsHeadline(label: string) {
+  return DURABLE_GOODS_HEADLINE_MATCHER.test(label);
+}
+
 function indicatorActual(indicator: CensusIndicator | undefined) {
   if (!indicator) return undefined;
   const level = formatUnits(indicator.value, indicator.unitsOfMeasure);
@@ -74,6 +90,11 @@ export async function getCensusOfficialEnrichments(): Promise<MacroSourceEnrichm
   const indicators = parseIndicators(html);
   const homeSales = indicators.RESSALES;
   const durableGoods = indicators.M3ADV;
+  const homeSalesReleasedAt = parseCensusReleaseDateIso(homeSales?.relDate);
+  const durableGoodsReleasedAt = parseCensusReleaseDateIso(durableGoods?.relDate);
+  const homeSalesActual = homeSalesReleasedAt ? indicatorActual(homeSales) : undefined;
+  const durableGoodsActual = durableGoodsReleasedAt ? censusDurableGoodsActual(durableGoods) : undefined;
+  const observedAt = new Date().toISOString();
 
   return [
     {
@@ -84,26 +105,38 @@ export async function getCensusOfficialEnrichments(): Promise<MacroSourceEnrichm
       sourceUrl: CENSUS_NEW_HOME_SALES_URL,
       officialUrl: CENSUS_NEW_HOME_SALES_URL,
       isOfficial: true,
-      confidence: homeSales?.value ? 0.95 : 0.7,
-      actualValue: indicatorActual(homeSales),
+      confidence: homeSalesActual ? 0.95 : 0.7,
+      actualValue: homeSalesActual,
+      actualProvenance: homeSalesActual ? "official" : undefined,
+      actualProvider: "Census",
+      actualSourceUrl: CENSUS_NEW_HOME_SALES_URL,
+      actualReportingPeriod: homeSalesActual ? homeSales?.statPeriod : undefined,
+      actualObservedAt: homeSalesActual ? observedAt : undefined,
       previousValue: formatUnits(homeSales?.compValue, homeSales?.unitsOfMeasure),
+      previousProvenance: homeSales?.compValue ? "official" : undefined,
       unit: homeSales?.unitsOfMeasure === "UNITS" ? "K" : undefined,
-      staleReason: homeSales?.value ? undefined : "Census economic indicators page was reachable, but New Home Sales actual value was not parsed.",
+      matchReleasedAt: homeSalesReleasedAt,
+      staleReason: homeSalesActual ? undefined : "Census economic indicators page was reachable, but New Home Sales release date or actual value was not parsed.",
       rawPayload: homeSales
     },
     {
-      matcher: /durable goods|core durable goods/i,
+      matcher: DURABLE_GOODS_HEADLINE_MATCHER,
       eventType: "numeric_release",
       source: "Census",
       sourceType: "official_page",
       sourceUrl: CENSUS_DURABLE_GOODS_URL,
       officialUrl: CENSUS_DURABLE_GOODS_URL,
       isOfficial: true,
-      confidence: durableGoods?.value ? 0.93 : 0.7,
-      actualValue: indicatorActual(durableGoods),
-      previousValue: formatUnits(durableGoods?.compValue, durableGoods?.unitsOfMeasure),
-      unit: durableGoods?.unitsOfMeasure === "BLN$" ? "B" : undefined,
-      staleReason: durableGoods?.value ? undefined : "Census economic indicators page was reachable, but Durable Goods actual value was not parsed.",
+      confidence: durableGoodsActual ? 0.93 : 0.7,
+      actualValue: durableGoodsActual,
+      actualProvenance: durableGoodsActual ? "official" : undefined,
+      actualProvider: "Census",
+      actualSourceUrl: CENSUS_DURABLE_GOODS_URL,
+      actualReportingPeriod: durableGoodsActual ? durableGoods?.statPeriod : undefined,
+      actualObservedAt: durableGoodsActual ? observedAt : undefined,
+      unit: "%",
+      matchReleasedAt: durableGoodsReleasedAt,
+      staleReason: durableGoodsActual ? undefined : "Census economic indicators page was reachable, but Durable Goods release date or monthly change was not parsed.",
       rawPayload: durableGoods
     }
   ];

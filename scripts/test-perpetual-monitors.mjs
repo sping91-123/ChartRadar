@@ -11,6 +11,38 @@ const journalReconcileMigration = readFileSync(
   join(process.cwd(), "supabase/migrations/20260720053200_reconcile_journal_columns.sql"),
   "utf8"
 );
+const experienceSource = readFileSync(
+  join(process.cwd(), "src/components/coin/PerpetualDecisionExperience.tsx"),
+  "utf8"
+);
+const journalRouteSource = readFileSync(
+  join(process.cwd(), "src/app/api/crypto/perpetual/journal/route.ts"),
+  "utf8"
+);
+const journalUiSource = readFileSync(join(process.cwd(), "src/components/JournalApp.tsx"), "utf8");
+assert.match(
+  experienceSource,
+  /initialAlertMonitorId \?\? storedContext\?\.monitorId/,
+  "a server-validated URL monitor must win over stale session storage"
+);
+assert.match(
+  journalRouteSource,
+  /select=id,user_id,snapshot_id,last_snapshot_id,condition_id,condition,timeframe,condition_role,last_evaluated_at,triggered_at/,
+  "Journal must load the owned monitor condition from the server"
+);
+assert.match(journalRouteSource, /monitorCondition = \{[\s\S]*label: conditionLabel/);
+assert.match(journalRouteSource, /\.\.\.\(monitorCondition \? \{ monitorCondition \} : \{\}\)/);
+assert.doesNotMatch(journalRouteSource, /body\.(?:condition|conditionLabel|threshold|timeframe)/, "Journal must not trust client-supplied monitor details");
+assert.match(journalUiSource, /알림이 울린 조건/);
+assert.match(journalUiSource, /monitorCondition\?\.label \?\? entry\.decisionContext\?\.primaryCondition\.label/);
+const monitorFallbackGuard = experienceSource.indexOf("if (monitorId) {");
+const localJournalFallback = experienceSource.indexOf("appendJournalEntry({", monitorFallbackGuard);
+assert.ok(monitorFallbackGuard >= 0 && localJournalFallback > monitorFallbackGuard, "monitor-linked Journal must stop before incomplete local fallback");
+assert.match(
+  experienceSource.slice(monitorFallbackGuard, localJournalFallback),
+  /실제로 감시한 조건을 정확히 남기려면 서버 연결이 필요합니다/,
+  "a server failure must keep monitor-linked Journal in a retryable error state"
+);
 const ids = {
   basic: "30000000-0000-4000-8000-000000000001",
   paid: "30000000-0000-4000-8000-000000000002",

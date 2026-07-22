@@ -56,7 +56,10 @@ export interface PerpetualMonitorRow {
 
 export interface PerpetualMonitorCapabilities {
   monitorLimit: number;
+  /** Saved quota usage: active/paused scenario monitors plus enabled legacy presets. */
   activeMonitorCount: number;
+  /** Conditions currently being evaluated, excluding paused scenarios. */
+  runningMonitorCount: number;
   scenarioMonitorCount: number;
   presetCount: number;
   canCreateMonitor: boolean;

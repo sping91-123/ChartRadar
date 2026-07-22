@@ -17,7 +17,7 @@ export interface NewsSourceDefinition {
 export const newsSourceCatalog: readonly NewsSourceDefinition[] = [
   {
     id: "macro_official_store",
-    name: "ChartRadar 공식 매크로 원장",
+    name: "미국 공식 경제지표",
     markets: ["crypto", "global"],
     adapter: "macro_store",
     endpoint: null,
@@ -154,15 +154,52 @@ export function runtimeAllowedNewsSourcesForPolicies(
   });
 }
 
+const invalidMacroActualPatterns = [
+  /^-+$/,
+  /발표\s*전/,
+  /결과\s*확인/,
+  /공식.*확인/,
+  /확인\s*(?:중|예정)/,
+  /미정/,
+  /수집\s*지연/,
+  /출처별.*상이/
+];
+
+function validMacroActual(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const normalized = value.normalize("NFKC").trim();
+  return normalized.length > 0 && !invalidMacroActualPatterns.some((pattern) => pattern.test(normalized));
+}
+
+function normalizedMacroActual(value: string) {
+  return value.normalize("NFKC").replace(/[\s,]/g, "").toUpperCase();
+}
+
 export function isAllowedOfficialMacroEvent(input: {
   source: string;
   status: string;
+  event_type?: string | null;
+  actual_value?: string | null;
   raw_payload?: Record<string, unknown> | null;
 }) {
-  return new Set(["BLS", "BEA", "Fed", "Census", "DOL"]).has(input.source) &&
+  const eventType = input.event_type ?? input.raw_payload?.eventType;
+  const baseAllowed = new Set(["BLS", "BEA", "Fed", "Census", "DOL"]).has(input.source) &&
     new Set(["actual_available", "released", "document_released", "meeting_completed"]).has(input.status) &&
     input.raw_payload?.isOfficial === true &&
     input.raw_payload?.sourceType !== "public_calendar";
+  if (!baseAllowed) return false;
+
+  const isNumericCandidate = eventType === "numeric_release" || input.status === "actual_available";
+  if (!isNumericCandidate) return true;
+
+  const rawActual = input.raw_payload?.actualValue ?? input.raw_payload?.actual;
+  return eventType === "numeric_release" &&
+    input.status === "actual_available" &&
+    (input.raw_payload?.sourceType === "official_api" || input.raw_payload?.sourceType === "official_page") &&
+    input.raw_payload?.actualProvenance === "official" &&
+    validMacroActual(input.actual_value) &&
+    validMacroActual(rawActual) &&
+    normalizedMacroActual(input.actual_value) === normalizedMacroActual(rawActual);
 }
 
 export function newsSourceById(sourceId: string) {

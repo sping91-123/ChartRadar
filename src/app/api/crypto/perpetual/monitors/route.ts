@@ -8,6 +8,7 @@ import {
 } from "@/lib/server/perpetualDecisionSource";
 import {
   createPerpetualMonitor,
+  listRecentTerminalPerpetualMonitors,
   listUserPerpetualMonitors,
   markExpiredPerpetualMonitors,
   reconcilePerpetualMonitorLimit,
@@ -62,10 +63,10 @@ function storeFailure(error: unknown) {
     }, { status: 403 });
   }
   if (message.includes("snapshot_not_actionable") || message.includes("condition_expired")) {
-    return privateJson({ error: "이 snapshot은 만료됐거나 감시에 사용할 수 없습니다. 최신 상태를 다시 확인해 주세요.", code: "snapshot_not_actionable" }, { status: 409 });
+    return privateJson({ error: "이 분석은 만료됐거나 감시에 사용할 수 없습니다. 최신 상태를 다시 확인해 주세요.", code: "snapshot_not_actionable" }, { status: 409 });
   }
   if (message.includes("monitor_not_rearmable")) {
-    return privateJson({ error: "완료되거나 취소된 1회성 조건은 같은 snapshot에서 다시 시작할 수 없습니다.", code: "snapshot_not_actionable" }, { status: 409 });
+    return privateJson({ error: "완료되거나 취소된 1회성 조건은 같은 분석에서 다시 시작할 수 없습니다.", code: "snapshot_not_actionable" }, { status: 409 });
   }
   if (message.includes("snapshot_not_found")) {
     return privateJson({ error: "저장된 분석을 찾지 못했습니다. 최신 상태를 다시 확인해 주세요.", code: "snapshot_not_actionable" }, { status: 409 });
@@ -98,15 +99,18 @@ export async function GET(request: Request) {
     const monitorLimit = cryptoAlertConditionLimit(entitlement.plan);
     await markExpiredPerpetualMonitors(perpetualDecisionEngineVersion);
     await reconcilePerpetualMonitorLimit(entitlement.userId!, monitorLimit);
-    const [monitors, usage] = await Promise.all([
+    const [monitors, history, usage] = await Promise.all([
       listUserPerpetualMonitors(entitlement.userId!, status),
+      status ? Promise.resolve([]) : listRecentTerminalPerpetualMonitors(entitlement.userId!, 5),
       sharedCryptoConditionUsage(entitlement.userId!)
     ]);
     return privateJson({
       monitors,
+      history,
       capabilities: {
         monitorLimit,
         activeMonitorCount: usage.total,
+        runningMonitorCount: monitors.filter((monitor) => monitor.status === "active").length + usage.enabledPresetCount,
         scenarioMonitorCount: usage.activeMonitorCount,
         presetCount: usage.enabledPresetCount,
         canCreateMonitor: usage.total < monitorLimit
@@ -147,7 +151,7 @@ export async function POST(request: Request) {
     typeof body.conditionId !== "string" ||
     body.conditionId.length > 180
   ) {
-    return privateJson({ error: "snapshot과 조건을 다시 확인해 주세요.", code: "invalid_monitor_request" }, { status: 400 });
+    return privateJson({ error: "분석과 조건을 다시 확인해 주세요.", code: "invalid_monitor_request" }, { status: 400 });
   }
 
   try {
@@ -160,7 +164,7 @@ export async function POST(request: Request) {
   const snapshot = await getPerpetualDecisionSnapshotById(body.snapshotId);
   if (!snapshot || snapshot.quality !== "ready" || new Date(snapshot.expiresAt).getTime() <= Date.now()) {
     return privateJson({
-      error: "로그인 중 snapshot이 갱신됐거나 감시 가능한 시간이 지났습니다. 최신 상태에서 조건을 다시 확인해 주세요.",
+      error: "로그인 중 분석이 갱신됐거나 감시 가능한 시간이 지났습니다. 최신 상태에서 조건을 다시 확인해 주세요.",
       code: "snapshot_not_actionable",
       refresh: { href: `/crypto/perpetual?asset=${snapshot?.asset ?? "btc"}&timeframe=15m` }
     }, { status: 409 });
@@ -169,7 +173,7 @@ export async function POST(request: Request) {
   const condition = findSnapshotCondition(snapshot, body.conditionId, entitlement.isPaid);
   if (!condition) {
     return privateJson({
-      error: entitlement.isPaid ? "snapshot에 없는 조건입니다." : "Basic에서는 현재 확인 조건 1개만 저장할 수 있습니다.",
+      error: entitlement.isPaid ? "이 분석에 없는 조건입니다." : "Basic에서는 현재 확인 조건 1개만 저장할 수 있습니다.",
       code: "condition_not_available"
     }, { status: entitlement.isPaid ? 400 : 403 });
   }

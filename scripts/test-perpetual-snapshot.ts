@@ -7,6 +7,7 @@ import { isHomePriorityMacro } from "../src/lib/homeMacroPriority";
 import { analyzeTimeframe, type Candle } from "../src/lib/marketAnalysis";
 import { parseClosedBinanceKlines } from "../src/lib/marketTime";
 import { comparePerpetualShadowDecision } from "../src/lib/perpetualShadowComparison";
+import { monitorConditionHeading } from "../src/lib/perpetualDecisionCopy";
 import {
   isPerpetualRevenueCoreScannerEnabled,
   isPerpetualRevenueCoreCanaryWindowActive,
@@ -27,6 +28,7 @@ import {
   serializeBasicPerpetualSnapshot,
   serializeStoredPerpetualSnapshot,
   type BuildPerpetualDecisionInput,
+  type MonitorCondition,
   type PerpetualDecisionSnapshot,
   type PerpetualTimeframeObservation,
   type SourceStatus
@@ -34,6 +36,18 @@ import {
 
 const generatedAt = "2026-07-19T12:00:00.000Z";
 const ready: SourceStatus = { status: "ready", observedAt: "2026-07-19T11:59:00.000Z", detail: "fixture" };
+const baseCondition: MonitorCondition = {
+  id: "label-fixture",
+  kind: "decision_state_change",
+  role: "primary",
+  timeframe: "15m",
+  label: "가격 흐름과 큰 체결이 같은 방향으로 모이는지 확인",
+  threshold: null,
+  baselineState: "risk",
+  expiresAt: "2026-07-20T12:00:00.000Z"
+};
+assert.equal(monitorConditionHeading(baseCondition), "지금 확인할 조건", "non-price checks must not be mislabeled as a price");
+assert.equal(monitorConditionHeading({ ...baseCondition, kind: "price_cross_above", threshold: 60_000 }), "지금 확인할 가격");
 
 const refreshNow = Date.parse(generatedAt);
 assert.equal(perpetualSnapshotRefreshDelay("2026-07-19T12:02:00.000Z", refreshNow), 60_000, "far expiry must retain the one-minute refresh ceiling");
@@ -171,10 +185,11 @@ assert.deepEqual(first, second, "fixed input must produce a deterministic snapsh
 assert.equal(first.asset, "btc");
 assert.equal(first.symbol, "BTCUSDT");
 assert.equal(first.exchange, "binance");
-assert.equal(first.engineVersion, "perpetual-v1.1.0", "the additive evidence schema must not reuse v1.0 storage buckets from the deployed engine");
+assert.equal(first.engineVersion, "perpetual-v1.2.0", "the public evidence upgrade must not reuse earlier storage buckets");
 assert.equal(first.chart.candles.length, 96);
 assert.equal(first.quality, "ready");
 assert.ok(first.publicEvidence, "Basic payload must retain useful 15m structure, pressure, and flow evidence");
+assert.equal(first.publicEvidence.context?.length, 3, "Basic must see the 15m, 1h, and 4h direction summary without paid raw metrics");
 assert.ok(first.publicEvidence.pressure?.summary.includes("강제 청산"), "Basic pressure copy must explain the practical risk in plain language");
 assert.ok(first.publicEvidence.flow?.summary.includes("큰 금액"), "Basic flow copy must explain what the observed trades mean");
 assert.equal(first.pro?.detailVersion, 1, "new snapshots must include the snapshot-native detail contract");
@@ -208,6 +223,8 @@ const timedSnapshot = buildPerpetualDecisionSnapshot(input({
   fingerprint: "timed-evidence-fixture",
   timeframes: [...timedFrames]
 }));
+assert.equal(timedSnapshot.publicEvidence?.events?.msb?.level, 60_560, "Basic must retain the exact 15m MSB level used by the chart marker");
+assert.equal(timedSnapshot.publicEvidence?.events?.choch?.level, 60_500, "Basic must retain the exact 15m CHoCH level used by the chart marker");
 let checkedTimedEvents = 0;
 timedFrames.forEach((frame, index) => {
   const storedEvidence = timedSnapshot.pro?.multiTimeframeEvidence[index];
@@ -321,7 +338,7 @@ const priceConditions = [
 ].filter((condition) => condition.kind === "price_cross_above" || condition.kind === "price_cross_below");
 assert.deepEqual(new Set(priceConditions.map((condition) => condition.timeframe)), new Set(["15m", "1h", "4h"]));
 for (const condition of priceConditions) {
-  assert.match(condition.label, /봉이 끝나는지 확인/, "monitor copy must explain the closed-candle rule in beginner language");
+  assert.match(condition.label, /가격 구간이 끝났을 때 .* (?:위|아래)인지 확인/, "monitor copy must explain the closed-candle rule as a beginner action");
   const threshold = condition.threshold ?? first.price;
   const metPrice = condition.kind === "price_cross_above" ? threshold + 1 : threshold - 1;
   const notMetPrice = condition.kind === "price_cross_above" ? threshold - 1 : threshold + 1;
@@ -385,5 +402,21 @@ const macroSource = readFileSync(join(process.cwd(), "src/components/MacroTicker
 assert.doesNotMatch(macroSource, /다음 매크로 ·/, "Home macro must not collapse the rich calendar card into a one-line summary");
 assert.match(macroSource, /오늘 거래 전 확인/, "Home macro must retain a visible daily-calendar heading");
 assert.match(macroSource, /recentReleased \?\? upcomingWithin24Hours \?\? nearestUpcoming \?\? previousReleased/, "an upcoming official event must outrank an old release on the daily Home card");
+
+const journalSource = readFileSync(join(process.cwd(), "src/components/JournalApp.tsx"), "utf8");
+for (const reviewSource of ["snapshot", "alert", "news"]) {
+  assert.match(
+    journalSource,
+    new RegExp(`entry\\.source === ["']${reviewSource}["']`),
+    `${reviewSource} decisions must remain available in the review loop`
+  );
+}
+assert.match(
+  journalSource,
+  /entry\.decisionContext\?\.primaryCondition\.label \?\? parsed\.nextCheckpoint/,
+  "review cards must prefer the frozen decision condition over reparsed free text"
+);
+assert.match(journalSource, /저장 당시 선물 판단/, "the saved decision context must remain visible during review");
+assert.match(journalSource, /판단 당시 뉴스 맥락/, "the saved official-news context must remain visible during review");
 
 console.log("Perpetual decision snapshot matrix passed.");

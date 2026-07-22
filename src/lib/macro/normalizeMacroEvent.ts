@@ -1,7 +1,8 @@
 // 기존 매크로 일정 항목을 공식 상태 모델이 포함된 응답으로 정규화합니다.
 import { type MacroEventItem } from "@/data/macroEvents";
-import { classifyMacroEvent, legacyStateFromStatus, resolveMacroStatus } from "@/lib/macro/macroStatus";
-import { type MacroSourceEnrichment } from "@/lib/macro/types";
+import { classifyMacroEvent, hasConfirmedActualValue, legacyStateFromStatus, resolveMacroStatus } from "@/lib/macro/macroStatus";
+import { resolveMacroSourceTrust } from "@/lib/macro/sourceTrust";
+import { type MacroSourceEnrichment, type MacroSourceType, type MacroValueProvenance, type MacroValueProvider } from "@/lib/macro/types";
 
 function normalizeId(value: string) {
   return value
@@ -24,13 +25,14 @@ function categoryFromTitle(title: string) {
   return "macro";
 }
 
-const RELEASE_MATCH_WINDOW_MS = 36 * 60 * 60 * 1000;
+const RELEASE_MATCH_WINDOW_MS = 18 * 60 * 60 * 1000;
 
 function matchesReleaseWindow(item: MacroEventItem, enrichment: MacroSourceEnrichment) {
-  if (!enrichment.releasedAt) return true;
+  const matchingReleaseAt = enrichment.matchReleasedAt ?? enrichment.releasedAt;
+  if (!matchingReleaseAt) return true;
 
   const itemTime = Date.parse(item.releaseAt);
-  const enrichmentTime = Date.parse(enrichment.releasedAt);
+  const enrichmentTime = Date.parse(matchingReleaseAt);
   if (!Number.isFinite(itemTime) || !Number.isFinite(enrichmentTime)) return true;
 
   return Math.abs(itemTime - enrichmentTime) <= RELEASE_MATCH_WINDOW_MS;
@@ -40,15 +42,47 @@ function pickEnrichment(item: MacroEventItem, enrichments: MacroSourceEnrichment
   return enrichments.find((candidate) => candidate.matcher.test(item.label) && matchesReleaseWindow(item, candidate));
 }
 
+function valueProvenance(sourceType: MacroSourceType | undefined, isOfficial: boolean | undefined): MacroValueProvenance {
+  if (isOfficial && (sourceType === "official_api" || sourceType === "official_page")) return "official";
+  if (sourceType === "public_calendar") return "public_calendar";
+  if (sourceType === "operator_fallback") return "operator_fallback";
+  if (sourceType === "derived") return "derived";
+  return "unknown";
+}
+
+function valueProvider(sourceUrl: string | undefined, fallback: MacroValueProvider | undefined) {
+  if (sourceUrl) {
+    try {
+      const hostname = new URL(sourceUrl).hostname.toLowerCase();
+      if (hostname === "tradingeconomics.com" || hostname.endsWith(".tradingeconomics.com")) return "TradingEconomics";
+      if (hostname === "forexfactory.com" || hostname.endsWith(".forexfactory.com")) return "ForexFactory";
+    } catch {
+      // Retain the explicit provider when a legacy URL cannot be parsed.
+    }
+  }
+  return fallback;
+}
+
 export function normalizeMacroEvent(item: MacroEventItem, enrichments: MacroSourceEnrichment[] = [], nowMs = Date.now()): MacroEventItem {
   const enrichment = pickEnrichment(item, enrichments);
   const eventType = enrichment?.eventType ?? item.eventType ?? classifyMacroEvent(item.label);
   const releaseTime = Date.parse(item.releaseAt);
   const canUseOfficialActual = !Number.isFinite(releaseTime) || releaseTime <= nowMs;
-  const actualValue = canUseOfficialActual ? (enrichment?.actualValue ?? item.actualValue ?? item.actual) : (item.actualValue ?? item.actual);
+  const enrichmentHasActual = canUseOfficialActual && hasConfirmedActualValue(enrichment?.actualValue);
+  const actualValue = enrichmentHasActual ? enrichment?.actualValue : (item.actualValue ?? item.actual);
+  const actualProvenance = enrichmentHasActual
+    ? enrichment?.actualProvenance ?? valueProvenance(enrichment?.sourceType, enrichment?.isOfficial)
+    : item.actualProvenance ?? valueProvenance(item.sourceType, item.isOfficial);
   const source = enrichment?.source ?? item.source;
   const sourceUrl = enrichment?.sourceUrl ?? item.sourceUrl;
-  const officialUrl = enrichment?.officialUrl ?? item.officialUrl ?? (source !== "ForexFactory" ? sourceUrl : undefined);
+  const { isOfficial, officialUrl } = resolveMacroSourceTrust({
+    source,
+    sourceUrl,
+    officialUrl: enrichment?.officialUrl ?? item.officialUrl,
+    enrichmentOfficial: enrichment?.isOfficial,
+    itemOfficial: item.isOfficial,
+    sourceType: enrichment?.sourceType ?? item.sourceType
+  });
   const releasedAt = enrichment?.releasedAt ?? item.releasedAt;
   const status = enrichment?.status
     ? {
@@ -72,6 +106,12 @@ export function normalizeMacroEvent(item: MacroEventItem, enrichments: MacroSour
   const isNumericEvent = eventType === "numeric_release";
   const consensusValue = enrichment?.consensusValue ?? item.consensusValue ?? item.forecast;
   const previousValue = enrichment?.previousValue ?? item.previousValue ?? item.previous;
+  const consensusProvenance = enrichment?.consensusValue
+    ? enrichment.consensusProvenance ?? valueProvenance(enrichment.sourceType, enrichment.isOfficial)
+    : item.consensusProvenance ?? valueProvenance(item.sourceType, item.isOfficial);
+  const previousProvenance = enrichment?.previousValue
+    ? enrichment.previousProvenance ?? valueProvenance(enrichment.sourceType, enrichment.isOfficial)
+    : item.previousProvenance ?? valueProvenance(item.sourceType, item.isOfficial);
 
   return {
     ...item,
@@ -88,8 +128,23 @@ export function normalizeMacroEvent(item: MacroEventItem, enrichments: MacroSour
     forecast: consensusValue ?? item.forecast,
     previous: previousValue ?? item.previous,
     actualValue,
+    actualProvenance,
+    actualProvider: enrichmentHasActual ? enrichment?.actualProvider ?? enrichment?.source : item.actualProvider,
+    actualSourceUrl: enrichmentHasActual ? enrichment?.actualSourceUrl ?? enrichment?.officialUrl ?? enrichment?.sourceUrl : item.actualSourceUrl,
+    actualReportingPeriod: enrichmentHasActual ? enrichment?.actualReportingPeriod : item.actualReportingPeriod,
+    actualObservedAt: enrichmentHasActual ? enrichment?.actualObservedAt : item.actualObservedAt,
     consensusValue,
+    consensusProvenance,
+    consensusProvider: consensusValue
+      ? enrichment?.consensusValue
+        ? valueProvider(enrichment.consensusSourceUrl ?? enrichment.sourceUrl, enrichment.consensusProvider ?? enrichment.source)
+        : valueProvider(item.consensusSourceUrl ?? item.sourceUrl, item.consensusProvider ?? item.source)
+      : undefined,
+    consensusSourceUrl: consensusValue
+      ? enrichment?.consensusValue ? enrichment.consensusSourceUrl ?? enrichment.sourceUrl : item.consensusSourceUrl ?? item.sourceUrl
+      : undefined,
     previousValue,
+    previousProvenance,
     unit: enrichment?.unit ?? item.unit,
     source,
     sourceType: enrichment?.sourceType ?? item.sourceType ?? (source === "ForexFactory" ? "public_calendar" : "official_page"),
@@ -98,7 +153,7 @@ export function normalizeMacroEvent(item: MacroEventItem, enrichments: MacroSour
     confidence: enrichment?.confidence ?? item.confidence ?? (enrichment?.isOfficial ? 0.9 : 0.7),
     staleReason: status.staleReason ?? enrichment?.staleReason ?? item.staleReason,
     nextRefreshMs: status.nextRefreshMs,
-    isOfficial: enrichment?.isOfficial ?? item.isOfficial ?? source !== "ForexFactory",
+    isOfficial,
     isDocumentEvent,
     isNumericEvent,
     state: legacyStateFromStatus(status.status)

@@ -973,7 +973,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto", newsImpac
       {newsImpactEnabled ? (
         <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
           <SectionHeader
-            title="News Impact 알림"
+            title="공식 뉴스 영향 알림"
             description="공식 사건 자체가 아니라, 발표 이후 기존 판단과 충돌하거나 리스크가 커진 경우만 별도로 알립니다. 기본값은 OFF입니다."
             action={<StatusPill tone={isPaid ? "watch" : "locked"}>{isPaid ? "Pro · 직접 선택" : "Pro 필요"}</StatusPill>}
           />

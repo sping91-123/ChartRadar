@@ -31,6 +31,14 @@ export interface DecisionJournalContext {
     label: string;
     role: "primary" | "confirmation" | "invalidation";
   };
+  monitorCondition?: {
+    id: string;
+    label: string;
+    role: "primary" | "confirmation" | "invalidation";
+    timeframe: "15m" | "1h" | "4h";
+    triggeredAt?: string;
+    lastEvaluatedAt?: string;
+  };
   news?: NewsDecisionContext;
 }
 

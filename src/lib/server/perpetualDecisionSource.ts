@@ -304,13 +304,13 @@ export async function getReadyPerpetualSnapshotBefore(
   const lowerAt = new Date(beforeMs - withinMinutes * 60_000).toISOString();
   const memory = Array.from(memorySnapshotsById.values())
     .filter((snapshot) => snapshot.asset === asset && snapshot.quality === "ready" && snapshot.engineVersion === perpetualDecisionEngineVersion)
-    .filter((snapshot) => snapshot.generatedAt <= beforeAt && snapshot.generatedAt >= lowerAt)
+    .filter((snapshot) => snapshot.generatedAt < beforeAt && snapshot.generatedAt >= lowerAt)
     .sort((left, right) => right.generatedAt.localeCompare(left.generatedAt))[0];
   if (memory) return memory;
   if (!isSupabaseAdminConfigured()) return null;
   try {
     const rows = await supabaseAdminRest<StoredSnapshotRow[]>(
-      `perpetual_decision_snapshots?select=*&asset=eq.${asset}&quality=eq.ready&engine_version=eq.${encodeURIComponent(perpetualDecisionEngineVersion)}&generated_at=lte.${encodeURIComponent(beforeAt)}&generated_at=gte.${encodeURIComponent(lowerAt)}&order=generated_at.desc&limit=1`
+      `perpetual_decision_snapshots?select=*&asset=eq.${asset}&quality=eq.ready&engine_version=eq.${encodeURIComponent(perpetualDecisionEngineVersion)}&generated_at=lt.${encodeURIComponent(beforeAt)}&generated_at=gte.${encodeURIComponent(lowerAt)}&order=generated_at.desc&limit=1`
     );
     if (!rows[0]) return null;
     const snapshot = snapshotFromRow(rows[0]);

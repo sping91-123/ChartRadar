@@ -76,14 +76,18 @@ function isDefaultSelection(symbols: FuturesSymbolInfo[]) {
   );
 }
 
-export function AltFuturesSignalSection() {
+export function AltFuturesSignalSection({ initialFocus }: { initialFocus?: string | null }) {
   const [selectedSymbols, setSelectedSymbols] = useState<FuturesSymbolInfo[]>(defaultAltFuturesSymbols);
   const [storageReady, setStorageReady] = useState(false);
 
   useEffect(() => {
-    setSelectedSymbols(readStoredAltFuturesSymbols());
+    const stored = readStoredAltFuturesSymbols();
+    const focused = supportedSymbolMap.get(`${normalizeSymbol(initialFocus)}USDT`);
+    setSelectedSymbols(focused
+      ? [focused, ...stored.filter((item) => item.symbol !== focused.symbol)].slice(0, MAX_ALT_FUTURES_SELECTION)
+      : stored);
     setStorageReady(true);
-  }, []);
+  }, [initialFocus]);
 
   const selectedLabelText = useMemo(() => selectedSymbols.map((item) => item.label).join(" · "), [selectedSymbols]);
   const defaultSelected = isDefaultSelection(selectedSymbols);

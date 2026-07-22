@@ -45,6 +45,29 @@ import { isSupabaseAdminConfigured, supabaseAdminRpc } from "@/lib/server/supaba
 
 const RETRY_MS = 5 * 60_000;
 const MAX_EVALUATION_WAIT_MS = 10 * 60_000;
+const GLOBAL_METRIC_ORDER = ["NQ=F", "ES=F", "YM=F", "RTY=F", "^VIX", "UUP", "TLT", "ZN=F", "SMH", "SOXX", "XLK", "XLY", "XLP", "XLV", "XLI", "XLU", "XLC", "XLF", "XLE", "marketModeScore"];
+const GLOBAL_METRIC_LABELS: Record<string, string> = {
+  "NQ=F": "나스닥100 선물",
+  "ES=F": "S&P500 선물",
+  "YM=F": "다우 선물",
+  "RTY=F": "러셀2000 선물",
+  "^VIX": "변동성 지수(VIX)",
+  UUP: "미국 달러",
+  TLT: "미 장기 국채",
+  "ZN=F": "미 10년 국채선물",
+  SMH: "반도체 섹터(SMH)",
+  SOXX: "반도체 섹터(SOXX)",
+  XLK: "기술주 섹터",
+  XLY: "경기소비재 섹터",
+  XLP: "필수소비재 섹터",
+  XLV: "헬스케어 섹터",
+  XLI: "산업재 섹터",
+  XLU: "유틸리티 섹터",
+  XLC: "커뮤니케이션 섹터",
+  XLF: "금융 섹터",
+  XLE: "에너지 섹터",
+  marketModeScore: "전체 시장 위험 점수"
+};
 
 export interface NewsImpactSyncResult {
   mode: ReturnType<typeof newsImpactMode>;
@@ -75,18 +98,22 @@ function globalReactionMetrics(before: GlobalReactionObservation | null, after: 
   const keys = Array.from(new Set([
     ...Object.keys(before?.metrics ?? {}),
     ...Object.keys(after?.metrics ?? {})
-  ])).sort();
+  ])).sort((left, right) => {
+    const leftIndex = GLOBAL_METRIC_ORDER.indexOf(left);
+    const rightIndex = GLOBAL_METRIC_ORDER.indexOf(right);
+    return (leftIndex < 0 ? Number.MAX_SAFE_INTEGER : leftIndex) - (rightIndex < 0 ? Number.MAX_SAFE_INTEGER : rightIndex) || left.localeCompare(right);
+  });
   return {
     items: keys.map((key) => {
       const beforeValue = before?.metrics[key] ?? null;
       const afterValue = after?.metrics[key] ?? null;
       return {
         key,
-        label: key,
+        label: GLOBAL_METRIC_LABELS[key] ?? key,
         before: beforeValue,
         after: afterValue,
         change: beforeValue === null || afterValue === null ? null : afterValue - beforeValue,
-        unit: "z"
+        unit: key === "marketModeScore" ? "점" : "σ"
       };
     })
   };
@@ -100,9 +127,15 @@ async function ensureDetectedReaction(event: NewsImpactEventRow, target: "btc" |
     version: event.version,
     occurredAt: event.occurred_at,
     firstSeenAt: event.first_seen_at,
-    updatedAt: event.updated_at
+    updatedAt: event.updated_at,
+    revisionDetectedAt: typeof event.metadata?.revision_detected_at === "string"
+      ? event.metadata.revision_detected_at
+      : null
   });
   const nextCheckAt = nextNewsImpactCheckAt(baselineAt, "detected");
+  const detectedSummary = event.version > 1
+    ? "공식 발표 내용이 수정되어 수정 시점 이후 15분 시장 반응을 다시 확인 중입니다."
+    : "공식 발표를 확인했습니다. 발표 이후 15분 시장 반응을 확인 중입니다.";
   if (target === "global") {
     const baseline = await findGlobalObservationBefore(baselineAt, 10).catch(() => null);
     return upsertNewsReaction({
@@ -117,7 +150,7 @@ async function ensureDetectedReaction(event: NewsImpactEventRow, target: "btc" |
       evaluatedAt: null,
       nextCheckAt,
       baselineObservationId: baseline?.id ?? null,
-      reactionSummary: "공식 발표를 확인했습니다. 발표 이후 15분 시장 반응을 확인 중입니다.",
+      reactionSummary: detectedSummary,
       metrics: { eventContext: { version: event.version, headline: event.headline, factSummary: event.fact_summary } }
     });
   }
@@ -134,7 +167,7 @@ async function ensureDetectedReaction(event: NewsImpactEventRow, target: "btc" |
     evaluatedAt: null,
     nextCheckAt,
     preSnapshotId: baseline?.id ?? null,
-    reactionSummary: "공식 발표를 확인했습니다. 발표 이후 15분 시장 반응을 확인 중입니다.",
+    reactionSummary: detectedSummary,
     metrics: { eventContext: { version: event.version, headline: event.headline, factSummary: event.fact_summary } }
   });
 }

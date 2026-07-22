@@ -8,6 +8,7 @@ import {
   type MacroEventItem
 } from "@/data/macroEvents";
 import { hasConfirmedActualValue } from "@/lib/macro/macroStatus";
+import { dedupeMacroCalendarItems } from "@/lib/macro/dedupeMacroCalendar";
 import { normalizeMacroEvents } from "@/lib/macro/normalizeMacroEvent";
 import { getBeaOfficialEnrichments } from "@/lib/macro/sourceAdapters/bea";
 import { fetchBlsOfficialActuals } from "@/lib/macro/sourceAdapters/bls";
@@ -34,6 +35,7 @@ export type MacroCalendarPayload = {
   nextRefreshMs: number;
   items: MacroEventItem[];
   warning?: string;
+  isStale?: boolean;
   debug?: {
     fetchedAt: string;
     serverTime: string;
@@ -175,18 +177,6 @@ function sourceFromTitle(title: string): MacroEventItem["source"] {
   if (/gdp|pce/i.test(title)) return "BEA";
   if (/cpi|ppi|nfp|payroll|unemployment rate|earnings|jolts/i.test(title)) return "BLS";
   return "ForexFactory";
-}
-
-function sourceUrlFromTitle(title: string) {
-  if (JOBLESS_CLAIMS_PATTERN.test(title)) return "https://oui.doleta.gov/unemploy/claims.asp";
-  if (/retail/i.test(title)) return "https://www.census.gov/retail";
-  if (/new home sales/i.test(title)) return "https://www.census.gov/construction/nrs/";
-  if (/existing home sales/i.test(title)) return "https://www.nar.realtor/research-and-statistics";
-  if (/fomc|fed|powell/i.test(title)) return "https://www.federalreserve.gov/monetarypolicy.htm";
-  if (/gdp|pce/i.test(title)) return "https://www.bea.gov/news/schedule";
-  if (/cpi/i.test(title)) return "https://www.bls.gov/cpi/";
-  if (/ppi/i.test(title)) return "https://www.bls.gov/ppi/";
-  return "https://www.forexfactory.com/calendar";
 }
 
 function eventState(releaseAt: string): MacroEventItem["state"] {
@@ -505,8 +495,9 @@ function toMacroItem(event: ForexFactoryEvent): MacroEventItem | null {
     actual: event.actual || undefined,
     summary: eventSummary(title),
     marketImpact: marketImpact(title),
-    source: sourceFromTitle(title),
-    sourceUrl: sourceUrlFromTitle(title)
+    source: "ForexFactory",
+    sourceType: "public_calendar",
+    sourceUrl: "https://www.forexfactory.com/calendar"
   };
 }
 
@@ -531,7 +522,11 @@ async function getOfficialEnrichments(items: MacroEventItem[]) {
 export function getFallbackPayload(warning: string): MacroCalendarPayload {
   const updatedAt = macroCalendarUpdatedAtIso || new Date().toISOString();
   const fetchedAt = new Date().toISOString();
-  const items = sortItems(normalizeMacroEvents(macroItems.map((item) => ({ ...item, state: eventState(item.releaseAt) }))).filter(isVisibleMacroImportance));
+  const items = sortItems(
+    dedupeMacroCalendarItems(
+      normalizeMacroEvents(macroItems.map((item) => ({ ...item, state: eventState(item.releaseAt) }))).filter(isVisibleMacroImportance)
+    )
+  );
 
   return {
     updatedAt,
@@ -581,8 +576,9 @@ export async function getMacroCalendarPayload(options: { bypassCache?: boolean }
     const baseItems = [...publicCalendarItems, ...pmiFallbackItems];
     const mergedBaseItems = mergeRecentReleasedEvents(baseItems, now);
     const enrichments = await getOfficialEnrichments(mergedBaseItems);
-    const items = normalizeMacroEvents(mergedBaseItems, enrichments, now).filter(isVisibleMacroImportance);
+    const items = dedupeMacroCalendarItems(normalizeMacroEvents(mergedBaseItems, enrichments, now).filter(isVisibleMacroImportance));
     const sorted = selectCalendarItems(items, now);
+    if (sorted.length === 0) throw new Error("No current macro events were produced by the live calendars");
     const updatedAt = new Date().toISOString();
     const payload: MacroCalendarPayload = {
       updatedAt,
@@ -597,7 +593,7 @@ export async function getMacroCalendarPayload(options: { bypassCache?: boolean }
       sourceNote: "일정은 공개 캘린더로 자동 확인하고, 숫자형 지표는 가능한 공식 통계로 보강합니다. 문서형 이벤트는 실제값 대신 공식 문서 공개 상태로 표시합니다.",
       isAutomatic: true,
       nextRefreshMs: getRefreshMs(sorted),
-      items: sorted.length ? sorted : getFallbackPayload("공개 캘린더가 비어 있어 예비 일정을 표시합니다.").items,
+      items: sorted,
       warning: enrichments.length ? undefined : "일부 공식 발표 확인이 지연될 수 있습니다."
     };
 
@@ -606,7 +602,9 @@ export async function getMacroCalendarPayload(options: { bypassCache?: boolean }
   } catch (error) {
     const fallback = getFallbackPayload(error instanceof Error ? error.message : "매크로 자동 갱신 실패");
     const enrichments = await getOfficialEnrichments(fallback.items).catch(() => [] as MacroSourceEnrichment[]);
-    const items = enrichments.length ? sortItems(normalizeMacroEvents(fallback.items, enrichments, now).filter(isVisibleMacroImportance)) : fallback.items;
+    const items = enrichments.length
+      ? sortItems(dedupeMacroCalendarItems(normalizeMacroEvents(fallback.items, enrichments, now).filter(isVisibleMacroImportance)))
+      : dedupeMacroCalendarItems(fallback.items);
     const payload = {
       ...fallback,
       sourceLabel: enrichments.length ? "예비 일정 + 공식 발표 확인" : fallback.sourceLabel,

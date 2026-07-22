@@ -3,6 +3,7 @@ import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
 import { ProPricingPanel } from "@/components/ProPricingPanel";
 import { RadarTopNav } from "@/components/RadarTopNav";
+import { safeReturnTo } from "@/lib/authRedirect";
 import type { BillingPageScope } from "@/lib/billing";
 import { isNewsImpactUiEnabled, newsImpactMode } from "@/lib/server/newsImpactMode";
 
@@ -16,10 +17,11 @@ function normalizeAttributionSource(source: string | undefined) {
   return source && /^[a-z0-9_-]{1,60}$/i.test(source) ? source : null;
 }
 
-export default async function ProPage({ searchParams }: { searchParams: Promise<{ market?: string | string[]; source?: string | string[] }> }) {
-  const { market, source } = await searchParams;
+export default async function ProPage({ searchParams }: { searchParams: Promise<{ market?: string | string[]; source?: string | string[]; returnTo?: string | string[] }> }) {
+  const { market, source, returnTo: rawReturnTo } = await searchParams;
   const marketScope = normalizeBillingScope(Array.isArray(market) ? market[0] : market);
   const attributionSource = normalizeAttributionSource(Array.isArray(source) ? source[0] : source);
+  const returnTo = safeReturnTo(Array.isArray(rawReturnTo) ? rawReturnTo[0] : rawReturnTo, "") || null;
   const navMarket = marketScope === "stocks" ? "stocks" : marketScope === "crypto" ? "crypto" : "all";
   const headerMarket = marketScope === "stocks" ? "stocks" : marketScope === "crypto" ? "crypto" : undefined;
 
@@ -28,7 +30,7 @@ export default async function ProPage({ searchParams }: { searchParams: Promise<
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 sm:gap-5">
         <Header market={headerMarket} />
         <RadarTopNav market={navMarket} newsImpactEnabled={isNewsImpactUiEnabled(newsImpactMode())} />
-        <ProPricingPanel marketScope={marketScope} attributionSource={attributionSource} />
+        <ProPricingPanel marketScope={marketScope} attributionSource={attributionSource} returnTo={returnTo} />
         <AppFooter />
       </div>
     </main>

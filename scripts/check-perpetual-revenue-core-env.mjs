@@ -52,6 +52,25 @@ if (mode === "shadow" || mode === "on") {
 
 if (mode === "on" || requireCanary || canaryActive) {
   check(configured("CRON_SECRET"), "cron authentication", "The five-minute monitor worker must be authenticated.");
+  const hasEnabledAiProvider = configured("GROQ_API_KEY") || (
+    value("ENABLE_GEMINI_AI_FALLBACK").toLowerCase() === "true" && configured("GEMINI_API_KEY")
+  );
+  check(
+    hasEnabledAiProvider,
+    "AI explanation provider",
+    "Paid Perpetual activation requires Groq or an explicitly enabled Gemini fallback."
+  );
+  check(
+    configured("UPSTASH_REDIS_REST_URL") && configured("UPSTASH_REDIS_REST_TOKEN"),
+    "shared AI cost guard",
+    "Revenue-core users require Upstash so provider-backed AI has a cross-instance daily ceiling."
+  );
+  const aiDailyLimit = Number(value("PERPETUAL_AI_DAILY_PROVIDER_LIMIT") || "240");
+  check(
+    Number.isInteger(aiDailyLimit) && aiDailyLimit >= 1 && aiDailyLimit <= 5_000,
+    "AI provider daily ceiling",
+    "PERPETUAL_AI_DAILY_PROVIDER_LIMIT must be an integer from 1 to 5000."
+  );
   const firebaseConfigured = configured("FIREBASE_SERVICE_ACCOUNT_JSON") || (
     configured("FIREBASE_PROJECT_ID") && configured("FIREBASE_CLIENT_EMAIL") && configured("FIREBASE_PRIVATE_KEY")
   );

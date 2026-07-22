@@ -106,6 +106,7 @@ export interface NewsImpactListResponse {
   market: NewsMarket;
   asset: "btc" | "eth" | null;
   snapshotId?: string | null;
+  snapshotContext: "not_requested" | "matched" | "ignored_official_only";
   generatedAt: string;
   quality: "ready" | "partial" | "stale" | "unavailable";
   warning: string | null;
@@ -228,7 +229,7 @@ function cryptoReactionSummary(classification: NewsImpactClassification, priceCh
   if (classification === "decision_state_changed") return `발표 이후 시장 데이터에서 판단 상태 변화가 관측됐습니다. ${move}`;
   if (classification === "supports_existing_state") return `발표 이후 구조·체결·청산 근거가 기존 판단을 강화했습니다. ${move}`;
   if (classification === "conflicts_with_existing_state") return `발표 이후 구조·체결·청산 근거가 기존 판단과 충돌했습니다. ${move}`;
-  if (classification === "insufficient_data") return "발표 전후의 동일 품질 데이터를 확보하지 못해 영향을 판단하지 않습니다.";
+  if (classification === "insufficient_data") return "같은 기준으로 비교할 발표 전후 자료가 부족해 영향을 판단하지 않습니다.";
   return `발표 이후 판단을 바꿀 정도의 반응은 아직 관측되지 않았습니다. ${move}`;
 }
 
@@ -349,10 +350,18 @@ export function classifyGlobalNewsReaction(
         : classification === "conflicts_with_existing_state"
           ? "기존 글로벌 판단과 충돌"
           : "뚜렷한 글로벌 반응 없음";
+  const observedSignals = [
+    Math.abs(after.signalGroups.futures) >= 1.5 ? (after.signalGroups.futures > 0 ? "지수선물 강세 확대" : "지수선물 약세 확대") : null,
+    Math.abs(after.signalGroups.risk) >= 1.5 ? (after.signalGroups.risk > 0 ? "변동성·달러·채권 부담 완화" : "변동성·달러·채권 부담 확대") : null,
+    Math.abs(after.signalGroups.sectors) >= 1.5 ? (after.signalGroups.sectors > 0 ? "상승 섹터 확산" : "하락 섹터 확산") : null
+  ].filter((value): value is string => Boolean(value));
+  const evidence = observedSignals.length > 0
+    ? `${observedSignals.join(" · ")}가 평소 20개 구간보다 크게 관측됐습니다.`
+    : "지수선물·위험지표·섹터 폭에서 평소보다 큰 같은 방향 움직임은 확인되지 않았습니다.";
   return {
     classification,
     riskEffect,
-    reactionSummary: `발표 이후 글로벌 시장 데이터에서 ${label}가 관측됐습니다.`,
+    reactionSummary: `발표 이후 ${evidence} 현재 분류는 '${label}'입니다.`,
     priceChangePercent: null,
     stateBefore: null,
     stateAfter: null
@@ -374,8 +383,14 @@ export function newsReactionAnchorAt(event: {
   occurredAt: string;
   firstSeenAt: string;
   updatedAt: string;
+  revisionDetectedAt?: string | null;
 }) {
-  if (event.version > 1) return event.updatedAt;
+  if (event.version > 1) {
+    const revisionDetectedAt = event.revisionDetectedAt?.trim();
+    return revisionDetectedAt && Number.isFinite(Date.parse(revisionDetectedAt))
+      ? revisionDetectedAt
+      : event.updatedAt;
+  }
   return event.macroEventId ? event.occurredAt : event.firstSeenAt;
 }
 
@@ -391,6 +406,74 @@ export function serializeBasicNewsImpactEvent(event: NewsImpactEvent): NewsImpac
     ...reaction
   } = basic.reaction;
   return { ...basic, reaction };
+}
+
+export function officialMacroHeadline(value: string) {
+  const normalized = value
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\d{10,}\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (/core producer price index|core ppi/i.test(normalized)) return "미국 근원 생산자물가지수(PPI) 발표";
+  if (/producer price index|\bppi\b/i.test(normalized)) return "미국 생산자물가지수(PPI) 발표";
+  if (/core consumer price index|core cpi/i.test(normalized)) return "미국 근원 소비자물가지수(CPI) 발표";
+  if (/consumer price index|\bcpi\b/i.test(normalized)) return "미국 소비자물가지수(CPI) 발표";
+  if (/employment situation|nonfarm|payroll/i.test(normalized)) return "미국 고용보고서 발표";
+  if (/personal consumption expenditures|\bpce\b/i.test(normalized)) return "미국 개인소비지출(PCE) 물가 발표";
+  if (/gross domestic product|\bgdp\b/i.test(normalized)) return "미국 국내총생산(GDP) 발표";
+  if (/retail sales/i.test(normalized)) return "미국 소매판매 발표";
+  if (/initial jobless claims|jobless claims|unemployment insurance claims/i.test(normalized)) return "미국 신규 실업수당 청구 발표";
+  if (/consumer sentiment/i.test(normalized)) return "미국 소비자심리지수 발표";
+  if (/consumer confidence/i.test(normalized)) return "미국 소비자신뢰지수 발표";
+  if (/manufacturing pmi/i.test(normalized)) return "미국 제조업 구매관리자지수(PMI) 발표";
+  if (/services pmi/i.test(normalized)) return "미국 서비스업 구매관리자지수(PMI) 발표";
+  if (/durable goods/i.test(normalized)) return "미국 내구재 주문 발표";
+  if (/existing home sales/i.test(normalized)) return "미국 기존주택판매 발표";
+  if (/new home sales/i.test(normalized)) return "미국 신규주택판매 발표";
+  if (/housing starts|building permits/i.test(normalized)) return "미국 주택착공·건축허가 발표";
+  if (/industrial production|capacity utilization/i.test(normalized)) return "미국 산업생산·설비가동률 발표";
+  if (/import price|export price/i.test(normalized)) return "미국 수출입물가지수 발표";
+  if (/jolts|job openings/i.test(normalized)) return "미국 구인·이직 보고서(JOLTS) 발표";
+  if (/ism manufacturing/i.test(normalized)) return "미국 ISM 제조업지수 발표";
+  if (/ism services|ism non manufacturing/i.test(normalized)) return "미국 ISM 서비스업지수 발표";
+  if (/factory orders/i.test(normalized)) return "미국 공장주문 발표";
+  if (/construction spending/i.test(normalized)) return "미국 건설지출 발표";
+  if (/trade balance|international trade/i.test(normalized)) return "미국 무역수지 발표";
+  if (/pending home sales/i.test(normalized)) return "미국 잠정주택판매 발표";
+  if (/employment cost index|\beci\b/i.test(normalized)) return "미국 고용비용지수(ECI) 발표";
+  if (/productivity|unit labor costs?/i.test(normalized)) return "미국 생산성·단위노동비용 발표";
+  if (/testif|testimony/i.test(normalized)) return "미 연준 인사 공식 증언";
+  if (/speaks|speech|remarks/i.test(normalized)) return "미 연준 인사 공식 발언";
+  if (/[가-힣]/.test(value)) return value.replace(/\s+/g, " ").trim();
+  return normalized ? `미국 공식 경제지표 · ${normalized.slice(0, 120)}` : "미국 공식 경제지표 발표";
+}
+
+export function serializeOfficialNewsImpactEvent(event: NewsImpactEvent): NewsImpactEvent {
+  return {
+    id: event.id,
+    semanticKey: event.semanticKey,
+    market: event.market,
+    category: event.category,
+    targets: [...event.targets],
+    importance: event.importance,
+    version: event.version,
+    status: event.status,
+    occurredAt: event.occurredAt,
+    firstSeenAt: event.firstSeenAt,
+    updatedAt: event.updatedAt,
+    headline: event.headline,
+    factSummary: event.factSummary,
+    primarySource: {
+      id: event.primarySource.id,
+      name: event.primarySource.name,
+      kind: event.primarySource.kind,
+      url: event.primarySource.url,
+      publishedAt: event.primarySource.publishedAt
+    },
+    sourceCount: event.sourceCount,
+    ...(event.macroEventKey ? { macroEventKey: event.macroEventKey } : {}),
+    reaction: null
+  };
 }
 
 export function isNewsImpactAlertEligible(reaction: Pick<NewsImpactReaction, "classification" | "quality">) {

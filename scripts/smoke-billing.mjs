@@ -24,6 +24,7 @@ const files = {
   confirm: read("src/app/api/billing/confirm/route.ts"),
   mobile: read("src/lib/mobilePurchases.ts"),
   proPricing: read("src/components/ProPricingPanel.tsx"),
+  proPage: read("src/app/pro/page.tsx"),
   productEventStore: read("src/lib/server/productEventStore.ts"),
   adminHealth: read("src/app/api/admin/health/route.ts"),
   adminPushDiagnostics: read("src/app/api/admin/push-diagnostics/route.ts"),
@@ -117,6 +118,14 @@ includes(files.mobile, "attributionId: params.attributionId", "native purchase f
 includes(files.mobile, "attributionSource: params.attributionSource", "native purchase forwards the validated paywall source");
 includes(files.proPricing, "purchaseAttributionId", "paywall creates one purchase-attribution id per attempt");
 includes(files.proPricing, "attributionSource: eventSource", "Perpetual paywall source reaches verified billing sync");
+includes(files.proPricing, "https://play.google.com/store/apps/details?id=com.staronlabs.chartradar", "web paywall links to the released Android package");
+includes(files.proPricing, "isPlanCovered(plan)", "paywall guards entitlements already covered by the current account");
+includes(files.proPricing, "중복 결제를 시작하지 않았습니다", "covered plans fail closed before native checkout");
+includes(files.proPricing, "loginHref", "logged-out native checkout has a direct login continuation");
+includes(files.proPricing, "보던 분석으로 돌아가기", "successful purchase flow retains the originating analysis CTA");
+includes(files.proPage, "safeReturnTo", "paywall validates the analysis return path on the server");
+includes(files.proPage, "returnTo={returnTo}", "paywall forwards the validated analysis return path");
+excludes(files.proPricing, "Android 앱에서 결제 가능", "web checkout is not a dead-end message");
 includes(files.productEventStore, "selectRecentPurchaseAttribution", "server purchase attribution is bounded by provider, plan, and time");
 excludes(files.mobile, "Purchases.configure({ apiKey, appUserID", "RevenueCat is not reconfigured per user");
 

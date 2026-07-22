@@ -1,11 +1,12 @@
 import type { NormalizedNewsSourceItem } from "./normalizeNewsSourceItem";
 import { newsSourceById } from "./sourceCatalog";
+import { officialMacroHeadline } from "../../newsImpact";
 
 export interface OfficialEventPresentation {
   headline: string;
   factSummary: string;
   method: "deterministic" | "groq" | "gemini";
-  ruleVersion: "official-summary-v1";
+  ruleVersion: "official-summary-v3";
 }
 
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
@@ -31,37 +32,53 @@ function hasUnsupportedOfficialClaim(output: string, item: NormalizedNewsSourceI
 }
 const unsafeDecisionTerms = /(호재|악재|매수|매도|진입|롱|숏|수익 보장|상승할|하락할)/;
 
-function koreanMacroHeadline(title: string) {
-  if (/consumer price index|\bcpi\b/i.test(title)) return "미국 소비자물가지수(CPI) 발표";
-  if (/employment situation|nonfarm|payroll/i.test(title)) return "미국 고용보고서 발표";
-  if (/personal consumption expenditures|\bpce\b/i.test(title)) return "미국 개인소비지출(PCE) 물가 발표";
-  if (/gross domestic product|\bgdp\b/i.test(title)) return "미국 국내총생산(GDP) 발표";
-  if (/retail sales/i.test(title)) return "미국 소매판매 발표";
-  if (/jobless claims|unemployment insurance claims/i.test(title)) return "미국 신규 실업수당 청구 발표";
-  return /[가-힣]/.test(title) ? title : "미국 주요 경제지표 공식 발표";
+function filingMeaning(form: string) {
+  if (form === "8-K") return "주요 경영 사건 공시";
+  if (form === "6-K") return "해외기업 주요 사건 공시";
+  if (form === "10-Q") return "분기 보고서";
+  if (form === "10-K") return "연간 보고서";
+  return "공식 공시";
+}
+
+function officialTopic(title: string) {
+  if (/settle|settlement|합의/i.test(title)) return "합의";
+  if (/penalt|sanction|fine|벌금|과징금|제재/i.test(title)) return "제재";
+  if (/charg|complaint|enforcement|fraud|기소|고발/i.test(title)) return "법 집행";
+  if (/approv|authoriz|permit|승인|허가/i.test(title)) return "승인";
+  if (/propos|rulemaking|규정 제안/i.test(title)) return "규정 제안";
+  if (/adopt|final rule|최종 규정/i.test(title)) return "최종 규정";
+  if (/crypto|digital asset|bitcoin|ethereum|token|blockchain|디지털 자산|가상자산/i.test(title)) return "디지털 자산";
+  if (/exchange|clearing|market structure|trading|거래소|청산|시장 구조/i.test(title)) return "시장 제도·거래 인프라";
+  return null;
+}
+
+function originalTitleCopy(item: NormalizedNewsSourceItem) {
+  const title = item.originalTitle.replace(/\s+/g, " ").trim().slice(0, 240);
+  return title ? ` 공식 원문 제목은 “${title}”입니다.` : "";
 }
 
 function deterministicHeadline(item: NormalizedNewsSourceItem) {
   const eventKind = typeof item.structuredPayload.eventKind === "string" ? item.structuredPayload.eventKind : item.eventType;
-  if (item.category === "macro" && item.sourceId === "macro_official_store") return koreanMacroHeadline(item.originalTitle);
+  if (item.category === "macro" && item.sourceId === "macro_official_store") return officialMacroHeadline(item.originalTitle);
   if (eventKind === "fomc_minutes") return "미 연준, FOMC 회의록 공개";
+  if (eventKind === "fed_discount_rate_minutes") return "미 연준, 할인율 회의록 공개";
   if (eventKind === "fomc_implementation_note") return "미 연준, FOMC 통화정책 실행 지침 공개";
   if (eventKind === "fomc_policy_statement") return "미 연준, FOMC 통화정책 성명 공개";
   if (eventKind === "financial_stability_action") return "미 연준, 금융안정 관련 공식 조치 발표";
   if (item.category === "corporate_sector") {
     const symbol = typeof item.structuredPayload.symbol === "string" ? item.structuredPayload.symbol : "추적 기업";
     const form = typeof item.structuredPayload.form === "string" ? item.structuredPayload.form : "공시";
-    return `${symbol}, SEC ${form} 공식 공시 제출`;
+    return `${symbol}, SEC ${form} ${filingMeaning(form)} 제출`;
   }
   if (item.sourceId === "sec_press_releases") {
-    return eventKind === "us_crypto_regulation"
-      ? "미 SEC, 디지털 자산 규제·감독 관련 공식 발표"
-      : "미 SEC, 시장 제도·거래 인프라 관련 공식 발표";
+    const topic = officialTopic(item.originalTitle);
+    if (topic) return `미 SEC, ${topic} 관련 공식 발표`;
+    return eventKind === "us_crypto_regulation" ? "미 SEC, 디지털 자산 규제·감독 관련 공식 발표" : "미 SEC, 시장 제도·거래 인프라 관련 공식 발표";
   }
   if (item.sourceId === "cftc_releases") {
-    return eventKind === "us_crypto_regulation"
-      ? "미 CFTC, 디지털 자산 파생상품 관련 공식 발표"
-      : "미 CFTC, 파생상품 시장 인프라 관련 공식 발표";
+    const topic = officialTopic(item.originalTitle);
+    if (topic) return `미 CFTC, ${topic} 관련 공식 발표`;
+    return eventKind === "us_crypto_regulation" ? "미 CFTC, 디지털 자산 파생상품 관련 공식 발표" : "미 CFTC, 파생상품 시장 인프라 관련 공식 발표";
   }
   return /[가-힣]/.test(item.originalTitle) ? item.originalTitle : `${newsSourceById(item.sourceId)?.name ?? "공식 기관"} 공식 발표`;
 }
@@ -71,25 +88,27 @@ export function deterministicOfficialPresentation(item: NormalizedNewsSourceItem
   const details = typeof item.structuredPayload.details === "string" ? item.structuredPayload.details.trim() : "";
   let factSummary: string;
   if (item.category === "macro") {
-    factSummary = `${source}가 공식 경제지표를 발표했습니다.${details ? ` ${details}.` : ""}`;
+    const headline = deterministicHeadline(item);
+    factSummary = `${headline}를 공식 출처에서 확인했습니다.${details ? ` ${details}.` : ""}`;
   } else if (item.category === "corporate_sector") {
     const symbol = typeof item.structuredPayload.symbol === "string" ? item.structuredPayload.symbol : "추적 기업";
+    const companyName = typeof item.structuredPayload.companyName === "string" ? item.structuredPayload.companyName : symbol;
     const form = typeof item.structuredPayload.form === "string" ? item.structuredPayload.form : "공시";
-    factSummary = `${symbol}이 SEC에 ${form} 공식 공시를 제출했습니다.`;
+    factSummary = `${companyName}(${symbol})이 SEC에 ${form} ${filingMeaning(form)}를 제출했습니다.`;
   } else if (item.sourceId === "fed_press_releases") {
-    factSummary = "미 연준이 통화정책 또는 금융안정과 관련된 공식 발표를 공개했습니다.";
+    factSummary = `미 연준이 통화정책 또는 금융안정과 관련된 공식 발표를 공개했습니다.${originalTitleCopy(item)}`;
   } else if (item.sourceId === "sec_press_releases") {
-    factSummary = "미 SEC가 디지털 자산 규제 또는 미국 시장 제도와 관련된 공식 발표를 공개했습니다.";
+    factSummary = `미 SEC가 ${officialTopic(item.originalTitle) ?? "디지털 자산 규제·미국 시장 제도"} 관련 공식 발표를 공개했습니다.${originalTitleCopy(item)}`;
   } else if (item.sourceId === "cftc_releases") {
-    factSummary = "미 CFTC가 디지털 자산 파생상품 또는 거래·청산 인프라와 관련된 공식 발표를 공개했습니다.";
+    factSummary = `미 CFTC가 ${officialTopic(item.originalTitle) ?? "디지털 자산 파생상품·거래 인프라"} 관련 공식 발표를 공개했습니다.${originalTitleCopy(item)}`;
   } else {
-    factSummary = `${source}가 공식 발표를 공개했습니다.`;
+    factSummary = `${source}가 공식 발표를 공개했습니다.${originalTitleCopy(item)}`;
   }
   return {
     headline: deterministicHeadline(item).slice(0, 180),
     factSummary: factSummary.slice(0, 600),
     method: "deterministic",
-    ruleVersion: "official-summary-v1"
+    ruleVersion: "official-summary-v3"
   };
 }
 
@@ -209,8 +228,8 @@ export async function officialEventPresentation(item: NormalizedNewsSourceItem):
   const provider = process.env.NEWS_TRANSLATION_PROVIDER?.trim().toLowerCase();
   if (provider !== "groq" && provider !== "gemini") return fallback;
   const groq = provider === "gemini" ? null : await requestGroq(item);
-  if (groq) return { ...groq, method: "groq", ruleVersion: "official-summary-v1" };
+  if (groq) return { ...groq, method: "groq", ruleVersion: "official-summary-v3" };
   const gemini = await requestGemini(item);
-  if (gemini) return { ...gemini, method: "gemini", ruleVersion: "official-summary-v1" };
+  if (gemini) return { ...gemini, method: "gemini", ruleVersion: "official-summary-v3" };
   return fallback;
 }

@@ -3,6 +3,7 @@ export type NewsImpactMode = "off" | "shadow" | "on";
 export interface NewsImpactRuntimePolicy {
   mode: NewsImpactMode;
   collect: boolean;
+  readOfficialFacts: boolean;
   expose: boolean;
   mutate: boolean;
   push: boolean;
@@ -16,6 +17,14 @@ export function newsImpactMode(value = process.env.NEWS_IMPACT_V1): NewsImpactMo
 
 export function isNewsImpactCollectionEnabled(mode = newsImpactMode()) {
   return mode === "shadow" || mode === "on";
+}
+
+export function isOfficialNewsFeedEnabled(mode = newsImpactMode()) {
+  return mode === "shadow" || mode === "on";
+}
+
+export function isNewsImpactReadEnabled(mode = newsImpactMode()) {
+  return mode === "on";
 }
 
 export function isNewsImpactUiEnabled(mode = newsImpactMode()) {
@@ -34,6 +43,7 @@ export function newsImpactRuntimePolicy(
   return {
     mode,
     collect: mode === "shadow" || expose,
+    readOfficialFacts: mode === "shadow" || expose,
     expose,
     mutate: expose,
     push: expose && pushEnabled

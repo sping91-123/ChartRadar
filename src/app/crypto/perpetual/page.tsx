@@ -2,7 +2,7 @@ import { MajorsApp } from "@/components/MajorsApp";
 import { resolveMajorAsset } from "@/lib/majorAssetRoute";
 import { isSnapshotId } from "@/lib/server/perpetualDecisionSource";
 import { perpetualRevenueCoreMode } from "@/lib/server/perpetualRevenueCore";
-import { isNewsImpactUiEnabled, newsImpactMode } from "@/lib/server/newsImpactMode";
+import { isOfficialNewsFeedEnabled, newsImpactMode } from "@/lib/server/newsImpactMode";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -12,6 +12,7 @@ export default async function CryptoPerpetualPage({ searchParams }: { searchPara
   const rawSource = Array.isArray(params.source) ? params.source[0] : params.source;
   const rawAttribution = Array.isArray(params.attribution) ? params.attribution[0] : params.attribution;
   const rawImpact = Array.isArray(params.impact) ? params.impact[0] : params.impact;
+  const rawMonitor = Array.isArray(params.monitor) ? params.monitor[0] : params.monitor;
   return (
     <MajorsApp
       initialAsset={resolveMajorAsset(params)}
@@ -19,8 +20,9 @@ export default async function CryptoPerpetualPage({ searchParams }: { searchPara
       initialSource={rawSource === "home" || rawSource === "alert" || rawSource === "news" ? rawSource : null}
       initialAttributionId={isSnapshotId(rawAttribution) ? rawAttribution : null}
       initialImpactId={isSnapshotId(rawImpact) ? rawImpact : null}
+      initialMonitorId={isSnapshotId(rawMonitor) ? rawMonitor : null}
       revenueCoreMode={perpetualRevenueCoreMode()}
-      newsImpactEnabled={isNewsImpactUiEnabled(newsImpactMode())}
+      newsImpactEnabled={isOfficialNewsFeedEnabled(newsImpactMode())}
     />
   );
 }

@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   if (!market) return privateJson({ error: "market은 crypto 또는 global이어야 합니다." }, { status: 400 });
   const { entitlement, capabilities } = await access(request, market);
   if (!entitlement.userId) return privateJson({ error: "로그인이 필요합니다.", enabled: false, capabilities }, { status: 401 });
-  if (!isNewsImpactUiEnabled(newsImpactMode())) return privateJson({ error: "뉴스 임팩트가 아직 공개되지 않았습니다." }, { status: 409 });
+  if (!isNewsImpactUiEnabled(newsImpactMode())) return privateJson({ error: "공식 뉴스 영향 알림이 아직 준비되지 않았습니다." }, { status: 409 });
   if (!isSupabaseAdminConfigured()) return privateJson({ error: "알림 설정 저장소가 준비되지 않았습니다." }, { status: 503 });
   const rows = await supabaseAdminRest<Array<{ enabled: boolean }>>(
     `news_alert_preferences?select=enabled&user_id=eq.${entitlement.userId}&market=eq.${market}&limit=1`
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  if (!isNewsImpactUiEnabled(newsImpactMode())) return privateJson({ error: "뉴스 임팩트가 아직 공개되지 않았습니다." }, { status: 409 });
+  if (!isNewsImpactUiEnabled(newsImpactMode())) return privateJson({ error: "공식 뉴스 영향 알림이 아직 준비되지 않았습니다." }, { status: 409 });
   let body: { market?: unknown; enabled?: unknown };
   try { body = await request.json(); } catch { return privateJson({ error: "요청 형식이 올바르지 않습니다." }, { status: 400 }); }
   const market = normalizeNewsMarket(typeof body.market === "string" ? body.market : null);
@@ -41,7 +41,7 @@ export async function PATCH(request: Request) {
   const { entitlement, capabilities } = await access(request, market);
   const disabling = body.enabled === false;
   if (!entitlement.userId) return privateJson({ error: "로그인이 필요합니다." }, { status: 401 });
-  if (!disabling && !capabilities.canEnableImpactAlerts) return privateJson({ error: "뉴스 임팩트 알림은 해당 시장 Pro에서 사용할 수 있습니다.", upgradePath: "/pro" }, { status: 403 });
+  if (!disabling && !capabilities.canEnableImpactAlerts) return privateJson({ error: "공식 뉴스 영향 알림은 해당 시장 Pro에서 사용할 수 있습니다.", upgradePath: "/pro" }, { status: 403 });
   if (!isSupabaseAdminConfigured()) return privateJson({ error: "알림 설정 저장소가 준비되지 않았습니다." }, { status: 503 });
   const rows = await supabaseAdminRpc<Array<{ enabled: boolean }>>("set_news_alert_preference", {
     p_user_id: entitlement.userId,

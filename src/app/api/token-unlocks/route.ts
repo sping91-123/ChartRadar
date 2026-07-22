@@ -58,10 +58,23 @@ export async function GET(request: Request) {
     cache = { report, cachedAt };
     return NextResponse.json({ report: withLimit(report, limit), cachedAt, cached: false });
   } catch (error) {
-    console.error("[api/token-unlocks] error:", error);
+    console.warn("[api/token-unlocks] source unavailable:", error instanceof Error ? error.message : "unknown_error");
     if (cache) {
       return NextResponse.json({ report: withLimit(cache.report, limit), cachedAt: cache.cachedAt, cached: true, stale: true });
     }
-    return NextResponse.json({ error: "언락 데이터를 잠시 확인하지 못했습니다." }, { status: 500 });
+    const unavailableReport: TokenUnlockReport = {
+      items: [],
+      totalUnlockValueUsd: 0,
+      highestPressure: null,
+      updatedAt: Date.now(),
+      source: "tokenomics-public-page"
+    };
+    return NextResponse.json({
+      report: unavailableReport,
+      cachedAt: unavailableReport.updatedAt,
+      cached: false,
+      unavailable: true,
+      warning: "언락 원문 갱신이 지연되어 현재 판단에는 반영하지 않습니다."
+    });
   }
 }

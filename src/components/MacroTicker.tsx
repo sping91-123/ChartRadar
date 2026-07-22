@@ -12,6 +12,7 @@ import { StatusPill } from "@/components/ui/DesignPrimitives";
 const RECENT_RELEASE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const COMPACT_UPCOMING_WINDOW_MS = 24 * 60 * 60 * 1000;
 const PREVIOUS_RELEASE_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+const MACRO_CALENDAR_REQUEST_TIMEOUT_MS = 8_000;
 const fallbackCalendar = getMacroCalendarFallbackPayload();
 
 const emptyValuePatterns = [
@@ -191,6 +192,16 @@ function numericMacroValue(value?: string) {
   return Number.isFinite(parsed) ? parsed * multiplier : null;
 }
 
+function macroValueDimension(value?: string) {
+  if (isEmptyValue(value)) return null;
+  const normalized = value!.replace(/,/g, "").trim();
+  if (normalized.includes(";") || /출처별 .* 상이/.test(normalized)) return "mixed";
+  if (normalized.includes("%")) return "percent";
+  if (/\$\s*-?\d/.test(normalized)) return "currency";
+  if (/-?\d+(?:\.\d+)?\s*[KMBT]\b/i.test(normalized)) return "scaled-count";
+  return "plain";
+}
+
 function macroSurprise(actual: number, expected: number) {
   const diff = actual - expected;
   if (Math.abs(diff) < 1e-9) return "same";
@@ -199,9 +210,14 @@ function macroSurprise(actual: number, expected: number) {
 
 function cryptoImpactRead(item: MacroEventItem): "호재" | "악재" | "중립" | null {
   if (!hasReleaseTimePassed(item) || isDocumentEvent(item)) return null;
+  if (item.actualProvenance !== "official") return null;
 
-  const actual = numericMacroValue(item.actualValue ?? item.actual);
-  const expected = numericMacroValue(item.consensusValue ?? item.forecast);
+  const actualText = item.actualValue ?? item.actual;
+  const expectedText = item.consensusValue ?? item.forecast;
+  if (item.consensusProvenance === "mixed") return null;
+  if (macroValueDimension(actualText) !== macroValueDimension(expectedText)) return null;
+  const actual = numericMacroValue(actualText);
+  const expected = numericMacroValue(expectedText);
   if (actual === null || expected === null) return null;
 
   const lower = item.label.toLowerCase();
@@ -276,6 +292,20 @@ function macroLabel(label: string) {
 function macroSourceNote(note: string) {
   if (note.includes("BLS 공식 통계")) return note;
   return `${note} BLS 공식 통계, Fed, DOL 등 공개 자료를 함께 확인합니다.`;
+}
+
+function compactSourceUpdatedAt(value?: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(date);
 }
 
 type PriceMacroFamily = "core-cpi" | "cpi" | "core-ppi" | "ppi";
@@ -511,7 +541,7 @@ function MacroNewsItem({ item, sectionLabel, subdued = false, released = false }
       <p className="mt-1.5 min-w-0 whitespace-normal text-xs leading-relaxed text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]">{item.marketImpact}</p>
       {sourceUrl ? (
         <a href={sourceUrl} target="_blank" rel="noreferrer" className="mt-1.5 inline-flex max-w-full items-center gap-1 text-[11px] font-semibold text-ui-brand hover:underline">
-          <span className="truncate">{item.officialUrl ? "공식 출처" : "출처"}</span>
+          <span className="truncate">{item.actualProvenance === "official" ? "공식 발표값 출처" : item.officialUrl ? "공식 일정 출처" : "출처"}</span>
           <ExternalLink size={11} className="shrink-0" aria-hidden />
         </a>
       ) : null}
@@ -535,7 +565,7 @@ export function MacroTicker({
   const [calendarRetryKey, setCalendarRetryKey] = useState(0);
   const [isPastExpanded, setIsPastExpanded] = useState(false);
   const [isUpcomingExpanded, setIsUpcomingExpanded] = useState(false);
-  const calendarItems = compact && !hasLoadedCalendar ? [] : calendar.items;
+  const calendarItems = calendar.items;
   const displayItems = getDisplayCalendarItems(calendarItems);
   const upcomingItems = getUpcomingItems(displayItems);
   const releasedItems = getRecentReleasedItems(displayItems);
@@ -545,8 +575,28 @@ export function MacroTicker({
   const nearestUpcoming = upcomingItems[0];
   const featuredUpcomingItems = upcomingItems.slice(0, isUpcomingExpanded ? 8 : 2);
   const laterUpcomingItems = upcomingItems.slice(1, 7);
-  const isNewsMacroReport = compact && pathname === "/news";
+  const isNewsMacroReport = compact && (pathname === "/news" || pathname === "/crypto/news");
   const homePriorityItem = homePriorityAware ? getHomePriorityItem(displayItems) : undefined;
+  const homeVisibleItems = homePriorityAware ? displayItems.filter(isVisibleCompactImpact) : [];
+  const homeNearestUpcoming = homePriorityAware ? getUpcomingItems(homeVisibleItems)[0] : undefined;
+  const homePreviousRelease = homePriorityAware ? getPreviousReleasedItems(homeVisibleItems)[0] : undefined;
+  const calendarWarning = calendar.warning?.trim();
+  const sourceUpdatedAtLabel = compactSourceUpdatedAt(calendar.sourceUpdatedAt ?? calendar.updatedAt);
+  const isLastKnownCalendar = calendar.isStale === true;
+  const isFallbackCalendar = calendar.cacheMode === "fallback";
+  const calendarWarningText = calendarWarning
+    ? isLastKnownCalendar
+      ? `${calendarWarning}${sourceUpdatedAtLabel ? ` 마지막 정상 확인: ${sourceUpdatedAtLabel}` : ""}`
+      : isFallbackCalendar
+        ? `${calendarWarning} 예비 일정으로 표시하며 자동으로 다시 확인합니다.`
+        : calendarWarning
+    : null;
+  const homeCalendarTrustLabel = isLastKnownCalendar
+    ? `마지막 정상${sourceUpdatedAtLabel ? ` · ${sourceUpdatedAtLabel}` : ""}`
+    : isFallbackCalendar ? "예비 일정 · 재시도 중"
+    : calendarWarning ? "일부 공식값 확인 중"
+    : displayItems.some((item) => item.isOfficial) ? "공식·공개 경제 일정" : "공개 경제 일정";
+  const homeCalendarTrustClass = calendarWarning ? "text-amber-300" : "text-ui-subtle";
 
   useEffect(() => {
     let cancelled = false;
@@ -560,7 +610,10 @@ export function MacroTicker({
     const loadCalendar = async () => {
       if (!cancelled) setCalendarLoadFailed(false);
       try {
-        const response = await fetch(`/api/macro-calendar?market=${market}&ts=${Date.now()}`, { cache: "no-store" });
+        const response = await fetch(`/api/macro-calendar?market=${market}`, {
+          cache: "no-store",
+          signal: AbortSignal.timeout(MACRO_CALENDAR_REQUEST_TIMEOUT_MS)
+        });
         if (response.ok) {
           const payload = (await response.json()) as MacroCalendarPayload;
           if (!cancelled) {
@@ -602,6 +655,11 @@ export function MacroTicker({
 
     return (
       <section className="space-y-2">
+        {calendarWarningText ? (
+          <div className="rounded-ui border border-amber-400/25 bg-amber-400/[0.06] px-3 py-2 text-[11px] font-semibold leading-5 text-amber-200" role="status">
+            {calendarWarningText}
+          </div>
+        ) : null}
         <div className="grid gap-2 md:grid-cols-2">
           {previousRelease ? (
             <MacroNewsItem item={previousRelease} sectionLabel="직전 발표" />
@@ -648,14 +706,16 @@ export function MacroTicker({
   }
 
   if (compact) {
-    const item = homePriorityItem ?? getCompactItem(displayItems);
+    const item = homePriorityAware
+      ? homePriorityItem ?? homeNearestUpcoming ?? homePreviousRelease
+      : getCompactItem(displayItems);
     if (!item) {
       return (
         <section className="space-y-1.5" aria-labelledby={homePriorityAware ? "home-macro-title" : undefined}>
           {homePriorityAware ? (
             <div className="flex items-center justify-between gap-2 px-1">
               <h2 id="home-macro-title" className="inline-flex items-center gap-1.5 text-xs font-black text-ui-text"><CalendarClock size={14} className="text-ui-brand" aria-hidden /> 오늘 거래 전 확인</h2>
-              <span className="text-[10px] font-semibold text-ui-subtle">공식 경제 일정</span>
+              <span className={`text-[10px] font-semibold ${homeCalendarTrustClass}`} title={calendarWarning}>{homeCalendarTrustLabel}</span>
             </div>
           ) : null}
           <div className="flex min-h-12 items-center justify-between gap-3 rounded-ui-lg bg-ui-panel px-3 py-2 text-xs font-bold leading-5 text-slate-500 [word-break:keep-all]">
@@ -682,7 +742,7 @@ export function MacroTicker({
             <h2 id="home-macro-title" className="inline-flex items-center gap-1.5 text-xs font-black text-ui-text">
               <CalendarClock size={14} className="text-ui-brand" aria-hidden /> 오늘 거래 전 확인
             </h2>
-            <span className="text-[10px] font-semibold text-ui-subtle">공식 경제 일정</span>
+            <span className={`text-[10px] font-semibold ${homeCalendarTrustClass}`} title={calendarWarning}>{homeCalendarTrustLabel}</span>
           </div>
         ) : null}
         <Link href={href} className="group flex min-h-10 items-start gap-1.5 rounded-ui-lg bg-ui-panel px-2.5 py-2 transition hover:bg-ui-elevated">
@@ -712,12 +772,28 @@ export function MacroTicker({
           </div>
           <ChevronRight size={14} className="shrink-0 text-slate-600 transition group-hover:text-accent-blue" aria-hidden />
         </Link>
+        {homePriorityAware && !isReleased && homePreviousRelease && homePreviousRelease.id !== item.id ? (
+          <Link href={href} className="flex min-h-8 items-center justify-between gap-2 rounded-ui-lg bg-ui-inset/35 px-2.5 py-1.5 text-[10.5px] font-semibold text-ui-muted transition hover:bg-ui-inset">
+            <span className="min-w-0 truncate"><strong className="text-ui-text">직전 발표</strong> · {macroLabel(homePreviousRelease.label)} · 실제 {displayActual(homePreviousRelease) || "확인 중"}</span>
+            <span className="shrink-0 text-ui-subtle">{homePreviousRelease.dateKst}</span>
+          </Link>
+        ) : null}
+        {!homePriorityAware && calendarWarningText ? (
+          <p className="rounded-ui bg-amber-400/[0.06] px-2.5 py-1.5 text-[10.5px] font-semibold leading-4 text-amber-200" role="status">
+            {calendarWarningText}
+          </p>
+        ) : null}
       </section>
     );
   }
 
   return (
     <section className="overflow-hidden">
+      {calendarWarningText ? (
+        <div className="mb-2 rounded-ui border border-amber-400/25 bg-amber-400/[0.06] px-3 py-2 text-[11px] font-semibold leading-5 text-amber-200" role="status">
+          {calendarWarningText}
+        </div>
+      ) : null}
       <div className="grid gap-2">
         <div className="rounded-ui border border-amber-400/20 bg-amber-400/[0.05] p-2">
           <button

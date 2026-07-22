@@ -5,8 +5,9 @@ import { isUuid } from "@/lib/perpetualMonitor";
 import { getMacroCalendarPayload } from "@/lib/macroCalendar";
 import type { MacroEventItem } from "@/data/macroEvents";
 import { newsImpactClassificationLabel } from "@/lib/newsImpactPresentation";
+import { cleanPublicNewsText } from "@/lib/server/news/newsImpactApi";
 import { readNewsImpactEvents } from "@/lib/server/news/newsImpactStore";
-import { isNewsImpactUiEnabled, newsImpactMode } from "@/lib/server/newsImpactMode";
+import { isNewsImpactReadEnabled, newsImpactMode } from "@/lib/server/newsImpactMode";
 import { fetchStockCandles, findStockSymbol } from "@/lib/stockMarket";
 import { rateLimit } from "@/lib/server/rateLimit";
 import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
@@ -651,16 +652,24 @@ function impactTone(classification: string, riskEffect: string | undefined): Pre
 }
 
 async function buildNewsPressure(requestedEventId?: string | null, canSeeProDetail = false) {
-  if (!isNewsImpactUiEnabled(newsImpactMode())) {
+  if (!isNewsImpactReadEnabled(newsImpactMode())) {
     return { title: "공식 사건 임팩트", summary: "공식 사건과 시장 반응 연결을 검증 중입니다.", tone: "mixed" as PressureTone, items: [] };
   }
   try {
-    const events = await readNewsImpactEvents({
+    const lookbackDays = canSeeProDetail ? 30 : requestedEventId ? 7 : 1;
+    const initialEvents = await readNewsImpactEvents({
       market: "global",
       eventId: requestedEventId,
-      since: new Date(Date.now() - (canSeeProDetail ? 30 : 1) * 24 * 60 * 60_000).toISOString(),
+      since: new Date(Date.now() - lookbackDays * 24 * 60 * 60_000).toISOString(),
       limit: requestedEventId ? 1 : 3
     });
+    const events = !canSeeProDetail && !requestedEventId && initialEvents.length === 0
+      ? await readNewsImpactEvents({
+          market: "global",
+          since: new Date(Date.now() - 7 * 24 * 60 * 60_000).toISOString(),
+          limit: 1
+        })
+      : initialEvents;
     const items = events.map((event) => ({
       eventId: event.id,
       reactionId: event.reaction?.reactionId ?? null,
@@ -670,14 +679,14 @@ async function buildNewsPressure(requestedEventId?: string | null, canSeeProDeta
       title: event.headline,
       originalTitle: event.headline,
       tone: impactTone(event.reaction?.classification ?? "pending", event.reaction?.riskEffect),
-      summary: event.reaction?.reactionSummary ?? "공식 발표 이후 시장 반응을 확인 중입니다."
+      summary: cleanPublicNewsText(event.reaction?.reactionSummary ?? "공식 발표 이후 시장 반응을 확인 중입니다.")
     }));
     const lead = events[0];
     const tone = items[0]?.tone ?? "mixed";
     const label = lead?.reaction ? newsImpactClassificationLabel(lead.reaction.classification) : "반응 확인 중";
     return {
       title: `공식 사건 임팩트 · ${label}`,
-      summary: lead?.reaction?.reactionSummary ?? (lead ? "공식 발표 이후 시장 반응을 확인 중입니다." : "현재 판단을 바꿀 공식 이슈가 없습니다."),
+      summary: cleanPublicNewsText(lead?.reaction?.reactionSummary ?? (lead ? "공식 발표 이후 시장 반응을 확인 중입니다." : "현재 판단을 바꿀 공식 이슈가 없습니다.")),
       tone,
       items
     };
@@ -822,7 +831,7 @@ export async function GET(request: Request) {
   const responsePayload: MarketBoardPayload = {
     capabilities: {
       canSeeProDetail: entitlement.isPaid,
-      newsImpactEnabled: isNewsImpactUiEnabled(newsImpactMode())
+      newsImpactEnabled: isNewsImpactReadEnabled(newsImpactMode())
     },
     updatedAt: new Date().toISOString(),
     headline,

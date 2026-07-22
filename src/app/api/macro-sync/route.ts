@@ -26,9 +26,9 @@ export async function GET(request: Request) {
   const result = await runMacroSync();
   return NextResponse.json(
     {
-      ok: true,
+      ok: result.status !== "degraded",
       ...result
     },
-    { headers: noStoreHeaders }
+    { status: result.status === "degraded" ? 503 : 200, headers: noStoreHeaders }
   );
 }

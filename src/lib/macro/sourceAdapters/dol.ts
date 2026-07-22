@@ -5,8 +5,12 @@ import { type MacroSourceEnrichment } from "@/lib/macro/types";
 
 const DOL_CLAIMS_PAGE_URL = "https://oui.doleta.gov/unemploy/claims.asp";
 const DOL_CLAIMS_REPORT_URL = "https://oui.doleta.gov/unemploy/wkclaims/report.asp";
-const JOBLESS_CLAIMS_MATCHER =
-  /신규\s*실업수당\s*청구|initial\s+jobless\s+claims|initial\s+claims|jobless\s+claims|unemployment\s+claims|unemployment\s+insurance\s+weekly\s+claims|continuing\s+claims/i;
+const INITIAL_CLAIMS_MATCHER =
+  /^(?!.*(?:continuing|continued|계속\s*실업수당|4[-\s]?week|four[-\s]?week|4주)).*(?:신규\s*실업수당\s*청구|initial\s+jobless\s+claims|initial\s+claims|jobless\s+claims|unemployment\s+claims|unemployment\s+insurance\s+weekly\s+claims)/i;
+const CONTINUING_CLAIMS_MATCHER = /continuing\s+(?:jobless\s+|unemployment\s+)?claims|continued\s+claims|계속\s*실업수당/i;
+const FOUR_WEEK_AVERAGE_CLAIMS_MATCHER = /(?:4[-\s]?week|four[-\s]?week|4주).*(?:average|평균).*(?:claims|실업수당)|(?:claims|실업수당).*(?:4[-\s]?week|four[-\s]?week|4주).*(?:average|평균)/i;
+
+export type DolClaimsKind = "initial" | "continuing" | "four_week_average";
 
 type DolClaimsWeek = {
   weekEndedIso: string;
@@ -16,6 +20,15 @@ type DolClaimsWeek = {
   initialClaimsFourWeekAverage: number | null;
   continuedClaimsSa: number | null;
 };
+
+export function dolClaimsValueForKind(
+  kind: DolClaimsKind,
+  week: Pick<DolClaimsWeek, "initialClaimsSa" | "continuedClaimsSa" | "initialClaimsFourWeekAverage">
+) {
+  if (kind === "initial") return week.initialClaimsSa;
+  if (kind === "continuing") return week.continuedClaimsSa;
+  return week.initialClaimsFourWeekAverage;
+}
 
 const parser = new XMLParser({
   ignoreAttributes: true,
@@ -34,9 +47,11 @@ function parseClaimsNumber(value: unknown) {
   return Number.isFinite(numberValue) ? numberValue : null;
 }
 
-function formatClaimsK(value: number | null) {
+export function formatDolClaimsK(value: number | null) {
   if (value === null) return undefined;
-  return `${Math.round(value / 1000)}K`;
+  const thousands = value / 1000;
+  const precise = Number(thousands.toFixed(2));
+  return `${precise.toLocaleString("en-US", { maximumFractionDigits: 2 })}K`;
 }
 
 function parseDolDate(value: unknown) {
@@ -54,12 +69,20 @@ function parseDolDate(value: unknown) {
   };
 }
 
-function expectedWeekEndedMs(releaseAt: string) {
+function previousSaturdayMs(releaseAt: string) {
   const releaseMs = Date.parse(releaseAt);
   if (!Number.isFinite(releaseMs)) return null;
   const date = new Date(releaseMs);
-  date.setUTCDate(date.getUTCDate() - 5);
+  const daysSinceSaturday = (date.getUTCDay() + 1) % 7 || 7;
+  date.setUTCDate(date.getUTCDate() - daysSinceSaturday);
   return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
+export function expectedDolWeekEndedIso(kind: DolClaimsKind, releaseAt: string) {
+  const initialWeekMs = previousSaturdayMs(releaseAt);
+  if (initialWeekMs === null) return null;
+  const expectedMs = kind === "continuing" ? initialWeekMs - 7 * 24 * 60 * 60 * 1000 : initialWeekMs;
+  return new Date(expectedMs).toISOString();
 }
 
 function sameUtcDate(a: number | null, b: number | null) {
@@ -114,9 +137,15 @@ async function fetchDolClaimsWeeks(year: number) {
   return weeks;
 }
 
-function baseEnrichment(staleReason?: string): MacroSourceEnrichment {
+function claimsMatcher(kind: DolClaimsKind) {
+  if (kind === "initial") return INITIAL_CLAIMS_MATCHER;
+  if (kind === "continuing") return CONTINUING_CLAIMS_MATCHER;
+  return FOUR_WEEK_AVERAGE_CLAIMS_MATCHER;
+}
+
+function baseEnrichment(kind: DolClaimsKind, staleReason?: string): MacroSourceEnrichment {
   return {
-    matcher: JOBLESS_CLAIMS_MATCHER,
+    matcher: claimsMatcher(kind),
     eventType: "numeric_release",
     source: "DOL",
     sourceType: "official_page",
@@ -128,72 +157,88 @@ function baseEnrichment(staleReason?: string): MacroSourceEnrichment {
   };
 }
 
-function targetJoblessItems(items: MacroEventItem[]) {
-  return items.filter((item) => JOBLESS_CLAIMS_MATCHER.test(`${item.label} ${item.title ?? ""}`));
+function targetJoblessItems(items: MacroEventItem[], kind: DolClaimsKind) {
+  const matcher = claimsMatcher(kind);
+  return items.filter((item) => matcher.test(`${item.label} ${item.title ?? ""}`));
 }
 
-function selectReleasedTarget(items: MacroEventItem[]) {
-  const now = Date.now();
-  return targetJoblessItems(items)
-    .filter((item) => Date.parse(item.releaseAt) <= now)
+function selectReleasedTarget(items: MacroEventItem[], kind: DolClaimsKind, nowMs: number) {
+  return targetJoblessItems(items, kind)
+    .filter((item) => Date.parse(item.releaseAt) <= nowMs)
     .sort((a, b) => Date.parse(b.releaseAt) - Date.parse(a.releaseAt))[0];
 }
 
-export async function fetchDolOfficialEnrichments(items: MacroEventItem[]): Promise<MacroSourceEnrichment[]> {
-  const targetItems = targetJoblessItems(items);
-  if (targetItems.length === 0) return [];
+export async function fetchDolOfficialEnrichments(
+  items: MacroEventItem[],
+  options: { nowMs?: number } = {}
+): Promise<MacroSourceEnrichment[]> {
+  const nowMs = options.nowMs ?? Date.now();
+  const requestedKinds = (["initial", "continuing", "four_week_average"] as const).filter((kind) => targetJoblessItems(items, kind).length > 0);
+  if (requestedKinds.length === 0) return [];
+  const releasedKinds = requestedKinds.filter((kind) => Boolean(selectReleasedTarget(items, kind, nowMs)));
+  // The DOL file contains the latest published week, not a forecast for a future release.
+  // Without a released row to bind it to, copying that value would contaminate the next event.
+  if (releasedKinds.length === 0) return [];
 
-  const target = selectReleasedTarget(items);
-  const years = new Set<number>([new Date().getUTCFullYear()]);
+  const years = new Set<number>([new Date(nowMs).getUTCFullYear()]);
 
-  for (const item of targetItems) {
-    const scheduledMs = Date.parse(item.releaseAt);
-    if (Number.isFinite(scheduledMs)) years.add(new Date(scheduledMs).getUTCFullYear());
+  for (const kind of requestedKinds) {
+    for (const item of targetJoblessItems(items, kind)) {
+      const scheduledMs = Date.parse(item.releaseAt);
+      if (Number.isFinite(scheduledMs)) years.add(new Date(scheduledMs).getUTCFullYear());
+      const reportingPeriod = expectedDolWeekEndedIso(kind, item.releaseAt);
+      if (reportingPeriod) years.add(new Date(reportingPeriod).getUTCFullYear());
+    }
   }
 
   try {
     const weeks = (await Promise.all(Array.from(years).map((year) => fetchDolClaimsWeeks(year)))).flat();
-    const weeksWithActual = weeks.filter((week) => week.initialClaimsSa !== null);
-    const latestWeek = weeksWithActual.at(-1);
-    if (!latestWeek) {
-      return [baseEnrichment("DOL official weekly claims data did not return a usable latest week.")];
-    }
+    const observedAt = new Date().toISOString();
+    const enrichments = releasedKinds.map((kind) => {
+      const target = selectReleasedTarget(items, kind, nowMs);
+      const weeksWithActual = weeks.filter((week) => dolClaimsValueForKind(kind, week) !== null);
+      const latestWeek = weeksWithActual.at(-1);
+      if (!latestWeek) return null;
 
-    const expectedWeek = target ? expectedWeekEndedMs(target.releaseAt) : null;
-    const matchedWeek = weeksWithActual.find((week) => sameUtcDate(week.weekEndedMs, expectedWeek)) ?? latestWeek;
-    const previousWeek = weeksWithActual.filter((week) => week.weekEndedMs < matchedWeek.weekEndedMs).at(-1);
-    const actualValue = formatClaimsK(matchedWeek.initialClaimsSa);
+      const expectedWeekIso = target ? expectedDolWeekEndedIso(kind, target.releaseAt) : null;
+      const expectedWeek = expectedWeekIso ? Date.parse(expectedWeekIso) : null;
+      const matchedWeek = weeksWithActual.find((week) => sameUtcDate(week.weekEndedMs, expectedWeek));
+      if (!matchedWeek) return null;
+      const previousWeek = weeksWithActual.filter((week) => week.weekEndedMs < matchedWeek.weekEndedMs).at(-1);
+      const actualValue = formatDolClaimsK(dolClaimsValueForKind(kind, matchedWeek));
+      if (!actualValue) return null;
+      const previousValue = formatDolClaimsK(previousWeek ? dolClaimsValueForKind(kind, previousWeek) : null);
 
-    if (!actualValue) {
-      return [baseEnrichment("DOL official weekly claims data was available, but the seasonally adjusted actual value was not parsed.")];
-    }
-
-    return [
-      {
-        ...baseEnrichment(),
-        sourceType: "official_api",
+      return {
+        ...baseEnrichment(kind),
+        sourceType: "official_api" as const,
         officialUrl: DOL_CLAIMS_REPORT_URL,
         actualValue,
-        previousValue: formatClaimsK(previousWeek?.initialClaimsSa ?? null),
+        actualProvenance: "official" as const,
+        actualProvider: "DOL" as const,
+        actualSourceUrl: DOL_CLAIMS_REPORT_URL,
+        actualReportingPeriod: matchedWeek.weekEndedIso,
+        actualObservedAt: observedAt,
+        previousValue,
+        previousProvenance: previousValue ? "official" as const : undefined,
         unit: "K",
         releasedAt: target?.releaseAt,
-        confidence: sameUtcDate(matchedWeek.weekEndedMs, expectedWeek) ? 0.95 : 0.86,
+        confidence: 0.95,
         rawPayload: {
+          kind,
           weekEndedIso: matchedWeek.weekEndedIso,
           initialClaimsSa: matchedWeek.initialClaimsSa,
           initialClaimsNsa: matchedWeek.initialClaimsNsa,
           initialClaimsFourWeekAverage: matchedWeek.initialClaimsFourWeekAverage,
           continuedClaimsSa: matchedWeek.continuedClaimsSa
         }
-      }
-    ];
+      };
+    });
+    return enrichments.filter(
+      (enrichment): enrichment is NonNullable<(typeof enrichments)[number]> => enrichment !== null
+    );
   } catch (error) {
-    return [
-      baseEnrichment(
-        error instanceof Error
-          ? `DOL official weekly claims fetch failed: ${error.message}`
-          : "DOL official weekly claims fetch failed."
-      )
-    ];
+    void error;
+    return [];
   }
 }

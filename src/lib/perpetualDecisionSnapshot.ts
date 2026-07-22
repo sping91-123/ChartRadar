@@ -2,7 +2,7 @@ import type { Candle, DirectionState, MarketRegime, TimeframeAnalysis } from "@/
 import type { LargeTradeFlowReport, LargeTradeSide } from "@/lib/largeTradeFlow";
 import type { LiquidationPressureReport, LiquidationPressureSide } from "@/lib/liquidationPressure";
 
-export const perpetualDecisionEngineVersion = "perpetual-v1.1.0";
+export const perpetualDecisionEngineVersion = "perpetual-v1.2.0";
 // Monitor IDs remain stable across the additive evidence-contract upgrade so existing alerts keep working.
 export const perpetualMonitorConditionVersion = "perpetual-v1.0.0";
 
@@ -123,6 +123,8 @@ export interface PerpetualDecisionSnapshot {
     timeframe: "15m";
     structure: DirectionState;
     transition: DirectionState;
+    events?: Pick<PerpetualEvidenceDetails["events"], "msb" | "choch">;
+    context?: Array<Pick<PerpetualDecisionEvidence, "timeframe" | "label" | "structure" | "transition" | "regime">>;
     pressure: Pick<LiquidationPressureReport, "dominantSide" | "grade" | "summary"> | null;
     flow: Pick<LargeTradeFlowReport, "dominantSide" | "grade" | "summary"> | null;
     previousChange?: SnapshotChange | null;
@@ -360,7 +362,7 @@ function priceCondition({
     kind,
     role,
     timeframe,
-    label: `${normalized.toLocaleString("ko-KR")} ${direction === "above" ? "위" : "아래"}에서 ${timeframeLabels[timeframe]} 봉이 끝나는지 확인`,
+    label: `${timeframeLabels[timeframe]} 가격 구간이 끝났을 때 ${normalized.toLocaleString("ko-KR")} ${direction === "above" ? "위" : "아래"}인지 확인`,
     threshold: normalized,
     expiresAt: addHours(generatedAt, hours)
   };
@@ -488,12 +490,12 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
   const headline =
     safeHeadline ??
     (state === "upside_watch"
-      ? "오르는 힘이 조금 더 강하지만 아직 확정된 흐름은 아닙니다."
+      ? "오르는 힘이 우세하지만 아직 확정 전입니다."
       : state === "downside_watch"
-        ? "내리는 힘이 조금 더 강하지만 아직 확정된 흐름은 아닙니다."
+        ? "내리는 힘이 우세하지만 아직 확정 전입니다."
         : state === "risk"
-          ? "가격 흐름과 큰 체결이 서로 달라 지금은 기다리는 구간입니다."
-          : "한쪽 힘이 뚜렷하지 않아 다음 움직임을 기다리는 구간입니다.");
+          ? "가격 흐름과 큰 체결이 엇갈려 지금은 기다릴 때입니다."
+          : "한쪽 힘이 뚜렷하지 않아 다음 움직임을 기다립니다.");
 
   const topRisk =
     quality !== "ready"
@@ -573,6 +575,7 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
         changedAt: input.generatedAt
       }
     : null;
+  const publicPrimaryDetails = evidenceDetails(primary);
 
   return {
     id: input.id,
@@ -596,6 +599,17 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
       timeframe: "15m",
       structure: primary.analysis.msb,
       transition: primary.analysis.choch,
+      events: {
+        msb: publicPrimaryDetails.events.msb,
+        choch: publicPrimaryDetails.events.choch
+      },
+      context: input.timeframes.map((observation) => ({
+        timeframe: observation.timeframe,
+        label: timeframeLabels[observation.timeframe],
+        structure: observation.analysis.msb,
+        transition: observation.analysis.choch,
+        regime: observation.analysis.condition.regime
+      })),
       pressure: input.pressure
         ? {
             dominantSide: input.pressure.dominantSide,

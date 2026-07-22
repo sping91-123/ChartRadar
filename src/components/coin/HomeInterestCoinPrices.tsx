@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Loader2, RefreshCw, Settings2 } from "lucide-react";
 import { hasMarketEntitlement } from "@/lib/billing";
@@ -152,6 +153,11 @@ export function HomeInterestCoinPrices() {
         {coins.map((coin) => {
           const ticker = tickers[coinKey(coin)];
           const change = ticker?.changePercent;
+          const base = coin.base.toLowerCase();
+          const isMajor = base === "btc" || base === "eth";
+          const analysisHref = isMajor
+            ? `/crypto/perpetual?asset=${base}&source=home-interest`
+            : `/crypto/perpetual/alts?focus=${encodeURIComponent(base)}&source=home`;
           const changeTone = typeof change === "number" && change > 0
             ? "text-ui-long"
             : typeof change === "number" && change < 0
@@ -167,6 +173,9 @@ export function HomeInterestCoinPrices() {
                 <p className="text-base font-black tabular-nums text-ui-text">{priceCopy(ticker?.price)}</p>
                 <p className={`text-xs font-black tabular-nums ${changeTone}`}>{changeCopy(change)}</p>
               </div>
+              <Link href={analysisHref} className="mt-2 inline-flex text-[10.5px] font-black text-ui-brand underline underline-offset-2">
+                {isMajor ? "BTC·ETH 선물 분석에서 확인" : "알트 선물 분석에서 확인"}
+              </Link>
             </article>
           );
         })}

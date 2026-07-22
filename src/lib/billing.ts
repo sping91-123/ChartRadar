@@ -55,8 +55,8 @@ export const billingPlans: BillingPlan[] = [
     billingPeriodMonths: 0,
     periodLabel: "무료",
     renewalText: "무료 플랜은 결제와 자동 갱신이 없습니다.",
-    description: "Basic에서는 방향 요약만 제공합니다. 상세 조건, 무효화 기준, 세부 리스크는 Pro에서 확인할 수 있습니다.",
-    highlights: ["방향 요약 확인", "일부 리스크 점검", "판단 보조용 기본 알림"],
+    description: "Basic은 현재 상태·핵심 위험·다음 조건, 시간대별 방향, 최근 15분 추세 신호와 조건 감시 1개를 제공합니다.",
+    highlights: ["현재 상태와 핵심 위험", "15분·1시간·4시간 방향", "조건 감시 1개와 판단 기록"],
     limits: {
       radarScans: "일부 제공",
       aiBriefings: "제한 제공",
@@ -82,10 +82,10 @@ export const billingPlans: BillingPlan[] = [
       ios: { productId: "chart_radar_crypto_monthly" },
       revenueCatPackageId: "crypto_monthly"
     },
-    description: "Binance USDT-M BTC·ETH의 상태, 위험, 확인 조건을 같은 snapshot으로 보고 감시·알림·복기로 이어갑니다.",
-    highlights: ["BTC·ETH 선물 리스크 snapshot", "확인·판단 변경 조건 감시", "알림에서 같은 판단 복기"],
+    description: "Binance USDT-M BTC·ETH의 1시간·4시간 신호 발생 가격·시각, 고급 가격 구간과 AI 해설을 보고 최대 20개 감시·알림·당시 판단 복기로 이어갑니다.",
+    highlights: ["시간대별 신호 발생 가격·시각과 고급 구간", "AI 해설과 조건 감시 20개", "알림 당시 분석과 조건 복기"],
     limits: {
-      radarScans: "BTC·ETH 판단 snapshot",
+      radarScans: "BTC·ETH 시장 판단",
       aiBriefings: "결정론적 판단 근거",
       watchlist: "관심 시세 5개",
       alerts: "코인 조건 20개",
@@ -112,7 +112,7 @@ export const billingPlans: BillingPlan[] = [
     description: "기존 연간 구독 복원과 권한 확인을 위해 유지되는 내부 상품입니다.",
     highlights: ["기존 Coin Pro 연간 권한", "BTC·ETH 조건 감시", "알림과 복기 연결"],
     limits: {
-      radarScans: "BTC·ETH 판단 snapshot",
+      radarScans: "BTC·ETH 시장 판단",
       aiBriefings: "결정론적 판단 근거",
       watchlist: "관심 시세 5개",
       alerts: "코인 조건 20개",
@@ -193,7 +193,7 @@ export const billingPlans: BillingPlan[] = [
     description: "Coin Pro와 Global Pro를 통합해 코인과 글로벌 전체 시장 판단을 한 번에 확인합니다.",
     highlights: ["BTC·ETH와 미국장을 함께 보는 통합 플랜", "Coin Pro + Global Pro 통합", "두 시장 알림과 복기"],
     limits: {
-      radarScans: "BTC·ETH snapshot, 글로벌 100회",
+      radarScans: "BTC·ETH 시장 판단, 글로벌 100회",
       aiBriefings: "총 60회",
       watchlist: "코인 100개, 글로벌 100개",
       alerts: "시장별 조건 20개",
@@ -221,7 +221,7 @@ export const billingPlans: BillingPlan[] = [
     description: "코인과 글로벌 전체 시장 판단을 6개월 단위로 함께 쓰는 자동 갱신 통합 구독입니다.",
     highlights: ["All Market Pro 전체 기능", "월 환산 약 33,167원", "코인과 글로벌 전체 시장 판단"],
     limits: {
-      radarScans: "BTC·ETH snapshot, 글로벌 100회",
+      radarScans: "BTC·ETH 시장 판단, 글로벌 100회",
       aiBriefings: "총 80회",
       watchlist: "코인 150개, 글로벌 150개",
       alerts: "시장별 조건 20개",

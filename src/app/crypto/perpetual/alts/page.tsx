@@ -11,15 +11,26 @@ import { SetupScoutPanel } from "@/components/SetupScoutPanel";
 import { WatchlistPanel } from "@/components/WatchlistPanel";
 import { isNewsImpactUiEnabled, newsImpactMode } from "@/lib/server/newsImpactMode";
 
-export default function CryptoPerpetualAltsPage() {
+const focusedAltMap = {
+  sol: { symbol: "SOLUSDT", label: "SOL" },
+  xrp: { symbol: "XRPUSDT", label: "XRP" },
+  doge: { symbol: "DOGEUSDT", label: "DOGE" },
+  bnb: { symbol: "BNBUSDT", label: "BNB" }
+} as const;
+
+export default async function CryptoPerpetualAltsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const params = await searchParams;
+  const rawFocus = Array.isArray(params.focus) ? params.focus[0] : params.focus;
+  const focus = typeof rawFocus === "string" ? rawFocus.trim().toLowerCase() : "";
+  const focusedAlt = focusedAltMap[focus as keyof typeof focusedAltMap];
   return (
     <main className="min-h-screen px-3 pb-28 sm:px-5 sm:pb-16">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 sm:gap-3">
         <Header market="crypto" />
         <RadarTopNav newsImpactEnabled={isNewsImpactUiEnabled(newsImpactMode())} />
         <CoinFuturesSwitch active="alts" />
-        <CoinFuturesBrief mode="alts" />
-        <AltFuturesSignalSection />
+        <CoinFuturesBrief mode="alts" symbols={focusedAlt ? [focusedAlt] : undefined} />
+        <AltFuturesSignalSection initialFocus={focusedAlt?.label ?? null} />
         <CoinUnlockPressurePanel />
         <section className="pt-1">
           <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">시장 환경 참고</p>
