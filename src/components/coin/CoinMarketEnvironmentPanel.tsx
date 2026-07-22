@@ -1,10 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BadgePercent, Globe2, RefreshCcw, ShieldAlert } from "lucide-react";
-import type { CoinMarketMetricsPayload } from "@/lib/coinMarketMetrics";
+import type {
+  CoinMarketMetricsPayload,
+  MarketMetricCadence,
+  MarketMetricFreshness,
+  UsdKrwSource
+} from "@/lib/coinMarketMetrics";
 import { ActionButton, AppSurface, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import { CompactHelp } from "@/components/ui/CompactHelp";
+import { TradingViewSingleTicker } from "@/components/coin/TradingViewSingleTicker";
 
 type LoadStatus = "idle" | "loading" | "ready" | "error";
 type MarketEnvironmentMode = "major" | "alts";
@@ -12,6 +18,23 @@ type MarketEnvironmentMode = "major" | "alts";
 type CoinMarketMetricsResponse = Partial<CoinMarketMetricsPayload> & {
   error?: string;
 };
+
+const AUTO_REFRESH_MS = 60_000;
+const USD_KRW_SOURCES = new Set<UsdKrwSource>(["exchangerate-dev", "exchangerate-fun", "frankfurter"]);
+const FRESHNESS_VALUES = new Set<MarketMetricFreshness>(["live", "hourly", "daily", "stale", "unavailable"]);
+const CADENCE_VALUES = new Set<MarketMetricCadence>(["live", "hourly", "daily"]);
+const KST_DATE_TIME_FORMATTER = new Intl.DateTimeFormat("ko-KR", {
+  timeZone: "Asia/Seoul",
+  month: "numeric",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false
+});
+
+function normalizedNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
 
 function formatPercent(value: number | null | undefined, digits = 1) {
   if (value === null || value === undefined || !Number.isFinite(value)) return "-";
@@ -24,59 +47,113 @@ function formatKrw(value: number | null | undefined) {
   return `${Math.round(value).toLocaleString("ko-KR")}원`;
 }
 
-function dominanceMeta(value: number | null | undefined) {
-  if (value === null || value === undefined || !Number.isFinite(value)) {
-    return { label: "확인 중", tone: "info" as const, detail: "BTC 비중 확인 대기" };
-  }
-  if (value >= 58) {
-    return { label: "BTC 쏠림", tone: "watch" as const, detail: "알트보다 BTC 영향이 커질 수 있는 구간" };
-  }
-  if (value <= 48) {
-    return { label: "알트 분산", tone: "long" as const, detail: "알트까지 자금이 퍼지는지 확인할 구간" };
-  }
-  return { label: "중립", tone: "info" as const, detail: "BTC와 알트 쏠림이 과하지 않은 구간" };
+function formatUsd(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "-";
+  return `$${value.toFixed(4)}`;
 }
 
-function kimchiMeta(value: number | null | undefined) {
+function formatObservedAt(value: string | null | undefined) {
+  if (!value) return "시각 확인 중";
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return "시각 확인 중";
+  return KST_DATE_TIME_FORMATTER.format(new Date(timestamp));
+}
+
+function formatReference(observedAt: string | null | undefined, referenceDate: string | null | undefined) {
+  const parts = referenceDate?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (parts) return `${Number(parts[2])}.${Number(parts[3])} 기준`;
+  return formatObservedAt(observedAt);
+}
+
+function cadenceLabel(value: MarketMetricCadence | null | undefined) {
+  if (value === "live") return "실시간";
+  if (value === "hourly") return "시간 단위";
+  if (value === "daily") return "일 단위";
+  return "";
+}
+
+function freshnessLabel(value: MarketMetricFreshness, cadence?: MarketMetricCadence | null) {
+  if (value === "live") return "실시간 참고";
+  if (value === "hourly") return "시간 단위 갱신";
+  if (value === "daily") return "전일 기준";
+  if (value === "stale") return `마지막 정상값${cadence ? ` · ${cadenceLabel(cadence)}` : ""}`;
+  return "확인 중";
+}
+
+function fxSourceLabel(value: UsdKrwSource | null | undefined) {
+  if (value === "exchangerate-dev") return "exchangerate.dev";
+  if (value === "exchangerate-fun") return "ExchangeRate.fun";
+  if (value === "frankfurter") return "Frankfurter";
+  return "환율 공급자 확인 중";
+}
+
+function kimchiMeta(value: number | null | undefined, stale = false) {
   if (value === null || value === undefined || !Number.isFinite(value)) {
-    return { label: "확인 중", tone: "info" as const, detail: "국내 프리미엄 확인 대기" };
+    return { label: "확인 중", tone: "info" as const, detail: "국내외 BTC 현물 가격을 다시 맞춰 보는 중입니다." };
+  }
+  if (stale) {
+    return { label: "마지막 참고값", tone: "watch" as const, detail: "일부 원천이 지연되어 마지막으로 검증된 계산값을 보여줍니다." };
   }
   if (value >= 1.5) {
-    return { label: "프리미엄 높음", tone: "risk" as const, detail: "국내 가격 과열이 섞였는지 분리 확인" };
+    return { label: "프리미엄 높음", tone: "risk" as const, detail: "국내 BTC가 해외 현물 환산가보다 비싼 구간입니다." };
   }
-  if (value <= -2) {
-    return { label: "역프리미엄", tone: "watch" as const, detail: "국내 수요가 약한 구간으로 분리 확인" };
+  if (value <= -1.5) {
+    return { label: "역프리미엄", tone: "watch" as const, detail: "국내 BTC가 해외 현물 환산가보다 싼 구간입니다." };
   }
-  return { label: "중립", tone: "info" as const, detail: "국내외 가격 차이가 크지 않은 구간" };
+  return { label: "차이 작음", tone: "info" as const, detail: "국내외 BTC 현물 가격 차이가 크지 않은 구간입니다." };
 }
 
-function fxMeta(value: number | null | undefined) {
-  if (value === null || value === undefined || !Number.isFinite(value)) {
-    return { label: "확인 중", tone: "info" as const, detail: "USD/KRW 확인 대기" };
-  }
-  if (value >= 1500) {
-    return { label: "환율 부담 큼", tone: "risk" as const, detail: "달러 강세 부담을 시장 배경으로 분리" };
-  }
-  if (value >= 1450) {
-    return { label: "환율 부담", tone: "watch" as const, detail: "위험 회피 흐름과 함께 확인" };
-  }
-  return { label: "보통", tone: "info" as const, detail: "환율 부담이 과도한 구간은 아님" };
-}
-
-async function fetchCoinMarketMetrics() {
-  const response = await fetch("/api/coin-market-metrics", { cache: "no-store" });
+async function fetchCoinMarketMetrics(signal: AbortSignal) {
+  const response = await fetch("/api/coin-market-metrics", { cache: "no-store", signal });
   const payload = (await response.json()) as CoinMarketMetricsResponse;
   if (!response.ok) throw new Error(payload.error ?? "시장 환경 확인 실패");
 
+  const usdKrwSource = payload.usdKrwSource && USD_KRW_SOURCES.has(payload.usdKrwSource) ? payload.usdKrwSource : null;
+  const usdKrwFreshness = payload.usdKrwFreshness && FRESHNESS_VALUES.has(payload.usdKrwFreshness)
+    ? payload.usdKrwFreshness
+    : "unavailable";
+  const usdKrwCadence = payload.usdKrwCadence && CADENCE_VALUES.has(payload.usdKrwCadence)
+    ? payload.usdKrwCadence
+    : null;
+  const kimchiFxFreshness = payload.kimchiFxFreshness && FRESHNESS_VALUES.has(payload.kimchiFxFreshness)
+    ? payload.kimchiFxFreshness
+    : "unavailable";
+  const kimchiFxCadence = payload.kimchiFxCadence && CADENCE_VALUES.has(payload.kimchiFxCadence)
+    ? payload.kimchiFxCadence
+    : null;
+  const kimchiFxSource = payload.kimchiFxSource && USD_KRW_SOURCES.has(payload.kimchiFxSource)
+    ? payload.kimchiFxSource
+    : null;
+
   return {
-    btcDominancePercent: payload.btcDominancePercent ?? null,
-    usdKrw: payload.usdKrw ?? null,
-    kimchiPremiumPercent: payload.kimchiPremiumPercent ?? null,
-    kimchiSource: payload.kimchiSource ?? null,
-    cachedAt: payload.cachedAt ?? Date.now(),
+    btcDominancePercent: null,
+    btcDominanceSource: "tradingview",
+    btcDominanceSymbol: "CRYPTOCAP:BTC.D",
+    usdKrw: normalizedNumber(payload.usdKrw),
+    usdKrwSource,
+    usdKrwObservedAt: typeof payload.usdKrwObservedAt === "string" ? payload.usdKrwObservedAt : null,
+    usdKrwReferenceDate: typeof payload.usdKrwReferenceDate === "string" ? payload.usdKrwReferenceDate : null,
+    usdKrwFreshness,
+    usdKrwCadence,
+    kimchiPremiumPercent: normalizedNumber(payload.kimchiPremiumPercent),
+    kimchiSource: payload.kimchiSource === "upbit-binance-spot-coinbase-usdt-usd" ? payload.kimchiSource : null,
+    kimchiStale: Boolean(payload.kimchiStale),
+    kimchiObservedAt: typeof payload.kimchiObservedAt === "string" ? payload.kimchiObservedAt : null,
+    kimchiCalculatedAt: typeof payload.kimchiCalculatedAt === "string" ? payload.kimchiCalculatedAt : null,
+    kimchiFxRate: normalizedNumber(payload.kimchiFxRate),
+    kimchiFxSource,
+    kimchiFxObservedAt: typeof payload.kimchiFxObservedAt === "string" ? payload.kimchiFxObservedAt : null,
+    kimchiFxReferenceDate: typeof payload.kimchiFxReferenceDate === "string" ? payload.kimchiFxReferenceDate : null,
+    kimchiFxFreshness,
+    kimchiFxCadence,
+    kimchiUsdtUsdRate: normalizedNumber(payload.kimchiUsdtUsdRate),
+    kimchiUsdtUsdObservedAt: typeof payload.kimchiUsdtUsdObservedAt === "string" ? payload.kimchiUsdtUsdObservedAt : null,
+    upbitBtcObservedAt: typeof payload.upbitBtcObservedAt === "string" ? payload.upbitBtcObservedAt : null,
+    binanceBtcObservedAt: typeof payload.binanceBtcObservedAt === "string" ? payload.binanceBtcObservedAt : null,
+    cachedAt: typeof payload.cachedAt === "number" ? payload.cachedAt : Date.now(),
     cached: Boolean(payload.cached),
-    stale: payload.stale,
-    warnings: payload.warnings ?? []
+    stale: Boolean(payload.stale),
+    warnings: Array.isArray(payload.warnings) ? payload.warnings.filter((warning): warning is string => typeof warning === "string") : []
   } satisfies CoinMarketMetricsPayload;
 }
 
@@ -84,15 +161,34 @@ export function CoinMarketEnvironmentPanel({ mode }: { mode: MarketEnvironmentMo
   const [status, setStatus] = useState<LoadStatus>("idle");
   const [metrics, setMetrics] = useState<CoinMarketMetricsPayload | null>(null);
   const [error, setError] = useState("");
+  const requestControllerRef = useRef<AbortController | null>(null);
+  const requestGenerationRef = useRef(0);
+  const lastRequestedAtRef = useRef(0);
 
-  const loadMetrics = useCallback(async () => {
-    setStatus("loading");
+  const loadMetrics = useCallback(async (silent = false) => {
+    requestControllerRef.current?.abort();
+    const controller = new AbortController();
+    const generation = requestGenerationRef.current + 1;
+    requestControllerRef.current = controller;
+    requestGenerationRef.current = generation;
+    lastRequestedAtRef.current = Date.now();
+    if (!silent) setStatus("loading");
     setError("");
+
     try {
-      const nextMetrics = await fetchCoinMarketMetrics();
+      const nextMetrics = await fetchCoinMarketMetrics(controller.signal);
+      if (requestGenerationRef.current !== generation) return;
       setMetrics(nextMetrics);
       setStatus("ready");
     } catch (nextError) {
+      if (controller.signal.aborted || requestGenerationRef.current !== generation) return;
+      setMetrics((current) => current ? {
+        ...current,
+        stale: true,
+        usdKrwFreshness: current.usdKrw === null ? current.usdKrwFreshness : "stale",
+        kimchiStale: current.kimchiPremiumPercent !== null || current.kimchiStale,
+        kimchiFxFreshness: current.kimchiFxRate === null ? current.kimchiFxFreshness : "stale"
+      } : current);
       setStatus("error");
       setError(nextError instanceof Error ? nextError.message : "시장 환경을 잠시 확인하지 못했습니다.");
     }
@@ -100,30 +196,38 @@ export function CoinMarketEnvironmentPanel({ mode }: { mode: MarketEnvironmentMo
 
   useEffect(() => {
     void loadMetrics();
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") void loadMetrics(true);
+    }, AUTO_REFRESH_MS);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastRequestedAtRef.current >= AUTO_REFRESH_MS) void loadMetrics(true);
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      requestControllerRef.current?.abort();
+    };
   }, [loadMetrics]);
 
   const summary = useMemo(() => {
     if (!metrics) {
       return mode === "alts"
-        ? "BTC 도미넌스, 김치 프리미엄, 환율을 알트 선물의 배경 리스크로 확인하는 중입니다."
-        : "BTC 도미넌스, 김치 프리미엄, 환율을 BTC/ETH 선물의 배경 리스크로 확인하는 중입니다.";
+        ? "BTC 쏠림, 국내외 가격 차이, 환율을 알트 선물의 배경 위험으로 확인하는 중입니다."
+        : "BTC 쏠림, 국내외 가격 차이, 환율을 BTC/ETH 선물의 배경 위험으로 확인하는 중입니다.";
     }
 
     const riskHints: string[] = [];
-    if (metrics.btcDominancePercent !== null && metrics.btcDominancePercent >= 58) riskHints.push("BTC 쏠림");
-    if (metrics.kimchiPremiumPercent !== null && Math.abs(metrics.kimchiPremiumPercent) >= 1.5) riskHints.push("국내 프리미엄");
-    if (metrics.usdKrw !== null && metrics.usdKrw >= 1450) riskHints.push("환율 부담");
+    if (metrics.kimchiPremiumPercent !== null && Math.abs(metrics.kimchiPremiumPercent) >= 1.5) riskHints.push("국내외 BTC 가격 차이");
+    if (metrics.stale) riskHints.push("일부 데이터 지연");
 
-    if (riskHints.length) {
-      return `${riskHints.join(" · ")}을 방향 신호와 분리해서 봅니다.`;
-    }
-
-    return "BTC 쏠림, 국내 프리미엄, 환율 부담이 과도한 구간은 아닙니다.";
+    if (riskHints.length) return `${riskHints.join(" · ")}을 가격 방향과 따로 확인하세요.`;
+    return "BTC.D의 하루 변화와 국내외 현물 가격 차이를 함께 보면 시장 쏠림을 더 쉽게 구분할 수 있습니다.";
   }, [metrics, mode]);
 
-  const dominance = dominanceMeta(metrics?.btcDominancePercent);
-  const kimchi = kimchiMeta(metrics?.kimchiPremiumPercent);
-  const fx = fxMeta(metrics?.usdKrw);
+  const kimchi = kimchiMeta(metrics?.kimchiPremiumPercent, metrics?.kimchiStale);
 
   return (
     <PanelCard variant="report" padding="md" className="space-y-4">
@@ -132,7 +236,7 @@ export function CoinMarketEnvironmentPanel({ mode }: { mode: MarketEnvironmentMo
         title={mode === "alts" ? "알트 선물 시장 환경" : "BTC/ETH 시장 환경"}
         description={summary}
         action={
-          <ActionButton tone="secondary" onClick={loadMetrics} disabled={status === "loading"}>
+          <ActionButton tone="secondary" onClick={() => void loadMetrics()} disabled={status === "loading"}>
             <RefreshCcw className={status === "loading" ? "animate-spin" : ""} size={15} aria-hidden />
             갱신
           </ActionButton>
@@ -141,7 +245,7 @@ export function CoinMarketEnvironmentPanel({ mode }: { mode: MarketEnvironmentMo
 
       {error ? (
         <AppSurface variant="flat" tone="critical" padding="none" className="border-t border-ui-line py-2 text-sm font-semibold text-ui-risk">
-          {error}
+          {metrics ? `갱신 실패 · 마지막 정상값을 유지합니다. ${error}` : error}
         </AppSurface>
       ) : null}
 
@@ -154,41 +258,54 @@ export function CoinMarketEnvironmentPanel({ mode }: { mode: MarketEnvironmentMo
       <div className="grid gap-2 md:grid-cols-3">
         <article className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3">
           <div className="flex min-w-0 items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">BTC DOMINANCE</p>
-              <p className="mt-1 text-xl font-semibold leading-7 text-ui-text">{formatPercent(metrics?.btcDominancePercent)}</p>
-            </div>
-            <StatusPill tone={dominance.tone} icon={BadgePercent} className="shrink-0">
-              {dominance.label}
+            <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">BTC 도미넌스</p>
+            <StatusPill tone="info" icon={BadgePercent} className="shrink-0">
+              TradingView BTC.D
             </StatusPill>
           </div>
-          <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{dominance.detail}</p>
+          <TradingViewSingleTicker
+            symbol="CRYPTOCAP:BTC.D"
+            label="TradingView BTC 도미넌스 최신 값"
+            href="https://www.tradingview.com/symbols/BTC.D/"
+          />
+          <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">
+            전체 코인 시가총액에서 BTC 비중이 커진 상태로, 알트가 상대적으로 약할 수 있습니다.
+          </p>
         </article>
 
         <article className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3">
           <div className="flex min-w-0 items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">KIMCHI PREMIUM</p>
-              <p className="mt-1 text-xl font-semibold leading-7 text-ui-text">{formatPercent(metrics?.kimchiPremiumPercent, 2)}</p>
-            </div>
+            <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">BTC 김프 · 현물</p>
             <StatusPill tone={kimchi.tone} icon={ShieldAlert} className="shrink-0">
               {kimchi.label}
             </StatusPill>
           </div>
+          <p className="mt-3 text-xl font-semibold leading-7 text-ui-text">{formatPercent(metrics?.kimchiPremiumPercent, 2)}</p>
           <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{kimchi.detail}</p>
+          <p className="mt-2 border-t border-ui-line pt-2 text-[11px] leading-4 text-ui-subtle [word-break:keep-all]">
+            Upbit BTC/KRW ↔ Binance BTC/USDT 현물 · {formatObservedAt(metrics?.kimchiObservedAt)}
+            <br />
+            USDT/USD {formatUsd(metrics?.kimchiUsdtUsdRate)} · Coinbase 체결가 · {formatObservedAt(metrics?.kimchiUsdtUsdObservedAt)}
+            <br />
+            계산 환율 {formatKrw(metrics?.kimchiFxRate)} · {fxSourceLabel(metrics?.kimchiFxSource)} · {freshnessLabel(metrics?.kimchiFxFreshness ?? "unavailable", metrics?.kimchiFxCadence)} · {formatReference(metrics?.kimchiFxObservedAt, metrics?.kimchiFxReferenceDate)}
+          </p>
         </article>
 
         <article className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3">
           <div className="flex min-w-0 items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">USD/KRW</p>
-              <p className="mt-1 text-xl font-semibold leading-7 text-ui-text">{formatKrw(metrics?.usdKrw)}</p>
-            </div>
-            <StatusPill tone={fx.tone} icon={Globe2} className="shrink-0">
-              {fx.label}
+            <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">원·달러 환율</p>
+            <StatusPill tone="info" icon={Globe2} className="shrink-0">
+              TradingView 기준
             </StatusPill>
           </div>
-          <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">{fx.detail}</p>
+          <TradingViewSingleTicker
+            symbol="FX_IDC:USDKRW"
+            label="TradingView 원달러 환율 최신 값"
+            href="https://www.tradingview.com/symbols/USDKRW/"
+          />
+          <p className="mt-2 text-xs leading-5 text-ui-muted [word-break:keep-all]">
+            숫자가 오르면 같은 달러 가격도 원화로는 더 비싸집니다. 김프 계산 환율과 갱신 시각은 가운데 카드에 따로 표시합니다.
+          </p>
         </article>
       </div>
 
@@ -198,8 +315,12 @@ export function CoinMarketEnvironmentPanel({ mode }: { mode: MarketEnvironmentMo
         </AppSurface>
       ) : null}
 
+      <p className="text-[11px] leading-4 text-ui-subtle">
+        자동 갱신 1분 · 김프 계산 {formatObservedAt(metrics?.kimchiCalculatedAt)}
+      </p>
+
       <CompactHelp label="데이터 기준">
-        BTC 도미넌스는 CoinGecko global 공개값, USD/KRW는 Frankfurter 공개 환율, 김치 프리미엄은 Upbit BTC와 Binance BTC 가격 차이를 기준으로 계산합니다. 이 값들은 직접 방향 결론이 아니라 선물 신호를 해석할 때의 배경 리스크입니다.
+        화면의 BTC 도미넌스는 TradingView CRYPTOCAP:BTC.D, 원·달러 환율은 TradingView USDKRW를 그대로 표시합니다. BTC 김프는 같은 시점의 Upbit BTC/KRW 현물, Binance BTC/USDT 현물, Coinbase USDT/USD 체결가를 함께 사용하고 USD/KRW로 원화 환산합니다. USDT를 무조건 1달러로 가정하지 않습니다. 환율 공급이 지연되면 전일 기준 또는 마지막 정상값임을 화면에 표시합니다. 이 값들은 매수·매도 지시가 아니라 선물 판단의 배경 위험입니다.
       </CompactHelp>
     </PanelCard>
   );

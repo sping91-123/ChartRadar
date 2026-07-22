@@ -463,3 +463,35 @@ Task 6 must select at most one follow-up candidate:
 - 정상 동기화는 ISO `syncGeneration`을 모든 행에 함께 저장한다. 화면과 NEWS는 중요도 필터보다 먼저 최신 세대를 선택하므로 발표 시각 변경·취소 전 일정과 이전 세대의 고중요도 사건이 다시 나타나지 않는다. 최근 8일·향후 60일 조회와 90일 retention도 적용했다.
 - 검증: `test:macro-calendar`, `test:news-sources`, `test:news-reactions`, `test:news-impact`, `smoke:ops`, TypeScript, 64-page production build, 최종 전체 `smoke:all`이 통과했다. 독립 읽기 전용 감사에서 발견된 데이터 신뢰 P1을 모두 반영한 뒤 마지막 전체 회귀를 다시 실행했다.
 - 운영 `chartradar.kr`, 운영 DB, cron, Push, Vercel flag, deploy, AAB, 스토어, commit·push는 변경하지 않았다. 로컬 후보가 돈을 받을 만한 제품 구조에 가까워졌다는 의미이며 실제 결제 전환과 매출은 운영 배포 후 사용 데이터로 별도 검증해야 한다.
+
+## 2026-07-22 BTC.D·환율·김프 기준 정합성 보강 (로컬)
+
+- 사용자가 비교하는 기준에 맞춰 BTC 도미넌스를 CoinGecko 전체 시장 비중에서 공식 TradingView `CRYPTOCAP:BTC.D` 위젯으로 교체했다. TradingView 숫자를 비공식 API로 복제하지 않으며 원문 링크와 정의를 함께 표시한다.
+- 원·달러 대표값은 TradingView `FX_IDC:USDKRW`를 그대로 표시한다. 김프 계산용 환율은 선택적 exchangerate.dev 실시간값, ExchangeRate.fun 시간 단위값, Frankfurter 일 단위값 순으로 fail-closed 처리하며, 일 단위 공급자의 날짜를 가짜 시각으로 변환하지 않는다.
+- 김프 정의를 `Upbit BTC/KRW 현물 ÷ Binance BTC/USDT 현물 ÷ Coinbase USDT/USD 체결가 ÷ USD/KRW - 1`로 고정했다. Futures fallback과 `1 USDT=1 USD` 가정을 제거하고 네 원천의 값·기준 시각·최대 시차·허용 지연을 검증한다.
+- 부분 장애에서는 필드별 마지막 정상값만 제한 시간 동안 유지한다. 김프의 원래 계산 시각과 사용한 환율·USDT/USD·출처·갱신 주기를 함께 동결해 stale 수명이 반복 요청으로 연장되거나 새 환율 라벨이 과거 계산값에 붙지 않게 했다.
+- 화면은 1분 visibility-aware 자동 갱신, 늦은 응답 차단, 마지막 정상값 배지, 원천별 기준 시각, TradingView 위젯 자동 재시도·수동 재시도·접근 가능한 원문 링크를 제공한다. BTC.D 문구는 자금 이동 인과를 단정하지 않고 시가총액 비중과 알트의 상대 강도로 설명한다.
+- 실제 공개 원천을 같은 시각에 다시 조회해 API 김프와 재계산값이 약 0.001%p 이내로 일치함을 확인했다. 로컬 production API는 warnings 없이 시간 단위 환율과 세 현물 시각을 반환했다.
+- 검증: 신규 `test:coin-market-metrics`의 계산·잘못된 날짜·unknown source·stale TTL·부분/전체 장애·캐시·시각 불일치 행렬, TypeScript, 64-page production build, `smoke:ops`, `smoke:mobile`, `smoke:routes`, 최종 `smoke:all`, `git diff --check`가 통과했다.
+- CLI Playwright로 360×800·390×844 Perpetual 시장 환경 패널을 확인했다. 두 TradingView 위젯 높이는 89px, 원천·Coinbase 환산 표시는 노출되고 horizontal overflow와 console error는 0건이다. 증거는 `output/playwright/coin-market-metrics-panel-360.png`, `output/playwright/coin-market-metrics-panel-390.png`에 있다. Codex in-app Browser는 사용하지 않았다.
+- 운영 `chartradar.kr`, 운영 환경변수, deploy, Push, AAB, 스토어, commit·push는 변경하지 않았다. Vercel 인스턴스별 메모리 캐시와 Android 실기기 확인은 배포 후 운영 관찰 항목이다.
+
+## 2026-07-22 매크로 발표 호재·악재·중립 복구 (로컬)
+
+- 회귀 원인은 최근 발표 실제값이 `public_calendar`인데 UI 판정이 공식 actual만 허용하면서 최신 일정의 배지가 모두 사라진 것이었다. 공식 actual은 `호재·악재·중립`, 공개 캘린더 actual은 `잠정 호재·잠정 악재·잠정 중립`으로 구분해 복구했다.
+- 판정은 실제값과 시장 예상의 surprise를 같은 단위로 비교한다. 물가·임금·고용·수요와 실업수당의 방향을 구분하고, 발표 전·결측·알 수 없는 출처·단위 불일치·혼합 전망은 표시하지 않는다. 전월비와 전년비가 엇갈리면 `중립`과 엇갈림 이유를 표시한다.
+- Home은 다음 일정이 주 카드일 때도 `직전 발표 · 실제값 · 판정 · 발표 시각`을 유지한다. Schedule과 Crypto/Global NEWS는 실제·예측·이전 값, 판정 배지, `단기 금리·달러 기준` 이유와 공식/잠정 상태를 함께 보여준다.
+- Census 공식 Economic Indicators의 `MARTS`를 Retail Sales headline actual로 연결했다. Core·Control Group·Ex Autos에는 headline actual을 잘못 붙이지 않는다.
+- 신규 `test:macro-impact`와 기존 `test:macro-calendar`, `smoke:ops`, `smoke:mobile`, `smoke:routes`, TypeScript, production build, 최종 `smoke:all`, `git diff --check`가 통과했다. route smoke 첫 실행은 기준 포트 3000 서버가 없어 연결 실패했으며 빌드 서버를 띄운 동일 검증은 66개 경로/API 전부 통과했다.
+- CLI Playwright로 360×800 Home·Crypto NEWS와 390×844 Schedule·Global을 확인했다. 발표값·배지·날짜가 보이고 horizontal overflow와 console error는 0건이다. 증거는 `output/playwright/macro-impact-restore/`에 있다. Codex in-app Browser는 사용하지 않았다.
+- 운영 `chartradar.kr`, 운영 DB, cron, deploy, Push, AAB, 스토어, commit·push는 변경하지 않았다. 배포 전 저장 캐시는 public-calendar actual을 잠정으로 표시하고, 배포 후 공식 동기화가 성공한 항목부터 확정 배지로 전환된다.
+
+## 2026-07-23 Home 상단 매크로 일정 비중 축소 (로컬·Figma)
+
+- Home 매크로 기본 카드를 Figma 390px 기준 162px에서 120px로, 360px QA 기준 약 111px로 줄였다. 날짜·시각, 중요도, 사건명, 발표 상태, 호재·악재·중립, 실제·예측·이전 값은 접힌 상태에 유지했다.
+- 판정 이유, 전체 수치, 직전 발표, 출처 상태, stale 경고, 출처 링크, 전체 일정 링크는 native `details` 펼침 영역으로 이동했다. 삭제된 데이터는 없다.
+- 발표 전 실제값은 빈칸 대신 `발표 전`으로 표시한다. 공개 보조 출처는 `출처`, 공식 일정은 `공식 일정 출처`, 공식 실제값은 `공식 발표값 출처`로 구분해 과장된 출처 라벨을 막았다.
+- Figma 증거는 `output/figma/v2-home-macro-compact-390.png`, `output/figma/v2-home-macro-compact-360.png`에, 실제 구현 증거는 `output/playwright/macro-compact-home-390x844.png`, `output/playwright/macro-compact-home-390x844-expanded.png`, `output/playwright/macro-compact-home-360x800.png`에 있다.
+- CLI Playwright에서 390×844·360×800 Home의 접힘·펼침, 첫 화면 선물 CTA, horizontal overflow 0, console error/warning 0을 확인했다. Codex in-app Browser는 사용하지 않았다.
+- 검증: `test:macro-impact`, `test:macro-calendar`, `smoke:ops`, `smoke:mobile`, production server의 `smoke:routes`, TypeScript, production build, `git diff --check` 통과.
+- 운영 `chartradar.kr`, 운영 DB, cron, deploy, Push, AAB, 스토어, commit·push는 변경하지 않았다.
