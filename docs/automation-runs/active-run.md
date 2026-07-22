@@ -495,3 +495,11 @@ Task 6 must select at most one follow-up candidate:
 - CLI Playwright에서 390×844·360×800 Home의 접힘·펼침, 첫 화면 선물 CTA, horizontal overflow 0, console error/warning 0을 확인했다. Codex in-app Browser는 사용하지 않았다.
 - 검증: `test:macro-impact`, `test:macro-calendar`, `smoke:ops`, `smoke:mobile`, production server의 `smoke:routes`, TypeScript, production build, `git diff --check` 통과.
 - 운영 `chartradar.kr`, 운영 DB, cron, deploy, Push, AAB, 스토어, commit·push는 변경하지 않았다.
+
+## 2026-07-23 BTC.D·환율·김프·매크로 UI 운영 반영
+
+- PR #18을 squash merge해 운영 `main` 커밋 `cc4c3f8b134c0e2f878c6af0637bbc314c302700`에 반영했다. Vercel 운영 배포 `dpl_Dt7rASgPyjeYBLTmiYChGRYTtshf`가 `READY`이며 `chartradar.kr`, `www.chartradar.kr` 별칭 연결 오류는 없다.
+- 운영 Home을 CLI Playwright 390×844·360×800에서 확인했다. 축소된 매크로 카드의 접힘·펼침, 실제·예측·이전 값, 발표 후 판정 안내, 첫 화면 선물 CTA가 정상이며 horizontal overflow와 console error/warning은 0건이다.
+- 운영 Perpetual에서 TradingView `CRYPTOCAP:BTC.D`, TradingView `FX_IDC:USDKRW`, Upbit·Binance 현물과 Coinbase USDT/USD를 사용한 김프 카드가 노출되는 것을 확인했다. `/api/coin-market-metrics`는 stale 없이 계산값을 반환하고 일 단위 환율 fallback은 전일 기준으로 명시한다.
+- 운영 `/api/health`는 HTTP 200이며 관련 Home·시장지표·매크로 API의 최근 1시간 Vercel runtime error는 0건이다. 배포 증거는 `output/playwright/production-release-2026-07-23/`에 있다.
+- Android 앱은 Capacitor WebView가 `https://chartradar.kr`를 로드하므로 이번 웹 UI·서버 API 변경에는 새 AAB가 필요하지 않다. Android native·Manifest·Gradle·플러그인·버전·아이콘·FCM 설정은 변경하지 않았고 Play Console 업로드도 수행하지 않았다.
