@@ -1,0 +1,136 @@
+{
+  "mode": "on",
+  "market": "crypto",
+  "asset": "btc",
+  "snapshotId": null,
+  "snapshotContext": "not_requested",
+  "generatedAt": "2026-07-24T03:05:00.000Z",
+  "quality": "ready",
+  "warning": null,
+  "sourceHealth": {
+    "active": 7,
+    "healthy": 7,
+    "degraded": 0,
+    "blocked": 4,
+    "accepted24h": 2,
+    "latestAcceptedAt": "2026-07-24T02:00:00.000Z"
+  },
+  "marketBrief": {
+    "market": "crypto",
+    "asset": "btc",
+    "generatedAt": "2026-07-24T03:05:00.000Z",
+    "quality": "ready",
+    "stateLabel": "하락 위험 확인",
+    "headline": "BTC는 지금 하락 위험을 확인하는 상태입니다.",
+    "topRisk": "매수 포지션 청산이 한쪽에 몰려 급락 시 변동성이 커질 수 있습니다.",
+    "nextCondition": "15분봉이 117,800 USDT 위에서 마감되는지 확인",
+    "snapshotId": "50000000-0000-4000-8000-000000000001",
+    "ctaHref": "/crypto/perpetual?asset=btc&timeframe=15m&snapshot=50000000-0000-4000-8000-000000000001&source=news",
+    "metrics": [
+      { "key": "price", "label": "현재 가격", "value": "116,950 USDT", "tone": "neutral" },
+      { "key": "change_1h", "label": "1시간", "value": "-0.42%", "tone": "negative" },
+      { "key": "change_24h", "label": "24시간", "value": "+1.18%", "tone": "positive" },
+      { "key": "large_flow", "label": "큰 금액 체결", "value": "큰 금액 매도 우세", "tone": "negative" }
+    ],
+    "weeklyPositioning": {
+      "asset": "btc",
+      "reportDate": "2026-07-21T00:00:00.000Z",
+      "openInterest": 32110,
+      "openInterestWeeklyChange": 1140,
+      "assetManagerNet": 1820,
+      "assetManagerNetWeeklyChange": 240,
+      "leveragedFundsNet": -2940,
+      "leveragedFundsNetWeeklyChange": -610,
+      "delayed": true,
+      "sourceName": "U.S. CFTC",
+      "sourceUrl": "https://publicreportinghub.cftc.gov/d/gpe5-46if"
+    }
+  },
+  "events": [
+    {
+      "id": "20000000-0000-4000-8000-000000000001",
+      "semanticKey": "fixture-actionable",
+      "market": "crypto",
+      "category": "regulation",
+      "targets": ["btc", "eth"],
+      "importance": "critical",
+      "version": 1,
+      "status": "active",
+      "occurredAt": "2026-07-24T02:00:00.000Z",
+      "firstSeenAt": "2026-07-24T02:01:00.000Z",
+      "updatedAt": "2026-07-24T03:01:00.000Z",
+      "headline": "미 SEC, Acme Crypto Exchange 대상 법 집행 발표",
+      "factSummary": "미 SEC가 Acme Crypto Exchange를 대상으로 디지털 자산 법 집행 조치와 적용 대상을 공개했습니다.",
+      "primarySource": {
+        "id": "10000000-0000-4000-8000-000000000001",
+        "name": "U.S. SEC",
+        "kind": "official",
+        "url": "https://www.sec.gov/newsroom/press-releases",
+        "publishedAt": "2026-07-24T02:00:00.000Z"
+      },
+      "sourceCount": 1,
+      "reactionEligibility": "eligible",
+      "reaction": {
+        "eventId": "20000000-0000-4000-8000-000000000001",
+        "reactionId": "30000000-0000-4000-8000-000000000001",
+        "eventVersion": 1,
+        "market": "crypto",
+        "target": "btc",
+        "stage": "final_60m",
+        "classification": "conflicts_with_existing_state",
+        "riskEffect": "increased",
+        "quality": "ready",
+        "eventAt": "2026-07-24T02:00:00.000Z",
+        "evaluatedAt": "2026-07-24T03:00:00.000Z",
+        "headline": "미 SEC, Acme Crypto Exchange 대상 법 집행 발표",
+        "factSummary": "미 SEC가 Acme Crypto Exchange를 대상으로 디지털 자산 법 집행 조치와 적용 대상을 공개했습니다.",
+        "reactionSummary": "발표 이후 BTC 가격은 -0.84% 움직였고, 큰 금액 매도와 청산 압력 두 근거가 발표 전 판단과 반대로 강해졌습니다.",
+        "nextCheckAt": null,
+        "preSnapshotId": "40000000-0000-4000-8000-000000000001",
+        "evaluatedSnapshotId": "40000000-0000-4000-8000-000000000002",
+        "priceChangePercent": -0.84,
+        "stateBefore": "upside_watch",
+        "stateAfter": "risk",
+        "nextCondition": {
+          "label": "15분봉이 117,800 USDT 위에서 마감되는지 확인",
+          "timeframe": "15m",
+          "kind": "price_cross_above",
+          "threshold": 117800
+        }
+      }
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000002",
+      "semanticKey": "fixture-context",
+      "market": "crypto",
+      "category": "regulation",
+      "targets": ["btc", "eth"],
+      "importance": "normal",
+      "version": 1,
+      "status": "active",
+      "occurredAt": "2026-07-24T01:00:00.000Z",
+      "firstSeenAt": "2026-07-24T01:02:00.000Z",
+      "updatedAt": "2026-07-24T01:02:00.000Z",
+      "headline": "미 OCC, 은행의 디지털 자산 보관 지침 공개",
+      "factSummary": "미 통화감독청이 은행의 디지털 자산 보관 업무에 적용되는 공식 해석을 공개했습니다.",
+      "primarySource": {
+        "id": "10000000-0000-4000-8000-000000000002",
+        "name": "U.S. OCC",
+        "kind": "official",
+        "url": "https://www.occ.gov/news-issuances/news-releases/",
+        "publishedAt": "2026-07-24T01:00:00.000Z"
+      },
+      "sourceCount": 1,
+      "reactionEligibility": "context_only",
+      "reaction": null
+    }
+  ],
+  "capabilities": {
+    "canSeeProEvidence": false,
+    "canEnableImpactAlerts": false,
+    "canSaveJournal": false,
+    "requiresAuth": false,
+    "alertDefaultEnabled": false
+  },
+  "nextCursor": null
+}

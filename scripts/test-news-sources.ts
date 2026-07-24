@@ -7,6 +7,8 @@ import { officialNewsCanonicalEventId, officialNewsSemanticSubject } from "../sr
 import { normalizeEdgarAcceptanceDateTime } from "../src/lib/officialNewsTime";
 import { resolveMacroSourceTrust } from "../src/lib/macro/sourceTrust";
 import { selectLatestMacroGenerationRows } from "../src/lib/macro/generation";
+import { normalizeFederalRegisterDocument } from "../src/lib/server/news/federalRegister";
+import { normalizeCftcPositioning } from "../src/lib/cftcPositioning";
 
 assert.equal(validateNewsSourceCatalog(), true);
 assert.deepEqual(
@@ -98,6 +100,58 @@ assert.equal(admitOfficialNews({ sourceId: "sec_press_releases", title: "SEC ann
 assert.equal(admitOfficialNews({ sourceId: "sec_press_releases", title: "SEC names a new regional director" }).accepted, false);
 assert.equal(admitOfficialNews({ sourceId: "cftc_releases", title: "CFTC updates derivatives clearing requirements" }).accepted, true);
 assert.equal(admitOfficialNews({ sourceId: "cftc_releases", title: "CFTC publishes agricultural advisory meeting agenda" }).accepted, false);
+const bitcoinOnlyRule = admitOfficialNews({
+  sourceId: "federal_register_financial",
+  title: "Position and exercise limits for options on iShares Bitcoin Trust ETF"
+});
+assert.equal(
+  bitcoinOnlyRule.accepted,
+  true,
+  "Federal Register crypto market-structure documents are admitted"
+);
+assert.deepEqual(bitcoinOnlyRule.targets, ["btc"], "a Bitcoin-only rule must not appear as ETH or Global context");
+assert.deepEqual(bitcoinOnlyRule.markets, ["crypto"]);
+assert.equal(bitcoinOnlyRule.importance, "normal", "context-only Federal Register material remains reference information unless explicitly critical");
+assert.deepEqual(
+  admitOfficialNews({ sourceId: "sec_press_releases", title: "SEC announces Ethereum ETF custody action" }).targets,
+  ["eth"],
+  "an Ethereum-only official release stays scoped to ETH"
+);
+assert.deepEqual(
+  admitOfficialNews({ sourceId: "sec_press_releases", title: "SEC announces stablecoin market action" }).targets,
+  ["btc", "eth"],
+  "a generic crypto-market event can apply to both supported assets"
+);
+assert.equal(
+  admitOfficialNews({
+    sourceId: "federal_register_financial",
+    title: "Fisheries of the Exclusive Economic Zone off Alaska"
+  }).accepted,
+  false,
+  "unrelated Federal Register documents never enter NEWS"
+);
+const occAdmission = admitOfficialNews({
+  sourceId: "occ_news_releases",
+  title: "OCC clarifies national bank activities involving stablecoin and digital asset custody"
+});
+assert.equal(occAdmission.accepted, true);
+assert.equal(occAdmission.pushEligible, false, "new official sources remain push-ineligible until separately observed");
+assert.equal(occAdmission.importance, "normal", "routine OCC guidance must not become the lead event merely from a keyword match");
+assert.deepEqual(occAdmission.markets, ["crypto"], "crypto-specific OCC material must not inflate the Global event feed");
+assert.equal(admitOfficialNews({
+  sourceId: "occ_news_releases",
+  title: "OCC releases quarterly bank trading report"
+}).accepted, false);
+assert.equal(
+  admitOfficialNews({ sourceId: "sec_edgar_tracked", title: "Tracked company filing", structuredPayload: { form: "8-K" } }).importance,
+  "normal",
+  "an 8-K form label alone cannot promote a routine filing"
+);
+assert.equal(
+  newsSourceCatalog.find((source) => source.id === "cftc_cot_positioning")?.adapter,
+  "positioning",
+  "the weekly positioning dataset must be governed by the official source catalog"
+);
 assert.equal(normalizeEdgarAcceptanceDateTime("20260720183000"), "2026-07-20T22:30:00.000Z", "SEC compact acceptance time is interpreted in America/New_York");
 assert.equal(normalizeEdgarAcceptanceDateTime(undefined, "2026-07-20"), "2026-07-20T00:00:00.000Z");
 assert.equal(normalizeEdgarAcceptanceDateTime("invalid", null), null);
@@ -107,6 +161,75 @@ assert.equal(officialRssPayloadFailure({ candidateCount: 3, admittedCount: 2, in
 assert.equal(officialRssPayloadFailure({ candidateCount: 3, admittedCount: 0, invalidAdmittedCount: 0 }), null, "a healthy feed with no product-relevant item is not degraded");
 
 const now = new Date("2026-07-20T12:00:00.000Z");
+const cftcPositioning = normalizeCftcPositioning("btc", {
+  id: "260714133741F",
+  cftc_contract_market_code: "133741",
+  report_date_as_yyyy_mm_dd: "2026-07-14T00:00:00.000",
+  open_interest_all: "19385",
+  change_in_open_interest_all: "553",
+  asset_mgr_positions_long: "4779",
+  asset_mgr_positions_short: "1964",
+  change_in_asset_mgr_long: "-11",
+  change_in_asset_mgr_short: "-441",
+  lev_money_positions_long: "4015",
+  lev_money_positions_short: "11506",
+  change_in_lev_money_long: "-391",
+  change_in_lev_money_short: "383"
+}, now);
+assert.ok(cftcPositioning);
+assert.equal(cftcPositioning.assetManagerNet, 2_815);
+assert.equal(cftcPositioning.assetManagerNetWeeklyChange, 430);
+assert.equal(cftcPositioning.leveragedFundsNet, -7_491);
+assert.equal(cftcPositioning.leveragedFundsNetWeeklyChange, -774);
+assert.equal(normalizeCftcPositioning("eth", {
+  cftc_contract_market_code: "133741",
+  report_date_as_yyyy_mm_dd: "2026-07-14T00:00:00.000"
+}, now), null, "a BTC CFTC row cannot be serialized as ETH");
+assert.equal(normalizeCftcPositioning("btc", {
+  cftc_contract_market_code: "133741",
+  report_date_as_yyyy_mm_dd: "2026-06-01T00:00:00.000"
+}, now), null, "stale weekly positioning fails closed");
+const federalRegisterSource = newsSourceCatalog.find((source) => source.id === "federal_register_financial");
+assert.ok(federalRegisterSource);
+const federalRegisterInspection = normalizeFederalRegisterDocument({
+  document_number: "2026-14589",
+  title: "Reporting Forms for FDIC-Supervised Permitted Payment Stablecoin Issuers",
+  filed_at: "2026-07-20T11:45:00.000Z",
+  publication_date: "2026-07-21",
+  html_url: "https://www.federalregister.gov/public-inspection/2026-14589/example",
+  type: "Notice",
+  agencies: [{ name: "Federal Deposit Insurance Corporation" }]
+}, now, federalRegisterSource!);
+assert.ok(federalRegisterInspection);
+assert.equal(federalRegisterInspection.externalId, "inspection:2026-14589");
+assert.equal(federalRegisterInspection.structuredPayload.reactionEligible, true);
+assert.equal(federalRegisterInspection.structuredPayload.reactionAnchorPolicy, "occurred_at");
+assert.equal(federalRegisterInspection.structuredPayload.canonicalEventId, "federal-register:2026-14589");
+const federalRegisterPublishedOnly = normalizeFederalRegisterDocument({
+  document_number: "2026-14527",
+  title: "Increase Position Limits for Options on iShares Bitcoin Trust ETF",
+  publication_date: "2026-07-20",
+  html_url: "https://www.federalregister.gov/documents/2026/07/20/2026-14527/example",
+  type: "Notice",
+  agencies: [{ name: "Securities and Exchange Commission" }]
+}, now, federalRegisterSource!);
+assert.ok(federalRegisterPublishedOnly);
+assert.equal(federalRegisterPublishedOnly.structuredPayload.reactionEligible, false);
+assert.equal(federalRegisterPublishedOnly.structuredPayload.reactionAnchorPolicy, "none");
+assert.equal(normalizeFederalRegisterDocument({
+  document_number: "2026-99999",
+  title: "Bitcoin filing with an invalid future time",
+  filed_at: "2026-07-20T12:06:00.000Z",
+  publication_date: "2026-07-20",
+  html_url: "https://www.federalregister.gov/public-inspection/2026-99999/example"
+}, now, federalRegisterSource!), null, "future filed_at values are rejected instead of being replaced");
+assert.equal(normalizeFederalRegisterDocument({
+  document_number: "2026-10000",
+  title: "Routine fisheries notice",
+  filed_at: "2026-07-20T11:45:00.000Z",
+  publication_date: "2026-07-21",
+  html_url: "https://www.federalregister.gov/public-inspection/2026-10000/example"
+}, now, federalRegisterSource!), null);
 const publicCalendarMacro = resolveMacroSourceTrust({
   source: "Official",
   sourceUrl: "https://tradingeconomics.com/united-states/manufacturing-pmi",
@@ -177,7 +300,7 @@ const ppiPresentationItem = normalizeNewsSourceItem({
 }, now);
 const ppiPresentation = deterministicOfficialPresentation(ppiPresentationItem!);
 assert.equal(ppiPresentation.headline, "미국 근원 생산자물가지수(PPI) 발표");
-assert.equal(ppiPresentation.ruleVersion, "official-summary-v3");
+assert.equal(ppiPresentation.ruleVersion, "official-summary-v4");
 assert.doesNotMatch(ppiPresentation.factSummary, /ChartRadar 공식 매크로 원장/);
 assert.match(ppiPresentation.factSummary, /공식 출처에서 확인/);
 const distinctMacroItem = normalizeNewsSourceItem({
@@ -250,6 +373,24 @@ assert.deepEqual(
   "only the deterministic fact envelope may cross the model boundary"
 );
 assert.match(deterministicOfficialPresentation(normalized!).factSummary, /공식 발표/);
+const specificEnforcementItem = normalizeNewsSourceItem({
+  sourceId: "sec_press_releases",
+  externalId: "SEC-2026-SPECIFIC",
+  canonicalUrl: "https://www.sec.gov/news/specific-enforcement",
+  originalTitle: "SEC Charges Acme Crypto Exchange for Digital Asset Fraud",
+  publishedAt: "2026-07-20T11:49:00.000Z",
+  eventType: "us_crypto_regulation",
+  entities: ["Acme Crypto Exchange"],
+  action: "published",
+  markets: ["crypto"],
+  targets: ["btc", "eth"],
+  category: "regulation",
+  importance: "high",
+  structuredPayload: {}
+}, now);
+const specificEnforcementPresentation = deterministicOfficialPresentation(specificEnforcementItem!);
+assert.match(specificEnforcementPresentation.headline, /Acme Crypto Exchange/, "a named official enforcement target remains visible in the Korean headline");
+assert.match(specificEnforcementPresentation.factSummary, /법 집행 조치와 적용 대상/, "the summary explains the agency action instead of emitting a generic news label");
 
 assert.equal(normalizeNewsSourceItem({
   sourceId: "sec_press_releases",
@@ -314,8 +455,7 @@ const cftcJointIdentity = officialNewsCanonicalEventId({
   eventKind: "joint_market_structure_action",
   publishedAt: "2026-07-20T18:03:00.000Z"
 });
-assert.equal(secJointIdentity, null);
-assert.equal(cftcJointIdentity, null);
+assert.equal(secJointIdentity, cftcJointIdentity, "joint agency releases share a date-scoped canonical identity");
 const secJointAdmission = admitOfficialNews({ sourceId: "sec_press_releases", title: "SEC and CFTC announce joint digital asset market structure action" });
 const cftcJointAdmission = admitOfficialNews({ sourceId: "cftc_releases", title: "CFTC and SEC announce joint digital asset market structure action" });
 assert.equal(secJointAdmission.accepted, true);

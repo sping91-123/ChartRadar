@@ -6,6 +6,7 @@ export type OfficialAdmissionReason =
   | "crypto_regulation"
   | "tracked_company"
   | "market_infrastructure"
+  | "federal_rulemaking"
   | "out_of_scope";
 
 export interface OfficialNewsAdmission {
@@ -34,7 +35,9 @@ export function officialRssPayloadFailure(input: {
   return null;
 }
 
-const cryptoTerms = /\b(bitcoin|btc|ether|ethereum|eth|crypto|digital asset|stablecoin|blockchain|virtual currenc(?:y|ies)|tokenized?|spot (?:bitcoin|ether) etf)\b/i;
+const bitcoinTerms = /\b(bitcoin|btc|spot bitcoin etf)\b/i;
+const etherTerms = /\b(ether|ethereum|eth|spot ether(?:eum)? etf)\b/i;
+const genericCryptoTerms = /\b(crypto|digital asset|stablecoin|blockchain|virtual currenc(?:y|ies)|tokenized?)\b/i;
 const trackedCompanyTerms = /\b(nvidia|tesla|apple|microsoft|amazon|meta platforms|alphabet|google|broadcom|nvda|tsla|aapl|msft|amzn|meta|googl|avgo)\b/i;
 const marketInfrastructureTerms = /\b(market structure|securities exchange|national market system|clearing|clearinghouse|central counterparty|margin requirement|position limit|trading halt|market disruption|systemic risk|swap dealer|derivatives market|futures market|short sale)\b/i;
 const criticalTerms = /\b(emergency|systemic|market disruption|trading halt|extraordinary|financial stability)\b/i;
@@ -54,6 +57,13 @@ function rejected(): OfficialNewsAdmission {
 
 function accepted(input: Omit<OfficialNewsAdmission, "accepted" | "ruleVersion">): OfficialNewsAdmission {
   return { accepted: true, ruleVersion: "official-admission-v1", ...input };
+}
+
+function cryptoTargets(text: string): Array<"btc" | "eth"> {
+  const bitcoin = bitcoinTerms.test(text);
+  const ether = etherTerms.test(text);
+  if (bitcoin || ether) return [...(bitcoin ? ["btc" as const] : []), ...(ether ? ["eth" as const] : [])];
+  return genericCryptoTerms.test(text) ? ["btc", "eth"] : [];
 }
 
 function fedEventKind(text: string) {
@@ -104,38 +114,88 @@ export function admitOfficialNews(input: {
       eventKind: `sec_filing_${form.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`,
       markets: ["global"],
       targets: ["global"],
-      importance: form === "8-K" || form === "6-K" ? "high" : "normal",
+      // Form type alone does not establish market relevance. A meaningful
+      // observed reaction can still promote the filing in the presentation.
+      importance: "normal",
       pushEligible: false
     });
   }
 
   if (input.sourceId === "sec_press_releases") {
-    const isCrypto = cryptoTerms.test(text);
+    const cryptoAssetTargets = cryptoTargets(text);
+    const isCrypto = cryptoAssetTargets.length > 0;
     const isTracked = trackedCompanyTerms.test(text);
     const isInfrastructure = marketInfrastructureTerms.test(text);
+    const isJointSecCftc = /\bsec\b/i.test(text) && /\bcftc\b/i.test(text);
     if (!isCrypto && !isTracked && !isInfrastructure) return rejected();
-    const markets: NewsMarket[] = [...(isCrypto ? ["crypto" as const] : []), ...(isTracked || isInfrastructure ? ["global" as const] : [])];
+    const markets: NewsMarket[] = [
+      ...(isCrypto ? ["crypto" as const] : []),
+      ...(isTracked || (isInfrastructure && !isCrypto) ? ["global" as const] : [])
+    ];
     return accepted({
       reason: isCrypto ? "crypto_regulation" : isInfrastructure ? "market_infrastructure" : "tracked_company",
-      eventKind: isCrypto ? "us_crypto_regulation" : isInfrastructure ? "us_market_infrastructure" : "sec_tracked_company",
+      eventKind: isJointSecCftc
+        ? isCrypto ? "joint_us_crypto_regulation" : "joint_us_market_infrastructure"
+        : isCrypto ? "us_crypto_regulation" : isInfrastructure ? "us_market_infrastructure" : "sec_tracked_company",
       markets,
-      targets: [...(isCrypto ? ["btc" as const, "eth" as const] : []), ...(isTracked || isInfrastructure ? ["global" as const] : [])],
+      targets: [...cryptoAssetTargets, ...(isTracked || (isInfrastructure && !isCrypto) ? ["global" as const] : [])],
       importance: criticalTerms.test(text) ? "critical" : isTracked && !isInfrastructure ? "normal" : "high",
       pushEligible: isCrypto || isInfrastructure
     });
   }
 
   if (input.sourceId === "cftc_releases") {
-    const isCrypto = cryptoTerms.test(text);
+    const cryptoAssetTargets = cryptoTargets(text);
+    const isCrypto = cryptoAssetTargets.length > 0;
     const isInfrastructure = marketInfrastructureTerms.test(text);
+    const isJointSecCftc = /\bsec\b/i.test(text) && /\bcftc\b/i.test(text);
     if (!isCrypto && !isInfrastructure) return rejected();
     return accepted({
       reason: isCrypto ? "crypto_regulation" : "market_infrastructure",
-      eventKind: isCrypto ? "us_crypto_regulation" : "us_market_infrastructure",
-      markets: [...(isCrypto ? ["crypto" as const] : []), ...(isInfrastructure ? ["global" as const] : [])],
-      targets: [...(isCrypto ? ["btc" as const, "eth" as const] : []), ...(isInfrastructure ? ["global" as const] : [])],
+      eventKind: isJointSecCftc
+        ? isCrypto ? "joint_us_crypto_regulation" : "joint_us_market_infrastructure"
+        : isCrypto ? "us_crypto_regulation" : "us_market_infrastructure",
+      markets: [...(isCrypto ? ["crypto" as const] : []), ...(isInfrastructure && !isCrypto ? ["global" as const] : [])],
+      targets: [...cryptoAssetTargets, ...(isInfrastructure && !isCrypto ? ["global" as const] : [])],
       importance: criticalTerms.test(text) ? "critical" : "high",
       pushEligible: true
+    });
+  }
+
+  if (input.sourceId === "federal_register_financial") {
+    const cryptoAssetTargets = cryptoTargets(text);
+    const isCrypto = cryptoAssetTargets.length > 0;
+    const isInfrastructure = marketInfrastructureTerms.test(text);
+    if (!isCrypto && !isInfrastructure) return rejected();
+    const markets: NewsMarket[] = [
+      ...(isCrypto ? ["crypto" as const] : []),
+      ...(isInfrastructure && !isCrypto ? ["global" as const] : [])
+    ];
+    return accepted({
+      reason: isCrypto ? "crypto_regulation" : "federal_rulemaking",
+      eventKind: isCrypto ? "us_crypto_rulemaking" : "us_market_rulemaking",
+      markets,
+      targets: [
+        ...cryptoAssetTargets,
+        ...(isInfrastructure && !isCrypto ? ["global" as const] : [])
+      ],
+      importance: criticalTerms.test(text) ? "critical" : "normal",
+      // Federal Register is enabled first as an explanatory source. Push stays
+      // fail-closed until enough observed events pass the separate alert gate.
+      pushEligible: false
+    });
+  }
+
+  if (input.sourceId === "occ_news_releases") {
+    const cryptoAssetTargets = cryptoTargets(text);
+    if (cryptoAssetTargets.length === 0) return rejected();
+    return accepted({
+      reason: "crypto_regulation",
+      eventKind: "us_bank_digital_asset_policy",
+      markets: ["crypto"],
+      targets: cryptoAssetTargets,
+      importance: criticalTerms.test(text) ? "critical" : "normal",
+      pushEligible: false
     });
   }
 

@@ -1,10 +1,10 @@
 import type { NewsImpactCapabilities, NewsImpactEvent, NewsMarket } from "@/lib/newsImpact";
 import { serializeBasicNewsImpactEvent, serializeOfficialNewsImpactEvent } from "@/lib/newsImpact";
 import { publicNewsReactionSummary, repairLegacyMacroPresentation } from "@/lib/newsImpactPresentationRules";
+import { sortNewsImpactEvents } from "@/lib/newsImpactSort";
 import type { NewsImpactMode } from "@/lib/server/newsImpactMode";
 import type { RequestEntitlement } from "@/lib/server/requestEntitlement";
-
-const importanceRank = { critical: 3, high: 2, normal: 1 } as const;
+export { sortNewsImpactEvents };
 
 export function cleanPublicNewsText(value: string) {
   const named: Record<string, string> = { amp: "&", apos: "'", gt: ">", lt: "<", nbsp: " ", quot: '"' };
@@ -114,13 +114,6 @@ export function newsImpactCapabilitiesForMode(
 
 export function serializeOfficialNewsEvents(events: NewsImpactEvent[]) {
   return events.map(cleanNewsEvent).map(serializeOfficialNewsImpactEvent);
-}
-
-export function sortNewsImpactEvents(events: NewsImpactEvent[]) {
-  return [...events].sort((left, right) => {
-    const importance = importanceRank[right.importance] - importanceRank[left.importance];
-    return importance || right.occurredAt.localeCompare(left.occurredAt) || right.id.localeCompare(left.id);
-  });
 }
 
 export function serializeNewsEvents(events: NewsImpactEvent[], pro: boolean) {

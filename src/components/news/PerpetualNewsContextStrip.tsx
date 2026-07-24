@@ -6,6 +6,7 @@ import { ArrowRight, Newspaper } from "lucide-react";
 import { StatusPill } from "@/components/ui/DesignPrimitives";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import type { NewsImpactListResponse } from "@/lib/newsImpact";
+import { selectMeaningfulNewsImpactEvent } from "@/lib/newsImpactSort";
 import { newsImpactClassificationLabel, newsImpactTone } from "@/lib/newsImpactPresentation";
 import type { PerpetualAsset } from "@/lib/perpetualDecisionSnapshot";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
@@ -58,16 +59,20 @@ export function PerpetualNewsContextStrip({ asset, snapshotId }: { asset: Perpet
   }
   if (state.status === "unavailable") return null;
 
-  const event = state.payload.events[0];
+  const event = selectMeaningfulNewsImpactEvent(state.payload.events);
   const href = event
     ? `/crypto/news?asset=${asset}&event=${event.id}&source=perpetual${state.exact ? `&snapshot=${encodeURIComponent(snapshotId)}` : ""}`
     : `/crypto/news?asset=${asset}&source=perpetual`;
   if (!event) {
     const delayed = state.payload.quality !== "ready";
+    const leveragedNet = state.payload.marketBrief?.weeklyPositioning?.leveragedFundsNet;
+    const positioningCopy = typeof leveragedNet === "number"
+      ? `CFTC 주간·지연 자료: 레버리지 펀드는 ${leveragedNet >= 0 ? "매수" : "매도"} 계약이 ${Math.abs(Math.round(leveragedNet)).toLocaleString("ko-KR")}개 더 많음`
+      : null;
     return (
       <Link href={href} className="flex min-h-12 items-center gap-2 bg-ui-panel px-3 py-2.5 text-xs font-semibold text-ui-muted transition hover:bg-ui-elevated">
         <Newspaper className="shrink-0 text-ui-brand" size={16} aria-hidden />
-        <span className="min-w-0 flex-1"><strong className="text-ui-text">공식 뉴스 확인</strong> · {delayed ? "공식 출처 갱신이 지연되어 새 사건이 없다고 단정하지 않습니다." : "현재 판단을 바꿀 새 공식 사건은 없습니다."}</span>
+        <span className="min-w-0 flex-1"><strong className="text-ui-text">공식 뉴스 확인</strong> · {delayed ? "공식 출처 갱신이 지연되어 새 사건이 없다고 단정하지 않습니다." : positioningCopy ?? "연결된 공식 출처에 새 BTC·ETH 사건이 없습니다."}</span>
         <ArrowRight className="shrink-0 text-ui-brand" size={14} aria-hidden />
       </Link>
     );

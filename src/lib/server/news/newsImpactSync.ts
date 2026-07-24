@@ -3,6 +3,7 @@ import {
   classifyGlobalNewsReaction,
   newsReactionAnchorAt,
   nextNewsImpactCheckAt,
+  nextNewsImpactStage,
   type ClassifiedReaction,
   type GlobalReactionObservation,
   type NewsImpactStage
@@ -27,6 +28,7 @@ import {
   readNewsEventRow,
   readRecentActionableNewsCandidates,
   readNewsReactionStage,
+  retractNewsEventsForRejectedSourceItems,
   renewNewsSyncRun,
   snapshotReactionMetrics,
   upsertGlobalReactionObservation,
@@ -39,6 +41,7 @@ import {
 } from "@/lib/server/news/newsImpactStore";
 import { fetchOfficialNewsSources } from "@/lib/server/news/officialSourceAdapters";
 import { deterministicOfficialPresentation, officialEventPresentation } from "@/lib/server/news/officialFactSummary";
+import { syncCftcPositioningObservations } from "@/lib/server/news/cftcPositioning";
 import { semanticNewsEventKey } from "@/lib/server/news/normalizeNewsSourceItem";
 import { isNewsImpactCollectionEnabled, isNewsImpactPushEnabled, newsImpactMode } from "@/lib/server/newsImpactMode";
 import { isSupabaseAdminConfigured, supabaseAdminRpc } from "@/lib/server/supabaseAdmin";
@@ -120,10 +123,17 @@ function globalReactionMetrics(before: GlobalReactionObservation | null, after: 
 }
 
 async function ensureDetectedReaction(event: NewsImpactEventRow, target: "btc" | "eth" | "global") {
+  if (event.metadata?.reaction_eligible === false) return null;
   const existing = await readNewsReactionStage(event.id, event.version, target, "detected");
   if (existing) return existing;
+  const reactionAnchorPolicy = event.metadata?.reaction_anchor_policy === "occurred_at"
+    ? "occurred_at" as const
+    : event.metadata?.reaction_anchor_policy === "first_seen"
+      ? "first_seen" as const
+      : null;
   const baselineAt = newsReactionAnchorAt({
     macroEventId: event.macro_event_id,
+    reactionAnchorPolicy,
     version: event.version,
     occurredAt: event.occurred_at,
     firstSeenAt: event.first_seen_at,
@@ -133,9 +143,12 @@ async function ensureDetectedReaction(event: NewsImpactEventRow, target: "btc" |
       : null
   });
   const nextCheckAt = nextNewsImpactCheckAt(baselineAt, "detected");
+  const anchorCopy = event.macro_event_id || reactionAnchorPolicy === "occurred_at"
+    ? "공식 공개 시각 뒤"
+    : "ChartRadar가 확인한 뒤";
   const detectedSummary = event.version > 1
-    ? "공식 발표 내용이 수정되어 수정 시점 이후 15분 시장 반응을 다시 확인 중입니다."
-    : "공식 발표를 확인했습니다. 발표 이후 15분 시장 반응을 확인 중입니다.";
+    ? `공식 발표 내용이 수정되어 ${anchorCopy} 15분 시장 반응을 다시 확인 중입니다.`
+    : `공식 발표를 확인했습니다. ${anchorCopy} 15분 시장 반응을 확인 중입니다.`;
   if (target === "global") {
     const baseline = await findGlobalObservationBefore(baselineAt, 10).catch(() => null);
     return upsertNewsReaction({
@@ -187,6 +200,12 @@ async function evaluateCryptoReaction(
     return null;
   }
   const classified = classifyCryptoNewsReaction(before, after);
+  const nextCondition = after ? {
+    label: after.summary.primaryCondition.label,
+    timeframe: after.summary.primaryCondition.timeframe,
+    kind: after.summary.primaryCondition.kind,
+    threshold: after.summary.primaryCondition.threshold
+  } : null;
   return upsertNewsReaction({
     eventId: current.event_id,
     eventVersion: current.event_version,
@@ -204,7 +223,15 @@ async function evaluateCryptoReaction(
     stateBefore: classified.stateBefore,
     stateAfter: classified.stateAfter,
     reactionSummary: classified.reactionSummary,
-    metrics: { ...snapshotReactionMetrics(before, after), eventContext: current.metrics?.eventContext }
+    metrics: {
+      ...snapshotReactionMetrics(before, after),
+      eventContext: current.metrics?.eventContext,
+      nextCondition,
+      engineVersions: {
+        before: before?.engineVersion ?? null,
+        after: after?.engineVersion ?? null
+      }
+    }
   });
 }
 
@@ -247,8 +274,8 @@ async function evaluateDueReaction(current: NewsReactionRow, now: Date) {
     await clearNewsReactionNextCheck(current.id);
     return null;
   }
-  const stage = current.stage === "detected" ? "provisional_15m" : "final_60m";
-  if (current.stage === "final_60m") {
+  const stage = nextNewsImpactStage(current.stage);
+  if (!stage) {
     await clearNewsReactionNextCheck(current.id);
     return null;
   }
@@ -267,8 +294,16 @@ async function evaluateDueReaction(current: NewsReactionRow, now: Date) {
 }
 
 async function runRetention(now: Date) {
-  if (now.getUTCMinutes() >= 5) return;
-  await supabaseAdminRpc("purge_news_impact_retention", {}).catch(() => undefined);
+  if (now.getUTCMinutes() >= 5) return { status: "skipped" as const, warning: null };
+  try {
+    await supabaseAdminRpc("purge_news_impact_retention", {});
+    return { status: "succeeded" as const, warning: null };
+  } catch (error) {
+    return {
+      status: "failed" as const,
+      warning: (error instanceof Error ? error.message : String(error)).slice(0, 180)
+    };
+  }
 }
 
 export async function runNewsImpactSync(now = new Date()): Promise<NewsImpactSyncResult> {
@@ -306,9 +341,15 @@ export async function runNewsImpactSync(now = new Date()): Promise<NewsImpactSyn
         .then((observation) => ({ observation, error: null as string | null }))
         .catch((error) => ({ observation: null, error: error instanceof Error ? error.message : String(error) }))
     ]);
-    const sourceResults = await fetchOfficialNewsSources(now);
+    const [sourceResults, positioningResult] = await Promise.all([
+      fetchOfficialNewsSources(now),
+      syncCftcPositioningObservations(now)
+    ]);
     await keepLease();
-    const sourceSummaries = sourceResults.map(({ items: _items, ...source }) => source);
+    const sourceSummaries = [
+      ...sourceResults.map(({ items: _items, rejectedExternalIds: _rejectedExternalIds, ...source }) => source),
+      positioningResult
+    ];
     let duplicateCount = 0;
     let acceptedCount = 0;
     for (const source of sourceResults) {
@@ -341,7 +382,12 @@ export async function runNewsImpactSync(now = new Date()): Promise<NewsImpactSyn
               summary_rule_version: deterministicPresentation.ruleVersion,
               admission_reason: item.structuredPayload.admissionReason ?? null,
               admission_rule_version: item.structuredPayload.admissionRuleVersion ?? null,
-              push_eligible: item.structuredPayload.pushEligible === true
+              push_eligible: item.structuredPayload.pushEligible === true,
+              reaction_eligible: item.structuredPayload.reactionEligible !== false,
+              reaction_anchor_policy: item.structuredPayload.reactionAnchorPolicy ?? (
+                typeof item.structuredPayload.macroEventId === "string" ? "occurred_at" : "first_seen"
+              ),
+              time_label: item.structuredPayload.timeLabel ?? null
             }
           });
           storedEvents.push(storedEvent);
@@ -363,6 +409,17 @@ export async function runNewsImpactSync(now = new Date()): Promise<NewsImpactSyn
               currentMetadata: storedEvent.event.metadata ?? {}
             })));
           }
+        }
+      }
+      const scopedRevisions = await retractNewsEventsForRejectedSourceItems(
+        source.sourceId,
+        source.rejectedExternalIds ?? [],
+        now.toISOString()
+      );
+      for (const revisedEvent of scopedRevisions) {
+        if (revisedEvent.status === "retracted") continue;
+        for (const target of revisedEvent.targets) {
+          await ensureDetectedReaction(revisedEvent, target);
         }
       }
     }
@@ -403,20 +460,22 @@ export async function runNewsImpactSync(now = new Date()): Promise<NewsImpactSyn
     const push = pushEnabled
       ? await enqueueNewsImpactAlerts(deliveryCandidates)
       : { eligible: actionable.length, claimed: 0, entitlementBlocked: 0 };
+    const retention = await runRetention(now);
     const partial = sourceResults.some((source) => source.status === "failed") ||
-      snapshotResults.some((snapshot) => snapshot.error) || Boolean(globalResult.error) || evaluationWarnings.length > 0;
+      positioningResult.status === "failed" ||
+      snapshotResults.some((snapshot) => snapshot.error) || Boolean(globalResult.error) ||
+      evaluationWarnings.length > 0 || retention.status === "failed";
     result = {
       ...result,
       status: partial ? "partial" : "stored",
       sources: sourceSummaries,
-      fetchedCount: sourceResults.reduce((sum, source) => sum + source.fetchedCount, 0),
+      fetchedCount: sourceResults.reduce((sum, source) => sum + source.fetchedCount, positioningResult.fetchedCount),
       acceptedCount,
       duplicateCount,
       evaluatedCount: evaluatedCandidates.length,
       wouldSendCount: actionable.length,
       claimedAlertCount: push.claimed
     };
-    await runRetention(now);
     await finishNewsSyncRun(runId, {
       startedAt,
       finishedAt: new Date().toISOString(),
@@ -425,6 +484,9 @@ export async function runNewsImpactSync(now = new Date()): Promise<NewsImpactSyn
         ...sourceSummaries,
         ...snapshotResults.map((snapshot) => ({ sourceId: `perpetual_${snapshot.asset}`, status: snapshot.error ? "failed" : "succeeded", warning: snapshot.error })),
         { sourceId: "global_observation", status: globalResult.error ? "failed" : "succeeded", warning: globalResult.error },
+        ...(retention.status === "skipped"
+          ? []
+          : [{ sourceId: "retention", status: retention.status, warning: retention.warning }]),
         ...(evaluationWarnings.length > 0
           ? [{ sourceId: "reaction_evaluator", status: "failed", warning: `${evaluationWarnings.length}개 반응 평가 재시도 대기` }]
           : [])

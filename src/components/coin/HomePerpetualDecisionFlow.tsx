@@ -14,6 +14,7 @@ import type { CryptoHomeTicker } from "@/lib/server/cryptoExchangeData";
 import type { PerpetualAsset, PerpetualDecisionSnapshot, SnapshotQuality } from "@/lib/perpetualDecisionSnapshot";
 import type { PerpetualSnapshotCapabilities, PerpetualSnapshotResponse } from "@/lib/perpetualApi";
 import type { NewsImpactListResponse } from "@/lib/newsImpact";
+import { selectMeaningfulNewsImpactEvent } from "@/lib/newsImpactSort";
 import { newsImpactClassificationLabel, newsImpactTone } from "@/lib/newsImpactPresentation";
 import { comparePerpetualShadowDecision, type LegacyPerpetualDirection } from "@/lib/perpetualShadowComparison";
 import {
@@ -148,17 +149,21 @@ function HomeNewsImpactStrip({ asset, snapshotId }: {
     return () => controller.abort();
   }, [asset, session?.accessToken, snapshotId]);
 
-  const event = payload?.events[0];
+  const event = selectMeaningfulNewsImpactEvent(payload?.events ?? []);
   if (!payload) return null;
   if (!event) {
     const delayed = payload.quality !== "ready";
+    const leveragedNet = payload.marketBrief?.weeklyPositioning?.leveragedFundsNet;
+    const positioningCopy = typeof leveragedNet === "number"
+      ? `CFTC 주간·지연 자료 · 레버리지 펀드는 ${leveragedNet >= 0 ? "매수" : "매도"} 계약이 ${Math.abs(Math.round(leveragedNet)).toLocaleString("ko-KR")}개 더 많음`
+      : null;
     return (
       <Link
         href={`/crypto/news?asset=${asset}&source=home`}
         className="mt-2 flex min-h-9 min-w-0 items-center gap-2 border-l-2 border-ui-line bg-ui-inset/45 px-2.5 py-1.5 text-[11px] font-semibold text-ui-muted transition hover:bg-ui-inset"
       >
         <StatusPill tone={delayed ? "risk" : "watch"} className="min-h-5 shrink-0 px-1.5 text-[10px]">공식 뉴스</StatusPill>
-        <span className="min-w-0 flex-1 truncate">{delayed ? "공식 출처 갱신 지연 · 상태 확인" : "현재 분석과 직접 연결된 새 공식 이슈 없음 · 최근 발표 보기"}</span>
+        <span className="min-w-0 flex-1 truncate">{delayed ? "공식 출처 갱신 지연 · 상태 확인" : positioningCopy ?? "연결된 공식 출처에 새 BTC·ETH 사건 없음 · 최근 자료 보기"}</span>
         <ArrowRight size={13} className="shrink-0 text-ui-brand" aria-hidden />
       </Link>
     );
@@ -182,7 +187,7 @@ function HomeNewsImpactStrip({ asset, snapshotId }: {
         className="mt-2 flex min-h-9 min-w-0 items-center gap-2 border-l-2 border-ui-watch bg-ui-inset/45 px-2.5 py-1.5 text-[11px] font-semibold text-ui-muted transition hover:bg-ui-inset"
       >
         <StatusPill tone="watch" className="min-h-5 shrink-0 px-1.5 text-[10px]">반응 확인 중</StatusPill>
-        <span className="min-w-0 flex-1 truncate">공식 발표 확인 · 발표 전후 시장 자료를 비교 중입니다</span>
+        <span className="min-w-0 flex-1 truncate">{event.headline} · 발표 전후 자료 비교 중</span>
         <ArrowRight size={13} className="shrink-0 text-ui-brand" aria-hidden />
       </Link>
     );

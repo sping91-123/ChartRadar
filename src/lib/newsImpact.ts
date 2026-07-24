@@ -1,5 +1,6 @@
 import type { DecisionState, PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
 import type { Candle } from "@/lib/marketAnalysis";
+import type { CftcPositioningBrief } from "@/lib/cftcPositioning";
 
 export type NewsMarket = "crypto" | "global";
 export type NewsImpactStage = "detected" | "provisional_15m" | "final_60m";
@@ -60,6 +61,12 @@ export interface NewsImpactReaction extends NewsDecisionContext {
   priceChangePercent?: number | null;
   stateBefore?: DecisionState | null;
   stateAfter?: DecisionState | null;
+  nextCondition?: {
+    label: string;
+    timeframe: "15m" | "1h" | "4h";
+    kind: "price_cross_above" | "price_cross_below" | "pressure_state_change" | "decision_state_change";
+    threshold: number | null;
+  } | null;
 }
 
 export interface NewsImpactEvent {
@@ -79,6 +86,7 @@ export interface NewsImpactEvent {
   primarySource: NewsSourceReference;
   sourceCount: number;
   macroEventKey?: string;
+  reactionEligibility?: "eligible" | "context_only";
   reaction: NewsImpactReaction | null;
   pro?: {
     sources: NewsSourceReference[];
@@ -101,12 +109,34 @@ export interface NewsImpactCapabilities {
   alertDefaultEnabled: false;
 }
 
+export interface NewsMarketBriefMetric {
+  key: string;
+  label: string;
+  value: string;
+  tone: "positive" | "negative" | "neutral" | "watch";
+}
+
+export interface NewsMarketBrief {
+  market: NewsMarket;
+  asset: "btc" | "eth" | null;
+  generatedAt: string;
+  quality: "ready" | "partial" | "stale" | "unavailable";
+  stateLabel: string;
+  headline: string;
+  topRisk: string;
+  nextCondition: string;
+  snapshotId?: string;
+  ctaHref: string;
+  metrics: NewsMarketBriefMetric[];
+  weeklyPositioning?: CftcPositioningBrief | null;
+}
+
 export interface NewsImpactListResponse {
   mode: "off" | "shadow" | "on";
   market: NewsMarket;
   asset: "btc" | "eth" | null;
   snapshotId?: string | null;
-  snapshotContext: "not_requested" | "matched" | "ignored_official_only";
+  snapshotContext: "not_requested" | "matched" | "not_matched" | "ignored_official_only";
   generatedAt: string;
   quality: "ready" | "partial" | "stale" | "unavailable";
   warning: string | null;
@@ -115,7 +145,10 @@ export interface NewsImpactListResponse {
     healthy: number;
     degraded: number;
     blocked: number;
+    accepted24h: number;
+    latestAcceptedAt: string | null;
   };
+  marketBrief: NewsMarketBrief | null;
   events: NewsImpactEvent[];
   capabilities: NewsImpactCapabilities;
   nextCursor: string | null;
@@ -240,6 +273,16 @@ export function classifyCryptoNewsReaction(
   const stateBefore = before?.summary.state ?? null;
   const stateAfter = after?.summary.state ?? null;
   const priceChangePercent = before && after ? percentChange(before.price, after.price) : null;
+  if (before && after && before.engineVersion !== after.engineVersion) {
+    return {
+      classification: "insufficient_data",
+      riskEffect: "unchanged",
+      reactionSummary: "분석 기준 버전이 달라 발표 전후 반응을 비교하지 않습니다.",
+      priceChangePercent: null,
+      stateBefore,
+      stateAfter
+    };
+  }
   if (
     !before ||
     !after ||
@@ -379,6 +422,7 @@ export function nextNewsImpactCheckAt(eventAt: string, stage: NewsImpactStage) {
 
 export function newsReactionAnchorAt(event: {
   macroEventId?: string | null;
+  reactionAnchorPolicy?: "occurred_at" | "first_seen" | null;
   version: number;
   occurredAt: string;
   firstSeenAt: string;
@@ -391,7 +435,15 @@ export function newsReactionAnchorAt(event: {
       ? revisionDetectedAt
       : event.updatedAt;
   }
+  if (event.reactionAnchorPolicy === "occurred_at") return event.occurredAt;
+  if (event.reactionAnchorPolicy === "first_seen") return event.firstSeenAt;
   return event.macroEventId ? event.occurredAt : event.firstSeenAt;
+}
+
+export function nextNewsImpactStage(stage: NewsImpactStage): Exclude<NewsImpactStage, "detected"> | null {
+  if (stage === "detected") return "provisional_15m";
+  if (stage === "provisional_15m") return "final_60m";
+  return null;
 }
 
 export function serializeBasicNewsImpactEvent(event: NewsImpactEvent): NewsImpactEvent {
@@ -472,6 +524,7 @@ export function serializeOfficialNewsImpactEvent(event: NewsImpactEvent): NewsIm
     },
     sourceCount: event.sourceCount,
     ...(event.macroEventKey ? { macroEventKey: event.macroEventKey } : {}),
+    ...(event.reactionEligibility ? { reactionEligibility: event.reactionEligibility } : {}),
     reaction: null
   };
 }

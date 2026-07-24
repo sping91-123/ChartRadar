@@ -94,6 +94,12 @@ export async function POST(request: Request) {
   if (source === "news" && !newsContext) {
     return privateJson({ error: "뉴스 사건과 동일한 자산·분석 연결을 확인하지 못했습니다." }, { status: 400 });
   }
+  if (newsContext) {
+    const existing = await supabaseAdminRest<Array<{ id: string; created_at: string }>>(
+      `journals?select=id,created_at&user_id=eq.${encodeURIComponent(entitlement.userId)}&news_reaction_id=eq.${encodeURIComponent(newsContext.reactionId)}&limit=1`
+    ).catch(() => []);
+    if (existing[0]) return privateJson({ journal: existing[0], existing: true });
+  }
 
   let monitorId: string | null = null;
   let monitorCondition: DecisionJournalContext["monitorCondition"];

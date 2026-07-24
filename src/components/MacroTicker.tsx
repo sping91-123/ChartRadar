@@ -552,7 +552,7 @@ export function MacroTicker({
   const nearestUpcoming = upcomingItems[0];
   const featuredUpcomingItems = upcomingItems.slice(0, isUpcomingExpanded ? 8 : 2);
   const laterUpcomingItems = upcomingItems.slice(1, 7);
-  const isNewsMacroReport = compact && (pathname === "/news" || pathname === "/crypto/news");
+  const isNewsMacroReport = compact && !homePriorityAware && (pathname === "/news" || pathname === "/crypto/news");
   const homePriorityItem = homePriorityAware ? getHomePriorityItem(displayItems) : undefined;
   const homeVisibleItems = homePriorityAware ? displayItems.filter(isVisibleCompactImpact) : [];
   const homeNearestUpcoming = homePriorityAware ? getUpcomingItems(homeVisibleItems)[0] : undefined;

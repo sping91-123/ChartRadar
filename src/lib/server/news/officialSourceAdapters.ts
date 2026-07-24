@@ -7,6 +7,8 @@ import { officialNewsCanonicalEventId, officialNewsSemanticSubject } from "@/lib
 import { isAllowedOfficialMacroEvent, isAllowedOfficialMacroUrl, isAllowedUrlForHosts, runtimeAllowedNewsSourcesForPolicies, type NewsSourceDefinition } from "@/lib/server/news/sourceCatalog";
 import { classifyNewsSourceTimestamp, normalizeNewsSourceItem, type NormalizedNewsSourceItem } from "@/lib/server/news/normalizeNewsSourceItem";
 import { readEnabledNewsSourcePolicies, readNewsSourceHealth, recordNewsSourceFailure, recordNewsSourceSuccess } from "@/lib/server/news/newsImpactStore";
+import { normalizeFederalRegisterDocument, type FederalRegisterDocumentRow } from "@/lib/server/news/federalRegister";
+import { readBoundedOfficialResponseText } from "@/lib/server/news/boundedOfficialResponse";
 
 export interface NewsSourceFetchResult {
   sourceId: string;
@@ -14,6 +16,7 @@ export interface NewsSourceFetchResult {
   fetchedCount: number;
   acceptedCount: number;
   items: NormalizedNewsSourceItem[];
+  rejectedExternalIds?: string[];
   warning?: string;
 }
 
@@ -37,6 +40,7 @@ const trackedEdgarCompanies = [
 const trackedForms = new Set(["8-K", "6-K", "10-Q", "10-K"]);
 const MAX_RSS_BYTES = 2 * 1024 * 1024;
 const MAX_JSON_BYTES = 5 * 1024 * 1024;
+const FEDERAL_REGISTER_LOOKBACK_DAYS = 3;
 let secRequestQueue: Promise<void> = Promise.resolve();
 let lastSecRequestAt = 0;
 
@@ -88,12 +92,17 @@ async function fetchWithTimeout(url: string, source: NewsSourceDefinition, heade
       const response = await fetch(url, {
         headers: {
           "User-Agent": process.env.NEWS_OFFICIAL_USER_AGENT || "ChartRadar/1.0 (https://chartradar.kr/contact)",
-          Accept: "application/rss+xml, application/atom+xml, application/xml, application/json;q=0.9",
+          Accept: "application/rss+xml, application/atom+xml, application/xml, text/xml, application/json;q=0.9, */*;q=0.1",
           ...headers
         },
         cache: "no-store",
         signal: controller.signal
       });
+      const finalUrl = response.url || url;
+      if (!isAllowedUrlForHosts(finalUrl, source.allowedHosts)) {
+        await response.body?.cancel().catch(() => undefined);
+        throw new Error(`${source.id}:redirect_host_not_allowed`);
+      }
       if (response.ok) return response;
       if (attempt === 0 && (response.status === 429 || response.status >= 500)) {
         const delay = retryDelayMs(response);
@@ -117,28 +126,12 @@ async function fetchWithTimeout(url: string, source: NewsSourceDefinition, heade
 }
 
 async function readLimitedText(response: Response, maxBytes: number, contentType: RegExp) {
-  const type = response.headers.get("content-type") ?? "";
-  if (!contentType.test(type)) throw new Error(`unexpected_content_type:${type.slice(0, 80)}`);
-  const declared = Number(response.headers.get("content-length") ?? 0);
-  if (Number.isFinite(declared) && declared > maxBytes) throw new Error("official_source_payload_too_large");
-  if (!response.body) return "";
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let received = 0;
-  let text = "";
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      received += value.byteLength;
-      if (received > maxBytes) throw new Error("official_source_payload_too_large");
-      text += decoder.decode(value, { stream: true });
-    }
-    text += decoder.decode();
-    return text;
-  } finally {
-    reader.releaseLock();
-  }
+  return readBoundedOfficialResponseText(response, {
+    maxBytes,
+    contentType,
+    contentTypeError: "unexpected_content_type",
+    tooLargeError: "official_source_payload_too_large"
+  });
 }
 
 function rssRows(payload: unknown) {
@@ -175,6 +168,7 @@ async function fetchRssSource(source: NewsSourceDefinition, now: Date) {
   const rows = rssRows(parser.parse(xml));
   const candidates = rows.slice(0, 30);
   const items: NormalizedNewsSourceItem[] = [];
+  const rejectedExternalIds: string[] = [];
   let admittedCount = 0;
   let invalidAdmittedCount = 0;
   let malformedCount = 0;
@@ -187,10 +181,13 @@ async function fetchRssSource(source: NewsSourceDefinition, now: Date) {
       malformedCount += 1;
       continue;
     }
-    const admission = admitOfficialNews({ sourceId: source.id, title });
-    if (!admission.accepted || !admission.eventKind) continue;
     const timestampStatus = classifyNewsSourceTimestamp(publishedAt, now);
     if (timestampStatus === "expired") continue;
+    const admission = admitOfficialNews({ sourceId: source.id, title });
+    if (!admission.accepted || !admission.eventKind) {
+      if (timestampStatus === "valid") rejectedExternalIds.push(externalId.slice(0, 180));
+      continue;
+    }
     admittedCount += 1;
     if (timestampStatus !== "valid") {
       invalidAdmittedCount += 1;
@@ -204,7 +201,7 @@ async function fetchRssSource(source: NewsSourceDefinition, now: Date) {
         originalTitle: title,
         publishedAt,
         eventType: admission.eventKind,
-        entities: (source.id === "sec_press_releases" || source.id === "cftc_releases") &&
+        entities: (source.id === "sec_press_releases" || source.id === "cftc_releases" || source.id === "occ_news_releases") &&
           (admission.reason === "crypto_regulation" || admission.reason === "market_infrastructure")
           ? [officialNewsSemanticSubject(title)].filter(Boolean)
           : title.match(/[A-Z][A-Za-z0-9.&-]{2,}/g)?.slice(0, 8) ?? [source.name],
@@ -229,7 +226,11 @@ async function fetchRssSource(source: NewsSourceDefinition, now: Date) {
   }
   const failure = officialRssPayloadFailure({ candidateCount: candidates.length, admittedCount, invalidAdmittedCount, malformedCount });
   if (failure) throw new Error(failure);
-  return { fetchedCount: candidates.length, items };
+  return {
+    fetchedCount: candidates.length,
+    items,
+    rejectedExternalIds: Array.from(new Set(rejectedExternalIds))
+  };
 }
 
 interface MacroEventRow {
@@ -338,6 +339,74 @@ interface EdgarSubmissions {
   };
 }
 
+interface FederalRegisterResponse {
+  count?: number;
+  results?: FederalRegisterDocumentRow[];
+}
+
+function dateOnlyUtc(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function recentFederalRegisterDates(now: Date) {
+  return Array.from({ length: FEDERAL_REGISTER_LOOKBACK_DAYS }, (_, index) => (
+    dateOnlyUtc(new Date(now.getTime() - index * 24 * 60 * 60_000))
+  ));
+}
+
+async function fetchFederalRegister(source: NewsSourceDefinition, now: Date) {
+  if (!source.endpoint) return { fetchedCount: 0, items: [] as NormalizedNewsSourceItem[] };
+  const rows: FederalRegisterDocumentRow[] = [];
+  for (const availableOn of recentFederalRegisterDates(now)) {
+    const url = new URL(source.endpoint);
+    url.searchParams.set("conditions[available_on]", availableOn);
+    url.searchParams.set("per_page", "1000");
+    const response = await fetchWithTimeout(url.toString(), source, { Accept: "application/json" });
+    const payload = JSON.parse(await readLimitedText(response, MAX_JSON_BYTES, /json/i)) as FederalRegisterResponse;
+    rows.push(...asArray(payload.results));
+    if (availableOn !== recentFederalRegisterDates(now).at(-1)) {
+      await new Promise((resolve) => setTimeout(resolve, 1_050));
+    }
+  }
+
+  const unique = new Map<string, FederalRegisterDocumentRow>();
+  for (const row of rows) {
+    const key = textValue(row.document_number);
+    if (key && !unique.has(key)) unique.set(key, row);
+  }
+  let structurallyValidCount = 0;
+  let admittedCount = 0;
+  let invalidAdmittedCount = 0;
+  const items: NormalizedNewsSourceItem[] = [];
+  for (const row of Array.from(unique.values())) {
+    const title = textValue(row.title);
+    const url = textValue(row.html_url);
+    const timestamp = textValue(row.filed_at) || textValue(row.publication_date);
+    if (!title || !url || !timestamp) continue;
+    structurallyValidCount += 1;
+    const context = [
+      title,
+      ...(Array.isArray(row.excerpts) ? row.excerpts : [row.excerpts]),
+      row.abstract
+    ].filter((value): value is string => typeof value === "string").join(" ");
+    if (!admitOfficialNews({ sourceId: source.id, title: context }).accepted) continue;
+    admittedCount += 1;
+    const normalized = normalizeFederalRegisterDocument(row, now, source);
+    if (normalized) items.push(normalized);
+    else invalidAdmittedCount += 1;
+  }
+  if (rows.length > 0 && structurallyValidCount === 0) {
+    throw new Error("federal_register_schema_invalid");
+  }
+  if (admittedCount > 0 && invalidAdmittedCount === admittedCount) {
+    throw new Error("federal_register_all_admitted_items_invalid");
+  }
+  return {
+    fetchedCount: rows.length,
+    items
+  };
+}
+
 async function fetchEdgar(source: NewsSourceDefinition, now: Date) {
   const results: NormalizedNewsSourceItem[] = [];
   let fetchedCount = 0;
@@ -404,16 +473,21 @@ async function fetchEdgar(source: NewsSourceDefinition, now: Date) {
   return { fetchedCount, items: results };
 }
 
-async function fetchAllowedSource(source: NewsSourceDefinition, now: Date) {
+async function fetchAllowedSource(
+  source: NewsSourceDefinition,
+  now: Date
+): Promise<{ fetchedCount: number; items: NormalizedNewsSourceItem[]; rejectedExternalIds?: string[] }> {
   if (source.adapter === "macro_store") return fetchMacroStore(now);
   if (source.adapter === "rss") return fetchRssSource(source, now);
   if (source.adapter === "edgar") return fetchEdgar(source, now);
+  if (source.adapter === "federal_register") return fetchFederalRegister(source, now);
   return { fetchedCount: 0, items: [] as NormalizedNewsSourceItem[] };
 }
 
 export async function fetchOfficialNewsSources(now = new Date()): Promise<NewsSourceFetchResult[]> {
   const sourcePolicies = await readEnabledNewsSourcePolicies();
-  const runtimeSources = runtimeAllowedNewsSourcesForPolicies(sourcePolicies);
+  const runtimeSources = runtimeAllowedNewsSourcesForPolicies(sourcePolicies)
+    .filter((source) => source.adapter !== "positioning");
   if (runtimeSources.length === 0) {
     return [{
       sourceId: "source_catalog",
@@ -440,6 +514,9 @@ export async function fetchOfficialNewsSources(now = new Date()): Promise<NewsSo
         fetchedCount: fetched.fetchedCount,
         acceptedCount: admittedItems.length,
         items: admittedItems,
+        ...(fetched.rejectedExternalIds?.length
+          ? { rejectedExternalIds: fetched.rejectedExternalIds }
+          : {}),
         ...(admittedItems.length < fetched.items.length ? { warning: "runtime_source_host_policy_filtered" } : {})
       };
     } catch (error) {

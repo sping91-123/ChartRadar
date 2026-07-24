@@ -7,6 +7,8 @@ const perpetualMigration = readFileSync(join(process.cwd(), "supabase/migrations
 const newsMigration = readFileSync(join(process.cwd(), "supabase/migrations/20260720141318_news_impact_v1.sql"), "utf8");
 const newsHardeningMigration = readFileSync(join(process.cwd(), "supabase/migrations/20260720165116_harden_news_impact_v1.sql"), "utf8");
 const macroStatusMigration = readFileSync(join(process.cwd(), "supabase/migrations/20260721191218_reconcile_macro_event_status.sql"), "utf8");
+const newsUsefulnessMigration = readFileSync(join(process.cwd(), "supabase/migrations/20260724013000_news_impact_useful_v2.sql"), "utf8");
+const newsOperationalHardeningMigration = readFileSync(join(process.cwd(), "supabase/migrations/20260724024500_news_impact_operational_hardening.sql"), "utf8");
 const users = {
   first: "70000000-0000-4000-8000-000000000001",
   second: "70000000-0000-4000-8000-000000000002",
@@ -79,6 +81,10 @@ try {
   await db.exec("update public.news_source_catalog set enabled=false, policy_reason='operator_kill_switch' where source_id='cftc_releases'");
   await db.exec(newsMigration);
   await db.exec(newsHardeningMigration);
+  await db.exec(newsUsefulnessMigration);
+  await db.exec(newsUsefulnessMigration);
+  await db.exec(newsOperationalHardeningMigration);
+  await db.exec(newsOperationalHardeningMigration);
   await db.exec("update public.news_source_catalog set allowed_hosts='{}'::text[] where source_id='cftc_releases'");
   await db.exec(newsHardeningMigration);
   await db.exec("alter table public.news_source_items disable trigger enforce_news_source_policy");
@@ -112,7 +118,7 @@ try {
     "macro_events", "macro_sync_runs",
     "news_source_catalog", "news_source_health", "news_source_items", "news_impact_events",
     "news_event_sources", "global_reaction_observations", "news_market_reactions", "news_sync_runs",
-    "news_alert_preferences", "news_alert_budgets"
+    "news_alert_preferences", "news_alert_budgets", "cftc_positioning_observations"
   ];
   for (const table of tables) {
     assert.equal((await db.query("select relrowsecurity from pg_class where oid=$1::regclass", [`public.${table}`])).rows[0].relrowsecurity, true, `${table} RLS`);
@@ -123,6 +129,20 @@ try {
     }
     for (const privilege of ["SELECT", "INSERT", "UPDATE", "DELETE"]) {
       assert.equal((await db.query("select has_table_privilege('service_role',$1,$2) allowed", [`public.${table}`, privilege])).rows[0].allowed, true, `service ${privilege} ${table}`);
+    }
+  }
+  assert.equal(
+    (await db.query("select has_table_privilege('authenticated','public.push_alert_events','SELECT') allowed")).rows[0].allowed,
+    true,
+    "authenticated users retain RLS-filtered Push alert history reads"
+  );
+  for (const role of ["anon", "authenticated"]) {
+    for (const privilege of ["INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"]) {
+      assert.equal(
+        (await db.query("select has_table_privilege($1,'public.push_alert_events',$2) allowed", [role, privilege])).rows[0].allowed,
+        false,
+        `${role} ${privilege} push_alert_events`
+      );
     }
   }
   const macroStatuses = [
@@ -156,6 +176,32 @@ try {
     "reapplying the hardening migration must preserve an operator host kill switch"
   );
   assert.equal((await db.query("select count(*)::int count from public.news_source_catalog where enabled=true and policy_status<>'allowed'")).rows[0].count, 0);
+  assert.deepEqual(
+    (await db.query("select policy_status,enabled,allowed_hosts from public.news_source_catalog where source_id='federal_register_financial'")).rows[0],
+    { policy_status: "allowed", enabled: true, allowed_hosts: ["federalregister.gov"] },
+    "Federal Register enters the fail-closed source catalog with only its official host"
+  );
+  assert.deepEqual(
+    (await db.query("select policy_status,enabled,allowed_hosts from public.news_source_catalog where source_id='occ_news_releases'")).rows[0],
+    { policy_status: "allowed", enabled: true, allowed_hosts: ["occ.gov"] },
+    "OCC RSS enters the fail-closed source catalog with only its official host"
+  );
+  assert.deepEqual(
+    (await db.query("select policy_status,enabled,allowed_hosts from public.news_source_catalog where source_id='cftc_cot_positioning'")).rows[0],
+    {
+      policy_status: "allowed",
+      enabled: true,
+      allowed_hosts: ["publicreporting.cftc.gov", "publicreportinghub.cftc.gov"]
+    },
+    "CFTC weekly positioning is controlled by the same runtime source catalog"
+  );
+  await db.exec("update public.news_source_catalog set allowed_hosts='{}'::text[] where source_id='federal_register_financial'");
+  await db.exec(newsUsefulnessMigration);
+  assert.deepEqual(
+    (await db.query("select allowed_hosts from public.news_source_catalog where source_id='federal_register_financial'")).rows[0].allowed_hosts,
+    [],
+    "reapplying NEWS usefulness must preserve an operator host kill switch"
+  );
 
   const signatures = [
     "public.claim_news_sync_run(timestamp with time zone)",
@@ -168,7 +214,10 @@ try {
     "public.expire_news_impact_delivery(uuid)",
     "public.mark_push_alert_read(uuid,uuid)",
     "public.purge_news_impact_retention()",
-    "public.retire_stale_news_reactions()"
+    "public.retire_stale_news_reactions()",
+    "public.enforce_news_reaction_engine_version()",
+    "public.enforce_news_alert_source_provenance()",
+    "public.claim_news_impact_delivery_tokens(uuid,integer,uuid[])"
   ];
   for (const signature of signatures) {
     for (const role of ["anon", "authenticated"]) {
@@ -217,12 +266,12 @@ try {
   );
   await asRole(db, "service_role", "update public.news_source_catalog set allowed_hosts=array['sec.gov']::text[] where source_id='sec_press_releases'");
 
-  async function snapshot(asset, offsetMinutes, quality = "ready") {
+  async function snapshot(asset, offsetMinutes, quality = "ready", engineVersion = "news-fixture-v1") {
     const symbol = asset === "btc" ? "BTCUSDT" : "ETHUSDT";
     const row = await asRole(db, "service_role", `insert into public.perpetual_decision_snapshots (
       fingerprint,asset,symbol,exchange,engine_version,bucket_at,generated_at,expires_at,quality,source_status,public_payload,pro_payload
-    ) values ($1,$2,$3,'binance','news-fixture-v1',now()+make_interval(mins=>$4),now()+make_interval(mins=>$4),now()+make_interval(mins=>$4+30),$5,'{}','{}','{}') returning id`,
-    [`${asset}-${offsetMinutes}-${quality}`, asset, symbol, offsetMinutes, quality]);
+    ) values ($1,$2,$3,'binance',$6,now()+make_interval(mins=>$4),now()+make_interval(mins=>$4),now()+make_interval(mins=>$4+30),$5,'{}','{}','{}') returning id`,
+    [`${asset}-${offsetMinutes}-${quality}-${engineVersion}`, asset, symbol, offsetMinutes, quality, engineVersion]);
     return row.rows[0].id;
   }
 
@@ -230,6 +279,7 @@ try {
   const btcOlder = await snapshot("btc", -20);
   const btcAfter = await snapshot("btc", 60);
   const ethAfter = await snapshot("eth", 60);
+  const btcDifferentEngine = await snapshot("btc", 65, "ready", "news-fixture-v2");
   const source = (await asRole(db, "service_role", `insert into public.news_source_items (
     source_id,external_id,canonical_url,original_title,published_at,first_seen_at,content_hash,policy_status,markets,targets,category,event_type,entities,action
   ) values ('fed_press_releases','fixture-fed','https://www.federalreserve.gov/newsevents/fixture.htm','Federal Reserve fixture',now(),now(),'hash','allowed',array['crypto'],array['btc'],'macro','official-macro-release',array['fed'],'published') returning id`)).rows[0];
@@ -240,7 +290,7 @@ try {
   const event = (await asRole(db, "service_role", `insert into public.news_impact_events (
     semantic_key,market,category,targets,importance,occurred_at,first_seen_at,headline,fact_summary,primary_source_item_id
   ) values ('semantic-fixture','crypto','macro',array['btc'],'high',now(),now(),'공식 사건','공식 발표 사실',$1) returning id`, [source.id])).rows[0];
-  await asRole(db, "service_role", "update public.news_impact_events set metadata=jsonb_build_object('push_eligible',true) where id=$1", [event.id]);
+  await asRole(db, "service_role", "update public.news_impact_events set metadata=jsonb_build_object('push_eligible',true,'push_source_item_ids',jsonb_build_array($2::text)) where id=$1", [event.id, source.id]);
   await asRole(db, "service_role", "insert into public.news_event_sources(event_id,source_item_id,is_primary) values ($1,$2,true)", [event.id, source.id]);
 
   const revisedWhileDue = (await asRole(db, "service_role", `insert into public.news_impact_events (
@@ -271,8 +321,29 @@ try {
   await expectFailure(
     () => asRole(db, "service_role", `insert into public.news_market_reactions (
       event_id,event_version,target,stage,classification,risk_effect,quality,event_at,evaluated_at,pre_snapshot_id,evaluated_snapshot_id,reaction_summary
+    ) values ($1,1,'btc','provisional_15m','risk_increase','increased','ready',now(),now(),$2,$3,'invalid engine version')`, [event.id, btcBefore, btcDifferentEngine]),
+    "ready crypto reactions cannot compare different decision-engine versions"
+  );
+  await expectFailure(
+    () => asRole(db, "service_role", `insert into public.news_market_reactions (
+      event_id,event_version,target,stage,classification,risk_effect,quality,event_at,evaluated_at,pre_snapshot_id,evaluated_snapshot_id,reaction_summary
     ) values ($1,1,'btc','provisional_15m','risk_increase','increased','ready',now(),now(),$2,$3,'time reversed')`, [event.id, btcBefore, btcOlder]),
     "evaluated evidence cannot predate its baseline"
+  );
+
+  const retentionBefore = await snapshot("btc", -90);
+  const retentionAfter = await snapshot("btc", -60);
+  const retentionEvent = (await asRole(db, "service_role", `insert into public.news_impact_events (
+    semantic_key,market,category,targets,importance,occurred_at,first_seen_at,headline,fact_summary,primary_source_item_id
+  ) values ('retention-fixture','crypto','macro',array['btc'],'normal',now(),now(),'보관 만료 사건','보관 만료 사건',$1) returning id`, [source.id])).rows[0];
+  const retentionReaction = (await asRole(db, "service_role", `insert into public.news_market_reactions (
+    event_id,event_version,target,stage,classification,risk_effect,quality,event_at,evaluated_at,pre_snapshot_id,evaluated_snapshot_id,reaction_summary
+  ) values ($1,1,'btc','final_60m','no_material_reaction','unchanged','ready',now(),now(),$2,$3,'보관 전 반응') returning id`, [retentionEvent.id, retentionBefore, retentionAfter])).rows[0];
+  await asRole(db, "service_role", "delete from public.perpetual_decision_snapshots where id=$1", [retentionBefore]);
+  assert.deepEqual(
+    (await db.query("select quality,classification,pre_snapshot_id from public.news_market_reactions where id=$1", [retentionReaction.id])).rows[0],
+    { quality: "unavailable", classification: "insufficient_data", pre_snapshot_id: null },
+    "snapshot retention must downgrade old reaction evidence instead of aborting the purge"
   );
 
   const reactionV1 = (await asRole(db, "service_role", `insert into public.news_market_reactions (
@@ -296,6 +367,23 @@ try {
   const noOptIn = await asRole(db, "service_role", "select * from public.claim_news_impact_alert($1,$2,'news-impact:no-opt-in','뉴스','반응','{}'::jsonb)", [users.second, reaction.id]);
   assert.equal(noOptIn.rows.length, 0, "news alerts default off");
 
+  const occSource = (await asRole(db, "service_role", `insert into public.news_source_items (
+    source_id,external_id,canonical_url,original_title,published_at,first_seen_at,content_hash,policy_status,markets,targets,category,event_type,entities,action
+  ) values ('occ_news_releases','occ-push-blocked','https://www.occ.gov/news-issuances/news-releases/2026/example.html','OCC digital asset fixture',now(),now(),'occ-hash','allowed',array['crypto'],array['btc'],'regulation','us_bank_digital_asset_policy',array['btc'],'published') returning id`)).rows[0];
+  const occEvent = (await asRole(db, "service_role", `insert into public.news_impact_events (
+    semantic_key,market,category,targets,importance,occurred_at,first_seen_at,headline,fact_summary,primary_source_item_id,metadata
+  ) values ('occ-push-blocked','crypto','regulation',array['btc'],'high',now(),now(),'OCC 사건','OCC 사건',$1::uuid,jsonb_build_object('push_eligible',true,'push_source_item_ids',jsonb_build_array(($1::uuid)::text))) returning id`, [occSource.id])).rows[0];
+  await asRole(db, "service_role", "insert into public.news_event_sources(event_id,source_item_id,is_primary) values ($1,$2,true)", [occEvent.id, occSource.id]);
+  const occReaction = (await asRole(db, "service_role", `insert into public.news_market_reactions (
+    event_id,event_version,target,stage,classification,risk_effect,quality,event_at,evaluated_at,pre_snapshot_id,evaluated_snapshot_id,reaction_summary
+  ) values ($1,1,'btc','final_60m','risk_increase','increased','ready',now(),now(),$2,$3,'OCC 반응') returning id`, [occEvent.id, btcBefore, btcAfter])).rows[0];
+  await asRole(db, "service_role", "select * from public.set_news_alert_preference($1,'crypto',true)", [users.third]);
+  assert.equal(
+    (await asRole(db, "service_role", "select * from public.claim_news_impact_alert($1,$2,'news-impact:occ-blocked','뉴스','반응','{}'::jsonb)", [users.third, occReaction.id])).rows.length,
+    0,
+    "a source that has not passed the Push gate cannot ride a sticky event flag"
+  );
+
   async function createActionableEvent(suffix, importance = "normal") {
     const sourceRow = (await asRole(db, "service_role", `insert into public.news_source_items (
       source_id,external_id,canonical_url,original_title,published_at,first_seen_at,content_hash,policy_status,markets,targets,category,event_type,entities,action
@@ -304,7 +392,7 @@ try {
     const eventRow = (await asRole(db, "service_role", `insert into public.news_impact_events (
       semantic_key,market,category,targets,importance,occurred_at,first_seen_at,headline,fact_summary,primary_source_item_id
     ) values ($1,'crypto','macro',array['btc'],$2,now(),now(),$3,$3,$4) returning id`, [`semantic-${suffix}`, importance, `Event ${suffix}`, sourceRow.id])).rows[0];
-    await asRole(db, "service_role", "update public.news_impact_events set metadata=jsonb_build_object('push_eligible',true) where id=$1", [eventRow.id]);
+    await asRole(db, "service_role", "update public.news_impact_events set metadata=jsonb_build_object('push_eligible',true,'push_source_item_ids',jsonb_build_array($2::text)) where id=$1", [eventRow.id, sourceRow.id]);
     await asRole(db, "service_role", "insert into public.news_event_sources(event_id,source_item_id,is_primary) values ($1,$2,true)", [eventRow.id, sourceRow.id]);
     const reactionRow = (await asRole(db, "service_role", `insert into public.news_market_reactions (
       event_id,event_version,target,stage,classification,risk_effect,quality,event_at,evaluated_at,pre_snapshot_id,evaluated_snapshot_id,reaction_summary
@@ -380,9 +468,30 @@ try {
   const retryLeaseOne = await asRole(db, "service_role", "select * from public.lease_news_impact_delivery($1,90)", [retryClaim.rows[0].id]);
   const tokenA = "80000000-0000-4000-8000-000000000001";
   const tokenB = "80000000-0000-4000-8000-000000000002";
+  assert.deepEqual(
+    (await asRole(
+      db,
+      "service_role",
+      "select public.claim_news_impact_delivery_tokens($1,$2,array[$3::uuid,$4::uuid]) claimed",
+      [retryClaim.rows[0].id, retryLeaseOne.rows[0].delivery_attempt_count, tokenA, tokenB]
+    )).rows[0].claimed.sort(),
+    [tokenA, tokenB],
+    "token attempts are durably claimed before FCM network delivery"
+  );
+  assert.deepEqual(
+    (await asRole(
+      db,
+      "service_role",
+      "select public.claim_news_impact_delivery_tokens($1,$2,array[$3::uuid,$4::uuid]) claimed",
+      [retryClaim.rows[0].id, retryLeaseOne.rows[0].delivery_attempt_count, tokenA, tokenB]
+    )).rows[0].claimed,
+    [],
+    "a second worker cannot claim tokens already attempted by the current lease"
+  );
   assert.equal((await asRole(db, "service_role", "select public.complete_news_impact_delivery($1,$2,'failed',1,1,'one target failed',array[$3::uuid]) completed", [retryClaim.rows[0].id, retryLeaseOne.rows[0].delivery_attempt_count, tokenA])).rows[0].completed, true);
   const retryLeaseTwo = await asRole(db, "service_role", "select * from public.lease_news_impact_delivery($1,90)", [retryClaim.rows[0].id]);
   assert.deepEqual(retryLeaseTwo.rows[0].delivery_succeeded_token_ids, [tokenA], "a retry lease preserves tokens that already received the Push");
+  assert.deepEqual([...retryLeaseTwo.rows[0].delivery_attempted_token_ids].sort(), [tokenA, tokenB], "a crash or retry cannot resend an FCM token with an uncertain prior outcome");
   assert.equal((await asRole(db, "service_role", "select public.complete_news_impact_delivery($1,$2,'sent',1,0,null,array[$3::uuid]) completed", [retryClaim.rows[0].id, retryLeaseTwo.rows[0].delivery_attempt_count, tokenB])).rows[0].completed, true);
   const retryComplete = (await db.query("select delivery_status,sent_count,delivery_succeeded_token_ids from public.push_alert_events where id=$1", [retryClaim.rows[0].id])).rows[0];
   assert.equal(retryComplete.delivery_status, "sent");
