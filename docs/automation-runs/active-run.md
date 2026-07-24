@@ -1,14 +1,43 @@
 # Active Automation Run
 
-## Current Run — `news-impact-v1-local-implementation`
+## Current Run — `news-impact-useful-v2`
 
 ### Run State
 
-- Status: `GATE_A_APPLIED / SHADOW_STARTING`
-- Completion date: 2026-07-20
-- Scope completed: 공식 출처 catalog, 사건 정규화·개정 병합, 15분·60분 반응 분류, 저장 원장과 RLS, 원자적 뉴스 알림 outbox, Crypto·Global NEWS, Home strip, Perpetual·Global·Journal 연결, 구형 `/api/radar-news` 저장 기반 호환 응답.
-- Safe defaults: `NEWS_IMPACT_V1=shadow`, `NEWS_IMPACT_PUSH_ENABLED=false`.
-- Explicitly not executed: News Impact UI `on`, 실제 News Impact FCM 발송, AAB/iOS/store 작업.
+- Status: `V2_DB_APPLIED / UI_ON_PENDING_DEPLOY`
+- Local completion date: 2026-07-24
+- Scope completed: 기존 News Impact v1 전체와 함께 사건 우선 NEWS 화면, 현재 BTC·ETH/Global 시장 브리프, Federal Register·OCC 공식 사건, 저장형 CFTC 주간 포지션, 자산별 관련성, 사건 수정·철회, Pro 전후 비교·복기, 보관 만료 안전성, 출처별 Push provenance와 at-most-once 전송 경계를 구현했다.
+- Production flags: `NEWS_IMPACT_V1=on`으로 저장했으며 새 deployment부터 적용된다. `NEWS_IMPACT_PUSH_ENABLED=false`는 직접 재확인했다.
+- Explicitly not executed: 실제 News Impact FCM 발송, AAB/iOS/store 작업.
+
+### 2026-07-24 NEWS Usefulness v2
+
+- NEWS가 공식 사건이 없는 날에도 비어 있지 않도록, 저장된 현재 BTC·ETH 선물 판단 또는 Global observation에서 `현재 상태 → 핵심 지표 → 가장 큰 위험 → 다음 확인 조건 → 상세 화면`을 구성한다.
+- 의미 있는 사건이 있으면 한 줄 현재 시장 상태 다음에 실제 사건을 즉시 배치한다. 큰 시장 브리프가 사건을 밀어내지 않으며, 사건이 없는 날에만 현재 브리프를 주 콘텐츠로 확장한다.
+- 사건 설명은 기관명·대상·실제 조치를 먼저 말하고 정확한 공식 제목을 보존한다. Basic에는 현재 판단과 다음 조건을 제공하고, Pro에는 `발표 전 → 15분 후 → 60분 후` 비교와 News 문맥을 동결한 Journal 복기를 명확히 노출한다.
+- Federal Register Public Inspection과 OCC RSS를 공식 metadata-only 출처로 추가했다. Bitcoin-only·ETH-only·공통 crypto 사건을 구분하고, crypto 전용 문서는 Global 사건으로 부풀리지 않는다.
+- CFTC TFF 주간 BTC·ETH 포지션은 5분 NEWS cron의 단일 lease에서 수집해 `cftc_positioning_observations`에 저장하고 사용자 요청은 저장값만 읽는다. 별도 공식 catalog와 runtime host allowlist, 128KB 실제 응답 상한, timeout, 마지막 정상값 fallback을 사용하며 화면에는 `주간·지연 자료`와 쉬운 매수·매도 우위 문구를 먼저 표시한다.
+- 일반 10-Q·10-K·8-K·6-K는 form 이름만으로 중요 사건이 되지 않는다. 의미 있는 실제 반응이 없으면 NEWS의 참고 자료로 내리고 Home·Perpetual 핵심 strip에도 올리지 않는다.
+- 동일 공식 GUID의 제목·URL 수정은 새 사건을 만들지 않고 같은 사건의 개정으로 처리한다. 이전에 허용된 항목이 host·대상 정책에서 벗어나면 출처 admission, Push 자격과 해당 target reaction을 함께 철회한다.
+- 공식 HTTP adapter는 redirect 이후 최종 host, content type, 선언 크기와 실제 stream 크기를 모두 재검증한다. 출처 catalog의 운영 host 축소는 즉시 runtime allowlist에 반영된다.
+- 만료된 요청 snapshot은 현재 시장으로 표시하지 않고 최신 상태로 교체한다. 10분 넘은 마지막 정상 snapshot·Global observation은 `stale`로 명시한다.
+- 서로 다른 decision engine 반응 비교를 차단했다. 30일 retention으로 snapshot·observation이 삭제될 때는 reaction을 `unavailable / insufficient_data`로 강등해 purge 전체가 실패하지 않게 한다.
+- Push 자격은 sticky 사건 flag가 아니라 자격을 획득한 정확한 source item ID와 현재 공식 host 정책을 함께 요구한다. Federal Register·OCC·CFTC 주간 포지션은 Push 비허용이며, preference 변경과 claim은 같은 사용자 advisory lock을 사용한다. FCM 전송 직전에 token ID를 원자적으로 선점해 성공 응답 유실 때도 같은 기기로 중복 Push를 재시도하지 않는다.
+- 정상 무사건 상태는 장애 경고가 아니라 중립 안내로 표시한다. Crypto·Global 360×800·390×844에서 핵심 CTA가 첫 화면에 있고 가로 넘침·console error가 없음을 CLI Playwright로 확인했다.
+- QA evidence: `output/playwright/news-impact-useful-v2/crypto-news-actionable-final-390x844.png`, `crypto-news-actionable-final-360x800.png`, `crypto-news-pro-preview-final-360x800.png` (gitignored local artifacts).
+- PASS: 신규 NEWS source/runtime/reaction/alert/outbox/preferences 테스트, Perpetual snapshot/monitor/push 테스트, migration replay·RLS·ops·routes·mobile·`smoke:all`, TypeScript, production build, `git diff --check`.
+- Remaining external risk: Push는 계속 OFF이며, 새 출처의 운영 수집 결과와 UI를 배포 후 확인해야 한다. Vercel 계정에는 payment overdue 경고가 있어 신규 deployment가 차단될 가능성을 별도로 확인한다.
+
+### 2026-07-24 v2 Production DB·Flag Application
+
+- 사용자 승인 후 운영 Supabase에 두 forward migration만 transaction·5초 lock timeout·120초 statement timeout으로 적용했다. 과거 migration 전체 `db push`는 실행하지 않았다.
+- 운영 migration ledger: `20260724092344 news_impact_useful_v2`, `20260724092432 news_impact_operational_hardening`.
+- migration SHA-256: useful v2 `88CF61EA72138F43E70936C71BA0D1C82B09A55A5DC4FECD72011619AEE23260`, hardening `B4C31C3EFB1E93952DBE7FA7A7D11BAD88A39F24F48BED0C8E3AF8006304582D`.
+- 독립 운영 권한 감사에서 `authenticated`가 `push_alert_events`의 SELECT 외에도 TRUNCATE·REFERENCES·TRIGGER를 보유한 문제를 배포 전에 발견했다. hardening migration과 canonical schema를 보강해 현재는 SELECT만 true이고 INSERT·UPDATE·DELETE·TRUNCATE·REFERENCES·TRIGGER는 모두 false다.
+- `cftc_positioning_observations`는 RLS가 켜져 있고 anon·authenticated SELECT는 false, service role CRUD는 true다. 신규 token claim RPC도 anon·authenticated 실행 false, service role 실행 true다.
+- 새 공식 출처 3개는 allowed·enabled 상태이며 CFTC runtime host는 `publicreporting.cftc.gov`, `publicreportinghub.cftc.gov`로 제한했다. 기존 engineVersion이 다른 반응 2건은 안전하게 비활성화했고 Push provenance 누락은 0건이다.
+- 적용 전후 profiles 69, subscriptions 12, legacy beta 12, sending Push 0으로 불변이다. News Impact Push 원장도 0건이다.
+- Vercel Production의 `NEWS_IMPACT_V1=on`을 저장했고 `NEWS_IMPACT_PUSH_ENABLED=false`를 직접 확인했다. 환경변수 변경은 다음 production deployment부터 적용된다.
 
 ### 2026-07-21 Gate A Production Application
 
@@ -52,12 +81,11 @@
 - 최종 재검증: `smoke:all`, 독립 production build, TypeScript, `git diff --check` 모두 PASS. 첫 독립 병렬 시도에서 build와 `tsc`가 `.next/types`를 동시에 갱신해 일시 충돌했으나 올바른 순차 실행에서 재현되지 않았다.
 - 운영 DDL·cron·Vercel flag·deploy·실제 FCM·AAB·스토어 변경은 이번 재감사에서 수행하지 않았다.
 
-### Operational Gates Not Yet Run
+### v2 Operational Gate State
 
-- Gate A: 운영 DDL·5분 cron 적용 승인 후 production catalog/RLS 재검증과 `shadow` 수집 시작.
-- Gate B: 최소 72시간 shadow 관찰에서 출처 없는 사건 0, 미허가 payload 0, 중복률 5% 이하, 수동 관련성 90% 이상일 때 UI `on` 검토.
-- Gate C: 최소 7일과 eligible 사건 10건, 중복·snapshot 불일치·부적절 후보 0, disposable Android FCM 확인 후 별도 승인.
-- 위 운영 시간 기반 기준은 로컬 구현 완료로 대체하거나 통과로 기록하지 않는다.
+- Gate A: v2 forward migration·새 source catalog 적용과 production catalog/RLS 재검증 완료.
+- Gate B: 기존 v1 shadow 원장을 검토하고 사용자 승인에 따라 Production UI flag를 `on`으로 저장했다. 실제 활성화는 이번 코드 deployment에서 확인한다.
+- Gate C: 미실행. `NEWS_IMPACT_PUSH_ENABLED=false`를 유지하며 실제 News Impact FCM은 발송하지 않는다.
 
 ---
 

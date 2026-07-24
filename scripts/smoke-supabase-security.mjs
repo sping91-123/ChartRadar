@@ -66,7 +66,11 @@ const newsMigrationName = migrationNames.find((name) => name.endsWith("_news_imp
 const newsMigration = newsMigrationName ? read(join("supabase", "migrations", newsMigrationName)) : "";
 const newsHardeningName = migrationNames.find((name) => name.endsWith("_harden_news_impact_v1.sql"));
 const newsHardening = newsHardeningName ? read(join("supabase", "migrations", newsHardeningName)) : "";
-const newsRpcSql = `${newsMigration}\n${newsHardening}`;
+const newsUsefulV2Name = migrationNames.find((name) => name.endsWith("_news_impact_useful_v2.sql"));
+const newsUsefulV2 = newsUsefulV2Name ? read(join("supabase", "migrations", newsUsefulV2Name)) : "";
+const newsOperationalName = migrationNames.find((name) => name.endsWith("_news_impact_operational_hardening.sql"));
+const newsOperational = newsOperationalName ? read(join("supabase", "migrations", newsOperationalName)) : "";
+const newsRpcSql = `${newsMigration}\n${newsHardening}\n${newsUsefulV2}\n${newsOperational}`;
 
 for (const [label, source] of [
   ["migration", migration],
@@ -191,7 +195,9 @@ for (const functionName of [
   "claim_news_impact_alert",
   "lease_news_impact_delivery",
   "complete_news_impact_delivery",
+  "claim_news_impact_delivery_tokens",
   "retire_stale_news_reactions",
+  "enforce_news_alert_source_provenance",
   "finalize_exhausted_news_impact_deliveries",
   "expire_news_impact_delivery",
   "purge_news_impact_retention"
@@ -203,6 +209,37 @@ for (const functionName of [
     "뉴스 원장 RPC는 service role 경계 안에서만 실행됩니다."
   );
 }
+
+expectMatch(
+  newsOperational,
+  /alter\s+table\s+public\.cftc_positioning_observations\s+enable\s+row\s+level\s+security/i,
+  "CFTC 포지션 원장 RLS 활성화",
+  "지연 주간 포지션 원장도 service route 밖에서 직접 읽거나 쓸 수 없습니다."
+);
+expectMatch(
+  newsOperational,
+  /revoke\s+all\s+privileges\s+on\s+table\s+public\.cftc_positioning_observations\s+from\s+public\s*,\s*anon\s*,\s*authenticated/i,
+  "CFTC 포지션 원장 공개 권한 회수",
+  "브라우저 역할은 저장된 CFTC 원장에 직접 접근하지 못합니다."
+);
+expectNoMatch(
+  newsOperational,
+  /grant\s+(?:select|insert|update|delete|all)\s+on\s+(?:table\s+)?public\.cftc_positioning_observations\s+to\s+(?:public|anon|authenticated)/i,
+  "CFTC 포지션 Data API grant 차단",
+  "CFTC 원장은 service role API를 통해서만 직렬화됩니다."
+);
+expectMatch(
+  newsOperational,
+  /revoke\s+all\s+privileges\s+on\s+table\s+public\.push_alert_events\s+from\s+public\s*,\s*anon\s*,\s*authenticated/i,
+  "Push 알림 원장 비행 권한 회수",
+  "RLS가 통제하지 않는 TRUNCATE·REFERENCES·TRIGGER 권한까지 공개 역할에서 회수합니다."
+);
+expectMatch(
+  newsOperational,
+  /grant\s+select\s+on\s+table\s+public\.push_alert_events\s+to\s+authenticated/i,
+  "Push 알림 원장 본인 읽기 유지",
+  "기존 RLS-filtered 알림 기록 조회는 그대로 유지합니다."
+);
 
 expectMatch(
   schema,

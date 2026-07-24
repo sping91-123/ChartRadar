@@ -6,6 +6,7 @@ const npxCommand = process.platform === "win32" ? "npx.cmd" : "npx";
 const checks = [
   ["smoke:migrations", "node", ["scripts/smoke-migrations.mjs"]],
   ["test:news-sources", npmCommand, ["run", "test:news-sources"]],
+  ["test:news-runtime", npmCommand, ["run", "test:news-runtime"]],
   ["test:macro-calendar", npmCommand, ["run", "test:macro-calendar"]],
   ["test:macro-impact", npmCommand, ["run", "test:macro-impact"]],
   ["test:news-impact", npmCommand, ["run", "test:news-impact"]],

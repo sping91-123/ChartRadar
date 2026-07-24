@@ -4,7 +4,7 @@ import { isNewsImpactAlertEligible } from "@/lib/newsImpact";
 import { remainingNewsPushTargets, resolveNewsDeliveryStatus, selectLatestNewsReaction } from "@/lib/newsImpactDelivery";
 import { sendFcmMessage } from "@/lib/server/firebaseMessaging";
 import type { NewsImpactEventRow, NewsReactionRow } from "@/lib/server/news/newsImpactStore";
-import { isAllowedNewsSourceUrl, isAllowedUrlForHosts } from "@/lib/server/news/sourceCatalog";
+import { isAllowedNewsSourceUrl, isAllowedUrlForHosts, isNewsSourcePushEnabled } from "@/lib/server/news/sourceCatalog";
 import type { PushSubscriptionRow, PushTokenRow } from "@/lib/server/push/types";
 import { supabaseAdminAuth, supabaseAdminRest, supabaseAdminRpc } from "@/lib/server/supabaseAdmin";
 import type { SupabaseUser } from "@/lib/supabase";
@@ -28,6 +28,7 @@ interface NewsOutboxRow {
   delivery_not_before: string | null;
   delivery_expires_at: string | null;
   delivery_succeeded_token_ids: string[];
+  delivery_attempted_token_ids: string[];
   news_event_id: string | null;
   news_reaction_id: string | null;
 }
@@ -106,8 +107,18 @@ async function exactAdminIds(userIds: string[]) {
   return admins;
 }
 
+function pushEligibleSourceItemIds(event: NewsImpactEventRow) {
+  return Array.isArray(event.metadata?.push_source_item_ids)
+    ? event.metadata.push_source_item_ids.filter((value): value is string => typeof value === "string")
+    : [];
+}
+
 export async function enqueueNewsImpactAlerts(candidates: Array<{ event: NewsImpactEventRow; reaction: NewsReactionRow }>) {
-  const eligible = candidates.filter(({ event, reaction }) => event.metadata?.push_eligible === true && isNewsImpactAlertEligible(reaction));
+  const eligible = candidates.filter(({ event, reaction }) => (
+    event.metadata?.push_eligible === true &&
+    pushEligibleSourceItemIds(event).length > 0 &&
+    isNewsImpactAlertEligible(reaction)
+  ));
   if (eligible.length === 0) return { eligible: 0, claimed: 0, entitlementBlocked: 0 };
   const markets = Array.from(new Set(eligible.map(({ event }) => event.market)));
   const preferences = await supabaseAdminRest<NewsAlertPreferenceRow[]>(
@@ -161,13 +172,15 @@ function tokenMatchesMarket(token: PushTokenRow, market: NewsOutboxRow["market"]
   return market === "crypto" ? token.markets.includes("crypto") : token.markets.some((value) => value === "stocks" || value === "global");
 }
 
-async function allowedOfficialSourceExists(eventId: string) {
+async function allowedPushEligibleSourceExists(eventId: string, pushSourceItemIds: string[]) {
+  if (pushSourceItemIds.length === 0) return false;
   const links = await supabaseAdminRest<Array<{ source_item_id: string }>>(
     `news_event_sources?select=source_item_id&event_id=eq.${encodeURIComponent(eventId)}&limit=100`,
     { timeoutMs: OUTBOX_REQUEST_TIMEOUT_MS }
   );
-  if (links.length === 0) return false;
-  const itemIds = links.map((link) => link.source_item_id);
+  const linkedIds = new Set(links.map((link) => link.source_item_id));
+  const itemIds = pushSourceItemIds.filter((sourceItemId) => linkedIds.has(sourceItemId));
+  if (itemIds.length === 0) return false;
   const items = await supabaseAdminRest<Array<{ source_id: string; policy_status: string; canonical_url: string }>>(
     `news_source_items?select=source_id,policy_status,canonical_url&id=in.(${itemIds.join(",")})&policy_status=eq.allowed&limit=100`,
     { timeoutMs: OUTBOX_REQUEST_TIMEOUT_MS }
@@ -180,6 +193,7 @@ async function allowedOfficialSourceExists(eventId: string) {
   );
   const allowedHosts = new Map(sources.map((source) => [source.source_id, source.allowed_hosts]));
   return items.some((item) => (
+    isNewsSourcePushEnabled(item.source_id) &&
     isAllowedNewsSourceUrl(item.source_id, item.canonical_url) &&
     isAllowedUrlForHosts(item.canonical_url, allowedHosts.get(item.source_id) ?? [])
   ));
@@ -211,7 +225,7 @@ async function validateDeliveryLease(lease: NewsOutboxRow) {
   if (lease.market !== expectedMarket) return "market_mismatch";
   if (event.market === "crypto" && (reaction.target === "global" || !event.targets.includes(reaction.target))) return "asset_mismatch";
   if (event.market === "global" && (reaction.target !== "global" || !event.targets.includes("global"))) return "market_mismatch";
-  if (!await allowedOfficialSourceExists(event.id)) return "source_not_allowed";
+  if (!await allowedPushEligibleSourceExists(event.id, pushEligibleSourceItemIds(event))) return "source_not_allowed";
 
   const [preferences, deletionRows] = await Promise.all([
     supabaseAdminRest<NewsAlertPreferenceRow[]>(
@@ -316,13 +330,21 @@ export async function deliverNewsImpactOutbox(deliveryEnabled: boolean) {
       { timeoutMs: OUTBOX_REQUEST_TIMEOUT_MS }
     ).catch(() => []);
     const targets = tokens.filter((token) => tokenMatchesMarket(token, lease.market));
-    const remainingTargets = remainingNewsPushTargets(targets, lease.delivery_succeeded_token_ids ?? []);
+    const remainingTargets = remainingNewsPushTargets(targets, lease.delivery_attempted_token_ids ?? []);
     let eventSent = 0;
     let eventFailed = 0;
     let error: string | null = null;
     const succeededTokenIds: string[] = [];
+    let claimedTargets = remainingTargets;
     if (deliveryEnabled && remainingTargets.length > 0) {
-      const results = await Promise.allSettled(remainingTargets.map((token) => sendFcmMessage({
+      const claimedTokenIds = await supabaseAdminRpc<string[]>("claim_news_impact_delivery_tokens", {
+        p_event_id: lease.id,
+        p_attempt: lease.delivery_attempt_count,
+        p_token_ids: remainingTargets.map((token) => token.id)
+      }, { timeoutMs: OUTBOX_REQUEST_TIMEOUT_MS });
+      const claimedSet = new Set(claimedTokenIds);
+      claimedTargets = remainingTargets.filter((token) => claimedSet.has(token.id));
+      const results = await Promise.allSettled(claimedTargets.map((token) => sendFcmMessage({
         token: token.token,
         title: lease.title,
         body: lease.body,
@@ -330,22 +352,33 @@ export async function deliverNewsImpactOutbox(deliveryEnabled: boolean) {
         tag: lease.news_event_id ? `news-impact:${lease.news_event_id}` : `news-impact:${lease.id}`
       })));
       eventSent = results.filter((result) => result.status === "fulfilled").length;
-      eventFailed = results.length - eventSent;
+      eventFailed = results.length - eventSent + (remainingTargets.length - claimedTargets.length);
       results.forEach((result, index) => {
-        if (result.status === "fulfilled") succeededTokenIds.push(remainingTargets[index].id);
+        if (result.status === "fulfilled") succeededTokenIds.push(claimedTargets[index].id);
       });
       error = results.find((result): result is PromiseRejectedResult => result.status === "rejected")?.reason instanceof Error
         ? results.find((result): result is PromiseRejectedResult => result.status === "rejected")!.reason.message
-        : null;
+        : claimedTargets.length < remainingTargets.length
+          ? "token_attempt_claim_incomplete"
+          : null;
     }
-    const status = resolveNewsDeliveryStatus({
-      deliveryEnabled,
-      targetCount: targets.length,
-      sentBefore: lease.delivery_succeeded_token_ids?.length ?? 0,
-      sentNow: eventSent,
-      failedNow: eventFailed,
-      attempt: lease.delivery_attempt_count
-    });
+    const sentBefore = lease.delivery_succeeded_token_ids?.length ?? 0;
+    const allTargetsAlreadyAttempted = deliveryEnabled && targets.length > 0 && remainingTargets.length === 0;
+    const status = allTargetsAlreadyAttempted
+      ? sentBefore >= targets.length
+        ? "sent"
+        : sentBefore > 0
+          ? "partial"
+          : "in_app_only"
+      : resolveNewsDeliveryStatus({
+          deliveryEnabled,
+          targetCount: targets.length,
+          sentBefore,
+          sentNow: eventSent,
+          failedNow: eventFailed,
+          attempt: lease.delivery_attempt_count,
+          allowRetry: false
+        });
     await supabaseAdminRpc<boolean>("complete_news_impact_delivery", {
       p_event_id: lease.id,
       p_attempt: lease.delivery_attempt_count,

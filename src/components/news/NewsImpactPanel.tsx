@@ -4,10 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Bell,
+  BookOpenCheck,
   CheckCircle2,
   Clock3,
   Database,
   ExternalLink,
+  LockKeyhole,
   Loader2,
   Newspaper,
   RefreshCw,
@@ -15,8 +17,9 @@ import {
 } from "lucide-react";
 import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
 import { withSupabaseAuth } from "@/lib/authFetch";
-import type { NewsImpactEvent, NewsImpactListResponse, NewsMarket, NewsReactionMetric } from "@/lib/newsImpact";
+import type { NewsImpactEvent, NewsImpactListResponse, NewsMarket, NewsMarketBrief, NewsReactionMetric } from "@/lib/newsImpact";
 import { formatNewsImpactTime, newsImpactClassificationLabel, newsImpactTone } from "@/lib/newsImpactPresentation";
+import { selectMeaningfulNewsImpactEvent } from "@/lib/newsImpactSort";
 import { trackProductEvent } from "@/lib/trackProductEvent";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
@@ -30,9 +33,12 @@ function revisionLabel(event: NewsImpactEvent) {
 function stageLabel(stage: NonNullable<NewsImpactEvent["reaction"]>["stage"], event: NewsImpactEvent) {
   const revised = event.status === "revised";
   const prefix = event.category === "macro" ? "공식값 갱신 뒤" : "수정 발표 뒤";
+  const anchor = event.reaction && Math.abs(Date.parse(event.reaction.eventAt) - Date.parse(event.occurredAt)) <= 60_000
+    ? "공식 공개 시각 뒤"
+    : "ChartRadar 확인 뒤";
   if (stage === "detected") return "반응 확인 중";
-  if (stage === "provisional_15m") return revised ? `${prefix} 15분 반응` : "발표 후 15분 반응";
-  return revised ? `${prefix} 60분 반응` : "발표 후 60분 반응";
+  if (stage === "provisional_15m") return revised ? `${prefix} 15분 반응` : `${anchor} 15분 반응`;
+  return revised ? `${prefix} 60분 반응` : `${anchor} 60분 반응`;
 }
 
 function qualityLabel(quality: NewsImpactListResponse["quality"]) {
@@ -59,13 +65,148 @@ function impactExplanation(event: NewsImpactEvent) {
 
 function nextCheckCopy(event: NewsImpactEvent) {
   const reaction = event.reaction;
-  if (!reaction) return "발표 뒤 마감되는 첫 15분 구간을 확인합니다.";
+  if (!reaction && event.reactionEligibility === "context_only") {
+    return "정확한 공개 시각 전후 자료가 없어 이 문서와 단기 가격 움직임을 억지로 연결하지 않습니다.";
+  }
+  if (!reaction) return "공식 공개 뒤 마감되는 첫 15분 구간을 확인합니다.";
+  if (reaction.stage === "final_60m" && reaction.nextCondition) {
+    return `현재 시장에서는 ${reaction.nextCondition.label}`;
+  }
+  const anchor = Math.abs(Date.parse(reaction.eventAt) - Date.parse(event.occurredAt)) <= 60_000
+    ? "공식 공개 시각 뒤"
+    : "ChartRadar 확인 뒤";
   const updatedPrefix = event.category === "macro" ? "공식값 갱신 뒤" : "수정 발표 뒤";
-  if (reaction.stage === "detected") return `${formatNewsImpactTime(reaction.nextCheckAt)} 전후 ${event.status === "revised" ? `${updatedPrefix} ` : ""}마감된 15분 반응을 확인합니다.`;
-  if (reaction.stage === "provisional_15m") return `${formatNewsImpactTime(reaction.nextCheckAt)} 전후 ${event.status === "revised" ? updatedPrefix : "발표 후"} 60분 반응을 확인합니다.`;
+  if (reaction.stage === "detected") return `${formatNewsImpactTime(reaction.nextCheckAt)} 전후 ${event.status === "revised" ? `${updatedPrefix} ` : `${anchor} `}마감된 15분 반응을 확인합니다.`;
+  if (reaction.stage === "provisional_15m") return `${formatNewsImpactTime(reaction.nextCheckAt)} 전후 ${event.status === "revised" ? updatedPrefix : anchor} 60분 반응을 확인합니다.`;
   return reaction.evaluatedAt
-    ? `${formatNewsImpactTime(reaction.evaluatedAt)} 기준 ${event.status === "revised" ? updatedPrefix : "발표 후"} 60분 반응 확인을 마쳤습니다. 현재 시장 화면에서 위험과 확인 가격을 다시 보세요.`
+    ? `${formatNewsImpactTime(reaction.evaluatedAt)} 기준 ${event.status === "revised" ? updatedPrefix : anchor} 60분 반응 확인을 마쳤습니다. 현재 시장 화면에서 위험과 확인 가격을 다시 보세요.`
     : "최종 반응 평가 시각을 확인하고 있습니다.";
+}
+
+function marketMetricTone(tone: NewsMarketBrief["metrics"][number]["tone"]) {
+  if (tone === "positive") return "text-ui-long";
+  if (tone === "negative") return "text-ui-risk";
+  if (tone === "watch") return "text-ui-watch";
+  return "text-ui-text";
+}
+
+function signedContracts(value: number) {
+  return `${value >= 0 ? "+" : ""}${Math.round(value).toLocaleString("ko-KR")}계약`;
+}
+
+function netPosition(value: number) {
+  if (Math.round(value) === 0) return "매수·매도 계약 비슷함";
+  return `${value >= 0 ? "매수" : "매도"} 계약이 ${Math.abs(Math.round(value)).toLocaleString("ko-KR")}개 더 많음`;
+}
+
+function reportDate(value: string) {
+  const date = new Date(value);
+  return Number.isFinite(date.getTime())
+    ? new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" }).format(date)
+    : "기준일 확인 필요";
+}
+
+function MarketBriefCard({ brief }: { brief: NewsMarketBrief }) {
+  const positioning = brief.weeklyPositioning;
+  return (
+    <section className="bg-ui-panel px-3 py-4 sm:px-5" aria-labelledby="news-market-brief-title">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand">뉴스를 보기 전, 지금 시장</p>
+          <h2 id="news-market-brief-title" className="mt-1 text-xl font-black tracking-tight text-ui-text">{brief.headline}</h2>
+        </div>
+        <StatusPill tone={brief.quality === "ready" ? "long" : "watch"}>
+          {brief.quality === "ready" ? brief.stateLabel : "갱신 대기"}
+        </StatusPill>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden bg-ui-line">
+        {brief.metrics.map((metric) => (
+          <div key={metric.key} className="min-w-0 bg-ui-inset px-3 py-2">
+            <p className="text-[10px] font-black text-ui-subtle">{metric.label}</p>
+            <p className={`mt-0.5 font-black tabular-nums ${metric.key === "history" || metric.key === "large_flow" ? "whitespace-normal text-xs leading-4 [word-break:keep-all]" : "truncate text-sm"} ${marketMetricTone(metric.tone)}`}>{metric.value}</p>
+          </div>
+        ))}
+      </div>
+      {positioning ? (
+        <details className="mt-2 bg-ui-inset/55 px-3 py-2">
+          <summary className="cursor-pointer text-[11px] font-black text-ui-text">
+            CFTC 주간·지연 자료 · 레버리지 펀드는 {netPosition(positioning.leveragedFundsNet)}
+          </summary>
+          <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] leading-5">
+            <p className="text-ui-muted"><span className="block font-black text-ui-text">자산운용사</span>{netPosition(positioning.assetManagerNet)} · 주간 변화 {signedContracts(positioning.assetManagerNetWeeklyChange)}</p>
+            <p className="text-ui-muted"><span className="block font-black text-ui-text">레버리지 펀드</span>{netPosition(positioning.leveragedFundsNet)} · 주간 변화 {signedContracts(positioning.leveragedFundsNetWeeklyChange)}</p>
+          </div>
+          <p className="mt-2 text-[10px] leading-4 text-ui-subtle">
+            {reportDate(positioning.reportDate)} 기준 CME 선물의 지연된 주간 보고서입니다. 실시간 가격 방향이나 수익을 뜻하지 않습니다.{" "}
+            <a href={positioning.sourceUrl} target="_blank" rel="noreferrer" className="font-black underline underline-offset-2">CFTC 원문</a>
+          </p>
+        </details>
+      ) : null}
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <div className="border-l-2 border-ui-risk/70 pl-2.5">
+          <p className="text-[10px] font-black text-ui-subtle">가장 먼저 볼 위험</p>
+          <p className="mt-0.5 text-xs font-semibold leading-5 text-ui-text [word-break:keep-all]">{brief.topRisk}</p>
+        </div>
+        <div className="border-l-2 border-ui-brand pl-2.5">
+          <p className="text-[10px] font-black text-ui-subtle">지금 확인할 조건</p>
+          <p className="mt-0.5 text-xs font-semibold leading-5 text-ui-text [word-break:keep-all]">{brief.nextCondition}</p>
+        </div>
+      </div>
+      <a href={brief.ctaHref} className="mt-3 inline-flex min-h-10 w-full items-center justify-center bg-ui-brand px-3 text-sm font-black text-white transition hover:brightness-110">
+        {brief.market === "crypto" ? `${brief.asset?.toUpperCase()} 선물 근거 자세히 보기` : "글로벌 시장 근거 자세히 보기"}
+      </a>
+      <p className="mt-1.5 text-[10px] font-semibold text-ui-subtle">
+        {brief.quality === "ready" ? "시장 요약" : "마지막 정상 시장 요약"} {formatNewsImpactTime(brief.generatedAt)} · 뉴스가 방향 점수를 직접 바꾸지는 않습니다.
+      </p>
+    </section>
+  );
+}
+
+function MarketBriefStrip({ brief }: { brief: NewsMarketBrief }) {
+  return (
+    <section className="flex min-w-0 flex-col gap-1 bg-ui-panel px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:px-5" aria-label="현재 시장 한 줄 요약">
+      <p className="min-w-0 text-xs font-semibold leading-5 text-ui-muted [word-break:keep-all]">
+        <span className="mr-1.5 font-black text-ui-brand">현재 시장</span>
+        <span className="font-black text-ui-text">{brief.stateLabel}</span>
+        <span aria-hidden> · </span>
+        {brief.nextCondition}
+      </p>
+      <a href={brief.ctaHref} className="shrink-0 text-xs font-black text-ui-brand underline underline-offset-2">
+        현재 판단 보기
+      </a>
+    </section>
+  );
+}
+
+function LockedReactionPreview({ href, requiresAuth }: { href: string; requiresAuth: boolean }) {
+  const steps = [
+    { label: "발표 전", value: "당시 시장 상태" },
+    { label: "15분 후", value: "첫 반응 확인" },
+    { label: "60분 후", value: "유지·되돌림 비교" }
+  ];
+  return (
+    <section className="bg-ui-panel px-3 py-4 sm:px-5" aria-labelledby="locked-news-evidence-title">
+      <div className="flex items-start gap-2">
+        <LockKeyhole className="mt-0.5 shrink-0 text-ui-brand" size={17} aria-hidden />
+        <div>
+          <h2 id="locked-news-evidence-title" className="text-sm font-black text-ui-text">Pro는 발표 전후를 같은 기준으로 비교합니다</h2>
+          <p className="mt-1 text-xs leading-5 text-ui-muted">기사 수를 늘리는 기능이 아닙니다. 발표 당시 상태와 15분·60분 뒤 가격·구조·큰 금액 체결을 나란히 보고, 그 판단을 복기에 저장합니다.</p>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-3 gap-px overflow-hidden bg-ui-line" aria-label="잠긴 발표 전후 비교 미리보기">
+        {steps.map((step) => (
+          <div key={step.label} className="min-w-0 bg-ui-inset px-2 py-2.5 text-center">
+            <p className="text-[11px] font-black text-ui-text">{step.label}</p>
+            <p className="mt-1 text-[11px] leading-4 text-ui-muted [word-break:keep-all]">{step.value}</p>
+            <LockKeyhole className="mx-auto mt-1.5 text-ui-subtle" size={13} aria-hidden />
+          </div>
+        ))}
+      </div>
+      <ActionButton href={href} tone="secondary" className="mt-3 w-full">
+        {requiresAuth ? "로그인하고 비교 기능 확인" : "Pro에서 발표 전후 비교 열기"}
+      </ActionButton>
+    </section>
+  );
 }
 
 function nextCheckHeading(event: NewsImpactEvent) {
@@ -126,18 +267,20 @@ function officialNextStepCopy(market: NewsMarket, asset: Asset) {
     : "글로벌 화면에서 현재 시장 모드와 위험지표를 먼저 보고, 검증된 발표 전후 반응이 준비되면 다시 비교합니다.";
 }
 
-function EmptyState({ market, quality, warning }: {
+function EmptyState({ market, quality, warning, hasReferenceItems = false }: {
   market: NewsMarket;
   quality: NewsImpactListResponse["quality"];
   warning: string | null;
+  hasReferenceItems?: boolean;
 }) {
   const delayed = quality !== "ready";
+  const referenceOnly = !delayed && hasReferenceItems;
   return (
     <section className="bg-ui-panel px-4 py-8 text-center" role="status">
       {delayed ? <AlertTriangle className="mx-auto text-ui-watch" size={24} aria-hidden /> : <CheckCircle2 className="mx-auto text-ui-long" size={24} aria-hidden />}
-      <h2 className="mt-3 text-lg font-black text-ui-text">{delayed ? "공식 출처 갱신 상태를 확인하고 있습니다" : "지금 시장 판단을 바꿀 새 공식 이슈는 없습니다"}</h2>
+      <h2 className="mt-3 text-lg font-black text-ui-text">{delayed ? "공식 출처 갱신 상태를 확인하고 있습니다" : referenceOnly ? "지금 시장 판단을 바꿀 새 공식 이슈는 없습니다" : `현재 연결된 공식 출처에서 새 ${market === "crypto" ? "BTC·ETH" : "글로벌"} 관련 사건을 찾지 못했습니다`}</h2>
       <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-ui-muted">
-        {delayed ? (warning ?? "출처 수집이 정상화되기 전에는 새 사건이 없다고 단정하지 않습니다. 마지막 정상 결과와 다음 일정을 확인해 주세요.") : `${market === "crypto" ? "BTC·ETH" : "글로벌 시장"}은 자극적인 헤드라인보다 실제 가격 반응과 다음 경제 일정을 우선해 확인합니다.`}
+        {delayed ? (warning ?? "출처 수집이 정상화되기 전에는 새 사건이 없다고 단정하지 않습니다. 마지막 정상 결과와 다음 일정을 확인해 주세요.") : referenceOnly ? "정기 보고서처럼 당장 판단을 바꾸기 어려운 자료는 아래 참고 기록으로 내렸습니다. 위의 현재 시장 상태와 다음 경제 일정을 우선 확인하세요." : "사건이 없다는 뜻이 아니라, 허용된 공식 기관 발표 중 현재 필터에 맞는 새 자료가 없다는 뜻입니다. 위의 현재 시장 상태와 다음 경제 일정을 함께 확인하세요."}
       </p>
       <a href={market === "crypto" ? "/schedule?market=crypto" : "/schedule?market=global"} className="mt-3 inline-flex text-xs font-black text-ui-brand underline underline-offset-2">다가오는 공식 경제 일정 보기</a>
     </section>
@@ -172,7 +315,7 @@ function SupportingEvents({
   if (events.length === 0) return null;
   return (
     <section className="bg-ui-panel px-3 py-4 sm:px-5" aria-labelledby="news-impact-history-title">
-      <h2 id="news-impact-history-title" className="text-base font-black text-ui-text">최근 공식 발표·공시</h2>
+      <h2 id="news-impact-history-title" className="text-base font-black text-ui-text">참고할 최근 공식 자료</h2>
       <div className="mt-2 divide-y divide-ui-line">
         {events.map((event) => {
           const cta = eventCta(event, market, asset, exactContext, impactEnabled);
@@ -180,7 +323,9 @@ function SupportingEvents({
             <article key={event.id} className="py-3">
               <div className="flex flex-wrap items-center gap-1.5">
                 <StatusPill tone={impactEnabled ? newsImpactTone(event.reaction?.classification ?? "pending") : "watch"}>
-                  {impactEnabled ? newsImpactClassificationLabel(event.reaction?.classification ?? "pending") : "공식 발표"}
+                  {event.category === "corporate_sector" && event.importance === "normal" && !event.reaction
+                    ? "정기 공시"
+                    : impactEnabled ? newsImpactClassificationLabel(event.reaction?.classification ?? "pending") : "공식 발표"}
                 </StatusPill>
                 <span className="text-[11px] font-semibold text-ui-subtle">{formatNewsImpactTime(event.occurredAt)}</span>
                 {revisionLabel(event) ? <span className="text-[11px] font-black text-ui-watch">{revisionLabel(event)}</span> : null}
@@ -217,6 +362,8 @@ export function NewsImpactPanel({ market, initialAsset = "btc", requestedEventId
   const [alertEnabled, setAlertEnabled] = useState(false);
   const [alertSaving, setAlertSaving] = useState(false);
   const [preferenceError, setPreferenceError] = useState<string | null>(null);
+  const [journalSaving, setJournalSaving] = useState(false);
+  const [journalResult, setJournalResult] = useState<{ ok: boolean; message: string } | null>(null);
   const requestRef = useRef<{ generation: number; controller: AbortController } | null>(null);
   const paginationRef = useRef<AbortController | null>(null);
   const generationRef = useRef(0);
@@ -226,6 +373,7 @@ export function NewsImpactPanel({ market, initialAsset = "btc", requestedEventId
     setActiveRequestedEventId(requestedEventId);
     setActiveRequestedSnapshotId(requestedSnapshotId);
     setDeepLinkError(null);
+    setJournalResult(null);
     viewedEventRef.current = null;
   }, [requestedEventId, requestedSnapshotId]);
 
@@ -252,7 +400,9 @@ export function NewsImpactPanel({ market, initialAsset = "btc", requestedEventId
       ) throw new Error("news_impact_context_mismatch");
       let events = next.events ?? [];
       let requestedError: string | null = null;
-      if (activeRequestedEventId && !events.some((event) => event.id === activeRequestedEventId) && next.mode === "on" && activeRequestedSnapshotId) {
+      if (activeRequestedSnapshotId && next.snapshotContext === "not_matched") {
+        requestedError = "요청한 분석 시점이 현재 자산과 일치하지 않아 최신 시장 상태로 표시했습니다.";
+      } else if (activeRequestedEventId && !events.some((event) => event.id === activeRequestedEventId) && next.mode === "on" && activeRequestedSnapshotId) {
         requestedError = "Home에서 본 시장 분석과 같은 시점의 뉴스 반응을 찾지 못했습니다.";
       } else if (activeRequestedEventId && !events.some((event) => event.id === activeRequestedEventId) && next.mode !== "off") {
         const detailParams = new URLSearchParams({ market });
@@ -268,7 +418,7 @@ export function NewsImpactPanel({ market, initialAsset = "btc", requestedEventId
       if (controller.signal.aborted || generation !== generationRef.current) return;
       setPayload({ ...next, events: Array.from(new Map(events.map((event) => [event.id, event])).values()) });
       setDeepLinkError(requestedError);
-      setError(next.warning ?? null);
+      setError(next.quality === "ready" ? null : next.warning ?? null);
     } catch (loadError) {
       if (!controller.signal.aborted && generation === generationRef.current) {
         setError(loadError instanceof Error ? loadError.message : "공식 뉴스 분석을 불러오지 못했습니다.");
@@ -316,12 +466,16 @@ export function NewsImpactPanel({ market, initialAsset = "btc", requestedEventId
     const events = payload?.events ?? [];
     return activeRequestedEventId
       ? events.find((event) => event.id === activeRequestedEventId) ?? null
-      : events[0] ?? null;
+      : selectMeaningfulNewsImpactEvent(events);
   }, [activeRequestedEventId, payload?.events]);
   const supporting = useMemo(
     () => (payload?.events ?? []).filter((event) => event.id !== lead?.id),
     [lead?.id, payload?.events]
   );
+
+  useEffect(() => {
+    setJournalResult(null);
+  }, [lead?.id]);
 
   useEffect(() => {
     if (!lead || viewedEventRef.current === lead.id) return;
@@ -346,6 +500,7 @@ export function NewsImpactPanel({ market, initialAsset = "btc", requestedEventId
     setPayload(null);
     setError(null);
     setDeepLinkError(null);
+    setJournalResult(null);
     setActiveRequestedEventId(null);
     setActiveRequestedSnapshotId(null);
     viewedEventRef.current = null;
@@ -422,6 +577,41 @@ export function NewsImpactPanel({ market, initialAsset = "btc", requestedEventId
     }
   }
 
+  async function saveNewsJournal() {
+    const reaction = lead?.reaction;
+    if (
+      journalSaving ||
+      market !== "crypto" ||
+      payload?.mode !== "on" ||
+      !payload.capabilities.canSaveJournal ||
+      !reaction?.evaluatedSnapshotId ||
+      !reaction.reactionId
+    ) return;
+    setJournalSaving(true);
+    setJournalResult(null);
+    try {
+      const response = await fetch("/api/crypto/perpetual/journal", await withSupabaseAuth({
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          snapshotId: reaction.evaluatedSnapshotId,
+          source: "news",
+          reactionId: reaction.reactionId
+        })
+      }));
+      const result = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) throw new Error(result.error ?? "뉴스 판단 복기를 저장하지 못했습니다.");
+      setJournalResult({ ok: true, message: "발표 당시 시장 상태와 반응을 복기에 저장했습니다." });
+    } catch (saveError) {
+      setJournalResult({
+        ok: false,
+        message: saveError instanceof Error ? saveError.message : "뉴스 판단 복기를 저장하지 못했습니다."
+      });
+    } finally {
+      setJournalSaving(false);
+    }
+  }
+
   if (loading && !payload) {
     return (
       <section className="min-h-[360px] bg-ui-panel px-4 py-8" aria-busy="true">
@@ -474,7 +664,8 @@ export function NewsImpactPanel({ market, initialAsset = "btc", requestedEventId
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold text-ui-muted">
           <span className="inline-flex items-center gap-1"><Database size={12} aria-hidden /> {qualityLabel(payload.quality)}</span>
           <span className="inline-flex items-center gap-1"><Clock3 size={12} aria-hidden /> 생성 {formatNewsImpactTime(payload.generatedAt)}</span>
-          <span>공식 출처 {officialSourceCount}곳 확인</span>
+          <span>공식 출처 {officialSourceCount}곳 연결</span>
+          <span>최근 24시간 관련 사건 {payload.sourceHealth.accepted24h}건</span>
           {refreshing ? <Loader2 className="animate-spin" size={12} aria-label="갱신 중" /> : null}
         </div>
         {error ? <p role="alert" className="mt-2 flex items-start gap-1.5 bg-ui-watch/10 px-2 py-1.5 text-xs font-semibold leading-5 text-ui-watch"><AlertTriangle className="mt-0.5 shrink-0" size={13} aria-hidden />{error}</p> : null}
@@ -499,7 +690,11 @@ export function NewsImpactPanel({ market, initialAsset = "btc", requestedEventId
         ) : null}
       </section>
 
-      {!lead ? (deepLinkError ? null : <EmptyState market={market} quality={payload.quality} warning={payload.warning} />) : (
+      {payload.marketBrief ? (
+        lead ? <MarketBriefStrip brief={payload.marketBrief} /> : <MarketBriefCard brief={payload.marketBrief} />
+      ) : null}
+
+      {!lead ? (deepLinkError ? null : <EmptyState market={market} quality={payload.quality} warning={payload.warning} hasReferenceItems={supporting.length > 0} />) : (
         <section className="bg-ui-panel px-3 py-4 sm:px-5" aria-labelledby="lead-news-impact-title">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand"><Newspaper size={12} aria-hidden /> {leadIsToday ? "오늘 확인할 공식 발표" : "최근 확인할 공식 발표"}</p>
@@ -510,11 +705,11 @@ export function NewsImpactPanel({ market, initialAsset = "btc", requestedEventId
             <span>{formatNewsImpactTime(lead.occurredAt)}</span><span>{lead.primarySource.name}</span>{revisionLabel(lead) ? <span className="font-black text-ui-watch">{revisionLabel(lead)}</span> : null}<span>{impactEnabled ? (reaction ? stageLabel(reaction.stage, lead) : "반응 확인 중") : "시장 반응 연결 검증 중"}</span>
           </div>
           {impactEnabled ? (
-            <div className="mt-3 grid gap-2 md:grid-cols-4">
-              <div className="bg-ui-inset/70 px-3 py-2.5"><p className="text-[10px] font-black uppercase tracking-[0.08em] text-ui-subtle">무슨 일이 있었나</p><p className="mt-1 line-clamp-3 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{lead.factSummary}</p></div>
-              <div className="bg-ui-inset/70 px-3 py-2.5"><p className="text-[10px] font-black uppercase tracking-[0.08em] text-ui-subtle">발표 뒤 실제 시장 반응</p><p className="mt-1 line-clamp-3 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{reaction?.reactionSummary ?? "발표 뒤 마감되는 첫 15분 구간을 확인 중입니다."}</p></div>
-              <div className="bg-ui-inset/70 px-3 py-2.5"><p className="text-[10px] font-black uppercase tracking-[0.08em] text-ui-subtle">현재 판단과 같은가?</p><p className="mt-1 line-clamp-3 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{impactExplanation(lead)}</p></div>
-              <div className="bg-ui-inset/70 px-3 py-2.5"><p className="text-[10px] font-black uppercase tracking-[0.08em] text-ui-subtle">{nextCheckHeading(lead)}</p><p className="mt-1 line-clamp-3 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{nextCheckCopy(lead)}</p></div>
+            <div className="mt-3 grid gap-px overflow-hidden bg-ui-line sm:grid-cols-2">
+              <div className="bg-ui-inset/70 px-3 py-2.5"><p className="text-[10px] font-black uppercase tracking-[0.08em] text-ui-subtle">무슨 일이 있었나</p><p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{lead.factSummary}</p></div>
+              <div className="bg-ui-inset/70 px-3 py-2.5"><p className="text-[10px] font-black uppercase tracking-[0.08em] text-ui-subtle">이후 실제 시장 반응</p><p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{reaction?.reactionSummary ?? (lead.reactionEligibility === "context_only" ? "정확한 시각 전후 자료가 없어 단기 반응을 연결하지 않습니다." : "첫 15분 구간을 확인 중입니다.")}</p></div>
+              <div className="bg-ui-inset/70 px-3 py-2.5"><p className="text-[10px] font-black uppercase tracking-[0.08em] text-ui-subtle">현재 판단과 같은가?</p><p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{impactExplanation(lead)}</p></div>
+              <div className="bg-ui-inset/70 px-3 py-2.5"><p className="text-[10px] font-black uppercase tracking-[0.08em] text-ui-subtle">{nextCheckHeading(lead)}</p><p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{nextCheckCopy(lead)}</p></div>
             </div>
           ) : (
             <div className="mt-3 grid gap-2 md:grid-cols-3">
@@ -527,6 +722,11 @@ export function NewsImpactPanel({ market, initialAsset = "btc", requestedEventId
             <a href={lead.primarySource.url} target="_blank" rel="noreferrer" onClick={() => void trackProductEvent({ eventName: "news_source_opened", surface: "news", asset: market === "crypto" ? asset : undefined, newsEventId: lead.id, properties: { market, source: lead.primarySource.name } })} className="order-2 inline-flex min-h-9 items-center gap-1 text-xs font-black text-ui-muted underline underline-offset-2 sm:order-1"><ExternalLink size={13} aria-hidden /> 대표 공식 원문</a>
             {cta ? <a href={cta.href} onClick={() => void trackProductEvent({ eventName: "news_to_market_opened", surface: "news", asset: market === "crypto" ? asset : undefined, snapshotId: reaction?.evaluatedSnapshotId, newsEventId: lead.id, newsReactionId: reaction?.reactionId, properties: { market, classification: reaction?.classification ?? "pending", source: "news", exactContext: canUseExactContext } })} className="order-1 inline-flex min-h-10 w-full items-center justify-center bg-ui-brand px-3 text-sm font-semibold text-white transition hover:brightness-110 sm:order-2 sm:w-auto">{cta.label}</a> : null}
           </div>
+          {market === "crypto" && impactEnabled && reaction && !canUseExactContext ? (
+            <p className="mt-2 text-[11px] font-semibold leading-5 text-ui-subtle">
+              이 버튼은 현재 선물 분석으로 이동합니다. 발표 당시 15분·60분 비교와 같은 시점 복기는 Pro에서 열립니다.
+            </p>
+          ) : null}
         </section>
       )}
 
@@ -537,9 +737,40 @@ export function NewsImpactPanel({ market, initialAsset = "btc", requestedEventId
             <ul className="space-y-1 text-xs text-ui-muted">{lead.pro.sources.map((source) => <li key={source.id}><a className="underline" href={source.url} target="_blank" rel="noreferrer">{source.name} · {formatNewsImpactTime(source.publishedAt)}</a></li>)}</ul>
             {lead.pro.metrics.length > 0 ? <div className="overflow-x-auto"><table className="min-w-full text-left text-xs"><thead><tr className="text-ui-subtle"><th className="py-1 pr-3">지표</th><th className="py-1 pr-3">발표 전</th><th className="py-1">발표 후</th></tr></thead><tbody>{lead.pro.metrics.map((metric) => <tr key={metric.key} className="border-t border-ui-line"><th className="py-1.5 pr-3 font-semibold text-ui-text">{metric.label}</th><td className="py-1.5 pr-3 tabular-nums">{formatMetricValue(metric, metric.before)}</td><td className="py-1.5 tabular-nums">{formatMetricValue(metric, metric.after)}</td></tr>)}</tbody></table></div> : null}
             {lead.pro.revisions.length > 0 ? <div><p className="text-xs font-black text-ui-text">공식 개정 이력</p><ul className="mt-1 space-y-1 text-xs text-ui-muted">{lead.pro.revisions.map((revision) => <li key={`${revision.version}-${revision.updatedAt}`}>v{revision.version} · {formatNewsImpactTime(revision.updatedAt)} · {revision.headline}</li>)}</ul></div> : null}
+            {market === "crypto" && payload.capabilities.canSaveJournal && reaction?.evaluatedSnapshotId && reaction.reactionId ? (
+              <div className="border-t border-ui-line pt-3">
+                <button type="button" disabled={journalSaving || journalResult?.ok === true} onClick={() => void saveNewsJournal()} className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 bg-ui-brand px-3 text-xs font-black text-white transition hover:brightness-110 disabled:opacity-60">
+                  {journalSaving ? <Loader2 className="animate-spin" size={14} aria-hidden /> : <BookOpenCheck size={14} aria-hidden />}
+                  {journalResult?.ok ? "뉴스 판단 복기 저장 완료" : "발표 당시 판단과 반응을 복기에 저장"}
+                </button>
+                {journalResult ? (
+                  <p className={`mt-2 text-xs font-semibold leading-5 ${journalResult.ok ? "text-ui-long" : "text-ui-risk"}`} role={journalResult.ok ? "status" : "alert"}>
+                    {journalResult.message} {journalResult.ok ? <a href="/journal" className="ml-1 font-black underline underline-offset-2">복기장 보기</a> : null}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </details>
       ) : null}
+
+      {lead && impactEnabled && !lead.pro ? (
+        <LockedReactionPreview
+          href={payload.capabilities.requiresAuth ? `/login?returnTo=${encodeURIComponent(currentNewsPath)}` : newsUpgradeHref}
+          requiresAuth={payload.capabilities.requiresAuth}
+        />
+      ) : null}
+
+      {lead && payload.marketBrief ? (
+        <details className="bg-ui-panel px-3 py-3 sm:px-5">
+          <summary className="cursor-pointer text-sm font-black text-ui-text">현재 시장 상태·위험·확인 조건 자세히 보기</summary>
+          <div className="-mx-3 mt-3 border-t border-ui-line sm:-mx-5">
+            <MarketBriefCard brief={payload.marketBrief} />
+          </div>
+        </details>
+      ) : null}
+
+      <SupportingEvents events={supporting} market={market} asset={asset} exactContext={canUseExactContext} impactEnabled={impactEnabled} />
 
       {payload.mode === "on" ? <section className="bg-ui-panel px-3 py-4 sm:px-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -548,7 +779,6 @@ export function NewsImpactPanel({ market, initialAsset = "btc", requestedEventId
         </div>
       </section> : null}
 
-      <SupportingEvents events={supporting} market={market} asset={asset} exactContext={canUseExactContext} impactEnabled={impactEnabled} />
       {payload.nextCursor ? <div className="flex justify-center"><ActionButton tone="secondary" disabled={loadingMore} onClick={() => void loadMore()}>{loadingMore ? <Loader2 className="animate-spin" size={15} aria-hidden /> : null} 이전 공식 발표·공시 더 보기</ActionButton></div> : null}
     </div>
   );

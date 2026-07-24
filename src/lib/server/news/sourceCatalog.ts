@@ -4,7 +4,7 @@ export interface NewsSourceDefinition {
   id: string;
   name: string;
   markets: NewsMarket[];
-  adapter: "macro_store" | "rss" | "edgar" | "disabled_media";
+  adapter: "macro_store" | "rss" | "edgar" | "federal_register" | "positioning" | "disabled_media";
   endpoint: string | null;
   policyStatus: NewsSourcePolicyStatus;
   termsUrl: string;
@@ -81,6 +81,45 @@ export const newsSourceCatalog: readonly NewsSourceDefinition[] = [
     allowedHosts: ["cftc.gov"]
   },
   {
+    id: "federal_register_financial",
+    name: "Federal Register",
+    markets: ["crypto", "global"],
+    adapter: "federal_register",
+    endpoint: "https://www.federalregister.gov/api/v1/public-inspection-documents.json",
+    policyStatus: "allowed",
+    termsUrl: "https://www.archives.gov/federal-register/faqs",
+    reviewedAt: "2026-07-24",
+    maxRequestsPerSecond: 1,
+    timeoutMs: 10_000,
+    allowedHosts: ["federalregister.gov"]
+  },
+  {
+    id: "occ_news_releases",
+    name: "U.S. OCC",
+    markets: ["crypto", "global"],
+    adapter: "rss",
+    endpoint: "https://www.occ.gov/rss/occ_news.xml",
+    policyStatus: "allowed",
+    termsUrl: "https://www.occ.gov/rss/index-rss.html",
+    reviewedAt: "2026-07-24",
+    maxRequestsPerSecond: 1,
+    timeoutMs: 8_000,
+    allowedHosts: ["occ.gov"]
+  },
+  {
+    id: "cftc_cot_positioning",
+    name: "U.S. CFTC 주간 포지션",
+    markets: ["crypto"],
+    adapter: "positioning",
+    endpoint: "https://publicreporting.cftc.gov/resource/gpe5-46if.json",
+    policyStatus: "allowed",
+    termsUrl: "https://publicreporting.cftc.gov/stories/s/User-s-Guide/p2fg-u73y/",
+    reviewedAt: "2026-07-24",
+    maxRequestsPerSecond: 1,
+    timeoutMs: 6_000,
+    allowedHosts: ["publicreporting.cftc.gov", "publicreportinghub.cftc.gov"]
+  },
+  {
     id: "coindesk_rss",
     name: "CoinDesk",
     markets: ["crypto"],
@@ -134,6 +173,17 @@ export const newsSourceCatalog: readonly NewsSourceDefinition[] = [
   }
 ];
 
+const newsPushEnabledSourceIds = new Set([
+  "macro_official_store",
+  "fed_press_releases",
+  "sec_press_releases",
+  "cftc_releases"
+]);
+
+export function isNewsSourcePushEnabled(sourceId: string) {
+  return newsPushEnabledSourceIds.has(sourceId);
+}
+
 export function enabledNewsSources(market?: NewsMarket) {
   return newsSourceCatalog.filter((source) => (
     source.policyStatus === "allowed" && (!market || source.markets.includes(market))
@@ -148,9 +198,10 @@ export function runtimeAllowedNewsSourcesForPolicies(
   policies: ReadonlyMap<string, readonly string[]>,
   market?: NewsMarket
 ) {
-  return runtimeAllowedNewsSources(new Set(policies.keys()), market).filter((source) => {
+  return runtimeAllowedNewsSources(new Set(policies.keys()), market).flatMap((source) => {
     const allowedHosts = policies.get(source.id) ?? [];
-    return allowedHosts.length > 0 && (!source.endpoint || isAllowedUrlForHosts(source.endpoint, allowedHosts));
+    if (allowedHosts.length === 0 || (source.endpoint && !isAllowedUrlForHosts(source.endpoint, allowedHosts))) return [];
+    return [{ ...source, allowedHosts }];
   });
 }
 

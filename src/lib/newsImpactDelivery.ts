@@ -25,10 +25,12 @@ export function resolveNewsDeliveryStatus(input: {
   sentNow: number;
   failedNow: number;
   attempt: number;
+  allowRetry?: boolean;
 }): NewsDeliveryStatus {
   const totalSent = input.sentBefore + input.sentNow;
   if (!input.deliveryEnabled || input.targetCount === 0) return totalSent > 0 ? "partial" : "in_app_only";
   if (input.failedNow === 0) return "sent";
+  if (input.allowRetry === false) return totalSent > 0 ? "partial" : "in_app_only";
   if (input.attempt < 3) return "failed";
   return totalSent > 0 ? "partial" : "in_app_only";
 }

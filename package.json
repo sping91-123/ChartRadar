@@ -24,6 +24,7 @@
     "test:product-events": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-product-events.js",
     "test:push-targets": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-push-targets.js",
     "test:news-sources": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-news-sources.js",
+    "test:news-runtime": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-news-runtime.js",
     "test:macro-calendar": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-macro-calendar.js",
     "test:macro-impact": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-macro-impact.js",
     "test:news-impact": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-news-reactions.js && node scripts/test-news-impact-ledger.mjs",

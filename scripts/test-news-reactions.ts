@@ -10,6 +10,7 @@ import {
   isNewsImpactAlertEligible,
   newsReactionAnchorAt,
   nextNewsImpactCheckAt,
+  nextNewsImpactStage,
   officialMacroHeadline,
   serializeBasicNewsImpactEvent,
   serializeOfficialNewsImpactEvent,
@@ -18,6 +19,8 @@ import {
 } from "../src/lib/newsImpact";
 import { isNewsImpactReadEnabled, isOfficialNewsFeedEnabled, newsImpactRuntimePolicy } from "../src/lib/server/newsImpactMode";
 import { publicNewsReactionSummary, repairLegacyMacroPresentation } from "../src/lib/newsImpactPresentationRules";
+import { selectMeaningfulNewsImpactEvent, sortNewsImpactEvents } from "../src/lib/newsImpactSort";
+import { buildCryptoNewsMarketBrief, buildGlobalNewsMarketBrief, resolveNewsMarketBriefQuality } from "../src/lib/newsMarketBrief";
 
 assert.deepEqual(newsImpactRuntimePolicy("off", true), { mode: "off", collect: false, readOfficialFacts: false, expose: false, mutate: false, push: false });
 assert.deepEqual(newsImpactRuntimePolicy("shadow", true), { mode: "shadow", collect: true, readOfficialFacts: true, expose: false, mutate: false, push: false });
@@ -58,6 +61,7 @@ function snapshot(overrides: {
   pressureSide?: "upsideShorts" | "downsideLongs" | "balanced";
   pressureGrade?: "calm" | "normal" | "heated" | "extreme";
   generatedAt?: string;
+  engineVersion?: string;
 } = {}): PerpetualDecisionSnapshot {
   const asset = overrides.asset ?? "btc";
   const state = overrides.state ?? "upside_watch";
@@ -66,7 +70,7 @@ function snapshot(overrides: {
   return {
     id: overrides.id ?? "10000000-0000-4000-8000-000000000001",
     fingerprint: "fixture",
-    engineVersion: "perpetual-v1.0.0",
+    engineVersion: overrides.engineVersion ?? "perpetual-v1.0.0",
     asset,
     symbol: asset === "btc" ? "BTCUSDT" : "ETHUSDT",
     exchange: "binance",
@@ -135,6 +139,12 @@ const before = snapshot({ generatedAt: "2026-07-20T11:45:00.000Z" });
 assert.equal(classifyCryptoNewsReaction(null, before).classification, "insufficient_data");
 assert.equal(classifyCryptoNewsReaction(before, snapshot({ quality: "partial" })).classification, "insufficient_data");
 assert.equal(classifyCryptoNewsReaction(before, snapshot({ asset: "eth" })).classification, "insufficient_data");
+const engineMismatch = classifyCryptoNewsReaction(
+  before,
+  snapshot({ generatedAt: "2026-07-20T12:15:00.000Z", engineVersion: "perpetual-v2.0.0" })
+);
+assert.equal(engineMismatch.classification, "insufficient_data");
+assert.match(engineMismatch.reactionSummary, /분석 기준 버전/);
 assert.equal(
   classifyCryptoNewsReaction(
     snapshot({ generatedAt: "2026-07-20T12:30:00.000Z" }),
@@ -165,6 +175,9 @@ assert.equal(conflicted.classification, "conflicts_with_existing_state");
 assert.equal(isNewsImpactAlertEligible({ classification: conflicted.classification, quality: "ready" }), true);
 assert.equal(isNewsImpactAlertEligible({ classification: "supports_existing_state", quality: "ready" }), false);
 assert.equal(isNewsImpactAlertEligible({ classification: "risk_increase", quality: "stale" }), false);
+assert.equal(isNewsImpactAlertEligible({ classification: "pending", quality: "ready" }), false);
+assert.equal(isNewsImpactAlertEligible({ classification: "insufficient_data", quality: "ready" }), false);
+assert.equal(isNewsImpactAlertEligible({ classification: "no_material_reaction", quality: "ready" }), false);
 
 const global = (mode: GlobalReactionObservation["marketMode"], groups: GlobalReactionObservation["signalGroups"], observedAt = "2026-07-20T12:00:00.000Z"): GlobalReactionObservation => ({
   id: crypto.randomUUID(),
@@ -193,6 +206,15 @@ assert.equal(nextNewsImpactCheckAt("2026-07-20T12:00:00.000Z", "detected"), "202
 assert.equal(nextNewsImpactCheckAt("2026-07-20T12:14:59.000Z", "detected"), "2026-07-20T12:29:59.000Z");
 assert.equal(nextNewsImpactCheckAt("2026-07-20T12:00:00.000Z", "provisional_15m"), "2026-07-20T13:00:00.000Z");
 assert.equal(nextNewsImpactCheckAt("2026-07-20T12:00:00.000Z", "final_60m"), null);
+assert.deepEqual(
+  [
+    nextNewsImpactStage("detected"),
+    nextNewsImpactStage("provisional_15m"),
+    nextNewsImpactStage("final_60m")
+  ],
+  ["provisional_15m", "final_60m", null],
+  "the reaction lifecycle advances exactly detected to 15 minutes to 60 minutes"
+);
 assert.equal(newsReactionAnchorAt({ macroEventId: "macro", version: 1, occurredAt: "2026-07-20T12:00:00.000Z", firstSeenAt: "2026-07-20T12:30:00.000Z", updatedAt: "2026-07-20T12:30:00.000Z" }), "2026-07-20T12:00:00.000Z");
 assert.equal(newsReactionAnchorAt({ macroEventId: "macro", version: 2, occurredAt: "2026-07-20T12:00:00.000Z", firstSeenAt: "2026-07-20T12:01:00.000Z", updatedAt: "2026-07-20T15:00:00.000Z" }), "2026-07-20T15:00:00.000Z", "a revised macro release anchors to the revision detection time");
 assert.equal(
@@ -208,6 +230,17 @@ assert.equal(
   "duplicate sync updates must not move a revision's reaction window"
 );
 assert.equal(newsReactionAnchorAt({ version: 1, occurredAt: "2026-07-20T12:00:00.000Z", firstSeenAt: "2026-07-20T12:30:00.000Z", updatedAt: "2026-07-20T12:30:00.000Z" }), "2026-07-20T12:30:00.000Z", "a delayed surprise event anchors to first detection");
+assert.equal(
+  newsReactionAnchorAt({
+    reactionAnchorPolicy: "occurred_at",
+    version: 1,
+    occurredAt: "2026-07-20T12:00:00.000Z",
+    firstSeenAt: "2026-07-20T12:30:00.000Z",
+    updatedAt: "2026-07-20T12:30:00.000Z"
+  }),
+  "2026-07-20T12:00:00.000Z",
+  "an official precise release time can anchor a non-macro event"
+);
 assert.equal(newsReactionAnchorAt({ version: 2, occurredAt: "2026-07-20T12:00:00.000Z", firstSeenAt: "2026-07-20T12:30:00.000Z", updatedAt: "2026-07-20T13:00:00.000Z" }), "2026-07-20T13:00:00.000Z", "a non-macro revision anchors to revision detection");
 
 const event = {
@@ -252,7 +285,13 @@ const eventWithPrivateReaction = {
     evaluatedSnapshotId: "40000000-0000-4000-8000-000000000002",
     priceChangePercent: 1.25,
     stateBefore: "neutral",
-    stateAfter: "risk"
+    stateAfter: "risk",
+    nextCondition: {
+      label: "60,500 USDT 위에서 15분 봉 마감 확인",
+      timeframe: "15m",
+      kind: "price_cross_above",
+      threshold: 60_500
+    }
   }
 } satisfies NewsImpactEvent;
 const basicEvent = serializeBasicNewsImpactEvent(eventWithPrivateReaction);
@@ -260,6 +299,7 @@ assert.equal(Object.prototype.hasOwnProperty.call(basicEvent.reaction ?? {}, "pr
 assert.equal(Object.prototype.hasOwnProperty.call(basicEvent.reaction ?? {}, "evaluatedSnapshotId"), false);
 assert.equal(Object.prototype.hasOwnProperty.call(basicEvent.reaction ?? {}, "priceChangePercent"), false);
 assert.equal(Object.prototype.hasOwnProperty.call(basicEvent.reaction ?? {}, "stateBefore"), false);
+assert.equal(basicEvent.reaction?.nextCondition?.label, "60,500 USDT 위에서 15분 봉 마감 확인", "Basic keeps one useful server-derived next condition");
 const officialEvent = serializeOfficialNewsImpactEvent(eventWithPrivateReaction);
 assert.equal(officialEvent.reaction, null, "shadow official facts must not expose a provisional or final market-reaction classification");
 assert.equal(Object.prototype.hasOwnProperty.call(officialEvent, "pro"), false, "shadow official facts must not expose paid evidence before the impact gate opens");
@@ -303,5 +343,82 @@ assert.equal(completedRecentGlobalCandles([candle("2026-07-20T10:00:00.000Z")], 
 assert.equal(globalObservationQuality({ availableFutures: 4, availableRisk: 3, availableSectors: 0 }), "ready", "two complete Global proxy groups are sufficient");
 assert.equal(globalObservationQuality({ availableFutures: 4, availableRisk: 0, availableSectors: 0 }), "partial", "one proxy group must fail closed as partial");
 assert.equal(globalObservationQuality({ availableFutures: 0, availableRisk: 0, availableSectors: 0 }), "unavailable");
+
+const currentBriefSnapshot = snapshot({
+  id: "50000000-0000-4000-8000-000000000001",
+  generatedAt: "2026-07-20T12:00:00.000Z",
+  price: 60_000
+});
+const cryptoBrief = buildCryptoNewsMarketBrief(
+  "btc",
+  currentBriefSnapshot,
+  snapshot({ generatedAt: "2026-07-20T11:00:00.000Z", price: 59_400 }),
+  snapshot({ generatedAt: "2026-07-19T12:00:00.000Z", price: 58_000 })
+);
+assert.equal(cryptoBrief.snapshotId, currentBriefSnapshot.id);
+assert.match(cryptoBrief.metrics.find((metric) => metric.key === "change_1h")?.value ?? "", /^\+1\.01%$/);
+assert.match(cryptoBrief.ctaHref, /snapshot=50000000-0000-4000-8000-000000000001/);
+const ethBrief = buildCryptoNewsMarketBrief(
+  "eth",
+  snapshot({ id: "50000000-0000-4000-8000-000000000002", asset: "eth", price: 3_200 }),
+  snapshot({ asset: "eth", price: 3_100 }),
+  snapshot({ asset: "eth", price: 3_000 })
+);
+assert.equal(ethBrief.asset, "eth");
+assert.match(ethBrief.ctaHref, /asset=eth/, "the ETH market brief cannot deep-link to BTC");
+const globalBrief = buildGlobalNewsMarketBrief(
+  global("Neutral", { futures: 0.72, risk: -0.35, sectors: 1.8 }),
+  global("Risk-Off", { futures: -1.8, risk: -1.7, sectors: -0.4 }, "2026-07-20T11:00:00.000Z"),
+  null
+);
+assert.match(globalBrief.metrics.find((metric) => metric.key === "futures")?.value ?? "", /\+0\.72σ · 평균 범위/);
+assert.match(globalBrief.metrics.find((metric) => metric.key === "sectors")?.value ?? "", /\+1\.80σ · 평소보다 뚜렷한 강세/);
+assert.equal(resolveNewsMarketBriefQuality({
+  quality: "ready",
+  generatedAt: "2026-07-20T11:59:00.000Z",
+  expiresAt: "2026-07-20T12:00:00.000Z",
+  nowMs: Date.parse("2026-07-20T12:01:00.000Z")
+}), "stale", "an expired snapshot cannot be presented as the current market");
+assert.equal(resolveNewsMarketBriefQuality({
+  quality: "ready",
+  generatedAt: "2026-07-20T11:40:00.000Z",
+  nowMs: Date.parse("2026-07-20T12:01:00.000Z")
+}), "stale", "an old Global observation is explicitly stale");
+
+const recentNoReaction = {
+  ...event,
+  id: "20000000-0000-4000-8000-000000000010",
+  importance: "critical" as const,
+  category: "corporate_sector" as const,
+  occurredAt: "2026-07-20T11:50:00.000Z"
+};
+const recentActionable = {
+  ...eventWithPrivateReaction,
+  id: "20000000-0000-4000-8000-000000000011",
+  importance: "normal" as const,
+  occurredAt: "2026-07-20T11:40:00.000Z"
+};
+assert.equal(
+  sortNewsImpactEvents([recentNoReaction, recentActionable], Date.parse("2026-07-20T12:00:00.000Z"))[0]?.id,
+  recentActionable.id,
+  "a useful observed reaction leads a headline-only filing in the same recency window"
+);
+assert.equal(
+  selectMeaningfulNewsImpactEvent([{ ...recentNoReaction, importance: "normal" }]),
+  null,
+  "a routine corporate filing without a meaningful reaction cannot lead NEWS, Home, or Perpetual"
+);
+assert.equal(
+  selectMeaningfulNewsImpactEvent([{
+    ...event,
+    id: "20000000-0000-4000-8000-000000000012",
+    category: "regulation",
+    importance: "high",
+    reactionEligibility: "context_only"
+  }]),
+  null,
+  "a context-only regulation document stays in references unless it is explicitly critical"
+);
+assert.equal(selectMeaningfulNewsImpactEvent([{ ...recentNoReaction, importance: "normal" }, recentActionable])?.id, recentActionable.id);
 
 console.log("News impact reaction and Basic/Pro serialization matrix passed.");

@@ -33,7 +33,7 @@ export default async function NewsPage({ searchParams }: { searchParams: Promise
           <p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand">다음 경제 일정</p>
           <h2 id="global-news-brief-title" className="mt-1 text-xl font-black text-ui-text">다음 변동성 구간을 미리 준비하세요</h2>
           <p className="mt-1 text-xs leading-5 text-ui-muted">위에서 공식 발표 뒤 글로벌 반응을 확인했다면, 다음 일정과 예상 시각으로 다시 확인할 때를 잡아보세요.</p>
-          <div className="mt-3"><MacroTicker compact market="stocks" /></div>
+          <div className="mt-3"><MacroTicker compact market="stocks" homePriorityAware /></div>
         </section>
       </div>
     </main>

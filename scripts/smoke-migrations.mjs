@@ -160,6 +160,40 @@ for (const marker of [
   if (!newsHardening.includes(marker)) failures.push(`News Impact hardening migration is missing ${marker}`);
 }
 
+const newsUsefulName = active.find((name) => name.endsWith("_news_impact_useful_v2.sql"));
+const newsUseful = newsUsefulName ? readNormalized(join(activeDir, newsUsefulName)) : "";
+for (const marker of [
+  "federal_register_financial",
+  "occ_news_releases",
+  "cftc_cot_positioning",
+  "array['federalregister.gov']::text[]",
+  "array['occ.gov']::text[]",
+  "array['publicreporting.cftc.gov', 'publicreportinghub.cftc.gov']::text[]",
+  "enforce_news_reaction_engine_version",
+  "enforce_news_alert_source_provenance",
+  "push_source_item_ids",
+  "old.pre_snapshot_id is not null",
+  "baseline.engine_version = evaluated.engine_version",
+  "revoke all on function public.enforce_news_reaction_engine_version() from public, anon, authenticated, service_role"
+]) {
+  if (!newsUseful.includes(marker)) failures.push(`News usefulness migration is missing ${marker}`);
+}
+
+const newsOperationalName = active.find((name) => name.endsWith("_news_impact_operational_hardening.sql"));
+const newsOperational = newsOperationalName ? readNormalized(join(activeDir, newsOperationalName)) : "";
+for (const marker of [
+  "create table if not exists public.cftc_positioning_observations",
+  "delivery_attempted_token_ids",
+  "claim_news_impact_delivery_tokens",
+  "delete from public.cftc_positioning_observations",
+  "revoke all privileges on table public.cftc_positioning_observations from public, anon, authenticated",
+  "revoke all privileges on table public.push_alert_events from public, anon, authenticated",
+  "grant select on table public.push_alert_events to authenticated",
+  "revoke all on function public.claim_news_impact_delivery_tokens(uuid, integer, uuid[]) from public, anon, authenticated"
+]) {
+  if (!newsOperational.includes(marker)) failures.push(`News operational hardening migration is missing ${marker}`);
+}
+
 const canonicalSchema = readNormalized(join(root, "supabase", "schema.sql"));
 for (const marker of [
   "perpetual_scenario_monitors_live_condition_idx",
@@ -174,6 +208,10 @@ for (const marker of [
   "product_events_snapshot_idx",
   "journals_decision_snapshot_idx",
   "create table if not exists public.news_source_catalog",
+  "create table if not exists public.cftc_positioning_observations",
+  "create or replace function public.claim_news_impact_delivery_tokens",
+  "revoke all privileges on table public.push_alert_events from public, anon, authenticated",
+  "grant select on table public.push_alert_events to authenticated",
   "create table if not exists public.news_impact_events",
   "create table if not exists public.news_market_reactions",
   "create or replace function public.claim_news_sync_run",
@@ -190,7 +228,14 @@ for (const marker of [
   "delivery_succeeded_token_ids",
   "finalize_exhausted_news_impact_deliveries",
   "expire_news_impact_delivery",
-  "complete_news_impact_delivery(uuid, integer, text, integer, integer, text, uuid[])"
+  "complete_news_impact_delivery(uuid, integer, text, integer, integer, text, uuid[])",
+  "federal_register_financial",
+  "occ_news_releases",
+  "cftc_cot_positioning",
+  "create or replace function public.enforce_news_reaction_engine_version()",
+  "create or replace function public.enforce_news_alert_source_provenance()",
+  "push_source_item_ids",
+  "baseline.engine_version = evaluated.engine_version"
 ]) {
   if (!canonicalSchema.includes(marker)) failures.push(`canonical schema is missing ${marker}`);
 }

@@ -10,6 +10,7 @@ import {
   sortNewsImpactEvents
 } from "@/lib/server/news/newsImpactApi";
 import { readNewsImpactEvents, readNewsSourceStatusSummary } from "@/lib/server/news/newsImpactStore";
+import { buildNewsMarketBrief } from "@/lib/server/news/newsMarketBrief";
 import { isNewsImpactReadEnabled, isOfficialNewsFeedEnabled, newsImpactMode } from "@/lib/server/newsImpactMode";
 import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
 import { normalizePerpetualAsset } from "@/lib/server/perpetualDecisionSource";
@@ -68,7 +69,8 @@ export async function GET(request: Request) {
     generatedAt,
     quality: "unavailable",
     warning: mode === "shadow" ? "공식 뉴스와 시장 반응의 정확도를 검증 중입니다." : "공식 뉴스 분석이 비활성화되어 있습니다.",
-    sourceHealth: { active: 0, healthy: 0, degraded: 0, blocked: 4 },
+    sourceHealth: { active: 0, healthy: 0, degraded: 0, blocked: 4, accepted24h: 0, latestAcceptedAt: null },
+    marketBrief: null,
     events: [],
     capabilities,
     nextCursor: null
@@ -82,9 +84,10 @@ export async function GET(request: Request) {
     const limit = normalizeLimit(url.searchParams.get("limit"), pro);
     const offset = pro ? decodeNewsCursor(url.searchParams.get("cursor")) : 0;
     const since = new Date(Date.now() - (pro ? 30 : 1) * 24 * 60 * 60_000).toISOString();
-    const [initialStored, health] = await Promise.all([
+    const [initialStored, health, marketBrief] = await Promise.all([
       readNewsImpactEvents({ market, asset, snapshotId: impactEnabled ? requestedSnapshotId : null, since, limit: 100 }),
-      readNewsSourceStatusSummary(market)
+      readNewsSourceStatusSummary(market),
+      buildNewsMarketBrief(market, asset, new Date(), impactEnabled ? requestedSnapshotId : null).catch(() => null)
     ]);
     const usedRecentFallback = !pro && !requestedSnapshotId && initialStored.length === 0;
     const stored = usedRecentFallback
@@ -100,6 +103,14 @@ export async function GET(request: Request) {
       : stored;
     const sorted = sortNewsImpactEvents(snapshotScoped);
     const page = sorted.slice(offset, offset + limit);
+    const snapshotMatched = Boolean(
+      requestedSnapshotId &&
+      impactEnabled &&
+      (
+        marketBrief?.snapshotId === requestedSnapshotId ||
+        snapshotScoped.some((event) => event.reaction?.evaluatedSnapshotId === requestedSnapshotId)
+      )
+    );
     const latestRunMs = health.latestRunAt ? Date.parse(health.latestRunAt) : 0;
     const stale = !latestRunMs || Date.now() - latestRunMs > 15 * 60_000;
     const quality = health.active === 0 ? "unavailable" : stale ? "stale" : health.degraded > 0 ? "partial" : "ready";
@@ -109,7 +120,7 @@ export async function GET(request: Request) {
       asset,
       snapshotId: requestedSnapshotId ?? null,
       snapshotContext: requestedSnapshotId
-        ? impactEnabled ? "matched" : "ignored_official_only"
+        ? impactEnabled ? snapshotMatched ? "matched" : "not_matched" : "ignored_official_only"
         : "not_requested",
       generatedAt: health.latestRunAt ?? generatedAt,
       quality,
@@ -119,12 +130,22 @@ export async function GET(request: Request) {
           ? "공식 출처 갱신이 지연되어 마지막 정상 결과를 표시합니다."
           : health.degraded > 0
             ? "일부 공식 출처의 갱신이 지연되고 있습니다."
+            : health.accepted24h === 0
+              ? "공식 출처 수집은 정상입니다. 최근 24시간 동안 현재 필터에 맞는 새 사건은 없어 현재 시장 상태와 다음 일정을 우선 표시합니다."
             : usedRecentFallback && stored.length > 0
               ? "24시간 안에 새 공식 사건이 없어 최근 7일의 중요 발표·공시를 보여드립니다."
               : mode === "shadow"
                 ? "공식 발표는 바로 제공하며, 발표 전후 시장 반응 연결은 정확도를 검증 중입니다."
                 : null,
-      sourceHealth: { active: health.active, healthy: health.healthy, degraded: health.degraded, blocked: health.blocked },
+      sourceHealth: {
+        active: health.active,
+        healthy: health.healthy,
+        degraded: health.degraded,
+        blocked: health.blocked,
+        accepted24h: health.accepted24h,
+        latestAcceptedAt: health.latestAcceptedAt
+      },
+      marketBrief,
       events: impactEnabled ? serializeNewsEvents(page, pro) : serializeOfficialNewsEvents(page),
       capabilities,
       nextCursor: pro && offset + limit < sorted.length ? encodeNewsCursor(offset + limit) : null

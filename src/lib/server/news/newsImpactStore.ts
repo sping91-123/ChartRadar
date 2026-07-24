@@ -122,6 +122,22 @@ function rowToReaction(row: NewsReactionRow, event: NewsImpactEventRow): NewsImp
     headline: typeof frozen?.headline === "string" ? frozen.headline : event.headline,
     factSummary: typeof frozen?.factSummary === "string" ? frozen.factSummary : event.fact_summary
   });
+  const rawNextCondition = row.metrics?.nextCondition && typeof row.metrics.nextCondition === "object"
+    ? row.metrics.nextCondition as Record<string, unknown>
+    : null;
+  const nextCondition = rawNextCondition &&
+    typeof rawNextCondition.label === "string" &&
+    ["15m", "1h", "4h"].includes(String(rawNextCondition.timeframe)) &&
+    ["price_cross_above", "price_cross_below", "pressure_state_change", "decision_state_change"].includes(String(rawNextCondition.kind))
+    ? {
+        label: rawNextCondition.label.slice(0, 180),
+        timeframe: rawNextCondition.timeframe as "15m" | "1h" | "4h",
+        kind: rawNextCondition.kind as "price_cross_above" | "price_cross_below" | "pressure_state_change" | "decision_state_change",
+        threshold: typeof rawNextCondition.threshold === "number" && Number.isFinite(rawNextCondition.threshold)
+          ? rawNextCondition.threshold
+          : null
+      }
+    : null;
   return {
     eventId: row.event_id,
     reactionId: row.id,
@@ -142,7 +158,8 @@ function rowToReaction(row: NewsReactionRow, event: NewsImpactEventRow): NewsImp
     quality: row.quality,
     priceChangePercent: row.price_change_percent === null ? null : Number(row.price_change_percent),
     stateBefore: row.state_before,
-    stateAfter: row.state_after
+    stateAfter: row.state_after,
+    ...(nextCondition ? { nextCondition } : {})
   };
 }
 
@@ -326,6 +343,14 @@ export async function upsertNewsImpactEvent(input: {
   const previousRevisionDetectedAt = typeof previous?.metadata?.revision_detected_at === "string"
     ? previous.metadata.revision_detected_at
     : null;
+  const previousPushSourceItemIds = Array.isArray(previous?.metadata?.push_source_item_ids)
+    ? previous.metadata.push_source_item_ids.filter((value): value is string => typeof value === "string")
+    : previous?.metadata?.push_eligible === true && previous.primary_source_item_id
+      ? [previous.primary_source_item_id]
+      : [];
+  const pushSourceItemIds = input.metadata?.push_eligible === true
+    ? Array.from(new Set([...previousPushSourceItemIds, input.sourceItem.id]))
+    : previousPushSourceItemIds.filter((sourceItemId) => sourceItemId !== input.sourceItem.id);
   const revisionHistory = previous && changed
     ? [...previousHistory, {
         version: previous.version,
@@ -338,14 +363,49 @@ export async function upsertNewsImpactEvent(input: {
     : previousHistory;
   const scopedTargets = input.item.targets.filter((target) => input.market === "crypto" ? target !== "global" : target === "global");
   const importanceRank = { normal: 1, high: 2, critical: 3 } as const;
-  const importance = previous && importanceRank[previous.importance] > importanceRank[input.item.importance]
-    ? previous.importance
-    : input.item.importance;
+  const storedSourceAdmissions = previous?.metadata?.source_admissions && typeof previous.metadata.source_admissions === "object"
+    ? previous.metadata.source_admissions as Record<string, unknown>
+    : {};
+  const sourceAdmissions: Record<string, {
+    targets: string[];
+    importance: "normal" | "high" | "critical";
+    active: boolean;
+  }> = {};
+  for (const [sourceItemId, value] of Object.entries(storedSourceAdmissions)) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+    const record = value as Record<string, unknown>;
+    const sourceImportance = record.importance === "critical" || record.importance === "high" ? record.importance : "normal";
+    sourceAdmissions[sourceItemId] = {
+      targets: Array.isArray(record.targets) ? record.targets.filter((target): target is string => typeof target === "string") : [],
+      importance: sourceImportance,
+      active: record.active !== false
+    };
+  }
+  if (previous?.primary_source_item_id && Object.keys(sourceAdmissions).length === 0) {
+    sourceAdmissions[previous.primary_source_item_id] = {
+      targets: previous.targets,
+      importance: previous.importance,
+      active: true
+    };
+  }
+  sourceAdmissions[input.sourceItem.id] = {
+    targets: scopedTargets,
+    importance: input.item.importance,
+    active: true
+  };
+  const activeAdmissions = Object.values(sourceAdmissions).filter((sourceAdmission) => sourceAdmission.active);
+  const targets = Array.from(new Set(activeAdmissions.flatMap((sourceAdmission) => sourceAdmission.targets)));
+  const importance = activeAdmissions.reduce<"normal" | "high" | "critical">(
+    (highest, sourceAdmission) => importanceRank[sourceAdmission.importance] > importanceRank[highest]
+      ? sourceAdmission.importance
+      : highest,
+    "normal"
+  );
   const body = {
     semantic_key: input.semanticKey,
     market: input.market,
     category: previous?.category ?? input.item.category,
-    targets: Array.from(new Set([...(previous?.targets ?? []), ...scopedTargets])),
+    targets,
     importance,
     version: previous ? previous.version + (changed ? 1 : 0) : 1,
     status: previous ? (changed ? "revised" : previous.status) : "active",
@@ -358,11 +418,13 @@ export async function upsertNewsImpactEvent(input: {
     metadata: {
       ...(previous?.metadata ?? {}),
       ...(changed || presentationChanged || !previous ? input.metadata ?? {} : {}),
-      push_eligible: previous?.metadata?.push_eligible === true || input.metadata?.push_eligible === true,
+      push_eligible: pushSourceItemIds.length > 0,
+      push_source_item_ids: pushSourceItemIds,
       content_hash: previous?.primary_source_item_id && previous.primary_source_item_id !== input.sourceItem.id
         ? previous.metadata?.content_hash ?? input.item.contentHash
         : input.item.contentHash,
       source_hashes: { ...sourceHashes, [input.sourceItem.id]: input.item.contentHash },
+      source_admissions: sourceAdmissions,
       macro_source_event_id: typeof input.item.structuredPayload.macroSourceEventId === "string"
         ? input.item.structuredPayload.macroSourceEventId
         : previous?.metadata?.macro_source_event_id ?? null,
@@ -385,6 +447,118 @@ export async function upsertNewsImpactEvent(input: {
     prefer: "resolution=merge-duplicates"
   });
   return { event, changed, duplicate: Boolean(previous && !changed) };
+}
+
+export async function retractNewsEventsForRejectedSourceItems(
+  sourceId: string,
+  rejectedExternalIds: readonly string[],
+  detectedAt: string
+) {
+  if (rejectedExternalIds.length === 0) return [] as NewsImpactEventRow[];
+  const rejectedSet = new Set(rejectedExternalIds);
+  const sourceItems = await supabaseAdminRest<NewsSourceItemRow[]>(
+    `news_source_items?source_id=eq.${encodeURIComponent(sourceId)}&limit=500`
+  );
+  const rejectedItems = sourceItems.filter((item) => rejectedSet.has(item.external_id));
+  if (rejectedItems.length === 0) return [] as NewsImpactEventRow[];
+  const rejectedItemIds = new Set(rejectedItems.map((item) => item.id));
+  const rejectedLinks = await supabaseAdminRest<NewsEventSourceRow[]>(
+    `news_event_sources?source_item_id=in.(${Array.from(rejectedItemIds).join(",")})&limit=500`
+  );
+  const eventIds = Array.from(new Set(rejectedLinks.map((link) => link.event_id)));
+  if (eventIds.length === 0) return [] as NewsImpactEventRow[];
+  const [events, allLinks] = await Promise.all([
+    supabaseAdminRest<NewsImpactEventRow[]>(`news_impact_events?id=in.(${eventIds.join(",")})&limit=500`),
+    supabaseAdminRest<NewsEventSourceRow[]>(`news_event_sources?event_id=in.(${eventIds.join(",")})&limit=500`)
+  ]);
+  const allItemIds = Array.from(new Set(allLinks.map((link) => link.source_item_id)));
+  const allItems = allItemIds.length > 0
+    ? await supabaseAdminRest<NewsSourceItemRow[]>(`news_source_items?id=in.(${allItemIds.join(",")})&limit=500`)
+    : [];
+  const itemById = new Map(allItems.map((item) => [item.id, item]));
+  const importanceRank = { normal: 1, high: 2, critical: 3 } as const;
+  const updated: NewsImpactEventRow[] = [];
+
+  for (const event of events) {
+    const linkedIds = allLinks.filter((link) => link.event_id === event.id).map((link) => link.source_item_id);
+    const storedAdmissions = event.metadata?.source_admissions && typeof event.metadata.source_admissions === "object"
+      ? event.metadata.source_admissions as Record<string, unknown>
+      : {};
+    const sourceAdmissions: Record<string, {
+      targets: string[];
+      importance: "normal" | "high" | "critical";
+      active: boolean;
+    }> = {};
+    for (const [sourceItemId, value] of Object.entries(storedAdmissions)) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+      const record = value as Record<string, unknown>;
+      sourceAdmissions[sourceItemId] = {
+        targets: Array.isArray(record.targets) ? record.targets.filter((target): target is string => typeof target === "string") : [],
+        importance: record.importance === "critical" || record.importance === "high" ? record.importance : "normal",
+        active: record.active !== false
+      };
+    }
+    for (const sourceItemId of linkedIds) {
+      const item = itemById.get(sourceItemId);
+      if (!item || sourceAdmissions[sourceItemId]) continue;
+      sourceAdmissions[sourceItemId] = {
+        targets: item.targets.filter((target) => event.market === "crypto" ? target !== "global" : target === "global"),
+        importance: event.importance,
+        active: item.policy_status === "allowed"
+      };
+    }
+    let changed = false;
+    for (const sourceItemId of Array.from(rejectedItemIds)) {
+      if (sourceAdmissions[sourceItemId]?.active) {
+        sourceAdmissions[sourceItemId] = { ...sourceAdmissions[sourceItemId], active: false };
+        changed = true;
+      }
+    }
+    if (!changed) continue;
+    const activeEntries = Object.entries(sourceAdmissions).filter(([, admission]) => admission.active);
+    const nextTargets = Array.from(new Set(activeEntries.flatMap(([, admission]) => admission.targets)));
+    const nextImportance = activeEntries.reduce<"normal" | "high" | "critical">(
+      (highest, [, admission]) => importanceRank[admission.importance] > importanceRank[highest]
+        ? admission.importance
+        : highest,
+      "normal"
+    );
+    const remainingPushSourceIds = Array.isArray(event.metadata?.push_source_item_ids)
+      ? event.metadata.push_source_item_ids.filter((value): value is string => (
+          typeof value === "string" && !rejectedItemIds.has(value) && sourceAdmissions[value]?.active === true
+        ))
+      : [];
+    const remainingPrimaryId = activeEntries[0]?.[0] ?? event.primary_source_item_id;
+    const body = {
+      version: event.version + 1,
+      status: activeEntries.length > 0 ? "revised" : "retracted",
+      targets: activeEntries.length > 0 ? nextTargets : event.targets,
+      importance: activeEntries.length > 0 ? nextImportance : event.importance,
+      primary_source_item_id: rejectedItemIds.has(event.primary_source_item_id ?? "") ? remainingPrimaryId : event.primary_source_item_id,
+      metadata: {
+        ...event.metadata,
+        source_admissions: sourceAdmissions,
+        push_source_item_ids: remainingPushSourceIds,
+        push_eligible: remainingPushSourceIds.length > 0,
+        retraction_detected_at: detectedAt,
+        retraction_source_id: sourceId
+      }
+    };
+    const rows = await supabaseAdminRest<NewsImpactEventRow[]>(`news_impact_events?id=eq.${event.id}`, {
+      method: "PATCH",
+      body,
+      prefer: "return=representation"
+    });
+    if (rows[0]) updated.push(rows[0]);
+    const retiredTargets = activeEntries.length === 0
+      ? event.targets
+      : event.targets.filter((target) => !nextTargets.includes(target));
+    await Promise.all(retiredTargets.map((target) => supabaseAdminRest(
+      `news_market_reactions?event_id=eq.${event.id}&target=eq.${target}`,
+      { method: "PATCH", body: { next_check_at: null } }
+    )));
+  }
+  return updated;
 }
 
 export async function updateNewsImpactEventPresentation(input: {
@@ -560,23 +734,43 @@ export async function readNewsSourceStatusSummary(market?: NewsMarket) {
     : [...newsSourceCatalog];
   const relevantIds = new Set(relevantSources.map((source) => source.id));
   const fallbackBlocked = relevantSources.filter((source) => source.policyStatus !== "allowed").length;
-  if (!isSupabaseAdminConfigured()) return { active: 0, healthy: 0, degraded: 0, blocked: fallbackBlocked, latestRunAt: null as string | null };
-  const [catalog, health, runs] = await Promise.all([
-    supabaseAdminRest<Array<{ source_id: string; policy_status: "allowed" | "review" | "blocked"; enabled: boolean }>>(
-      "news_source_catalog?select=source_id,policy_status,enabled&limit=100"
+  if (!isSupabaseAdminConfigured()) return {
+    active: 0,
+    healthy: 0,
+    degraded: 0,
+    blocked: fallbackBlocked,
+    latestRunAt: null as string | null,
+    accepted24h: 0,
+    latestAcceptedAt: null as string | null
+  };
+  const recentSince = new Date(Date.now() - 24 * 60 * 60_000).toISOString();
+  const [catalog, health, runs, recentEvents] = await Promise.all([
+    supabaseAdminRest<Array<{ source_id: string; policy_status: "allowed" | "review" | "blocked"; enabled: boolean; allowed_hosts: string[] }>>(
+      "news_source_catalog?select=source_id,policy_status,enabled,allowed_hosts&limit=100"
     ).catch(() => []),
-    supabaseAdminRest<Array<{ source_id: string; consecutive_failures: number; circuit_open_until: string | null }>>(
-      "news_source_health?select=source_id,consecutive_failures,circuit_open_until&limit=50"
+    supabaseAdminRest<Array<{ source_id: string; consecutive_failures: number; circuit_open_until: string | null; last_success_at: string | null }>>(
+      "news_source_health?select=source_id,consecutive_failures,circuit_open_until,last_success_at&limit=50"
     ).catch(() => []),
     supabaseAdminRest<Array<{ finished_at: string; status: string }>>(
       "news_sync_runs?select=finished_at,status&order=finished_at.desc&limit=10"
-    ).catch(() => [])
+    ).catch(() => []),
+    market
+      ? supabaseAdminRest<Array<{ occurred_at: string }>>(
+          `news_impact_events?select=occurred_at&market=eq.${market}&status=neq.retracted&occurred_at=gte.${encodeURIComponent(recentSince)}&order=occurred_at.desc&limit=500`
+        ).catch(() => [])
+      : Promise.resolve([] as Array<{ occurred_at: string }>)
   ]);
   const relevantCatalog = catalog.filter((source) => relevantIds.has(source.source_id));
-  const activeIds = new Set(relevantCatalog.filter((source) => source.policy_status === "allowed" && source.enabled).map((source) => source.source_id));
-  const degradedIds = new Set(health.filter((row) => activeIds.has(row.source_id) && (
-    row.consecutive_failures > 0 || (row.circuit_open_until && Date.parse(row.circuit_open_until) > Date.now())
-  )).map((row) => row.source_id));
+  const activeIds = new Set(relevantCatalog.filter((source) => (
+    source.policy_status === "allowed" && source.enabled &&
+    Array.isArray(source.allowed_hosts) && source.allowed_hosts.length > 0
+  )).map((source) => source.source_id));
+  const healthById = new Map(health.map((row) => [row.source_id, row]));
+  const degradedIds = new Set(Array.from(activeIds).filter((sourceId) => {
+    const row = healthById.get(sourceId);
+    return !row?.last_success_at || row.consecutive_failures > 0 ||
+      Boolean(row.circuit_open_until && Date.parse(row.circuit_open_until) > Date.now());
+  }));
   const latestRun = runs[0] ?? null;
   const latestUsableRun = runs.find((run) => run.status === "stored" || run.status === "partial") ?? null;
   const latestFailed = latestRun?.status === "failed";
@@ -585,8 +779,13 @@ export async function readNewsSourceStatusSummary(market?: NewsMarket) {
     active: activeIds.size,
     healthy: Math.max(0, activeIds.size - degraded),
     degraded,
-    blocked: relevantCatalog.length > 0 ? relevantCatalog.filter((source) => source.policy_status !== "allowed" || !source.enabled).length : fallbackBlocked,
-    latestRunAt: latestUsableRun?.finished_at ?? null
+    blocked: relevantCatalog.length > 0 ? relevantCatalog.filter((source) => (
+      source.policy_status !== "allowed" || !source.enabled ||
+      !Array.isArray(source.allowed_hosts) || source.allowed_hosts.length === 0
+    )).length : fallbackBlocked,
+    latestRunAt: latestUsableRun?.finished_at ?? null,
+    accepted24h: recentEvents.length,
+    latestAcceptedAt: recentEvents[0]?.occurred_at ?? null
   };
 }
 
@@ -684,6 +883,7 @@ export async function readNewsImpactEvents(input: {
       primarySource: rowToSource(primary),
       sourceCount: eventSources.length,
       ...(typeof event.metadata?.macro_source_event_id === "string" ? { macroEventKey: event.metadata.macro_source_event_id } : {}),
+      reactionEligibility: event.metadata?.reaction_eligible === false ? "context_only" : "eligible",
       reaction: latest ? rowToReaction(latest, event) : null,
       pro: {
         sources: eventSources.map(rowToSource),

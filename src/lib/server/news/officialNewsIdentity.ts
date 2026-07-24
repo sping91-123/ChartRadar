@@ -47,5 +47,11 @@ export function officialNewsCanonicalEventId(input: {
     return `macro:${agency}:${sourceEventId}`;
   }
   if (input.sourceId === "sec_edgar_tracked") return `sec-accession:${input.externalId}`;
+  if (input.eventKind.startsWith("joint_")) {
+    return `joint-official:${input.eventKind}:${newYorkDate(input.publishedAt)}`;
+  }
+  if (["fed_press_releases", "sec_press_releases", "cftc_releases", "occ_news_releases"].includes(input.sourceId)) {
+    return `official-feed:${input.sourceId}:${input.externalId}`;
+  }
   return null;
 }

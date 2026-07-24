@@ -74,6 +74,11 @@ assert.deepEqual(
 assert.equal(resolveNewsDeliveryStatus({ deliveryEnabled: true, targetCount: 2, sentBefore: 1, sentNow: 0, failedNow: 1, attempt: 2 }), "failed");
 assert.equal(resolveNewsDeliveryStatus({ deliveryEnabled: true, targetCount: 2, sentBefore: 1, sentNow: 0, failedNow: 1, attempt: 3 }), "partial");
 assert.equal(resolveNewsDeliveryStatus({ deliveryEnabled: true, targetCount: 1, sentBefore: 0, sentNow: 0, failedNow: 1, attempt: 3 }), "in_app_only");
+assert.equal(
+  resolveNewsDeliveryStatus({ deliveryEnabled: true, targetCount: 1, sentBefore: 0, sentNow: 0, failedNow: 1, attempt: 1, allowRetry: false }),
+  "in_app_only",
+  "an uncertain NEWS FCM attempt is not retried because duplicate alerts are more harmful than a missed push"
+);
 assert.equal(resolveNewsDeliveryStatus({ deliveryEnabled: false, targetCount: 2, sentBefore: 0, sentNow: 0, failedNow: 0, attempt: 1 }), "in_app_only");
 
 const monitorLink = {

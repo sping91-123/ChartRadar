@@ -6,7 +6,7 @@ export interface OfficialEventPresentation {
   headline: string;
   factSummary: string;
   method: "deterministic" | "groq" | "gemini";
-  ruleVersion: "official-summary-v3";
+  ruleVersion: "official-summary-v4";
 }
 
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
@@ -52,9 +52,44 @@ function officialTopic(title: string) {
   return null;
 }
 
+function officialAction(title: string) {
+  if (/settle|settlement|agreement|합의/i.test(title)) return "합의 내용과 적용 대상을 공개했습니다";
+  if (/penalt|sanction|fine|벌금|과징금|제재/i.test(title)) return "제재 내용과 적용 대상을 공개했습니다";
+  if (/charg|complaint|enforcement|fraud|indict|기소|고발/i.test(title)) return "법 집행 조치와 적용 대상을 공개했습니다";
+  if (/reject|deni|dismiss|거부|기각/i.test(title)) return "거부 또는 기각 결정과 적용 대상을 공개했습니다";
+  if (/approv|authoriz|permit|승인|허가/i.test(title)) return "승인 또는 허가 결정과 적용 대상을 공개했습니다";
+  if (/withdraw|revoke|rescind|cancel|철회|취소/i.test(title)) return "철회 또는 취소 결정과 적용 시점을 공개했습니다";
+  if (/adopt|final rule|최종 규정/i.test(title)) return "최종 규정과 적용 범위를 공개했습니다";
+  if (/propos|rulemaking|규정 제안/i.test(title)) return "규정 제안과 의견수렴 내용을 공개했습니다";
+  if (/guidance|interpret|advisory|clarif|지침|해석|안내/i.test(title)) return "공식 지침 또는 해석과 적용 범위를 공개했습니다";
+  if (/roundtable|hearing|meeting|forum|회의|공청회/i.test(title)) return "공개 논의 일정과 다룰 주제를 발표했습니다";
+  return "공식 문서의 대상과 조치 내용을 공개했습니다";
+}
+
+function officialSubject(title: string) {
+  const normalized = title.replace(/\s+/g, " ").trim();
+  const patterns = [
+    /(?:charges?|charged|fines?|sanctions?|settles?(?:\s+charges)?|approves?|authorizes?|denies?|rejects?|orders?)\s+(.+?)(?=\s+(?:for|over|with|to|after|on|in)\b|[:;,]|$)/i,
+    /(?:against|with)\s+(.+?)(?=\s+(?:for|over|to|after|on|in)\b|[:;,]|$)/i
+  ];
+  for (const pattern of patterns) {
+    const candidate = normalized.match(pattern)?.[1]
+      ?.replace(/^(?:the\s+)?(?:SEC|CFTC|OCC|Commission)\s+/i, "")
+      .replace(/^["'“”]|["'“”]$/g, "")
+      .trim();
+    if (
+      candidate &&
+      candidate.length >= 2 &&
+      candidate.length <= 80 &&
+      !/(instruction|password|secret|token|api key)/i.test(candidate)
+    ) return candidate;
+  }
+  return null;
+}
+
 function originalTitleCopy(item: NormalizedNewsSourceItem) {
   const title = item.originalTitle.replace(/\s+/g, " ").trim().slice(0, 240);
-  return title ? ` 공식 원문 제목은 “${title}”입니다.` : "";
+  return title ? ` 세부 대상과 조치는 공식 원문 제목 “${title}”에서 확인할 수 있습니다.` : "";
 }
 
 function deterministicHeadline(item: NormalizedNewsSourceItem) {
@@ -72,13 +107,28 @@ function deterministicHeadline(item: NormalizedNewsSourceItem) {
   }
   if (item.sourceId === "sec_press_releases") {
     const topic = officialTopic(item.originalTitle);
+    const subject = officialSubject(item.originalTitle);
+    if (topic && subject) return `미 SEC, ${subject} 대상 ${topic} 발표`;
     if (topic) return `미 SEC, ${topic} 관련 공식 발표`;
     return eventKind === "us_crypto_regulation" ? "미 SEC, 디지털 자산 규제·감독 관련 공식 발표" : "미 SEC, 시장 제도·거래 인프라 관련 공식 발표";
   }
   if (item.sourceId === "cftc_releases") {
     const topic = officialTopic(item.originalTitle);
+    const subject = officialSubject(item.originalTitle);
+    if (topic && subject) return `미 CFTC, ${subject} 대상 ${topic} 발표`;
     if (topic) return `미 CFTC, ${topic} 관련 공식 발표`;
     return eventKind === "us_crypto_regulation" ? "미 CFTC, 디지털 자산 파생상품 관련 공식 발표" : "미 CFTC, 파생상품 시장 인프라 관련 공식 발표";
+  }
+  if (item.sourceId === "federal_register_financial") {
+    const agency = Array.isArray(item.structuredPayload.agencies)
+      ? item.structuredPayload.agencies.find((value): value is string => typeof value === "string" && value.trim().length > 0)
+      : null;
+    const prefix = agency ? `${agency}, ` : "미 연방 관보, ";
+    const topic = officialTopic(item.originalTitle);
+    return `${prefix}${topic ?? "디지털 자산·시장 제도"} 관련 공식 문서`;
+  }
+  if (item.sourceId === "occ_news_releases") {
+    return `미 OCC, ${officialTopic(item.originalTitle) ?? "은행의 디지털 자산 업무"} 관련 공식 발표`;
   }
   return /[가-힣]/.test(item.originalTitle) ? item.originalTitle : `${newsSourceById(item.sourceId)?.name ?? "공식 기관"} 공식 발표`;
 }
@@ -98,9 +148,20 @@ export function deterministicOfficialPresentation(item: NormalizedNewsSourceItem
   } else if (item.sourceId === "fed_press_releases") {
     factSummary = `미 연준이 통화정책 또는 금융안정과 관련된 공식 발표를 공개했습니다.${originalTitleCopy(item)}`;
   } else if (item.sourceId === "sec_press_releases") {
-    factSummary = `미 SEC가 ${officialTopic(item.originalTitle) ?? "디지털 자산 규제·미국 시장 제도"} 관련 공식 발표를 공개했습니다.${originalTitleCopy(item)}`;
+    const subject = officialSubject(item.originalTitle);
+    factSummary = `미 SEC가 ${subject ? `${subject}을(를) 대상으로 ` : ""}${officialTopic(item.originalTitle) ?? "디지털 자산 규제·미국 시장 제도"} 관련 공식 발표에서 ${officialAction(item.originalTitle)}.${originalTitleCopy(item)}`;
   } else if (item.sourceId === "cftc_releases") {
-    factSummary = `미 CFTC가 ${officialTopic(item.originalTitle) ?? "디지털 자산 파생상품·거래 인프라"} 관련 공식 발표를 공개했습니다.${originalTitleCopy(item)}`;
+    const subject = officialSubject(item.originalTitle);
+    factSummary = `미 CFTC가 ${subject ? `${subject}을(를) 대상으로 ` : ""}${officialTopic(item.originalTitle) ?? "디지털 자산 파생상품·거래 인프라"} 관련 공식 발표에서 ${officialAction(item.originalTitle)}.${originalTitleCopy(item)}`;
+  } else if (item.sourceId === "federal_register_financial") {
+    const agencies = Array.isArray(item.structuredPayload.agencies)
+      ? item.structuredPayload.agencies.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+      : [];
+    const agency = agencies[0] ?? "미국 연방 기관";
+    const timeLabel = item.structuredPayload.timeLabel === "공개 열람 등록" ? "공개 열람 문서로 등록했습니다" : "연방 관보에 공식 문서를 발행했습니다";
+    factSummary = `${agency}가 ${officialTopic(item.originalTitle) ?? "디지털 자산·시장 제도"} 관련 문서를 ${timeLabel}. 이 문서는 ${officialAction(item.originalTitle)}.${originalTitleCopy(item)}`;
+  } else if (item.sourceId === "occ_news_releases") {
+    factSummary = `미 통화감독청(OCC)이 ${officialTopic(item.originalTitle) ?? "은행의 디지털 자산·스테이블코인 업무"} 관련 공식 발표에서 ${officialAction(item.originalTitle)}.${originalTitleCopy(item)}`;
   } else {
     factSummary = `${source}가 공식 발표를 공개했습니다.${originalTitleCopy(item)}`;
   }
@@ -108,7 +169,7 @@ export function deterministicOfficialPresentation(item: NormalizedNewsSourceItem
     headline: deterministicHeadline(item).slice(0, 180),
     factSummary: factSummary.slice(0, 600),
     method: "deterministic",
-    ruleVersion: "official-summary-v3"
+    ruleVersion: "official-summary-v4"
   };
 }
 
@@ -228,8 +289,8 @@ export async function officialEventPresentation(item: NormalizedNewsSourceItem):
   const provider = process.env.NEWS_TRANSLATION_PROVIDER?.trim().toLowerCase();
   if (provider !== "groq" && provider !== "gemini") return fallback;
   const groq = provider === "gemini" ? null : await requestGroq(item);
-  if (groq) return { ...groq, method: "groq", ruleVersion: "official-summary-v3" };
+  if (groq) return { ...groq, method: "groq", ruleVersion: "official-summary-v4" };
   const gemini = await requestGemini(item);
-  if (gemini) return { ...gemini, method: "gemini", ruleVersion: "official-summary-v3" };
+  if (gemini) return { ...gemini, method: "gemini", ruleVersion: "official-summary-v4" };
   return fallback;
 }
