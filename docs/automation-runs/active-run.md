@@ -4,10 +4,10 @@
 
 ### Run State
 
-- Status: `V2_DB_APPLIED / UI_ON_PENDING_DEPLOY`
+- Status: `V2_PRODUCTION_COMPLETE / PUSH_OFF`
 - Local completion date: 2026-07-24
 - Scope completed: 기존 News Impact v1 전체와 함께 사건 우선 NEWS 화면, 현재 BTC·ETH/Global 시장 브리프, Federal Register·OCC 공식 사건, 저장형 CFTC 주간 포지션, 자산별 관련성, 사건 수정·철회, Pro 전후 비교·복기, 보관 만료 안전성, 출처별 Push provenance와 at-most-once 전송 경계를 구현했다.
-- Production flags: `NEWS_IMPACT_V1=on`으로 저장했으며 새 deployment부터 적용된다. `NEWS_IMPACT_PUSH_ENABLED=false`는 직접 재확인했다.
+- Production flags: `NEWS_IMPACT_V1=on`, `NEWS_IMPACT_PUSH_ENABLED=false`.
 - Explicitly not executed: 실제 News Impact FCM 발송, AAB/iOS/store 작업.
 
 ### 2026-07-24 NEWS Usefulness v2
@@ -26,7 +26,7 @@
 - 정상 무사건 상태는 장애 경고가 아니라 중립 안내로 표시한다. Crypto·Global 360×800·390×844에서 핵심 CTA가 첫 화면에 있고 가로 넘침·console error가 없음을 CLI Playwright로 확인했다.
 - QA evidence: `output/playwright/news-impact-useful-v2/crypto-news-actionable-final-390x844.png`, `crypto-news-actionable-final-360x800.png`, `crypto-news-pro-preview-final-360x800.png` (gitignored local artifacts).
 - PASS: 신규 NEWS source/runtime/reaction/alert/outbox/preferences 테스트, Perpetual snapshot/monitor/push 테스트, migration replay·RLS·ops·routes·mobile·`smoke:all`, TypeScript, production build, `git diff --check`.
-- Remaining external risk: Push는 계속 OFF이며, 새 출처의 운영 수집 결과와 UI를 배포 후 확인해야 한다. Vercel 계정에는 payment overdue 경고가 있어 신규 deployment가 차단될 가능성을 별도로 확인한다.
+- Remaining external risk: Push는 계속 OFF다. Vercel 계정의 payment overdue 경고와 Supabase Auth의 leaked-password protection 비활성 WARN은 별도 계정 운영 위험으로 남는다.
 
 ### 2026-07-24 v2 Production DB·Flag Application
 
@@ -38,6 +38,16 @@
 - 새 공식 출처 3개는 allowed·enabled 상태이며 CFTC runtime host는 `publicreporting.cftc.gov`, `publicreportinghub.cftc.gov`로 제한했다. 기존 engineVersion이 다른 반응 2건은 안전하게 비활성화했고 Push provenance 누락은 0건이다.
 - 적용 전후 profiles 69, subscriptions 12, legacy beta 12, sending Push 0으로 불변이다. News Impact Push 원장도 0건이다.
 - Vercel Production의 `NEWS_IMPACT_V1=on`을 저장했고 `NEWS_IMPACT_PUSH_ENABLED=false`를 직접 확인했다. 환경변수 변경은 다음 production deployment부터 적용된다.
+
+### 2026-07-24 v2 Production Release
+
+- 기능 PR `#21`을 squash merge했고 운영 main SHA는 `a6a7d60589cd6e084a88123ab25cac6d76b59c3e`다. production deployment `dpl_Ci9m1bMYASJtAmvTjUMfi8xJ1mfJ`가 1분 19초에 READY가 됐고 `chartradar.kr`의 Current deployment로 연결됐다.
+- 운영 API는 Crypto BTC·ETH, Global, `/api/radar-news` 호환 응답이 모두 HTTP 200 JSON이며 `mode=on`이다. 무인증 `/api/news-sync`는 HTTP 401을 유지한다.
+- 09:45 KST 첫 v2 cron은 10초 만에 `stored`로 완료됐다. 공식 source·BTC·ETH·Global 관측 11개가 모두 `succeeded`, fetched 451, accepted 2, duplicate 12, evaluated 2, `would_send=0`, error null이다.
+- Federal Register·OCC·CFTC 주간 포지션은 연속 실패 0·last error null이며 CFTC BTC·ETH 2행이 저장됐다. Crypto·Global API는 cron 뒤 `quality=ready`와 공식 출처 정상 상태로 전환됐다.
+- 최종 운영 원장은 profiles 69, subscriptions 12, legacy beta 12, sending Push 0, News Impact Push 0으로 불변이다.
+- CLI Playwright 390×844 Crypto NEWS에서 현재 시장·CFTC 주간 자료·위험·다음 가격·무사건 정상 안내를, 360×800 Global NEWS에서 실제 공식 사건·시장 반응·판단 영향·Pro 전후 비교를 확인했다. Home 공식 NEWS strip도 유지되며 모든 확인 화면의 horizontal overflow와 console warning/error는 0건이다.
+- Vercel deployment runtime logs는 warning 0, error 0, fatal 0이다. Supabase Security Advisor도 error 0이며 기존 leaked-password protection 비활성 WARN 1건만 남았다.
 
 ### 2026-07-21 Gate A Production Application
 
@@ -84,7 +94,7 @@
 ### v2 Operational Gate State
 
 - Gate A: v2 forward migration·새 source catalog 적용과 production catalog/RLS 재검증 완료.
-- Gate B: 기존 v1 shadow 원장을 검토하고 사용자 승인에 따라 Production UI flag를 `on`으로 저장했다. 실제 활성화는 이번 코드 deployment에서 확인한다.
+- Gate B: Production UI `on`, 새 공식 source 첫 cron 성공, Crypto·Global 실서비스 검증 완료.
 - Gate C: 미실행. `NEWS_IMPACT_PUSH_ENABLED=false`를 유지하며 실제 News Impact FCM은 발송하지 않는다.
 
 ---
