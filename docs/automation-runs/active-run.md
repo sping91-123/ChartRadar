@@ -10,6 +10,15 @@
 - Production flags: `NEWS_IMPACT_V1=on`, `NEWS_IMPACT_PUSH_ENABLED=false`.
 - Explicitly not executed: 실제 News Impact FCM 발송, AAB/iOS/store 작업.
 
+### 2026-07-27 Android 로그인 유지 회귀 수정 (로컬)
+
+- 운영 Supabase Auth 로그와 앱 코드를 함께 확인한 결과, 20개가 넘는 화면 컴포넌트가 각각 인증 hook을 실행해 같은 기기에서 `/auth/v1/user` 요청이 같은 초에 여러 번 중복됐다. 각 hook은 네트워크 오류·429·5xx까지 모두 세션 삭제로 처리해 앱 재진입과 네트워크 전환 시 로그인 화면이 다시 나타날 수 있었다.
+- 인증 상태를 루트 `SupabaseAuthProvider` 하나로 통합했다. 모든 `useSupabaseAuth()` 호출은 같은 상태를 구독하며, user/profile/subscription 조회와 30초 갱신 타이머는 앱 전체에서 한 번만 실행된다.
+- access token은 만료 60초 전에 선제 갱신하고 같은 refresh token의 동시 요청은 하나로 합친다. 400·401·403으로 토큰이 실제 거부된 경우만 세션을 지우며 429·5xx·네트워크 장애에서는 저장 세션을 유지하고 재시도한다.
+- 로그아웃 중 늦게 도착한 갱신 응답의 세션 부활과 다른 탭의 최신 회전 token 삭제를 차단했다. Home 진입도 mount 시점의 오래된 저장 여부 대신 현재 Provider session을 사용한다.
+- PASS: `test:auth-session-persistence`, `test:auth-boundaries`, `smoke:billing`, `smoke:mobile`, TypeScript, production build.
+- 운영 배포·Supabase 설정 변경·Android native 변경·AAB·Play Console 업로드는 수행하지 않았다. 이 수정은 웹 배포 후 현재 Android WebView에 반영되며 새 AAB는 필요하지 않다.
+
 ### 2026-07-24 NEWS Usefulness v2
 
 - NEWS가 공식 사건이 없는 날에도 비어 있지 않도록, 저장된 현재 BTC·ETH 선물 판단 또는 Global observation에서 `현재 상태 → 핵심 지표 → 가장 큰 위험 → 다음 확인 조건 → 상세 화면`을 구성한다.

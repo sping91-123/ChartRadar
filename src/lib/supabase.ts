@@ -12,6 +12,24 @@ const legacyUntitledRiskSupabaseSessionStorageKey = "untitledRisk.supabase.sessi
 const legacyPreviousBrandSupabaseSessionStorageKey = `${"position"}${"guard"}.supabase.session`;
 const legacySupabaseSessionStorageKey = "co" + "ters.supabase.session";
 const allowLocalRefreshToken = process.env.NEXT_PUBLIC_ALLOW_LOCAL_REFRESH_TOKEN !== "false";
+export const supabaseSessionRefreshLeewaySeconds = 60;
+const refreshRequests = new Map<string, Promise<SupabaseSession | null>>();
+
+export class SupabaseAuthRequestError extends Error {
+  readonly status: number | null;
+  readonly invalidSession: boolean;
+
+  constructor(message: string, options: { status?: number | null; invalidSession?: boolean } = {}) {
+    super(message);
+    this.name = "SupabaseAuthRequestError";
+    this.status = options.status ?? null;
+    this.invalidSession = options.invalidSession ?? false;
+  }
+}
+
+export function isSupabaseSessionInvalidError(error: unknown) {
+  return error instanceof SupabaseAuthRequestError && error.invalidSession;
+}
 
 export interface SupabaseSession {
   accessToken: string;
@@ -183,13 +201,30 @@ export function getSupabaseSession(): SupabaseSession | null {
   }
 }
 
+export function shouldRefreshSupabaseSession(
+  session: SupabaseSession,
+  nowSeconds = Math.floor(Date.now() / 1000)
+) {
+  return Boolean(
+    session.refreshToken &&
+    session.expiresAt &&
+    session.expiresAt <= nowSeconds + supabaseSessionRefreshLeewaySeconds
+  );
+}
+
 export async function getActiveSupabaseSession(): Promise<SupabaseSession | null> {
   const session = getSupabaseSession();
   if (!session) return null;
 
   const now = Math.floor(Date.now() / 1000);
-  if (session.expiresAt && session.expiresAt <= now) {
-    return refreshSupabaseSession(session);
+  if (shouldRefreshSupabaseSession(session, now)) {
+    try {
+      const refreshed = await refreshSupabaseSession(session);
+      if (refreshed) return refreshed;
+      return null;
+    } catch {
+      return session.expiresAt && session.expiresAt <= now ? null : session;
+    }
   }
 
   return session;
@@ -217,8 +252,16 @@ export async function signOutSupabaseSession(accessToken: string, scope: "local"
   }
 }
 
-export async function refreshSupabaseSession(session: SupabaseSession): Promise<SupabaseSession | null> {
-  if (!isSupabaseConfigured() || !session.refreshToken) return null;
+function isStoredSessionMatch(session: SupabaseSession) {
+  const stored = getSupabaseSession();
+  if (!stored) return false;
+  if (session.refreshToken && stored.refreshToken) return session.refreshToken === stored.refreshToken;
+  return session.accessToken === stored.accessToken;
+}
+
+async function refreshSupabaseSessionOnce(session: SupabaseSession): Promise<SupabaseSession | null> {
+  const refreshToken = session.refreshToken;
+  if (!isSupabaseConfigured() || !refreshToken) return null;
 
   const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
     method: "POST",
@@ -226,24 +269,40 @@ export async function refreshSupabaseSession(session: SupabaseSession): Promise<
       apikey: supabasePublishableKey,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ refresh_token: session.refreshToken })
+    body: JSON.stringify({ refresh_token: refreshToken })
   });
 
-  if (!response.ok) {
-    clearSupabaseSession();
-    return null;
-  }
-
-  const payload = (await response.json()) as {
+  const payload = (await response.json().catch(() => ({}))) as {
     access_token?: string;
     refresh_token?: string;
     expires_in?: number;
     token_type?: string;
+    error?: string;
+    error_code?: string;
+    error_description?: string;
+    msg?: string;
   };
 
+  if (!response.ok) {
+    const invalidSession = response.status === 400 || response.status === 401 || response.status === 403;
+    if (invalidSession) {
+      if (isStoredSessionMatch(session)) {
+        clearSupabaseSession();
+        return null;
+      }
+      return getSupabaseSession();
+    }
+    throw new SupabaseAuthRequestError("로그인 상태 갱신이 잠시 지연되고 있습니다.", {
+      status: response.status,
+      invalidSession: false
+    });
+  }
+
   if (!payload.access_token) {
-    clearSupabaseSession();
-    return null;
+    throw new SupabaseAuthRequestError("로그인 상태 갱신 응답이 올바르지 않습니다.", {
+      status: response.status,
+      invalidSession: false
+    });
   }
 
   const nextSession: SupabaseSession = {
@@ -254,8 +313,25 @@ export async function refreshSupabaseSession(session: SupabaseSession): Promise<
     tokenType: payload.token_type
   };
 
+  if (!isStoredSessionMatch(session)) return getSupabaseSession();
   saveSupabaseSession(nextSession);
   return nextSession;
+}
+
+export async function refreshSupabaseSession(session: SupabaseSession): Promise<SupabaseSession | null> {
+  const refreshToken = session.refreshToken;
+  if (!isSupabaseConfigured() || !refreshToken) return null;
+
+  const currentRequest = refreshRequests.get(refreshToken);
+  if (currentRequest) return currentRequest;
+
+  const request = refreshSupabaseSessionOnce(session);
+  refreshRequests.set(refreshToken, request);
+  try {
+    return await request;
+  } finally {
+    if (refreshRequests.get(refreshToken) === request) refreshRequests.delete(refreshToken);
+  }
 }
 
 export async function exchangeGoogleIdToken(idToken: string, nonce: string): Promise<SupabaseSession> {
@@ -338,12 +414,22 @@ export async function fetchSupabaseUser(accessToken: string) {
     }
   });
 
-  if (!response.ok) throw new Error("로그인 정보를 다시 확인하지 못했습니다.");
+  if (!response.ok) {
+    throw new SupabaseAuthRequestError(
+      response.status === 401 || response.status === 403
+        ? "로그인 세션이 만료되었습니다."
+        : "로그인 정보를 다시 확인하지 못했습니다.",
+      {
+        status: response.status,
+        invalidSession: response.status === 401 || response.status === 403
+      }
+    );
+  }
   return (await response.json()) as SupabaseUser;
 }
 
-export async function fetchSupabaseProfile(accessToken: string) {
-  const user = await fetchSupabaseUser(accessToken);
+export async function fetchSupabaseProfile(accessToken: string, knownUser?: SupabaseUser) {
+  const user = knownUser ?? await fetchSupabaseUser(accessToken);
   const rows = await supabaseRest<SupabaseProfileRow[]>(
     `profiles?select=*&id=eq.${encodeURIComponent(user.id)}&limit=1`,
     { accessToken }

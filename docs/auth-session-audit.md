@@ -3,7 +3,7 @@
 ## 범위
 
 - 기준 작업: `docs/work-queue.md`의 `세션 저장/refresh token 구조 점검`.
-- 점검 파일: `src/lib/supabase.ts`, `src/lib/nativeGoogleSignIn.ts`, `src/lib/useSupabaseAuth.ts`, `src/components/GoogleLoginButton.tsx`, `src/components/AuthHashRescue.tsx`, `src/app/auth/callback/page.tsx`, `src/app/api/auth/kakao/callback/route.ts`, `.env.example`.
+- 점검 파일: `src/lib/supabase.ts`, `src/lib/nativeGoogleSignIn.ts`, `src/lib/useSupabaseAuth.ts`, `src/app/layout.tsx`, `src/components/HomeEntryGate.tsx`, `src/components/GoogleLoginButton.tsx`, `src/components/AuthHashRescue.tsx`, `src/app/auth/callback/page.tsx`, `src/app/api/auth/kakao/callback/route.ts`, `.env.example`.
 - 제외 범위: Google OAuth 프로젝트/콘솔 정리, OAuth consent screen 수정, 로그인 UX 대공사, 결제/푸시/레이더 로직 변경.
 
 ## 현재 세션 저장 구조
@@ -32,20 +32,21 @@
 
 ## 세션 복구와 refresh 흐름
 
-1. `useSupabaseAuth()`는 마운트 시 `getSupabaseSession()`으로 저장 세션을 읽는다.
-2. `expiresAt`이 지났고 `refreshToken`이 있으면 `refreshSupabaseSession()`이 Supabase refresh endpoint를 호출한다.
-3. refresh 성공 시 새 access token과 새 refresh token 또는 기존 refresh token을 다시 저장한다.
-4. refresh 실패 시 `clearSupabaseSession()`으로 저장 세션을 삭제한다.
-5. 세션이 없으면 user/profile 상태를 null로 만든다.
-6. corrupt JSON 등 저장 세션 파싱 실패 시 이번 점검에서 `clearSupabaseSession()`으로 정리하도록 최소 보정했다.
+1. 루트 `SupabaseAuthProvider`가 마운트 시 한 번만 `getSupabaseSession()`으로 저장 세션을 읽는다. 각 화면의 `useSupabaseAuth()`는 같은 Context 상태를 구독하며 별도 인증 요청을 만들지 않는다.
+2. access token 만료 60초 전부터 `refreshSupabaseSession()`이 Supabase refresh endpoint를 호출한다.
+3. 같은 refresh token으로 동시에 들어온 갱신은 한 Promise를 공유한다. refresh 성공 시 회전된 access token과 refresh token을 저장한다.
+4. refresh endpoint의 400·401·403처럼 토큰이 실제로 거부된 경우에만 현재 저장 세션을 삭제한다.
+5. 429·5xx·응답 형식 오류·네트워크 예외는 저장 세션을 보존하고 5초 뒤 재시도한다. 아직 유효한 access token은 그대로 사용한다.
+6. 다른 탭이나 새 로그인에서 이미 refresh token이 바뀐 경우 늦은 응답이 새 세션을 덮거나 삭제하지 않는다. 로그아웃 뒤 도착한 refresh 응답도 세션을 되살리지 않는다.
+7. corrupt JSON 등 저장 세션 파싱 실패는 `clearSupabaseSession()`으로 정리한다.
 
 ## Pro 권한 갱신 흐름
 
-1. `useSupabaseAuth()`는 user, profile, active subscriptions를 함께 읽고 `applySupabaseAuthEntitlement()`로 최종 plan을 계산한다.
+1. 루트 `SupabaseAuthProvider`는 user, profile, active subscriptions를 함께 읽고 공용 entitlement resolver로 최종 plan을 계산한다.
 2. `supabaseAuthRefreshEvent`를 받으면 권한을 다시 읽는다.
-3. focus, visibilitychange, 30초 interval에서도 silent refresh를 수행한다.
+3. focus, visibilitychange, 30초 interval에서도 공용 Provider 한 곳에서만 silent refresh를 수행한다.
 4. manual tester 권한 부여, 앱 구독 동기화, 결제 성공 후 권한 재조회와 충돌하는 별도 상태 저장은 없다.
-5. 세션 refresh 실패는 `refreshSupabaseSession()`에서 저장 세션을 삭제하므로 만료된 refresh token이 오래 유지되는 구조는 아니다.
+5. 검증된 invalid refresh token만 삭제한다. 일시 장애 중에는 entitlement를 `unavailable`로 표시하되 로그인 세션은 보존한다.
 
 ## 로그아웃 정리 상태
 
@@ -80,8 +81,16 @@
 ## Supabase auth state listener 구조
 
 - 현재는 `supabase-js` 클라이언트와 `onAuthStateChange` listener를 사용하지 않는다.
-- 대신 커스텀 `useSupabaseAuth()` hook이 localStorage 세션, refresh endpoint, focus/visibility/interval/event 기반 재조회로 상태를 관리한다.
+- 대신 루트 `SupabaseAuthProvider`가 localStorage 세션, refresh endpoint, focus/visibility/interval/event 기반 재조회를 한 번만 수행하고 `useSupabaseAuth()`는 Context를 구독한다.
 - 이 구조는 단순하지만 Supabase SDK의 built-in session persistence, cookie integration, multi-tab auth broadcast 장점은 쓰지 못한다.
+
+## 2026-07-27 모바일 재진입 회귀 수정
+
+- 운영 Auth 로그에서 한 화면 진입마다 동일 기기의 `/auth/v1/user` 요청이 같은 초에 여러 건 반복됐다. 원인은 20개가 넘는 화면 컴포넌트가 각각 `useSupabaseAuth()`의 effect와 30초 타이머를 실행하던 구조였다.
+- 개별 hook을 루트 Provider 하나로 합쳐 `/user`, profile, subscription 조회와 token refresh가 앱 전체에서 한 번만 실행되게 했다.
+- 이전에는 어떤 오류든 hook catch에서 `clearSupabaseSession()`을 호출해 모바일 네트워크 전환·서버 일시 장애도 로그아웃으로 바뀌었다. 이제 확실한 인증 거부와 일시 장애를 구분한다.
+- Home 진입은 초기 mount 때 한 번 읽은 `hasStoredSession`만 믿지 않고 Provider의 현재 `session`을 사용한다. 세션 복원 중에는 로그인 화면을 먼저 보여주지 않는다.
+- 회귀 테스트는 만료 60초 전 선제 갱신, 동시 갱신 단일 요청, 503 보존, invalid token 삭제, 로그아웃 race, 다른 탭의 최신 token 보호를 포함한다.
 
 ## 권장 후속 작업
 
@@ -95,4 +104,5 @@
 
 - 출시 차단 수준의 토큰 로그 노출은 발견하지 못했다.
 - 현재 refresh token localStorage 저장은 보안상 최종 구조는 아니지만, 앱 재실행 후 Pro 권한 유지라는 현재 요구를 만족하기 위해 의도된 구조다.
-- 이번 작업에서는 대공사 없이 corrupt session 정리와 네이티브 signOut 실패 흡수만 최소 보정했다.
+- 2026-07-27 보정으로 화면별 중복 인증 요청과 일시 오류 시 강제 로그아웃을 제거했다.
+- 현재 수정은 웹 코드이므로 `https://chartradar.kr`를 직접 로드하는 Android 앱에는 웹 배포만으로 반영되며 새 AAB가 필요하지 않다.

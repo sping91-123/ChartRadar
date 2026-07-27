@@ -5,6 +5,7 @@ import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 import { RadarAlertMonitor } from "@/components/RadarAlertMonitor";
 import { SystemBarsThemeSync } from "@/components/SystemBarsThemeSync";
 import { getSiteUrlWithLocalFallback } from "@/lib/siteUrl";
+import { SupabaseAuthProvider } from "@/lib/useSupabaseAuth";
 import "./globals.css";
 
 const siteUrl = getSiteUrlWithLocalFallback();
@@ -109,13 +110,15 @@ export default function RootLayout({
             __html: initialClientBootScript
           }}
         />
-        <AuthHashRescue />
-        <SystemBarsThemeSync />
-        <div className="app-shell">
-          <div className="app-scroll-root">{children}</div>
-        </div>
-        <RadarAlertMonitor />
-        <PwaInstallPrompt />
+        <SupabaseAuthProvider>
+          <AuthHashRescue />
+          <SystemBarsThemeSync />
+          <div className="app-shell">
+            <div className="app-scroll-root">{children}</div>
+          </div>
+          <RadarAlertMonitor />
+          <PwaInstallPrompt />
+        </SupabaseAuthProvider>
       </body>
     </html>
   );

@@ -105,7 +105,7 @@ function MarketSelector() {
 
 export function HomeEntryGate() {
   const router = useRouter();
-  const { user, isLoading } = useSupabaseAuth();
+  const { session, user, isLoading } = useSupabaseAuth();
   const [skipSplashAfterAuth, setSkipSplashAfterAuth] = useState(false);
   const [hasStoredSession, setHasStoredSession] = useState(false);
   const [basicBrowse, setBasicBrowse] = useState(false);
@@ -125,10 +125,25 @@ export function HomeEntryGate() {
 
   useEffect(() => {
     if (!preferredMarketLoaded || !preferredMarket) return;
-    const canEnterApp = Boolean(user || basicBrowse || (isLoading && (skipSplashAfterAuth || hasStoredSession)));
+    const canEnterApp = Boolean(
+      user ||
+      session ||
+      basicBrowse ||
+      (isLoading && (skipSplashAfterAuth || hasStoredSession))
+    );
     if (!canEnterApp) return;
     router.replace(preferredMarket === "global" ? "/global" : "/crypto/home");
-  }, [basicBrowse, hasStoredSession, isLoading, preferredMarket, preferredMarketLoaded, router, skipSplashAfterAuth, user]);
+  }, [
+    basicBrowse,
+    hasStoredSession,
+    isLoading,
+    preferredMarket,
+    preferredMarketLoaded,
+    router,
+    session,
+    skipSplashAfterAuth,
+    user
+  ]);
 
   const startBasicBrowse = () => {
     setBasicBrowse(true);
@@ -145,7 +160,10 @@ export function HomeEntryGate() {
 
   if (!preferredMarketLoaded) return loadingView;
 
-  if (preferredMarket && (isLoading || user || basicBrowse || hasStoredSession || skipSplashAfterAuth)) {
+  if (
+    preferredMarket &&
+    (isLoading || user || session || basicBrowse || (hasStoredSession && isLoading) || skipSplashAfterAuth)
+  ) {
     return loadingView;
   }
 
@@ -153,7 +171,7 @@ export function HomeEntryGate() {
     return loadingView;
   }
 
-  if (!user && !basicBrowse) {
+  if (!user && !session && !basicBrowse) {
     return <LoginPrompt onBrowseBasic={startBasicBrowse} />;
   }
 
