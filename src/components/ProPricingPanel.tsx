@@ -140,7 +140,7 @@ function scopeCopy(scope: BillingPageScope) {
 
 function checkoutCtaLabel(plan: BillingPlan, nativePurchaseAvailable: boolean, isCovered: boolean, authenticated: boolean) {
   if (isCovered) return "현재 권한으로 이용 중";
-  if (!nativePurchaseAvailable) return "Google Play에서 Chart Radar 열기";
+  if (!nativePurchaseAvailable) return "Google Play에서 차트 레이더 열기";
   if (!authenticated) return "로그인하고 Pro 시작";
   if (plan.marketScope === "crypto") return "Coin Pro로 코인 기준 보기";
   if (plan.marketScope === "stocks") return "Global Pro로 글로벌 맥락 보기";
@@ -526,7 +526,7 @@ export function ProPricingPanel({
     ? "표시된 가격과 결제 버튼은 기존 플랜 정보를 그대로 사용합니다. 필요한 시장 기준과 리뷰 흐름만 선택하세요."
     : marketScope === "crypto"
       ? "표시 가격은 앱 구독 기준이며, 버튼을 누르면 Google Play로 이동합니다."
-      : "표시된 가격은 앱 구독 기준입니다. 웹에서는 Google Play의 Chart Radar 앱으로 이동해 구독할 수 있습니다.";
+      : "표시된 가격은 앱 구독 기준입니다. 웹에서는 Google Play의 차트 레이더 앱으로 이동해 구독할 수 있습니다.";
   const visibleDepthRows = marketScope === "crypto"
     ? planDepthRows.filter((item) => item.label === "Basic" || item.label === "Coin Pro")
     : marketScope === "stocks"
@@ -585,7 +585,7 @@ export function ProPricingPanel({
       return;
     }
     if (!nativePurchaseAvailable) {
-      setCheckoutState({ status: "message", tone: "info", text: "Google Play의 Chart Radar 앱에서 구독을 시작해 주세요.", planId: plan.id });
+      setCheckoutState({ status: "message", tone: "info", text: "Google Play의 차트 레이더 앱에서 구독을 시작해 주세요.", planId: plan.id });
       return;
     }
 

@@ -380,7 +380,7 @@ async function ensureRadarPushChannel() {
 
   await PushNotifications.createChannel({
     id: radarPushChannelId,
-    name: "Chart Radar Alerts",
+    name: "차트 레이더 알림",
     description: "레이더 조건, 뉴스, 시장 변화 알림",
     importance: 4,
     visibility: 1,
@@ -550,7 +550,7 @@ export async function registerAppPushListeners() {
   await PushNotifications.addListener("pushNotificationReceived", (notification) => {
     writeAppPushState({
       ...readAppPushState(),
-      lastNotificationTitle: notification.title ?? "Chart Radar 앱 푸시",
+      lastNotificationTitle: notification.title ?? "차트 레이더 앱 알림",
       updatedAt: new Date().toISOString()
     });
   });

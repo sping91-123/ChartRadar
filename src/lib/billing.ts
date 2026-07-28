@@ -69,7 +69,7 @@ export const billingPlans: BillingPlan[] = [
     id: "crypto_monthly",
     marketScope: "crypto",
     name: "Coin Pro",
-    displayName: "Chart Radar Coin Pro 월간 구독",
+    displayName: "차트 레이더 코인 Pro 월간 구독",
     badge: "코인",
     priceLabel: "29,000원 / 월",
     billingAmount: 29000,
@@ -96,7 +96,7 @@ export const billingPlans: BillingPlan[] = [
     id: "crypto_yearly",
     marketScope: "crypto",
     name: "Coin Pro 연간",
-    displayName: "Chart Radar Coin Pro 연간 구독",
+    displayName: "차트 레이더 코인 Pro 연간 구독",
     badge: "코인 연간",
     priceLabel: "출시가 290,000원 / 연",
     billingAmount: 290000,
@@ -461,5 +461,5 @@ export function parsePlanIdFromOrderId(orderId: string | null | undefined): Bill
 export const subscriptionTrustNotes = [
   "Coin Pro와 Global Pro는 각각 독립된 시장 판단 도구이고, All Market Pro는 두 시장을 함께 보는 통합 플랜입니다.",
   "웹과 앱에서 같은 계정으로 Pro 기능을 이어서 사용할 수 있도록 설계했습니다.",
-  "Chart Radar는 투자 권유가 아니라 시장 구조, 뉴스, 매크로, 알림을 한 화면에서 정리하는 판단 보조 도구입니다."
+  "차트 레이더는 투자 권유가 아니라 시장 구조, 뉴스, 매크로, 알림을 한 화면에서 정리하는 판단 보조 도구입니다."
 ];

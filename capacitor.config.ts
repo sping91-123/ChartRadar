@@ -4,7 +4,7 @@ const serverUrl = process.env.CAPACITOR_SERVER_URL;
 
 const config: CapacitorConfig = {
   appId: "com.staronlabs.chartradar",
-  appName: "Chart Radar",
+  appName: "차트 레이더",
   webDir: "mobile-shell",
   ...(serverUrl
     ? {

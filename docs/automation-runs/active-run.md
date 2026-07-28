@@ -19,6 +19,15 @@
 - PASS: `test:auth-session-persistence`, `test:auth-boundaries`, `smoke:billing`, `smoke:mobile`, TypeScript, production build.
 - 운영 배포·Supabase 설정 변경·Android native 변경·AAB·Play Console 업로드는 수행하지 않았다. 이 수정은 웹 배포 후 현재 Android WebView에 반영되며 새 AAB는 필요하지 않다.
 
+### 2026-07-27 사용자 표시 브랜드 띄어쓰기 통일 (로컬)
+
+- 사용자 표시 이름을 `차트 레이더`, 시장 이름을 `코인 레이더`·`글로벌 레이더`로 통일했다. `차트레이더`처럼 붙여 써서 `차 + 트레이더`로 오독될 수 있는 표기는 사용하지 않는다.
+- 웹 metadata·PWA manifest·설치 안내·로그인·약관·푸시 문구와 Android launcher, Capacitor, iOS display name을 함께 수정했다. 도메인, 패키지명, 상품 ID, 저장 키, API User-Agent 같은 기술 식별자는 `ChartRadar` 또는 기존 값을 유지한다.
+- `글로벌 자산 레이더` 등 같은 가독성 원칙이 적용되는 화면 표기도 띄어썼다. 기존 설치 PWA의 오래된 오프라인 화면이 남지 않도록 service worker cache를 `chart-radar-shell-v7`로 갱신했다.
+- production build를 별도 로컬 서버로 실행해 CLI Playwright 360×800 코인 Home과 390×844 Global을 확인했다. `코인 레이더`·`글로벌 레이더`가 잘림 없이 표시됐고 오류 상태에서도 모바일 레이아웃이 유지됐다. 증거는 `output/playwright/brand-spacing-2026-07-27/`에 있다.
+- PASS: `test:push-targets`, `smoke:mobile`, `smoke:copy`, `smoke:billing`, TypeScript, production build, `git diff --check`.
+- 운영 웹 배포·AAB 빌드·Play Console 업로드는 수행하지 않았다. 웹 표기는 다음 배포 후 반영되며, 설치 아이콘 이름은 새 AAB를 배포하고 앱을 업데이트해야 반영된다. 스토어 등록 이름과 기존 홍보 스크린샷도 다음 Play Console 작업에서 `차트 레이더`로 갱신해야 한다.
+
 ### 2026-07-24 NEWS Usefulness v2
 
 - NEWS가 공식 사건이 없는 날에도 비어 있지 않도록, 저장된 현재 BTC·ETH 선물 판단 또는 Global observation에서 `현재 상태 → 핵심 지표 → 가장 큰 위험 → 다음 확인 조건 → 상세 화면`을 구성한다.

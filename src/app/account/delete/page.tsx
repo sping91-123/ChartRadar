@@ -7,7 +7,7 @@ import { Header } from "@/components/Header";
 
 export const metadata: Metadata = {
   title: "계정·데이터 삭제",
-  description: "ChartRadar 계정과 사용자 데이터 삭제를 요청하는 공식 경로"
+  description: "차트 레이더 계정과 사용자 데이터 삭제를 요청하는 공식 경로"
 };
 
 export default function AccountDeletePage() {

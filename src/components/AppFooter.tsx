@@ -10,7 +10,7 @@ export function AppFooter() {
         <ShieldAlert className="mt-0.5 shrink-0 text-accent-blue" size={16} aria-hidden />
         <div className="space-y-2">
           <p>
-            Chart Radar는 시장 판단과 리스크 요소를 정리하는 분석 도구입니다. 제공되는 모든 정보는
+            차트 레이더는 시장 판단과 리스크 요소를 정리하는 분석 도구입니다. 제공되는 모든 정보는
             특정 거래 권유, 투자 자문, 성과 약속으로 해석될 수 없습니다. 레버리지 거래와 파생상품 거래에는 원금 손실과
             청산 위험이 있으며, 모든 투자 판단과 책임은 사용자 본인에게 있습니다.
           </p>
@@ -44,7 +44,7 @@ export function AppFooter() {
             구독 해지·환불 안내
           </Link>
         </nav>
-        <p className="text-slate-600">Chart Radar. 문의: contact@staronlabs.com · 고객지원: support@staronlabs.com · {APP_VERSION_DISPLAY}</p>
+        <p className="text-slate-600">차트 레이더. 문의: contact@staronlabs.com · 고객지원: support@staronlabs.com · {APP_VERSION_DISPLAY}</p>
       </div>
     </footer>
   );

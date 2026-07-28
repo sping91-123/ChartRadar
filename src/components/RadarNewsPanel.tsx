@@ -545,7 +545,7 @@ function BriefingDetail({
         <div>
           <div className="flex items-center gap-2">
             <BarChart3 size={15} className="text-ui-brand" aria-hidden />
-            <h4 className="text-sm font-semibold text-ui-text">차트레이더 해석</h4>
+            <h4 className="text-sm font-semibold text-ui-text">차트 레이더 해석</h4>
           </div>
           <ul className="mt-2 space-y-2">
             {(marketImpact.length ? marketImpact : [keySummary]).slice(0, 3).map((item) => (

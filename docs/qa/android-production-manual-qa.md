@@ -34,7 +34,7 @@ Complete these before starting manual QA. Do not continue if the device/account 
 
 | QA ID | Check item | Prerequisites | Steps | Expected result | Failure record | Failure suspect area | Risk | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| M-001 | Install or update production app | Preflight complete; Play Store available. | Open Play Store, find ChartRadar, install or update if needed. | App installs or is already up to date as production app. | Device name, OS version, app version, Play Store state, screenshot. | Play Store availability, account/tester state, production rollout, device compatibility. | LOW-MEDIUM | `NOT_RUN` |
+| M-001 | Install or update production app | Preflight complete; Play Store available. | Open Play Store, find `차트 레이더`, install or update if needed. | App installs or is already up to date as production app and the launcher label is `차트 레이더`. | Device name, OS version, app version, Play Store state, screenshot. | Play Store availability, account/tester state, production rollout, device compatibility. | LOW-MEDIUM | `NOT_RUN` |
 | M-002 | First launch | Production app installed. | Launch the app from icon or Play Store Open button. | App opens without crash and shows splash/loading/content. | Device/OS/app version, screen capture, crash/blank step. | App startup, WebView shell, network, production route boot. | LOW-MEDIUM | `NOT_RUN` |
 | M-003 | First screen after loading | App launched. | Wait for splash/loading to settle; record first visible screen. | First route is stable, readable, and not trapped in blank/loading forever. | First route, elapsed wait, screenshot/recording. | Initial route, data loading, auth restore, network response. | MEDIUM | `NOT_RUN` |
 

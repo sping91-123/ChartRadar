@@ -30,7 +30,7 @@ export async function scanMacroCalendarEvent(origin: string, market: SetupAlertM
     ruleId: "macro-event-reminder",
     alertKind: "macro",
     eventKey: `macro-event-reminder:${nextEvent.label}:${nextEvent.releaseAt}`,
-    title: "Chart Radar 시장 이벤트 리마인더",
+    title: "차트 레이더 시장 이벤트 리마인더",
     body: `${nextEvent.dateKst ?? "곧"} ${nextEvent.label} 예정입니다. 발표 전후 변동성 확대 가능성을 확인하세요.`,
     data: {
       type: "macro_event",

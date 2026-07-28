@@ -31,8 +31,8 @@ const stockNavItems: NavItem[] = [
 ];
 
 const allNavItems: NavItem[] = [
-  { label: "Coin Radar", icon: Radar, href: "/crypto/home", match: ["/crypto/home", "/crypto/spot", "/crypto/perpetual", "/crypto/perpetual/alts", "/crypto/news", "/crypto/review", "/crypto/alert", "/crypto/alertlist", "/crypto/alertset"] },
-  { label: "글로벌", icon: TrendingUp, href: "/global", match: ["/stocks", "/global", "/global/assets"] },
+  { label: "코인 레이더", icon: Radar, href: "/crypto/home", match: ["/crypto/home", "/crypto/spot", "/crypto/perpetual", "/crypto/perpetual/alts", "/crypto/news", "/crypto/review", "/crypto/alert", "/crypto/alertlist", "/crypto/alertset"] },
+  { label: "글로벌 레이더", icon: TrendingUp, href: "/global", match: ["/stocks", "/global", "/global/assets"] },
   { label: "요금제", icon: Crown, href: "/pro", match: ["/pro", "/checkout/success", "/checkout/fail", "/refund"] }
 ];
 

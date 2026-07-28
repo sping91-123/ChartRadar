@@ -32,7 +32,7 @@
 | Capacitor iOS platform | `npx cap add ios` | Not run; `ios/` directory is absent. | Add iOS platform only in a separate implementation run. | BLOCKER | Yes |
 | Capacitor iOS platform | `npx cap sync ios` | Not run. | Sync after native platform exists and web build output is ready. | BLOCKER | Yes |
 | Capacitor iOS platform | Native iOS project | Missing. | Create and inspect `ios/` project in a separate run. | BLOCKER | Yes |
-| Capacitor iOS platform | `capacitor.config.ts` app identity | `appId` is `com.staronlabs.chartradar`; `appName` is `Chart Radar`. | Reconfirm before creating Apple Bundle ID or native project. | LOW | No, owner confirmation still needed |
+| Capacitor iOS platform | `capacitor.config.ts` app identity | `appId` is `com.staronlabs.chartradar`; user-facing `appName` is `차트 레이더`. | Reconfirm before creating Apple Bundle ID or native project. | LOW | No, owner confirmation still needed |
 | Apple Developer | Apple Developer Program membership | Not verified. | Confirm membership and account type. | BLOCKER | Yes |
 | Apple Developer | Team ID | Not verified. | Confirm Team ID for signing and capabilities. | BLOCKER | Yes |
 | Apple Developer | Bundle ID/App ID | Candidate is `com.staronlabs.chartradar`; not created or verified. | Create or confirm explicit App ID after owner approval. | BLOCKER | Yes |

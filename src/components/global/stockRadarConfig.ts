@@ -1,4 +1,4 @@
-// 글로벌 자산레이더의 기본 자산 목록과 화면 선택 상수를 정의한다.
+// 글로벌 자산 레이더의 기본 자산 목록과 화면 선택 상수를 정의한다.
 import type { Candle, ChartTimeframe } from "@/lib/marketAnalysis";
 import type { StockSymbolInfo } from "@/lib/stockMarket";
 

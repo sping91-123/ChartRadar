@@ -120,7 +120,7 @@ export function setupToEvent(
       symbol: setup.symbol,
       timeframe: setup.timeframe,
       side,
-      signal: isGlobalMomentum ? stockSignalTitle(setup.symbol, side).replace("Chart Radar ", "") : ruleId,
+      signal: isGlobalMomentum ? stockSignalTitle(setup.symbol, side) : ruleId,
       is_market_scout: "true",
       is_watchlist: "false",
       evidence: evidenceLabels.join(","),
@@ -148,7 +148,7 @@ export function matchedSetupToEvent(
     ruleId,
     alertKind: "watchlist",
     eventKey: `${prefix}:${market}:${setup.symbol}:${setup.timeframe}:${setup.side}:${eventBucket(15)}`,
-    title: market === "stocks" ? "Chart Radar 글로벌 조건 재감지" : "Chart Radar 관심코인 조건 재감지",
+    title: market === "stocks" ? "차트 레이더 글로벌 조건 재감지" : "차트 레이더 관심코인 조건 재감지",
     body:
       market === "stocks"
         ? `${stockSignalLabel(setup.symbol)} ${setup.timeframe} 저장한 조건에 가까운 흐름이 다시 감지되었습니다. 앱에서 근거를 확인해 주세요.`
@@ -226,7 +226,7 @@ export function buildRiskOffEvent(setups: ScoutSetup[]): PushAlertEvent | null {
     ruleId: "stock-momentum",
     alertKind: "risk_off",
     eventKey: `risk-off:stocks:${weakIndex.symbol}:${companion.symbol}:${eventBucket(30)}`,
-    title: "Chart Radar 리스크오프 조합",
+    title: "차트 레이더 리스크오프 조합",
     body: `${stockSignalLabel(weakIndex.symbol)} 약세와 ${stockSignalLabel(companion.symbol)} 강세가 함께 감지됐습니다. 변동성·달러·금 흐름을 확인하세요.`,
     data: {
       type: "stock-momentum",
@@ -268,7 +268,7 @@ export function buildSemiconductorLeadershipEvent(setups: ScoutSetup[]): PushAle
     ruleId: "stock-momentum",
     alertKind: "semiconductor_leadership",
     eventKey: `semiconductor-leadership:stocks:${semiconductor.symbol}:${index.symbol}:${strengthened ? "strong" : "weak"}:${eventBucket(30)}`,
-    title: `Chart Radar 반도체 주도력 ${strengthened ? "강화" : "약화"}`,
+    title: `차트 레이더 반도체 주도력 ${strengthened ? "강화" : "약화"}`,
     body: `${stockSignalLabel(semiconductor.symbol)} 흐름이 ${stockSignalLabel(index.symbol)}보다 ${strengthened ? "강하게" : "약하게"} 감지됐습니다. 지수와 섹터 흐름 차이를 확인하세요.`,
     data: {
       type: "stock-momentum",

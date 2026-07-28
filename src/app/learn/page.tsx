@@ -8,7 +8,7 @@ import { AppSurface, DataRow, SectionHeader, StatusPill } from "@/components/ui/
 
 export const metadata: Metadata = {
   title: "용어 안내",
-  description: "Chart Radar 화면별 판단 보조 용어 안내"
+  description: "차트 레이더 화면별 판단 보조 용어 안내"
 };
 
 const guideCategories = [

@@ -1,12 +1,13 @@
-# Chart Radar 앱스토어 출시 준비 가이드
+# 차트 레이더 앱스토어 출시 준비 가이드
 
-이 문서는 Chart Radar를 Google Play와 App Store에 제출하기 전에 필요한 등록 자료와 점검 순서를 정리합니다. 실제 등록 전에는 사업자 정보, 고객센터 이메일, 개인정보 처리 항목, 가격, 환불 기준을 운영 값으로 다시 확인해야 합니다.
+이 문서는 차트 레이더를 Google Play와 App Store에 제출하기 전에 필요한 등록 자료와 점검 순서를 정리합니다. 실제 등록 전에는 사업자 정보, 고객센터 이메일, 개인정보 처리 항목, 가격, 환불 기준을 운영 값으로 다시 확인해야 합니다.
 
 ## 1. 앱 기본 정보
 
 | 항목 | 권장 값 |
 | --- | --- |
-| 앱 이름 | Chart Radar |
+| 앱 이름 | 차트 레이더 |
+| 영문·기술 브랜드 | `ChartRadar` |
 | 패키지명 | `com.staronlabs.chartradar` |
 | 카테고리 | Finance |
 | 지원 언어 | 한국어 우선 |
@@ -18,9 +19,9 @@
 
 ## 2. 스토어 소개 문구
 
-Chart Radar는 코인과 글로벌 시장을 빠르게 점검하는 시장 분석 앱입니다. 실시간 시세, ICT 구조 판독, 기술지표 레이더, 청산 압력 추정, AI 뉴스 브리핑, 관심종목, 알림 설정을 한 화면 흐름으로 묶어 매일 시장을 확인할 이유를 만들어 줍니다.
+차트 레이더는 코인과 글로벌 시장을 빠르게 점검하는 시장 분석 앱입니다. 실시간 시세, ICT 구조 판독, 기술지표 레이더, 청산 압력 추정, AI 뉴스 브리핑, 관심종목, 알림 설정을 한 화면 흐름으로 묶어 매일 시장을 확인할 이유를 만들어 줍니다.
 
-Chart Radar는 매수·매도 신호를 보장하거나 자동매매를 실행하지 않습니다. 사용자가 시장 구조, 변동성, 주요 일정, 위험 요소를 더 빠르게 정리하도록 돕는 분석 보조 도구입니다.
+차트 레이더는 매수·매도 신호를 보장하거나 자동매매를 실행하지 않습니다. 사용자가 시장 구조, 변동성, 주요 일정, 위험 요소를 더 빠르게 정리하도록 돕는 분석 보조 도구입니다.
 
 ## 3. 키워드 초안
 
@@ -68,8 +69,8 @@ Google Play Console에는 아래 상품 ID를 그대로 만듭니다. 코드의 
 
 | 상품 | 상품 ID | 기본 요금제 ID | 표시 이름 |
 | --- | --- | --- | --- |
-| Coin Pro 월간 | `chart_radar_crypto_monthly` | `monthly` | Chart Radar Coin Pro 월간 구독 |
-| Coin Pro 연간 | `chart_radar_crypto_yearly` | `year-1` | Chart Radar Coin Pro 연간 구독 |
+| Coin Pro 월간 | `chart_radar_crypto_monthly` | `monthly` | 차트 레이더 코인 Pro 월간 구독 |
+| Coin Pro 연간 | `chart_radar_crypto_yearly` | `year-1` | 차트 레이더 코인 Pro 연간 구독 |
 | Global Pro 월간 | `chart_radar_global_monthly` | `monthly` | Global Pro 월간 구독 |
 | Global Pro 연간 | `chart_radar_global_yearly` | `yearly-1` | Global Pro 연간 구독 |
 | All Market Pro 월간 | `chart_radar_bundle_monthly` | `monthly` | All Market Pro 월간 구독 |

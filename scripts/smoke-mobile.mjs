@@ -70,17 +70,22 @@ if (!iconSize) {
 }
 
 const manifestSource = readText("src/app/manifest.ts");
-if (manifestSource.includes("Chart Radar") && manifestSource.includes("/brand/chart-radar-icon.png")) {
-  pass("manifest 브랜드 연결", "Chart Radar 이름과 앱 아이콘을 포함합니다.");
+if (
+  manifestSource.includes('name: "차트 레이더"') &&
+  manifestSource.includes('name: "코인 레이더"') &&
+  manifestSource.includes('name: "글로벌 레이더"') &&
+  manifestSource.includes("/brand/chart-radar-icon.png")
+) {
+  pass("manifest 브랜드 연결", "한글 앱·시장 이름과 앱 아이콘을 포함합니다.");
 } else {
-  fail("manifest 브랜드 연결", "Chart Radar 이름 또는 앱 아이콘 경로가 빠져 있습니다.");
+  fail("manifest 브랜드 연결", "한글 앱·시장 이름 또는 앱 아이콘 경로가 빠져 있습니다.");
 }
 
 const serviceWorker = readText("public/sw.js");
-if (serviceWorker.includes("CACHE_NAME") && serviceWorker.includes("/offline.html")) {
-  pass("서비스 워커 오프라인 fallback", "캐시 이름과 offline 화면을 포함합니다.");
+if (serviceWorker.includes('const CACHE_NAME = "chart-radar-shell-v7"') && serviceWorker.includes("/offline.html")) {
+  pass("서비스 워커 오프라인 fallback", "최신 브랜드 캐시와 offline 화면을 포함합니다.");
 } else {
-  fail("서비스 워커 오프라인 fallback", "CACHE_NAME 또는 /offline.html이 빠져 있습니다.");
+  fail("서비스 워커 오프라인 fallback", "최신 브랜드 캐시 이름 또는 /offline.html이 빠져 있습니다.");
 }
 
 if (serviceWorker.includes('"/global"')) {
@@ -90,16 +95,16 @@ if (serviceWorker.includes('"/global"')) {
 }
 
 const offlineHtml = readText("public/offline.html");
-if (offlineHtml.includes("Chart Radar") && offlineHtml.includes('href="/"')) {
-  pass("오프라인 화면 복귀 링크", "Chart Radar 문구와 홈 복귀 링크를 포함합니다.");
+if (offlineHtml.includes("차트 레이더") && offlineHtml.includes('href="/"')) {
+  pass("오프라인 화면 복귀 링크", "차트 레이더 문구와 홈 복귀 링크를 포함합니다.");
 } else {
-  fail("오프라인 화면 복귀 링크", "Chart Radar 문구 또는 홈 복귀 링크가 빠져 있습니다.");
+  fail("오프라인 화면 복귀 링크", "차트 레이더 문구 또는 홈 복귀 링크가 빠져 있습니다.");
 }
 
 const capacitorConfig = readText("capacitor.config.ts");
 if (
   capacitorConfig.includes('appId: "com.staronlabs.chartradar"') &&
-  capacitorConfig.includes('appName: "Chart Radar"') &&
+  capacitorConfig.includes('appName: "차트 레이더"') &&
   capacitorConfig.includes('webDir: "mobile-shell"') &&
   capacitorConfig.includes("PushNotifications")
 ) {
@@ -173,10 +178,32 @@ if (androidBuildGradle.includes("google-services.json") && androidBuildGradle.in
 }
 
 const mobileShell = readText("mobile-shell/index.html");
-if (mobileShell.includes("Chart Radar") && mobileShell.includes("CAPACITOR_SERVER_URL")) {
-  pass("모바일 shell 안내", "Chart Radar와 CAPACITOR_SERVER_URL 안내를 포함합니다.");
+if (mobileShell.includes("차트 레이더") && mobileShell.includes("CAPACITOR_SERVER_URL")) {
+  pass("모바일 shell 안내", "차트 레이더와 CAPACITOR_SERVER_URL 안내를 포함합니다.");
 } else {
   fail("모바일 shell 안내", "모바일 shell에 앱 이름 또는 서버 URL 안내가 빠져 있습니다.");
+}
+
+const androidStrings = readText("android/app/src/main/res/values/strings.xml");
+if (
+  androidStrings.includes('<string name="app_name">차트 레이더</string>') &&
+  androidStrings.includes('<string name="title_activity_main">차트 레이더</string>')
+) {
+  pass("Android 런처 이름", "설치 아이콘과 메인 화면 이름을 차트 레이더로 표시합니다.");
+} else {
+  fail("Android 런처 이름", "app_name 또는 title_activity_main이 차트 레이더와 다릅니다.");
+}
+
+const marketSwitcher = readText("src/components/HeaderMarketSwitcher.tsx");
+if (
+  marketSwitcher.includes('label: "코인 레이더"') &&
+  marketSwitcher.includes('label: "글로벌 레이더"') &&
+  !marketSwitcher.includes('label: "Coin Radar"') &&
+  !marketSwitcher.includes('label: "Global Radar"')
+) {
+  pass("시장 전환 이름", "코인 레이더와 글로벌 레이더를 한글로 표시합니다.");
+} else {
+  fail("시장 전환 이름", "시장 전환 메뉴에 영문 Radar 이름이 남아 있습니다.");
 }
 
 const rootLayout = readText("src/app/layout.tsx");

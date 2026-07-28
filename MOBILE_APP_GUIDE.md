@@ -1,6 +1,6 @@
-# Chart Radar 모바일 앱 가이드
+# 차트 레이더 모바일 앱 가이드
 
-Chart Radar Android 앱은 Capacitor WebView로 운영 웹앱 `https://chartradar.kr`을 여는 하이브리드 앱입니다. 화면과 라우팅의 기준은 Next.js 웹앱이며, Android native 쪽은 로그인, 푸시, 앱 패키징을 담당합니다.
+차트 레이더 Android 앱은 Capacitor WebView로 운영 웹앱 `https://chartradar.kr`을 여는 하이브리드 앱입니다. 화면과 라우팅의 기준은 Next.js 웹앱이며, Android native 쪽은 로그인, 푸시, 앱 패키징을 담당합니다.
 
 ## 현재 기준
 
@@ -16,7 +16,7 @@ Chart Radar Android 앱은 Capacitor WebView로 운영 웹앱 `https://chartrada
 - `/crypto` - BTC/ETH 코인 레이더
 - `/alts` - 알트코인 레이더
 - `/global` - 글로벌 시장흐름
-- `/global/assets` - 글로벌 자산레이더
+- `/global/assets` - 글로벌 자산 레이더
 - `/news?market=crypto` - 코인 뉴스/이벤트
 - `/news?market=global` - 글로벌 일정/이벤트/뉴스
 - `/alerts?market=crypto` - 코인 앱 푸시 알림 조건과 상태
@@ -54,8 +54,8 @@ npm.cmd run app:android:release
 - Android 13 이상에서 푸시 권한 팝업이 표시되는지 확인합니다.
 - FCM 토큰이 서버에 저장되는지 확인합니다.
 - 테스트 푸시는 관리자 계정에서만 노출되어야 합니다.
-- `/global/assets`에서 자산레이더 차트와 하단 모바일 컨트롤이 보이는지 확인합니다.
-- `/global`, `/news?market=global`, `/journal?market=global`에서는 자산레이더 하단 컨트롤이 노출되지 않아야 합니다.
+- `/global/assets`에서 자산 레이더 차트와 하단 모바일 컨트롤이 보이는지 확인합니다.
+- `/global`, `/news?market=global`, `/journal?market=global`에서는 자산 레이더 하단 컨트롤이 노출되지 않아야 합니다.
 
 ## iOS 참고
 

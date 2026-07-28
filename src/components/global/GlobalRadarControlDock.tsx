@@ -15,7 +15,7 @@ export function GlobalRadarControlDock({
   return (
     <div
       className="sticky top-2 z-20 mx-auto mt-4 w-full max-w-5xl rounded-ui-lg bg-ui-panel p-1.5 backdrop-blur sm:top-3 sm:mt-5"
-      aria-label="글로벌 자산레이더 조작 패널"
+      aria-label="글로벌 자산 레이더 조작 패널"
     >
       <div className="grid grid-cols-5 gap-1">
         {chartTimeframes.map((item) => (

@@ -122,7 +122,7 @@ function DisplaySettingsSection() {
           <div className="rounded-ui-sm bg-ui-elevated px-3 py-2">
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-bold text-slate-400">현재 기억한 시장</span>
-              <span className="text-xs font-black text-white">{preferredMarket === "global" ? "Global Radar" : preferredMarket === "coin" ? "Coin Radar" : "선택 없음"}</span>
+              <span className="text-xs font-black text-white">{preferredMarket === "global" ? "글로벌 레이더" : preferredMarket === "coin" ? "코인 레이더" : "선택 없음"}</span>
             </div>
             <button
               type="button"
@@ -141,7 +141,7 @@ function DisplaySettingsSection() {
 function AppInfoSection() {
   return (
     <section className="rounded-ui-lg bg-ui-panel px-3 pb-2.5 pt-3">
-      <p className="text-sm font-black text-white">Chart Radar</p>
+      <p className="text-sm font-black text-white">차트 레이더</p>
       <p className="mt-1 text-xs font-semibold text-slate-500">{APP_VERSION_DISPLAY}</p>
     </section>
   );
@@ -277,7 +277,7 @@ export function HeaderActions({ market }: { market?: HeaderMarket } = {}) {
                 <p id="settings-panel-title" className="text-base font-black text-white">
                   설정
                 </p>
-                <p className="text-xs font-semibold text-slate-500">Chart Radar</p>
+                <p className="text-xs font-semibold text-slate-500">차트 레이더</p>
               </div>
             </header>
             <main className="grid gap-2 py-3">

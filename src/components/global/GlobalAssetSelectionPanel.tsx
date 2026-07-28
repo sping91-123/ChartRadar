@@ -54,7 +54,7 @@ export function GlobalAssetSelectionPanel({
             <BarChart3 size={21} aria-hidden />
           </div>
           <div>
-            <p className="text-xs font-semibold tracking-[0.18em] text-ui-brand">자산레이더</p>
+            <p className="text-xs font-semibold tracking-[0.18em] text-ui-brand">자산 레이더</p>
             <h2 className="mt-1 text-xl font-semibold text-ui-text">선택 자산 상세 판단</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]">
               글로벌 전체 판단 이후 개별 종목을 확인하는 심화 영역입니다.

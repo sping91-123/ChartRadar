@@ -117,7 +117,7 @@ export function PwaInstallPrompt() {
           <Download size={18} aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black">Chart Radar를 홈 화면에 추가하세요.</p>
+          <p className="text-sm font-black">차트 레이더를 홈 화면에 추가하세요.</p>
           <p className="mt-1 text-xs leading-5 text-slate-400">
             {installEvent
               ? "브라우저 주소창 없이 레이더를 바로 열 수 있습니다."

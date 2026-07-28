@@ -396,7 +396,7 @@ export function CoinMarketEnvironmentPanel({ mode }: { mode: MarketEnvironmentMo
       </p>
 
       <CompactHelp label="데이터 기준">
-        BTC 도미넌스와 원·달러 환율은 TradingView 화면이 사용하는 비공식 시세 응답에서 서버가 확인한 숫자를 ChartRadar 형식으로 표시합니다. 원천 관측시각은 제공되지 않아 서버 확인 시각을 표기하며, 실시간 상태가 아니거나 응답이 막히면 마지막 정상값과 기존 환율 공급자로 전환합니다. BTC 김프는 같은 시점의 Upbit BTC/KRW 현물, Binance BTC/USDT 현물, Coinbase USDT/USD 체결가와 화면에 표시한 USD/KRW를 사용합니다. 이 값들은 매수·매도 지시가 아니라 선물 판단의 배경 위험입니다.
+        BTC 도미넌스와 원·달러 환율은 TradingView 화면이 사용하는 비공식 시세 응답에서 서버가 확인한 숫자를 차트 레이더 형식으로 표시합니다. 원천 관측시각은 제공되지 않아 서버 확인 시각을 표기하며, 실시간 상태가 아니거나 응답이 막히면 마지막 정상값과 기존 환율 공급자로 전환합니다. BTC 김프는 같은 시점의 Upbit BTC/KRW 현물, Binance BTC/USDT 현물, Coinbase USDT/USD 체결가와 화면에 표시한 USD/KRW를 사용합니다. 이 값들은 매수·매도 지시가 아니라 선물 판단의 배경 위험입니다.
       </CompactHelp>
     </PanelCard>
   );

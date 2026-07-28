@@ -35,7 +35,7 @@ function stageLabel(stage: NonNullable<NewsImpactEvent["reaction"]>["stage"], ev
   const prefix = event.category === "macro" ? "공식값 갱신 뒤" : "수정 발표 뒤";
   const anchor = event.reaction && Math.abs(Date.parse(event.reaction.eventAt) - Date.parse(event.occurredAt)) <= 60_000
     ? "공식 공개 시각 뒤"
-    : "ChartRadar 확인 뒤";
+    : "차트 레이더 확인 뒤";
   if (stage === "detected") return "반응 확인 중";
   if (stage === "provisional_15m") return revised ? `${prefix} 15분 반응` : `${anchor} 15분 반응`;
   return revised ? `${prefix} 60분 반응` : `${anchor} 60분 반응`;
@@ -74,7 +74,7 @@ function nextCheckCopy(event: NewsImpactEvent) {
   }
   const anchor = Math.abs(Date.parse(reaction.eventAt) - Date.parse(event.occurredAt)) <= 60_000
     ? "공식 공개 시각 뒤"
-    : "ChartRadar 확인 뒤";
+    : "차트 레이더 확인 뒤";
   const updatedPrefix = event.category === "macro" ? "공식값 갱신 뒤" : "수정 발표 뒤";
   if (reaction.stage === "detected") return `${formatNewsImpactTime(reaction.nextCheckAt)} 전후 ${event.status === "revised" ? `${updatedPrefix} ` : `${anchor} `}마감된 15분 반응을 확인합니다.`;
   if (reaction.stage === "provisional_15m") return `${formatNewsImpactTime(reaction.nextCheckAt)} 전후 ${event.status === "revised" ? updatedPrefix : anchor} 60분 반응을 확인합니다.`;

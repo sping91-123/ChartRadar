@@ -595,7 +595,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto", newsImpac
       recordUsageEvent(alertUsageBucketId);
       setPermission(result as PermissionState);
       if (result === "granted") {
-        new Notification("Chart Radar 브라우저 알림 테스트", {
+        new Notification("차트 레이더 브라우저 알림 테스트", {
           body: isGlobal
             ? "현재 열린 브라우저에서 글로벌 감시 조건을 포그라운드 알림으로 확인합니다."
             : "현재 열린 브라우저에서 레이더 감시 조건을 포그라운드 알림으로 확인합니다.",

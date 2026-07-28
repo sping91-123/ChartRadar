@@ -1,6 +1,6 @@
 # Launch Checklist
 
-Chart Radar를 공개하거나 앱 빌드를 제출하기 전에 확인할 항목입니다.
+차트 레이더를 공개하거나 앱 빌드를 제출하기 전에 확인할 항목입니다.
 
 ## 1. 도메인과 배포
 
@@ -87,9 +87,9 @@ CAPACITOR_SERVER_URL=https://chartradar.kr
 ## 5. 글로벌 화면 기준
 
 - `/global`은 글로벌 시장흐름 대시보드입니다.
-- `/global/assets`는 글로벌 자산레이더입니다.
+- `/global/assets`는 글로벌 자산 레이더입니다.
 - `/global/assets`에서만 자산 선택, 타임프레임, 분석 모드 하단 모바일 컨트롤을 표시합니다.
-- `/global`, `/news?market=global`, `/journal?market=global`에서는 자산레이더 하단 컨트롤이 노출되지 않아야 합니다.
+- `/global`, `/news?market=global`, `/journal?market=global`에서는 자산 레이더 하단 컨트롤이 노출되지 않아야 합니다.
 - `/news?market=global`은 단순 뉴스 목록보다 글로벌 일정, 이벤트, 뉴스 확인 흐름으로 설명합니다.
 
 ## 6. 결제와 Pro

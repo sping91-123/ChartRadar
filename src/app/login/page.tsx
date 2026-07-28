@@ -40,7 +40,7 @@ export default function LoginPage() {
       <div className="mx-auto flex w-full max-w-md flex-col gap-5">
         <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-white">
           <ArrowLeft size={16} aria-hidden />
-          Chart Radar로 돌아가기
+          차트 레이더로 돌아가기
         </Link>
 
         <section className="border-y border-surface-line py-5">

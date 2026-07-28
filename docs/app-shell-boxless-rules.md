@@ -11,13 +11,13 @@ This document defines the app-wide rules for Header, RadarTopNav, and shared she
 
 ## Design Goal
 
-ChartRadar should read like a full-screen mobile app, not a dashboard made of stacked cards.
+The user-facing brand `차트 레이더` should read like a full-screen mobile app, not a dashboard made of stacked cards.
 
 The common shell must:
 
 - Stay lighter than the content below it.
 - Preserve fast access to alerts, settings, account, and plan actions.
-- Preserve Coin Radar and Global Radar as independent top-level market modes.
+- Preserve `코인 레이더` and `글로벌 레이더` as independent top-level market modes.
 - Use spacing, typography, divider lines, and active underlines before using boxed surfaces.
 - Avoid nested card, panel, border, shadow, and blur treatment unless there is a functional reason.
 
@@ -90,16 +90,16 @@ For this run:
 - Global/all-market nav should move toward the same divider or underline model.
 - The Suspense fallback should not render as a boxed card; it should resemble the final nav row height and divider.
 
-## Coin Radar and Global Radar Independence
+## Independence of 코인 레이더 and 글로벌 레이더
 
-The shared shell must not make Global Radar look like a secondary macro tab for Coin Radar.
+The shared shell must not make `글로벌 레이더` look like a secondary macro tab for `코인 레이더`.
 
 Rules:
 
-- Coin Radar and Global Radar remain equal top-level market modes.
+- `코인 레이더` and `글로벌 레이더` remain equal top-level market modes.
 - Header copy, nav labels, and active states must not imply one mode belongs inside the other.
-- `/crypto` remains the primary Coin Radar route.
-- `/global` remains the primary Global Radar route.
+- `/crypto` remains the primary `코인 레이더` route.
+- `/global` remains the primary `글로벌 레이더` route.
 - `/majors` remains compatibility/redirect only.
 - Shared shell styling may be common, but route intent and market-specific nav items stay separate.
 
@@ -128,7 +128,7 @@ Header:
 
 - Target one-row layout on 340px and 360px.
 - Avoid long subtitle text on mobile.
-- Keep brand text short: `ChartRadar` is acceptable on mobile.
+- Keep the user-facing Korean brand spaced as `차트 레이더`; do not collapse it to `차트레이더`.
 - Keep action buttons visible without wrapping.
 - Avoid a large vertical card before content.
 
@@ -230,7 +230,7 @@ Improved areas:
 Screenshot review:
 
 - `/crypto` 360px: Header and nav are flatter, no horizontal overflow.
-- `/global` 360px: Global Radar keeps independent nav labels and entry flow, no horizontal overflow.
+- `/global` 360px: `글로벌 레이더` keeps independent nav labels and entry flow, no horizontal overflow.
 - `/news` 360px: News pilot content and new shell direction work together, no horizontal overflow.
 - Desktop: Header, plan/status, alert, settings, and nav remain visible without boxed shell framing.
 

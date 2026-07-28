@@ -1,4 +1,4 @@
-// 글로벌 자산레이더 전용 페이지입니다.
+// 글로벌 자산 레이더 전용 페이지입니다.
 import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
 import { MacroTicker } from "@/components/MacroTicker";
@@ -14,8 +14,8 @@ export default function GlobalAssetsPage() {
         <RadarTopNav market="stocks" newsImpactEnabled={isNewsImpactUiEnabled(newsImpactMode())} />
         <MacroTicker compact market="stocks" />
         <section className="rounded-ui-lg bg-ui-panel p-4 sm:p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ui-brand">Global Asset Radar</p>
-          <h1 className="mt-1 text-2xl font-semibold text-ui-text">글로벌 자산레이더</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ui-brand">글로벌 자산</p>
+          <h1 className="mt-1 text-2xl font-semibold text-ui-text">글로벌 자산 레이더</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-ui-muted [word-break:keep-all]">
             지수·변동성·반도체·원자재 흐름을 자산별로 확인합니다.
           </p>

@@ -2795,7 +2795,7 @@ export function LiveMarketChart({
               {showDebug ? (
                 <>
                   <p className="mt-2 text-xs leading-5 text-slate-400">
-                    현재 Chart Radar가 읽은 구조 값입니다. 같은 코인과 타임프레임으로 TradingView 지표와 비교하면 판독 차이를 빠르게 확인할 수 있습니다.
+                    현재 차트 레이더가 읽은 구조 값입니다. 같은 코인과 타임프레임으로 TradingView 지표와 비교하면 판독 차이를 빠르게 확인할 수 있습니다.
                   </p>
                   <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <MiniMetric label="h0" value={activeAnalysis.debug.h0 ? formatPrice(activeAnalysis.debug.h0) : "-"} />
@@ -2812,7 +2812,7 @@ export function LiveMarketChart({
                       <div>
                         <h4 className="text-sm font-bold text-white">Pine 기준값 일치율</h4>
                         <p className="mt-1 text-xs leading-5 text-slate-400">
-                          Pine 지표에서 복사한 값이나 직접 적은 key=value 값을 넣으면 Chart Radar 판독값과 바로 비교합니다.
+                          Pine 지표에서 복사한 값이나 직접 적은 key=value 값을 넣으면 차트 레이더 판독값과 바로 비교합니다.
                         </p>
                       </div>
                       {parityScore !== null ? (

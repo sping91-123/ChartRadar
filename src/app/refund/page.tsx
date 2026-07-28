@@ -8,7 +8,7 @@ import { RadarTopNav } from "@/components/RadarTopNav";
 
 export const metadata: Metadata = {
   title: "구독 해지·환불 안내",
-  description: "Chart Radar 구독 해지와 환불 안내"
+  description: "차트 레이더 구독 해지와 환불 안내"
 };
 
 const refundSections = [

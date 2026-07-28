@@ -1,4 +1,4 @@
-// 글로벌 자산레이더의 가격, 시간, 방향, 그룹 안내 문구를 포맷한다.
+// 글로벌 자산 레이더의 가격, 시간, 방향, 그룹 안내 문구를 포맷한다.
 import type { Time } from "lightweight-charts";
 import type { ChartTimeframe, DirectionState } from "@/lib/marketAnalysis";
 import type { StockSymbolInfo } from "@/lib/stockMarket";

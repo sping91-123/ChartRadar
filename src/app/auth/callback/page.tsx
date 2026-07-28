@@ -36,7 +36,7 @@ export default function AuthCallbackPage() {
         <div className="mx-auto grid h-12 w-12 place-items-center text-accent-blue">
           {isDone ? <CheckCircle2 size={24} aria-hidden /> : <Loader2 className="animate-spin" size={24} aria-hidden />}
         </div>
-        <h1 className="mt-5 text-xl font-black text-white">Chart Radar 로그인</h1>
+        <h1 className="mt-5 text-xl font-black text-white">차트 레이더 로그인</h1>
         <p className="mt-2 text-sm leading-6 text-slate-400">{message}</p>
         {!isDone ? (
           <Link

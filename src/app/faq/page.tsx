@@ -8,15 +8,15 @@ import { HistoryBackButton } from "@/components/HistoryBackButton";
 
 export const metadata: Metadata = {
   title: "자주 묻는 질문",
-  description: "Chart Radar 서비스 성격, 데이터 기준, Pro와 결제 안내"
+  description: "차트 레이더 서비스 성격, 데이터 기준, Pro와 결제 안내"
 };
 
 const faqItems = [
   {
     icon: ShieldCheck,
-    question: "ChartRadar는 투자 조언인가요?",
+    question: "차트 레이더는 투자 조언인가요?",
     answer:
-      "ChartRadar는 시장 상태, 리스크, 확인 조건을 정리하는 판단 보조 도구입니다. 특정 거래 행동이나 성과를 약속하지 않습니다."
+      "차트 레이더는 시장 상태, 리스크, 확인 조건을 정리하는 판단 보조 도구입니다. 특정 거래 행동이나 성과를 약속하지 않습니다."
   },
   {
     icon: HelpCircle,
@@ -59,7 +59,7 @@ export default function FaqPage() {
             <div>
               <h1 className="text-2xl font-black text-white">자주 묻는 질문</h1>
               <p className="mt-2 text-sm leading-6 text-slate-400 [word-break:keep-all]">
-                ChartRadar를 사용할 때 자주 확인하는 서비스 성격, 데이터 기준, Pro와 결제 안내를 모았습니다.
+                차트 레이더를 사용할 때 자주 확인하는 서비스 성격, 데이터 기준, Pro와 결제 안내를 모았습니다.
               </p>
             </div>
           </div>

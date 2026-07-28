@@ -145,7 +145,7 @@ async function ensureDetectedReaction(event: NewsImpactEventRow, target: "btc" |
   const nextCheckAt = nextNewsImpactCheckAt(baselineAt, "detected");
   const anchorCopy = event.macro_event_id || reactionAnchorPolicy === "occurred_at"
     ? "공식 공개 시각 뒤"
-    : "ChartRadar가 확인한 뒤";
+    : "차트 레이더가 확인한 뒤";
   const detectedSummary = event.version > 1
     ? `공식 발표 내용이 수정되어 ${anchorCopy} 15분 시장 반응을 다시 확인 중입니다.`
     : `공식 발표를 확인했습니다. ${anchorCopy} 15분 시장 반응을 확인 중입니다.`;

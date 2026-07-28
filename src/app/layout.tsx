@@ -15,11 +15,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   manifest: "/manifest.webmanifest",
   title: {
-    default: "Chart Radar",
-    template: "%s | Chart Radar"
+    default: "차트 레이더",
+    template: "%s | 차트 레이더"
   },
   description: "코인과 글로벌 시장의 차트 구조, 기술지표, 시장 이슈를 빠르게 확인하는 분석 레이더",
-  applicationName: "Chart Radar",
+  applicationName: "차트 레이더",
   keywords: [
     "Chart Radar",
     "차트 레이더",
@@ -36,11 +36,11 @@ export const metadata: Metadata = {
     "리스크 관리"
   ],
   openGraph: {
-    title: "Chart Radar",
+    title: "차트 레이더",
     description: "코인과 글로벌 시장의 차트 구조, 기술지표, 시장 이슈를 빠르게 확인하세요.",
     type: "website",
     locale: "ko_KR",
-    images: [{ url: appIcon, width: 1024, height: 1024, alt: "Chart Radar app icon" }]
+    images: [{ url: appIcon, width: 1024, height: 1024, alt: "차트 레이더 앱 아이콘" }]
   },
   robots: {
     index: true,
@@ -48,13 +48,13 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Chart Radar",
+    title: "차트 레이더",
     description: "코인과 글로벌 시장의 차트 구조와 시장 이슈를 빠르게 확인하세요.",
     images: [appIcon]
   },
   appleWebApp: {
     capable: true,
-    title: "Chart Radar",
+    title: "차트 레이더",
     statusBarStyle: "black-translucent"
   },
   formatDetection: {

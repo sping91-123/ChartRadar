@@ -178,7 +178,7 @@ export default function AccountPage() {
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-cyan-200">로그인됨</p>
-                      <p className="mt-1 truncate text-lg font-black text-white">{displayName ?? "Chart Radar 회원"}</p>
+                      <p className="mt-1 truncate text-lg font-black text-white">{displayName ?? "차트 레이더 회원"}</p>
                       {email ? <p className="mt-1 truncate text-sm text-slate-300">{email}</p> : null}
                     </div>
                     <button

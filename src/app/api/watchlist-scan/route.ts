@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
   const invalidSymbol = rawSymbols.find((symbol) => typeof symbol !== "string" || !isLikelyUsdtPerpSymbol(symbol));
   if (invalidSymbol !== undefined) {
     return NextResponse.json(
-      { error: "지원하지 않는 관심코인 심볼이 포함되어 있습니다. Chart Radar에서 제공하는 코인 심볼만 요청해 주세요." },
+      { error: "지원하지 않는 관심코인 심볼이 포함되어 있습니다. 차트 레이더에서 제공하는 코인 심볼만 요청해 주세요." },
       { status: 400 }
     );
   }

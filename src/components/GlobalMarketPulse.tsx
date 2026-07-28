@@ -645,7 +645,7 @@ export function GlobalMarketPulse({ requestedEventId = null }: { requestedEventI
             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-ui-sm bg-ui-elevated px-3 text-xs font-semibold text-ui-brand transition hover:bg-ui-inset hover:text-ui-text"
           >
             <BarChart3 size={13} aria-hidden />
-            자산레이더 보기
+            자산 레이더 보기
           </Link>
           {showPaywall ? <ProCta /> : null}
           <button

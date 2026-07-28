@@ -17,7 +17,7 @@ export const pushTestMessages: PushTestMessage[] = [
   {
     kind: "default",
     label: "기본 테스트 알림",
-    title: "차트레이더 테스트 알림",
+    title: "차트 레이더 테스트 알림",
     body: "앱 푸시 알림이 정상적으로 연결되었습니다.",
     target: "/alerts?market=crypto",
     targetPath: "/alerts",

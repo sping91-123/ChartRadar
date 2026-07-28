@@ -7,7 +7,7 @@ import { Header } from "@/components/Header";
 
 export const metadata: Metadata = {
   title: "개인정보 처리방침",
-  description: "Chart Radar 개인정보 처리방침"
+  description: "차트 레이더 개인정보 처리방침"
 };
 
 const sections = [
@@ -121,7 +121,7 @@ export default function PrivacyPage() {
             <div className="flex items-start gap-3">
               <ShieldCheck className="mt-0.5 shrink-0 text-accent-blue" size={18} aria-hidden />
               <p>
-                Chart Radar는 거래소 주문 권한을 요구하지 않습니다. 향후 거래 이력 연동 기능이 추가되는 경우에도 읽기 전용 권한과
+                차트 레이더는 거래소 주문 권한을 요구하지 않습니다. 향후 거래 이력 연동 기능이 추가되는 경우에도 읽기 전용 권한과
                 별도 동의 절차를 우선 적용합니다.
               </p>
             </div>

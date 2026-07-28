@@ -14,8 +14,8 @@ const marketOptions: Array<{
   description: string;
   href: string;
 }> = [
-  { key: "coin", label: "Coin Radar", description: "BTC/ETH, 알트, 코인 뉴스", href: "/crypto/home" },
-  { key: "global", label: "Global Radar", description: "미국장, 글로벌 자산, 일정", href: "/global" }
+  { key: "coin", label: "코인 레이더", description: "BTC/ETH, 알트, 코인 뉴스", href: "/crypto/home" },
+  { key: "global", label: "글로벌 레이더", description: "미국장, 글로벌 자산, 일정", href: "/global" }
 ];
 
 function marketFromHeader(market?: HeaderMarket): PreferredMarket | null {
@@ -45,7 +45,7 @@ export function HeaderMarketSwitcher({ market, subtitle }: { market?: HeaderMark
   const [switchingKey, setSwitchingKey] = useState<PreferredMarket | null>(null);
   const switchTimer = useRef<number | null>(null);
   const preferred = marketFromHeader(market);
-  const title = market === "crypto" ? "Coin Radar" : market === "stocks" ? "Global Radar" : "Chart Radar";
+  const title = market === "crypto" ? "코인 레이더" : market === "stocks" ? "글로벌 레이더" : "차트 레이더";
 
   useEffect(() => {
     if (preferred) savePreferredMarket(preferred);

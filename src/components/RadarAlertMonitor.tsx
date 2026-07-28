@@ -193,7 +193,7 @@ export function RadarAlertMonitor() {
 
     notifiedIds.add(freshMatch.id);
     writeNotifiedIds(market, notifiedIds);
-    new Notification("Chart Radar 브라우저 감시 조건 일치", {
+    new Notification("차트 레이더 브라우저 감시 조건 일치", {
       body: `${compactSymbol(freshMatch.setup.symbol)} ${freshMatch.setup.timeframe} ${sideLabel(freshMatch.setup.side)} 감지가 다시 올라왔습니다.`,
       icon: "/brand/chart-radar-mark.png"
     });

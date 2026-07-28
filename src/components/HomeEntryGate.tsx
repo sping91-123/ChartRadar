@@ -69,7 +69,7 @@ function MarketSelector() {
       <section className="max-h-full w-full max-w-5xl -translate-y-[6dvh] overflow-visible sm:translate-y-0">
         <div className="flex min-h-0 flex-col items-center gap-5 sm:gap-8 lg:gap-10">
           <header className="flex w-full shrink-0 flex-col items-center gap-1.5 text-center sm:gap-4">
-            <h1 className="text-xl font-semibold tracking-tight text-ui-text sm:text-4xl">ChartRadar</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-ui-text sm:text-4xl">차트 레이더</h1>
 
             <p className="max-w-2xl text-xs font-medium leading-snug text-ui-muted sm:text-base sm:leading-relaxed">
               코인과 글로벌 시장을 각각 독립 레이더로 확인합니다.
