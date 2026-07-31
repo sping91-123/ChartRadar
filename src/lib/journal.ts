@@ -67,7 +67,7 @@ export interface JournalEntry {
   note: string;
   createdAt: string;
   market?: "crypto" | "stocks";
-  source?: "manual" | "chart" | "scout" | "snapshot" | "alert" | "news";
+  source?: "manual" | "chart" | "scout" | "snapshot" | "alert" | "news" | "exchange";
   symbol?: string;
   timeframe?: string;
   verdict?: string;
@@ -81,6 +81,7 @@ export interface JournalEntry {
   monitorId?: string;
   newsEventId?: string;
   newsReactionId?: string;
+  tradePositionId?: string;
   decisionContext?: DecisionJournalContext;
 }
 

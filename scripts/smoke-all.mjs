@@ -23,6 +23,7 @@ const checks = [
   ["test:perpetual-beta-report", npmCommand, ["run", "test:perpetual-beta-report"]],
   ["check:perpetual-revenue-core", "node", ["scripts/check-perpetual-revenue-core-env.mjs"]],
   ["test:entitlements", npmCommand, ["run", "test:entitlements"]],
+  ["test:exchange-journal", npmCommand, ["run", "test:exchange-journal"]],
   ["test:futures-brief", npmCommand, ["run", "test:futures-brief"]],
   ["test:auth-boundaries", npmCommand, ["run", "test:auth-boundaries"]],
   ["smoke:copy", "node", ["scripts/smoke-copy.mjs"]],

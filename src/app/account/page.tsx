@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeft, CheckCircle2, Crown, LogIn, LogOut, ShieldCheck, Trash2, UserCircle, UserPlus } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Crown, Link2, LogIn, LogOut, ShieldCheck, Trash2, UserCircle, UserPlus } from "lucide-react";
 import { AppFooter } from "@/components/AppFooter";
 import { Header } from "@/components/Header";
 import { getEntitlementLabel, hasAnyPaidEntitlement, hasMarketEntitlement } from "@/lib/billing";
@@ -207,6 +207,30 @@ export default function AccountPage() {
                   hasCryptoAccess={hasCryptoAccess}
                   hasGlobalAccess={hasGlobalAccess}
                 />
+                <section className="border-y border-cyan-300/20 py-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-black text-white">거래소 API 복기</p>
+                        <span className="rounded-full border border-cyan-300/30 bg-cyan-300/10 px-2 py-0.5 text-[10px] font-black text-cyan-100">
+                          Coin Pro
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs leading-5 text-slate-400 [word-break:keep-all]">
+                        {hasCryptoAccess
+                          ? "읽기 전용 USDT 선물 체결과 수수료·펀딩 이력을 연결하고 거래별 복기를 확인합니다."
+                          : "거래소 API 자동 복기는 코인 권한이 포함된 유료 플랜에서만 이용할 수 있습니다. 직접 복기는 무료로 계속 사용할 수 있습니다."}
+                      </p>
+                    </div>
+                    <Link
+                      href={hasCryptoAccess ? "/account/exchanges" : "/pro?market=crypto&source=exchange-journal"}
+                      className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-cyan-300/35 bg-cyan-300/10 px-4 py-2 text-sm font-black text-cyan-100 transition hover:border-cyan-300/60"
+                    >
+                      <Link2 size={16} aria-hidden />
+                      {hasCryptoAccess ? "거래소 연결 관리" : "Coin Pro 보기"}
+                    </Link>
+                  </div>
+                </section>
                 {isAdmin ? (
                   <section className="border-y border-amber-300/25 bg-amber-300/10 py-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

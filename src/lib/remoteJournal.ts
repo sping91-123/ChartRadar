@@ -9,7 +9,7 @@ interface JournalRow {
   bias: string;
   note: string;
   market?: JournalEntry["market"] | null;
-  source: "manual" | "chart" | "scout" | "snapshot" | "alert" | "news";
+  source: "manual" | "chart" | "scout" | "snapshot" | "alert" | "news" | "exchange";
   symbol: string | null;
   timeframe: string | null;
   verdict: string | null;
@@ -20,6 +20,7 @@ interface JournalRow {
   monitor_id?: string | null;
   news_event_id?: string | null;
   news_reaction_id?: string | null;
+  trade_position_id?: string | null;
   decision_context?: JournalEntry["decisionContext"] | null;
   created_at: string;
 }
@@ -60,6 +61,7 @@ function rowToEntry(row: JournalRow): JournalEntry {
     monitorId: row.monitor_id ?? undefined,
     newsEventId: row.news_event_id ?? undefined,
     newsReactionId: row.news_reaction_id ?? undefined,
+    tradePositionId: row.trade_position_id ?? undefined,
     decisionContext: row.decision_context ?? undefined
   };
 }
@@ -101,6 +103,7 @@ export async function createRemoteJournalEntry(
       monitor_id: entry.monitorId ?? null,
       news_event_id: entry.newsEventId ?? null,
       news_reaction_id: entry.newsReactionId ?? null,
+      trade_position_id: entry.tradePositionId ?? null,
       decision_context: entry.decisionContext ?? null
     }
   });
@@ -165,6 +168,7 @@ export async function migrateLocalJournalEntries(accessToken: string, entries: J
       monitor_id: entry.monitorId ?? null,
       news_event_id: entry.newsEventId ?? null,
       news_reaction_id: entry.newsReactionId ?? null,
+      trade_position_id: entry.tradePositionId ?? null,
       decision_context: entry.decisionContext ?? null,
       created_at: entry.createdAt
     }))

@@ -48,6 +48,20 @@ const alertCopyFiles = [
   "src/lib/server/push/eventBuilders.ts"
 ];
 const alertBlockedPhrases = ["롱 우세", "숏 우세", "롱/숏 비율", "청산 압력", "추격 진입"];
+const exchangeGuideFile = "src/components/ExchangeConnectionManager.tsx";
+const requiredExchangeGuideSnippets = [
+  "https://www.okx.com/en-gb/help/api-faq",
+  "Read만 선택",
+  "https://bybit-exchange.github.io/docs/v5/user/apikey-info",
+  "Read-Only + Contract 조회",
+  "https://www.bitget.com/api-doc/uta/guide",
+  "Read-only + UTA 조회",
+  "https://bingx.com/en-us/account/api/",
+  "Reading만 선택",
+  "IP 제한은 선택입니다",
+  "IP를 등록하지 않아도 읽기 전용 API 키를 연결할 수 있습니다.",
+  "쓰기·출금·이체 권한이 감지되면 저장하지 않습니다."
+];
 
 const brokenPatterns = ["�", "媛", "肄", "湲", "덉", "쒖", "뺤", "釉", "諛", "留", "寃", "怨", "臾", "濡"];
 
@@ -100,6 +114,13 @@ for (const file of alertCopyFiles) {
     if (source.includes(phrase)) {
       failures.push({ file, phrase });
     }
+  }
+}
+
+const exchangeGuideSource = readFileSync(path.join(root, exchangeGuideFile), "utf8");
+for (const snippet of requiredExchangeGuideSnippets) {
+  if (!exchangeGuideSource.includes(snippet)) {
+    failures.push({ file: exchangeGuideFile, phrase: `거래소 API 안내 누락. ${snippet}` });
   }
 }
 

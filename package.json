@@ -17,6 +17,7 @@
     "test:entitlements": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-entitlements.js && node .verify-dist/scripts/test-revenuecat-webhook.js && node .verify-dist/scripts/test-account-deletion-contract.js && node scripts/test-entitlement-ledger.mjs && node scripts/test-account-deletion-ledger.mjs",
     "test:auth-boundaries": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-auth-boundaries.js && node .verify-dist/scripts/test-auth-session-persistence.js && node .verify-dist/scripts/test-user-storage.js",
     "test:auth-session-persistence": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-auth-session-persistence.js",
+    "test:exchange-journal": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-exchange-journal.js && node .verify-dist/scripts/test-trade-quality.js && node .verify-dist/scripts/test-exchange-market-candles.js && node scripts/test-exchange-journal-ledger.mjs",
     "test:futures-brief": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-futures-brief.js",
     "test:perpetual-snapshot": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-perpetual-snapshot.js",
     "test:perpetual-briefing": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-perpetual-briefing.js",

@@ -10,8 +10,10 @@ import {
   ClipboardCheck,
   Clock3,
   History,
+  Link2,
   ListChecks,
   Loader2,
+  LockKeyhole,
   Plus,
   ShieldCheck,
   Target,
@@ -19,6 +21,7 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { RadarTopNav } from "@/components/RadarTopNav";
+import { ExchangeJournalDashboard } from "@/components/journal/ExchangeJournalDashboard";
 import {
   ActionButton,
   AppSurface,
@@ -35,6 +38,7 @@ import {
   type JournalEntry,
   type OutcomeType
 } from "@/lib/journal";
+import { hasMarketEntitlement } from "@/lib/billing";
 import {
   createRemoteJournalEntry,
   deleteRemoteJournalEntry,
@@ -51,6 +55,15 @@ type DirectionType = "롱" | "숏" | "관망" | "미진입";
 type TradeResult = "익절" | "손절" | "본절" | "미진입" | "진행 중";
 type RResult = "+1R" | "-1R" | "0R" | "직접 입력";
 type HistoryFilter = "전체" | "익절" | "손절" | "원칙 지킴" | "원칙 깨짐" | "추격 진입";
+type JournalMode = "manual" | "exchange";
+
+interface ExchangeJournalCapabilityPayload {
+  mode: "off" | "shadow" | "on";
+  canRead: boolean;
+  canConnect: boolean;
+  canSync: boolean;
+  reason: string | null;
+}
 
 interface FeedbackSummary {
   principleStatus: string;
@@ -262,6 +275,8 @@ function SourceBadge({ entry }: { entry: JournalEntry }) {
             ? "알림 복기"
             : entry.source === "news"
               ? "뉴스 판단 복기"
+              : entry.source === "exchange"
+                ? "거래소 API 복기"
             : "직접 기록";
   const normalizedSymbol = entry.symbol?.toUpperCase() ?? "";
   const snapshotAsset = normalizedSymbol.includes("ETH") ? "eth" : normalizedSymbol.includes("BTC") ? "btc" : null;
@@ -377,10 +392,178 @@ function ChipGroup({
   );
 }
 
+function JournalModeSelector({
+  mode,
+  canUseExchange,
+  canReadExchange,
+  isChecking,
+  onChange
+}: {
+  mode: JournalMode;
+  canUseExchange: boolean;
+  canReadExchange: boolean;
+  isChecking: boolean;
+  onChange: (mode: JournalMode) => void;
+}) {
+  const options: Array<{
+    id: JournalMode;
+    title: string;
+    description: string;
+    icon: typeof ClipboardCheck;
+  }> = [
+    {
+      id: "manual",
+      title: "직접 복기",
+      description: "종목·결과·원칙을 직접 기록",
+      icon: ClipboardCheck
+    },
+    {
+      id: "exchange",
+      title: "거래소 API 복기",
+      description: "읽기 전용 체결을 불러와 거래별 기준을 복기",
+      icon: Link2
+    }
+  ];
+
+  return (
+    <PanelCard variant="report" padding="lg">
+      <SectionHeader
+        eyebrow="복기 방식"
+        title="원하는 기록 방식을 선택하세요"
+        description="직접 복기는 누구나 사용할 수 있고, 거래소 API 복기는 Coin Pro 권한에서 제공됩니다."
+      />
+      <div className="mt-4 grid grid-cols-2 gap-2" role="tablist" aria-label="복기 방식">
+        {options.map((option) => {
+          const active = mode === option.id;
+          const Icon = option.icon;
+          const locked = option.id === "exchange" && !canUseExchange && !isChecking;
+          return (
+            <button
+              key={option.id}
+              id={`journal-tab-${option.id}`}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              aria-controls={`journal-panel-${option.id}`}
+              onClick={() => onChange(option.id)}
+              className={`min-h-24 rounded-ui-sm border px-3 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-brand ${
+                active
+                  ? "border-ui-brand bg-ui-brand/10 text-ui-text"
+                  : "border-ui-line bg-ui-inset text-ui-muted hover:border-ui-brand/50 hover:text-ui-text"
+              }`}
+            >
+              <span className="flex items-center justify-between gap-2">
+                <Icon size={18} className={active ? "text-ui-brand" : "text-ui-subtle"} aria-hidden />
+                {option.id === "exchange" ? (
+                  <StatusPill tone={canReadExchange ? "long" : "watch"}>
+                    {isChecking
+                      ? "상태 확인 중"
+                      : !canUseExchange
+                        ? <><LockKeyhole size={12} aria-hidden /> Coin Pro</>
+                        : canReadExchange
+                          ? "Coin Pro"
+                          : "운영 점검 중"}
+                  </StatusPill>
+                ) : null}
+              </span>
+              <span className="mt-3 block break-keep text-sm font-black leading-snug">{option.title}</span>
+              <span className="mt-1 block break-keep text-xs font-semibold leading-5 text-ui-muted">
+                {locked
+                  ? "유료 코인 권한이 필요합니다."
+                  : option.id === "exchange" && !canReadExchange && !isChecking
+                    ? "직접 복기는 그대로 이용할 수 있습니다."
+                    : option.description}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </PanelCard>
+  );
+}
+
+function ExchangeJournalAvailabilityGate({
+  isChecking,
+  hasError,
+  onRetry,
+  onManual
+}: {
+  isChecking: boolean;
+  hasError: boolean;
+  onRetry: () => void;
+  onManual: () => void;
+}) {
+  return (
+    <PanelCard variant="report" padding="lg">
+      <SectionHeader
+        eyebrow="자동 매매복기"
+        title={isChecking ? "거래소 복기 상태를 확인하고 있습니다" : hasError ? "자동 복기 상태를 확인하지 못했습니다" : "거래소 자동 복기는 운영 점검 중입니다"}
+        description={
+          isChecking
+            ? "잠시만 기다려 주세요. 직접 복기는 계속 이용할 수 있습니다."
+            : hasError
+              ? "API 키를 입력받거나 외부 거래소를 호출하지 않았습니다. 상태 확인을 다시 시도해 주세요."
+              : "기존 직접 복기는 그대로 사용할 수 있으며, 운영 안전 조건이 확인된 뒤 자동 복기 화면을 다시 엽니다."
+        }
+        action={isChecking ? <Loader2 className="animate-spin text-ui-brand" size={20} aria-hidden /> : undefined}
+      />
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+        {hasError ? <ActionButton onClick={onRetry}>상태 다시 확인</ActionButton> : null}
+        <ActionButton tone="primary" onClick={onManual}>직접 복기 계속</ActionButton>
+      </div>
+    </PanelCard>
+  );
+}
+
+function ExchangeJournalProGate({
+  isAuthenticated,
+  isChecking,
+  onManual
+}: {
+  isAuthenticated: boolean;
+  isChecking: boolean;
+  onManual: () => void;
+}) {
+  if (isChecking) {
+    return (
+      <PanelCard variant="report" padding="lg" className="flex items-center gap-2 text-sm text-ui-muted" aria-live="polite">
+        <Loader2 className="animate-spin" size={18} aria-hidden />
+        거래소 API 복기 권한을 확인하고 있습니다.
+      </PanelCard>
+    );
+  }
+
+  return (
+    <PanelCard variant="report" padding="lg">
+      <SectionHeader
+        eyebrow="Coin Pro"
+        title={isAuthenticated ? "거래소 API 복기는 Coin Pro 전용입니다" : "로그인하고 Coin Pro 권한을 확인해 주세요"}
+        description={
+          isAuthenticated
+            ? "읽기 전용 거래소 체결 동기화와 자동 손익 분석은 코인 권한이 포함된 유료 플랜에서 이용할 수 있습니다."
+            : "로그인 후 활성화된 코인 유료 권한을 확인하면 읽기 전용 거래소 복기를 이용할 수 있습니다."
+        }
+        action={
+          <ActionButton
+            href={isAuthenticated ? "/pro?market=crypto&source=exchange-journal" : "/login?returnTo=%2Fjournal%3Fmode%3Dexchange"}
+            tone="primary"
+          >
+            {isAuthenticated ? "Coin Pro 보기" : "로그인"}
+          </ActionButton>
+        }
+      />
+      <ActionButton className="mt-4" onClick={onManual}>
+        직접 복기 계속
+      </ActionButton>
+    </PanelCard>
+  );
+}
+
 export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false }: { initialMarket?: MarketScope; newsImpactEnabled?: boolean }) {
-  const { session, user } = useSupabaseAuth();
+  const { session, user, profile, entitlementState, isLoading: isAuthLoading } = useSupabaseAuth();
   const journalOwnerId = session?.accessToken ? user?.id : null;
   const [market, setMarket] = useState<MarketScope>(initialMarket);
+  const [journalMode, setJournalMode] = useState<JournalMode>("manual");
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [title, setTitle] = useState("");
   const [symbol, setSymbol] = useState("");
@@ -403,8 +586,55 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
     message: string;
     retryable?: boolean;
   } | null>(null);
+  const [exchangeCapabilityState, setExchangeCapabilityState] = useState<{
+    status: "idle" | "checking" | "ready" | "error";
+    capabilities: ExchangeJournalCapabilityPayload | null;
+  }>({ status: "idle", capabilities: null });
+  const [exchangeCapabilityRetry, setExchangeCapabilityRetry] = useState(0);
 
   const marketLabel = market === "stocks" ? "글로벌" : "코인";
+  const canUseExchangeJournal =
+    entitlementState === "active" &&
+    hasMarketEntitlement(profile?.plan ?? "free", "crypto");
+  const canReadExchangeJournal =
+    canUseExchangeJournal && exchangeCapabilityState.capabilities?.canRead === true;
+  const canConnectExchangeJournal =
+    canReadExchangeJournal && exchangeCapabilityState.capabilities?.canConnect === true;
+  const isExchangeCapabilityChecking =
+    isAuthLoading ||
+    (canUseExchangeJournal &&
+      (exchangeCapabilityState.status === "idle" || exchangeCapabilityState.status === "checking"));
+
+  useEffect(() => {
+    if (!canUseExchangeJournal || !session?.accessToken) {
+      setExchangeCapabilityState({ status: "idle", capabilities: null });
+      return;
+    }
+    const controller = new AbortController();
+    setExchangeCapabilityState((current) => ({
+      status: "checking",
+      capabilities: current.capabilities
+    }));
+    void fetch("/api/exchange-connections", {
+      headers: { Authorization: `Bearer ${session.accessToken}` },
+      cache: "no-store",
+      signal: controller.signal
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("exchange_capability_unavailable");
+        const payload = await response.json() as { capabilities?: ExchangeJournalCapabilityPayload };
+        if (!payload.capabilities) throw new Error("exchange_capability_invalid");
+        if (!controller.signal.aborted) {
+          setExchangeCapabilityState({ status: "ready", capabilities: payload.capabilities });
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setExchangeCapabilityState({ status: "error", capabilities: null });
+        }
+      });
+    return () => controller.abort();
+  }, [canUseExchangeJournal, exchangeCapabilityRetry, session?.accessToken]);
 
   const refreshRemote = useCallback(async () => {
     if (!session?.accessToken) return;
@@ -450,6 +680,19 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
     refreshRemote();
   }, [journalOwnerId, refreshRemote, session?.accessToken]);
 
+  useEffect(() => {
+    if (market !== "crypto") {
+      setJournalMode("manual");
+      return;
+    }
+    if (isAuthLoading) return;
+
+    const requestedMode = new URLSearchParams(window.location.search).get("mode");
+    if (requestedMode === "exchange" && canUseExchangeJournal) {
+      setJournalMode("exchange");
+    }
+  }, [canUseExchangeJournal, isAuthLoading, market]);
+
   const marketEntries = useMemo(
     () =>
       entries.filter((entry) => {
@@ -458,16 +701,20 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
       }),
     [entries, market]
   );
+  const directMarketEntries = useMemo(
+    () => marketEntries.filter((entry) => entry.source !== "exchange"),
+    [marketEntries]
+  );
 
   const pendingRadarEntries = useMemo(
-    () => marketEntries.filter((entry) => isReviewableRadarEntry(entry) && !entry.outcome).slice(0, 4),
-    [marketEntries]
+    () => directMarketEntries.filter((entry) => isReviewableRadarEntry(entry) && !entry.outcome).slice(0, 4),
+    [directMarketEntries]
   );
 
   const summary = useMemo(() => {
     const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    const weekEntries = marketEntries.filter((entry) => new Date(entry.createdAt).getTime() >= cutoff);
-    const parsedEntries = marketEntries.map(parseEntryMeta);
+    const weekEntries = directMarketEntries.filter((entry) => new Date(entry.createdAt).getTime() >= cutoff);
+    const parsedEntries = directMarketEntries.map(parseEntryMeta);
     const principleReady = parsedEntries.filter((entry) => entry.keptPrinciples.length > 0 || entry.brokenPrinciples.length > 0);
     const principleKept = principleReady.filter((entry) => entry.brokenReal.length === 0 && entry.keptPrinciples.length > 0);
     const complianceRate = principleReady.length ? Math.round((principleKept.length / principleReady.length) * 100) : null;
@@ -481,7 +728,7 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
     const latestCheckpoint = parsedEntries.find((entry) => entry.nextCheckpoint)?.nextCheckpoint ?? "";
 
     return {
-      total: marketEntries.length,
+      total: directMarketEntries.length,
       weekCount: weekEntries.length,
       complianceRate,
       repeatedMistake,
@@ -490,10 +737,10 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
           ? `다음 판단 전 ${repeatedMistake} 기준을 먼저 확인하세요.`
           : latestCheckpoint || "복기 1건 이상 저장 시 표시됩니다"
     };
-  }, [marketEntries]);
+  }, [directMarketEntries]);
 
   const filteredEntries = useMemo(() => {
-    return marketEntries.filter((entry) => {
+    return directMarketEntries.filter((entry) => {
       const parsed = parseEntryMeta(entry);
       if (activeFilter === "익절") return entry.outcome === "win" || parsed.result === "익절";
       if (activeFilter === "손절") return entry.outcome === "loss" || parsed.result === "손절";
@@ -509,7 +756,7 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
       }
       return true;
     });
-  }, [activeFilter, marketEntries]);
+  }, [activeFilter, directMarketEntries]);
 
   const isSubmitReady =
     title.trim() &&
@@ -687,6 +934,47 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
           </div>
 
           <div className="grid gap-6 py-4">
+            {market === "crypto" ? (
+              <JournalModeSelector
+                mode={journalMode}
+                canUseExchange={canUseExchangeJournal}
+                canReadExchange={canReadExchangeJournal}
+                isChecking={isExchangeCapabilityChecking}
+                onChange={setJournalMode}
+              />
+            ) : null}
+
+            {market === "crypto" && journalMode === "exchange" ? (
+              <section
+                id="journal-panel-exchange"
+                role="tabpanel"
+                aria-labelledby="journal-tab-exchange"
+              >
+                {!canUseExchangeJournal ? (
+                  <ExchangeJournalProGate
+                    isAuthenticated={Boolean(user && session?.accessToken)}
+                    isChecking={isAuthLoading}
+                    onManual={() => setJournalMode("manual")}
+                  />
+                ) : !canReadExchangeJournal ? (
+                  <ExchangeJournalAvailabilityGate
+                    isChecking={isExchangeCapabilityChecking}
+                    hasError={exchangeCapabilityState.status === "error"}
+                    onRetry={() => setExchangeCapabilityRetry((current) => current + 1)}
+                    onManual={() => setJournalMode("manual")}
+                  />
+                ) : (
+                  <ExchangeJournalDashboard canConnect={canConnectExchangeJournal} />
+                )}
+              </section>
+            ) : (
+              <section
+                id={market === "crypto" ? "journal-panel-manual" : undefined}
+                role={market === "crypto" ? "tabpanel" : undefined}
+                aria-labelledby={market === "crypto" ? "journal-tab-manual" : undefined}
+                className="grid gap-6"
+              >
+
             <PanelCard variant="report" padding="lg">
               <SectionHeader
                 title="오늘의 복기"
@@ -919,6 +1207,19 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
               </PanelCard>
             ) : null}
 
+            <details
+              open={market !== "crypto" || !user}
+              className={market === "crypto" && user ? "rounded-ui-sm border border-ui-line bg-ui-inset/40 p-3" : ""}
+            >
+              <summary
+                className={market === "crypto" && user
+                  ? "flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-black text-ui-text"
+                  : "hidden"}
+              >
+                <span>직접 복기 편집·삭제</span>
+                <span className="text-xs font-semibold text-ui-muted">통합 히스토리의 직접 기록 관리</span>
+              </summary>
+              <div className={market === "crypto" && user ? "mt-3" : ""}>
             <PanelCard variant="report" padding="lg" className="scroll-mb-56">
               <SectionHeader
                 title="복기 히스토리"
@@ -1086,6 +1387,10 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
                 )}
               </div>
             </PanelCard>
+              </div>
+            </details>
+              </section>
+            )}
           </div>
         </AppSurface>
       </div>

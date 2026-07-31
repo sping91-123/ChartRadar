@@ -27,6 +27,16 @@
     },
     "src/app/api/news-sync/route.ts": {
       "regions": ["sin1"]
+    },
+    "src/app/api/exchange-connections/route.ts": {
+      "regions": ["sin1"]
+    },
+    "src/app/api/exchange-connections/[id]/sync/route.ts": {
+      "regions": ["sin1"]
+    },
+    "src/app/api/exchange-sync/route.ts": {
+      "regions": ["sin1"],
+      "maxDuration": 240
     }
   },
   "crons": [
@@ -45,6 +55,10 @@
     {
       "path": "/api/account-deletions/process",
       "schedule": "17 * * * *"
+    },
+    {
+      "path": "/api/exchange-sync",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

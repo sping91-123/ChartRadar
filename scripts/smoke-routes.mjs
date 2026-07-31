@@ -28,6 +28,7 @@ const pageChecks = [
   "/",
   "/account",
   "/account/delete",
+  "/account/exchanges",
   "/admin/entitlements",
   "/alerts?market=global",
   "/auth/callback",
@@ -213,6 +214,53 @@ const protectedApiChecks = [
     path: "/api/crypto/perpetual/briefing",
     method: "POST",
     body: { snapshotId: "70000000-0000-4000-8000-000000000001" },
+    expectedStatus: [401]
+  },
+  {
+    label: "Exchange connection list requires login",
+    path: "/api/exchange-connections",
+    expectedStatus: [401]
+  },
+  {
+    label: "Exchange connection create requires login",
+    path: "/api/exchange-connections",
+    method: "POST",
+    body: {},
+    expectedStatus: [401]
+  },
+  {
+    label: "Exchange sync requires login",
+    path: "/api/exchange-connections/70000000-0000-4000-8000-000000000001/sync",
+    method: "POST",
+    body: {},
+    expectedStatus: [401]
+  },
+  {
+    label: "Exchange disconnect requires login",
+    path: "/api/exchange-connections/70000000-0000-4000-8000-000000000001",
+    method: "DELETE",
+    expectedStatus: [401]
+  },
+  {
+    label: "Exchange cron requires secret",
+    path: "/api/exchange-sync",
+    expectedStatus: [401]
+  },
+  {
+    label: "Exchange journal trades require login",
+    path: "/api/journal/trades",
+    expectedStatus: [401]
+  },
+  {
+    label: "Exchange journal analytics require login",
+    path: "/api/journal/analytics",
+    expectedStatus: [401]
+  },
+  {
+    label: "Exchange journal review requires login",
+    path: "/api/journal/trades/70000000-0000-4000-8000-000000000001/review",
+    method: "PATCH",
+    body: {},
     expectedStatus: [401]
   }
 ];

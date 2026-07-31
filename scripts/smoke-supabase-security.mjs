@@ -71,6 +71,14 @@ const newsUsefulV2 = newsUsefulV2Name ? read(join("supabase", "migrations", news
 const newsOperationalName = migrationNames.find((name) => name.endsWith("_news_impact_operational_hardening.sql"));
 const newsOperational = newsOperationalName ? read(join("supabase", "migrations", newsOperationalName)) : "";
 const newsRpcSql = `${newsMigration}\n${newsHardening}\n${newsUsefulV2}\n${newsOperational}`;
+const exchangeMigrationName = migrationNames.find((name) => name.endsWith("_exchange_trade_journal_v1.sql"));
+const exchangeMigration = exchangeMigrationName
+  ? read(join("supabase", "migrations", exchangeMigrationName))
+  : "";
+const exchangeRuntimeControlName = migrationNames.find((name) => name.endsWith("_exchange_runtime_kill_switch.sql"));
+const exchangeRuntimeControl = exchangeRuntimeControlName
+  ? read(join("supabase", "migrations", exchangeRuntimeControlName))
+  : "";
 
 for (const [label, source] of [
   ["migration", migration],
@@ -263,6 +271,164 @@ for (const marker of [
   expectMatch(newsHardening, marker, `News Impact hardening ${marker.source}`, "보강 migration이 출처·개정·재시도 경계를 선언합니다.");
   expectMatch(schema, marker, `기준 schema hardening ${marker.source}`, "canonical schema가 forward hardening과 같은 최종 catalog를 선언합니다.");
 }
+
+for (const table of [
+  "exchange_connections",
+  "exchange_credentials",
+  "exchange_order_contexts",
+  "exchange_trade_fills",
+  "exchange_cashflows",
+  "exchange_trade_positions",
+  "exchange_trade_assessments",
+  "exchange_trade_reviews",
+  "exchange_sync_checkpoints",
+  "exchange_sync_runs"
+]) {
+  expectMatch(
+    exchangeMigration,
+    new RegExp(`alter\\s+table\\s+public\\.${table}\\s+enable\\s+row\\s+level\\s+security`, "i"),
+    `${table} RLS enabled`,
+    "Exchange ledger tables require explicit RLS."
+  );
+  expectMatch(
+    exchangeMigration,
+    new RegExp(
+      `revoke\\s+all\\s+privileges\\s+on\\s+table\\s+public\\.${table}\\s+from\\s+public\\s*,\\s*anon\\s*,\\s*authenticated\\s*,\\s*service_role`,
+      "i"
+    ),
+    `${table} privileges reset`,
+    "Inherited table privileges are reset before scoped service grants."
+  );
+  expectNoMatch(
+    exchangeMigration,
+    new RegExp(
+      `grant\\s+(?:select|insert|update|delete|all)\\s+on\\s+(?:table\\s+)?public\\.${table}\\s+to\\s+(?:public|anon|authenticated)`,
+      "i"
+    ),
+    `${table} direct browser grant blocked`,
+    "Exchange data is served only through authenticated server APIs."
+  );
+}
+
+for (const functionName of [
+  "exchange_user_has_coin_pro",
+  "create_exchange_connection",
+  "disconnect_exchange_connection",
+  "claim_exchange_connection",
+  "claim_due_exchange_connections",
+  "commit_exchange_sync_batch",
+  "list_due_exchange_trade_assessment_positions",
+  "upsert_exchange_trade_assessment",
+  "fail_exchange_sync"
+]) {
+  expectMatch(
+    exchangeMigration,
+    new RegExp(`revoke\\s+all\\s+on\\s+function\\s+public\\.${functionName}\\(`, "i"),
+    `${functionName} public execute revoked`,
+    "Exchange mutation RPCs are service-role only."
+  );
+  expectMatch(
+    exchangeMigration,
+    new RegExp(`grant\\s+execute\\s+on\\s+function\\s+public\\.${functionName}\\(`, "i"),
+    `${functionName} service execute granted`,
+    "Exchange mutation RPCs retain the required service execution path."
+  );
+}
+
+expectMatch(
+  exchangeMigration,
+  /create\s+or\s+replace\s+function\s+public\.create_exchange_connection\([\s\S]*?if\s+not\s+public\.exchange_user_has_coin_pro\(p_user_id\)[\s\S]*?raise\s+exception\s+'exchange coin pro required'/i,
+  "exchange create requires Coin Pro",
+  "Basic users cannot create exchange credentials."
+);
+expectMatch(
+  exchangeMigration,
+  /create\s+or\s+replace\s+function\s+public\.claim_exchange_connection\([\s\S]*?if\s+not\s+v_has_coin_pro\s+then[\s\S]*?return\s+false/i,
+  "exchange manual claim requires Coin Pro",
+  "Expired users cannot obtain sync leases."
+);
+expectMatch(
+  exchangeMigration,
+  /create\s+or\s+replace\s+function\s+public\.claim_due_exchange_connections\([\s\S]*?where\s+ranked\.has_coin_pro/i,
+  "exchange cron claim requires Coin Pro",
+  "Cron skips non-paid connections."
+);
+expectMatch(
+  exchangeMigration,
+  /create\s+or\s+replace\s+function\s+public\.commit_exchange_sync_batch\([\s\S]*?if\s+not\s+v_has_coin_pro[\s\S]*?raise\s+exception\s+'exchange coin pro required'/i,
+  "exchange sync commit rechecks Coin Pro",
+  "A lease cannot commit after entitlement expires."
+);
+
+expectMatch(
+  exchangeRuntimeControl,
+  /alter\s+table\s+public\.exchange_feature_control\s+enable\s+row\s+level\s+security/i,
+  "exchange runtime control RLS enabled",
+  "The operator kill switch remains server-only."
+);
+expectMatch(
+  exchangeRuntimeControl,
+  /revoke\s+all\s+on\s+table\s+public\.exchange_feature_control\s+from\s+public\s*,\s*anon\s*,\s*authenticated/i,
+  "exchange runtime control browser privileges revoked",
+  "Browser roles cannot read or modify the kill switch."
+);
+expectNoMatch(
+  exchangeRuntimeControl,
+  /grant\s+(?:select|insert|update|delete|all)\s+on\s+(?:table\s+)?public\.exchange_feature_control\s+to\s+(?:public|anon|authenticated)/i,
+  "exchange runtime control browser grant blocked",
+  "Only the service-role server path can read the operational state."
+);
+for (const functionName of ["exchange_operations_enabled", "guard_exchange_connection_operations"]) {
+  expectMatch(
+    exchangeRuntimeControl,
+    new RegExp(`revoke\\s+all\\s+on\\s+function\\s+public\\.${functionName}\\(`, "i"),
+    `${functionName} public execute revoked`,
+    "Runtime control helpers are not public Data API functions."
+  );
+}
+expectMatch(
+  exchangeRuntimeControl,
+  /if\s+not\s+public\.exchange_operations_enabled\(\)\s+then\s+return\s+false/i,
+  "manual claim checks runtime kill switch",
+  "A deploy-time flag cannot bypass the database lock."
+);
+expectMatch(
+  exchangeRuntimeControl,
+  /p_allowed_user_ids\s+uuid\[\][\s\S]*?connection\.user_id\s*=\s*any\(p_allowed_user_ids\)/i,
+  "cron claim filters canary users",
+  "Scheduled leases remain inside the active rollout cohort."
+);
+expectMatch(
+  exchangeRuntimeControl,
+  /new\.next_sync_at\s*:=\s*new\.last_synced_at\s*\+\s*interval\s*'10 minutes'/i,
+  "successful sync schedules a ten-minute due time",
+  "The five-minute cron can meet the 15-minute target without waiting a full extra cycle."
+);
+
+expectMatch(
+  exchangeMigration,
+  /create\s+policy\s+"exchange_credentials_service_only"[\s\S]*?to\s+service_role/i,
+  "exchange credentials service-only policy",
+  "Encrypted credential rows are not exposed to authenticated clients."
+);
+expectMatch(
+  exchangeMigration,
+  /create\s+policy\s+"exchange_sync_checkpoints_service_only"[\s\S]*?to\s+service_role/i,
+  "exchange checkpoints service-only policy",
+  "Provider cursors remain server-only."
+);
+expectMatch(
+  exchangeMigration,
+  /delete\s+from\s+public\.journals\s+journal[\s\S]*?journal\.source\s*=\s*'exchange'/i,
+  "exchange delete-history removes derived journals",
+  "The optional delete-history path removes normalized review journals before the connection root."
+);
+expectMatch(
+  exchangeMigration,
+  /'exchange_connections',[\s\S]*?'journals'/i,
+  "account purge includes exchange root",
+  "Deleting the connection root cascades credentials and normalized ledger rows."
+);
 
 let failed = 0;
 for (const check of checks) {

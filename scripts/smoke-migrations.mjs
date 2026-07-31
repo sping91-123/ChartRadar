@@ -194,6 +194,58 @@ for (const marker of [
   if (!newsOperational.includes(marker)) failures.push(`News operational hardening migration is missing ${marker}`);
 }
 
+const exchangeJournalName = active.find((name) => name.endsWith("_exchange_trade_journal_v1.sql"));
+const exchangeJournal = exchangeJournalName ? readNormalized(join(activeDir, exchangeJournalName)) : "";
+for (const marker of [
+  "create table if not exists public.exchange_connections",
+  "create table if not exists public.exchange_credentials",
+  "create table if not exists public.exchange_trade_fills",
+  "create table if not exists public.exchange_cashflows",
+  "create table if not exists public.exchange_trade_positions",
+  "create table if not exists public.exchange_trade_assessments",
+  "create table if not exists public.exchange_trade_reviews",
+  "create table if not exists public.exchange_sync_checkpoints",
+  "create table if not exists public.exchange_sync_runs",
+  "flat_baseline_at",
+  "symbol_flat_baselines",
+  "open_close",
+  "is_current",
+  "create or replace function public.create_exchange_connection",
+  "create or replace function public.claim_due_exchange_connections",
+  "create or replace function public.commit_exchange_sync_batch",
+  "create or replace function public.list_due_exchange_trade_assessment_positions",
+  "create or replace function public.upsert_exchange_trade_assessment",
+  "position_fingerprint text not null",
+  "attempt_count smallint not null",
+  "create or replace function public.disconnect_exchange_connection",
+  "delete from public.journals journal",
+  "'exchange_connections',",
+  "revoke all privileges on table public.exchange_credentials from public, anon, authenticated, service_role",
+  "grant execute on function public.commit_exchange_sync_batch"
+]) {
+  if (!exchangeJournal.includes(marker)) failures.push(`Exchange journal migration is missing ${marker}`);
+}
+
+const exchangeRuntimeControlName = active.find((name) => name.endsWith("_exchange_runtime_kill_switch.sql"));
+const exchangeRuntimeControl = exchangeRuntimeControlName
+  ? readNormalized(join(activeDir, exchangeRuntimeControlName))
+  : "";
+for (const marker of [
+  "create table if not exists public.exchange_feature_control",
+  "operations_enabled boolean not null default false",
+  "create or replace function public.exchange_operations_enabled",
+  "create or replace function public.guard_exchange_connection_operations",
+  "new.next_sync_at := new.last_synced_at + interval '10 minutes'",
+  "p_allowed_user_ids uuid[]",
+  "connection.user_id = any(p_allowed_user_ids)",
+  "revoke all on function public.claim_due_exchange_connections(integer, uuid, uuid[])",
+  "grant execute on function public.claim_due_exchange_connections(integer, uuid, uuid[]) to service_role"
+]) {
+  if (!exchangeRuntimeControl.includes(marker)) {
+    failures.push(`Exchange runtime control migration is missing ${marker}`);
+  }
+}
+
 const canonicalSchema = readNormalized(join(root, "supabase", "schema.sql"));
 for (const marker of [
   "perpetual_scenario_monitors_live_condition_idx",
@@ -238,6 +290,32 @@ for (const marker of [
   "baseline.engine_version = evaluated.engine_version"
 ]) {
   if (!canonicalSchema.includes(marker)) failures.push(`canonical schema is missing ${marker}`);
+}
+
+for (const marker of [
+  "-- Exchange trade journal v1 canonical mirror.",
+  "create table if not exists public.exchange_connections",
+  "create table if not exists public.exchange_credentials",
+  "create table if not exists public.exchange_trade_fills",
+  "create table if not exists public.exchange_trade_assessments",
+  "create table if not exists public.exchange_feature_control",
+  "create or replace function public.exchange_operations_enabled",
+  "create or replace function public.guard_exchange_connection_operations",
+  "p_allowed_user_ids uuid[]",
+  "create or replace function public.commit_exchange_sync_batch",
+  "create or replace function public.list_due_exchange_trade_assessment_positions",
+  "create or replace function public.upsert_exchange_trade_assessment",
+  "create or replace function public.disconnect_exchange_connection",
+  "delete from public.journals journal",
+  "revoke all privileges on table public.exchange_credentials from public, anon, authenticated, service_role"
+]) {
+  if (!canonicalSchema.includes(marker)) failures.push(`canonical schema is missing ${marker}`);
+}
+if (
+  canonicalSchema.indexOf("-- Exchange trade journal v1 canonical mirror.") !==
+  canonicalSchema.lastIndexOf("-- Exchange trade journal v1 canonical mirror.")
+) {
+  failures.push("canonical schema contains more than one Exchange trade journal mirror");
 }
 
 const newsSchemaBaseMarker = "-- News Impact v1 canonical schema mirror.";
@@ -286,6 +364,17 @@ if (failures.length) {
         process.exitCode = newsReplay.status ?? 1;
       } else {
         console.log("PASS executable News Impact migration matrix.");
+        const exchangeReplay = spawnSync(process.execPath, ["scripts/test-exchange-journal-ledger.mjs"], {
+          cwd: root,
+          stdio: "inherit",
+          shell: false
+        });
+        if (exchangeReplay.status !== 0) {
+          console.error("FAIL executable Exchange journal migration matrix");
+          process.exitCode = exchangeReplay.status ?? 1;
+        } else {
+          console.log("PASS executable Exchange journal migration matrix.");
+        }
       }
     }
   }

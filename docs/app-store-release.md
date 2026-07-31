@@ -58,10 +58,17 @@
 | 사용자 ID | 복기, 관심종목, 구독 권한 연결 | Supabase 계정 ID |
 | 관심종목 | 개인화된 레이더 화면 제공 | 사용자가 직접 저장 |
 | 매매 복기 | 사용자가 입력한 기록 저장 | 사용자가 직접 입력 |
+| 거래소 연결 정보 | 사용자가 선택한 읽기 전용 거래 이력 동기화 | 거래소, 마스킹된 키, 권한·선택적 IP 제한 상태 |
+| 선물 거래 이력 | 자동 복기 원장과 통계 제공 | 체결, 수수료, 펀딩, 계산된 실현손익 |
+| 거래 위치 평가 | 종료 거래의 사후 복기 보조 | 동일 거래소 공개 캔들 구간, 진입·청산 위치 점수, 근거, 신뢰도 |
 | 사용량 기록 | Free 기준과 Pro 권한 안내 | 기능 사용 횟수 |
 | 결제 상태 | Pro 권한 확인 | 웹 결제 또는 앱 구독 |
 
 현재 제품 방향에서는 정확한 위치 정보, 연락처, 건강 정보, 광고 추적 ID를 수집하지 않는 편이 좋습니다.
+거래소 연결은 사용자가 명시적으로 선택한 경우에만 처리하며 API key·secret·passphrase는 서버 암호화 저장소에 보관합니다.
+주문·출금·이체 권한은 허용하지 않고, 거래 이력은 외부 LLM에 전송하지 않습니다.
+직접 복기는 무료 이용자에게도 제공하고, 읽기 전용 거래소 API 복기와 자동 손익 분석은 Coin Pro 또는 코인 권한이 포함된 상위 유료 플랜에만 제공합니다.
+자동 평가는 미래 수익을 예측하지 않으며 진입 전 확정 구조와 청산 시점까지 확인된 가격 구조만 사용합니다. 당시 손절·목표·전략 의도가 없으면 청산 점수를 보류합니다.
 
 ## 6. Google Play 구독 상품
 
@@ -133,7 +140,7 @@ npm run check:app-billing
 ## 8. 심사 메모 초안
 
 ```text
-Chart Radar is a market analysis and education tool. It provides market structure summaries, technical indicator dashboards, AI news briefings, watchlists, and alert settings for crypto and selected global markets. It does not execute trades, connect to exchanges for trading, or provide guaranteed buy/sell signals. Subscriptions unlock higher usage limits and advanced analysis screens.
+Chart Radar is a market analysis, education, and trade-review tool. It provides market structure summaries, technical indicator dashboards, AI news briefings, watchlists, alerts, and an optional read-only USDT perpetual trade-history connection for supported exchanges. The exchange connection imports fills, fees, funding, and realized results only for deterministic review statistics. It cannot place, cancel, transfer, or withdraw, and it does not provide guaranteed buy/sell signals or predicted returns. API credentials are accepted only when read-only; IP restriction is optional. Credentials are encrypted in server-only storage and deleted immediately when the user disconnects. Users can separately delete imported review history. Subscriptions unlock higher usage limits and cross-analysis screens.
 ```
 
 테스트 계정이 필요하면 Google 계정 하나를 심사용으로 만들고, 필요 시 Supabase에서 임시 Pro 권한을 부여합니다.
@@ -149,3 +156,7 @@ Chart Radar is a market analysis and education tool. It provides market structur
 - `TOSS_PAYMENTS_SECRET_KEY`와 `SUPABASE_SERVICE_ROLE_KEY`는 서버 환경변수에만 들어 있습니다.
 - AI API와 스캐너 API의 호출 제한이 켜져 있습니다.
 - 앱 설명에 수익 보장, 확정 매수 신호, 자동매매처럼 오해될 표현이 없습니다.
+- Financial Features 선언에 읽기 전용 거래 이력 기반 복기 기능과 파생상품 데이터 처리를 반영했습니다.
+- 개인정보 라벨에 거래소 연결 메타데이터와 체결·수수료·펀딩·실현손익 원장을 반영했습니다.
+- 거래소별 read-only 소액 테스트 계정 대사와 쓰기·출금·이체 권한 거절 검증을 확인한 뒤 실키 feature flag를 엽니다. IP 제한은 선택 사항입니다.
+- 연결 해제 시 secret 즉시 삭제, 선택적 정규화 이력 삭제, 계정 삭제 cascade를 실제 계정으로 확인했습니다.

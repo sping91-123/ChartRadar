@@ -5,6 +5,51 @@ const smokeClientIp = `127.0.0.${Math.floor(Math.random() * 200) + 20}`;
 
 const checks = [
   {
+    label: "Exchange connection list authentication boundary",
+    path: "/api/exchange-connections",
+    method: "GET",
+    expectedStatus: [401]
+  },
+  {
+    label: "Exchange connection create authentication boundary",
+    path: "/api/exchange-connections",
+    method: "POST",
+    body: {},
+    expectedStatus: [401]
+  },
+  {
+    label: "Exchange manual sync authentication boundary",
+    path: "/api/exchange-connections/70000000-0000-4000-8000-000000000001/sync",
+    method: "POST",
+    body: {},
+    expectedStatus: [401]
+  },
+  {
+    label: "Exchange journal trades authentication boundary",
+    path: "/api/journal/trades",
+    method: "GET",
+    expectedStatus: [401]
+  },
+  {
+    label: "Exchange journal analytics authentication boundary",
+    path: "/api/journal/analytics",
+    method: "GET",
+    expectedStatus: [401]
+  },
+  {
+    label: "Exchange journal review authentication boundary",
+    path: "/api/journal/trades/70000000-0000-4000-8000-000000000001/review",
+    method: "PATCH",
+    body: {},
+    expectedStatus: [401]
+  },
+  {
+    label: "Exchange cron authentication boundary",
+    path: "/api/exchange-sync",
+    method: "GET",
+    expectedStatus: [401]
+  },
+  {
     label: "Perpetual invalid asset rejection",
     path: "/api/crypto/perpetual/snapshot?asset=doge",
     method: "GET",
