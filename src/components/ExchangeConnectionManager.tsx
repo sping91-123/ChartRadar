@@ -829,6 +829,7 @@ export function ExchangeConnectionManager() {
                           <input
                             value={apiKey}
                             onChange={(event) => setApiKey(event.target.value)}
+                            autoComplete="off"
                             autoCapitalize="none"
                             autoCorrect="off"
                             spellCheck={false}

@@ -7,8 +7,8 @@ dist
 reports
 .verify-dist
 .env
-.env.local
-.env*.local
+.env.*
+!.env.example
 android/app/google-services.json
 android/keystore.properties
 android/app/*.jks
