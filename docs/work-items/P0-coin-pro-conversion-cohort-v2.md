@@ -3,7 +3,7 @@
 ## 상태
 
 - 로컬 구현: `IMPLEMENTED / RELEASE_VERIFIED`
-- 운영 설정: `CONFIGURED / RELEASE_PENDING`
+- 운영 설정: `CONFIGURED / PLAY_REVIEW_SUBMITTED`
 - 신규 cohort: `NOT_STARTED`
 - 기준선: 2026-08-01 16:09 KST
 - 운영 mutation: additive migration 1건과 내부 QA 이벤트 12건 분류
@@ -113,7 +113,7 @@ from first_event;
 - `test:entitlements`, `test:product-events`, `test:coin-product-contract`, `test:coin-usage-quotas`, `test:perpetual-beta-report`, `test:perpetual-snapshot`, `test:perpetual-briefing`, `test:perpetual-monitors`, `test:push-targets` 통과.
 - RevenueCat 실제 grace 만료, 일반 alias의 canonical 사용자 1명 처리, TRANSFER 출발·도착 순서, 복수 구독의 해지·만료 상품 귀속 회귀 행렬을 통과했다. AI 재열람은 production Upstash 공유 캐시를 먼저 확인해 다른 Vercel instance에서도 같은 입력을 다시 일일 생성량으로 차감하지 않는다.
 - Android `:app:compileDebugJavaWithJavac` 통과. Install Referrer 저장·재시도 코드와 App Link manifest가 Java/Android resource 컴파일을 통과했다.
-- CLI Playwright에서 360×800과 390×844의 Home·Perpetual·Alt·Spot을 확인했고 모든 화면의 horizontal overflow는 0이었다. 알트 Basic CTA에서 문맥형 paywall 이동도 확인했다. 로컬 sandbox의 외부 시장 API 차단으로 화면은 정상적인 지연·오류 상태를 표시했다.
+- CLI Playwright에서 360×800과 390×844의 Home·Perpetual·Alt·Spot을 확인했고 모든 화면의 horizontal overflow는 0이었다. 알트 Basic CTA에서 문맥형 paywall 이동도 확인했다. 배포 후 `chartradar.kr`의 코인 Home과 문맥형 paywall도 실제 데이터로 재확인했으며 console error·warning은 0건이었다.
 - 자체 포함 보고서: `output/reports/coin-pro-conversion-v2/index.html`. 보고서 verifier의 1440px·390px 검사와 source dialog 검사를 통과했다.
 - 모바일 증거: `output/playwright/coin-pro-v2/coin-pro-paywall-360.png`, `output/playwright/coin-pro-v2/alt-context-paywall-390.png`.
 
@@ -130,6 +130,10 @@ from first_event;
 5. Vercel Production에 Play App Signing SHA-256, 독립 QA secret과 production-only Upstash Redis를 구성했다. Redis는 Vercel이 제공한 `KV_REST_API_URL/TOKEN` alias도 서버가 허용한다.
 6. Android `versionCode 13`, `versionName 1.0.9` AAB를 clean signing validation과 `jarsigner`로 검증했다. SHA-256은 `82B2843A4EC0B0997EB22D3748B3FBFEC7E999918E59CAB8F5DDF7366645BEF7`이다. Google Play가 13(1.0.9), target SDK 36, 기존 대비 지원 기기 감소 0으로 인식했으며 프로덕션 변경사항을 저장했다.
 7. 대표 지시에 따라 실제 Google Play sandbox 결제 행렬은 생략했다. 따라서 체험 적격/비적격, 결제 성공, 복원, grace/account-hold의 실기기 store 증거는 없는 출시 위험으로 남긴다.
-8. 웹 production 배포·실응답·Upstash canary·RevenueCat dashboard TEST와 Google Play 최종 검토 제출을 완료한 뒤에만 신규 cohort 시작 여부를 별도로 기록한다.
+8. Vercel production deployment `dpl_9JLGJUVCxU8ibLGSPFFKQAg1m3e7`를 Ready로 배포했다. `chartradar.kr`의 `/`, `/pro?market=crypto`, `/.well-known/assetlinks.json`, `/api/health`, `/api/crypto-home-snapshot`이 모두 HTTP 200을 반환했고 최근 production error·warning log는 0건이었다. Basic 알트 quota live canary도 공유 Upstash에서 200과 누적 사용량 2/3을 확인했다.
+9. RevenueCat dashboard의 signed TEST webhook이 HTTP 200을 반환했다. TEST 이후 Supabase의 구독·billing event·product event 증분은 모두 0건으로, 합성 테스트 사용자가 운영 원장을 오염시키지 않음을 확인했다.
+10. Google Play 13(1.0.9) 프로덕션 100% 전체 출시를 검토 제출했다. 현재 Play Console은 `변경사항을 검토 중입니다`로 표시하며, 관리형 게시가 꺼져 있어 승인되면 자동 게시된다. Google 검토 완료와 실제 설치본 lifecycle은 외부 진행 상태로 남는다.
+
+신규 cohort는 릴리스 제출과 별개로 아직 `NOT_STARTED`다. Play 게시 확인 뒤 시작 시각을 별도 기록하기 전에는 신규 KPI를 PASS/FAIL로 판정하지 않는다.
 
 가격 인하, 연간 상품 재노출, 웹 결제, 새 대표 기능은 v2 첫 릴리스에서 제외한다.

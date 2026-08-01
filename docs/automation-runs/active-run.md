@@ -1,14 +1,16 @@
 # Active Automation Run
 
-## 2026-08-01 Coin Pro 전환 v2 (운영 설정·출시 준비)
+## 2026-08-01 Coin Pro 전환 v2 (운영 배포·Play 검토 제출)
 
 - Basic/Pro capability 원장, Scout·Watchlist 서버 serializer, Scout·Watchlist·알트 KST 서버 일일 한도, Vercel instance 간 공유되는 AI 캐시 미차감, 문맥형 gate·24시간 funnel session, 14일 체험 문구와 구매/권한 동기화 상태 분리를 로컬에 구현했다.
 - 기존 beta는 2026-08-01 16:09 KST에 `STOPPED_PRE_CHANGE / RELEASE_CONFOUNDED / INCONCLUSIVE`로 종료 기록했다. legacy 12명 권한과 이후 내부 QA 이벤트는 삭제하지 않는다.
 - TypeScript, production build, routes/mobile/billing/migration/copy smoke, 권한·이벤트·Coin·서버 quota 계약·Perpetual 회귀, Android debug Java compile을 통과했다. RevenueCat grace·alias·transfer·복수 상품 terminal event와 공유 AI cache 회귀도 통과했다. `smoke:ops`는 정적 계약을 통과했고 현재 외부 매크로 일정의 live coverage 1건만 시점 의존 실패다. CLI Playwright 360×800·390×844에서 핵심 코인 route와 알트 gate→문맥형 paywall을 확인했고 horizontal overflow는 0이었다.
 - 자체 포함 분석 보고서는 `output/reports/coin-pro-conversion-v2/index.html`, 화면 증거는 `output/playwright/coin-pro-v2/`에 있다.
 - Supabase migration `20260801103109` 적용, 내부 UI 감사 이벤트 12건 분류, Google Play 신규 고객 14일 offer 활성화, RevenueCat product/offering/webhook 확인, Play App Signing 지문·QA secret·production-only Upstash 설정을 완료했다. Google Play가 paywall 이전 gate 사용자의 최종 체험 적격 여부를 제공하지 않으므로 초기 eligible-gate KPI는 `DIRECTIONAL ONLY`다.
-- Android 13(1.0.9) release AAB를 clean signing validation으로 생성했고 Google Play 프로덕션이 target SDK 36과 지원 기기 감소 0으로 인식했다. 출시 노트와 100% rollout 변경사항은 저장했으며 웹 production 검증 전에는 Google 검토 제출을 보류한다.
-- 대표 지시에 따라 실제 Play sandbox 결제는 생략한다. 체험·결제·복원의 실기기 증거가 없는 위험을 수용하되 신규 cohort는 아직 시작하지 않는다. production 배포, 최종 Play 제출, commit/push는 이 기록 시점에 진행 중이다.
+- Android 13(1.0.9) release AAB를 clean signing validation으로 생성했고 Google Play 프로덕션이 target SDK 36과 지원 기기 감소 0으로 인식했다. 출시 노트와 100% rollout 변경사항을 저장하고 Google 검토에 제출했다. Play Console 현재 상태는 `변경사항을 검토 중입니다`이며 관리형 게시가 꺼져 있어 승인 후 자동 게시된다.
+- commit `25081dc`를 `codex/news-impact-v2-release-record`에 push하고, Vercel production deployment `dpl_9JLGJUVCxU8ibLGSPFFKQAg1m3e7`를 Ready로 배포했다. `chartradar.kr` 핵심 route·assetlinks·health·crypto snapshot은 모두 HTTP 200이고 production error·warning log는 0건이었다. 문맥형 Play 링크의 source·placement·route·symbol 보존과 Upstash 공유 quota live canary도 통과했다.
+- RevenueCat signed TEST webhook은 HTTP 200을 반환했고, 이후 Supabase 구독·billing event·product event 증분은 모두 0건이었다. 대표 지시에 따라 실제 Play sandbox 결제는 생략했으므로 체험·결제·복원·grace/account-hold의 실기기 증거는 없는 출시 위험으로 남긴다.
+- 신규 cohort는 아직 `NOT_STARTED`다. Google Play 게시를 확인하고 시작 시각을 별도로 기록하기 전에는 v2 KPI를 PASS/FAIL로 판정하지 않는다.
 - 상세 cohort·KPI·외부 승인 게이트: `docs/work-items/P0-coin-pro-conversion-cohort-v2.md`.
 
 ## Current Run — `news-impact-useful-v2`
