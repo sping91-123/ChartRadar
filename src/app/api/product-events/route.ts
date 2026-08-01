@@ -8,7 +8,12 @@ import {
 import { isUuid, monitorLinksSnapshot } from "@/lib/perpetualMonitor";
 import { getRequestEntitlement } from "@/lib/server/requestEntitlement";
 import { hashAnonymousProductId } from "@/lib/server/productEventStore";
-import { anonymousProductRateKey } from "@/lib/server/productEventPrivacy";
+import {
+  anonymousProductRateKey,
+  hashFunnelSessionId,
+  isInternalProductTester,
+  verifyProductQaSignature
+} from "@/lib/server/productEventPrivacy";
 import { rateLimit } from "@/lib/server/rateLimit";
 import { isSupabaseAdminConfigured, supabaseAdminRest } from "@/lib/server/supabaseAdmin";
 import { newsImpactRuntimePolicy } from "@/lib/server/newsImpactMode";
@@ -39,13 +44,14 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "이벤트 형식이 올바르지 않습니다." }, { status: 400 });
   }
-  const allowedKeys = new Set(["eventId", "eventName", "attributionId", "anonymousId", "surface", "asset", "snapshotId", "monitorId", "newsEventId", "newsReactionId", "properties"]);
+  const allowedKeys = new Set(["eventId", "eventName", "attributionId", "anonymousId", "funnelSessionId", "surface", "asset", "snapshotId", "monitorId", "newsEventId", "newsReactionId", "properties"]);
   if (!body || typeof body !== "object" || Object.keys(body).some((key) => !allowedKeys.has(key))) {
     return NextResponse.json({ error: "허용되지 않은 제품 이벤트 필드입니다." }, { status: 400 });
   }
   if (
     !isUuid(body.eventId) ||
     (body.attributionId !== undefined && !isUuid(body.attributionId)) ||
+    (body.funnelSessionId !== undefined && !isUuid(body.funnelSessionId)) ||
     !isClientProductEventName(body.eventName) ||
     !isProductEventSurface(body.surface) ||
     (body.asset !== undefined && body.asset !== "btc" && body.asset !== "eth") ||
@@ -59,6 +65,14 @@ export async function POST(request: Request) {
   if (body.eventName.startsWith("news_") && !newsImpactRuntimePolicy().mutate) return accepted();
 
   const entitlement = await getRequestEntitlement(request, "crypto");
+  let funnelSessionHash: string | null = null;
+  if (body.funnelSessionId) {
+    try {
+      funnelSessionHash = hashFunnelSessionId(body.funnelSessionId);
+    } catch {
+      return accepted();
+    }
+  }
   let anonymousIdHash: string | null = null;
   if (!entitlement.userId) {
     if (!isUuid(body.anonymousId)) return accepted();
@@ -78,6 +92,10 @@ export async function POST(request: Request) {
   });
   if (!limited.allowed) return accepted();
   if (!isSupabaseAdminConfigured()) return accepted();
+  const trafficClass = entitlement.isAdmin || isInternalProductTester(entitlement.userId) || verifyProductQaSignature({
+    header: request.headers.get("x-chart-radar-qa"),
+    funnelSessionId: body.funnelSessionId ?? null
+  }) ? "internal" : "user";
 
   try {
     if (body.monitorId && entitlement.userId) {
@@ -115,6 +133,8 @@ export async function POST(request: Request) {
         event_source: "client",
         user_id: entitlement.userId,
         anonymous_id_hash: entitlement.userId ? null : anonymousIdHash,
+        funnel_session_hash: funnelSessionHash,
+        traffic_class: trafficClass,
         surface: body.surface,
         asset: body.asset ?? null,
         snapshot_id: body.snapshotId ?? null,

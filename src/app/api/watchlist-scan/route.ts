@@ -10,18 +10,17 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { scanAllSetups, type ScoutSetup } from "@/lib/setupScout";
+import { scanAllSetups, serializeScoutSetups, type ScoutSetup } from "@/lib/setupScout";
+import { getCoinCapabilityPolicy } from "@/lib/coinCapabilities";
 import { isLikelyUsdtPerpSymbol } from "@/lib/cryptoUniverse";
 import { isBodyTooLarge, rateLimit } from "@/lib/server/rateLimit";
 import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
+import { claimCoinDailyUsage } from "@/lib/server/coinUsageQuota";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const CACHE_TTL_MS = 3 * 60 * 1000;
-const BASIC_MAX_SYMBOLS = 10;
-const PRO_MAX_SYMBOLS = 50;
-
 interface CacheEntry {
   setups: ScoutSetup[];
   cachedAt: number;
@@ -40,6 +39,7 @@ export async function POST(req: NextRequest) {
   if (entitlement.state === "unavailable") {
     return NextResponse.json({ error: "구독 권한을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요." }, { status: 503 });
   }
+  const capability = getCoinCapabilityPolicy(entitlement.plan);
   const limit = await rateLimit(req, {
     key: entitlementRateKey("watchlist-scan", entitlement),
     limit: entitlement.isPaid ? 100 : 20,
@@ -80,12 +80,35 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const maxSymbols = entitlement.isPaid ? PRO_MAX_SYMBOLS : BASIC_MAX_SYMBOLS;
+  const maxSymbols = capability.watchlistScanSymbolLimit;
   const symbols = (rawSymbols as string[]).slice(0, maxSymbols);
 
   if (symbols.length === 0) {
     return NextResponse.json({ setups: [], cachedAt: Date.now(), cached: false, maxSymbols });
   }
+
+  const successResponse = async (payload: Record<string, unknown>) => {
+    const quota = await claimCoinDailyUsage({
+      request: req,
+      entitlement,
+      bucket: "watchlist",
+      limit: capability.watchlistScanDailyLimit
+    });
+    if (!quota.allowed) {
+      const backendUnavailable = quota.backend === "unavailable";
+      return NextResponse.json(
+        {
+          error: backendUnavailable
+            ? "관심코인 사용량을 확인하지 못해 요청을 안전하게 중단했습니다. 잠시 후 다시 시도해 주세요."
+            : "오늘 관심코인 자동 확인 한도를 모두 사용했습니다. 저장한 결과는 다시 볼 수 있고 Pro에서는 장중 반복 확인이 가능합니다.",
+          code: backendUnavailable ? "usage_backend_unavailable" : "daily_quota_reached",
+          usage: quota.usage
+        },
+        { status: backendUnavailable ? 503 : 429, headers: { "Retry-After": String(quota.retryAfter) } }
+      );
+    }
+    return NextResponse.json({ ...payload, usage: quota.usage });
+  };
 
   const key = makeCacheKey(symbols);
   const now = Date.now();
@@ -93,7 +116,12 @@ export async function POST(req: NextRequest) {
   // 캐시 확인.
   const cached = cacheMap.get(key);
   if (cached && now - cached.cachedAt < CACHE_TTL_MS) {
-    return NextResponse.json({ setups: cached.setups, cachedAt: cached.cachedAt, cached: true, maxSymbols });
+    return successResponse({
+      setups: serializeScoutSetups(cached.setups, capability.detailedScoutEvidence),
+      cachedAt: cached.cachedAt,
+      cached: true,
+      maxSymbols
+    });
   }
 
   // thundering-herd 방지.
@@ -113,8 +141,8 @@ export async function POST(req: NextRequest) {
   try {
     const setups = await inflight;
     const entry = cacheMap.get(key);
-    return NextResponse.json({
-      setups,
+    return successResponse({
+      setups: serializeScoutSetups(setups, capability.detailedScoutEvidence),
       cachedAt: entry?.cachedAt ?? Date.now(),
       cached: false,
       maxSymbols,

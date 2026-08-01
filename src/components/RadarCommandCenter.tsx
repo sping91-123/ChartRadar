@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Activity, ArrowDownRight, ArrowUpRight, Loader2, Radar, RefreshCw, ShieldAlert } from "lucide-react";
 import { RadarScanLoader } from "@/components/RadarScanLoader";
 import type { TradingMode } from "@/lib/marketAnalysis";
-import type { ScoutSetup } from "@/lib/setupScout";
+import { hasProScoutDetails, type ProScoutSetup as ScoutSetup, type ScoutSetupPayload } from "@/lib/setupScout";
 import { withSupabaseAuth } from "@/lib/authFetch";
 
 type RadarState =
@@ -144,14 +144,14 @@ export function RadarCommandCenter() {
         modes.map(async (mode) => {
           const response = await fetch(`/api/scout?mode=${mode}&risk=radar`, await withSupabaseAuth({ cache: "no-store" }));
           const payload = (await response.json().catch(() => ({}))) as {
-            setups?: ScoutSetup[];
+            setups?: ScoutSetupPayload[];
             cachedAt?: number;
             error?: string;
           };
           if (!response.ok || !Array.isArray(payload.setups)) {
             throw new Error(payload.error ?? "시장 레이더를 잠시 확인하지 못했습니다.");
           }
-          return payload;
+          return { ...payload, setups: payload.setups.filter(hasProScoutDetails) };
         })
       );
 

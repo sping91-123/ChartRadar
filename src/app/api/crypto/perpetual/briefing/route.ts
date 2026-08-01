@@ -12,6 +12,7 @@ import { getPerpetualDecisionSnapshotById, isSnapshotId } from "@/lib/server/per
 import { isPerpetualRevenueCoreUserEnabled } from "@/lib/server/perpetualRevenueCore";
 import { rateLimit, readJsonBodyLimited } from "@/lib/server/rateLimit";
 import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
+import { getCoinCapabilityPolicy } from "@/lib/coinCapabilities";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +21,6 @@ const PROMPT_VERSION = "perpetual-beginner-v1";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const PROVIDER_TIMEOUT_MS = 18_000;
 const CACHE_MAX_ENTRIES = 3_000;
-const DAILY_PROVIDER_GENERATION_LIMIT = 24;
 const DEFAULT_GLOBAL_DAILY_PROVIDER_GENERATION_LIMIT = 240;
 const cache = new Map<string, { briefing: string; model: string; expiresAt: number }>();
 
@@ -29,6 +29,16 @@ function globalDailyProviderGenerationLimit() {
   return Number.isInteger(configured) && configured >= 1 && configured <= 5_000
     ? configured
     : DEFAULT_GLOBAL_DAILY_PROVIDER_GENERATION_LIMIT;
+}
+
+function millisecondsUntilNextKstMidnight(now = new Date()) {
+  const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const nextMidnightUtc = Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate() + 1);
+  return Math.max(1_000, nextMidnightUtc - kstNow.getTime());
+}
+
+function kstDateKey(now = new Date()) {
+  return new Date(now.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
 function privateJson(body: unknown, init?: ResponseInit) {
@@ -157,9 +167,9 @@ export async function POST(request: Request) {
     }
 
     const dailyGenerationLimit = await rateLimit(request, {
-      key: entitlementRateKey("perpetual-briefing-provider-daily", entitlement),
-      limit: DAILY_PROVIDER_GENERATION_LIMIT,
-      windowMs: 24 * 60 * 60 * 1000,
+      key: entitlementRateKey(`coin-ai-generation-daily:v1:${kstDateKey()}`, entitlement),
+      limit: getCoinCapabilityPolicy(entitlement.plan).cryptoAiDailyLimit,
+      windowMs: millisecondsUntilNextKstMidnight(),
       includeClientIp: false,
       requireSharedBackend: true
     });

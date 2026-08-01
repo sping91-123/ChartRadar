@@ -1,4 +1,4 @@
-import { cryptoAlertConditionLimit } from "@/lib/billing";
+import { cryptoAlertConditionLimit } from "@/lib/coinCapabilities";
 import { hasEffectiveScope, resolveEffectiveEntitlement } from "@/lib/effectiveEntitlement";
 import { isMonitorConditionMet, perpetualDecisionEngineVersion, type PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
 import { allowsPerpetualPushMarket, isUuid, monitorNotificationCopy, perpetualPushDeliveryStatus, type PerpetualMonitorRow } from "@/lib/perpetualMonitor";

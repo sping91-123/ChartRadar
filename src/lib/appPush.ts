@@ -37,6 +37,8 @@ export interface AppPushPreferences {
   market: AppPushMarket;
   ruleIds: string[];
   presets?: SetupAlertPreset[];
+  /** Register a newly created monitor without replacing alert-rule choices. */
+  preserveRuleIds?: boolean;
 }
 
 const appPushStorageKey = "chartRadar.appPush.device.v1";
@@ -359,7 +361,8 @@ async function syncTokenToServer(token: string, preferences: AppPushPreferences)
       appId: "com.staronlabs.chartradar",
       markets: [preferences.market],
       ruleIds: preferences.ruleIds,
-      presets: preferences.presets ?? [],
+      ...(preferences.preserveRuleIds ? {} : { presets: preferences.presets ?? [] }),
+      preserveRuleIds: preferences.preserveRuleIds === true,
       enabled: true
     })
   });

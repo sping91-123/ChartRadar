@@ -19,7 +19,7 @@ if (-not (Test-Path $androidConfigPath)) {
   throw "Capacitor Android config was not generated: $androidConfigPath"
 }
 
-$config = Get-Content $androidConfigPath -Raw | ConvertFrom-Json
+$config = Get-Content $androidConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
 if (-not $config.server -or $config.server.url -ne $productionUrl) {
   throw "Android app is not targeting $productionUrl. Run npm.cmd run app:sync again and check CAPACITOR_SERVER_URL handling."
 }

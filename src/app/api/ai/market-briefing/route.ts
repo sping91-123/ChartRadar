@@ -4,12 +4,17 @@ import { AIProviderError, getAIProviderCandidates, type MarketBriefingInput } fr
 import { generateFallbackMarketBriefing } from "@/lib/ai/fallback";
 import { isBodyTooLarge, rateLimit } from "@/lib/server/rateLimit";
 import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
+import { getCoinCapabilityPolicy } from "@/lib/coinCapabilities";
+import {
+  getMarketBriefingCache,
+  marketBriefingCacheKey,
+  setMarketBriefingCache
+} from "@/lib/ai/marketBriefingCache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const CACHE_TTL_MS = 5 * 60 * 1000;
-const cache = new Map<string, { text: string; expiresAt: number }>();
+const CACHE_TTL_SECONDS = 5 * 60;
 
 function cleanMarketBriefingText(text: string) {
   return text
@@ -80,27 +85,14 @@ function isValidInput(value: unknown): value is MarketBriefingInput {
   );
 }
 
-function cacheKey(input: MarketBriefingInput) {
-  return [
-    input.symbol,
-    input.analysisScope,
-    input.activeTimeframe,
-    input.tradingMode,
-    Math.round(input.price * 100) / 100,
-    input.bias,
-    input.biasScore,
-    input.active.msb,
-    input.active.choch,
-    input.active.ob,
-    input.active.fvg,
-    input.active.poc,
-    input.active.pd,
-    input.aggregate?.compositeScore ?? "",
-    input.aggregate?.alignment ?? "",
-    input.pressure?.dominant ?? "",
-    input.pressure?.longScore ?? "",
-    input.pressure?.shortScore ?? ""
-  ].join("|");
+function kstDateKey(now = new Date()) {
+  return new Date(now.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+function millisecondsUntilNextKstMidnight(now = new Date()) {
+  const kstNow = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const nextMidnightUtc = Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate() + 1);
+  return Math.max(1_000, nextMidnightUtc - kstNow.getTime());
 }
 
 export async function POST(request: Request) {
@@ -136,12 +128,39 @@ export async function POST(request: Request) {
   }
 
   const input = body as MarketBriefingInput;
-  const key = cacheKey(input);
-  const now = Date.now();
-  const hit = cache.get(key);
+  const key = marketBriefingCacheKey(input);
+  const cached = await getMarketBriefingCache(key);
+  if (cached.status === "hit") {
+    return NextResponse.json({ briefing: cached.value.briefing, model: cached.value.model, cached: true });
+  }
+  if (cached.status === "unavailable") {
+    return NextResponse.json(
+      { error: "AI 브리핑 캐시를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.", code: "cache_unavailable" },
+      { status: 503 }
+    );
+  }
 
-  if (hit && hit.expiresAt > now) {
-    return NextResponse.json({ briefing: hit.text, model: "cache", cached: true });
+  const policy = getCoinCapabilityPolicy(entitlement.plan);
+  const dailyLimit = await rateLimit(request, {
+    key: entitlementRateKey(`coin-ai-generation-daily:v1:${kstDateKey()}`, entitlement),
+    limit: policy.cryptoAiDailyLimit,
+    windowMs: millisecondsUntilNextKstMidnight(),
+    includeClientIp: entitlement.userId ? false : true,
+    requireSharedBackend: process.env.NODE_ENV === "production"
+  });
+  if (!dailyLimit.allowed) {
+    const unavailable = dailyLimit.backend === "unavailable";
+    return NextResponse.json(
+      {
+        error: unavailable
+          ? "AI 사용량을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요."
+          : policy.tier === "basic"
+            ? "오늘 Basic AI 1회를 사용했습니다. Coin Pro는 새 브리핑을 하루 24회 생성할 수 있습니다."
+            : "오늘 Coin Pro AI 새 브리핑 24회를 사용했습니다.",
+        code: unavailable ? "usage_limit_unavailable" : "daily_limit"
+      },
+      { status: unavailable ? 503 : 429, headers: { "Retry-After": String(dailyLimit.retryAfter) } }
+    );
   }
 
   try {
@@ -149,7 +168,14 @@ export async function POST(request: Request) {
     for (const provider of providers) {
       try {
         const text = cleanMarketBriefingText(await provider.generateMarketBriefing(input));
-        cache.set(key, { text, expiresAt: now + CACHE_TTL_MS });
+        const cachedResult = await setMarketBriefingCache(
+          key,
+          { briefing: text, model: provider.model },
+          CACHE_TTL_SECONDS
+        );
+        if (!cachedResult && process.env.NODE_ENV === "production") {
+          console.warn("[ai/market-briefing] Shared cache write failed after generation.");
+        }
         return NextResponse.json({ briefing: text, model: provider.model, cached: false });
       } catch (error) {
         if (error instanceof AIProviderError) {
@@ -164,6 +190,13 @@ export async function POST(request: Request) {
   }
 
   const fallback = cleanMarketBriefingText(generateFallbackMarketBriefing(input));
-  cache.set(key, { text: fallback, expiresAt: now + CACHE_TTL_MS });
+  const cachedFallback = await setMarketBriefingCache(
+    key,
+    { briefing: fallback, model: "fallback" },
+    CACHE_TTL_SECONDS
+  );
+  if (!cachedFallback && process.env.NODE_ENV === "production") {
+    console.warn("[ai/market-briefing] Shared fallback cache write failed after generation.");
+  }
   return NextResponse.json({ briefing: fallback, model: "fallback", cached: false });
 }

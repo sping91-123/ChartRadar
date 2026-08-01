@@ -13,15 +13,32 @@ import {
   hasMarketEntitlement,
   subscriptionTrustNotes
 } from "@/lib/billing";
-import { fetchNativePlanPriceLabels, isNativePurchaseAvailable, NativePurchaseError, purchaseNativePlan, restoreNativeEntitlement, type NativePurchaseStageEvent } from "@/lib/mobilePurchases";
+import {
+  fetchNativePlanOffers,
+  getNativePurchasePlatform,
+  isNativePurchaseAvailable,
+  NativePurchaseError,
+  purchaseNativePlan,
+  restoreNativeEntitlement,
+  type NativeEntitlementPendingCode,
+  type NativePlanOffer,
+  type NativePurchaseStageEvent
+} from "@/lib/mobilePurchases";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
-import { trackProductEvent } from "@/lib/trackProductEvent";
+import { adoptFunnelSessionId, getFunnelSessionId, trackProductEvent } from "@/lib/trackProductEvent";
+import {
+  buildCoinProPlayStoreUrl,
+  type CoinProPlacement,
+  type CoinProRouteKey,
+  type CoinProSource
+} from "@/lib/coinProConversion";
 import { ActionButton, AppSurface, DataRow, MetricRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 
 type CheckoutState =
   | { status: "idle" }
   | { status: "loading"; planId: string; stageText?: string }
   | { status: "restoring" }
+  | { status: "entitlement_sync_pending"; planId: string; code: NativeEntitlementPendingCode; text: string }
   | { status: "message"; tone: "info" | "error"; text: string; planId?: string };
 
 type ValueCardTone = "info" | "watch" | "risk" | "long" | "locked";
@@ -37,10 +54,21 @@ class NativeCheckoutTimeoutError extends Error {
   }
 }
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string,
+  shouldReject = () => true,
+  onTimeout = () => undefined
+) {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<T>((_, reject) => {
-    timeoutId = setTimeout(() => reject(new NativeCheckoutTimeoutError(message)), timeoutMs);
+    timeoutId = setTimeout(() => {
+      if (shouldReject()) {
+        onTimeout();
+        reject(new NativeCheckoutTimeoutError(message));
+      }
+    }, timeoutMs);
   });
 
   return Promise.race([promise, timeout]).finally(() => {
@@ -74,6 +102,12 @@ function nativeStageText(event: NativePurchaseStageEvent) {
       return "결제 단계: Google Play 결제창을 요청했습니다.";
     case "purchase_success":
       return "결제 단계: Google Play 결제가 완료됐습니다.";
+    case "entitlement_sync_start":
+      return "결제 단계: 계정에 Pro 권한을 연결하는 중입니다.";
+    case "entitlement_sync_success":
+      return "결제 단계: Pro 권한이 확인됐습니다.";
+    case "entitlement_sync_pending":
+      return "결제 단계: 결제는 완료됐고 Pro 권한 반영을 확인 중입니다.";
     case "purchase_cancel":
       return "결제 단계: 결제가 취소되었습니다.";
     case "purchase_error":
@@ -114,12 +148,30 @@ function logNativeCheckout(event: string, details: Record<string, string | boole
   console.info(`[ChartRadar billing] ${event}`, details);
 }
 
-function scopeCopy(scope: BillingPageScope) {
+function scopeCopy(scope: BillingPageScope, placement: CoinProPlacement = "direct_paywall") {
   if (scope === "crypto") {
+    const contextual = placement === "alt_daily_limit" || placement === "alt_usage_banner" || placement === "alt_scout_results" || placement === "watchlist_limit"
+      ? {
+          title: "보던 알트 판단을 감시와 복기로 이어가세요",
+          body: "알트 상세 분석 제한을 풀고 관심 코인 50개를 추적합니다. 확인 조건을 감시로 저장하면 알림 당시 가격·뉴스·근거를 복기할 수 있습니다."
+        }
+      : placement === "perpetual_monitor_lock" || placement === "alert_limit"
+        ? {
+            title: "두 번째 조건부터 앱이 대신 확인합니다",
+            body: "Basic 감시 1개를 20개로 늘리고, 조건이 오면 알림 당시의 가격·근거·뉴스를 같은 복기 흐름으로 연결합니다."
+          }
+        : placement === "perpetual_ai_lock" || placement === "ai_daily_limit"
+          ? {
+              title: "AI 설명을 한 번의 체험에서 반복 워크플로로 바꾸세요",
+              body: "Basic 새 AI 브리핑 1회에서 Coin Pro 하루 24회로 늘리고, 조건 감시·알림·당시 근거 복기로 이어갑니다."
+            }
+          : {
+              title: "매일 확인하고, 조건이 오면 다시 보는 Coin Pro",
+              body: "Basic의 상태·위험·시간대별 방향 위에, 1시간·4시간 신호의 발생 가격·시각과 고급 구간·AI 해설·조건 20개·알림 당시 복기를 엽니다."
+            };
     return {
       eyebrow: "COIN PRO",
-      title: "매일 확인하고, 조건이 오면 다시 보는 Coin Pro",
-      body: "Basic의 상태·위험·시간대별 방향 위에, 1시간·4시간 신호의 발생 가격·시각과 고급 구간·AI 해설·조건 20개·알림 당시 복기를 엽니다."
+      ...contextual
     };
   }
 
@@ -138,10 +190,19 @@ function scopeCopy(scope: BillingPageScope) {
   };
 }
 
-function checkoutCtaLabel(plan: BillingPlan, nativePurchaseAvailable: boolean, isCovered: boolean, authenticated: boolean) {
+function checkoutCtaLabel(
+  plan: BillingPlan,
+  nativePurchaseAvailable: boolean,
+  isCovered: boolean,
+  authenticated: boolean,
+  trialEligible: boolean | null
+) {
   if (isCovered) return "현재 권한으로 이용 중";
+  if (!nativePurchaseAvailable && plan.id === "crypto_monthly") return "Google Play에서 14일 체험 가능 여부 확인";
   if (!nativePurchaseAvailable) return "Google Play에서 차트 레이더 열기";
   if (!authenticated) return "로그인하고 Pro 시작";
+  if (plan.id === "crypto_monthly" && trialEligible === true) return "14일 무료 체험 시작";
+  if (plan.id === "crypto_monthly" && trialEligible === false) return "Coin Pro 월간 시작";
   if (plan.marketScope === "crypto") return "Coin Pro로 코인 기준 보기";
   if (plan.marketScope === "stocks") return "Global Pro로 글로벌 맥락 보기";
   if (plan.marketScope === "bundle") return "All Market Pro로 시장 간 리스크 보기";
@@ -361,10 +422,13 @@ function PlanCard({
   authenticated,
   loginHref,
   nativePurchaseAvailable,
-  priceLabel,
+  offer,
+  storeHref,
   message,
   busyStageText,
-  onCheckout
+  onCheckout,
+  onStoreOpen,
+  onAuthStart
 }: {
   plan: BillingPlan;
   isBusy: boolean;
@@ -373,10 +437,13 @@ function PlanCard({
   authenticated: boolean;
   loginHref: string;
   nativePurchaseAvailable: boolean;
-  priceLabel: string;
+  offer?: NativePlanOffer;
+  storeHref: string;
   message?: { tone: "info" | "error"; text: string };
   busyStageText?: string;
   onCheckout: (plan: BillingPlan) => void;
+  onStoreOpen: (plan: BillingPlan) => void;
+  onAuthStart: () => void;
 }) {
   const hasMonthlyValue = plan.monthlyValue > 0 && plan.billingPeriodMonths > 1;
   const displayCopy = getPlanDisplayCopy(plan);
@@ -402,27 +469,36 @@ function PlanCard({
         </div>
       </div>
 
-      <p className="mt-4 break-keep text-[1.35rem] font-semibold leading-tight tracking-tight text-ui-text min-[360px]:text-2xl">{priceLabel}</p>
+      <p className="mt-4 break-keep text-[1.35rem] font-semibold leading-tight tracking-tight text-ui-text min-[360px]:text-2xl">{offer?.priceLabel ?? plan.priceLabel}</p>
+      {plan.id === "crypto_monthly" ? (
+        <p className="mt-2 text-sm font-black leading-6 text-ui-brand [word-break:keep-all]">
+          {offer?.trialEligible === true
+            ? "14일 무료, 이후 월 29,000원 자동 갱신 · 갱신 전 Google Play에서 언제든 해지"
+            : offer?.trialEligible === false
+              ? "현재 계정은 일반 월간 구독으로 시작합니다."
+              : "14일 무료 체험 가능 여부와 갱신일은 Google Play 결제 화면에서 확인됩니다."}
+        </p>
+      ) : null}
       {hasMonthlyValue ? (
         <p className="mt-1 text-ui-label font-semibold text-ui-muted">월 환산 {formatKrw(plan.monthlyValue)}</p>
       ) : null}
       <div className="mt-4">
         {isCovered ? (
           <ActionButton tone="secondary" disabled className="w-full whitespace-normal break-keep px-2 text-center leading-5 min-[360px]:px-3">
-            {checkoutCtaLabel(plan, nativePurchaseAvailable, true, authenticated)}
+            {checkoutCtaLabel(plan, nativePurchaseAvailable, true, authenticated, offer?.trialEligible ?? null)}
           </ActionButton>
         ) : !nativePurchaseAvailable ? (
-          <ActionButton tone="primary" href={PLAY_STORE_URL} className="w-full whitespace-normal break-keep px-2 text-center leading-5 min-[360px]:px-3">
-            {checkoutCtaLabel(plan, false, false, authenticated)}
+          <ActionButton tone="primary" href={storeHref} onNavigate={() => onStoreOpen(plan)} className="w-full whitespace-normal break-keep px-2 text-center leading-5 min-[360px]:px-3">
+            {checkoutCtaLabel(plan, false, false, authenticated, offer?.trialEligible ?? null)}
           </ActionButton>
         ) : !authenticated ? (
-          <ActionButton tone="primary" href={loginHref} className="w-full whitespace-normal break-keep px-2 text-center leading-5 min-[360px]:px-3">
-            {checkoutCtaLabel(plan, true, false, false)}
+          <ActionButton tone="primary" href={loginHref} onNavigate={onAuthStart} className="w-full whitespace-normal break-keep px-2 text-center leading-5 min-[360px]:px-3">
+            {checkoutCtaLabel(plan, true, false, false, offer?.trialEligible ?? null)}
           </ActionButton>
         ) : (
           <ActionButton tone="primary" onClick={() => onCheckout(plan)} disabled={isBusy} className="w-full whitespace-normal break-keep px-2 text-center leading-5 min-[360px]:px-3">
             {isBusy ? <Loader2 className="mr-2 animate-spin" size={16} aria-hidden /> : null}
-            {checkoutCtaLabel(plan, true, false, true)}
+            {checkoutCtaLabel(plan, true, false, true, offer?.trialEligible ?? null)}
           </ActionButton>
         )}
       </div>
@@ -483,26 +559,36 @@ function PlanCard({
 
 export function ProPricingPanel({
   marketScope = "all",
-  attributionSource = null,
+  attributionSource = "direct",
+  attributionPlacement = "direct_paywall",
+  routeKey = "crypto_home",
+  symbol = null,
+  incomingFunnelSessionId = null,
   returnTo = null
 }: {
   marketScope?: BillingPageScope;
-  attributionSource?: string | null;
+  attributionSource?: CoinProSource;
+  attributionPlacement?: CoinProPlacement;
+  routeKey?: CoinProRouteKey;
+  symbol?: string | null;
+  incomingFunnelSessionId?: string | null;
   returnTo?: string | null;
 } = {}) {
   const { session, user, profile, entitlementState, isLoading } = useSupabaseAuth();
   const [checkoutState, setCheckoutState] = useState<CheckoutState>({ status: "idle" });
-  const [nativePriceLabels, setNativePriceLabels] = useState<Partial<Record<BillingPlanId, string>>>({});
+  const [nativeOffers, setNativeOffers] = useState<Partial<Record<BillingPlanId, NativePlanOffer>>>({});
+  const [funnelSessionId, setFunnelSessionId] = useState<string | null>(null);
   const checkoutRunRef = useRef(0);
   const isMountedRef = useRef(true);
   const lastNativeStageRef = useRef<NativePurchaseStageEvent | undefined>(undefined);
   const trackedPaywallRef = useRef<string | null>(null);
+  const trackedPaywallOfferRef = useRef<string | null>(null);
   const visiblePlans = useMemo(() => getBillingPlansForPage(marketScope), [marketScope]);
   const freePlan = visiblePlans.find((plan) => plan.id === "free");
   const paidPlans = visiblePlans.filter((plan) => plan.id !== "free");
   const visiblePlanIds = useMemo(() => visiblePlans.map((plan) => plan.id).join("|"), [visiblePlans]);
-  const copy = scopeCopy(marketScope);
-  const eventSource = attributionSource ?? (marketScope === "crypto" ? "crypto" : marketScope === "stocks" ? "stocks" : "all");
+  const copy = scopeCopy(marketScope, attributionPlacement);
+  const eventSource = attributionSource;
   const nativePurchaseAvailable = isNativePurchaseAvailable();
   const currentPlanId = (profile?.plan ?? "free") as BillingEntitlementPlan;
   const currentPlanLabel = isLoading
@@ -519,6 +605,9 @@ export function ProPricingPanel({
   const pageParams = new URLSearchParams();
   if (marketScope !== "all") pageParams.set("market", marketScope);
   if (attributionSource) pageParams.set("source", attributionSource);
+  pageParams.set("placement", attributionPlacement);
+  pageParams.set("route", routeKey);
+  if (symbol) pageParams.set("symbol", symbol);
   if (returnTo) pageParams.set("returnTo", returnTo);
   const paywallReturnTo = `/pro${pageParams.size > 0 ? `?${pageParams.toString()}` : ""}`;
   const loginHref = `/login?returnTo=${encodeURIComponent(paywallReturnTo)}`;
@@ -532,6 +621,73 @@ export function ProPricingPanel({
     : marketScope === "stocks"
       ? planDepthRows.filter((item) => item.label !== "Coin Pro")
       : planDepthRows;
+  const platform = getNativePurchasePlatform() ?? "web";
+  const storeHref = marketScope === "crypto" && funnelSessionId
+    ? buildCoinProPlayStoreUrl({ source: eventSource, placement: attributionPlacement, routeKey, funnelSessionId, symbol })
+    : PLAY_STORE_URL;
+  const expectedTrialRenewalDate = useMemo(
+    () => new Intl.DateTimeFormat("ko-KR", {
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    }).format(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)),
+    []
+  );
+  const coinTrialEligibility = nativeOffers.crypto_monthly?.trialEligible ?? null;
+  const coinTrialHero = coinTrialEligibility === true
+    ? {
+        badge: "신규 적격 계정 1회",
+        title: "14일 무료, 이후 월 29,000원 자동 갱신",
+        body: `오늘 시작하면 예상 첫 결제일은 ${expectedTrialRenewalDate}입니다. 실제 갱신일은 Google Play 결제창에서 확정되며, 갱신 전 Google Play 구독 관리에서 언제든 해지할 수 있습니다.`
+      }
+    : coinTrialEligibility === false
+      ? {
+          badge: "체험 대상 아님",
+          title: "월 29,000원 자동 갱신",
+          body: "Google Play가 이 계정을 무료 체험 비적격으로 확인했습니다. 결제창의 첫 결제일과 금액을 확인한 뒤 시작하고, Google Play 구독 관리에서 언제든 해지할 수 있습니다."
+        }
+      : {
+          badge: "Google Play에서 확인",
+          title: "14일 무료 대상 여부 · 이후 월 29,000원",
+          body: "신규 적격 계정은 14일 무료 체험을 받을 수 있습니다. 실제 체험 적용 여부, 첫 결제일과 갱신 금액은 로그인 후 Google Play 결제창에서 확정됩니다."
+        };
+
+  function funnelProperties(extra: Record<string, string | number | boolean> = {}) {
+    return {
+      source: eventSource,
+      placement: attributionPlacement,
+      routeKey,
+      ...(symbol ? { symbol } : {}),
+      platform,
+      authState: session ? "authenticated" : "anonymous",
+      variant: "coin-pro-v2",
+      ...extra
+    };
+  }
+
+  function trackAuthStart() {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem("chartRadar.coinPro.authPending.v1", JSON.stringify({ createdAt: Date.now() }));
+    }
+    void trackProductEvent({
+      eventName: "auth_started",
+      surface: "paywall",
+      properties: funnelProperties()
+    });
+  }
+
+  function trackStoreOpen(plan: BillingPlan) {
+    void trackProductEvent({
+      eventName: "store_opened",
+      surface: "billing",
+      properties: funnelProperties({
+        planId: plan.id,
+        provider: "google_play",
+        ...(nativeOffers[plan.id]?.offerId ? { offerId: nativeOffers[plan.id]!.offerId! } : {})
+      })
+    });
+  }
 
   function isPlanCovered(plan: BillingPlan) {
     if (plan.marketScope === "crypto") return hasCryptoAccess;
@@ -542,36 +698,84 @@ export function ProPricingPanel({
 
   useEffect(() => {
     isMountedRef.current = true;
+    setFunnelSessionId(incomingFunnelSessionId ? adoptFunnelSessionId(incomingFunnelSessionId) : getFunnelSessionId());
     return () => {
       isMountedRef.current = false;
       checkoutRunRef.current += 1;
     };
-  }, []);
+  }, [incomingFunnelSessionId]);
 
   useEffect(() => {
-    if (trackedPaywallRef.current !== eventSource) {
-      trackedPaywallRef.current = eventSource;
+    if (isLoading) return;
+    const trackingKey = `${eventSource}:${attributionPlacement}:${routeKey}:${symbol ?? ""}`;
+    if (trackedPaywallRef.current !== trackingKey) {
+      trackedPaywallRef.current = trackingKey;
       void trackProductEvent({
         eventName: "paywall_viewed",
         surface: "paywall",
-        properties: { source: eventSource }
+        properties: {
+          source: eventSource,
+          placement: attributionPlacement,
+          routeKey,
+          ...(symbol ? { symbol } : {}),
+          platform,
+          authState: session ? "authenticated" : "anonymous",
+          variant: "coin-pro-v2"
+        }
       });
     }
-  }, [eventSource]);
+  }, [attributionPlacement, eventSource, isLoading, platform, routeKey, session, symbol]);
+
+  useEffect(() => {
+    if (isLoading || platform !== "android" || marketScope !== "crypto") return;
+    const offer = nativeOffers.crypto_monthly;
+    if (!offer || offer.trialEligible === null) return;
+    const eligibilityVariant = offer.trialEligible
+      ? "coin-pro-v2-trial-eligible"
+      : "coin-pro-v2-trial-ineligible";
+    const trackingKey = `${eligibilityVariant}:${offer.offerId ?? "no-offer"}:${user?.id ?? "anonymous"}`;
+    if (trackedPaywallOfferRef.current === trackingKey) return;
+    trackedPaywallOfferRef.current = trackingKey;
+    void trackProductEvent({
+      eventName: "paywall_viewed",
+      surface: "paywall",
+      properties: funnelProperties({
+        variant: eligibilityVariant,
+        ...(offer.offerId ? { offerId: offer.offerId } : {})
+      })
+    });
+    // funnelProperties is intentionally evaluated only when the verified
+    // native offer eligibility changes for this account.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, marketScope, nativeOffers.crypto_monthly, platform, user?.id]);
+
+  useEffect(() => {
+    if (!session || typeof window === "undefined") return;
+    const raw = window.sessionStorage.getItem("chartRadar.coinPro.authPending.v1");
+    if (!raw) return;
+    window.sessionStorage.removeItem("chartRadar.coinPro.authPending.v1");
+    void trackProductEvent({
+      eventName: "auth_completed",
+      surface: "paywall",
+      properties: funnelProperties()
+    });
+    // This event is tied to the one-shot continuation marker, not auth refreshes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
 
   useEffect(() => {
     if (!nativePurchaseAvailable || !user?.id) {
-      setNativePriceLabels({});
+      setNativeOffers({});
       return;
     }
 
     let cancelled = false;
-    fetchNativePlanPriceLabels(visiblePlans, user.id)
-      .then((labels) => {
-        if (!cancelled) setNativePriceLabels(labels);
+    fetchNativePlanOffers(visiblePlans, user.id)
+      .then((offers) => {
+        if (!cancelled) setNativeOffers(offers);
       })
       .catch(() => {
-        if (!cancelled) setNativePriceLabels({});
+        if (!cancelled) setNativeOffers({});
       });
 
     return () => {
@@ -610,24 +814,71 @@ export function ProPricingPanel({
 
     const checkoutRunId = checkoutRunRef.current + 1;
     const purchaseAttributionId = crypto.randomUUID();
+    const checkoutFunnelSessionId = funnelSessionId ?? getFunnelSessionId();
+    let storeSucceeded = false;
+    let pendingTracked = false;
+    let checkoutActive = true;
     checkoutRunRef.current = checkoutRunId;
     lastNativeStageRef.current = undefined;
     setCheckoutState({ status: "loading", planId: plan.id, stageText: "결제 단계: Android 결제 요청을 시작합니다." });
     void trackProductEvent({
-      eventId: purchaseAttributionId,
-      eventName: "purchase_started",
+      eventName: "store_opened",
       surface: "billing",
-      properties: { source: eventSource, planId: plan.id, provider: "revenuecat" }
+      properties: funnelProperties({
+        planId: plan.id,
+        provider: "google_play",
+        ...(nativeOffers[plan.id]?.offerId ? { offerId: nativeOffers[plan.id]!.offerId! } : {})
+      })
     });
+    await Promise.race([
+      trackProductEvent({
+        eventId: purchaseAttributionId,
+        eventName: "purchase_started",
+        surface: "billing",
+        properties: funnelProperties({
+          planId: plan.id,
+          provider: "revenuecat",
+          ...(nativeOffers[plan.id]?.offerId ? { offerId: nativeOffers[plan.id]!.offerId! } : {})
+        })
+      }),
+      new Promise<void>((resolve) => setTimeout(resolve, 1_500))
+    ]);
     logNativeCheckout("native purchase start", { planId: plan.id });
     const handleNativeStage = (event: NativePurchaseStageEvent) => {
       lastNativeStageRef.current = event;
+      if (event.stage === "purchase_success" && !storeSucceeded) {
+        storeSucceeded = true;
+        void trackProductEvent({
+          attributionId: purchaseAttributionId,
+          eventName: "store_purchase_succeeded",
+          surface: "billing",
+          properties: funnelProperties({
+            planId: plan.id,
+            provider: "revenuecat",
+            ...(nativeOffers[plan.id]?.offerId ? { offerId: nativeOffers[plan.id]!.offerId! } : {})
+          })
+        });
+      }
+      if (event.stage === "entitlement_sync_pending" && !pendingTracked) {
+        pendingTracked = true;
+        void trackProductEvent({
+          attributionId: purchaseAttributionId,
+          eventName: "entitlement_sync_pending",
+          surface: "billing",
+          properties: funnelProperties({
+            planId: plan.id,
+            provider: "revenuecat",
+            code: typeof event.details?.code === "string" ? event.details.code : "sync_pending"
+          })
+        });
+      }
       if (!isMountedRef.current || checkoutRunRef.current !== checkoutRunId) return;
       setCheckoutState((current) => {
         if (current.status !== "loading" || current.planId !== plan.id) return current;
         return { ...current, stageText: nativeStageText(event) };
       });
     };
+    const currentNativeStage = () => lastNativeStageRef.current?.stage ?? "";
 
     try {
       if (!user?.id) throw new Error("앱 구독을 연결하려면 로그인 정보를 먼저 확인해야 합니다.");
@@ -638,15 +889,30 @@ export function ProPricingPanel({
           accessToken: session.accessToken,
           attributionId: purchaseAttributionId,
           attributionSource: eventSource,
+          funnelSessionId: checkoutFunnelSessionId,
+          isCheckoutActive: () => checkoutActive && isMountedRef.current && checkoutRunRef.current === checkoutRunId,
           onStage: handleNativeStage
         }),
         NATIVE_CHECKOUT_TIMEOUT_MS,
-        NATIVE_CHECKOUT_TIMEOUT_MESSAGE
+        NATIVE_CHECKOUT_TIMEOUT_MESSAGE,
+        () => !["purchase_start", "purchase_success", "entitlement_sync_start", "entitlement_sync_success", "entitlement_sync_pending"].includes(currentNativeStage()),
+        () => {
+          checkoutActive = false;
+        }
       );
+      checkoutActive = false;
       if (!isMountedRef.current || checkoutRunRef.current !== checkoutRunId) return;
-      logNativeCheckout("native purchase success", { planId: plan.id });
-      setCheckoutState({ status: "message", tone: "info", text: result.message, planId: plan.id });
+      logNativeCheckout(result.status === "active" ? "native purchase success" : "native entitlement sync pending", { planId: plan.id });
+      if (result.status === "entitlement_sync_pending") {
+        setCheckoutState({ status: "entitlement_sync_pending", planId: plan.id, code: result.code, text: result.message });
+      } else {
+        setCheckoutState({ status: "message", tone: "info", text: result.message, planId: plan.id });
+        if (returnTo && typeof window !== "undefined") {
+          window.setTimeout(() => window.location.assign(returnTo), 700);
+        }
+      }
     } catch (error) {
+      checkoutActive = false;
       if (!isMountedRef.current || checkoutRunRef.current !== checkoutRunId) return;
       const isTimeout = error instanceof NativeCheckoutTimeoutError;
       logNativeCheckout(isTimeout ? "native purchase timeout" : "native purchase error", {
@@ -655,16 +921,37 @@ export function ProPricingPanel({
         errorCode: error instanceof NativePurchaseError ? error.code : "unknown"
       });
       const cancelled = error instanceof NativePurchaseError && error.code === "purchase_cancelled";
+      const storeAlreadySucceeded = storeSucceeded || ["purchase_success", "entitlement_sync_start", "entitlement_sync_success", "entitlement_sync_pending"].includes(currentNativeStage());
+      if (storeAlreadySucceeded) {
+        if (!pendingTracked) {
+          pendingTracked = true;
+          void trackProductEvent({
+            attributionId: purchaseAttributionId,
+            eventName: "entitlement_sync_pending",
+            surface: "billing",
+            properties: funnelProperties({ planId: plan.id, provider: "revenuecat", code: "sync_unreachable" })
+          });
+        }
+        setCheckoutState({
+          status: "entitlement_sync_pending",
+          planId: plan.id,
+          code: "sync_unreachable",
+          text: "Google Play 결제는 완료됐고 Pro 권한을 확인 중입니다. 중복 결제하지 말고 ‘구독 권한 다시 확인’을 이용해 주세요."
+        });
+        return;
+      }
       void trackProductEvent({
         attributionId: purchaseAttributionId,
         eventName: cancelled ? "purchase_cancelled" : "purchase_failed",
         surface: "billing",
-        properties: {
-          source: eventSource,
+        properties: funnelProperties({
           planId: plan.id,
           provider: "revenuecat",
-          ...(cancelled ? {} : { code: error instanceof NativePurchaseError ? error.code : isTimeout ? "timeout" : "unknown" })
-        }
+          ...(cancelled ? {} : {
+            code: error instanceof NativePurchaseError ? error.code : isTimeout ? "timeout" : "unknown",
+            stage: currentNativeStage() || "unknown"
+          })
+        })
       });
       setCheckoutState({ status: "message", tone: "error", text: nativeCheckoutErrorMessage(error, lastNativeStageRef.current), planId: plan.id });
     }
@@ -717,6 +1004,26 @@ export function ProPricingPanel({
           </div>
           <StatusPill tone={session ? "info" : "locked"} className="self-start">{currentPlanLabel}</StatusPill>
         </div>
+        {marketScope === "crypto" ? (
+          <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
+            <AppSurface tone="inset" variant="report" padding="md" className="border-l-2 border-ui-brand">
+              <StatusPill tone={coinTrialEligibility === false ? "watch" : "info"}>{coinTrialHero.badge}</StatusPill>
+              <p className="mt-2 text-base font-black text-ui-text">{coinTrialHero.title}</p>
+              <p className="mt-1 text-xs leading-5 text-ui-muted">
+                {coinTrialHero.body}
+              </p>
+              <p className="mt-3 text-sm font-black text-ui-text">20개 조건 감시 → 알림 → 당시 가격·뉴스·근거 복기</p>
+            </AppSurface>
+            <AppSurface tone="inset" variant="report" padding="md">
+              <StatusPill tone="watch">과거 예시 · 실시간 데이터 아님</StatusPill>
+              <p className="mt-2 text-sm font-black text-ui-text">“1시간 방향 유지, 확인 가격 접근”</p>
+              <p className="mt-1 text-xs leading-5 text-ui-muted">예시 감시를 저장하면 조건 도달 시점의 스냅샷과 근거를 복기에 연결합니다. Basic 사용자에게 실제 Pro payload를 전달하지 않습니다.</p>
+            </AppSurface>
+          </div>
+        ) : null}
+        {marketScope === "crypto" ? <ActionButton href="#pro-plans" tone="primary" className="mt-4 min-h-11 w-full text-sm sm:w-auto">
+          14일 체험·월 29,000원 확인
+        </ActionButton> : null}
         {marketScope !== "crypto" ? <div className="mt-5 grid gap-3 sm:grid-cols-3">
           <div className="border-t border-ui-line pt-3">
             <StatusPill tone="locked">Basic</StatusPill>
@@ -749,20 +1056,32 @@ export function ProPricingPanel({
               authenticated={Boolean(session?.accessToken)}
               loginHref={loginHref}
               nativePurchaseAvailable={nativePurchaseAvailable}
-              priceLabel={nativePriceLabels[plan.id] ?? plan.priceLabel}
+              offer={nativeOffers[plan.id]}
+              storeHref={storeHref}
               busyStageText={checkoutState.status === "loading" && checkoutState.planId === plan.id ? checkoutState.stageText : undefined}
-              message={checkoutState.status === "message" && checkoutState.planId === plan.id ? { tone: checkoutState.tone, text: checkoutState.text } : undefined}
+              message={checkoutState.status === "message" && checkoutState.planId === plan.id
+                ? { tone: checkoutState.tone, text: checkoutState.text }
+                : checkoutState.status === "entitlement_sync_pending" && checkoutState.planId === plan.id
+                  ? { tone: "info", text: checkoutState.text }
+                  : undefined}
               onCheckout={startCheckout}
+              onStoreOpen={trackStoreOpen}
+              onAuthStart={trackAuthStart}
             />
           ))}
         </div>
       </div>
 
-      {checkoutState.status === "message" ? (
-        <AppSurface tone="inset" variant="report" padding="md" className={checkoutState.tone === "error" ? "text-ui-short" : "text-ui-muted"}>
-          <StatusPill tone={checkoutState.tone === "error" ? "risk" : "info"}>{checkoutState.tone === "error" ? "확인 필요" : "결제 상태"}</StatusPill>
+      {checkoutState.status === "message" || checkoutState.status === "entitlement_sync_pending" ? (
+        <AppSurface tone="inset" variant="report" padding="md" className={checkoutState.status === "message" && checkoutState.tone === "error" ? "text-ui-short" : "text-ui-muted"}>
+          <StatusPill tone={checkoutState.status === "message" && checkoutState.tone === "error" ? "risk" : "info"}>
+            {checkoutState.status === "entitlement_sync_pending" ? "권한 반영 중" : checkoutState.tone === "error" ? "확인 필요" : "결제 상태"}
+          </StatusPill>
           <p className="mt-2 text-ui-body font-semibold [word-break:keep-all]">{checkoutState.text}</p>
-          {checkoutState.tone === "info" && checkoutState.planId && returnTo ? <ActionButton href={returnTo} tone="primary" className="mt-3 w-full sm:w-auto">보던 분석으로 돌아가기</ActionButton> : null}
+          {checkoutState.status === "message" && checkoutState.tone === "info" && checkoutState.planId && returnTo ? <ActionButton href={returnTo} tone="primary" className="mt-3 w-full sm:w-auto">보던 분석으로 돌아가기</ActionButton> : null}
+          {checkoutState.status === "entitlement_sync_pending" ? (
+            <ActionButton onClick={restoreCheckout} tone="primary" className="mt-3 w-full sm:w-auto">구독 권한 다시 확인</ActionButton>
+          ) : null}
         </AppSurface>
       ) : null}
 
@@ -828,7 +1147,7 @@ export function ProPricingPanel({
       {nativePurchaseAvailable ? (
         <ActionButton onClick={restoreCheckout} disabled={checkoutState.status === "restoring"} tone="secondary" className="w-full sm:w-auto">
           {checkoutState.status === "restoring" ? <Loader2 className="mr-2 animate-spin" size={16} aria-hidden /> : null}
-          구독 권한 불러오기
+          구독 권한 다시 확인
         </ActionButton>
       ) : null}
 

@@ -26,6 +26,7 @@ export interface BillingPlan {
   billingPeriodMonths: number;
   periodLabel: string;
   renewalText: string;
+  trialDays?: number;
   storeProducts?: {
     android: { productId: string; basePlanId: string };
     ios: { productId: string };
@@ -77,6 +78,7 @@ export const billingPlans: BillingPlan[] = [
     billingPeriodMonths: 1,
     periodLabel: "월간 구독",
     renewalText: "매월 자동 갱신됩니다. 해지는 Google Play 구독 관리에서 언제든 가능합니다.",
+    trialDays: 14,
     storeProducts: {
       android: { productId: "chart_radar_crypto_monthly", basePlanId: "monthly" },
       ios: { productId: "chart_radar_crypto_monthly" },
@@ -426,14 +428,6 @@ export function hasMarketEntitlement(planId: BillingEntitlementPlan, scope: Excl
 export function hasScopedEntitlement(planId: BillingEntitlementPlan, scope: BillingPageScope) {
   if (scope === "all") return hasAnyPaidEntitlement(planId);
   return hasMarketEntitlement(planId, scope);
-}
-
-/**
- * Crypto alert presets and Perpetual scenario monitors share one quota.
- * This numeric contract is the server-side source of truth; UI copy must not be parsed.
- */
-export function cryptoAlertConditionLimit(planId: BillingEntitlementPlan) {
-  return hasMarketEntitlement(planId, "crypto") ? 20 : 1;
 }
 
 export function getEntitlementLabel(planId: BillingEntitlementPlan) {

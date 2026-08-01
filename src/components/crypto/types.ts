@@ -47,7 +47,7 @@ export type MarketBriefingState =
   | { status: "idle" }
   | { status: "loading" }
   | { status: "ready"; text: string; model: string; cached: boolean }
-  | { status: "error"; message: string };
+  | { status: "error"; message: string; code?: string | null };
 
 export type RadarProfile = "combined" | "ict" | "technical";
 export type StructureSensitivity = 5 | 7 | 9;

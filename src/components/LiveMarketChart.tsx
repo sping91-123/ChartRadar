@@ -45,10 +45,11 @@ import { evaluateRadarDecision } from "@/lib/radarDecisionEngine";
 import { getActiveSupabaseSession } from "@/lib/supabase";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import { BeginnerActionGuide } from "@/components/BeginnerActionGuide";
+import { CoinProConversionLink } from "@/components/CoinProConversionLink";
 import { RadarInsightPanel } from "@/components/RadarInsightPanel";
 import { TechnicalRadarPanel } from "@/components/TechnicalRadarPanel";
 import { LiquidationPressurePanel } from "@/components/LiquidationPressurePanel";
-import { getAltAnalysisGate, initialAltAnalysisGate, registerAltAnalysisSymbol } from "@/components/crypto/altAnalysisUsage";
+import { applyServerAltAnalysisUsage, getAltAnalysisGate, initialAltAnalysisGate } from "@/components/crypto/altAnalysisUsage";
 import {
   buildCoinBasicBeginnerSteps,
   buildCoinBeginnerSteps,
@@ -66,7 +67,9 @@ import {
   legacyStorageKeys,
   readLocalStorageWithLegacy,
   readMarketBriefingResponse,
+  MarketBriefingResponseError,
   readMarketCache,
+  removeAllMarketCaches,
   storageKey,
   writeLocalStorage,
   writeMarketCache
@@ -85,6 +88,7 @@ import { hasMarketEntitlement } from "@/lib/billing";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { getChartThemeOptions, observeChartThemeChange } from "@/lib/chartTheme";
 import { marketAnalysisToRadarInsight, visibleRadarInsightForPlan } from "@/lib/radarInsight";
+import { recordUsageEvent } from "@/lib/usageMeter";
 import {
   MAJOR_STRENGTH_HELP,
   altSymbols,
@@ -380,7 +384,6 @@ export function LiveMarketChart({
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const priceLinesRef = useRef<IPriceLine[]>([]);
   const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
-  const pendingUserSelectedAltSymbolRef = useRef<string | null>(null);
   const marketRequestGenerationRef = useRef(0);
   const marketAbortRef = useRef<AbortController | null>(null);
   const briefingRequestGenerationRef = useRef(0);
@@ -436,14 +439,11 @@ export function LiveMarketChart({
   const visibleAltAnalysisGate = hasMounted ? altAnalysisGate : initialAltAnalysisGate(false);
   const cacheKey = buildMarketCacheKey({ symbol, activeTimeframe, analysisMode, msbMode, structureSensitivity });
 
-  const selectSymbol = useCallback((nextSymbol: string, options: { userSelected?: boolean } = {}) => {
-    if (altOnly && options.userSelected) {
-      pendingUserSelectedAltSymbolRef.current = nextSymbol;
-    }
+  const selectSymbol = useCallback((nextSymbol: string, _options: { userSelected?: boolean } = {}) => {
     setSymbol(nextSymbol);
     setShowOtherSymbols(false);
     setOtherSymbolQuery("");
-  }, [altOnly]);
+  }, []);
 
   useEffect(() => {
     setHasMounted(true);
@@ -554,6 +554,10 @@ export function LiveMarketChart({
   }, [overlaySettings]);
 
   useEffect(() => {
+    if (isBasicAltView) {
+      removeAllMarketCaches();
+      return;
+    }
     const parsed = readMarketCache(cacheKey);
     if (!parsed) return;
 
@@ -562,7 +566,7 @@ export function LiveMarketChart({
       setAnalysis(parsed.analysis);
       setIsUsingCachedData(true);
     }
-  }, [analysis, cacheKey, candles.length]);
+  }, [analysis, cacheKey, candles.length, isBasicAltView]);
 
   const loadMarket = useCallback(async () => {
     const generation = ++marketRequestGenerationRef.current;
@@ -574,13 +578,34 @@ export function LiveMarketChart({
 
     try {
       if (altOnly) {
-        const currentGate = getAltAnalysisGate(hasCoinPro, symbol);
+        const usageResponse = await fetch(
+          "/api/crypto/alt-analysis-usage",
+          await withSupabaseAuth({
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ symbol }),
+            cache: "no-store",
+            signal: controller.signal
+          })
+        );
+        const usagePayload = (await usageResponse.json().catch(() => ({}))) as {
+          allowed?: boolean;
+          newlyCounted?: boolean;
+          error?: string;
+          usage?: { used?: number; limit?: number | null; remaining?: number | null };
+        };
+        if (controller.signal.aborted || generation !== marketRequestGenerationRef.current) return;
+        const currentGate = applyServerAltAnalysisUsage(symbol, hasCoinPro, {
+          allowed: usageResponse.ok && usagePayload.allowed === true,
+          newlyCounted: usagePayload.newlyCounted,
+          usage: usagePayload.usage
+        });
         setAltAnalysisGate(currentGate);
-
-        if (!currentGate.allowed) {
+        if (!usageResponse.ok || !currentGate.allowed) {
           setCandles([]);
           setAnalysis(null);
           setMarketBriefing({ status: "idle" });
+          setError(usagePayload.error ?? "알트 분석 사용량을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.");
           return;
         }
       }
@@ -614,26 +639,20 @@ export function LiveMarketChart({
       setAnalysis(nextAnalysis);
       setIsUsingCachedData(false);
 
-      writeMarketCache(cacheKey, {
-        analysis: nextAnalysis,
-        candles: activeCandles
-      });
-      if (altOnly && pendingUserSelectedAltSymbolRef.current === symbol) {
-        setAltAnalysisGate(registerAltAnalysisSymbol(symbol, hasCoinPro));
-        pendingUserSelectedAltSymbolRef.current = null;
+      if (!isBasicAltView) {
+        writeMarketCache(cacheKey, {
+          analysis: nextAnalysis,
+          candles: activeCandles
+        });
       }
     } catch (loadError) {
       if (controller.signal.aborted || generation !== marketRequestGenerationRef.current) return;
-      const fallback = readMarketCache(cacheKey);
+      const fallback = isBasicAltView ? null : readMarketCache(cacheKey);
 
       if (fallback) {
         setCandles(fallback.candles);
         setAnalysis(fallback.analysis);
         setIsUsingCachedData(true);
-        if (altOnly && pendingUserSelectedAltSymbolRef.current === symbol) {
-          setAltAnalysisGate(registerAltAnalysisSymbol(symbol, hasCoinPro));
-          pendingUserSelectedAltSymbolRef.current = null;
-        }
         setError("실시간 데이터를 잠시 불러오지 못해 최근 레이더 판독값을 보여주고 있습니다.");
       } else {
         setError(loadError instanceof Error ? loadError.message : "시장 흐름을 잠시 확인하지 못했습니다.");
@@ -641,7 +660,7 @@ export function LiveMarketChart({
     } finally {
       if (generation === marketRequestGenerationRef.current) setIsLoading(false);
     }
-  }, [activeTimeframe, altOnly, analysisMode, cacheKey, effectiveTradingMode, hasCoinPro, msbMode, structureSensitivity, symbol]);
+  }, [activeTimeframe, altOnly, analysisMode, cacheKey, effectiveTradingMode, hasCoinPro, isBasicAltView, msbMode, structureSensitivity, symbol]);
 
   useEffect(() => {
     loadMarket();
@@ -899,10 +918,12 @@ export function LiveMarketChart({
         model: payload.model ?? "unknown",
         cached: Boolean(payload.cached)
       });
+      if (!payload.cached) recordUsageEvent("cryptoAiBriefing");
     } catch (briefingError) {
       if (controller.signal.aborted || generation !== briefingRequestGenerationRef.current) return;
       setMarketBriefing({
         status: "error",
+        code: briefingError instanceof MarketBriefingResponseError ? briefingError.code : null,
         message: briefingError instanceof Error ? briefingError.message : "AI 종합 피드백을 잠시 확인하지 못했습니다. 잠시 뒤 다시 시도해 주세요."
       });
     }
@@ -1990,7 +2011,7 @@ export function LiveMarketChart({
             <LiquidationPressurePanel symbol={symbol} timeframe={activeTimeframe} />
           ) : null}
 
-          {analysis && activeAnalysis && ((isMajorScreen && !hasCoinPro) || isBasicAltView) ? (
+          {analysis && activeAnalysis && isBasicAltView ? (
             <CryptoAiBriefingGateNotice isBasicAltView={isBasicAltView} />
           ) : analysis && activeAnalysis ? (
             <div
@@ -2008,7 +2029,9 @@ export function LiveMarketChart({
                     {isMajorScreen ? "차트 내용을 짧게 정리합니다." : "감지된 구조 전체를 AI가 종합해서 정리합니다."}
                   </h3>
                   <p className="mt-2 text-sm leading-6 text-slate-400">
-                    {isMajorScreen
+                    {!hasCoinPro
+                      ? "Basic은 개인화 AI 새 브리핑을 하루 1회 생성할 수 있습니다. 같은 결과의 캐시 재열람은 차감되지 않습니다."
+                      : isMajorScreen
                       ? "차트 구조와 기술 지표를 한 문단으로 정리합니다."
                       : radarProfile === "technical"
                       ? "선택 코인의 추세, 모멘텀, 변동성, 거래량 지표를 중심으로 시장 해석을 정리합니다."
@@ -2080,7 +2103,21 @@ export function LiveMarketChart({
                   </>
                 ) : null}
                 {marketBriefing.status === "error" ? (
-                  <p className="text-sm leading-6 text-signal-danger">{marketBriefing.message}</p>
+                  <div>
+                    <p className="text-sm leading-6 text-signal-danger">{marketBriefing.message}</p>
+                    {marketBriefing.code === "daily_limit" && !hasCoinPro ? (
+                      <CoinProConversionLink
+                        source="ai-limit"
+                        placement="ai_daily_limit"
+                        routeKey={altOnly ? "alts" : "spot"}
+                        symbol={symbol}
+                        surface={altOnly ? "alts" : "spot"}
+                        className="mt-3 inline-flex min-h-10 items-center justify-center rounded-md bg-accent-blue px-4 text-sm font-black text-slate-950"
+                      >
+                        Coin Pro AI 24회와 감시 흐름 보기
+                      </CoinProConversionLink>
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
             </div>

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { cryptoAlertConditionLimit } from "@/lib/billing";
+import { cryptoAlertConditionLimit, getCoinCapabilityPolicy } from "@/lib/coinCapabilities";
 import { serializeBasicPerpetualSnapshot } from "@/lib/perpetualDecisionSnapshot";
 import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
 import {
@@ -85,7 +85,7 @@ export async function GET(request: Request) {
     const hydratedSnapshot = await hydratePerpetualDecisionChart(resolution.snapshot);
     const failClosed = entitlement.state === "unavailable" || entitlement.state === "deletion_pending";
     const monitorEnabled = isPerpetualRevenueCoreUserEnabled(entitlement.userId, mode);
-    const canSeeProDetail = entitlement.isPaid && !failClosed;
+    const canSeeProDetail = getCoinCapabilityPolicy(entitlement.plan).preciseHigherTimeframeEvidence && !failClosed;
     const alerts = entitlement.userId && monitorEnabled
       ? await activeCryptoAlertCount(entitlement.userId)
       : { count: 0, scenarioMonitorCount: 0, presetCount: 0, available: false };

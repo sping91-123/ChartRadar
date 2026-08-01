@@ -3,6 +3,7 @@
 import { ArrowDown, ArrowUp, BarChart3, ChevronDown, CircleHelp, Gauge, Layers3, Minus, Waves } from "lucide-react";
 import { PerpetualSnapshotBriefing } from "@/components/coin/PerpetualSnapshotBriefing";
 import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
+import { CoinProConversionLink } from "@/components/CoinProConversionLink";
 import {
   beginnerTerm,
   flowDirectionLabel,
@@ -157,8 +158,6 @@ function IctDetails({ evidence }: { evidence?: PerpetualDecisionEvidence }) {
 }
 
 function BasicProValueCard({ snapshot }: { snapshot: PerpetualDecisionSnapshot }) {
-  const returnTo = `/crypto/perpetual?asset=${snapshot.asset}&timeframe=15m&snapshot=${encodeURIComponent(snapshot.id)}`;
-  const upgradeHref = `/pro?market=crypto&source=perpetual-evidence&returnTo=${encodeURIComponent(returnTo)}`;
   return (
     <section className="flex flex-col gap-3 border-l-2 border-ui-brand bg-ui-panel px-3 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
       <div>
@@ -171,7 +170,17 @@ function BasicProValueCard({ snapshot }: { snapshot: PerpetualDecisionSnapshot }
           <li>· 무료 1개 · Coin Pro 최대 20개 조건 감시·알림</li>
         </ul>
       </div>
-      <ActionButton href={upgradeHref} tone="primary" className="w-full sm:w-auto">Pro 기능 모두 보기</ActionButton>
+      <CoinProConversionLink
+        source="perpetual-evidence"
+        placement="perpetual_evidence_lock"
+        routeKey={snapshot.asset === "eth" ? "perpetual_eth" : "perpetual_btc"}
+        returnTo={`/crypto/perpetual?asset=${snapshot.asset}&timeframe=15m&snapshot=${encodeURIComponent(snapshot.id)}`}
+        symbol={snapshot.asset.toUpperCase()}
+        surface="perpetual"
+        className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-ui-sm bg-ui-brand px-3 text-sm font-semibold text-white transition hover:brightness-110 sm:w-auto"
+      >
+        Pro 기능 모두 보기
+      </CoinProConversionLink>
     </section>
   );
 }

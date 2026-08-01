@@ -61,7 +61,8 @@ if (mode === "on" || requireCanary || canaryActive) {
     "Paid Perpetual activation requires Groq or an explicitly enabled Gemini fallback."
   );
   check(
-    configured("UPSTASH_REDIS_REST_URL") && configured("UPSTASH_REDIS_REST_TOKEN"),
+    (configured("UPSTASH_REDIS_REST_URL") && configured("UPSTASH_REDIS_REST_TOKEN")) ||
+      (configured("KV_REST_API_URL") && configured("KV_REST_API_TOKEN")),
     "shared AI cost guard",
     "Revenue-core users require Upstash so provider-backed AI has a cross-instance daily ceiling."
   );

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { chartTimeframes, type Candle, type ChartTimeframe, type TradingMode } from "@/lib/marketAnalysis";
 import { isAndroidNativeApp, registerAppPushListeners } from "@/lib/appPush";
-import type { ScoutSetup } from "@/lib/setupScout";
+import type { ProScoutSetup, ScoutSetup, ScoutSetupPayload } from "@/lib/setupScout";
 import { analyzeTechnicalRadar } from "@/lib/technicalRadar";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import {
@@ -20,7 +20,10 @@ import {
 } from "@/lib/setupAlertPresets";
 
 const scanModes: TradingMode[] = ["scalp", "swing"];
-const monitoredMarkets: SetupAlertMarket[] = ["crypto", "stocks"];
+// Crypto presets and Perpetual conditions are evaluated by the authenticated
+// server scanners. Re-running Scout from the root browser monitor would consume
+// a user's explicit daily radar quota every five minutes and duplicate alerts.
+const monitoredMarkets: SetupAlertMarket[] = ["stocks"];
 const monitorIntervalMs = 5 * 60 * 1000;
 
 function asChartTimeframe(value: string): ChartTimeframe {
@@ -66,7 +69,7 @@ function stockQuality(score: number): ScoutSetup["plan"]["quality"] {
   return "C";
 }
 
-async function fetchCurrentStockSetups(presets: ReturnType<typeof readSetupAlertPresets>): Promise<ScoutSetup[]> {
+async function fetchCurrentStockSetups(presets: ReturnType<typeof readSetupAlertPresets>): Promise<ProScoutSetup[]> {
   const keys = Array.from(new Set(presets.map((preset) => `${preset.symbol}:${preset.timeframe}`)));
   const settled = await Promise.allSettled(
     keys.map(async (key) => {
@@ -97,6 +100,7 @@ async function fetchCurrentStockSetups(presets: ReturnType<typeof readSetupAlert
       const target2 = side === "long" ? report.price * 1.06 : report.price * 0.94;
 
       return {
+        access: "pro",
         symbol,
         mode: stockModeFromTimeframe(timeframe),
         timeframe,
@@ -126,14 +130,17 @@ async function fetchCurrentStockSetups(presets: ReturnType<typeof readSetupAlert
         proximity: "ready",
         currentPrice: report.price,
         scannedAt: new Date().toISOString()
-      } satisfies ScoutSetup;
+      } satisfies ProScoutSetup;
     })
   );
 
   return settled.flatMap((result) => (result.status === "fulfilled" && result.value ? [result.value] : []));
 }
 
-async function fetchCurrentSetups(market: SetupAlertMarket, presets: ReturnType<typeof readSetupAlertPresets>) {
+async function fetchCurrentSetups(
+  market: SetupAlertMarket,
+  presets: ReturnType<typeof readSetupAlertPresets>
+): Promise<ScoutSetupPayload[]> {
   if (market === "stocks") {
     return fetchCurrentStockSetups(presets);
   }
@@ -141,7 +148,7 @@ async function fetchCurrentSetups(market: SetupAlertMarket, presets: ReturnType<
   const results = await Promise.allSettled(
     scanModes.map(async (mode) => {
       const response = await fetch(`/api/scout?mode=${mode}&risk=radar&scope=all`, await withSupabaseAuth({ cache: "no-store" }));
-      const payload = (await response.json().catch(() => ({}))) as { setups?: ScoutSetup[] };
+      const payload = (await response.json().catch(() => ({}))) as { setups?: ScoutSetupPayload[] };
       if (!response.ok || !Array.isArray(payload.setups)) return [];
       return payload.setups;
     })
@@ -230,8 +237,10 @@ export function RadarAlertMonitor() {
 
     async function handleManualCheck(event: Event) {
       const requestedMarket = (event as CustomEvent<{ market?: SetupAlertMarket }>).detail?.market;
-      const matchCount = requestedMarket && monitoredMarkets.includes(requestedMarket)
-        ? await runMarketCheck(requestedMarket, "manual")
+      const matchCount = requestedMarket
+        ? monitoredMarkets.includes(requestedMarket)
+          ? await runMarketCheck(requestedMarket, "manual")
+          : 0
         : await runCheck("manual");
       window.dispatchEvent(new CustomEvent(SETUP_ALERT_CHECK_FINISHED_EVENT, { detail: { matchCount } }));
     }

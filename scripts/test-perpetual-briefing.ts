@@ -79,8 +79,16 @@ assert.match(routeSource, /Vary", "Authorization/);
 assert.match(routeSource, /snapshot\.pro\?\.detailVersion !== 1/);
 assert.match(routeSource, /code: "pro_required"/);
 assert.match(routeSource, /code: "snapshot_detail_unavailable"/);
-assert.match(routeSource, /DAILY_PROVIDER_GENERATION_LIMIT = 24/, "provider-backed AI must have a bounded daily account budget");
-assert.match(routeSource, /perpetual-briefing-provider-daily/, "provider generations must use a separate daily limiter");
+assert.match(
+  routeSource,
+  /getCoinCapabilityPolicy\(entitlement\.plan\)\.cryptoAiDailyLimit/,
+  "provider-backed AI must use the canonical Coin capability budget"
+);
+assert.match(
+  routeSource,
+  /coin-ai-generation-daily:v1:\$\{kstDateKey\(\)\}/,
+  "all new Coin AI generations must consume the shared KST daily account budget"
+);
 assert.match(routeSource, /perpetual-briefing-provider-global-daily:v1/, "provider-backed AI must also have a cross-account daily cost ceiling");
 assert.match(routeSource, /PERPETUAL_AI_DAILY_PROVIDER_LIMIT/, "the global provider ceiling must be operator configurable");
 assert.match(routeSource, /includeClientIp: false/, "the daily provider budget must follow the account rather than the current IP");

@@ -1,13 +1,23 @@
 import { NextResponse } from "next/server";
-import { resolveCombinedBillingEntitlementPlan } from "@/lib/billing";
 import { reconcileProviderEntitlements } from "@/lib/server/billingEntitlements";
-import { findRecentPurchaseAttribution, recordServerProductEvent } from "@/lib/server/productEventStore";
+import {
+  findRecentPurchaseAttributionContext,
+  persistPurchaseAttributionContext,
+  recordServerProductEvent
+} from "@/lib/server/productEventStore";
+import {
+  deriveSubscriptionLifecycleTransitions,
+  resolveTerminalSubscriptionTarget,
+  stableProductLifecycleEventId,
+  type PreviousSubscriptionState
+} from "@/lib/server/subscriptionLifecycleEvents";
 import {
   buildRevenueCatSnapshot,
   extractRevenueCatWebhookUserIds,
   fetchRevenueCatSubscriber
 } from "@/lib/server/revenueCatSnapshot";
 import { verifyRevenueCatWebhookSignature } from "@/lib/server/revenueCatWebhook";
+import { supabaseAdminRest } from "@/lib/server/supabaseAdmin";
 
 interface WebhookPayload {
   event?: Record<string, unknown> & { id?: string };
@@ -59,6 +69,9 @@ export async function POST(request: Request) {
       // Transfer source IDs are intentionally processed first. A tiny monotonic
       // offset lets a verified source revocation precede ownership transfer.
       const observedAt = new Date(observedAtMs + index).toISOString();
+      const previousSubscriptions = await supabaseAdminRest<PreviousSubscriptionState[]>(
+        `subscriptions?select=provider_order_id,provider_product_id,status,plan,revoked_at&user_id=eq.${encodeURIComponent(userId)}&provider=eq.revenuecat`
+      );
       const payloadSnapshot = await fetchRevenueCatSubscriber({ appUserId: userId, apiKey });
       const snapshot = buildRevenueCatSnapshot(payloadSnapshot, observedAt);
       const result = await reconcileProviderEntitlements({
@@ -69,20 +82,75 @@ export async function POST(request: Request) {
         observedAtIso: observedAt,
         verifiedEmpty: snapshot.length === 0
       });
-      if (snapshot.length > 0 && result.changed) {
-        const planIds = snapshot.map((entry) => entry.plan);
-        const primaryPlan = resolveCombinedBillingEntitlementPlan(planIds, "all") ?? planIds[0] ?? null;
-        const attributionId = await findRecentPurchaseAttribution({
+      const transitions = deriveSubscriptionLifecycleTransitions({
+        userId,
+        previous: previousSubscriptions,
+        current: snapshot
+      });
+      for (const transition of transitions) {
+        const attributionContext = await findRecentPurchaseAttributionContext({
           userId,
           provider: "revenuecat",
-          planId: primaryPlan
+          planId: transition.planId,
+          providerOrderId: transition.providerOrderId,
+          maxAgeMs: transition.eventName === "trial_converted" ? 30 * 24 * 60 * 60 * 1000 : 30 * 60 * 1000
         });
+        if (attributionContext) {
+          await persistPurchaseAttributionContext({
+            userId,
+            provider: "revenuecat",
+            providerOrderId: transition.providerOrderId,
+            planId: transition.planId,
+            context: attributionContext
+          });
+        }
         await recordServerProductEvent({
-          eventName: "entitlement_activated",
+          eventId: transition.eventId,
+          eventName: transition.eventName,
           userId,
           surface: "billing",
-          attributionId,
-          properties: { provider: "revenuecat", source: "webhook", planId: primaryPlan }
+          attributionId: attributionContext?.attributionId ?? null,
+          funnelSessionHash: attributionContext?.funnelSessionHash ?? null,
+          trafficClass: attributionContext?.trafficClass,
+          properties: { provider: "revenuecat", source: "webhook", planId: transition.planId }
+        });
+      }
+      const terminalTarget = resolveTerminalSubscriptionTarget({
+        productId: payload.event?.product_id,
+        previous: previousSubscriptions,
+        current: snapshot
+      });
+      const terminalAttributionContext = terminalTarget
+        ? await findRecentPurchaseAttributionContext({
+            userId,
+            provider: "revenuecat",
+            planId: terminalTarget.planId,
+            providerOrderId: terminalTarget.providerOrderId,
+            maxAgeMs: 30 * 24 * 60 * 60 * 1000
+          })
+        : null;
+      if (eventType === "CANCELLATION" && terminalTarget) {
+        await recordServerProductEvent({
+          eventId: stableProductLifecycleEventId(userId, eventId, "subscription_cancelled"),
+          eventName: "subscription_cancelled",
+          userId,
+          surface: "billing",
+          attributionId: terminalAttributionContext?.attributionId ?? null,
+          funnelSessionHash: terminalAttributionContext?.funnelSessionHash ?? null,
+          trafficClass: terminalAttributionContext?.trafficClass,
+          properties: { provider: "revenuecat", source: "webhook", planId: terminalTarget.planId }
+        });
+      }
+      if (eventType === "EXPIRATION" && terminalTarget) {
+        await recordServerProductEvent({
+          eventId: stableProductLifecycleEventId(userId, eventId, "subscription_expired"),
+          eventName: "subscription_expired",
+          userId,
+          surface: "billing",
+          attributionId: terminalAttributionContext?.attributionId ?? null,
+          funnelSessionHash: terminalAttributionContext?.funnelSessionHash ?? null,
+          trafficClass: terminalAttributionContext?.trafficClass,
+          properties: { provider: "revenuecat", source: "webhook", planId: terminalTarget.planId }
         });
       }
       reconciliations.push({

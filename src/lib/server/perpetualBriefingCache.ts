@@ -16,8 +16,8 @@ export type SharedPerpetualBriefingLease =
   | { status: "unavailable" };
 
 function configuration() {
-  const baseUrl = process.env.UPSTASH_REDIS_REST_URL?.trim().replace(/\/$/, "");
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+  const baseUrl = (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL)?.trim().replace(/\/$/, "");
+  const token = (process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN)?.trim();
   return baseUrl && token ? { baseUrl, token } : null;
 }
 

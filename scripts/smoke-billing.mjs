@@ -96,9 +96,17 @@ includes(files.sync, "attributionSource", "RevenueCat sync preserves the validat
 includes(files.webhook, "verifyRevenueCatWebhookSignature", "webhook verifies raw-body HMAC");
 includes(files.webhook, "fetchRevenueCatSubscriber", "webhook refetches latest subscriber snapshot");
 includes(files.webhook, "findRecentPurchaseAttribution", "webhook links verified activation to a recent purchase attempt");
-includes(files.revenueCatSnapshot, "billing_issues_detected_at", "RevenueCat billing issue is fail-closed");
+includes(files.revenueCatSnapshot, "billing_issues_detected_at", "RevenueCat billing issue metadata is modeled");
+includes(files.revenueCatSnapshot, "grace_period_expires_date", "RevenueCat grace expiry is modeled");
+includes(files.revenueCatSnapshot, "latestFutureIso", "RevenueCat grace expiry extends the effective access window");
+excludes(
+  files.revenueCatSnapshot,
+  "subscription.billing_issues_detected_at || subscription.refunded_at",
+  "RevenueCat billing issue preserves an active grace entitlement"
+);
 includes(files.revenueCatSnapshot, "refunded_at", "RevenueCat refund is fail-closed");
 includes(files.revenueCatSnapshot, "transferred_from", "RevenueCat transfer source is reconciled");
+includes(files.webhook, "resolveTerminalSubscriptionTarget", "terminal events resolve the signed store product");
 includes(files.webhook, "Webhook payload is not valid JSON", "webhook rejects malformed JSON");
 includes(files.webhook, 'eventType === "TEST"', "signed RevenueCat dashboard test is accepted without ledger mutation");
 const signatureGuardIndex = files.webhook.indexOf("if (!signatureValid)");
@@ -107,7 +115,7 @@ const dashboardTestIndex = files.webhook.indexOf('eventType === "TEST"');
 signatureGuardIndex >= 0 && eventIdGuardIndex > signatureGuardIndex && dashboardTestIndex > eventIdGuardIndex
   ? pass("dashboard test follows signature and event-id validation")
   : fail("dashboard test follows signature and event-id validation");
-excludes(files.webhook, "payload.event?.product_id", "webhook does not authorize raw product event");
+includes(files.webhook, "payload.event?.product_id", "signed webhook product scopes terminal analytics only");
 
 includes(files.mobile, "Purchases.configure({ apiKey })", "RevenueCat configure has no user id");
 includes(files.mobile, "Purchases.logIn({ appUserID: userId })", "RevenueCat account login");

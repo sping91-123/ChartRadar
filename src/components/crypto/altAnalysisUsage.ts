@@ -1,13 +1,17 @@
-import { altAnalysisFreeLimit, altAnalysisUsageStorageKey } from "@/components/crypto/constants";
+import { altAnalysisUsageStorageKey } from "@/components/crypto/constants";
 import type { AltAnalysisGate, AltAnalysisUsageSnapshot } from "@/components/crypto/types";
-import { recordUsageEvent } from "@/lib/usageMeter";
+import { basicCoinCapabilityPolicy } from "@/lib/coinCapabilities";
+import { recordUsageEvent, syncUsageCount } from "@/lib/usageMeter";
 
 function localDateKey(date = new Date()) {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
+  const kst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  const year = kst.getUTCFullYear();
+  const month = `${kst.getUTCMonth() + 1}`.padStart(2, "0");
+  const day = `${kst.getUTCDate()}`.padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
+
+const altAnalysisFreeLimit = basicCoinCapabilityPolicy.altAnalysisDailyLimit ?? 3;
 
 function emptyAltAnalysisUsage(): AltAnalysisUsageSnapshot {
   return { dateKey: localDateKey(), symbols: [] };
@@ -38,7 +42,7 @@ function writeAltAnalysisUsage(snapshot: AltAnalysisUsageSnapshot) {
 }
 
 export function initialAltAnalysisGate(isPaid: boolean): AltAnalysisGate {
-  const limit = isPaid ? 300 : altAnalysisFreeLimit;
+  const limit = isPaid ? Number.POSITIVE_INFINITY : altAnalysisFreeLimit;
   return {
     allowed: true,
     used: 0,
@@ -54,8 +58,8 @@ export function getAltAnalysisGate(isPaid: boolean, currentSymbol?: string): Alt
     return {
       allowed: true,
       used: snapshot.symbols.length,
-      limit: 300,
-      remaining: 300,
+      limit: Number.POSITIVE_INFINITY,
+      remaining: Number.POSITIVE_INFINITY,
       symbols: snapshot.symbols
     };
   }
@@ -70,34 +74,44 @@ export function getAltAnalysisGate(isPaid: boolean, currentSymbol?: string): Alt
   };
 }
 
-export function registerAltAnalysisSymbol(symbol: string, isPaid: boolean): AltAnalysisGate {
-  const snapshot = readAltAnalysisUsage();
-  if (isPaid || snapshot.symbols.includes(symbol)) {
-    return getAltAnalysisGate(isPaid, symbol);
+export function applyServerAltAnalysisUsage(
+  symbol: string,
+  isPaid: boolean,
+  result: {
+    allowed: boolean;
+    newlyCounted?: boolean;
+    usage?: { used?: number; limit?: number | null; remaining?: number | null };
   }
-
-  if (snapshot.symbols.length >= altAnalysisFreeLimit) {
+): AltAnalysisGate {
+  const snapshot = readAltAnalysisUsage();
+  const symbols = result.allowed && !snapshot.symbols.includes(symbol)
+    ? [...snapshot.symbols, symbol]
+    : snapshot.symbols;
+  const addedLocally = symbols !== snapshot.symbols;
+  if (result.allowed && addedLocally) {
+    writeAltAnalysisUsage({ dateKey: snapshot.dateKey, symbols });
+  }
+  if (!isPaid && typeof result.usage?.used === "number") {
+    syncUsageCount("altIndividualAnalysis", result.usage.used);
+  } else if (addedLocally) {
+    recordUsageEvent("altIndividualAnalysis");
+  }
+  if (isPaid || result.usage?.limit === null) {
     return {
-      allowed: false,
-      used: snapshot.symbols.length,
-      limit: altAnalysisFreeLimit,
-      remaining: 0,
-      symbols: snapshot.symbols
+      allowed: result.allowed,
+      used: symbols.length,
+      limit: Number.POSITIVE_INFINITY,
+      remaining: Number.POSITIVE_INFINITY,
+      symbols
     };
   }
-
-  const next = {
-    dateKey: snapshot.dateKey,
-    symbols: [...snapshot.symbols, symbol]
-  };
-  writeAltAnalysisUsage(next);
-  recordUsageEvent("altIndividualAnalysis");
-
+  const used = typeof result.usage?.used === "number" ? result.usage.used : symbols.length;
+  const limit = typeof result.usage?.limit === "number" ? result.usage.limit : altAnalysisFreeLimit;
   return {
-    allowed: true,
-    used: next.symbols.length,
-    limit: altAnalysisFreeLimit,
-    remaining: Math.max(0, altAnalysisFreeLimit - next.symbols.length),
-    symbols: next.symbols
+    allowed: result.allowed,
+    used,
+    limit,
+    remaining: typeof result.usage?.remaining === "number" ? result.usage.remaining : Math.max(0, limit - used),
+    symbols
   };
 }

@@ -24,6 +24,17 @@ interface MarketBriefingPayload {
   model?: string;
   cached?: boolean;
   error?: string;
+  code?: string;
+}
+
+export class MarketBriefingResponseError extends Error {
+  code: string | null;
+
+  constructor(message: string, code: string | null = null) {
+    super(message);
+    this.name = "MarketBriefingResponseError";
+    this.code = code;
+  }
 }
 
 export function storageKey(name: string) {
@@ -101,6 +112,20 @@ export function writeMarketCache(cacheKey: string, payload: MarketCachePayload) 
   window.localStorage.setItem(cacheKey, JSON.stringify(payload));
 }
 
+export function removeMarketCache(cacheKey: string) {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(cacheKey);
+}
+
+export function removeAllMarketCaches() {
+  if (typeof window === "undefined") return;
+  const prefixes = [storagePrefix, legacyPreviousBrandStoragePrefix, legacyChannelStoragePrefix]
+    .map((prefix) => `${prefix}.marketCache.`);
+  const keys = Array.from({ length: window.localStorage.length }, (_, index) => window.localStorage.key(index))
+    .filter((key): key is string => Boolean(key && prefixes.some((prefix) => key.startsWith(prefix))));
+  keys.forEach((key) => window.localStorage.removeItem(key));
+}
+
 export async function fetchCryptoSymbolList() {
   const response = await fetch("/api/crypto-symbols", { cache: "no-store" });
   if (!response.ok) return [];
@@ -115,7 +140,10 @@ export async function readMarketBriefingResponse(response: Response) {
   const payload = (await response.json().catch(() => ({}))) as MarketBriefingPayload;
 
   if (!response.ok || !payload.briefing) {
-    throw new Error(payload.error ?? "AI 종합 피드백을 생성하지 못했습니다.");
+    throw new MarketBriefingResponseError(
+      payload.error ?? "AI 종합 피드백을 생성하지 못했습니다.",
+      typeof payload.code === "string" ? payload.code : null
+    );
   }
 
   return {

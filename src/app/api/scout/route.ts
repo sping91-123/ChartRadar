@@ -8,11 +8,13 @@
  */
 
 import { NextResponse } from "next/server";
-import { scanAllSetups, topSetups, type ScoutRiskProfile, type ScoutSetup } from "@/lib/setupScout";
+import { scanAllSetups, serializeScoutSetups, topSetups, type ScoutRiskProfile, type ScoutSetup } from "@/lib/setupScout";
 import { getLiquidCryptoSymbols } from "@/lib/cryptoUniverse";
 import { rateLimit } from "@/lib/server/rateLimit";
 import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
 import type { TradingMode } from "@/lib/marketAnalysis";
+import { getCoinCapabilityPolicy, getCoinScoutResultLimit } from "@/lib/coinCapabilities";
+import { claimCoinDailyUsage } from "@/lib/server/coinUsageQuota";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,10 +32,12 @@ type ScoutScope = "all" | "major" | "alts";
 
 const majorSymbols = new Set(["BTCUSDT.P", "ETHUSDT.P"]);
 
-function parseMode(searchParams: URLSearchParams): TradingMode | null {
+type ScoutRequestMode = TradingMode | "both";
+
+function parseMode(searchParams: URLSearchParams): ScoutRequestMode | null {
   const raw = searchParams.get("mode");
   if (raw === null) return "scalp";
-  if (raw === "scalp" || raw === "swing") return raw;
+  if (raw === "scalp" || raw === "swing" || raw === "both") return raw;
   return null;
 }
 
@@ -63,28 +67,21 @@ async function getScannerSymbols(scope: ScoutScope) {
   return getLiquidCryptoSymbols({ includeMajor: true, limit: 40 });
 }
 
-function getScoutTopLimit(scope: ScoutScope, riskProfile: ScoutRiskProfile, isPaid: boolean) {
-  if (scope === "alts") {
-    if (!isPaid) return 3;
-    return riskProfile === "radar" ? 5 : 3;
-  }
-  return isPaid ? (riskProfile === "radar" ? 12 : 6) : riskProfile === "radar" ? 6 : 3;
-}
-
 export async function GET(request: Request) {
   const entitlement = await getRequestEntitlement(request, "crypto");
   if (entitlement.state === "unavailable") {
     return NextResponse.json({ error: "구독 권한을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요." }, { status: 503 });
   }
-  const limit = await rateLimit(request, {
+  const capability = getCoinCapabilityPolicy(entitlement.plan);
+  const abuseLimit = await rateLimit(request, {
     key: entitlementRateKey("scout", entitlement),
     limit: entitlement.isPaid ? 120 : 20,
     windowMs: 5 * 60 * 1000
   });
-  if (!limit.allowed) {
+  if (!abuseLimit.allowed) {
     return NextResponse.json(
       { error: "레이더 요청이 잠시 많습니다. 잠시 후 다시 시도해 주세요." },
-      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
+      { status: 429, headers: { "Retry-After": String(abuseLimit.retryAfter) } }
     );
   }
 
@@ -102,11 +99,33 @@ export async function GET(request: Request) {
   const cacheKey = `${mode}:${riskProfile}:${scope}:${entitlement.isPaid ? "pro" : "basic"}`;
   const now = Date.now();
   const cache = cacheByKey.get(cacheKey) ?? null;
+  const successResponse = async (payload: Record<string, unknown>) => {
+    const quota = await claimCoinDailyUsage({
+      request,
+      entitlement,
+      bucket: "radar",
+      limit: capability.radarScanDailyLimit
+    });
+    if (!quota.allowed) {
+      const backendUnavailable = quota.backend === "unavailable";
+      return NextResponse.json(
+        {
+          error: backendUnavailable
+            ? "레이더 사용량을 확인하지 못해 요청을 안전하게 중단했습니다. 잠시 후 다시 시도해 주세요."
+            : "오늘 Basic/Pro 코인 레이더 확인 한도를 모두 사용했습니다. Pro 전환 화면에서 반복 감시 흐름을 확인할 수 있습니다.",
+          code: backendUnavailable ? "usage_backend_unavailable" : "daily_quota_reached",
+          usage: quota.usage
+        },
+        { status: backendUnavailable ? 503 : 429, headers: { "Retry-After": String(quota.retryAfter) } }
+      );
+    }
+    return NextResponse.json({ ...payload, usage: quota.usage });
+  };
 
   // 유효한 캐시가 있으면 즉시 반환합니다.
   if (cache && now - cache.cachedAt < CACHE_TTL_MS) {
-    return NextResponse.json({
-      setups: cache.setups,
+    return successResponse({
+      setups: serializeScoutSetups(cache.setups, capability.detailedScoutEvidence),
       cachedAt: cache.cachedAt,
       cached: true,
       entitlement: { isPaid: entitlement.isPaid, plan: entitlement.plan }
@@ -116,10 +135,15 @@ export async function GET(request: Request) {
   // 같은 요청이 이미 진행 중이면 같은 Promise를 재사용합니다.
   if (!inflightByKey.has(cacheKey)) {
     const promise = getScannerSymbols(scope)
-      .then((symbols) => scanAllSetups({ mode, riskProfile, symbols }))
+      .then(async (symbols) => mode === "both"
+        ? (await Promise.all([
+            scanAllSetups({ mode: "scalp", riskProfile, symbols }),
+            scanAllSetups({ mode: "swing", riskProfile, symbols })
+          ])).flat()
+        : scanAllSetups({ mode, riskProfile, symbols }))
       .then((all) => {
         const scoped = all.filter((setup) => setupInScope(setup, scope));
-        const topLimit = getScoutTopLimit(scope, riskProfile, entitlement.isPaid);
+        const topLimit = getCoinScoutResultLimit(capability, scope, riskProfile);
         const top = topSetups(scoped, topLimit);
         cacheByKey.set(cacheKey, { setups: top, cachedAt: Date.now() });
         return top;
@@ -132,8 +156,8 @@ export async function GET(request: Request) {
 
   try {
     const setups = await inflightByKey.get(cacheKey)!;
-    return NextResponse.json({
-      setups,
+    return successResponse({
+      setups: serializeScoutSetups(setups, capability.detailedScoutEvidence),
       cachedAt: cacheByKey.get(cacheKey)?.cachedAt ?? Date.now(),
       cached: false,
       entitlement: { isPaid: entitlement.isPaid, plan: entitlement.plan }
@@ -142,8 +166,8 @@ export async function GET(request: Request) {
     const message = error instanceof Error ? error.message : "레이더 자동 스캔에 실패했습니다.";
     console.error("[api/scout] 레이더 스캔 오류:", error);
     if (cache) {
-      return NextResponse.json({
-        setups: cache.setups,
+      return successResponse({
+        setups: serializeScoutSetups(cache.setups, capability.detailedScoutEvidence),
         cachedAt: cache.cachedAt,
         cached: true,
         stale: true

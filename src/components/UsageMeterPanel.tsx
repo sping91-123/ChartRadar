@@ -21,13 +21,16 @@ function barColor(percent: number, isOverFree: boolean) {
 }
 
 function UsageRow({ state, isPaid }: { state: ReturnType<typeof getUsageBucketStates>[number]; isPaid: boolean }) {
-  const activeLimit = Math.max(1, isPaid ? state.proDailyLimit : state.freeDailyLimit);
-  const displayedUsed = Math.min(state.used, activeLimit);
-  const activeRemaining = Math.max(0, activeLimit - state.used);
-  const activePercent = Math.min(100, Math.round((state.used / activeLimit) * 100));
-  const isOverActiveLimit = state.used >= activeLimit;
+  const unlimited = isPaid && state.proDailyLimit === null;
+  const activeLimit = Math.max(1, isPaid ? state.proDailyLimit ?? state.freeDailyLimit : state.freeDailyLimit);
+  const displayedUsed = unlimited ? state.used : Math.min(state.used, activeLimit);
+  const activeRemaining = unlimited ? null : Math.max(0, activeLimit - state.used);
+  const activePercent = unlimited ? 0 : Math.min(100, Math.round((state.used / activeLimit) * 100));
+  const isOverActiveLimit = unlimited ? false : state.used >= activeLimit;
   const limitCopy = isPaid
-    ? `오늘 ${state.proDailyLimit}회까지 반복 확인할 수 있습니다.`
+    ? unlimited
+      ? "상품상 일일 제한 없이 다시 확인할 수 있습니다."
+      : `오늘 ${state.proDailyLimit}회까지 반복 확인할 수 있습니다.`
     : `처음 ${state.freeDailyLimit}회 이후에는 Pro에서 장중 재확인이 열립니다.`;
 
   return (
@@ -44,14 +47,14 @@ function UsageRow({ state, isPaid }: { state: ReturnType<typeof getUsageBucketSt
               : "border-accent-blue/30 bg-accent-blue/10 text-accent-blue"
           }`}
         >
-          {displayedUsed}/{activeLimit}
+          {unlimited ? `${displayedUsed}회` : `${displayedUsed}/${activeLimit}`}
         </span>
       </div>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
         <div className={`h-full rounded-full ${barColor(activePercent, isOverActiveLimit)}`} style={{ width: `${activePercent}%` }} />
       </div>
       <div className="mt-2 flex items-center justify-between gap-3 text-[11px] font-bold text-slate-500">
-        <span>오늘 남음 {activeRemaining}회</span>
+        <span>{activeRemaining === null ? "오늘 제한 없음" : `오늘 남음 ${activeRemaining}회`}</span>
         <span className="text-right">{limitCopy}</span>
       </div>
     </div>

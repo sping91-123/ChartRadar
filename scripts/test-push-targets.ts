@@ -13,6 +13,31 @@ import { collectPaginatedRows } from "../src/lib/pagination";
 import { remainingNewsPushTargets, resolveNewsDeliveryStatus, selectLatestNewsReaction } from "../src/lib/newsImpactDelivery";
 import { readOptionalJson } from "../src/lib/server/push/optionalJson";
 import { resolvePushScannerOrigin } from "../src/lib/server/push/scannerOrigin";
+import { shouldConnectPushAfterFirstMonitor } from "../src/lib/firstMonitorPush";
+import type { AppPushDeviceState } from "../src/lib/appPush";
+
+function pushState(patch: Partial<AppPushDeviceState>): AppPushDeviceState {
+  return {
+    supported: true,
+    platform: "android",
+    permission: "prompt",
+    token: null,
+    markets: [],
+    synced: false,
+    registrationStage: "idle",
+    lastFailureStage: null,
+    updatedAt: null,
+    lastError: null,
+    lastNotificationTitle: null,
+    ...patch
+  };
+}
+
+assert.equal(shouldConnectPushAfterFirstMonitor(pushState({})), true, "the first monitor may request a not-yet-decided permission");
+assert.equal(shouldConnectPushAfterFirstMonitor(pushState({ permission: "granted", registrationStage: "failed" })), true, "a granted but failed token sync is retryable");
+assert.equal(shouldConnectPushAfterFirstMonitor(pushState({ permission: "granted", registrationStage: "enabled", synced: false })), true, "an enabled but unsynced device is retryable");
+assert.equal(shouldConnectPushAfterFirstMonitor(pushState({ permission: "denied", registrationStage: "denied" })), false, "an explicit denial must not be prompted again");
+assert.equal(shouldConnectPushAfterFirstMonitor(pushState({ permission: "granted", registrationStage: "enabled", synced: true })), false, "an already connected device needs no retry");
 
 const payload = {
   type: "perpetual_scenario",

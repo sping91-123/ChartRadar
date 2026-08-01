@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
+import { CoinProConversionLink } from "@/components/CoinProConversionLink";
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -15,9 +15,16 @@ import {
   Search,
   X
 } from "lucide-react";
-import { watchlistSymbolPool, type ScoutSetup } from "@/lib/setupScout";
+import {
+  hasProScoutDetails,
+  serializeScoutSetup,
+  watchlistSymbolPool,
+  type BasicScoutSetup,
+  type ScoutSetup,
+  type ScoutSetupPayload
+} from "@/lib/setupScout";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
-import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
+import { syncUsageCount } from "@/lib/usageMeter";
 import { hasMarketEntitlement } from "@/lib/billing";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import {
@@ -59,7 +66,14 @@ function activeSetupAnalysis(setup: ScoutSetup) {
   return setup.analysis.timeframeAnalyses.find((item) => item.timeframe === setup.timeframe);
 }
 
-function buildWatchlistRiskSignals(setup: ScoutSetup) {
+function buildWatchlistRiskSignals(setup: ScoutSetupPayload) {
+  if (!hasProScoutDetails(setup)) {
+    const signals: string[] = [];
+    if (setup.status === "active" || setup.proximity === "ready") signals.push("급등 추격 주의");
+    if (setup.watchKind === "counter") signals.push("BTC 방향성 의존");
+    if (setup.proximity === "wait") signals.push("추적 대기");
+    return uniqueItems([...signals, ...setup.summary.riskFlags]).slice(0, 5);
+  }
   const active = activeSetupAnalysis(setup);
   const signals: string[] = [];
 
@@ -78,11 +92,11 @@ function buildWatchlistRiskSignals(setup: ScoutSetup) {
   return uniqueItems([...signals, ...setup.analysis.riskFlags]).slice(0, 5);
 }
 
-function summarizeWatchlistRisk(setup: ScoutSetup) {
+function summarizeWatchlistRisk(setup: ScoutSetupPayload) {
   return buildWatchlistRiskSignals(setup)[0] ?? "리스크 점검";
 }
 
-function classifyWatchlistSetup(setup: ScoutSetup): WatchlistFilterMeta {
+function classifyWatchlistSetup(setup: ScoutSetupPayload): WatchlistFilterMeta {
   const risks = buildWatchlistRiskSignals(setup);
   const isDanger =
     setup.status === "active" ||
@@ -114,10 +128,11 @@ function classifyWatchlistSetup(setup: ScoutSetup): WatchlistFilterMeta {
   };
 }
 
-function watchlistJudgmentLabel(setup: ScoutSetup, meta: WatchlistFilterMeta) {
+function watchlistJudgmentLabel(setup: ScoutSetupPayload, meta: WatchlistFilterMeta) {
   if (meta.bucket === "danger") return "고위험";
   if (meta.bucket === "watch") return "관망 우위";
-  return setup.plan.side === "long" ? "상방 환경" : "하방 환경";
+  const side = hasProScoutDetails(setup) ? setup.plan.side : setup.summary.side;
+  return side === "long" ? "상방 환경" : "하방 환경";
 }
 
 function WatchlistProCta() {
@@ -130,20 +145,59 @@ function WatchlistProCta() {
             BTC·ETH와 알트의 위험, 확인할 가격, 해석을 다시 볼 조건, 세부 근거는 Coin Pro에서 확인할 수 있습니다.
           </p>
         </div>
-        <Link
-          href="/pro?market=crypto"
+        <CoinProConversionLink
+          source="watchlist"
+          placement="watchlist_limit"
+          routeKey="alts"
+          surface="watchlist"
           className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-md bg-cyan-300 px-3 text-xs font-black text-slate-950 transition hover:bg-cyan-200"
         >
           <Crown size={14} aria-hidden />
           Coin Pro로 코인 상세 판단 열기
-        </Link>
+        </CoinProConversionLink>
       </div>
     </div>
   );
 }
 
 // ─── 미니 레이더 카드 ──────────────────────────────────────────────────────────
-function WatchlistSetupCard({ setup, canShowProDetails }: { setup: ScoutSetup; canShowProDetails: boolean }) {
+function BasicWatchlistSetupCard({ setup }: { setup: BasicScoutSetup }) {
+  const isLong = setup.summary.side === "long";
+  const SideIcon = isLong ? ArrowUpRight : ArrowDownRight;
+  const meta = classifyWatchlistSetup(setup);
+  const risks = buildWatchlistRiskSignals(setup);
+
+  return (
+    <article className="border-t border-ui-line py-3.5 first:border-t-0">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <h4 className="text-sm font-black text-white">{symbolToName(setup.symbol)}</h4>
+          <span className="text-[10px] font-bold text-slate-300">{setup.timeframe}</span>
+          <SideIcon className={isLong ? "text-signal-success" : "text-signal-danger"} size={14} aria-hidden />
+          <span className="text-[11px] font-bold text-white">{watchlistJudgmentLabel(setup, meta)}</span>
+        </div>
+        <span className={`text-[10px] font-black ${meta.className}`}>{meta.label}</span>
+      </div>
+      <div className="mt-2.5 grid gap-2 border-y border-white/10 py-2 text-xs sm:grid-cols-2">
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-bold text-slate-500">요약 리스크</p>
+          <p className="font-bold text-white">{risks[0] ?? "구조 확인 우선"}</p>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-bold text-slate-500">다음 확인</p>
+          <p className="font-bold text-white">{setup.summary.opportunityFlags[0] ?? "방향 유지 확인"}</p>
+        </div>
+      </div>
+      <p className="mt-2 text-[10px] leading-5 text-slate-500">
+        Basic 응답에는 현재가·관찰 가격·무효화·목표값·상세 근거가 포함되지 않습니다.
+      </p>
+    </article>
+  );
+}
+
+function WatchlistSetupCard({ setup, canShowProDetails }: { setup: ScoutSetupPayload; canShowProDetails: boolean }) {
+  if (!hasProScoutDetails(setup)) return <BasicWatchlistSetupCard setup={setup} />;
+  if (!canShowProDetails) return <BasicWatchlistSetupCard setup={serializeScoutSetup(setup, false) as BasicScoutSetup} />;
   const isLong = setup.plan.side === "long";
   const sideColor = isLong ? "text-signal-success" : "text-signal-danger";
   const SideIcon = isLong ? ArrowUpRight : ArrowDownRight;
@@ -354,8 +408,52 @@ function AddCoinModal({
 type ScanState =
   | { status: "idle" }
   | { status: "loading" }
-  | { status: "ready"; setups: ScoutSetup[]; cachedAt: number }
+  | { status: "ready"; setups: ScoutSetupPayload[]; cachedAt: number }
   | { status: "error"; message: string };
+
+const watchlistScanCachePrefix = "chartRadar.watchlistScan.v2";
+
+function kstDateKey() {
+  const shifted = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, "0")}-${String(shifted.getUTCDate()).padStart(2, "0")}`;
+}
+
+function watchlistScanCacheKey(isPaid: boolean) {
+  return `${watchlistScanCachePrefix}.${isPaid ? "pro" : "basic"}`;
+}
+
+function readWatchlistScanCache(symbols: string[], isPaid: boolean) {
+  if (typeof window === "undefined") return null;
+  if (!isPaid) window.localStorage.removeItem(watchlistScanCacheKey(true));
+  try {
+    const raw = window.localStorage.getItem(watchlistScanCacheKey(isPaid));
+    const parsed = raw ? (JSON.parse(raw) as {
+      dateKey?: unknown;
+      symbols?: unknown;
+      setups?: unknown;
+      cachedAt?: unknown;
+    }) : null;
+    if (
+      parsed?.dateKey !== kstDateKey() ||
+      parsed.symbols !== [...symbols].sort().join(",") ||
+      !Array.isArray(parsed.setups) ||
+      typeof parsed.cachedAt !== "number"
+    ) return null;
+    return { setups: parsed.setups as ScoutSetupPayload[], cachedAt: parsed.cachedAt };
+  } catch {
+    return null;
+  }
+}
+
+function writeWatchlistScanCache(symbols: string[], isPaid: boolean, setups: ScoutSetupPayload[], cachedAt: number) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(watchlistScanCacheKey(isPaid), JSON.stringify({
+    dateKey: kstDateKey(),
+    symbols: [...symbols].sort().join(","),
+    setups,
+    cachedAt
+  }));
+}
 
 // ─── 메인 패널 ────────────────────────────────────────────────────────────────
 export function WatchlistPanel() {
@@ -394,14 +492,14 @@ export function WatchlistPanel() {
   }, []);
 
   // 레이더 실행
-  const runScan = useCallback(async (symbols: string[]) => {
+  const runScan = useCallback(async (symbols: string[], force = false) => {
     if (symbols.length === 0) {
       setScanState({ status: "idle" });
       return;
     }
-    const usageGate = getUsageGate("watchlistScan", isPaid);
-    if (!usageGate.allowed) {
-      setScanState({ status: "error", message: usageGate.message });
+    const cached = !force ? readWatchlistScanCache(symbols, isPaid) : null;
+    if (cached) {
+      setScanState({ status: "ready", setups: cached.setups, cachedAt: cached.cachedAt });
       return;
     }
 
@@ -416,13 +514,18 @@ export function WatchlistPanel() {
           cache: "no-store"
         })
       );
-      if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        setups?: ScoutSetupPayload[];
+        cachedAt?: number;
+        error?: string;
+        usage?: { used?: number };
+      };
+      if (typeof data.usage?.used === "number") syncUsageCount("watchlistScan", data.usage.used);
+      if (!res.ok || !Array.isArray(data.setups) || typeof data.cachedAt !== "number") {
         throw new Error(data.error ?? "관심코인 레이더를 잠시 확인하지 못했습니다. 잠시 뒤 다시 확인해 주세요.");
       }
-      const data = (await res.json()) as { setups: ScoutSetup[]; cachedAt: number };
       setScanState({ status: "ready", setups: data.setups, cachedAt: data.cachedAt });
-      recordUsageEvent("watchlistScan");
+      writeWatchlistScanCache(symbols, isPaid, data.setups, data.cachedAt);
     } catch (error) {
       const message = error instanceof Error ? error.message : "레이더 판독을 잠시 확인하지 못했습니다. 잠시 뒤 다시 확인해 주세요.";
       setScanState({ status: "error", message });
@@ -432,7 +535,7 @@ export function WatchlistPanel() {
   // watchlist 변경 시 자동 레이더 판독
   useEffect(() => {
     if (watchlist.length > 0) {
-      void runScan(watchlist);
+      void runScan(watchlist, false);
     } else {
       setScanState({ status: "idle" });
     }
@@ -483,7 +586,7 @@ export function WatchlistPanel() {
             {scanState.status === "ready" && watchlist.length > 0 && (
               <button
                 type="button"
-                onClick={() => runScan(watchlist)}
+                onClick={() => runScan(watchlist, true)}
                 className="inline-flex min-h-8 shrink-0 items-center gap-1.5 whitespace-nowrap border-b border-ui-line px-0 text-[11px] font-bold text-slate-200 hover:text-white disabled:opacity-50"
               >
                 <RefreshCw size={12} className="shrink-0" aria-hidden />

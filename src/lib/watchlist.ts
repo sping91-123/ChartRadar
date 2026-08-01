@@ -12,6 +12,7 @@
  */
 
 import type { BillingEntitlementPlan } from "./billing";
+import { getCoinCapabilityPolicy } from "./coinCapabilities";
 import { isLikelyUsdtPerpSymbol } from "./cryptoUniverse";
 
 export type WatchlistPlan = NonNullable<BillingEntitlementPlan>;
@@ -66,7 +67,12 @@ function saveWatchlist(list: string[]) {
 }
 
 export function getWatchlistLimit(plan: BillingEntitlementPlan): number {
-  return WATCHLIST_LIMIT[plan ?? "free"] ?? WATCHLIST_LIMIT.free;
+  // This storage helper is also used by Global Radar. Keep its historical
+  // stock-only limits while Coin Radar reads the canonical capability policy.
+  if (plan === "stocks_monthly" || plan === "stocks_yearly" || plan === "member") {
+    return WATCHLIST_LIMIT[plan];
+  }
+  return getCoinCapabilityPolicy(plan).altWatchlistLimit;
 }
 
 /** 관심 코인 추가. plan 한도를 초과하면 false 반환. */

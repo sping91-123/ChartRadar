@@ -1,5 +1,5 @@
 // 레이더 TOP 감지를 사용자가 다시 볼 감시 조건으로 저장하는 브라우저 저장 로직이다.
-import type { ScoutSetup } from "@/lib/setupScout";
+import type { ScoutSetup, ScoutSetupPayload } from "@/lib/setupScout";
 
 export type SetupAlertMarket = "crypto" | "stocks";
 
@@ -165,7 +165,7 @@ export function buildSetupAlertPreset(setup: ScoutSetup, market: SetupAlertMarke
 
 export function findSetupAlertMatches(
   presets: SetupAlertPreset[],
-  setups: ScoutSetup[],
+  setups: Array<ScoutSetup | ScoutSetupPayload>,
   market: SetupAlertMarket = "crypto"
 ): SetupAlertMatch[] {
   const matches: SetupAlertMatch[] = [];
@@ -176,13 +176,17 @@ export function findSetupAlertMatches(
     const match = setups.find((setup) => {
       if (setup.symbol !== preset.symbol) return false;
       if (setup.timeframe !== preset.timeframe) return false;
-      if (setup.plan.side !== preset.side) return false;
+      // Basic payloads intentionally omit the live score and quality evidence.
+      // Do not turn a historical preset score into a current alert match.
+      if (!("plan" in setup)) return false;
+      const side = setup.plan.side;
+      if (side !== preset.side) return false;
       if (preset.mode && setup.mode !== preset.mode) return false;
       if (setup.score < Math.max(50, preset.score - 5)) return false;
       return setup.status === "entry" || setup.status === "active" || setup.proximity === "ready" || setup.proximity === "near";
     });
 
-    if (!match || usedPresetIds.has(preset.id)) continue;
+    if (!match || !("plan" in match) || usedPresetIds.has(preset.id)) continue;
     usedPresetIds.add(preset.id);
     matches.push({
       id: `${preset.id}:${match.scannedAt}:${match.score}`,

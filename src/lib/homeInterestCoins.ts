@@ -1,9 +1,10 @@
 import type { CryptoExchangeId, CryptoExchangeMarket } from "@/lib/server/cryptoExchangeData";
+import { basicCoinCapabilityPolicy, coinProCapabilityPolicy } from "@/lib/coinCapabilities";
 
 export type HomeInterestCoin = CryptoExchangeMarket;
 
-export const homeInterestMaxBasic = 1;
-export const homeInterestMaxPro = 5;
+export const homeInterestMaxBasic = basicCoinCapabilityPolicy.homeInterestLimit;
+export const homeInterestMaxPro = coinProCapabilityPolicy.homeInterestLimit;
 
 export const defaultHomeInterestCoin: HomeInterestCoin = {
   exchangeId: "binance",

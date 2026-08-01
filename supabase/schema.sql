@@ -284,13 +284,17 @@ create table if not exists public.product_events (
   event_id uuid primary key,
   event_name text not null check (event_name in (
     'home_snapshot_viewed', 'home_perpetual_opened', 'perpetual_snapshot_viewed',
-    'pro_gate_viewed', 'monitor_created', 'monitor_failed', 'scenario_triggered',
-    'scenario_opened', 'journal_saved', 'paywall_viewed', 'purchase_started',
-    'purchase_failed', 'purchase_cancelled', 'entitlement_activated'
+    'pro_gate_viewed', 'pro_cta_clicked', 'monitor_created', 'monitor_failed', 'scenario_triggered',
+    'scenario_opened', 'journal_saved', 'paywall_viewed', 'auth_started', 'auth_completed',
+    'store_opened', 'purchase_started', 'store_purchase_succeeded', 'entitlement_sync_pending',
+    'purchase_failed', 'purchase_cancelled', 'entitlement_activated', 'verified_trial_started',
+    'trial_converted', 'subscription_cancelled', 'subscription_expired'
   )),
   event_source text not null check (event_source in ('client', 'server')),
   user_id uuid references auth.users(id) on delete cascade,
   anonymous_id_hash text,
+  funnel_session_hash text check (funnel_session_hash is null or funnel_session_hash ~ '^[0-9a-f]{64}$'),
+  traffic_class text not null default 'user' check (traffic_class in ('user', 'internal')),
   surface text not null,
   asset text check (asset in ('btc', 'eth')),
   snapshot_id uuid references public.perpetual_decision_snapshots(id) on delete set null,
@@ -311,6 +315,70 @@ create index if not exists product_events_snapshot_idx
 on public.product_events(snapshot_id) where snapshot_id is not null;
 create index if not exists product_events_monitor_idx
 on public.product_events(monitor_id) where monitor_id is not null;
+create index if not exists product_events_funnel_session_idx
+on public.product_events(funnel_session_hash, occurred_at) where funnel_session_hash is not null;
+create index if not exists product_events_traffic_funnel_idx
+on public.product_events(traffic_class, event_name, occurred_at desc);
+
+create table if not exists public.product_purchase_attributions (
+  provider text not null,
+  provider_order_id text not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  plan_id text not null,
+  attribution_id uuid not null,
+  funnel_session_hash text,
+  traffic_class text not null default 'user',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  expires_at timestamptz not null default (now() + interval '45 days'),
+  primary key (provider, provider_order_id),
+  check (provider ~ '^[a-z][a-z0-9_]{1,31}$'),
+  check (plan_id ~ '^[a-z][a-z0-9_]{1,63}$'),
+  check (funnel_session_hash is null or funnel_session_hash ~ '^[0-9a-f]{64}$'),
+  check (traffic_class in ('user', 'internal'))
+);
+
+create index if not exists product_purchase_attributions_user_idx
+on public.product_purchase_attributions(user_id, provider, updated_at desc);
+
+create or replace function public.mark_coin_pro_v2_internal_events(
+  p_event_ids uuid[],
+  p_expected_count integer default 12
+)
+returns integer
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+  v_unique_count integer;
+  v_existing_count integer;
+  v_updated_count integer;
+begin
+  if p_expected_count <> 12 then
+    raise exception 'coin_pro_v2_internal_event_count_must_be_12';
+  end if;
+
+  select count(distinct event_id) into v_unique_count
+  from unnest(coalesce(p_event_ids, array[]::uuid[])) as ids(event_id);
+  if v_unique_count <> p_expected_count then
+    raise exception 'expected_%_unique_event_ids_received_%', p_expected_count, v_unique_count;
+  end if;
+
+  select count(*) into v_existing_count
+  from public.product_events
+  where event_id = any(p_event_ids);
+  if v_existing_count <> p_expected_count then
+    raise exception 'expected_%_existing_events_found_%', p_expected_count, v_existing_count;
+  end if;
+
+  update public.product_events
+  set traffic_class = 'internal'
+  where event_id = any(p_event_ids);
+  get diagnostics v_updated_count = row_count;
+  return v_updated_count;
+end;
+$$;
 
 alter table public.journals
   add column if not exists decision_snapshot_id uuid references public.perpetual_decision_snapshots(id) on delete set null,
@@ -493,6 +561,7 @@ alter table public.perpetual_decision_snapshots enable row level security;
 alter table public.perpetual_scenario_monitors enable row level security;
 alter table public.perpetual_decision_outcomes enable row level security;
 alter table public.product_events enable row level security;
+alter table public.product_purchase_attributions enable row level security;
 alter table public.macro_events enable row level security;
 alter table public.macro_sync_runs enable row level security;
 
@@ -644,10 +713,12 @@ revoke all privileges on table public.perpetual_decision_snapshots from public, 
 revoke all privileges on table public.perpetual_scenario_monitors from public, anon, authenticated;
 revoke all privileges on table public.perpetual_decision_outcomes from public, anon, authenticated;
 revoke all privileges on table public.product_events from public, anon, authenticated;
+revoke all privileges on table public.product_purchase_attributions from public, anon, authenticated;
 revoke all privileges on table public.perpetual_decision_snapshots from service_role;
 revoke all privileges on table public.perpetual_scenario_monitors from service_role;
 revoke all privileges on table public.perpetual_decision_outcomes from service_role;
 revoke all privileges on table public.product_events from service_role;
+revoke all privileges on table public.product_purchase_attributions from service_role;
 revoke all privileges on table public.push_alert_events from service_role;
 revoke all privileges on table public.journals from service_role;
 revoke all privileges on table public.profiles from service_role;
@@ -656,6 +727,9 @@ grant select, insert, update, delete on table public.perpetual_decision_snapshot
 grant select, insert, update, delete on table public.perpetual_scenario_monitors to service_role;
 grant select, insert, update, delete on table public.perpetual_decision_outcomes to service_role;
 grant select, insert, update, delete on table public.product_events to service_role;
+grant select, insert, update, delete on table public.product_purchase_attributions to service_role;
+revoke all on function public.mark_coin_pro_v2_internal_events(uuid[], integer) from public, anon, authenticated;
+grant execute on function public.mark_coin_pro_v2_internal_events(uuid[], integer) to service_role;
 revoke all privileges on table public.push_alert_events from public, anon, authenticated;
 grant select on table public.push_alert_events to authenticated;
 grant select, insert, update, delete on table public.push_alert_events to service_role;
@@ -1171,14 +1245,17 @@ set search_path = ''
 as $$
 declare
   v_events integer := 0;
+  v_attributions integer := 0;
   v_snapshots integer := 0;
 begin
   delete from public.product_events where occurred_at < now() - interval '90 days';
   get diagnostics v_events = row_count;
+  delete from public.product_purchase_attributions where expires_at <= now();
+  get diagnostics v_attributions = row_count;
   delete from public.perpetual_decision_snapshots snapshot
   where snapshot.generated_at < now() - interval '30 days';
   get diagnostics v_snapshots = row_count;
-  return jsonb_build_object('product_events', v_events, 'snapshots', v_snapshots);
+  return jsonb_build_object('product_events', v_events, 'purchase_attributions', v_attributions, 'snapshots', v_snapshots);
 end
 $$;
 
@@ -1195,7 +1272,7 @@ declare
 begin
   foreach v_table_name in array array[
     'journals', 'push_alert_events', 'push_alert_presets', 'push_tokens',
-    'product_events', 'perpetual_scenario_monitors', 'subscriptions', 'oauth_provider_credentials'
+    'product_events', 'product_purchase_attributions', 'perpetual_scenario_monitors', 'subscriptions', 'oauth_provider_credentials'
   ]
   loop
     if to_regclass('public.' || v_table_name) is not null
@@ -1528,9 +1605,11 @@ alter table public.journals add constraint journals_source_check
 alter table public.product_events drop constraint if exists product_events_event_name_check;
 alter table public.product_events add constraint product_events_event_name_check check (event_name in (
   'home_snapshot_viewed', 'home_perpetual_opened', 'perpetual_snapshot_viewed',
-  'pro_gate_viewed', 'monitor_created', 'monitor_failed', 'scenario_triggered',
-  'scenario_opened', 'journal_saved', 'paywall_viewed', 'purchase_started',
-  'purchase_failed', 'purchase_cancelled', 'entitlement_activated',
+  'pro_gate_viewed', 'pro_cta_clicked', 'monitor_created', 'monitor_failed', 'scenario_triggered',
+  'scenario_opened', 'journal_saved', 'paywall_viewed', 'auth_started', 'auth_completed',
+  'store_opened', 'purchase_started', 'store_purchase_succeeded', 'entitlement_sync_pending',
+  'purchase_failed', 'purchase_cancelled', 'entitlement_activated', 'verified_trial_started',
+  'trial_converted', 'subscription_cancelled', 'subscription_expired',
   'news_impact_viewed', 'news_source_opened', 'news_to_market_opened',
   'news_alert_opted_in', 'news_alert_opened', 'news_journal_saved'
 ));

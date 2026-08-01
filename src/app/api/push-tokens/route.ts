@@ -1,6 +1,6 @@
 // Android 앱 푸시 토큰을 로그인 사용자 계정에 연결합니다.
 import { NextResponse } from "next/server";
-import { cryptoAlertConditionLimit } from "@/lib/billing";
+import { cryptoAlertConditionLimit } from "@/lib/coinCapabilities";
 import { perpetualDecisionEngineVersion } from "@/lib/perpetualDecisionSnapshot";
 import { radarAlertRules, type RadarAlertRule, type RadarAlertRuleId } from "@/lib/radarAlerts";
 import { isPerpetualRevenueCoreUserEnabled } from "@/lib/server/perpetualRevenueCore";
@@ -18,6 +18,7 @@ interface PushTokenRequestBody {
   markets?: string[];
   ruleIds?: string[];
   presets?: unknown[];
+  preserveRuleIds?: boolean;
   enabled?: boolean;
 }
 
@@ -180,7 +181,9 @@ export async function POST(request: Request) {
   );
   const existing = existingRows[0] ?? null;
   const mergedMarkets = mergePushMarkets(existing?.markets, markets);
-  const nextRuleIds = replaceScopedRuleIds(existing?.rule_ids, ruleIds, markets);
+  const nextRuleIds = body.preserveRuleIds === true
+    ? normalizePushRuleIds(existing?.rule_ids)
+    : replaceScopedRuleIds(existing?.rule_ids, ruleIds, markets);
 
   const rows = await supabaseAdminRest<Array<{ id: string }>>("push_tokens?on_conflict=token", {
     method: "POST",

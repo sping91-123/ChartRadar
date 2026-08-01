@@ -72,6 +72,63 @@ export interface ScoutSetup {
   scannedAt: string;
 }
 
+export interface BasicScoutSetup {
+  access: "basic";
+  symbol: string;
+  mode: TradingMode;
+  timeframe: ChartTimeframe;
+  status?: ScoutSetup["status"];
+  watchKind?: ScoutSetup["watchKind"];
+  headline: string;
+  proximity: ScoutSetup["proximity"];
+  scannedAt: string;
+  summary: {
+    side: TradePlanCandidate["side"];
+    readiness: MarketAnalysis["readiness"];
+    riskFlags: string[];
+    opportunityFlags: string[];
+  };
+}
+
+export type ProScoutSetup = ScoutSetup & { access: "pro" };
+export type ScoutSetupPayload = BasicScoutSetup | ProScoutSetup;
+
+export function hasProScoutDetails(setup: ScoutSetupPayload): setup is ProScoutSetup {
+  return setup.access === "pro";
+}
+
+/**
+ * Basic responses deliberately omit every precise price, invalidation,
+ * target, confidence, and timeframe-evidence field. The client must never
+ * receive hidden Pro data and then rely on CSS to conceal it.
+ */
+export function serializeScoutSetup(setup: ScoutSetup, isPaid: boolean): ScoutSetupPayload {
+  if (isPaid) return { ...setup, access: "pro" };
+
+  const sideLabel = setup.plan.side === "long" ? "상방 환경" : "하방 환경";
+  return {
+    access: "basic",
+    symbol: setup.symbol,
+    mode: setup.mode,
+    timeframe: setup.timeframe,
+    status: setup.status,
+    watchKind: setup.watchKind,
+    headline: `${setup.symbol.replace("USDT.P", "")} ${setup.timeframe} · ${sideLabel}`,
+    proximity: setup.proximity,
+    scannedAt: setup.scannedAt,
+    summary: {
+      side: setup.plan.side,
+      readiness: setup.analysis.readiness,
+      riskFlags: setup.analysis.riskFlags.slice(0, 3),
+      opportunityFlags: setup.analysis.opportunityFlags.slice(0, 2)
+    }
+  };
+}
+
+export function serializeScoutSetups(setups: ScoutSetup[], isPaid: boolean): ScoutSetupPayload[] {
+  return setups.map((setup) => serializeScoutSetup(setup, isPaid));
+}
+
 /**
  * TF별 "이 정도까지 떨어진(올라간) 곳에서 잡으라는 셋업은 비현실적" 임계.
  * 이걸 넘으면 Scout에서 아예 제외.
@@ -855,47 +912,53 @@ export function topSetups(setups: ScoutSetup[], n = 3): ScoutSetup[] {
 }
 
   /** 기본 모드 일일 제한용. localStorage 저장 키. */
-export const scoutCacheKey = "chartRadar.setupScout.v8";
-const legacyScoutBaseCacheKeys = ["untitledRisk.setupScout.v8", `${"position"}${"guard"}.setupScout.v2`];
+export const scoutCacheKey = "chartRadar.setupScout.v9";
+const unsafeScoutCacheKeys = ["chartRadar.setupScout.v8", "untitledRisk.setupScout.v8", `${"position"}${"guard"}.setupScout.v2`];
 export const scoutCacheTtlMs = 5 * 60 * 1000; // 5분
 
 interface ScoutCacheEntry {
-  setups: ScoutSetup[];
+  setups: ScoutSetupPayload[];
   cachedAt: number;
 }
 
 function scoutCacheKeyForMode(
   mode: TradingMode,
   riskProfile: ScoutRiskProfile,
-  scope: ScoutScope = defaultScoutScope
+  scope: ScoutScope = defaultScoutScope,
+  access: ScoutSetupPayload["access"] = "basic"
 ) {
-  return `${scoutCacheKey}.${mode}.${riskProfile}.${scope}`;
+  return `${scoutCacheKey}.${mode}.${riskProfile}.${scope}.${access}`;
 }
 
 export function readScoutCache(
   mode: TradingMode = defaultScoutMode,
   riskProfile: ScoutRiskProfile = defaultScoutRiskProfile,
-  scope: ScoutScope = defaultScoutScope
+  scope: ScoutScope = defaultScoutScope,
+  access: ScoutSetupPayload["access"] = "basic"
 ): ScoutCacheEntry | null {
   if (typeof window === "undefined") return null;
   try {
-    const scopedKey = scoutCacheKeyForMode(mode, riskProfile, scope);
+    const scopedKey = scoutCacheKeyForMode(mode, riskProfile, scope, access);
     const legacyModeKey = `${scoutCacheKey}.${mode}.${riskProfile}`;
-    const legacyKeys = legacyScoutBaseCacheKeys.flatMap((baseKey) => [
+    const legacyKeys = unsafeScoutCacheKeys.flatMap((baseKey) => [
       `${baseKey}.${mode}.${riskProfile}.${scope}`,
       `${baseKey}.${mode}.${riskProfile}`,
       baseKey
     ]);
-    const raw =
-      window.localStorage.getItem(scopedKey) ??
-      window.localStorage.getItem(legacyModeKey) ??
-      legacyKeys.map((key) => window.localStorage.getItem(key)).find((value): value is string => value !== null);
+    // v8 contained full Pro analysis for Basic users. Never migrate it.
+    unsafeScoutCacheKeys.forEach((baseKey) => {
+      window.localStorage.removeItem(baseKey);
+      window.localStorage.removeItem(`${baseKey}.${mode}.${riskProfile}`);
+      window.localStorage.removeItem(`${baseKey}.${mode}.${riskProfile}.${scope}`);
+    });
+    const raw = window.localStorage.getItem(scopedKey) ?? window.localStorage.getItem(legacyModeKey);
     if (!raw) return null;
     window.localStorage.setItem(scopedKey, raw);
     window.localStorage.removeItem(legacyModeKey);
     legacyKeys.forEach((key) => window.localStorage.removeItem(key));
     const parsed = JSON.parse(raw) as ScoutCacheEntry;
     if (Date.now() - parsed.cachedAt > scoutCacheTtlMs) return null;
+    if (!Array.isArray(parsed.setups) || parsed.setups.some((setup) => setup.access !== access)) return null;
     return parsed;
   } catch {
     return null;
@@ -903,16 +966,18 @@ export function readScoutCache(
 }
 
 export function writeScoutCache(
-  setups: ScoutSetup[],
+  setups: ScoutSetupPayload[],
   mode: TradingMode = defaultScoutMode,
   riskProfile: ScoutRiskProfile = defaultScoutRiskProfile,
-  scope: ScoutScope = defaultScoutScope
+  scope: ScoutScope = defaultScoutScope,
+  access: ScoutSetupPayload["access"] = "basic"
 ) {
   if (typeof window === "undefined") return;
   try {
     const entry: ScoutCacheEntry = { setups, cachedAt: Date.now() };
-    window.localStorage.setItem(scoutCacheKeyForMode(mode, riskProfile, scope), JSON.stringify(entry));
-    legacyScoutBaseCacheKeys.forEach((baseKey) => {
+    if (setups.some((setup) => setup.access !== access)) return;
+    window.localStorage.setItem(scoutCacheKeyForMode(mode, riskProfile, scope, access), JSON.stringify(entry));
+    unsafeScoutCacheKeys.forEach((baseKey) => {
       window.localStorage.removeItem(baseKey);
       window.localStorage.removeItem(`${baseKey}.${mode}.${riskProfile}`);
       window.localStorage.removeItem(`${baseKey}.${mode}.${riskProfile}.${scope}`);

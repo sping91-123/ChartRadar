@@ -16,6 +16,7 @@ export class RevenueCatSnapshotError extends Error {
 
 export interface RevenueCatSubscription {
   expires_date?: string | null;
+  grace_period_expires_date?: string | null;
   purchase_date?: string | null;
   original_purchase_date?: string | null;
   original_transaction_id?: string | null;
@@ -24,10 +25,12 @@ export interface RevenueCatSubscription {
   unsubscribe_detected_at?: string | null;
   billing_issues_detected_at?: string | null;
   refunded_at?: string | null;
+  period_type?: "normal" | "trial" | "intro" | "promotional" | string | null;
 }
 
 export interface RevenueCatEntitlement {
   expires_date?: string | null;
+  grace_period_expires_date?: string | null;
   product_identifier?: string | null;
 }
 
@@ -44,6 +47,13 @@ function futureIso(value: string | null | undefined, observedAt: string) {
   const observedTimestamp = Date.parse(observedAt);
   if (!Number.isFinite(timestamp) || !Number.isFinite(observedTimestamp) || timestamp <= observedTimestamp) return null;
   return new Date(timestamp).toISOString();
+}
+
+function latestFutureIso(values: Array<string | null | undefined>, observedAt: string) {
+  return values
+    .map((value) => futureIso(value, observedAt))
+    .filter((value): value is string => Boolean(value))
+    .sort((left, right) => Date.parse(right) - Date.parse(left))[0] ?? null;
 }
 
 function providerOrderId(productId: string, subscription: RevenueCatSubscription) {
@@ -72,8 +82,14 @@ export function buildRevenueCatSnapshot(
 
   const activeProductIds = new Set<string>();
   for (const entitlement of Object.values(subscriber.entitlements)) {
-    if (!futureIso(entitlement.expires_date, observedAt)) continue;
     const productId = entitlement.product_identifier?.trim();
+    const subscription = productId ? subscriber.subscriptions[productId] : undefined;
+    const activeUntil = latestFutureIso([
+      entitlement.expires_date,
+      entitlement.grace_period_expires_date,
+      subscription?.grace_period_expires_date
+    ], observedAt);
+    if (!activeUntil) continue;
     if (!productId) {
       throw new RevenueCatSnapshotError(
         "incomplete",
@@ -94,15 +110,20 @@ export function buildRevenueCatSnapshot(
       );
     }
 
-    // Product policy is intentionally fail-closed: billing issues are past_due
-    // immediately, and refunded purchases must not retain access.
-    if (subscription.billing_issues_detected_at || subscription.refunded_at) continue;
+    // RevenueCat may keep access active after the regular expiry while Google
+    // Play is in grace. The grace expiry is therefore part of the effective
+    // access window; billing issue metadata alone is not a revoke signal.
+    // Refunds and an expired/missing entitlement still fail closed.
+    if (subscription.refunded_at) continue;
 
-    const expiry = futureIso(subscription.expires_date, observedAt);
+    const expiry = latestFutureIso([
+      subscription.expires_date,
+      subscription.grace_period_expires_date
+    ], observedAt);
     if (!expiry) {
       throw new RevenueCatSnapshotError(
         "incomplete",
-        "An active RevenueCat entitlement has no future subscription expiry."
+        "An active RevenueCat entitlement has no future subscription or grace expiry."
       );
     }
     const plan = findBillingPlanByAppStoreProductId(productId);
@@ -121,7 +142,7 @@ export function buildRevenueCatSnapshot(
     snapshot.push({
       plan: plan.id,
       market_scope: getMarketScopeForPlan(plan.id) as "crypto" | "stocks" | "bundle",
-      status: subscription.unsubscribe_detected_at ? "canceled" : "active",
+      status: subscription.period_type?.trim().toLowerCase() === "trial" ? "trialing" : subscription.unsubscribe_detected_at ? "canceled" : "active",
       current_period_start: subscription.purchase_date ?? subscription.original_purchase_date ?? observedAt,
       current_period_end: expiry,
       provider_product_id: productId,
@@ -181,20 +202,33 @@ function identityValues(value: unknown) {
   return [];
 }
 
+function firstUuid(values: string[]) {
+  for (const candidate of values) {
+    const normalized = candidate.trim().toLowerCase();
+    if (uuidPattern.test(normalized)) return normalized;
+  }
+  return null;
+}
+
 export function extractRevenueCatWebhookUserIds(event: Record<string, unknown> | undefined) {
   if (!event) return [];
-  const candidates = [
-    ...identityValues(event.transferred_from),
+  const eventType = typeof event.type === "string" ? event.type.trim().toUpperCase() : "";
+  if (eventType === "TRANSFER") {
+    // RevenueCat can include multiple aliases for each side of a transfer.
+    // They identify one Customer per side, so reconcile one verified Supabase
+    // UUID for the source and one for the destination, in that order.
+    const sourceUserId = firstUuid(identityValues(event.transferred_from));
+    const destinationUserId = firstUuid(identityValues(event.transferred_to));
+    return Array.from(new Set([sourceUserId, destinationUserId].filter((value): value is string => Boolean(value))));
+  }
+
+  // Aliases belong to the same RevenueCat Customer. Reconciling every alias
+  // would attempt to assign one provider order to multiple Supabase users.
+  // Prefer the event's current app user, then its original user, then aliases.
+  const canonicalUserId = firstUuid([
     ...identityValues(event.app_user_id),
     ...identityValues(event.original_app_user_id),
-    ...identityValues(event.aliases),
-    ...identityValues(event.transferred_to)
-  ];
-  const unique = new Set<string>();
-  for (const candidate of candidates) {
-    const normalized = candidate.trim();
-    if (uuidPattern.test(normalized)) unique.add(normalized.toLowerCase());
-    if (unique.size >= 8) break;
-  }
-  return Array.from(unique);
+    ...identityValues(event.aliases)
+  ]);
+  return canonicalUserId ? [canonicalUserId] : [];
 }

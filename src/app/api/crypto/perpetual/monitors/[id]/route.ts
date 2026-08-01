@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { cryptoAlertConditionLimit } from "@/lib/billing";
+import { cryptoAlertConditionLimit } from "@/lib/coinCapabilities";
 import { isUuid } from "@/lib/perpetualMonitor";
 import { perpetualDecisionEngineVersion } from "@/lib/perpetualDecisionSnapshot";
 import { markExpiredPerpetualMonitors, reconcilePerpetualMonitorLimit, setPerpetualMonitorAction } from "@/lib/server/perpetualMonitorStore";

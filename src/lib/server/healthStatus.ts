@@ -141,7 +141,11 @@ export async function getDetailedHealthPayload() {
   const perpetualMutationEnabled = isPerpetualRevenueCoreScannerEnabled(perpetualMode);
   const hasProductAnalytics = productAnalyticsConfigured();
   const hasCronSecret = hasValue(process.env.CRON_SECRET);
-  const hasSharedAiCostGuard = hasValue(process.env.UPSTASH_REDIS_REST_URL) && hasValue(process.env.UPSTASH_REDIS_REST_TOKEN);
+  const hasSharedAiCostGuard = (
+    hasValue(process.env.UPSTASH_REDIS_REST_URL) || hasValue(process.env.KV_REST_API_URL)
+  ) && (
+    hasValue(process.env.UPSTASH_REDIS_REST_TOKEN) || hasValue(process.env.KV_REST_API_TOKEN)
+  );
   const hasFirebaseServer = hasValue(process.env.FIREBASE_SERVICE_ACCOUNT_JSON) || (
     hasValue(process.env.FIREBASE_PROJECT_ID) &&
     hasValue(process.env.FIREBASE_CLIENT_EMAIL) &&
@@ -226,7 +230,7 @@ export async function getDetailedHealthPayload() {
       : {
           area: "perpetual_revenue_core",
           label: "Perpetual revenue-core activation",
-          env: "PRODUCT_ANALYTICS_HMAC_SECRET, CRON_SECRET, Firebase server credentials, UPSTASH_REDIS_REST_URL/TOKEN",
+          env: "PRODUCT_ANALYTICS_HMAC_SECRET, CRON_SECRET, Firebase server credentials, UPSTASH_REDIS_REST_URL/TOKEN or KV_REST_API_URL/TOKEN",
           reason: "On mode requires measurable product events, an authenticated five-minute Push worker, and a cross-instance AI cost ceiling."
         }
   ].filter((item): item is { area: string; label: string; env: string; reason: string } => Boolean(item));

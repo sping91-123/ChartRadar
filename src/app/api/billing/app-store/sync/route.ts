@@ -4,20 +4,28 @@ import { resolveCombinedBillingEntitlementPlan, resolvePlanIdFromStoreProductId 
 import { resolveEffectiveEntitlement } from "@/lib/effectiveEntitlement";
 import { isUuid } from "@/lib/perpetualMonitor";
 import { reconcileProviderEntitlements } from "@/lib/server/billingEntitlements";
-import { findRecentPurchaseAttribution, recordServerProductEvent } from "@/lib/server/productEventStore";
+import {
+  findRecentPurchaseAttributionContext,
+  persistPurchaseAttributionContext,
+  recordServerProductEvent,
+  type PurchaseAttributionContext
+} from "@/lib/server/productEventStore";
+import { hashFunnelSessionId, isInternalProductTester, verifyProductQaSignature } from "@/lib/server/productEventPrivacy";
+import { deriveSubscriptionLifecycleTransitions, type PreviousSubscriptionState } from "@/lib/server/subscriptionLifecycleEvents";
 import { isBodyTooLarge, rateLimit, readJsonBodyLimited } from "@/lib/server/rateLimit";
 import {
   buildRevenueCatSnapshot,
   fetchRevenueCatSubscriber,
   RevenueCatSnapshotError
 } from "@/lib/server/revenueCatSnapshot";
-import { fetchSupabaseUserOnServer, isSupabaseAdminConfigured } from "@/lib/server/supabaseAdmin";
+import { fetchSupabaseUserOnServer, isSupabaseAdminConfigured, supabaseAdminRest } from "@/lib/server/supabaseAdmin";
 import { fetchSupabaseActiveSubscriptions } from "@/lib/supabase";
 
 interface AppStoreSyncRequest {
   appUserId?: string;
   attributionId?: string;
   attributionSource?: string;
+  funnelSessionId?: string;
   basePlanId?: string;
   planId?: string;
   productId?: string;
@@ -67,7 +75,7 @@ export async function POST(request: Request) {
     );
   }
   const body = parsed.value ?? {};
-  const allowedKeys = new Set(["appUserId", "attributionId", "attributionSource", "basePlanId", "planId", "productId", "platform"]);
+  const allowedKeys = new Set(["appUserId", "attributionId", "attributionSource", "basePlanId", "planId", "productId", "platform", "funnelSessionId"]);
   if (typeof body !== "object" || Array.isArray(body) || Object.keys(body).some((key) => !allowedKeys.has(key))) {
     return NextResponse.json({ active: false, status: "pending", message: "Request fields are invalid." }, { status: 400 });
   }
@@ -76,6 +84,9 @@ export async function POST(request: Request) {
   }
   if (body.attributionSource !== undefined && !/^[a-z0-9_-]{1,60}$/i.test(body.attributionSource)) {
     return NextResponse.json({ active: false, status: "pending", message: "Purchase attribution source is invalid." }, { status: 400 });
+  }
+  if (body.funnelSessionId !== undefined && !isUuid(body.funnelSessionId)) {
+    return NextResponse.json({ active: false, status: "pending", message: "Purchase funnel session is invalid." }, { status: 400 });
   }
   const accessToken = getBearerToken(request);
   if (!accessToken) {
@@ -114,16 +125,41 @@ export async function POST(request: Request) {
   }
 
   const observedAt = new Date().toISOString();
+  const trafficClass = user.app_metadata?.role === "admin" || isInternalProductTester(user.id) || verifyProductQaSignature({
+    header: request.headers.get("x-chart-radar-qa"),
+    funnelSessionId: body.funnelSessionId ?? null
+  }) ? "internal" as const : "user" as const;
+  let funnelSessionHash: string | null = null;
+  if (body.funnelSessionId) {
+    try {
+      funnelSessionHash = hashFunnelSessionId(body.funnelSessionId);
+    } catch {
+      return NextResponse.json({ active: false, status: "pending", message: "Purchase analytics are not configured." }, { status: 503 });
+    }
+  }
   if (body.attributionId && requestPlanId) {
     await recordServerProductEvent({
       eventId: body.attributionId,
       eventName: "purchase_started",
       userId: user.id,
       surface: "billing",
+      funnelSessionHash,
+      trafficClass,
       properties: { provider: "revenuecat", planId: requestPlanId, source: body.attributionSource ?? "pro_page" }
     });
   }
   let snapshot: ReturnType<typeof buildRevenueCatSnapshot>;
+  let previousSubscriptions: PreviousSubscriptionState[];
+  try {
+    previousSubscriptions = await supabaseAdminRest<PreviousSubscriptionState[]>(
+      `subscriptions?select=provider_order_id,status,plan,revoked_at&user_id=eq.${encodeURIComponent(user.id)}&provider=eq.revenuecat`
+    );
+  } catch {
+    return NextResponse.json(
+      { active: false, status: "pending", message: "기존 구독 상태를 확인하는 중입니다. 잠시 후 다시 시도해 주세요." },
+      { status: 503 }
+    );
+  }
   try {
     const payload = await fetchRevenueCatSubscriber({ appUserId: body.appUserId, apiKey: revenueCatApiKey });
     snapshot = buildRevenueCatSnapshot(payload, observedAt);
@@ -162,18 +198,44 @@ export async function POST(request: Request) {
     const planIds = snapshot.map((entry) => entry.plan);
     const primaryPlan = resolveCombinedBillingEntitlementPlan(planIds, "all") ?? planIds[0] ?? null;
     const active = snapshot.length > 0;
-    if (active && result.changed) {
-      const attributionId = body.attributionId ?? await findRecentPurchaseAttribution({
+    const transitions = deriveSubscriptionLifecycleTransitions({
+      userId: user.id,
+      previous: previousSubscriptions,
+      current: snapshot
+    });
+    for (const transition of transitions) {
+      const directContext: PurchaseAttributionContext | null = body.attributionId && requestPlanId === transition.planId
+        ? { attributionId: body.attributionId, funnelSessionHash, trafficClass }
+        : null;
+      const attributionContext = directContext ?? await findRecentPurchaseAttributionContext({
         userId: user.id,
         provider: "revenuecat",
-        planId: primaryPlan
+        planId: transition.planId,
+        providerOrderId: transition.providerOrderId,
+        maxAgeMs: transition.eventName === "trial_converted" ? 30 * 24 * 60 * 60 * 1000 : 30 * 60 * 1000
       });
+      if (attributionContext) {
+        await persistPurchaseAttributionContext({
+          userId: user.id,
+          provider: "revenuecat",
+          providerOrderId: transition.providerOrderId,
+          planId: transition.planId,
+          context: attributionContext
+        });
+      }
       await recordServerProductEvent({
-        eventName: "entitlement_activated",
+        eventId: transition.eventId,
+        eventName: transition.eventName,
         userId: user.id,
         surface: "billing",
-        attributionId,
-        properties: { provider: "revenuecat", planId: primaryPlan }
+        attributionId: attributionContext?.attributionId ?? null,
+        funnelSessionHash: attributionContext?.funnelSessionHash ?? null,
+        trafficClass: attributionContext?.trafficClass ?? trafficClass,
+        properties: {
+          provider: "revenuecat",
+          planId: transition.planId,
+          ...(transition.eventName === "verified_trial_started" && body.basePlanId ? { offerId: body.basePlanId } : {})
+        }
       });
     }
     return NextResponse.json({

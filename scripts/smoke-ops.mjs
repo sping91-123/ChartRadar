@@ -382,8 +382,8 @@ expectIncludes(cryptoHomeTickerRoute, "getCryptoHomeTicker", "Home ticker route 
 expectIncludes(cryptoExchangeData, "compositeStructureScore", "Home multi-timeframe structure score", "src/lib/server/cryptoExchangeData.ts");
 expectIncludes(cryptoExchangeData, "fetchPressure", "Home futures pressure source", "src/lib/server/cryptoExchangeData.ts");
 expectIncludes(cryptoExchangeData, "buildStrategyRadar", "Home strategy radar builder", "src/lib/server/cryptoExchangeData.ts");
-expectIncludes(homeInterestCoins, "homeInterestMaxBasic = 1", "Home Basic interest coin limit", "src/lib/homeInterestCoins.ts");
-expectIncludes(homeInterestCoins, "homeInterestMaxPro = 5", "Home Pro interest coin limit", "src/lib/homeInterestCoins.ts");
+expectIncludes(homeInterestCoins, "basicCoinCapabilityPolicy.homeInterestLimit", "Home Basic interest coin limit uses capability policy", "src/lib/homeInterestCoins.ts");
+expectIncludes(homeInterestCoins, "coinProCapabilityPolicy.homeInterestLimit", "Home Pro interest coin limit uses capability policy", "src/lib/homeInterestCoins.ts");
 expectIncludes(majorsApp, "CoinMarketEnvironmentPanel", "Market environment panel on majors", "src/components/MajorsApp.tsx");
 expectIncludes(majorsApp, "PerpetualDecisionExperience", "Single-snapshot Perpetual decision experience", "src/components/MajorsApp.tsx");
 expectIncludes(majorsApp, 'revenueCoreMode === "on"', "Perpetual revenue core rollout gate", "src/components/MajorsApp.tsx");

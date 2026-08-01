@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowDownRight, ArrowUpRight, Loader2, Radar, RefreshCw } from "lucide-react";
-import type { ScoutSetup } from "@/lib/setupScout";
+import { hasProScoutDetails, type ProScoutSetup as ScoutSetup, type ScoutSetupPayload } from "@/lib/setupScout";
 
 interface MarketBoardItem {
   symbol: string;
@@ -112,8 +112,8 @@ export function DailyRadarBrief({ scope = "all" }: { scope?: BriefScope }) {
 
       let setups: ScoutSetup[] = [];
       if (scoutResponse.status === "fulfilled" && scoutResponse.value.ok) {
-        const payload = (await scoutResponse.value.json()) as { setups?: ScoutSetup[]; cachedAt?: number };
-        setups = (payload.setups ?? []).filter((setup) => inScope(setup.symbol, scope));
+        const payload = (await scoutResponse.value.json()) as { setups?: ScoutSetupPayload[]; cachedAt?: number };
+        setups = (payload.setups ?? []).filter(hasProScoutDetails).filter((setup) => inScope(setup.symbol, scope));
         cachedAt = payload.cachedAt ?? cachedAt;
       }
 

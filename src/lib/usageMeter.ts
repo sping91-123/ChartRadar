@@ -1,4 +1,5 @@
 // 일일 사용량 제한과 브라우저 저장 로직을 관리합니다.
+import { basicCoinCapabilityPolicy, coinProCapabilityPolicy } from "@/lib/coinCapabilities";
 export type UsageBucketId =
   | "radarScan"
   | "altIndividualAnalysis"
@@ -15,7 +16,8 @@ export interface UsageBucket {
   shortLabel: string;
   description: string;
   freeDailyLimit: number;
-  proDailyLimit: number;
+  /** null means the product has no advertised daily quota. */
+  proDailyLimit: number | null;
 }
 
 export interface UsageSnapshot {
@@ -39,32 +41,32 @@ export const usageBuckets: UsageBucket[] = [
     label: "코인 레이더",
     shortLabel: "코인",
     description: "BTC, ETH, 알트코인의 구조와 시장 변화를 다시 확인합니다.",
-    freeDailyLimit: 2,
-    proDailyLimit: 200
+    freeDailyLimit: basicCoinCapabilityPolicy.radarScanDailyLimit,
+    proDailyLimit: coinProCapabilityPolicy.radarScanDailyLimit
   },
   {
     id: "altIndividualAnalysis",
     label: "알트 개별 분석",
     shortLabel: "알트",
     description: "선택한 알트코인을 BTC, ETH처럼 개별로 분석합니다.",
-    freeDailyLimit: 3,
-    proDailyLimit: 300
+    freeDailyLimit: basicCoinCapabilityPolicy.altAnalysisDailyLimit ?? 3,
+    proDailyLimit: coinProCapabilityPolicy.altAnalysisDailyLimit
   },
   {
     id: "cryptoAiBriefing",
     label: "코인 AI 브리핑",
     shortLabel: "코인 AI",
     description: "코인 뉴스와 시장 흐름을 한 번에 정리합니다.",
-    freeDailyLimit: 1,
-    proDailyLimit: 30
+    freeDailyLimit: basicCoinCapabilityPolicy.cryptoAiDailyLimit,
+    proDailyLimit: coinProCapabilityPolicy.cryptoAiDailyLimit
   },
   {
     id: "watchlistScan",
     label: "관심코인 감시",
     shortLabel: "관심",
     description: "저장한 관심코인의 구조 변화를 다시 훑습니다.",
-    freeDailyLimit: 1,
-    proDailyLimit: 100
+    freeDailyLimit: basicCoinCapabilityPolicy.watchlistScanDailyLimit,
+    proDailyLimit: coinProCapabilityPolicy.watchlistScanDailyLimit
   },
   {
     id: "stockRadar",
@@ -87,8 +89,8 @@ export const usageBuckets: UsageBucket[] = [
     label: "코인 알림 설정",
     shortLabel: "코인 알림",
     description: "코인 레이더 알림 조건을 만들고 다시 확인합니다.",
-    freeDailyLimit: 1,
-    proDailyLimit: 20
+    freeDailyLimit: basicCoinCapabilityPolicy.sharedMonitorLimit,
+    proDailyLimit: coinProCapabilityPolicy.sharedMonitorLimit
   },
   {
     id: "stocksAlertRule",
@@ -101,9 +103,10 @@ export const usageBuckets: UsageBucket[] = [
 ];
 
 function getLocalDateKey(date = new Date()) {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
+  const kst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  const year = kst.getUTCFullYear();
+  const month = `${kst.getUTCMonth() + 1}`.padStart(2, "0");
+  const day = `${kst.getUTCDate()}`.padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
@@ -152,6 +155,19 @@ export function recordUsageEvent(bucketId: UsageBucketId, amount = 1) {
   return next;
 }
 
+export function syncUsageCount(bucketId: UsageBucketId, used: number) {
+  const snapshot = readUsageSnapshot();
+  const next: UsageSnapshot = {
+    dateKey: snapshot.dateKey,
+    counts: {
+      ...snapshot.counts,
+      [bucketId]: Math.max(0, Math.floor(Number.isFinite(used) ? used : 0))
+    }
+  };
+  writeUsageSnapshot(next);
+  return next;
+}
+
 export function resetUsageSnapshot() {
   const snapshot = emptySnapshot();
   writeUsageSnapshot(snapshot);
@@ -189,7 +205,8 @@ export function getUsageGate(bucketId: UsageBucketId, isPaid: boolean) {
     };
   }
 
-  const limit = isPaid ? state.proDailyLimit : state.freeDailyLimit;
+  const unlimited = isPaid && state.proDailyLimit === null;
+  const limit = unlimited ? Number.POSITIVE_INFINITY : isPaid ? state.proDailyLimit! : state.freeDailyLimit;
   const remaining = Math.max(0, limit - state.used);
   const allowed = remaining > 0;
 

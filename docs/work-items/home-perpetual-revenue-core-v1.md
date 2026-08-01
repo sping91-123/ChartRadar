@@ -2,7 +2,7 @@
 
 ## 상태
 
-- 상태: `PRODUCTION_ON / BETA_OBSERVATION_SCHEDULED`
+- 상태: `PRODUCTION_ON / BETA_STOPPED_PRE_CHANGE / INCONCLUSIVE`
 - 우선순위: P0 수익화 코어
 - 구현·검증일: 2026-07-20 KST
 - 운영 DB: migration 2건 적용·검증 완료
@@ -11,6 +11,7 @@
 - AAB·스토어·iOS 작업: 이번 범위에서 제외
 - beta 12명 추가 mutation: 없음, E2E 전후 cohort 불변
 - commit·push: PR `#11` squash merge 완료
+- 2026-08-01 16:09 KST에 기존 관찰을 종료했다. legacy 12명의 권한은 유지하되 Coin Pro v2 체험·전환 cohort에서는 제외한다. 이후 UI 감사 이벤트 12건은 삭제하지 않고 `internal`로 분류해 지표에서 제외한다.
 
 ## 결과
 

@@ -25,6 +25,9 @@ import {
 } from "@/lib/perpetualSnapshotContinuity";
 import { trackProductEvent } from "@/lib/trackProductEvent";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
+import { buildCoinProHref } from "@/lib/coinProConversion";
+import { isAndroidNativeApp, readAppPushState, registerAndroidAppPush } from "@/lib/appPush";
+import { shouldConnectPushAfterFirstMonitor } from "@/lib/firstMonitorPush";
 
 type DecisionLoadState =
   | { status: "loading"; snapshot: null; capabilities: null; continuity: null }
@@ -105,7 +108,9 @@ function MonitorAction({
   isAuthenticated,
   actionable,
   snapshotId,
-  upgradeHref
+  upgradeHref,
+  onUpgrade,
+  prefilled = false
 }: {
   condition: MonitorCondition;
   capabilities: PerpetualSnapshotCapabilities;
@@ -115,6 +120,8 @@ function MonitorAction({
   actionable: boolean;
   snapshotId: string;
   upgradeHref: string;
+  onUpgrade: (condition: MonitorCondition) => void;
+  prefilled?: boolean;
 }) {
   const operationBusy = monitorState.status === "saving";
   const saved = monitorState.status === "saved" && monitorState.snapshotId === snapshotId && monitorState.conditionId === condition.id;
@@ -145,7 +152,7 @@ function MonitorAction({
   }
 
   if (capabilities.activeMonitorCount >= capabilities.monitorLimit) {
-    return <ActionButton href={upgradeHref} tone="secondary" className="w-full sm:w-auto">Coin Pro 감시 한도 보기</ActionButton>;
+    return <ActionButton href={upgradeHref} onNavigate={() => onUpgrade(condition)} tone="secondary" className="w-full sm:w-auto">Coin Pro 감시 한도 보기</ActionButton>;
   }
 
   return (
@@ -156,7 +163,7 @@ function MonitorAction({
       className="w-full sm:w-auto"
     >
       {operationBusy ? <Loader2 className="animate-spin" size={15} aria-hidden /> : saved ? <CheckCircle2 size={15} aria-hidden /> : <Bell size={15} aria-hidden />}
-      {operationBusy ? "조건 저장 중" : saved ? "감시 저장됨" : capabilities.setupRequired ? "저장소 준비 필요" : !actionable ? "데이터 정상화 후 가능" : "이 조건 감시하기"}
+      {operationBusy ? "조건 저장 중" : saved ? "감시 저장됨" : capabilities.setupRequired ? "저장소 준비 필요" : !actionable ? "데이터 정상화 후 가능" : prefilled ? "준비된 조건 감시 저장" : "이 조건 감시하기"}
     </ActionButton>
   );
 }
@@ -185,6 +192,8 @@ export function PerpetualDecisionExperience({
   const [newsContext, setNewsContext] = useState<NewsDecisionContext | null>(null);
   const [monitorRefreshKey, setMonitorRefreshKey] = useState(0);
   const [livePrice, setLivePrice] = useState<number | null>(null);
+  const [activationPending, setActivationPending] = useState(false);
+  const [activationConditionId, setActivationConditionId] = useState<string | null>(null);
   const generationRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const initialRequestRef = useRef(requestedSnapshotId ?? null);
@@ -308,6 +317,41 @@ export function PerpetualDecisionExperience({
   const snapshot = state.snapshot;
   const exactAlertContext = effectiveSource === "alert" && state.continuity?.status === "same";
   useEffect(() => {
+    if (typeof window === "undefined" || !snapshot || !state.capabilities?.canSeeProDetail) {
+      setActivationPending(false);
+      setActivationConditionId(null);
+      return;
+    }
+    try {
+      const raw = window.sessionStorage.getItem("chartRadar.coinPro.monitorActivation.v1");
+      const parsed = raw ? (JSON.parse(raw) as {
+        asset?: unknown;
+        snapshotId?: unknown;
+        conditionId?: unknown;
+        createdAt?: unknown;
+      }) : null;
+      const conditionIds = new Set([
+        snapshot.summary.primaryCondition.id,
+        ...(snapshot.pro?.confirmationConditions.map((condition) => condition.id) ?? []),
+        ...(snapshot.pro?.invalidationConditions.map((condition) => condition.id) ?? [])
+      ]);
+      const conditionId = typeof parsed?.conditionId === "string" ? parsed.conditionId : null;
+      const matches = Boolean(
+        parsed?.asset === asset &&
+        parsed?.snapshotId === snapshot.id &&
+        conditionId &&
+        conditionIds.has(conditionId) &&
+        typeof parsed?.createdAt === "number" &&
+        Date.now() - parsed.createdAt < 24 * 60 * 60 * 1000
+      );
+      setActivationPending(matches);
+      setActivationConditionId(matches ? conditionId : null);
+    } catch {
+      setActivationPending(false);
+      setActivationConditionId(null);
+    }
+  }, [asset, session, snapshot, state.capabilities?.canSeeProDetail]);
+  useEffect(() => {
     if (!snapshot) return;
     const storedContext = source === "alert"
       ? readPerpetualAlertContext(requestedSnapshotId ?? snapshot.id)
@@ -332,17 +376,36 @@ export function PerpetualDecisionExperience({
           : { quality: snapshot.quality, continuity: state.continuity?.status ?? "current", source: effectiveSource ?? "direct" }
       });
     }
-    if (!snapshot.pro && !trackedGateRef.current) {
+    const capabilities = state.capabilities;
+    const monitorLimitGateVisible = Boolean(
+      capabilities &&
+      !capabilities.canSeeProDetail &&
+      capabilities.monitorEnabled &&
+      session &&
+      !capabilities.requiresAuth &&
+      snapshot.quality === "ready" &&
+      !exactAlertContext &&
+      new Date(snapshot.expiresAt).getTime() > Date.now() &&
+      capabilities.activeMonitorCount >= capabilities.monitorLimit
+    );
+    if (monitorLimitGateVisible && !trackedGateRef.current) {
       trackedGateRef.current = true;
       void trackProductEvent({
         eventName: "pro_gate_viewed",
         surface: "perpetual",
         asset: snapshot.asset,
         snapshotId: snapshot.id,
-        properties: { source: effectiveSource ?? "direct", reason: "pro_conditions" }
+        properties: {
+          source: "perpetual-monitor",
+          placement: "perpetual_monitor_lock",
+          routeKey: snapshot.asset === "eth" ? "perpetual_eth" : "perpetual_btc",
+          symbol: snapshot.asset.toUpperCase(),
+          variant: "coin-pro-v2",
+          reason: "monitor_limit"
+        }
       });
     }
-  }, [attributionId, effectiveSource, exactAlertContext, initialAlertMonitorId, requestedSnapshotId, snapshot, source, state.continuity?.status]);
+  }, [attributionId, effectiveSource, exactAlertContext, initialAlertMonitorId, requestedSnapshotId, session, snapshot, source, state.capabilities, state.continuity?.status]);
   useEffect(() => {
     if (!snapshot) return;
     let cancelled = false;
@@ -368,6 +431,7 @@ export function PerpetualDecisionExperience({
   const createMonitor = useCallback(async (condition: MonitorCondition) => {
     if (!snapshot) return;
     const monitorSnapshotId = snapshot.id;
+    const shouldOfferFirstMonitorPush = (state.capabilities?.scenarioMonitorCount ?? 0) === 0;
     setMonitorState({ status: "saving", conditionId: condition.id, snapshotId: monitorSnapshotId });
     let failureTracked = false;
     try {
@@ -397,6 +461,30 @@ export function PerpetualDecisionExperience({
         throw new Error(payload.error ?? "조건 감시를 저장하지 못했습니다.");
       }
       setMonitorState({ status: "saved", conditionId: condition.id, monitorId: payload.monitor.id, snapshotId: snapshot.id, message: "최대 5분 간격 감시가 시작됐습니다." });
+      setActivationPending(false);
+      setActivationConditionId(null);
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem("chartRadar.coinPro.monitorActivation.v1");
+      }
+      const currentPushState = isAndroidNativeApp() ? readAppPushState() : null;
+      if (
+        isAndroidNativeApp() &&
+        shouldOfferFirstMonitorPush &&
+        shouldConnectPushAfterFirstMonitor(currentPushState)
+      ) {
+        // Permission is requested only after the user has reviewed and saved
+        // the first monitor condition. Existing alert preferences are retained.
+        void registerAndroidAppPush({ market: "crypto", ruleIds: [], preserveRuleIds: true }).then((pushState) => {
+          setMonitorState((current) => current.status === "saved" && current.monitorId === payload.monitor!.id
+            ? {
+                ...current,
+                message: pushState.registrationStage === "enabled" && pushState.synced
+                  ? "최대 5분 간격 감시가 시작됐고 앱 알림도 연결됐습니다."
+                  : `감시는 시작됐습니다. ${pushState.lastError ?? "앱 알림 연결은 알림 설정에서 다시 확인해 주세요."}`
+              }
+            : current);
+        });
+      }
       setMonitorRefreshKey((current) => current + 1);
       setState((current) => current.capabilities ? {
         ...current,
@@ -425,7 +513,7 @@ export function PerpetualDecisionExperience({
       }
       setMonitorState({ status: "error", conditionId: condition.id, snapshotId: monitorSnapshotId, message: error instanceof Error ? error.message : "조건 감시를 저장하지 못했습니다." });
     }
-  }, [effectiveSource, snapshot]);
+  }, [effectiveSource, snapshot, state.capabilities?.scenarioMonitorCount]);
 
   const handleMonitorUsageChange = useCallback((count: number) => {
     setState((current) => {
@@ -563,13 +651,54 @@ export function PerpetualDecisionExperience({
     monitorState
   ) ? monitorState : { status: "idle" } as const;
   const quickEvidence = displaySnapshot.publicEvidence;
-  const analysisReturnTo = `/crypto/perpetual?asset=${asset}&timeframe=15m&snapshot=${encodeURIComponent(displaySnapshot.id)}`;
-  const monitorUpgradeHref = `/pro?market=crypto&source=perpetual-monitor&returnTo=${encodeURIComponent(analysisReturnTo)}`;
+  const monitorRouteKey = asset === "eth" ? "perpetual_eth" : "perpetual_btc";
+  const monitorReturnParams = new URLSearchParams({ asset, timeframe: "15m", snapshot: displaySnapshot.id });
+  if (effectiveSource) monitorReturnParams.set("source", effectiveSource);
+  if (effectiveSource === "alert" && alertMonitorId) monitorReturnParams.set("monitor", alertMonitorId);
+  if (effectiveSource === "news" && newsContext?.reactionId) monitorReturnParams.set("impact", newsContext.reactionId);
+  const monitorReturnTo = `/crypto/perpetual?${monitorReturnParams.toString()}`;
+  const monitorUpgradeHref = buildCoinProHref({
+    source: "perpetual-monitor",
+    placement: "perpetual_monitor_lock",
+    routeKey: monitorRouteKey,
+    returnTo: monitorReturnTo,
+    symbol: asset.toUpperCase()
+  });
+  const trackMonitorUpgrade = (condition: MonitorCondition) => {
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem("chartRadar.coinPro.monitorActivation.v1", JSON.stringify({
+        asset,
+        snapshotId: displaySnapshot.id,
+        conditionId: condition.id,
+        createdAt: Date.now()
+      }));
+    }
+    void trackProductEvent({
+      eventName: "pro_cta_clicked",
+      surface: "perpetual",
+      asset,
+      snapshotId: displaySnapshot.id,
+      properties: {
+        source: "perpetual-monitor",
+        placement: "perpetual_monitor_lock",
+        routeKey: monitorRouteKey,
+        symbol: asset.toUpperCase(),
+        authState: session ? "authenticated" : "anonymous",
+        variant: "coin-pro-v2"
+      }
+    });
+  };
   const savesNewsContext = effectiveSource === "news" && newsContext?.evaluatedSnapshotId === displaySnapshot.id && Boolean(capabilities.canSaveNewsJournal);
   const savesSnapshotWithoutNews = effectiveSource === "news" && Boolean(newsContext) && !savesNewsContext;
 
   return (
     <div className="space-y-3">
+      {activationPending ? (
+        <div className="border-l-2 border-ui-brand bg-ui-brand/10 px-3 py-3 text-sm leading-6 text-ui-text">
+          <p className="font-black">보던 시장으로 돌아왔습니다. 첫 감시 조건이 아래에 준비되어 있습니다.</p>
+          <p className="mt-1 text-xs text-ui-muted">조건을 직접 확인해 저장한 뒤에만 Android 알림 권한을 요청합니다.</p>
+        </div>
+      ) : null}
       {continuityRefreshed ? (
         <div className="flex items-start gap-2 bg-ui-watch/10 px-3 py-2 text-xs font-semibold leading-5 text-ui-watch">
           <History size={15} className="mt-0.5 shrink-0" aria-hidden />
@@ -616,7 +745,7 @@ export function PerpetualDecisionExperience({
         <div className="mt-3 flex flex-col gap-2 border-t border-ui-line pt-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="order-2 text-xs leading-5 text-ui-muted sm:order-1">알림은 주문을 실행하지 않습니다. 선택한 가격 조건을 최대 5분마다 확인합니다.</p>
           <div className="order-1 flex flex-col gap-2 sm:order-2 sm:flex-row">
-            <MonitorAction condition={displaySnapshot.summary.primaryCondition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} />
+            <MonitorAction condition={displaySnapshot.summary.primaryCondition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} onUpgrade={trackMonitorUpgrade} prefilled={activationConditionId === displaySnapshot.summary.primaryCondition.id} />
             {session ? (
               <ActionButton
                 tone="secondary"
@@ -677,7 +806,7 @@ export function PerpetualDecisionExperience({
             {conditions.slice(1).map((condition) => (
               <div key={condition.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div><p className="text-xs font-black text-ui-text">{condition.role === "confirmation" ? "흐름이 더 강해지는 확인 가격" : "이 조건이 나오면 해석을 다시 봐야 해요"}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{condition.label}</p></div>
-                <MonitorAction condition={condition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} />
+                <MonitorAction condition={condition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} onUpgrade={trackMonitorUpgrade} prefilled={activationConditionId === condition.id} />
               </div>
             ))}
           </div>

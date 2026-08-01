@@ -13,28 +13,32 @@ import {
   Save,
   Target
 } from "lucide-react";
-import Link from "next/link";
+import { CoinProConversionLink } from "@/components/CoinProConversionLink";
 import {
   readScoutCache,
+  hasProScoutDetails,
+  serializeScoutSetup,
   writeScoutCache,
+  type BasicScoutSetup,
   type ScoutRiskProfile,
   type ScoutScope,
-  type ScoutSetup
+  type ScoutSetup,
+  type ScoutSetupPayload
 } from "@/lib/setupScout";
 import { appendJournalEntry, type ScoutSnapshot } from "@/lib/journal";
 import { createRemoteJournalEntry } from "@/lib/remoteJournal";
 import { getActiveSupabaseSession } from "@/lib/supabase";
 import type { CommentaryInput } from "@/lib/ai/types";
-import type { TradingMode } from "@/lib/marketAnalysis";
-import { getUsageGate, recordUsageEvent } from "@/lib/usageMeter";
+import { syncUsageCount } from "@/lib/usageMeter";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { hasMarketEntitlement } from "@/lib/billing";
 import { withSupabaseAuth } from "@/lib/authFetch";
+import { getCoinCapabilityPolicy, getCoinScoutResultLimit } from "@/lib/coinCapabilities";
 
 type ScanState =
   | { status: "idle" }
   | { status: "loading" }
-  | { status: "ready"; setups: ScoutSetup[]; cachedAt: number }
+  | { status: "ready"; setups: ScoutSetupPayload[]; cachedAt: number }
   | { status: "error"; message: string };
 
 type CommentaryState =
@@ -105,7 +109,15 @@ function activeSetupAnalysis(setup: ScoutSetup) {
   return setup.analysis.timeframeAnalyses.find((item) => item.timeframe === setup.timeframe);
 }
 
-function buildAltRiskSignals(setup: ScoutSetup) {
+function buildAltRiskSignals(setup: ScoutSetupPayload) {
+  if (!hasProScoutDetails(setup)) {
+    const signals: string[] = [];
+    if (setup.status === "active" || setup.proximity === "ready") signals.push("급등 추격 주의");
+    if (setup.watchKind === "counter") signals.push("BTC 방향성 의존");
+    if (setup.proximity === "wait") signals.push("추적 대기");
+    if (setup.summary.readiness !== "high") signals.push("리스크 점검");
+    return uniqueItems([...signals, ...setup.summary.riskFlags]).slice(0, 6);
+  }
   const active = activeSetupAnalysis(setup);
   const signals: string[] = [];
 
@@ -128,11 +140,11 @@ function buildAltRiskSignals(setup: ScoutSetup) {
   return uniqueItems([...signals, ...setup.analysis.riskFlags]).slice(0, 6);
 }
 
-function summarizeAltRisk(setup: ScoutSetup) {
+function summarizeAltRisk(setup: ScoutSetupPayload) {
   return buildAltRiskSignals(setup)[0] ?? "리스크 점검";
 }
 
-function classifyAltSetup(setup: ScoutSetup): AltFilterMeta {
+function classifyAltSetup(setup: ScoutSetupPayload): AltFilterMeta {
   const riskSignals = buildAltRiskSignals(setup);
   const highRisk =
     setup.status === "active" ||
@@ -167,13 +179,19 @@ function classifyAltSetup(setup: ScoutSetup): AltFilterMeta {
   };
 }
 
-function altJudgmentLabel(setup: ScoutSetup, meta: AltFilterMeta) {
+function altJudgmentLabel(setup: ScoutSetupPayload, meta: AltFilterMeta) {
   if (meta.bucket === "danger") return "고위험";
   if (meta.bucket === "watch") return "관망 우위";
-  return setup.plan.side === "long" ? "상방 환경" : "하방 환경";
+  const side = hasProScoutDetails(setup) ? setup.plan.side : setup.summary.side;
+  return side === "long" ? "상방 환경" : "하방 환경";
 }
 
-function buildAltBtcInfluence(setup: ScoutSetup) {
+function buildAltBtcInfluence(setup: ScoutSetupPayload) {
+  if (!hasProScoutDetails(setup)) {
+    return setup.watchKind === "counter"
+      ? "BTC 방향성 확인 전까지 알트 단독 신호를 보수적으로 봅니다."
+      : "BTC/ETH 방향이 같은 쪽으로 유지되는지 함께 확인합니다.";
+  }
   const active = activeSetupAnalysis(setup);
   if (setup.watchKind === "counter" || active?.condition.regime === "mixed") {
     return "BTC 방향성 확인 전까지 알트 단독 신호를 보수적으로 봅니다.";
@@ -194,13 +212,16 @@ function AltProCta({ compact = false }: { compact?: boolean }) {
             BTC·ETH와 알트의 위험, 확인할 가격, 해석을 다시 볼 조건, 세부 근거는 Coin Pro에서 확인할 수 있습니다.
           </p>
         </div>
-        <Link
-          href="/pro?market=crypto"
+        <CoinProConversionLink
+          source="alt-scout"
+          placement="alt_scout_results"
+          routeKey="alts"
+          surface="scout"
           className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-md bg-cyan-300 px-3 text-xs font-black text-slate-950 transition hover:bg-cyan-200"
         >
           <Crown size={14} aria-hidden />
           Coin Pro로 코인 상세 판단 열기
-        </Link>
+        </CoinProConversionLink>
       </div>
     </div>
   );
@@ -467,6 +488,60 @@ function buildJournalNote(setup: ScoutSetup) {
   ].join("\n");
 }
 
+function BasicSetupCard({
+  setup,
+  rank,
+  isAltFilterMode
+}: {
+  setup: BasicScoutSetup;
+  rank: number;
+  isAltFilterMode: boolean;
+}) {
+  const isLong = setup.summary.side === "long";
+  const SideIcon = isLong ? ArrowUpRight : ArrowDownRight;
+  const risks = buildAltRiskSignals(setup).slice(0, 3);
+  const confirmations = setup.summary.opportunityFlags.slice(0, 2);
+
+  return (
+    <article className="border-t border-ui-line py-4 [word-break:keep-all] first:border-t-0">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold text-slate-500">{isAltFilterMode ? "ALT FILTER" : "TOP"} {rank}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-black text-white">{setup.symbol.replace("USDT.P", "")}</h3>
+            <span className="text-xs font-bold text-slate-300">{setup.timeframe}</span>
+            <SideIcon className={isLong ? "text-signal-success" : "text-signal-danger"} size={16} aria-hidden />
+            <span className="text-xs font-black text-white">{isLong ? "상방 환경" : "하방 환경"}</span>
+          </div>
+        </div>
+        <span className="text-[11px] font-black text-slate-300">
+          {setup.proximity === "ready" ? "조건 확인" : setup.proximity === "near" ? "근접 관찰" : "추적 대기"}
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-3 border-y border-white/10 py-3 sm:grid-cols-2">
+        <div>
+          <p className="text-[11px] font-bold text-slate-500">먼저 볼 위험</p>
+          <p className="mt-1 text-sm font-black text-white">{risks[0] ?? "추격보다 구조 확인 우선"}</p>
+        </div>
+        <div>
+          <p className="text-[11px] font-bold text-slate-500">다음 확인 조건</p>
+          <p className="mt-1 text-sm font-black text-white">
+            {confirmations[0] ?? "같은 방향의 구조가 유지되는지 확인"}
+          </p>
+        </div>
+      </div>
+
+      <p className="mt-3 text-xs leading-5 text-slate-400">
+        Basic에는 방향·위험·확인 순서만 전달됩니다. 정확한 관찰 가격, 무효화, 목표값과 상세 근거는 서버 응답에도 포함되지 않습니다.
+      </p>
+      <div className="mt-3">
+        <AltProCta compact />
+      </div>
+    </article>
+  );
+}
+
 function SetupCard({
   setup,
   rank,
@@ -474,12 +549,20 @@ function SetupCard({
   isAltFilterMode,
   canShowAltProDetails
 }: {
-  setup: ScoutSetup;
+  setup: ScoutSetupPayload;
   rank: number;
   riskProfile: ScoutRiskProfile;
   isAltFilterMode: boolean;
   canShowAltProDetails: boolean;
 }) {
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  if (!hasProScoutDetails(setup)) {
+    return <BasicSetupCard setup={setup} rank={rank} isAltFilterMode={isAltFilterMode} />;
+  }
+  if (!canShowAltProDetails) {
+    return <BasicSetupCard setup={serializeScoutSetup(setup, false) as BasicScoutSetup} rank={rank} isAltFilterMode={isAltFilterMode} />;
+  }
+  const detailedSetup = setup;
   const isLong = setup.plan.side === "long";
   const sideColor = isLong ? "text-signal-success" : "text-signal-danger";
   const SideIcon = isLong ? ArrowUpRight : ArrowDownRight;
@@ -487,7 +570,7 @@ function SetupCard({
   const altMeta = isAltFilterMode ? classifyAltSetup(setup) : null;
   const altRiskSignals = isAltFilterMode ? buildAltRiskSignals(setup) : [];
   const altSummaryRisk = isAltFilterMode ? summarizeAltRisk(setup) : null;
-  const shouldShowProDetails = !isAltFilterMode || canShowAltProDetails;
+  const shouldShowProDetails = canShowAltProDetails;
   const modeCardClass =
     isAltFilterMode && altMeta?.bucket === "danger"
       ? "border-signal-danger/30 bg-signal-danger/5 hover:border-signal-danger/50"
@@ -508,31 +591,29 @@ function SetupCard({
         : setup.timeframe === "4h"
           ? "border-violet-400/25 bg-violet-400/10 text-violet-200"
           : "border-emerald-300/25 bg-emerald-300/10 text-emerald-200";
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-
   async function saveSetup() {
     setSaveState("saving");
     const snapshot: ScoutSnapshot = {
-      entryLow: setup.plan.entryLow,
-      entryHigh: setup.plan.entryHigh,
-      invalidation: setup.plan.invalidation,
-      target1: setup.plan.target1,
-      target2: setup.plan.target2,
-      side: setup.plan.side,
-      score: setup.score,
-      quality: setup.plan.quality,
-      scannedAt: setup.scannedAt
+      entryLow: detailedSetup.plan.entryLow,
+      entryHigh: detailedSetup.plan.entryHigh,
+      invalidation: detailedSetup.plan.invalidation,
+      target1: detailedSetup.plan.target1,
+      target2: detailedSetup.plan.target2,
+      side: detailedSetup.plan.side,
+      score: detailedSetup.score,
+      quality: detailedSetup.plan.quality,
+      scannedAt: detailedSetup.scannedAt
     };
 
     const payload = {
-      title: setup.headline,
+      title: detailedSetup.headline,
       bias: isLong ? "롱" : "숏",
-      note: buildJournalNote(setup),
+      note: buildJournalNote(detailedSetup),
       market: "crypto" as const,
       source: "scout" as const,
-      symbol: setup.symbol,
-      timeframe: setup.timeframe,
-      verdict: `${setup.score}점 · ${setup.plan.quality}급 · ${setup.proximity === "ready" ? "관찰 구간 내부" : "대기 감지"}`,
+      symbol: detailedSetup.symbol,
+      timeframe: detailedSetup.timeframe,
+      verdict: `${detailedSetup.score}점 · ${detailedSetup.plan.quality}급 · ${detailedSetup.proximity === "ready" ? "관찰 구간 내부" : "대기 감지"}`,
       scoutSnapshot: snapshot
     };
 
@@ -793,7 +874,7 @@ function ScanSummary({
   excludeMajor,
   hiddenDangerCount = 0
 }: {
-  setups: ScoutSetup[];
+  setups: ScoutSetupPayload[];
   riskProfile: ScoutRiskProfile;
   excludeMajor: boolean;
   hiddenDangerCount?: number;
@@ -855,30 +936,33 @@ function ScanSummary({
   );
 }
 
-function setupStatusRank(setup: ScoutSetup) {
+function setupStatusRank(setup: ScoutSetupPayload) {
   if (setup.status === "entry") return 3;
   if (setup.status === "active") return 2;
   return 1;
 }
 
-function setupQualityRank(setup: ScoutSetup) {
+function setupQualityRank(setup: ScoutSetupPayload) {
+  if (!hasProScoutDetails(setup)) return 0;
   if (setup.plan.quality === "A") return 3;
   if (setup.plan.quality === "B") return 2;
   return 1;
 }
 
-function rankScoutSetups(setups: ScoutSetup[]) {
+function rankScoutSetups(setups: ScoutSetupPayload[]) {
   return [...setups].sort((a, b) => {
     const statusDiff = setupStatusRank(b) - setupStatusRank(a);
     if (statusDiff !== 0) return statusDiff;
     const qualityDiff = setupQualityRank(b) - setupQualityRank(a);
     if (qualityDiff !== 0) return qualityDiff;
-    return b.score - a.score;
+    const aScore = hasProScoutDetails(a) ? a.score : 0;
+    const bScore = hasProScoutDetails(b) ? b.score : 0;
+    return bScore - aScore;
   });
 }
 
-function uniqueTopSetupsBySymbol(setups: ScoutSetup[], limit: number) {
-  const picked: ScoutSetup[] = [];
+function uniqueTopSetupsBySymbol(setups: ScoutSetupPayload[], limit: number) {
+  const picked: ScoutSetupPayload[] = [];
   const usedSymbols = new Set<string>();
 
   for (const setup of rankScoutSetups(setups)) {
@@ -893,16 +977,8 @@ function uniqueTopSetupsBySymbol(setups: ScoutSetup[], limit: number) {
 
 const majorSetupSymbols = new Set(["BTCUSDT.P", "ETHUSDT.P"]);
 
-function filterSetupsByScope(setups: ScoutSetup[], excludeMajor: boolean) {
+function filterSetupsByScope(setups: ScoutSetupPayload[], excludeMajor: boolean) {
   return excludeMajor ? setups.filter((setup) => !majorSetupSymbols.has(setup.symbol)) : setups;
-}
-
-function getVisibleSetupLimit(excludeMajor: boolean, riskProfile: ScoutRiskProfile, isPaid: boolean) {
-  if (excludeMajor) {
-    if (!isPaid) return 3;
-    return riskProfile === "radar" ? 5 : 3;
-  }
-  return isPaid ? (riskProfile === "radar" ? 12 : 6) : riskProfile === "radar" ? 6 : 3;
 }
 
 export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boolean } = {}) {
@@ -923,8 +999,8 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
       window.localStorage.setItem(scoutRiskProfileStorageKey, riskProfile);
     }
     if (!force && !isPaid) {
-      const cachedScalp = readScoutCache("scalp", riskProfile, scoutScope);
-      const cachedSwing = readScoutCache("swing", riskProfile, scoutScope);
+      const cachedScalp = readScoutCache("scalp", riskProfile, scoutScope, "basic");
+      const cachedSwing = readScoutCache("swing", riskProfile, scoutScope, "basic");
       if (cachedScalp && cachedSwing) {
         const scopedSetups = filterSetupsByScope([...cachedScalp.setups, ...cachedSwing.setups], excludeMajor);
         setState({
@@ -936,35 +1012,32 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
       }
     }
 
-    const usageGate = getUsageGate("radarScan", isPaid);
-    if (!usageGate.allowed) {
-      setState({ status: "error", message: usageGate.message });
-      return;
-    }
-
     setState({ status: "loading" });
     try {
-      const fetchMode = async (mode: TradingMode) => {
-        const res = await fetch(
-          `/api/scout?mode=${mode}&risk=${riskProfile}&scope=${scoutScope}`,
-          await withSupabaseAuth({ cache: "no-store" })
-        );
-        if (!res.ok) {
-          const data = (await res.json().catch(() => ({}))) as { error?: string };
-          throw new Error(data.error ?? "레이더 후보를 잠시 확인하지 못했습니다. 잠시 뒤 다시 확인해 주세요.");
-        }
-        const data = (await res.json()) as { setups: ScoutSetup[]; cachedAt: number };
-        writeScoutCache(data.setups, mode, riskProfile, scoutScope);
-        return data;
+      const res = await fetch(
+        `/api/scout?mode=both&risk=${riskProfile}&scope=${scoutScope}`,
+        await withSupabaseAuth({ cache: "no-store" })
+      );
+      const data = (await res.json().catch(() => ({}))) as {
+        setups?: ScoutSetupPayload[];
+        cachedAt?: number;
+        error?: string;
+        usage?: { used?: number };
       };
-      const [scalp, swing] = await Promise.all([fetchMode("scalp"), fetchMode("swing")]);
-      const scopedSetups = filterSetupsByScope([...scalp.setups, ...swing.setups], excludeMajor);
+      if (typeof data.usage?.used === "number") syncUsageCount("radarScan", data.usage.used);
+      if (!res.ok || !Array.isArray(data.setups) || typeof data.cachedAt !== "number") {
+        throw new Error(data.error ?? "레이더 후보를 잠시 확인하지 못했습니다. 잠시 뒤 다시 확인해 주세요.");
+      }
+      const scalpSetups = data.setups.filter((setup) => setup.mode === "scalp");
+      const swingSetups = data.setups.filter((setup) => setup.mode === "swing");
+      writeScoutCache(scalpSetups, "scalp", riskProfile, scoutScope, isPaid ? "pro" : "basic");
+      writeScoutCache(swingSetups, "swing", riskProfile, scoutScope, isPaid ? "pro" : "basic");
+      const scopedSetups = filterSetupsByScope(data.setups, excludeMajor);
       setState({
         status: "ready",
         setups: scopedSetups,
-        cachedAt: Math.max(scalp.cachedAt, swing.cachedAt)
+        cachedAt: data.cachedAt
       });
-      recordUsageEvent("radarScan");
     } catch (error) {
       const message = error instanceof Error ? error.message : "레이더 판독을 잠시 확인하지 못했습니다. 잠시 뒤 다시 확인해 주세요.";
       setState({ status: "error", message });
@@ -981,7 +1054,11 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
     return formatCachedAt(state.cachedAt);
   }, [state]);
 
-  const visibleLimit = getVisibleSetupLimit(excludeMajor, riskProfile, isPaid);
+  const visibleLimit = getCoinScoutResultLimit(
+    getCoinCapabilityPolicy(profile?.plan),
+    excludeMajor ? "alts" : "all",
+    riskProfile
+  );
   const displayableSetups =
     state.status === "ready" && excludeMajor
       ? state.setups.filter((setup) => classifyAltSetup(setup).bucket !== "danger")
@@ -994,7 +1071,7 @@ export function SetupScoutPanel({ excludeMajor = false }: { excludeMajor?: boole
       : 0;
   const visibleSetups = state.status === "ready" ? uniqueTopSetupsBySymbol(displayableSetups, visibleLimit) : [];
   const isAltFilterMode = excludeMajor;
-  const canShowAltProDetails = !isAltFilterMode || isPaid;
+  const canShowAltProDetails = isPaid;
 
   return (
     <section className="border-y border-ui-line py-4 sm:py-5">

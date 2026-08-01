@@ -178,11 +178,12 @@ interface ActionButtonBase {
   className?: string;
   children: ReactNode;
   href?: string;
+  onNavigate?: () => void;
 }
 
 type ActionButtonProps = ActionButtonBase & ButtonHTMLAttributes<HTMLButtonElement>;
 
-export function ActionButton({ tone = "secondary", className, children, href, type = "button", ...props }: ActionButtonProps) {
+export function ActionButton({ tone = "secondary", className, children, href, onNavigate, type = "button", ...props }: ActionButtonProps) {
   const classes = cx(
     "inline-flex min-h-10 items-center justify-center gap-2 rounded-ui-sm px-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50",
     buttonClass[tone],
@@ -191,7 +192,7 @@ export function ActionButton({ tone = "secondary", className, children, href, ty
 
   if (href) {
     return (
-      <Link href={href} className={classes}>
+      <Link href={href} className={classes} onClick={onNavigate}>
         {children}
       </Link>
     );

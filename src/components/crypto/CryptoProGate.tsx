@@ -1,9 +1,11 @@
 // 코인 레이더 Pro 잠금 안내와 CTA 표시 shell을 담당하는 컴포넌트입니다.
-import Link from "next/link";
+import { CoinProConversionLink } from "@/components/CoinProConversionLink";
+import type { CoinProPlacement } from "@/lib/coinProConversion";
 import { Crown } from "lucide-react";
 
 interface CryptoProCtaLinkProps {
   size?: "sm" | "md";
+  placement?: CoinProPlacement;
 }
 
 interface CryptoAltAnalysisGateBannerProps {
@@ -20,11 +22,14 @@ interface CryptoAltAnalysisLimitNoticeProps {
   getSymbolLabel: (symbol: string) => string;
 }
 
-export function CryptoProCtaLink({ size = "sm" }: CryptoProCtaLinkProps) {
+export function CryptoProCtaLink({ size = "sm", placement = "crypto_detail_lock" }: CryptoProCtaLinkProps) {
   const isLarge = size === "md";
   return (
-    <Link
-      href="/pro?market=crypto"
+    <CoinProConversionLink
+      source={placement === "alt_daily_limit" ? "alt-analysis-limit" : "alt-analysis"}
+      placement={placement}
+      routeKey="alts"
+      surface="alts"
       className={
         isLarge
           ? "inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-cyan-300 px-4 text-sm font-black text-slate-950 transition hover:bg-cyan-200"
@@ -33,7 +38,7 @@ export function CryptoProCtaLink({ size = "sm" }: CryptoProCtaLinkProps) {
     >
       <Crown size={isLarge ? 16 : 13} aria-hidden />
       Coin Pro 상세 보기
-    </Link>
+    </CoinProConversionLink>
   );
 }
 
@@ -58,7 +63,7 @@ export function CryptoAltAnalysisGateBanner({
                 : "오늘 무료 알트 분석을 모두 사용했습니다. Coin Pro에서는 BTC/ETH·알트 리스크와 추적 조건을 반복 확인할 수 있습니다."}
           </p>
         </div>
-        {!hasCoinPro ? <CryptoProCtaLink /> : null}
+        {!hasCoinPro ? <CryptoProCtaLink placement={allowed ? "alt_usage_banner" : "alt_daily_limit"} /> : null}
       </div>
     </div>
   );
@@ -81,7 +86,7 @@ export function CryptoAltAnalysisLimitNotice({
             새로운 알트의 추적 조건과 리스크까지 확인하려면 Coin Pro가 필요합니다.
           </p>
         </div>
-        <CryptoProCtaLink size="md" />
+        <CryptoProCtaLink size="md" placement="alt_daily_limit" />
       </div>
       {symbols.length > 0 ? (
         <div className="mt-4 flex flex-wrap gap-2">

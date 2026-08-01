@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, Brain, HelpCircle, Loader2, Newspaper, Radar, Sparkles } from "lucide-react";
-import type { ScoutSetup } from "@/lib/setupScout";
+import { hasProScoutDetails, type ProScoutSetup as ScoutSetup, type ScoutSetupPayload } from "@/lib/setupScout";
 import type { TradingMode } from "@/lib/marketAnalysis";
 import { withSupabaseAuth } from "@/lib/authFetch";
 
@@ -116,14 +116,14 @@ export function RadarDigestPanel() {
       const scanPayloads = await Promise.all(
         scanResponses.map(async (response) => {
           const payload = (await response.json().catch(() => ({}))) as {
-            setups?: ScoutSetup[];
+            setups?: ScoutSetupPayload[];
             cachedAt?: number;
             error?: string;
           };
           if (!response.ok || !Array.isArray(payload.setups)) {
             throw new Error(payload.error ?? "레이더 감지값을 잠시 확인하지 못했습니다.");
           }
-          return payload;
+          return { ...payload, setups: payload.setups.filter(hasProScoutDetails) };
         })
       );
 
