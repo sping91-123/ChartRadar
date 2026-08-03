@@ -22,6 +22,7 @@ import { formatNewsImpactTime, newsImpactClassificationLabel, newsImpactTone } f
 import { selectMeaningfulNewsImpactEvent } from "@/lib/newsImpactSort";
 import { trackProductEvent } from "@/lib/trackProductEvent";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
+import { fomcCompactFields, fomcConfidenceLabel, fomcStanceTextClass, fomcStanceTone } from "@/lib/fomcPolicyPresentation";
 
 type Asset = "btc" | "eth";
 
@@ -643,6 +644,7 @@ export function NewsImpactPanel({ market, initialAsset = "btc", requestedEventId
     : `/news?market=global${lead ? `&event=${encodeURIComponent(lead.id)}` : ""}`;
   const newsUpgradeHref = `/pro?market=${market === "crypto" ? "crypto" : "stocks"}&source=news&returnTo=${encodeURIComponent(currentNewsPath)}`;
   const reaction = lead?.reaction;
+  const fomcAssessment = lead?.fomcPolicyAssessment;
   const officialSourceCount = payload.sourceHealth.healthy + payload.sourceHealth.degraded;
   const leadIsToday = Boolean(lead && Date.now() - Date.parse(lead.occurredAt) <= 24 * 60 * 60_000);
   return (
@@ -698,15 +700,37 @@ export function NewsImpactPanel({ market, initialAsset = "btc", requestedEventId
         <section className="bg-ui-panel px-3 py-4 sm:px-5" aria-labelledby="lead-news-impact-title">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand"><Newspaper size={12} aria-hidden /> {leadIsToday ? "오늘 확인할 공식 발표" : "최근 확인할 공식 발표"}</p>
-            <StatusPill tone={impactEnabled ? newsImpactTone(reaction?.classification ?? "pending") : "watch"}>{impactEnabled ? newsImpactClassificationLabel(reaction?.classification ?? "pending") : "공식 발표"}</StatusPill>
+            <div className="flex flex-wrap items-center justify-end gap-1">
+              {fomcAssessment ? <StatusPill tone={fomcStanceTone(fomcAssessment)}>FOMC · {fomcAssessment.stanceLabel}</StatusPill> : null}
+              <StatusPill tone={impactEnabled ? newsImpactTone(reaction?.classification ?? "pending") : "watch"}>{impactEnabled ? newsImpactClassificationLabel(reaction?.classification ?? "pending") : "공식 발표"}</StatusPill>
+            </div>
           </div>
           <h2 id="lead-news-impact-title" className="mt-2 line-clamp-2 text-xl font-black leading-7 tracking-tight text-ui-text [word-break:keep-all]">{lead.headline}</h2>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-semibold text-ui-muted">
             <span>{formatNewsImpactTime(lead.occurredAt)}</span><span>{lead.primarySource.name}</span>{revisionLabel(lead) ? <span className="font-black text-ui-watch">{revisionLabel(lead)}</span> : null}<span>{impactEnabled ? (reaction ? stageLabel(reaction.stage, lead) : "반응 확인 중") : "시장 반응 연결 검증 중"}</span>
           </div>
+          {fomcAssessment ? (
+            <div className="mt-3 bg-ui-inset/55 px-3 py-2.5" role="status" aria-live="polite">
+              <dl className="grid grid-cols-3 gap-1">
+                {fomcCompactFields(fomcAssessment).map(([label, value]) => (
+                  <div key={label} className="min-w-0 bg-ui-panel/55 px-2 py-1.5">
+                    <dt className="text-[9px] font-black text-ui-subtle">{label}</dt>
+                    <dd className="truncate text-xs font-black text-ui-text" title={value}>{value}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-2 text-xs font-semibold leading-5 text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]">
+                <strong className={fomcStanceTextClass(fomcAssessment)}>{market === "crypto" ? "코인" : "글로벌 위험자산"} 단기 · {fomcAssessment.riskAssetLabel}</strong>
+                {` · ${fomcAssessment.rationale}`}
+              </p>
+              <p className="mt-1 text-[10px] font-semibold leading-4 text-ui-subtle [word-break:keep-all]">
+                {fomcAssessment.coverageLabel} · 신뢰 {fomcConfidenceLabel(fomcAssessment)} · 정책 문구 해석과 발표 뒤 실제 가격 반응은 별도입니다.
+              </p>
+            </div>
+          ) : null}
           {impactEnabled ? (
             <div className="mt-3 grid gap-px overflow-hidden bg-ui-line sm:grid-cols-2">
-              <div className="bg-ui-inset/70 px-3 py-2.5"><p className="text-[10px] font-black uppercase tracking-[0.08em] text-ui-subtle">무슨 일이 있었나</p><p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{lead.factSummary}</p></div>
+              <div className="bg-ui-inset/70 px-3 py-2.5"><p className="text-[10px] font-black uppercase tracking-[0.08em] text-ui-subtle">{fomcAssessment ? "정책 결정 사실" : "무슨 일이 있었나"}</p><p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{lead.factSummary}</p></div>
               <div className="bg-ui-inset/70 px-3 py-2.5"><p className="text-[10px] font-black uppercase tracking-[0.08em] text-ui-subtle">이후 실제 시장 반응</p><p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{reaction?.reactionSummary ?? (lead.reactionEligibility === "context_only" ? "정확한 시각 전후 자료가 없어 단기 반응을 연결하지 않습니다." : "첫 15분 구간을 확인 중입니다.")}</p></div>
               <div className="bg-ui-inset/70 px-3 py-2.5"><p className="text-[10px] font-black uppercase tracking-[0.08em] text-ui-subtle">현재 판단과 같은가?</p><p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{impactExplanation(lead)}</p></div>
               <div className="bg-ui-inset/70 px-3 py-2.5"><p className="text-[10px] font-black uppercase tracking-[0.08em] text-ui-subtle">{nextCheckHeading(lead)}</p><p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{nextCheckCopy(lead)}</p></div>

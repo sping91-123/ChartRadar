@@ -1,6 +1,7 @@
 import type { DecisionState, PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
 import type { Candle } from "@/lib/marketAnalysis";
 import type { CftcPositioningBrief } from "@/lib/cftcPositioning";
+import type { FomcPolicyAssessment } from "@/lib/fomcPolicyAssessment";
 
 export type NewsMarket = "crypto" | "global";
 export type NewsImpactStage = "detected" | "provisional_15m" | "final_60m";
@@ -87,6 +88,7 @@ export interface NewsImpactEvent {
   sourceCount: number;
   macroEventKey?: string;
   reactionEligibility?: "eligible" | "context_only";
+  fomcPolicyAssessment?: FomcPolicyAssessment;
   reaction: NewsImpactReaction | null;
   pro?: {
     sources: NewsSourceReference[];
@@ -447,6 +449,8 @@ export function nextNewsImpactStage(stage: NewsImpactStage): Exclude<NewsImpactS
 }
 
 export function serializeBasicNewsImpactEvent(event: NewsImpactEvent): NewsImpactEvent {
+  // 공식 문서만으로 만든 FOMC 해석은 공개 매크로 일정과 같은 Basic 정보입니다.
+  // Pro 경계는 원시 정책 문서가 아니라 정확한 시점의 반응 지표·스냅샷·이력입니다.
   const { pro: _pro, ...basic } = event;
   if (!basic.reaction) return basic;
   const {

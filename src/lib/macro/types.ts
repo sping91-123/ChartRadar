@@ -1,4 +1,5 @@
 // 매크로 일정의 이벤트 종류와 공식 발표 상태를 정의합니다.
+import type { FomcPolicyAssessment } from "@/lib/fomcPolicyAssessment";
 export type MacroEventType = "numeric_release" | "document_release" | "meeting_event" | "speech_event" | "calendar_event";
 
 export type MacroEventStatus =
@@ -49,6 +50,7 @@ export type MacroSourceEnrichment = {
   status?: MacroEventStatus;
   statusLabel?: string;
   staleReason?: string;
+  fomcPolicyAssessment?: FomcPolicyAssessment;
   rawPayload?: unknown;
 };
 

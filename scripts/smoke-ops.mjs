@@ -114,6 +114,7 @@ const blsAdapter = read("src/lib/macro/sourceAdapters/bls.ts");
 const dolAdapter = read("src/lib/macro/sourceAdapters/dol.ts");
 const censusAdapter = read("src/lib/macro/sourceAdapters/census.ts");
 const fedAdapter = read("src/lib/macro/sourceAdapters/fed.ts");
+const fomcPolicyAssessment = read("src/lib/fomcPolicyAssessment.ts");
 const macroTicker = read("src/components/MacroTicker.tsx");
 const newsPage = read("src/app/news/page.tsx");
 const radarNewsApi = read("src/app/api/radar-news/route.ts");
@@ -261,7 +262,12 @@ expectIncludes(macroStore, 'payload.cacheMode === "fallback"', "예비 일정의
 expectIncludes(macroStore, "scheduled_at=gte.", "저장 일정 최근·향후 시간창 조회", "src/lib/macro/server/macroStore.ts");
 expectIncludes(macroStore, "syncGeneration", "매크로 원장 세대 단위 저장", "src/lib/macro/server/macroStore.ts");
 expectIncludes(fedAdapter, "fomccalendars.htm", "Fed FOMC 공식 문서 확인", "src/lib/macro/sourceAdapters/fed.ts");
+expectIncludes(fedAdapter, "readBoundedOfficialResponseText", "Fed FOMC 원문 응답 크기 제한", "src/lib/macro/sourceAdapters/fed.ts");
+expectIncludes(fomcPolicyAssessment, "deterministic_official_text", "FOMC 정책 기조의 결정론적 공식 원문 계약", "src/lib/fomcPolicyAssessment.ts");
+expectIncludes(fomcPolicyAssessment, "isAllowedFomcDocumentUrl", "FOMC 문서 exact host·path 제한", "src/lib/fomcPolicyAssessment.ts");
+expectIncludes(fomcPolicyAssessment, "실제 가격 반응", "FOMC 정책 문구와 시장 반응 분리 문구", "src/lib/fomcPolicyAssessment.ts");
 expectIncludes(macroTicker, "생산자물가지수(PPI)", "매크로 발표명 한글 표시", "src/components/MacroTicker.tsx");
+expectIncludes(macroTicker, "fomcCompactFields", "일정 카드 FOMC 결정·기조·금리경로 표시", "src/components/MacroTicker.tsx");
 expectIncludes(macroTicker, "BLS 공식 통계", "매크로 출처명 한글 표시", "src/components/MacroTicker.tsx");
 expectIncludes(macroTicker, "MACRO_CALENDAR_REQUEST_TIMEOUT_MS", "Home 매크로 일정 요청 timeout", "src/components/MacroTicker.tsx");
 expectIncludes(macroTicker, "assessMacroImpact", "Home 호재·악재 판정은 출처 인식 공용 판정기를 사용", "src/components/MacroTicker.tsx");
@@ -296,6 +302,7 @@ expectIncludes(officialNewsAdapters, "actualReportingPeriod", "NEWS에 공식 �
 expectIncludes(officialNewsAdapters, "시장 예상", "NEWS의 public consensus를 공식 실제값과 분리", "src/lib/server/news/officialSourceAdapters.ts");
 expectIncludes(officialNewsAdapters, "consensusSourceUrl", "NEWS에 시장 예상 출처 URL 동결", "src/lib/server/news/officialSourceAdapters.ts");
 expectIncludes(officialNewsAdapters, "selectLatestMacroGenerationRows", "NEWS에서 변경 전 매크로 일정 세대 제외", "src/lib/server/news/officialSourceAdapters.ts");
+expectIncludes(officialNewsAdapters, 'eventKind === "fomc_policy_statement"', "FOMC 정책 해석의 NEWS canonical 사건 한정", "src/lib/server/news/officialSourceAdapters.ts");
 expectNotIncludes(officialNewsAdapters, "importance=eq.3", "NEWS 중요도 필터 전 최신 매크로 세대 선택", "src/lib/server/news/officialSourceAdapters.ts");
 expectIncludes(officialNewsAdapters, "row.importance === 3", "NEWS 최신 세대 내부에서만 중요도 필터", "src/lib/server/news/officialSourceAdapters.ts");
 expectIncludes(newsImpactPanel, "실제 시장 반응", "공식 사건과 관측 반응 분리", "src/components/news/NewsImpactPanel.tsx");
@@ -310,6 +317,7 @@ expectNotIncludes(newsImpactPanel, "뉴스 알림 준비 중", "shadow NEWS 미�
 expectIncludes(newsImpactPanel, 'params.set("snapshot", requestedSnapshot)', "News Impact pagination snapshot 고정", "src/components/news/NewsImpactPanel.tsx");
 expectNotIncludes(newsImpactPanel, "localStorage", "News Pro payload 영속 캐시 차단", "src/components/news/NewsImpactPanel.tsx");
 expectIncludes(newsImpactStore, "select=source_id,allowed_hosts", "News Impact 조회 시 현재 host allowlist 재검증", "src/lib/server/news/newsImpactStore.ts");
+expectIncludes(newsImpactStore, "assessmentChanged", "FOMC 분석 보강과 공식 사건 revision 분리", "src/lib/server/news/newsImpactStore.ts");
 expectIncludes(newsImpactOutbox, "claim_news_impact_alert", "뉴스 Push 원자적 선점", "src/lib/server/news/newsImpactAlertOutbox.ts");
 expectIncludes(newsImpactOutbox, '"in_app_only"', "FCM 없는 앱 내 뉴스 기록", "src/lib/server/news/newsImpactAlertOutbox.ts");
 expectIncludes(newsImpactOutbox, "validateDeliveryLease", "지연 Push 발송 직전 권한·출처 재검증", "src/lib/server/news/newsImpactAlertOutbox.ts");

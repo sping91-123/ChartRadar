@@ -9,6 +9,14 @@ import { isHighImpactMacroEvent, isHomePriorityMacro } from "@/lib/homeMacroPrio
 import { getMacroCalendarFallbackPayload, type MacroCalendarPayload } from "@/lib/macroCalendar";
 import { assessMacroImpact, type MacroImpactAssessment } from "@/lib/macro/macroImpact";
 import { StatusPill } from "@/components/ui/DesignPrimitives";
+import {
+  fomcCompactFields,
+  fomcConfidenceLabel,
+  fomcDecisionShortLabel,
+  fomcStanceTextClass,
+  fomcStanceTone,
+  isFomcPolicyLabel
+} from "@/lib/fomcPolicyPresentation";
 
 const RECENT_RELEASE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const COMPACT_UPCOMING_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -488,10 +496,17 @@ function MacroNewsValue({ label, value, pending = false, blankWhenMissing = fals
 }
 
 function MacroNewsItem({ item, sectionLabel, market, subdued = false, released = false }: { item: MacroEventItem; sectionLabel: string; market: "crypto" | "stocks"; subdued?: boolean; released?: boolean }) {
-  const sourceUrl = item.officialUrl ?? item.sourceUrl;
+  const fomcAssessment = item.fomcPolicyAssessment;
+  const isFomcPolicyEvent = isFomcPolicyLabel(item.label);
+  const sourceUrl = fomcAssessment?.statementUrl ?? item.officialUrl ?? item.sourceUrl;
   const pendingActual = !hasActualValue(item) && hasReleaseTimePassed(item) && !isDocumentEvent(item);
   const showSectionLabel = Boolean(sectionLabel && !(released && sectionLabel === "발표"));
   const impactAssessment = assessMacroImpact(item);
+  const valueFields = fomcAssessment
+    ? fomcCompactFields(fomcAssessment)
+    : isFomcPolicyEvent
+      ? [["결정", hasReleaseTimePassed(item) ? "분석 대기" : "발표 후"], ["기조", "분석 대기"], ["금리경로", "분석 대기"]] as const
+      : null;
 
   return (
     <article className={`py-2 first:pt-0 ${subdued ? "opacity-95" : ""}`}>
@@ -499,15 +514,27 @@ function MacroNewsItem({ item, sectionLabel, market, subdued = false, released =
         {showSectionLabel ? <StatusPill tone="info" className="min-h-5 px-1.5 text-[10px]">{sectionLabel}</StatusPill> : null}
         <StatusPill tone={hasReleaseTimePassed(item) ? "watch" : "info"} className="min-h-5 px-1.5 text-[10px]">{compactStatusLabel(item)}</StatusPill>
         <StatusPill tone={isHighImpactMacro(item) ? "risk" : "info"} className="min-h-5 px-1.5 text-[10px]">{impactLabel(item)}</StatusPill>
+        {fomcAssessment ? <StatusPill tone={fomcStanceTone(fomcAssessment)} className="min-h-5 px-1.5 text-[10px]">FOMC · {fomcAssessment.stanceLabel}</StatusPill> : null}
         {impactAssessment ? <MacroImpactPill assessment={impactAssessment} market={market} /> : null}
       </div>
       <h4 className="mt-1.5 line-clamp-2 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">{macroLabel(item.label)}</h4>
       <p className="mt-0.5 text-[11px] font-semibold leading-4 text-ui-muted">한국시간 {item.dateKst}</p>
-      <div className="mt-1.5 grid grid-cols-3 gap-x-2 gap-y-1 text-left min-[420px]:flex min-[420px]:flex-wrap min-[420px]:gap-x-3">
-        <MacroNewsValue label={isDocumentEvent(item) ? "상태" : "실제"} value={displayActual(item)} pending={pendingActual} blankWhenMissing />
-        <MacroNewsValue label="예측" value={displayItemConsensusValue(item)} pending={displayItemConsensusValue(item).startsWith("예측 확인")} />
-        <MacroNewsValue label="이전" value={displayItemPreviousValue(item)} pending={displayItemPreviousValue(item) === "이전 확인 필요"} />
-      </div>
+      {valueFields ? (
+        <dl className="mt-1.5 grid grid-cols-3 gap-1 text-left">
+          {valueFields.map(([label, value]) => (
+            <div key={label} className="min-w-0 bg-ui-inset/55 px-2 py-1">
+              <dt className="text-[9px] font-bold text-ui-subtle">{label}</dt>
+              <dd className="truncate text-[11px] font-black text-ui-text" title={value}>{value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <div className="mt-1.5 grid grid-cols-3 gap-x-2 gap-y-1 text-left min-[420px]:flex min-[420px]:flex-wrap min-[420px]:gap-x-3">
+          <MacroNewsValue label={isDocumentEvent(item) ? "상태" : "실제"} value={displayActual(item)} pending={pendingActual} blankWhenMissing />
+          <MacroNewsValue label="예측" value={displayItemConsensusValue(item)} pending={displayItemConsensusValue(item).startsWith("예측 확인")} />
+          <MacroNewsValue label="이전" value={displayItemPreviousValue(item)} pending={displayItemPreviousValue(item) === "이전 확인 필요"} />
+        </div>
+      )}
       {impactAssessment ? (
         <p className="mt-1.5 text-[11px] font-semibold leading-5 text-ui-muted [word-break:keep-all]">
           <span className={macroImpactToneClass(impactAssessment)}>{`${macroImpactLensLabel(market)} · ${impactAssessment.verdict}`}</span>
@@ -515,10 +542,18 @@ function MacroNewsItem({ item, sectionLabel, market, subdued = false, released =
           {impactAssessment.confidence === "provisional" ? " · 공식 발표값 확인 전 잠정 해석" : " · 공식 발표값 기준"}
         </p>
       ) : null}
-      <p className="mt-1.5 min-w-0 whitespace-normal text-xs leading-relaxed text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]">{item.marketImpact}</p>
+      {fomcAssessment ? (
+        <div className="mt-1.5 space-y-1 text-xs leading-relaxed text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]" role="status" aria-live="polite">
+          <p><strong className={fomcStanceTextClass(fomcAssessment)}>{market === "crypto" ? "코인" : "주식"} 단기 · {fomcAssessment.riskAssetLabel}</strong></p>
+          <p>{fomcAssessment.rationale} 실제 인상·인하 확률과 발표 뒤 가격 반응은 별도로 확인해야 합니다.</p>
+          <p className="text-[11px] font-semibold text-ui-subtle">{fomcAssessment.coverageLabel} · 신뢰 {fomcConfidenceLabel(fomcAssessment)}</p>
+        </div>
+      ) : (
+        <p className="mt-1.5 min-w-0 whitespace-normal text-xs leading-relaxed text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]">{isFomcPolicyEvent && hasReleaseTimePassed(item) ? "공식 성명 원문 분석이 완료될 때까지 정책 기조 판단을 보류합니다." : item.marketImpact}</p>
+      )}
       {sourceUrl ? (
         <a href={sourceUrl} target="_blank" rel="noreferrer" className="mt-1.5 inline-flex max-w-full items-center gap-1 text-[11px] font-semibold text-ui-brand hover:underline">
-          <span className="truncate">{item.actualProvenance === "official" ? "공식 발표값 출처" : item.officialUrl ? "공식 일정 출처" : "출처"}</span>
+          <span className="truncate">{fomcAssessment ? "Fed 공식 성명" : item.actualProvenance === "official" ? "공식 발표값 출처" : item.officialUrl ? "공식 일정 출처" : "출처"}</span>
           <ExternalLink size={11} className="shrink-0" aria-hidden />
         </a>
       ) : null}
@@ -710,20 +745,30 @@ export function MacroTicker({
     const primaryValueLabel = isDocumentEvent(item) ? "상태" : "실제";
     const primaryValue = displayActual(item);
     const impactAssessment = assessMacroImpact(item);
+    const fomcAssessment = item.fomcPolicyAssessment;
+    const isFomcPolicyEvent = isFomcPolicyLabel(item.label);
+    const fomcFields = fomcAssessment
+      ? fomcCompactFields(fomcAssessment)
+      : isFomcPolicyEvent
+        ? [["결정", isReleased ? "분석 대기" : "발표 후"], ["기조", "분석 대기"], ["금리경로", "분석 대기"]] as const
+        : null;
     const ImpactIcon = impactAssessment?.verdict === "호재" ? TrendingUp : impactAssessment?.verdict === "악재" ? TrendingDown : impactAssessment ? Minus : null;
+    const FomcIcon = fomcAssessment?.riskAssetImpact === "tailwind" ? TrendingUp : fomcAssessment?.riskAssetImpact === "headwind" ? TrendingDown : fomcAssessment ? Minus : null;
     const impactToneClass = macroImpactToneClass(impactAssessment);
     const homePreviousImpact = homePreviousRelease ? assessMacroImpact(homePreviousRelease) : null;
     const href = market === "stocks" ? "/schedule?market=global" : "/schedule?market=crypto";
 
     if (homePriorityAware) {
-      const sourceUrl = item.officialUrl ?? item.sourceUrl;
-      const sourceLabel = item.actualProvenance === "official"
+      const sourceUrl = fomcAssessment?.statementUrl ?? item.officialUrl ?? item.sourceUrl;
+      const sourceLabel = fomcAssessment ? "Fed 공식 성명" : item.actualProvenance === "official"
         ? "공식 발표값 출처"
         : item.officialUrl ? "공식 일정 출처" : "출처";
       const homePrimaryValue = primaryValue || (isReleased ? "확인 중" : "발표 전");
-      const impactSummary = impactAssessment
+      const impactSummary = fomcAssessment
+        ? `${fomcAssessment.coverageLabel} · 신뢰 ${fomcConfidenceLabel(fomcAssessment)}`
+        : impactAssessment
         ? `${macroSurpriseLabel(impactAssessment)} · ${impactAssessment.confidence === "confirmed" ? "공식 확정" : "잠정 해석"}`
-        : `${compactStatusLabel(item)} · ${isReleased ? homeCalendarTrustLabel : "발표 후 호재·악재 판정"}`;
+        : `${compactStatusLabel(item)} · ${isFomcPolicyEvent ? (isReleased ? "공식 성명 분석 중" : "발표 후 정책 기조 분석") : isReleased ? homeCalendarTrustLabel : "발표 후 호재·악재 판정"}`;
 
       return (
         <section aria-labelledby="home-macro-title">
@@ -742,7 +787,11 @@ export function MacroTicker({
                 <p className="min-w-0 flex-1 truncate text-[13px] font-black leading-[19px] text-white" title={macroLabel(item.label)}>
                   {macroLabel(item.label)}
                 </p>
-                {impactAssessment ? (
+                {fomcAssessment ? (
+                  <span className={`shrink-0 text-[10px] font-black leading-4 ${fomcStanceTextClass(fomcAssessment)}`}>
+                    FOMC · {fomcAssessment.stanceLabel}
+                  </span>
+                ) : impactAssessment ? (
                   <span className={`shrink-0 text-[10px] font-black leading-4 ${impactToneClass}`}>
                     {macroImpactDisplayLabel(impactAssessment, market)}
                   </span>
@@ -754,11 +803,11 @@ export function MacroTicker({
               </div>
 
               <dl className="mt-1 grid grid-cols-3 gap-1">
-                {[
+                {(fomcFields ?? [
                   [primaryValueLabel, homePrimaryValue],
                   ["예측", displayConsensusValue(item)],
                   ["이전", displayPreviousValue(item)]
-                ].map(([label, value]) => (
+                ]).map(([label, value]) => (
                   <div key={label} className="min-w-0 rounded-md bg-ui-inset/70 px-2 py-1">
                     <dt className="text-[9px] font-bold leading-3 text-ui-subtle">{label}</dt>
                     <dd className="truncate text-xs font-black leading-4 text-ui-text" title={value}>{value}</dd>
@@ -767,7 +816,7 @@ export function MacroTicker({
               </dl>
 
               <div className="mt-1 flex min-h-[18px] items-center justify-between gap-2 text-[10px] font-bold leading-[18px]">
-                <span className={`min-w-0 truncate ${impactAssessment ? impactToneClass : homeCalendarTrustClass}`} title={impactAssessment?.reason ?? calendarWarning ?? homeCalendarTrustLabel}>
+                <span className={`min-w-0 truncate ${fomcAssessment ? fomcStanceTextClass(fomcAssessment) : impactAssessment ? impactToneClass : homeCalendarTrustClass}`} title={fomcAssessment?.coverageLabel ?? impactAssessment?.reason ?? calendarWarning ?? homeCalendarTrustLabel}>
                   {impactSummary}
                 </span>
                 <span className="inline-flex shrink-0 items-center gap-0.5 text-ui-subtle">
@@ -779,22 +828,28 @@ export function MacroTicker({
 
             <div id="home-macro-detail" data-testid="home-macro-detail" className="space-y-2 border-t border-ui-border/70 px-2.5 py-2.5 text-[11px] leading-5 text-ui-muted">
               <p className="font-black text-ui-text [word-break:keep-all]">{macroLabel(item.label)}</p>
-              {impactAssessment ? (
+              {fomcAssessment ? (
+                <div className="space-y-1 [overflow-wrap:anywhere] [word-break:keep-all]" role="status" aria-live="polite">
+                  <p><strong className={fomcStanceTextClass(fomcAssessment)}>{market === "crypto" ? "코인" : "주식"} 단기 · {fomcAssessment.riskAssetLabel}</strong></p>
+                  <p>{fomcAssessment.rationale}</p>
+                  <p className="text-ui-subtle">{fomcAssessment.coverageLabel} · 신뢰 {fomcConfidenceLabel(fomcAssessment)} · 문구 기반 해석이며 실제 인상·인하 확률과 가격 반응은 별도입니다.</p>
+                </div>
+              ) : impactAssessment ? (
                 <p className="[word-break:keep-all]">
                   <strong className={impactToneClass}>{macroImpactLensLabel(market)} · {impactAssessment.verdict}</strong>
                   {` · ${impactAssessment.reason}`}
                   {impactAssessment.confidence === "provisional" ? " · 공식 발표값 확인 전 잠정 해석" : " · 공식 발표값 기준"}
                 </p>
               ) : (
-                <p className="[word-break:keep-all]">{item.marketImpact}</p>
+                <p className="[word-break:keep-all]">{isFomcPolicyEvent && isReleased ? "공식 성명 원문 분석이 완료될 때까지 정책 기조 판단을 보류합니다." : item.marketImpact}</p>
               )}
 
               <dl className="grid grid-cols-3 gap-1">
-                {[
+                {(fomcFields ?? [
                   [primaryValueLabel, homePrimaryValue],
                   ["예측", displayConsensusValue(item)],
                   ["이전", displayPreviousValue(item)]
-                ].map(([label, value]) => (
+                ]).map(([label, value]) => (
                   <div key={label} className="min-w-0 rounded-md bg-ui-inset/60 px-2 py-1.5">
                     <dt className="text-[9px] font-bold text-ui-subtle">{label}</dt>
                     <dd className="break-words font-black text-ui-text">{value}</dd>
@@ -856,7 +911,12 @@ export function MacroTicker({
         <Link href={href} className="group flex min-h-10 items-start gap-1.5 rounded-ui-lg bg-ui-panel px-2.5 py-2 transition hover:bg-ui-elevated">
           <div className={`flex w-10 shrink-0 flex-col items-center justify-start gap-0.5 text-center text-[10px] font-black leading-3 ${isReleased ? "text-signal-warning" : "text-accent-blue"}`}>
             <span>{eventKind}</span>
-            {impactAssessment && ImpactIcon ? (
+            {fomcAssessment && FomcIcon ? (
+              <span className={`inline-flex flex-col items-center justify-center gap-0.5 ${fomcStanceTextClass(fomcAssessment)}`} aria-label={`FOMC ${fomcAssessment.stanceLabel}`}>
+                <FomcIcon size={14} aria-hidden />
+                <span className="text-[9px] font-black leading-none">{fomcAssessment.stanceLabel}</span>
+              </span>
+            ) : impactAssessment && ImpactIcon ? (
               <span className={`inline-flex flex-col items-center justify-center gap-0.5 ${impactToneClass}`} aria-label={macroImpactDisplayLabel(impactAssessment, market)}>
                 <ImpactIcon size={14} aria-hidden />
                 <span className="text-[9px] font-black leading-none">{impactAssessment.badgeLabel}</span>
@@ -867,16 +927,22 @@ export function MacroTicker({
           </div>
           <div className="min-w-0 flex-1">
             <p className="line-clamp-4 text-[10.5px] font-black leading-4 text-white [word-break:keep-all]">
-              {macroLabel(item.label)} · <span className={compactStateClass(item)}>{compactStatusLabel(item)}</span> · {impactLabel(item)}
+              {macroLabel(item.label)} · <span className={compactStateClass(item)}>{compactStatusLabel(item)}</span> · {fomcAssessment ? fomcAssessment.ratePathLabel : impactLabel(item)}
             </p>
             <p className="text-[10.5px] font-bold leading-[15px] text-slate-500 [word-break:keep-all]">
               <span>한국시간 {item.dateKst}</span>
             </p>
-            <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-bold leading-[15px] text-slate-500 [overflow-wrap:anywhere] [word-break:keep-all]">
-              <span>{primaryValueLabel} {primaryValue}</span>
-              <span>예측 {displayConsensusValue(item)}</span>
-              <span>이전 {displayPreviousValue(item)}</span>
-            </p>
+            {fomcFields ? (
+              <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-bold leading-[15px] text-slate-500 [overflow-wrap:anywhere] [word-break:keep-all]">
+                {fomcFields.map(([label, value]) => <span key={label}>{label} {value}</span>)}
+              </p>
+            ) : (
+              <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-bold leading-[15px] text-slate-500 [overflow-wrap:anywhere] [word-break:keep-all]">
+                <span>{primaryValueLabel} {primaryValue}</span>
+                <span>예측 {displayConsensusValue(item)}</span>
+                <span>이전 {displayPreviousValue(item)}</span>
+              </p>
+            )}
           </div>
           <ChevronRight size={14} className="shrink-0 text-slate-600 transition group-hover:text-accent-blue" aria-hidden />
         </Link>

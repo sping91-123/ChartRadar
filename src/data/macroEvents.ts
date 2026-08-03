@@ -1,5 +1,6 @@
 // 자동 매크로 캘린더가 실패했을 때 보여줄 예비 경제 일정입니다.
 import { type MacroEventStatus, type MacroEventType, type MacroSourceType, type MacroValueProvenance, type MacroValueProvider } from "@/lib/macro/types";
+import type { FomcPolicyAssessment } from "@/lib/fomcPolicyAssessment";
 
 export type MacroEventState = "upcoming" | "released" | "watch";
 export type MacroEventImportance = 1 | 2 | 3;
@@ -48,6 +49,7 @@ export type MacroEventItem = {
   isOfficial?: boolean;
   isDocumentEvent?: boolean;
   isNumericEvent?: boolean;
+  fomcPolicyAssessment?: FomcPolicyAssessment;
 };
 
 export const macroCalendarUpdatedAt = "2026년 5월 25일 예비 일정 갱신";

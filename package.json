@@ -31,6 +31,7 @@
     "test:news-runtime": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-news-runtime.js",
     "test:macro-calendar": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-macro-calendar.js",
     "test:macro-impact": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-macro-impact.js",
+    "test:fomc-policy": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-fomc-policy-assessment.js",
     "test:news-impact": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-news-reactions.js && node scripts/test-news-impact-ledger.mjs",
     "test:news-reactions": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-news-reactions.js",
     "test:news-alerts": "node scripts/test-news-impact-ledger.mjs",

@@ -9,6 +9,7 @@ import { classifyNewsSourceTimestamp, normalizeNewsSourceItem, type NormalizedNe
 import { readEnabledNewsSourcePolicies, readNewsSourceHealth, recordNewsSourceFailure, recordNewsSourceSuccess } from "@/lib/server/news/newsImpactStore";
 import { normalizeFederalRegisterDocument, type FederalRegisterDocumentRow } from "@/lib/server/news/federalRegister";
 import { readBoundedOfficialResponseText } from "@/lib/server/news/boundedOfficialResponse";
+import { fomcPolicyAssessmentFingerprint, parseFomcPolicyAssessment } from "@/lib/fomcPolicyAssessment";
 
 export interface NewsSourceFetchResult {
   sourceId: string;
@@ -276,6 +277,9 @@ async function fetchMacroStore(now: Date) {
       ? admitOfficialNews({ sourceId: "fed_press_releases", title: row.title })
       : null;
     const eventKind = fedAdmission?.accepted && fedAdmission.eventKind ? fedAdmission.eventKind : "official_macro_release";
+    const fomcPolicyAssessment = eventKind === "fomc_policy_statement"
+      ? parseFomcPolicyAssessment(row.raw_payload?.fomcPolicyAssessment)
+      : null;
     try {
       const normalized = normalizeNewsSourceItem({
         sourceId: "macro_official_store",
@@ -310,7 +314,11 @@ async function fetchMacroStore(now: Date) {
           eventKind,
           admissionReason: "official_macro",
           admissionRuleVersion: "official-admission-v1",
-          pushEligible: true
+          pushEligible: true,
+          ...(fomcPolicyAssessment ? {
+            fomcPolicyAssessment,
+            fomcPolicyAssessmentFingerprint: fomcPolicyAssessmentFingerprint(fomcPolicyAssessment)
+          } : {})
         }
       }, now);
       if (!normalized) {

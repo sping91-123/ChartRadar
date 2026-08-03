@@ -7,6 +7,7 @@ import { selectLatestMacroGenerationRows } from "@/lib/macro/generation";
 import { normalizeMacroEvents } from "@/lib/macro/normalizeMacroEvent";
 import { resolveMacroSourceTrust } from "@/lib/macro/sourceTrust";
 import { isStoredMacroPayloadStale } from "@/lib/macro/staleness";
+import { parseFomcPolicyAssessment, preserveFomcPolicyAssessments } from "@/lib/fomcPolicyAssessment";
 
 type MacroEventRow = {
   id?: string;
@@ -70,6 +71,7 @@ function isLegacyFutureClaimsContamination(row: MacroEventRow, now = Date.now())
 
 function rowToItem(row: MacroEventRow): MacroEventItem {
   const rawPayload = row.raw_payload && typeof row.raw_payload === "object" ? (row.raw_payload as Partial<MacroEventItem>) : {};
+  const fomcPolicyAssessment = parseFomcPolicyAssessment(rawPayload.fomcPolicyAssessment);
   const source = rowSource(row);
   const sourceType = rawPayload.sourceType ?? "official_page";
   const sourceUrl = row.source_url ?? rawPayload.sourceUrl ?? "";
@@ -114,7 +116,8 @@ function rowToItem(row: MacroEventRow): MacroEventItem {
     isOfficial: trust.isOfficial,
     isDocumentEvent: rawPayload.isDocumentEvent,
     isNumericEvent: rawPayload.isNumericEvent,
-    nextRefreshMs: rawPayload.nextRefreshMs
+    nextRefreshMs: rawPayload.nextRefreshMs,
+    fomcPolicyAssessment: fomcPolicyAssessment ?? undefined
   };
 }
 
@@ -206,15 +209,18 @@ export async function writeStoredMacroCalendarPayload(payload: MacroCalendarPayl
     };
   }
 
-  const syncGeneration = Number.isFinite(Date.parse(payload.updatedAt)) ? payload.updatedAt : new Date().toISOString();
-  const rows = payload.items.map((item) => itemToRow(item, syncGeneration));
-  if (rows.length === 0) {
+  if (payload.items.length === 0) {
     return {
       stored: false,
       updatedCount: 0,
       reason: "저장할 매크로 일정이 없습니다."
     };
   }
+
+  const previousPayload = await readStoredMacroCalendarPayload({ allowStale: true }).catch(() => null);
+  const items = preserveFomcPolicyAssessments(payload.items, previousPayload?.items ?? []);
+  const syncGeneration = Number.isFinite(Date.parse(payload.updatedAt)) ? payload.updatedAt : new Date().toISOString();
+  const rows = items.map((item) => itemToRow(item, syncGeneration));
 
   await supabaseAdminRest("macro_events?on_conflict=source,source_event_id", {
     method: "POST",

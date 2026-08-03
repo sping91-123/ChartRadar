@@ -153,6 +153,7 @@ export function normalizeMacroEvent(item: MacroEventItem, enrichments: MacroSour
     confidence: enrichment?.confidence ?? item.confidence ?? (enrichment?.isOfficial ? 0.9 : 0.7),
     staleReason: status.staleReason ?? enrichment?.staleReason ?? item.staleReason,
     nextRefreshMs: status.nextRefreshMs,
+    fomcPolicyAssessment: enrichment?.fomcPolicyAssessment ?? item.fomcPolicyAssessment,
     isOfficial,
     isDocumentEvent,
     isNumericEvent,

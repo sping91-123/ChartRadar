@@ -14,6 +14,7 @@ import { isAllowedNewsSourceUrl, isAllowedUrlForHosts, newsSourceById, newsSourc
 import type { NormalizedNewsSourceItem } from "@/lib/server/news/normalizeNewsSourceItem";
 import { repairLegacyMacroPresentation } from "@/lib/newsImpactPresentationRules";
 import { isSupabaseAdminConfigured, supabaseAdminRest, supabaseAdminRpc } from "@/lib/server/supabaseAdmin";
+import { hasFomcAssessmentMetadataChange, parseFomcPolicyAssessment } from "@/lib/fomcPolicyAssessment";
 
 export interface NewsSourceItemRow {
   id: string;
@@ -337,6 +338,7 @@ export async function upsertNewsImpactEvent(input: {
     typeof input.metadata?.summary_rule_version === "string" &&
     previous.metadata?.summary_rule_version !== input.metadata.summary_rule_version
   );
+  const assessmentChanged = hasFomcAssessmentMetadataChange(previous?.metadata ?? {}, input.metadata ?? {});
   const previousHistory = Array.isArray(previous?.metadata?.revision_history)
     ? previous.metadata.revision_history as unknown[]
     : [];
@@ -417,7 +419,7 @@ export async function upsertNewsImpactEvent(input: {
     macro_event_id: input.macroEventId ?? previous?.macro_event_id ?? null,
     metadata: {
       ...(previous?.metadata ?? {}),
-      ...(changed || presentationChanged || !previous ? input.metadata ?? {} : {}),
+      ...(changed || presentationChanged || assessmentChanged || !previous ? input.metadata ?? {} : {}),
       push_eligible: pushSourceItemIds.length > 0,
       push_source_item_ids: pushSourceItemIds,
       content_hash: previous?.primary_source_item_id && previous.primary_source_item_id !== input.sourceItem.id
@@ -866,6 +868,7 @@ export async function readNewsImpactEvents(input: {
     const eventReactions = allEventReactions.filter((reaction) => reaction.event_version === event.version);
     const latest = eventReactions[0] ?? null;
     const metrics = asArray(latest?.metrics?.items);
+    const fomcPolicyAssessment = parseFomcPolicyAssessment(event.metadata?.fomc_policy_assessment);
     return {
       id: event.id,
       semanticKey: event.semantic_key,
@@ -884,6 +887,7 @@ export async function readNewsImpactEvents(input: {
       sourceCount: eventSources.length,
       ...(typeof event.metadata?.macro_source_event_id === "string" ? { macroEventKey: event.metadata.macro_source_event_id } : {}),
       reactionEligibility: event.metadata?.reaction_eligible === false ? "context_only" : "eligible",
+      ...(fomcPolicyAssessment ? { fomcPolicyAssessment } : {}),
       reaction: latest ? rowToReaction(latest, event) : null,
       pro: {
         sources: eventSources.map(rowToSource),

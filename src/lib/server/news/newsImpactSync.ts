@@ -39,6 +39,7 @@ import {
   type NewsImpactEventRow,
   type NewsReactionRow
 } from "@/lib/server/news/newsImpactStore";
+import { fomcPolicyAssessmentFingerprint, parseFomcPolicyAssessment } from "@/lib/fomcPolicyAssessment";
 import { fetchOfficialNewsSources } from "@/lib/server/news/officialSourceAdapters";
 import { deterministicOfficialPresentation, officialEventPresentation } from "@/lib/server/news/officialFactSummary";
 import { syncCftcPositioningObservations } from "@/lib/server/news/cftcPositioning";
@@ -359,6 +360,7 @@ export async function runNewsImpactSync(now = new Date()): Promise<NewsImpactSyn
         if (storedItem.duplicate) duplicateCount += 1;
         else acceptedCount += 1;
         const deterministicPresentation = deterministicOfficialPresentation(item);
+        const fomcPolicyAssessment = parseFomcPolicyAssessment(item.structuredPayload.fomcPolicyAssessment);
         const storedEvents: Array<Awaited<ReturnType<typeof upsertNewsImpactEvent>>> = [];
         for (const market of item.markets) {
           const storedEvent = await upsertNewsImpactEvent({
@@ -387,7 +389,11 @@ export async function runNewsImpactSync(now = new Date()): Promise<NewsImpactSyn
               reaction_anchor_policy: item.structuredPayload.reactionAnchorPolicy ?? (
                 typeof item.structuredPayload.macroEventId === "string" ? "occurred_at" : "first_seen"
               ),
-              time_label: item.structuredPayload.timeLabel ?? null
+              time_label: item.structuredPayload.timeLabel ?? null,
+              ...(fomcPolicyAssessment ? {
+                fomc_policy_assessment: fomcPolicyAssessment,
+                fomc_policy_fingerprint: fomcPolicyAssessmentFingerprint(fomcPolicyAssessment)
+              } : {})
             }
           });
           storedEvents.push(storedEvent);
