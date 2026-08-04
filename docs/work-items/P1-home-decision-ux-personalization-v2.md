@@ -8,7 +8,7 @@
 - 담당방: `/crypto/home` UX / Coin Basic·Pro
 - 위험도: 중간
 - 관련 route: `/crypto/home`, `/api/crypto/home-interest-summary`
-- 완료 커밋: 미커밋
+- 완료 커밋: `4a726b7d3773ef27e78d7ec83f0cffbf0e836e43`
 
 ## 배경
 
@@ -48,6 +48,16 @@
 ## 남은 운영 확인
 
 - Basic의 하루 1회 제한은 현재 계정 서버가 아니라 기기 localStorage 기준입니다. 계정·기기 간 강제 정책이 필요하면 별도 서버 저장소와 마이그레이션이 필요합니다.
-- 기존 `perpetual-v1.0.0` 상태 감시는 오판 방지를 위해 fail-closed 처리했습니다. 2026-08-04 production 사전 집계에서 비만료 활성·일시정지 감시는 모두 0건이었으며, 배포 직전 다시 확인합니다.
+- 기존 `perpetual-v1.0.0` 상태 감시는 오판 방지를 위해 fail-closed 처리했습니다. 2026-08-04 production 사전 집계와 배포 직전 재집계에서 비만료 활성·일시정지 감시는 모두 0건이었습니다.
 - 임의 알트코인의 홈 요약은 선택 종목 자체 데이터를 사용하지만, 상세 알트 화면은 지원 범위 전체를 여는 일반 화면일 수 있어 안내 문구를 함께 표시합니다.
-- production 배포와 실도메인 검증은 사용자 승인에 따라 후속 릴리스 단계에서 수행하고 결과를 별도로 기록합니다.
+- production 배포와 실도메인 검증은 아래 릴리스 기록대로 완료했습니다.
+
+## Production 반영
+
+- 반영일: 2026-08-04
+- Vercel deployment: `dpl_4F8rqRFXA87QoZtz5J7KaYwECRo9` (`Ready`, target `production`)
+- 실도메인: `https://chartradar.kr`
+- `/api/health`, `/api/macro-calendar`, BTC·ETH perpetual snapshot, SOL 홈 관심 코인 요약 API: HTTP 200
+- BTC·ETH perpetual snapshot: `perpetual-v2.0.0`, `확정 전` 구문 없음
+- Production Playwright 360px·390px: 매크로 중복 아코디언 없음, 시간대 화살표 3개, 가로 overflow 없음, console error 없음
+- 배포 후 30분 Vercel error 로그: 0건
