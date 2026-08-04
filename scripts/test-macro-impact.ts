@@ -121,14 +121,15 @@ assert.equal(assessMacroImpact({ ...base, label: "Fed Chair Testimony" }, nowMs)
 
 const tickerSource = readFileSync("src/components/MacroTicker.tsx", "utf8");
 assert.match(tickerSource, /assessMacroImpact/, "all macro surfaces must use the tested impact assessment");
-assert.match(tickerSource, /homePreviousImpact/, "Home must retain the previous release interpretation while the primary card shows an upcoming event");
+assert.match(tickerSource, /homePreviousImpact/, "the full schedule card must retain the previous release interpretation while showing an upcoming event");
 assert.match(tickerSource, /잠정 해석/, "public-calendar results must be clearly distinguished from confirmed official results");
 assert.match(tickerSource, /코인 단기 금리·달러 기준/, "the UI must disclose the interpretation lens instead of promising a price direction");
 assert.match(tickerSource, /mergedMacroProvenance/, "combined MoM and YoY values must not inherit only the first row's provenance");
 assert.match(tickerSource, /data-testid="home-macro-compact"/, "Home must keep the macro summary in a dedicated compact surface");
-assert.match(tickerSource, /<details[\s\S]*data-testid="home-macro-detail"/, "Home macro details must remain expandable instead of deleting source and prior-release context");
+assert.doesNotMatch(tickerSource, /data-testid="home-macro-detail"/, "Home must not repeat its compact macro values inside an accordion");
+assert.match(tickerSource, /전체 일정 <ChevronRight/, "Home must link directly to the full schedule for sources and prior-release context");
 assert.match(tickerSource, /macroSurpriseLabel/, "Home must explain whether the result was above, below, or equal to the forecast");
-assert.match(tickerSource, /공식 발표값 출처/, "Home macro details must distinguish a confirmed official-value source");
-assert.match(tickerSource, /item\.officialUrl \? "공식 일정 출처" : "출처"/, "Home must not label a public fallback URL as an official source");
+assert.match(tickerSource, /공식 발표값 출처/, "the full macro surface must distinguish a confirmed official-value source");
+assert.match(tickerSource, /item\.officialUrl \? "공식 일정 출처" : "출처"/, "the full macro surface must not label a public fallback URL as an official source");
 
 console.log("macro impact classification matrix passed");

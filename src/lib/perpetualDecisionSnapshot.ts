@@ -2,9 +2,11 @@ import type { Candle, DirectionState, MarketRegime, TimeframeAnalysis } from "@/
 import type { LargeTradeFlowReport, LargeTradeSide } from "@/lib/largeTradeFlow";
 import type { LiquidationPressureReport, LiquidationPressureSide } from "@/lib/liquidationPressure";
 
-export const perpetualDecisionEngineVersion = "perpetual-v1.2.0";
-// Monitor IDs remain stable across the additive evidence-contract upgrade so existing alerts keep working.
+export const perpetualDecisionEngineVersion = "perpetual-v2.0.0";
+// Price monitor IDs remain stable. State monitors use their own semantic version so older
+// baselines cannot fire solely because the decision engine changed.
 export const perpetualMonitorConditionVersion = "perpetual-v1.0.0";
+export const perpetualDecisionStateConditionVersion = "perpetual-state-v2.0.0";
 
 export type PerpetualAsset = "btc" | "eth";
 export type PerpetualSymbol = "BTCUSDT" | "ETHUSDT";
@@ -375,7 +377,7 @@ function stateChangeCondition(
   label = "빠진 데이터가 다시 들어오고 방향 신호가 한쪽으로 모이는지 확인"
 ): MonitorCondition {
   return {
-    id: conditionId(asset, "15m", "primary", "decision_state_change", null),
+    id: [perpetualDecisionStateConditionVersion, asset, "15m", "primary", "decision_state_change", baselineState].join(":"),
     kind: "decision_state_change",
     role: "primary",
     timeframe: "15m",
@@ -487,14 +489,21 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
   else state = "neutral";
 
   const safeHeadline = qualityHeadline(quality);
+  const riskHeadline = flowConflict
+    ? "가격 흐름과 큰 금액 체결이 엇갈려 지금은 기다릴 때입니다."
+    : timeframeConflict
+      ? "짧은 흐름과 큰 흐름이 엇갈려 지금은 기다릴 때입니다."
+      : input.pressure?.grade === "extreme"
+        ? "한쪽 포지션 쏠림이 커 지금은 변동성에 주의할 때입니다."
+        : "근거가 엇갈려 지금은 기다릴 때입니다.";
   const headline =
     safeHeadline ??
     (state === "upside_watch"
-      ? "오르는 힘이 우세하지만 아직 확정 전입니다."
+      ? "현재는 오르는 근거가 더 많습니다."
       : state === "downside_watch"
-        ? "내리는 힘이 우세하지만 아직 확정 전입니다."
+        ? "현재는 내리는 근거가 더 많습니다."
         : state === "risk"
-          ? "가격 흐름과 큰 체결이 엇갈려 지금은 기다릴 때입니다."
+          ? riskHeadline
           : "한쪽 힘이 뚜렷하지 않아 다음 움직임을 기다립니다.");
 
   const topRisk =
@@ -508,7 +517,9 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
             ? "한쪽 포지션이 많이 몰려 있어 급격한 반대 움직임이 나올 수 있습니다."
             : primary.analysis.condition.volatilityState === "expanded"
               ? "평소보다 움직임이 커 작은 변동에도 현재 해석이 자주 바뀔 수 있습니다."
-              : "확인 가격에 닿기 전에 따라가면 되돌림에 흔들릴 수 있습니다.";
+              : state === "neutral"
+                ? "방향 근거가 약한 구간이라 작은 움직임을 추세로 오해하기 쉽습니다."
+                : "확인 가격에 닿기 전에 따라가면 되돌림에 흔들릴 수 있습니다.";
 
   const reasons: [string, string] = [
     `15분은 ${structureLabel(primary.analysis.msb)}, 1시간은 ${structureLabel(hourly.analysis.msb)}, 4시간은 ${structureLabel(fourHourly.analysis.msb)}입니다.`,
@@ -517,14 +528,15 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
       : "몰린 포지션이나 큰 금액 체결 데이터가 부족해 차트 흐름만으로 단정하지 않습니다."
   ];
 
-  const primaryDirection: "above" | "below" =
-    state === "downside_watch" || (state === "neutral" && totalScore < 0) ? "below" : "above";
-  const primaryCondition = state === "risk"
+  const primaryDirection: "above" | "below" = state === "downside_watch" ? "below" : "above";
+  const primaryCondition = state === "risk" || state === "neutral"
     ? stateChangeCondition(
         input.asset,
         input.generatedAt,
         state,
-        quality === "ready"
+        state === "neutral"
+          ? "15분·1시간·4시간 근거가 한쪽으로 모이는지 확인"
+          : quality === "ready"
           ? "15분 가격 흐름과 큰 금액 체결이 같은 방향으로 모이는지 확인"
           : "빠진 데이터가 다시 들어오고 방향 신호가 한쪽으로 모이는지 확인"
       )
@@ -537,9 +549,10 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
         threshold: nextThreshold(input.asset, input.price, primary, primaryDirection)
       });
 
-  const scenarioDirection: "above" | "below" = totalScore < 0 ? "below" : "above";
+  const hasDirectionalScenario = state === "upside_watch" || state === "downside_watch";
+  const scenarioDirection: "above" | "below" = state === "downside_watch" ? "below" : "above";
   const inverseDirection: "above" | "below" = scenarioDirection === "above" ? "below" : "above";
-  const confirmationConditions = [
+  const confirmationConditions = hasDirectionalScenario ? [
     priceCondition({
       asset: input.asset,
       generatedAt: input.generatedAt,
@@ -548,8 +561,8 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
       direction: scenarioDirection,
       threshold: nextThreshold(input.asset, input.price, hourly, scenarioDirection)
     })
-  ];
-  const invalidationConditions = [
+  ] : [];
+  const invalidationConditions = hasDirectionalScenario ? [
     priceCondition({
       asset: input.asset,
       generatedAt: input.generatedAt,
@@ -566,7 +579,7 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
       direction: inverseDirection,
       threshold: nextThreshold(input.asset, input.price, fourHourly, inverseDirection)
     })
-  ];
+  ] : [];
 
   const previousChange = input.previousSnapshot && input.previousSnapshot.summary.state !== state
     ? {
@@ -734,8 +747,10 @@ export function isMonitorConditionMet(condition: MonitorCondition, snapshot: Per
     return condition.threshold !== null && typeof closedPrice === "number" && Number.isFinite(closedPrice) && closedPrice <= condition.threshold;
   }
   if (condition.kind === "decision_state_change") {
+    if (!condition.id.startsWith(`${perpetualDecisionStateConditionVersion}:`)) return false;
     if (condition.targetState) return snapshot.summary.state === condition.targetState;
-    return Boolean(condition.baselineState && snapshot.summary.state !== condition.baselineState);
+    const alignedDirection = snapshot.summary.state === "upside_watch" || snapshot.summary.state === "downside_watch";
+    return Boolean(condition.baselineState && snapshot.summary.state !== condition.baselineState && alignedDirection);
   }
   const pressure = snapshot.pro?.pressure?.dominantSide;
   if (!pressure) return false;

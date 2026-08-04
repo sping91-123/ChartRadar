@@ -31,7 +31,12 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
         horzLines: { color: "rgba(148,163,184,0.08)" }
       },
       rightPriceScale: { borderColor: "rgba(148,163,184,0.16)" },
-      timeScale: { borderColor: "rgba(148,163,184,0.16)", timeVisible: true, secondsVisible: false },
+      timeScale: {
+        borderColor: "rgba(148,163,184,0.16)",
+        timeVisible: true,
+        secondsVisible: false,
+        ...(compact ? { rightOffsetPixels: 56 } : {})
+      },
       handleScroll: !compact,
       handleScale: !compact
     });
@@ -42,18 +47,21 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
       wickUpColor: "#34d399",
       wickDownColor: "#fb7185"
     });
-    series.setData(snapshot.chart.candles.map((candle) => ({
+    const visibleCandles = compact ? snapshot.chart.candles.slice(-64) : snapshot.chart.candles;
+    series.setData(visibleCandles.map((candle) => ({
       time: candle.time as never,
       open: candle.open,
       high: candle.high,
       low: candle.low,
       close: candle.close
     })));
-    const conditions = [
-      snapshot.summary.primaryCondition,
-      ...(snapshot.pro?.confirmationConditions ?? []),
-      ...(snapshot.pro?.invalidationConditions ?? [])
-    ];
+    const conditions = compact
+      ? [snapshot.summary.primaryCondition]
+      : [
+          snapshot.summary.primaryCondition,
+          ...(snapshot.pro?.confirmationConditions ?? []),
+          ...(snapshot.pro?.invalidationConditions ?? [])
+        ];
     conditions.forEach((condition) => {
       if (condition.threshold === null || !Number.isFinite(condition.threshold)) return;
       series.createPriceLine({
@@ -70,28 +78,32 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
     const details = primaryEvidence?.details;
     const publicEvents = snapshot.publicEvidence?.events;
     if (details || publicEvents) {
-      const candleTimes = new Set(snapshot.chart.candles.map((candle) => candle.time));
+      const candleTimes = new Set(visibleCandles.map((candle) => candle.time));
       const markers: SeriesMarker<Time>[] = [];
+      const addMarker = (marker: SeriesMarker<Time>) => {
+        if (compact && markers.some((item) => item.time === marker.time && item.position === marker.position)) return;
+        markers.push(marker);
+      };
       const msb = details?.events.msb ?? publicEvents?.msb;
       const choch = details?.events.choch ?? publicEvents?.choch;
       const msbTime = markerTime(msb?.occurredAt ?? null, candleTimes);
       if (msbTime && msb) {
-        markers.push({
+        addMarker({
           time: msbTime,
           position: msb.direction === "bullish" ? "belowBar" : "aboveBar",
           color: msb.direction === "bullish" ? "#34d399" : "#fb7185",
           shape: msb.direction === "bullish" ? "arrowUp" : "arrowDown",
-          text: "추세 확인"
+          ...(compact ? {} : { text: "추세 확인" })
         });
       }
       const chochTime = markerTime(choch?.occurredAt ?? null, candleTimes);
       if (chochTime && choch) {
-        markers.push({
+        addMarker({
           time: chochTime,
           position: choch.direction === "bullish" ? "belowBar" : "aboveBar",
           color: "#fbbf24",
           shape: "circle",
-          text: "전환 가능"
+          ...(compact ? {} : { text: "전환 가능" })
         });
       }
       if (markers.length) {
@@ -99,7 +111,7 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
         createSeriesMarkers(series, markers);
       }
 
-      const zoneLines = details ? [
+      const zoneLines = !compact && details ? [
         ...(details.zones.orderBlock
           ? [
               { price: details.zones.orderBlock.top, color: "#2dd4bf", title: "큰 주문 구간 위" },
@@ -145,5 +157,5 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
     );
   }
 
-  return <div ref={containerRef} className="w-full" role="img" aria-label={`${snapshot.symbol} 15분 캔들, 추세 변화, 확인 가격 차트`} />;
+  return <div ref={containerRef} className="w-full" role="img" aria-label={`${snapshot.symbol} 15분 캔들과 핵심 확인선 차트`} />;
 }

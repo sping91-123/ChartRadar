@@ -759,10 +759,6 @@ export function MacroTicker({
     const href = market === "stocks" ? "/schedule?market=global" : "/schedule?market=crypto";
 
     if (homePriorityAware) {
-      const sourceUrl = fomcAssessment?.statementUrl ?? item.officialUrl ?? item.sourceUrl;
-      const sourceLabel = fomcAssessment ? "Fed 공식 성명" : item.actualProvenance === "official"
-        ? "공식 발표값 출처"
-        : item.officialUrl ? "공식 일정 출처" : "출처";
       const homePrimaryValue = primaryValue || (isReleased ? "확인 중" : "발표 전");
       const impactSummary = fomcAssessment
         ? `${fomcAssessment.coverageLabel} · 신뢰 ${fomcConfidenceLabel(fomcAssessment)}`
@@ -773,11 +769,11 @@ export function MacroTicker({
       return (
         <section aria-labelledby="home-macro-title">
           <h2 id="home-macro-title" className="sr-only">오늘 거래 전 확인</h2>
-          <details
-            className="group overflow-hidden rounded-ui-lg border border-amber-400/25 bg-ui-panel"
+          <div
+            className="overflow-hidden rounded-ui-lg border border-amber-400/25 bg-ui-panel"
             data-testid="home-macro-compact"
           >
-            <summary className="cursor-pointer list-none px-2.5 py-2 outline-none transition hover:bg-ui-elevated focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ui-brand [&::-webkit-details-marker]:hidden">
+            <div className="px-2.5 py-2">
               <div className="flex min-h-4 items-center justify-between gap-2 text-[10px] font-black leading-4">
                 <time dateTime={item.releaseAt} className="min-w-0 truncate text-ui-text">{item.dateKst}</time>
                 <span className="shrink-0 text-amber-300">{impactLabel(item)}</span>
@@ -819,81 +815,17 @@ export function MacroTicker({
                 <span className={`min-w-0 truncate ${fomcAssessment ? fomcStanceTextClass(fomcAssessment) : impactAssessment ? impactToneClass : homeCalendarTrustClass}`} title={fomcAssessment?.coverageLabel ?? impactAssessment?.reason ?? calendarWarning ?? homeCalendarTrustLabel}>
                   {impactSummary}
                 </span>
-                <span className="inline-flex shrink-0 items-center gap-0.5 text-ui-subtle">
-                  상세
-                  <ChevronDown size={13} className="transition-transform group-open:rotate-180" aria-hidden />
-                </span>
-              </div>
-            </summary>
-
-            <div id="home-macro-detail" data-testid="home-macro-detail" className="space-y-2 border-t border-ui-border/70 px-2.5 py-2.5 text-[11px] leading-5 text-ui-muted">
-              <p className="font-black text-ui-text [word-break:keep-all]">{macroLabel(item.label)}</p>
-              {fomcAssessment ? (
-                <div className="space-y-1 [overflow-wrap:anywhere] [word-break:keep-all]" role="status" aria-live="polite">
-                  <p><strong className={fomcStanceTextClass(fomcAssessment)}>{market === "crypto" ? "코인" : "주식"} 단기 · {fomcAssessment.riskAssetLabel}</strong></p>
-                  <p>{fomcAssessment.rationale}</p>
-                  <p className="text-ui-subtle">{fomcAssessment.coverageLabel} · 신뢰 {fomcConfidenceLabel(fomcAssessment)} · 문구 기반 해석이며 실제 인상·인하 확률과 가격 반응은 별도입니다.</p>
-                </div>
-              ) : impactAssessment ? (
-                <p className="[word-break:keep-all]">
-                  <strong className={impactToneClass}>{macroImpactLensLabel(market)} · {impactAssessment.verdict}</strong>
-                  {` · ${impactAssessment.reason}`}
-                  {impactAssessment.confidence === "provisional" ? " · 공식 발표값 확인 전 잠정 해석" : " · 공식 발표값 기준"}
-                </p>
-              ) : (
-                <p className="[word-break:keep-all]">{isFomcPolicyEvent && isReleased ? "공식 성명 원문 분석이 완료될 때까지 정책 기조 판단을 보류합니다." : item.marketImpact}</p>
-              )}
-
-              <dl className="grid grid-cols-3 gap-1">
-                {(fomcFields ?? [
-                  [primaryValueLabel, homePrimaryValue],
-                  ["예측", displayConsensusValue(item)],
-                  ["이전", displayPreviousValue(item)]
-                ]).map(([label, value]) => (
-                  <div key={label} className="min-w-0 rounded-md bg-ui-inset/60 px-2 py-1.5">
-                    <dt className="text-[9px] font-bold text-ui-subtle">{label}</dt>
-                    <dd className="break-words font-black text-ui-text">{value}</dd>
-                  </div>
-                ))}
-              </dl>
-
-              {calendarWarningText ? (
-                <p className="rounded-md bg-amber-400/[0.06] px-2 py-1.5 font-semibold text-amber-200" role="status">
-                  {calendarWarningText}
-                </p>
-              ) : null}
-
-              {!isReleased && homePreviousRelease && homePreviousRelease.id !== item.id ? (
-                <div className="rounded-md bg-ui-inset/45 px-2 py-1.5">
-                  <div className="flex flex-wrap items-center justify-between gap-1">
-                    <strong className="text-ui-text">직전 발표 · {macroLabel(homePreviousRelease.label)}</strong>
-                    {homePreviousImpact ? (
-                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-black ${macroImpactBadgeClass(homePreviousImpact)}`}>
-                        {macroImpactDisplayLabel(homePreviousImpact, market)}
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="mt-0.5 [word-break:keep-all]">
-                    {homePreviousRelease.dateKst} · 실제 {displayActual(homePreviousRelease) || "확인 중"} · 예측 {displayConsensusValue(homePreviousRelease)} · 이전 {displayPreviousValue(homePreviousRelease)}
-                  </p>
-                </div>
-              ) : null}
-
-              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-ui-border/60 pt-2">
-                <span className={`font-semibold ${homeCalendarTrustClass}`}>{homeCalendarTrustLabel}</span>
-                <span className="inline-flex items-center gap-3">
-                  {sourceUrl ? (
-                    <a href={sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-black text-ui-brand hover:underline">
-                      {sourceLabel} <ExternalLink size={11} aria-hidden />
-                    </a>
-                  ) : null}
-                  <Link href={href} className="inline-flex items-center gap-1 font-black text-ui-brand hover:underline">
-                    전체 일정 <ChevronRight size={12} aria-hidden />
-                  </Link>
-                </span>
+                <Link href={href} className="inline-flex shrink-0 items-center gap-0.5 text-ui-brand hover:underline">
+                  전체 일정 <ChevronRight size={12} aria-hidden />
+                </Link>
               </div>
             </div>
-          </details>
+            {calendarWarningText ? (
+              <p className="border-t border-ui-border/70 bg-amber-400/[0.06] px-2.5 py-1.5 text-[10px] font-semibold leading-4 text-amber-200" role="status">
+                {calendarWarningText}
+              </p>
+            ) : null}
+          </div>
         </section>
       );
     }

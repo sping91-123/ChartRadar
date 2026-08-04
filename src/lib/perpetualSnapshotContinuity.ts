@@ -1,4 +1,8 @@
-import type { PerpetualAsset, PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
+import {
+  perpetualDecisionStateConditionVersion,
+  type PerpetualAsset,
+  type PerpetualDecisionSnapshot
+} from "./perpetualDecisionSnapshot";
 
 const SNAPSHOT_REFRESH_MAX_DELAY_MS = 60_000;
 const SNAPSHOT_REFRESH_RETRY_DELAY_MS = 15_000;
@@ -62,7 +66,7 @@ export function buildStalePerpetualDecisionFallback(snapshot: PerpetualDecisionS
         "캔들·청산 압력·대형 체결이 다시 정상화된 뒤 조건을 확인합니다."
       ],
       primaryCondition: {
-        id: `${snapshot.engineVersion}:${snapshot.asset}:15m:primary:decision_state_change:stale`,
+        id: `${perpetualDecisionStateConditionVersion}:${snapshot.asset}:15m:primary:decision_state_change:risk`,
         kind: "decision_state_change",
         role: "primary",
         timeframe: "15m",

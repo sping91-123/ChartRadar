@@ -17,7 +17,7 @@ export const defaultHomeInterestCoin: HomeInterestCoin = {
   active: true
 };
 
-const storageKey = "chartRadar.cryptoHome.interestCoins.v1";
+export const homeInterestCoinsStorageKey = "chartRadar.cryptoHome.interestCoins.v1";
 const basicChangeKey = "chartRadar.cryptoHome.basicChange.v1";
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
@@ -80,7 +80,7 @@ function dedupeCoins(coins: HomeInterestCoin[]) {
 export function readHomeInterestCoins(isPaid = false): HomeInterestCoin[] {
   if (!canUseStorage()) return [defaultHomeInterestCoin];
   try {
-    const raw = window.localStorage.getItem(storageKey);
+    const raw = window.localStorage.getItem(homeInterestCoinsStorageKey);
     if (!raw) return [defaultHomeInterestCoin];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [defaultHomeInterestCoin];
@@ -97,7 +97,7 @@ export function writeHomeInterestCoins(coins: HomeInterestCoin[], isPaid = false
   const limit = isPaid ? homeInterestMaxPro : homeInterestMaxBasic;
   const normalized = dedupeCoins(coins).slice(0, limit);
   const next = normalized.length ? normalized : [defaultHomeInterestCoin];
-  window.localStorage.setItem(storageKey, JSON.stringify(next));
+  window.localStorage.setItem(homeInterestCoinsStorageKey, JSON.stringify(next));
   return next;
 }
 

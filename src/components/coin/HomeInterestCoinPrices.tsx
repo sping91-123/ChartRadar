@@ -1,22 +1,16 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Loader2, RefreshCw, Settings2 } from "lucide-react";
-import { hasMarketEntitlement } from "@/lib/billing";
 import {
   basicHomeInterestChangeStatus,
-  defaultHomeInterestCoin,
   homeInterestMaxBasic,
   homeInterestMaxPro,
-  readHomeInterestCoins,
   recordBasicHomeInterestChange,
   sameHomeCoin,
-  writeHomeInterestCoins,
   type HomeInterestCoin
 } from "@/lib/homeInterestCoins";
 import type { CryptoExchangeId, CryptoExchangeMarket, CryptoHomeTicker } from "@/lib/server/cryptoExchangeData";
-import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
 const exchangeOptions: Array<{ id: CryptoExchangeId; label: string }> = [
   { id: "binance", label: "Binance" },
@@ -42,11 +36,16 @@ function changeCopy(value: number | null | undefined) {
   return `${value > 0 ? "+" : ""}${value.toFixed(2)}%`;
 }
 
-export function HomeInterestCoinPrices() {
-  const { profile } = useSupabaseAuth();
-  const isPaid = hasMarketEntitlement(profile?.plan, "crypto");
+export function HomeInterestCoinPrices({
+  coins,
+  isPaid,
+  onCoinsChange
+}: {
+  coins: HomeInterestCoin[];
+  isPaid: boolean;
+  onCoinsChange: (coins: HomeInterestCoin[]) => void;
+}) {
   const limit = isPaid ? homeInterestMaxPro : homeInterestMaxBasic;
-  const [coins, setCoins] = useState<HomeInterestCoin[]>([defaultHomeInterestCoin]);
   const [tickers, setTickers] = useState<Record<string, CryptoHomeTicker>>({});
   const [priceError, setPriceError] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -57,10 +56,6 @@ export function HomeInterestCoinPrices() {
   const [query, setQuery] = useState("");
   const [selectionMessage, setSelectionMessage] = useState<string | null>(null);
   const priceGeneration = useRef(0);
-
-  useEffect(() => {
-    setCoins(readHomeInterestCoins(isPaid));
-  }, [isPaid]);
 
   const loadPrices = useCallback(async (signal?: AbortSignal) => {
     const generation = ++priceGeneration.current;
@@ -127,7 +122,7 @@ export function HomeInterestCoinPrices() {
         next = coins.filter((coin) => !sameHomeCoin(coin, market));
       } else {
         if (coins.length >= limit) {
-          setSelectionMessage(`Coin Pro는 관심 시세를 최대 ${limit}개까지 저장할 수 있습니다.`);
+          setSelectionMessage(`Coin Pro는 분석 코인을 최대 ${limit}개까지 저장할 수 있습니다.`);
           return;
         }
         next = [...coins, market];
@@ -136,28 +131,22 @@ export function HomeInterestCoinPrices() {
       if (alreadySelected) return;
       const change = basicHomeInterestChangeStatus();
       if (change.used) {
-        setSelectionMessage("Basic 관심코인은 하루 1회 변경할 수 있습니다.");
+        setSelectionMessage("Basic 분석 코인은 이 기기에서 하루 1회 변경할 수 있습니다.");
         return;
       }
       recordBasicHomeInterestChange();
       next = [market];
     }
-    const saved = writeHomeInterestCoins(next, isPaid);
-    setCoins(saved);
-    setSelectionMessage("관심 시세 목록을 저장했습니다.");
-  }, [coins, isPaid, limit]);
+    onCoinsChange(next);
+    setSelectionMessage("홈 분석 코인을 저장했습니다.");
+  }, [coins, isPaid, limit, onCoinsChange]);
 
   return (
-    <section className="space-y-3 pb-3" aria-label="관심코인 시세 목록">
+    <section className="space-y-3 pb-3" aria-label="홈 분석 코인 목록">
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {coins.map((coin) => {
           const ticker = tickers[coinKey(coin)];
           const change = ticker?.changePercent;
-          const base = coin.base.toLowerCase();
-          const isMajor = base === "btc" || base === "eth";
-          const analysisHref = isMajor
-            ? `/crypto/perpetual?asset=${base}&source=home-interest`
-            : `/crypto/perpetual/alts?focus=${encodeURIComponent(base)}&source=home`;
           const changeTone = typeof change === "number" && change > 0
             ? "text-ui-long"
             : typeof change === "number" && change < 0
@@ -173,16 +162,14 @@ export function HomeInterestCoinPrices() {
                 <p className="text-base font-black tabular-nums text-ui-text">{priceCopy(ticker?.price)}</p>
                 <p className={`text-xs font-black tabular-nums ${changeTone}`}>{changeCopy(change)}</p>
               </div>
-              <Link href={analysisHref} className="mt-2 inline-flex text-[10.5px] font-black text-ui-brand underline underline-offset-2">
-                {isMajor ? "BTC·ETH 선물 분석에서 확인" : "알트 선물 분석에서 확인"}
-              </Link>
+              <p className="mt-2 text-[10.5px] font-black text-ui-brand">위 분석 탭에서 선택해 확인</p>
             </article>
           );
         })}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] leading-5 text-ui-muted">
-        <span>시장 관찰용 공개 시세이며 선물 판단 근거에는 사용하지 않습니다.</span>
+        <span>저장한 코인은 위 홈 분석 탭에 바로 반영됩니다.</span>
         <button type="button" onClick={() => void loadPrices()} className="inline-flex items-center gap-1 font-black text-ui-brand">
           <RefreshCw size={12} aria-hidden /> 시세 새로고침
         </button>
@@ -191,10 +178,10 @@ export function HomeInterestCoinPrices() {
 
       <details className="border-t border-ui-line pt-2" onToggle={(event) => setEditorOpen(event.currentTarget.open)}>
         <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 text-xs font-black text-ui-muted marker:hidden [&::-webkit-details-marker]:hidden">
-          <Settings2 size={14} aria-hidden /> 관심 시세 변경 · {coins.length}/{limit}
+          <Settings2 size={14} aria-hidden /> 홈 분석 코인 변경 · {coins.length}/{limit}
         </summary>
         <div className="mt-2 space-y-3">
-          <div className="flex gap-1 overflow-x-auto pb-1" role="group" aria-label="관심 시세 거래소">
+          <div className="flex gap-1 overflow-x-auto pb-1" role="group" aria-label="홈 분석 코인 거래소">
             {exchangeOptions.map((exchange) => (
               <button
                 key={exchange.id}

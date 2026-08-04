@@ -241,8 +241,8 @@ export interface MarketAnalysis {
 }
 
 interface StructureState {
-  market: 1 | -1;
-  chochDir: 1 | -1;
+  market: 1 | -1 | 0;
+  chochDir: 1 | -1 | 0;
   h0: PivotPoint | null;
   h1: PivotPoint | null;
   l0: PivotPoint | null;
@@ -256,10 +256,11 @@ interface StructureState {
   latestCisd: CisdSignal | null;
 }
 
-interface AnalysisContext {
+export interface AnalysisContext {
   oteAnchorCandles?: Candle[];
   useCloseForMsb?: boolean;
   zigLen?: number;
+  requireEstablishedStructure?: boolean;
 }
 
 export const chartTimeframes: ChartTimeframe[] = ["5m", "15m", "1h", "4h", "1d"];
@@ -971,6 +972,12 @@ function directionKorean(direction: DirectionState) {
   return "미확인";
 }
 
+function directionReasonTone(direction: DirectionState): ReasonTone {
+  if (direction === "bullish") return "bullish";
+  if (direction === "bearish") return "bearish";
+  return "neutral";
+}
+
 function formatLevel(value: number) {
   return value.toLocaleString("ko-KR", {
     maximumFractionDigits: value > 100 ? 2 : 5
@@ -1134,11 +1141,11 @@ function findInstantBearishOb(candles: Candle[], fromIndex: number, toIndex: num
 function buildBreakerBlock(
   candles: Candle[],
   timeframe: ChartTimeframe,
-  market: 1 | -1,
+  market: 1 | -1 | 0,
   h1: PivotPoint | null,
   l1: PivotPoint | null
 ): OrderBlockZone | null {
-  if (!h1 || !l1) return null;
+  if (market === 0 || !h1 || !l1) return null;
 
   const fromIndex = Math.max(0, Math.min(h1.index, l1.index));
   const toIndex = Math.max(fromIndex, Math.max(h1.index, l1.index));
@@ -1217,14 +1224,15 @@ function buildStructureState(
   candles: Candle[],
   timeframe: ChartTimeframe,
   zigLen = 5,
-  useCloseForMsb = true
+  useCloseForMsb = true,
+  requireEstablishedStructure = false
 ): StructureState {
   const { hiPoints, loPoints } = buildPivotArrays(candles, zigLen);
   const volumeSma20 = smaSeries(candles.map((candle) => candle.volume), 20);
   const atr14 = atrSeries(candles, 14);
 
-  let market: 1 | -1 = 1;
-  let chochDir: 1 | -1 = 1;
+  let market: 1 | -1 | 0 = requireEstablishedStructure ? 0 : 1;
+  let chochDir: 1 | -1 | 0 = requireEstablishedStructure ? 0 : 1;
   let latestMsbEvent: StructureEvent | null = null;
   let latestChochEvent: StructureEvent | null = null;
   let latestBb: OrderBlockZone | null = null;
@@ -1243,8 +1251,11 @@ function buildStructureState(
     const bullBreakSource = useCloseForMsb ? candles[index].close : candles[index].high;
     const bearBreakSource = useCloseForMsb ? candles[index].close : candles[index].low;
 
-    const bullBreak = market === -1 && h0 && bullBreakSource > h0.price;
-    const bearBreak = market === 1 && l0 && bearBreakSource < l0.price;
+    const bullBreakCandidate = Boolean(h0 && bullBreakSource > h0.price);
+    const bearBreakCandidate = Boolean(l0 && bearBreakSource < l0.price);
+    const ambiguousInitialBreak = market === 0 && bullBreakCandidate && bearBreakCandidate;
+    const bullBreak = !ambiguousInitialBreak && (market === -1 || (requireEstablishedStructure && market === 0)) && bullBreakCandidate;
+    const bearBreak = !ambiguousInitialBreak && (market === 1 || (requireEstablishedStructure && market === 0)) && bearBreakCandidate;
 
     if (bullBreak) {
       market = 1;
@@ -1254,7 +1265,7 @@ function buildStructureState(
         type: "msb",
         direction: "bullish",
         index,
-        level: h0.price
+        level: h0!.price
       };
 
       if (h0 && h1 && l0 && l1) {
@@ -1287,7 +1298,7 @@ function buildStructureState(
         type: "msb",
         direction: "bearish",
         index,
-        level: l0.price
+        level: l0!.price
       };
 
       if (h0 && h1 && l0 && l1) {
@@ -1312,7 +1323,7 @@ function buildStructureState(
       continue;
     }
 
-    const previousChoch: 1 | -1 = chochDir;
+    const previousChoch: 1 | -1 | 0 = chochDir;
     const instantBearChoch = Boolean(chochDir === 1 && l0 && candles[index].low < l0.price);
     const instantBullChoch = Boolean(chochDir === -1 && h0 && candles[index].high > h0.price);
 
@@ -2314,7 +2325,13 @@ export function analyzeTimeframe(
   const latest = candles[candles.length - 1];
   const closes = candles.map((candle) => candle.close);
   const ema200 = ema(closes, 200);
-  const structure = buildStructureState(candles, timeframe, context?.zigLen ?? 5, context?.useCloseForMsb ?? true);
+  const structure = buildStructureState(
+    candles,
+    timeframe,
+    context?.zigLen ?? 5,
+    context?.useCloseForMsb ?? true,
+    context?.requireEstablishedStructure ?? false
+  );
   const latestSweep = detectLatestSweep(candles, timeframe, structure.hiPoints, structure.loPoints);
   const latestFvg = detectLatestFvg(candles, timeframe);
   const latestOb = structure.latestOb;
@@ -2327,8 +2344,10 @@ export function analyzeTimeframe(
   const { oteZone, premiumDiscount, oteLevels } = detectOteAndPd(candles, context?.oteAnchorCandles);
   const condition = buildMarketCondition(candles, closes);
 
-  const msb: DirectionState = structure.market === 1 ? "bullish" : "bearish";
-  const choch: DirectionState = structure.chochDir === 1 ? "bullish" : "bearish";
+  const msb: DirectionState =
+    structure.market === 1 ? "bullish" : structure.market === -1 ? "bearish" : "unknown";
+  const choch: DirectionState =
+    structure.chochDir === 1 ? "bullish" : structure.chochDir === -1 ? "bearish" : "unknown";
 
   let score = 0;
   if (msb === "bullish") score += 1;
@@ -2429,12 +2448,12 @@ export function summarizeMarket(
     appendReason(
       reasons,
       `${item.timeframe} MSB ${directionKorean(item.msb)}`,
-      item.msb === "bullish" ? "bullish" : "bearish"
+      directionReasonTone(item.msb)
     );
     appendReason(
       reasons,
       `${item.timeframe} CHoCH ${directionKorean(item.choch)}`,
-      item.choch === "bullish" ? "bullish" : "bearish"
+      directionReasonTone(item.choch)
     );
   }
 
@@ -2442,12 +2461,12 @@ export function summarizeMarket(
     appendReason(
       reasons,
       `${item.timeframe} MSB ${directionKorean(item.msb)}`,
-      item.msb === "bullish" ? "bullish" : "bearish"
+      directionReasonTone(item.msb)
     );
     appendReason(
       reasons,
       `${item.timeframe} CHoCH ${directionKorean(item.choch)}`,
-      item.choch === "bullish" ? "bullish" : "bearish"
+      directionReasonTone(item.choch)
     );
 
     if (item.ema200Side !== "unknown") {

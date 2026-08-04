@@ -2,13 +2,25 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Activity, AlertTriangle, ArrowRight, Bell, BookOpen, Clock3, Database, Loader2, Newspaper, RefreshCw, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bell, BookOpen, Clock3, Database, Loader2, Newspaper, RefreshCw, ShieldCheck } from "lucide-react";
 import { CoinRadarHomePanel } from "@/components/coin/CoinRadarHomePanel";
+import { HomeInterestAnalysisSummary } from "@/components/coin/HomeInterestAnalysisSummary";
 import { HomeInterestCoinPrices } from "@/components/coin/HomeInterestCoinPrices";
+import { HomeTimeframeDirection } from "@/components/coin/HomeTimeframeDirection";
 import { PerpetualDecisionChart } from "@/components/coin/PerpetualDecisionChart";
 import { MacroTicker } from "@/components/MacroTicker";
 import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
 import { withSupabaseAuth } from "@/lib/authFetch";
+import { hasMarketEntitlement } from "@/lib/billing";
+import {
+  defaultHomeInterestCoin,
+  homeInterestCoinsStorageKey,
+  readHomeInterestCoins,
+  sameHomeCoin,
+  writeHomeInterestCoins,
+  type HomeInterestCoin
+} from "@/lib/homeInterestCoins";
+import { canonicalAssetForHomeCoin } from "@/lib/homeInterestRouting";
 import { beginnerTerm, decisionStateLabel, flowDirectionLabel, monitorConditionHeading, plainDirection, pressureDirectionLabel, qualityLabel } from "@/lib/perpetualDecisionCopy";
 import type { CryptoHomeTicker } from "@/lib/server/cryptoExchangeData";
 import type { PerpetualAsset, PerpetualDecisionSnapshot, SnapshotQuality } from "@/lib/perpetualDecisionSnapshot";
@@ -43,16 +55,9 @@ const sourceCopy: Record<keyof PerpetualDecisionSnapshot["sourceStatus"], string
 };
 
 function qualityCopy(quality: SnapshotQuality) {
-  if (quality === "ready") return { label: qualityLabel(quality), tone: "long" as const };
+  if (quality === "ready") return { label: qualityLabel(quality), tone: "info" as const };
   if (quality === "partial") return { label: qualityLabel(quality), tone: "watch" as const };
   return { label: qualityLabel(quality), tone: "risk" as const };
-}
-
-function stateCopy(state: PerpetualDecisionSnapshot["summary"]["state"]) {
-  if (state === "upside_watch") return { label: decisionStateLabel(state), tone: "long" as const };
-  if (state === "downside_watch") return { label: decisionStateLabel(state), tone: "short" as const };
-  if (state === "risk") return { label: decisionStateLabel(state), tone: "risk" as const };
-  return { label: decisionStateLabel(state), tone: "watch" as const };
 }
 
 function formatAsOf(value: string) {
@@ -114,12 +119,61 @@ function SnapshotShadowProbe() {
   return null;
 }
 
-function HomeMarketWatch() {
+function HomeInterestTabs({
+  coins,
+  activeCoin,
+  isPaid,
+  onSelect
+}: {
+  coins: HomeInterestCoin[];
+  activeCoin: HomeInterestCoin;
+  isPaid: boolean;
+  onSelect: (coin: HomeInterestCoin) => void;
+}) {
+  return (
+    <section className="bg-ui-panel px-3 py-2.5" aria-labelledby="home-analysis-coins-title">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 id="home-analysis-coins-title" className="text-xs font-black text-ui-text">내 분석 코인</h2>
+          <p className="mt-0.5 text-[10px] font-semibold text-ui-muted">{isPaid ? "Coin Pro · 최대 5개를 눌러 비교" : "Basic · 1개, 이 기기에서 하루 1회 변경"}</p>
+        </div>
+        <span className="shrink-0 text-[10px] font-black text-ui-subtle">{coins.length}개</span>
+      </div>
+      <div className="mt-2 flex gap-1 overflow-x-auto pb-0.5" role="group" aria-label="홈 분석 코인 선택">
+        {coins.map((coin) => {
+          const active = sameHomeCoin(coin, activeCoin);
+          return (
+            <button
+              key={`${coin.exchangeId}:${coin.symbol}`}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onSelect(coin)}
+              className={`min-h-10 shrink-0 rounded-ui-sm px-3 text-left transition ${active ? "bg-ui-brand text-white" : "bg-ui-inset text-ui-muted hover:text-ui-text"}`}
+            >
+              <span className="block text-xs font-black">{coin.base}/{coin.quote}</span>
+              <span className={`block text-[9px] font-semibold ${active ? "text-white/75" : "text-ui-subtle"}`}>{coin.exchangeLabel}</span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function HomeMarketWatch({
+  coins,
+  isPaid,
+  onCoinsChange
+}: {
+  coins: HomeInterestCoin[];
+  isPaid: boolean;
+  onCoinsChange: (coins: HomeInterestCoin[]) => void;
+}) {
   return (
     <section className="border-t border-ui-line pt-3" aria-labelledby="home-market-watch-title">
-      <h2 id="home-market-watch-title" className="text-sm font-black text-ui-text">관심코인 시세</h2>
-      <p className="mt-0.5 text-xs leading-5 text-ui-muted">다른 거래소와 알트는 시장 관찰용 시세이며, 위의 BTC·ETH 선물 분석과는 분리해 보여드립니다.</p>
-      <div className="mt-3"><HomeInterestCoinPrices /></div>
+      <h2 id="home-market-watch-title" className="text-sm font-black text-ui-text">홈 분석 코인 관리</h2>
+      <p className="mt-0.5 text-xs leading-5 text-ui-muted">여기서 저장한 코인이 위 분석 탭에 바로 나타납니다.</p>
+      <div className="mt-3"><HomeInterestCoinPrices coins={coins} isPaid={isPaid} onCoinsChange={onCoinsChange} /></div>
     </section>
   );
 }
@@ -232,7 +286,8 @@ function HomeEvidenceSummary({ snapshot }: { snapshot: PerpetualDecisionSnapshot
         <div className="mt-2 grid grid-cols-3 gap-1" aria-label="시간대별 흐름">
           {evidence.context.map((item) => (
             <p key={item.timeframe} className="bg-ui-inset/40 px-2 py-1.5 text-center text-[10px] font-semibold text-ui-muted">
-              <span className="block font-black text-ui-text">{item.label}</span>{plainDirection(item.structure)}
+              <span className="block font-black text-ui-text">{item.label}</span>
+              <HomeTimeframeDirection direction={item.structure} />
             </p>
           ))}
         </div>
@@ -246,9 +301,8 @@ function HomeEvidenceSummary({ snapshot }: { snapshot: PerpetualDecisionSnapshot
   );
 }
 
-function HomeDecisionHero({ newsImpactEnabled }: { newsImpactEnabled: boolean }) {
+function HomeDecisionHero({ asset, newsImpactEnabled }: { asset: PerpetualAsset; newsImpactEnabled: boolean }) {
   const { session } = useSupabaseAuth();
-  const [asset, setAsset] = useState<PerpetualAsset>("btc");
   const [state, setState] = useState<LoadState>({ status: "loading", snapshot: null, capabilities: null });
   const [livePrice, setLivePrice] = useState<number | null>(null);
   const [liveChange, setLiveChange] = useState<number | null>(null);
@@ -291,19 +345,11 @@ function HomeDecisionHero({ newsImpactEnabled }: { newsImpactEnabled: boolean })
     }
   }, []);
 
-  const selectAsset = useCallback((nextAsset: PerpetualAsset) => {
-    if (nextAsset === asset) return;
-    requestGeneration.current += 1;
-    abortRef.current?.abort();
-    setState({ status: "loading", snapshot: null, capabilities: null });
-    setLivePrice(null);
-    setLiveChange(null);
-    setAsset(nextAsset);
-  }, [asset]);
-
   useEffect(() => {
     let cancelled = false;
     let timer: number | undefined;
+    setLivePrice(null);
+    setLiveChange(null);
     async function refresh(silent: boolean) {
       const nextSnapshot = await load(asset, silent);
       if (cancelled) return;
@@ -363,14 +409,8 @@ function HomeDecisionHero({ newsImpactEnabled }: { newsImpactEnabled: boolean })
 
   if (!snapshot && state.status === "loading") {
     return (
-      <section className="bg-ui-panel px-3 py-4 sm:px-4" aria-busy="true" aria-label="BTC와 ETH 선물 시장 분석을 불러오는 중">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex gap-1 rounded-ui-sm bg-ui-inset p-1" aria-hidden>
-            <span className="min-w-12 rounded-ui-sm bg-ui-brand/70 px-3 py-2 text-center text-xs font-black text-white">BTC</span>
-            <span className="min-w-12 px-3 py-2 text-center text-xs font-black text-ui-subtle">ETH</span>
-          </div>
-          <span className="inline-flex items-center gap-1 text-xs font-black text-ui-brand"><Loader2 className="animate-spin" size={14} aria-hidden /> 분석 중</span>
-        </div>
+      <section className="bg-ui-panel px-3 py-4 sm:px-4" aria-busy="true" aria-label={`${assetCopy[asset].label} 선물 시장 분석을 불러오는 중`}>
+        <p className="inline-flex items-center gap-1 text-xs font-black text-ui-brand"><Loader2 className="animate-spin" size={14} aria-hidden /> {assetCopy[asset].label} 분석 중</p>
         <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.12em] text-ui-subtle">바이낸스 만기 없는 선물 · 15분 흐름 기준</p>
         <div className="mt-2 h-7 w-4/5 animate-pulse bg-ui-inset" />
         <div className="mt-2 h-7 w-3/5 animate-pulse bg-ui-inset" />
@@ -400,32 +440,15 @@ function HomeDecisionHero({ newsImpactEnabled }: { newsImpactEnabled: boolean })
     : snapshot;
   const displayQuality: SnapshotQuality = displaySnapshot.quality;
   const quality = qualityCopy(displayQuality);
-  const decision = stateCopy(displaySnapshot.summary.state);
   const capabilities = state.capabilities;
   const detailHref = `/crypto/perpetual?asset=${asset}&timeframe=15m&snapshot=${encodeURIComponent(displaySnapshot.id)}&source=home${journeyId ? `&attribution=${encodeURIComponent(journeyId)}` : ""}`;
 
   return (
     <section className="bg-ui-panel px-3 py-3 sm:px-4 sm:py-4" aria-labelledby="home-decision-title">
-      <div className="flex items-center justify-between gap-2">
-        <div className="grid grid-cols-2 gap-1 rounded-ui-sm bg-ui-inset p-1" role="group" aria-label="선물 판단 자산">
-          {(["btc", "eth"] as const).map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => selectAsset(item)}
-              aria-pressed={asset === item}
-              className={`min-h-9 rounded-ui-sm px-4 text-xs font-black transition ${asset === item ? "bg-ui-brand text-white" : "text-ui-muted hover:text-ui-text"}`}
-            >
-              {assetCopy[item].label}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center justify-end gap-2">
         <div className="flex min-w-0 flex-wrap justify-end gap-1">
-          <StatusPill tone={quality.tone} icon={quality.tone === "long" ? ShieldCheck : Database} className="min-h-7 text-[10px]">
+          <StatusPill tone={quality.tone} icon={displayQuality === "ready" ? ShieldCheck : Database} className="min-h-7 text-[10px]">
             {quality.label}
-          </StatusPill>
-          <StatusPill tone={decision.tone} icon={Activity} className="min-h-7 text-[10px]">
-            {decision.label}
           </StatusPill>
         </div>
       </div>
@@ -459,10 +482,6 @@ function HomeDecisionHero({ newsImpactEnabled }: { newsImpactEnabled: boolean })
         </div>
       </div>
 
-      <ul className="mt-2 grid gap-1 text-[11px] font-semibold leading-4 text-ui-muted sm:grid-cols-2">
-        {displaySnapshot.summary.reasons.map((reason) => <li key={reason}>· {reason}</li>)}
-      </ul>
-
       {state.status === "error" ? <p className="mt-2 text-[11px] font-semibold text-ui-risk">최신 갱신 실패 · 마지막 정상 분석을 참고용으로 보여드립니다.</p> : null}
 
       <Link
@@ -486,7 +505,7 @@ function HomeDecisionHero({ newsImpactEnabled }: { newsImpactEnabled: boolean })
       <div className="mt-3 bg-ui-inset/25 px-1 py-2">
         <div className="mb-2 flex items-center justify-between gap-2 px-2">
           <p className="text-[11px] font-black text-ui-text">15분 차트에서 직접 확인</p>
-          <span className="text-[10px] font-semibold text-ui-subtle">신호와 확인 가격 표시</span>
+          <span className="text-[10px] font-semibold text-ui-subtle">핵심 확인선 1개 · 신호 아이콘</span>
         </div>
         <PerpetualDecisionChart snapshot={displaySnapshot} compact />
         <div className="mt-2 grid grid-cols-3 gap-1 px-2 text-[9.5px] leading-4 text-ui-muted">
@@ -558,12 +577,58 @@ function HomeDailyActions({ newsImpactEnabled }: { newsImpactEnabled: boolean })
 }
 
 function HomeRevenueCoreExperience({ newsImpactEnabled }: { newsImpactEnabled: boolean }) {
+  const { profile, isLoading } = useSupabaseAuth();
+  const isPaid = hasMarketEntitlement(profile?.plan, "crypto");
+  const [coins, setCoins] = useState<HomeInterestCoin[]>([defaultHomeInterestCoin]);
+  const [activeCoin, setActiveCoin] = useState<HomeInterestCoin>(defaultHomeInterestCoin);
+
+  useEffect(() => {
+    if (isLoading) return;
+    const stored = readHomeInterestCoins(isPaid);
+    setCoins(stored);
+    setActiveCoin((current) => stored.find((coin) => sameHomeCoin(coin, current)) ?? stored[0] ?? defaultHomeInterestCoin);
+  }, [isLoading, isPaid]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    const syncAcrossTabs = (event: StorageEvent) => {
+      if (event.key !== homeInterestCoinsStorageKey) return;
+      const stored = readHomeInterestCoins(isPaid);
+      setCoins(stored);
+      setActiveCoin((current) => stored.find((coin) => sameHomeCoin(coin, current)) ?? stored[0] ?? defaultHomeInterestCoin);
+    };
+    window.addEventListener("storage", syncAcrossTabs);
+    return () => window.removeEventListener("storage", syncAcrossTabs);
+  }, [isLoading, isPaid]);
+
+  const saveCoins = useCallback((nextCoins: HomeInterestCoin[]) => {
+    const stored = writeHomeInterestCoins(nextCoins, isPaid);
+    setCoins(stored);
+    setActiveCoin((current) => stored.find((coin) => sameHomeCoin(coin, current)) ?? stored[0] ?? defaultHomeInterestCoin);
+  }, [isPaid]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col gap-2 pt-1">
+        <MacroTicker compact market="crypto" homePriorityAware />
+        <section className="bg-ui-panel px-3 py-4" aria-busy="true">
+          <p className="inline-flex items-center gap-2 text-xs font-black text-ui-brand"><Loader2 size={14} className="animate-spin" aria-hidden /> 내 분석 코인 확인 중</p>
+          <div className="mt-3 h-10 animate-pulse bg-ui-inset" />
+        </section>
+      </div>
+    );
+  }
+
+  const canonicalAsset = canonicalAssetForHomeCoin(activeCoin);
   return (
     <div className="flex flex-col gap-2 pt-1">
       <MacroTicker compact market="crypto" homePriorityAware />
-      <HomeDecisionHero newsImpactEnabled={newsImpactEnabled} />
+      <HomeInterestTabs coins={coins} activeCoin={activeCoin} isPaid={isPaid} onSelect={setActiveCoin} />
+      {canonicalAsset
+        ? <HomeDecisionHero key={canonicalAsset} asset={canonicalAsset} newsImpactEnabled={newsImpactEnabled} />
+        : <HomeInterestAnalysisSummary key={`${activeCoin.exchangeId}:${activeCoin.symbol}`} coin={activeCoin} />}
       <HomeDailyActions newsImpactEnabled={newsImpactEnabled} />
-      <HomeMarketWatch />
+      <HomeMarketWatch coins={coins} isPaid={isPaid} onCoinsChange={saveCoins} />
     </div>
   );
 }

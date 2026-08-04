@@ -449,7 +449,7 @@ async function generateSnapshot(asset: PerpetualAsset, asOf: Date, previousSnaps
   const flow = flowResult.status === "fulfilled" ? flowResult.value : null;
   const observations = candleRows.map((row) => ({
     timeframe: row.timeframe,
-    analysis: analyzeTimeframe(row.timeframe, row.candles),
+    analysis: analyzeTimeframe(row.timeframe, row.candles, { requireEstablishedStructure: true }),
     observedAt: row.observedAt,
     closedPrice: row.closedPrice,
     rangeHigh: row.rangeHigh,

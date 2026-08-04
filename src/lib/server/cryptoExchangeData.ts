@@ -1357,7 +1357,11 @@ export async function getCryptoHomeTicker(exchangeId: CryptoExchangeId, rawSymbo
   };
 }
 
-export async function getCryptoHomeSnapshot(exchangeId: CryptoExchangeId, rawSymbol: string | null | undefined): Promise<CryptoHomeSnapshot> {
+export async function getCryptoHomeSnapshot(
+  exchangeId: CryptoExchangeId,
+  rawSymbol: string | null | undefined,
+  options: { requireEstablishedStructure?: boolean } = {}
+): Promise<CryptoHomeSnapshot> {
   const selection = await resolveExchangeMarket(exchangeId, rawSymbol);
   const [tickerResult, candleResults] = await Promise.all([
     fetchSelectionTicker(selection).catch((error: unknown) => {
@@ -1367,7 +1371,9 @@ export async function getCryptoHomeSnapshot(exchangeId: CryptoExchangeId, rawSym
     Promise.all(timeframes.map(async (timeframe) => ({ timeframe, candles: await fetchExchangeCandles(selection.exchangeId, selection.symbol, timeframe) })))
   ]);
 
-  const analyses = candleResults.map(({ timeframe, candles }) => analyzeTimeframe(timeframe, candles));
+  const analyses = candleResults.map(({ timeframe, candles }) => analyzeTimeframe(timeframe, candles, {
+    requireEstablishedStructure: options.requireEstablishedStructure ?? false
+  }));
   const hourlyCandles = candleResults.find((item) => item.timeframe === "1h")?.candles ?? [];
   const latestCandle = hourlyCandles.at(-1) ?? candleResults[0]?.candles.at(-1);
   const ticker = isRecord(tickerResult) ? tickerResult : null;

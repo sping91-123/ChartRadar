@@ -906,7 +906,7 @@ function SettingsDialog({
     }
     const changed = !isPaid && !sameHomeCoin(normalized[0], coins[0] ?? defaultHomeInterestCoin);
     if (changed && basicStatus.used) {
-      setError(`Basic은 하루 1회만 변경할 수 있습니다. 다음 변경 가능 시간: ${formatNextChangeAt(basicStatus.nextChangeAt)}`);
+      setError(`Basic은 이 기기에서 하루 1회만 변경할 수 있습니다. 다음 변경 가능 시간: ${formatNextChangeAt(basicStatus.nextChangeAt)}`);
       return;
     }
     if (changed) recordBasicHomeInterestChange();
@@ -922,7 +922,7 @@ function SettingsDialog({
               관심코인 설정
             </p>
             <p className="mt-1 text-xs font-semibold text-ui-muted">
-              {isPaid ? `Pro는 최대 ${homeInterestMaxPro}개, 변경 제한 없음` : `Basic은 ${homeInterestMaxBasic}개, 하루 1회 변경`}
+              {isPaid ? `Pro는 최대 ${homeInterestMaxPro}개, 변경 제한 없음` : `Basic은 ${homeInterestMaxBasic}개, 이 기기에서 하루 1회 변경`}
             </p>
           </div>
           <button type="button" onClick={onClose} className="grid h-9 w-9 shrink-0 place-items-center text-ui-muted transition hover:text-ui-text" aria-label="닫기">
@@ -931,7 +931,7 @@ function SettingsDialog({
         </header>
         <div className="overflow-y-auto px-4 py-4">
           <div className="rounded-ui-sm border border-ui-watch/35 bg-ui-watch/10 px-3 py-2.5 text-xs font-black leading-5 text-ui-watch [word-break:keep-all]">
-            {isPaid ? "Pro는 관심코인 최대 5개, 변경 제한 없음" : "Basic은 관심코인 1개, 하루 1회 변경"}
+            {isPaid ? "Pro는 관심코인 최대 5개, 변경 제한 없음" : "Basic은 관심코인 1개, 이 기기에서 하루 1회 변경"}
           </div>
 
           <div className="mt-2 rounded-ui-sm bg-ui-inset/40 px-3 py-2 text-xs font-semibold leading-5 text-ui-muted [word-break:keep-all]">
