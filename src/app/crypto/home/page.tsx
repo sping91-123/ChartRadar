@@ -2,7 +2,6 @@ import { HomePerpetualDecisionFlow } from "@/components/coin/HomePerpetualDecisi
 import { Header } from "@/components/Header";
 import { RadarTopNav } from "@/components/RadarTopNav";
 import { perpetualRevenueCoreMode } from "@/lib/server/perpetualRevenueCore";
-import { isOfficialNewsFeedEnabled, newsImpactMode } from "@/lib/server/newsImpactMode";
 
 export default function CryptoHomePage() {
   const mode = perpetualRevenueCoreMode();
@@ -11,7 +10,7 @@ export default function CryptoHomePage() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-0">
         <Header market="crypto" />
         <RadarTopNav market="crypto" newsImpactEnabled />
-        <HomePerpetualDecisionFlow mode={mode} newsImpactEnabled={isOfficialNewsFeedEnabled(newsImpactMode())} />
+        <HomePerpetualDecisionFlow mode={mode} />
       </div>
     </main>
   );

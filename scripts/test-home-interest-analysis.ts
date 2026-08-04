@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { serializeHomeInterestAnalysis } from "../src/lib/server/homeInterestAnalysis";
 import { canonicalAssetForHomeCoin, homeInterestDetailTarget } from "../src/lib/homeInterestRouting";
 import type { CryptoHomeSnapshot } from "../src/lib/server/cryptoExchangeData";
@@ -98,5 +98,23 @@ assert.match(routeSource, /getRequestEntitlement\(request, "crypto"\)/, "the Hom
 assert.match(routeSource, /requireEstablishedStructure: true/, "the Home summary must not inherit the legacy bullish structure default");
 assert.match(routeSource, /Cache-Control", "private, no-store, max-age=0"/, "personalized analysis must not be publicly cached");
 assert.match(routeSource, /Vary", "Authorization"/, "authenticated and anonymous summaries must not share a cache entry");
+
+const homeFlowSource = readFileSync("src/components/coin/HomePerpetualDecisionFlow.tsx", "utf8");
+const settingsSource = readFileSync("src/components/coin/HomeInterestCoinSettingsDialog.tsx", "utf8");
+const interestSummarySource = readFileSync("src/components/coin/HomeInterestAnalysisSummary.tsx", "utf8");
+assert.match(homeFlowSource, /role="tablist"/, "saved Home coins are exposed as a real tab list");
+assert.match(homeFlowSource, /aria-selected=\{active\}/, "the active Home coin is announced as the selected tab");
+assert.match(homeFlowSource, /aria-controls="home-interest-settings-dialog"/, "the settings gear owns the shared dialog");
+assert.doesNotMatch(homeFlowSource, /HomeDailyActions|HomeMarketWatch|HomeNewsImpactStrip/, "duplicate Home tools, tickers, and official-news cards stay removed");
+assert.doesNotMatch(homeFlowSource, /\/api\/news-impact|\/api\/crypto\/perpetual\/monitors\?status=active/, "removed Home cards must not keep polling in the background");
+assert.match(homeFlowSource, /degradedSources[\s\S]*source\.status !== "ready"/, "normal source rows labelled as analysis-ready stay hidden");
+assert.match(settingsSource, /onSave\(normalized\);\s*if \(changed\) recordBasicHomeInterestChange\(\);/, "Basic usage is recorded only after a changed selection is saved");
+assert.match(settingsSource, /const latestBasicStatus = basicHomeInterestChangeStatus\(\);/, "Basic quota is re-read at save time so open dialogs cannot bypass or falsely retain the daily limit");
+assert.match(settingsSource, /event\.key === "Escape"/, "the settings dialog supports Escape");
+assert.match(settingsSource, /const returnFocusTarget = returnFocusRef\?\.current/, "the settings trigger is captured before dialog cleanup");
+assert.match(settingsSource, /returnFocusTarget \?\? previousFocusRef\.current/, "dialog close returns focus to its trigger");
+assert.match(homeFlowSource, /aria-controls="home-analysis-panel"/, "all analysis tabs control a stable panel that remains in the DOM");
+assert.doesNotMatch(interestSummarySource, /Coin Pro 분석|Basic 분석/, "normal access-plan badges are removed from alternate coin summaries");
+assert.equal(existsSync("src/components/coin/HomeInterestCoinPrices.tsx"), false, "the duplicate polling price-card component is removed");
 
 console.log("Home interest analysis contract passed.");

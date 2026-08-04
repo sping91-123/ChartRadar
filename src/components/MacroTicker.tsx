@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CalendarClock, ChevronDown, ChevronRight, ExternalLink, Minus, Radio, TrendingDown, TrendingUp } from "lucide-react";
 import { type MacroEventItem } from "@/data/macroEvents";
-import { isHighImpactMacroEvent, isHomePriorityMacro } from "@/lib/homeMacroPriority";
+import { isHighImpactMacroEvent, isHomePriorityMacro, isSameKstDate } from "@/lib/homeMacroPriority";
 import { getMacroCalendarFallbackPayload, type MacroCalendarPayload } from "@/lib/macroCalendar";
 import { assessMacroImpact, type MacroImpactAssessment } from "@/lib/macro/macroImpact";
 import { StatusPill } from "@/components/ui/DesignPrimitives";
@@ -46,20 +46,6 @@ function isDocumentEvent(item: MacroEventItem) {
 
 function hasReleaseTimePassed(item: MacroEventItem) {
   return eventTime(item) <= Date.now();
-}
-
-function kstDateKey(input: number | string) {
-  const date = typeof input === "number" ? new Date(input) : new Date(input);
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).format(date);
-}
-
-function isSameKstDate(input: string) {
-  return kstDateKey(input) === kstDateKey(Date.now());
 }
 
 function isRecentlyReleased(item: MacroEventItem) {
@@ -589,7 +575,7 @@ export function MacroTicker({
   const laterUpcomingItems = upcomingItems.slice(1, 7);
   const isNewsMacroReport = compact && !homePriorityAware && (pathname === "/news" || pathname === "/crypto/news");
   const homePriorityItem = homePriorityAware ? getHomePriorityItem(displayItems) : undefined;
-  const homeVisibleItems = homePriorityAware ? displayItems.filter(isVisibleCompactImpact) : [];
+  const homeVisibleItems = homePriorityAware ? displayItems.filter(isHighImpactMacro) : [];
   const homeNearestUpcoming = homePriorityAware ? getUpcomingItems(homeVisibleItems)[0] : undefined;
   const homePreviousRelease = getPreviousReleasedItems(
     homePriorityAware ? homeVisibleItems : displayItems.filter(isVisibleCompactImpact)
@@ -724,6 +710,7 @@ export function MacroTicker({
       ? homePriorityItem ?? homeNearestUpcoming ?? homePreviousRelease
       : getCompactItem(displayItems);
     if (!item) {
+      const emptyHref = market === "stocks" ? "/schedule?market=global" : "/schedule?market=crypto";
       return (
         <section className="space-y-1.5" aria-labelledby={homePriorityAware ? "home-macro-title" : undefined}>
           {homePriorityAware ? (
@@ -732,10 +719,15 @@ export function MacroTicker({
               <span className={`text-[10px] font-semibold ${homeCalendarTrustClass}`} title={calendarWarning}>{homeCalendarTrustLabel}</span>
             </div>
           ) : null}
-          <div className="flex min-h-12 items-center justify-between gap-3 rounded-ui-lg bg-ui-panel px-3 py-2 text-xs font-bold leading-5 text-slate-500 [word-break:keep-all]">
-            <span>{calendarLoadFailed ? "공식 일정을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." : "자동 캘린더에서 이번 주 주요 일정을 확인하는 중입니다."}</span>
-            {calendarLoadFailed ? <button type="button" onClick={() => setCalendarRetryKey((value) => value + 1)} className="shrink-0 font-black text-ui-brand underline">다시 시도</button> : null}
+          <div className="flex min-h-12 items-center justify-between gap-3 rounded-ui-lg border border-ui-line bg-ui-panel px-3 py-2 text-xs font-bold leading-5 text-slate-500 [word-break:keep-all]">
+            <span>{calendarLoadFailed ? "공식 일정을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." : hasLoadedCalendar ? "가까운 중요 일정 없음" : "중요 일정을 확인하는 중입니다."}</span>
+            {calendarLoadFailed ? (
+              <button type="button" onClick={() => setCalendarRetryKey((value) => value + 1)} className="shrink-0 font-black text-ui-brand underline">다시 시도</button>
+            ) : homePriorityAware ? (
+              <Link href={emptyHref} className="shrink-0 font-black text-ui-brand hover:underline">전체 일정</Link>
+            ) : null}
           </div>
+          {homePriorityAware && calendarWarningText ? <p className="rounded-ui-sm bg-ui-risk/[0.06] px-2.5 py-1.5 text-[10px] font-semibold leading-4 text-ui-risk" role="status">{calendarWarningText}</p> : null}
         </section>
       );
     }
@@ -760,44 +752,47 @@ export function MacroTicker({
 
     if (homePriorityAware) {
       const homePrimaryValue = primaryValue || (isReleased ? "확인 중" : "발표 전");
+      const isToday = isSameKstDate(item.releaseAt);
       const impactSummary = fomcAssessment
-        ? `${fomcAssessment.coverageLabel} · 신뢰 ${fomcConfidenceLabel(fomcAssessment)}`
+        ? `FOMC ${fomcAssessment.stanceLabel} · ${fomcAssessment.rationale} · ${fomcAssessment.coverageLabel} · 신뢰 ${fomcConfidenceLabel(fomcAssessment)}`
         : impactAssessment
-        ? `${macroSurpriseLabel(impactAssessment)} · ${impactAssessment.confidence === "confirmed" ? "공식 확정" : "잠정 해석"}`
+        ? `${macroImpactDisplayLabel(impactAssessment, market)} · ${macroSurpriseLabel(impactAssessment)} · ${impactAssessment.reason} · ${impactAssessment.confidence === "confirmed" ? "공식 확정" : "잠정 해석"}`
         : `${compactStatusLabel(item)} · ${isFomcPolicyEvent ? (isReleased ? "공식 성명 분석 중" : "발표 후 정책 기조 분석") : isReleased ? homeCalendarTrustLabel : "발표 후 호재·악재 판정"}`;
 
       return (
-        <section aria-labelledby="home-macro-title">
+        <section className="space-y-1.5" aria-labelledby="home-macro-title">
           <h2 id="home-macro-title" className="sr-only">오늘 거래 전 확인</h2>
-          <div
-            className="overflow-hidden rounded-ui-lg border border-amber-400/25 bg-ui-panel"
+          <details
+            className={`group overflow-hidden rounded-ui-lg border ${isToday ? "border-signal-warning/45 bg-signal-warning/[0.06]" : "border-ui-line bg-ui-panel"}`}
             data-testid="home-macro-compact"
           >
-            <div className="px-2.5 py-2">
-              <div className="flex min-h-4 items-center justify-between gap-2 text-[10px] font-black leading-4">
-                <time dateTime={item.releaseAt} className="min-w-0 truncate text-ui-text">{item.dateKst}</time>
-                <span className="shrink-0 text-amber-300">{impactLabel(item)}</span>
+            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-2.5 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ui-brand marker:hidden [&::-webkit-details-marker]:hidden">
+              <div className="min-w-0 flex-1">
+                <div className="flex min-h-4 items-center gap-1.5 text-[10px] font-black leading-4">
+                  <time dateTime={item.releaseAt} className="min-w-0 truncate text-ui-text">{item.dateKst}</time>
+                  <span className="shrink-0 text-ui-risk">영향도 높음</span>
+                  {isToday ? <span className="shrink-0 rounded-full bg-signal-warning/15 px-1.5 text-signal-warning">오늘 발표</span> : null}
+                </div>
+                <div className="mt-0.5 flex min-w-0 items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-black leading-[19px] text-white" title={macroLabel(item.label)}>{macroLabel(item.label)}</span>
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    {fomcAssessment && FomcIcon ? (
+                      <span className={`inline-flex items-center gap-0.5 text-[10px] font-black leading-4 ${fomcStanceTextClass(fomcAssessment)}`} aria-label={`FOMC ${fomcAssessment.stanceLabel}`}>
+                        <FomcIcon size={11} aria-hidden /> FOMC {fomcAssessment.stanceLabel}
+                      </span>
+                    ) : impactAssessment && ImpactIcon ? (
+                      <span className={`inline-flex items-center gap-0.5 text-[10px] font-black leading-4 ${impactToneClass}`} aria-label={macroImpactDisplayLabel(impactAssessment, market)}>
+                        <ImpactIcon size={11} aria-hidden /> {impactAssessment.badgeLabel}
+                      </span>
+                    ) : null}
+                    <span className={`text-[10px] font-black leading-4 ${compactStateClass(item)}`}>{eventKind} · {compactStatusLabel(item)}</span>
+                  </span>
+                </div>
               </div>
+              <ChevronDown size={15} className="shrink-0 text-ui-muted transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
+            </summary>
 
-              <div className="mt-0.5 flex min-w-0 items-center gap-2">
-                <p className="min-w-0 flex-1 truncate text-[13px] font-black leading-[19px] text-white" title={macroLabel(item.label)}>
-                  {macroLabel(item.label)}
-                </p>
-                {fomcAssessment ? (
-                  <span className={`shrink-0 text-[10px] font-black leading-4 ${fomcStanceTextClass(fomcAssessment)}`}>
-                    FOMC · {fomcAssessment.stanceLabel}
-                  </span>
-                ) : impactAssessment ? (
-                  <span className={`shrink-0 text-[10px] font-black leading-4 ${impactToneClass}`}>
-                    {macroImpactDisplayLabel(impactAssessment, market)}
-                  </span>
-                ) : (
-                  <span className={`shrink-0 text-[10px] font-black leading-4 ${compactStateClass(item)}`}>
-                    {eventKind}
-                  </span>
-                )}
-              </div>
-
+            <div className="border-t border-ui-line/70 px-2.5 py-2">
               <dl className="mt-1 grid grid-cols-3 gap-1">
                 {(fomcFields ?? [
                   [primaryValueLabel, homePrimaryValue],
@@ -811,21 +806,19 @@ export function MacroTicker({
                 ))}
               </dl>
 
-              <div className="mt-1 flex min-h-[18px] items-center justify-between gap-2 text-[10px] font-bold leading-[18px]">
-                <span className={`min-w-0 truncate ${fomcAssessment ? fomcStanceTextClass(fomcAssessment) : impactAssessment ? impactToneClass : homeCalendarTrustClass}`} title={fomcAssessment?.coverageLabel ?? impactAssessment?.reason ?? calendarWarning ?? homeCalendarTrustLabel}>
+              <div className="mt-2 space-y-1.5 text-[10px] font-bold leading-[18px]">
+                <p className={`${fomcAssessment ? fomcStanceTextClass(fomcAssessment) : impactAssessment ? impactToneClass : homeCalendarTrustClass} [word-break:keep-all]`}>
                   {impactSummary}
-                </span>
-                <Link href={href} className="inline-flex shrink-0 items-center gap-0.5 text-ui-brand hover:underline">
-                  전체 일정 <ChevronRight size={12} aria-hidden />
-                </Link>
+                </p>
+                <div className="flex justify-end">
+                  <Link href={href} className="inline-flex items-center gap-0.5 text-ui-brand hover:underline">
+                    전체 일정 <ChevronRight size={12} aria-hidden />
+                  </Link>
+                </div>
               </div>
             </div>
-            {calendarWarningText ? (
-              <p className="border-t border-ui-border/70 bg-amber-400/[0.06] px-2.5 py-1.5 text-[10px] font-semibold leading-4 text-amber-200" role="status">
-                {calendarWarningText}
-              </p>
-            ) : null}
-          </div>
+          </details>
+          {calendarWarningText ? <p className="rounded-ui-sm bg-ui-risk/[0.06] px-2.5 py-1.5 text-[10px] font-semibold leading-4 text-ui-risk" role="status">{calendarWarningText}</p> : null}
         </section>
       );
     }

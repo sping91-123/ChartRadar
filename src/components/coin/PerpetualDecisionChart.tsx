@@ -1,19 +1,84 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { CandlestickSeries, ColorType, LineStyle, createChart, createSeriesMarkers, type SeriesMarker, type Time } from "lightweight-charts";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  CandlestickSeries,
+  ColorType,
+  LineStyle,
+  createChart,
+  createSeriesMarkers,
+  type IChartApi,
+  type ISeriesApi,
+  type ISeriesMarkersPluginApi,
+  type SeriesMarker,
+  type Time
+} from "lightweight-charts";
+import { PerpetualChartLegend } from "@/components/coin/PerpetualChartLegend";
+import {
+  buildPerpetualChartOverlayModel,
+  buildPerpetualSignalLegendItems,
+  compactPerpetualCandleLimit,
+  resolvePerpetualChartMarkers,
+  type PerpetualChartLineStyle,
+  type ResolvedPerpetualChartMarker
+} from "@/lib/perpetualDecisionChartOverlays";
 import type { PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
 
-function markerTime(occurredAt: string | null, candleTimes: Set<number>) {
-  if (!occurredAt) return null;
-  const parsed = Date.parse(occurredAt);
-  if (!Number.isFinite(parsed)) return null;
-  const seconds = Math.floor(parsed / 1000);
-  return candleTimes.has(seconds) ? (seconds as Time) : null;
+function lightweightLineStyle(style: PerpetualChartLineStyle) {
+  if (style === "dashed") return LineStyle.Dashed;
+  if (style === "dotted") return LineStyle.Dotted;
+  return LineStyle.Solid;
+}
+
+function seriesMarker(marker: ResolvedPerpetualChartMarker, compact: boolean): SeriesMarker<Time> {
+  return {
+    time: marker.time as Time,
+    position: marker.position,
+    color: marker.color,
+    shape: marker.shape,
+    ...(compact ? {} : { text: marker.kind === "msb" ? "추세 확인" : "전환 가능" })
+  };
 }
 
 export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot: PerpetualDecisionSnapshot; compact?: boolean }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
+  const [compactCandleLimit, setCompactCandleLimit] = useState(64);
+  const setContainerRef = useCallback((container: HTMLDivElement | null) => {
+    containerRef.current = container;
+    if (!compact || !container || container.clientWidth <= 0) return;
+    const measuredLimit = compactPerpetualCandleLimit(container.clientWidth);
+    setCompactCandleLimit((current) => current === measuredLimit ? current : measuredLimit);
+  }, [compact]);
+  const legendId = `perpetual-chart-legend-${useId().replace(/:/g, "")}`;
+  const overlayModel = useMemo(() => buildPerpetualChartOverlayModel(snapshot), [snapshot]);
+  const visibleCandles = useMemo(
+    () => compact ? snapshot.chart.candles.slice(-compactCandleLimit) : snapshot.chart.candles,
+    [compact, compactCandleLimit, snapshot.chart.candles]
+  );
+  const resolvedMarkers = useMemo(
+    () => resolvePerpetualChartMarkers(overlayModel.markers, visibleCandles.map((candle) => candle.time)),
+    [overlayModel.markers, visibleCandles]
+  );
+  const allResolvedMarkers = useMemo(
+    () => resolvePerpetualChartMarkers(overlayModel.markers, snapshot.chart.candles.map((candle) => candle.time)),
+    [overlayModel.markers, snapshot.chart.candles]
+  );
+  const visibleMarkerIds = useMemo(
+    () => new Set(resolvedMarkers.map((marker) => marker.id)),
+    [resolvedMarkers]
+  );
+  const legendItems = useMemo(
+    () => [...overlayModel.legendItems, ...buildPerpetualSignalLegendItems(allResolvedMarkers, visibleMarkerIds)],
+    [allResolvedMarkers, overlayModel.legendItems, visibleMarkerIds]
+  );
+  const counts = useMemo(() => ({
+    conditions: overlayModel.legendItems.filter((item) => item.group === "condition").length,
+    zones: overlayModel.legendItems.filter((item) => item.group === "zone").length,
+    signals: resolvedMarkers.length
+  }), [overlayModel.legendItems, resolvedMarkers.length]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -47,107 +112,59 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
       wickUpColor: "#34d399",
       wickDownColor: "#fb7185"
     });
-    const visibleCandles = compact ? snapshot.chart.candles.slice(-64) : snapshot.chart.candles;
+    const markers = createSeriesMarkers(series, []);
+    chartRef.current = chart;
+    seriesRef.current = series;
+    markersRef.current = markers;
+
+    overlayModel.lines.forEach((line) => {
+      series.createPriceLine({
+        price: line.price,
+        color: line.color,
+        lineWidth: line.lineWidth,
+        lineStyle: lightweightLineStyle(line.lineStyle),
+        axisLabelVisible: compact ? line.axisLabelVisible : true,
+        title: compact ? "" : line.detailLabel
+      });
+    });
+
+    const resize = () => {
+      const width = container.clientWidth;
+      if (width <= 0) return;
+      chart.applyOptions({ width });
+      if (compact) {
+        const nextLimit = compactPerpetualCandleLimit(width);
+        setCompactCandleLimit((current) => current === nextLimit ? current : nextLimit);
+      }
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(container);
+    resize();
+
+    return () => {
+      observer.disconnect();
+      markersRef.current = null;
+      seriesRef.current = null;
+      chartRef.current = null;
+      chart.remove();
+    };
+  }, [compact, overlayModel]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    const series = seriesRef.current;
+    const markers = markersRef.current;
+    if (!chart || !series || !markers) return;
     series.setData(visibleCandles.map((candle) => ({
-      time: candle.time as never,
+      time: candle.time as Time,
       open: candle.open,
       high: candle.high,
       low: candle.low,
       close: candle.close
     })));
-    const conditions = compact
-      ? [snapshot.summary.primaryCondition]
-      : [
-          snapshot.summary.primaryCondition,
-          ...(snapshot.pro?.confirmationConditions ?? []),
-          ...(snapshot.pro?.invalidationConditions ?? [])
-        ];
-    conditions.forEach((condition) => {
-      if (condition.threshold === null || !Number.isFinite(condition.threshold)) return;
-      series.createPriceLine({
-        price: condition.threshold,
-        color: condition.role === "invalidation" ? "#fb7185" : condition.role === "confirmation" ? "#60a5fa" : "#fbbf24",
-        lineWidth: 1,
-        lineStyle: condition.role === "primary" ? LineStyle.Solid : LineStyle.Dashed,
-        axisLabelVisible: true,
-        title: condition.role === "primary" ? "먼저 확인" : condition.role === "confirmation" ? "추가 확인" : "해석 재확인"
-      });
-    });
-
-    const primaryEvidence = snapshot.pro?.multiTimeframeEvidence.find((item) => item.timeframe === "15m");
-    const details = primaryEvidence?.details;
-    const publicEvents = snapshot.publicEvidence?.events;
-    if (details || publicEvents) {
-      const candleTimes = new Set(visibleCandles.map((candle) => candle.time));
-      const markers: SeriesMarker<Time>[] = [];
-      const addMarker = (marker: SeriesMarker<Time>) => {
-        if (compact && markers.some((item) => item.time === marker.time && item.position === marker.position)) return;
-        markers.push(marker);
-      };
-      const msb = details?.events.msb ?? publicEvents?.msb;
-      const choch = details?.events.choch ?? publicEvents?.choch;
-      const msbTime = markerTime(msb?.occurredAt ?? null, candleTimes);
-      if (msbTime && msb) {
-        addMarker({
-          time: msbTime,
-          position: msb.direction === "bullish" ? "belowBar" : "aboveBar",
-          color: msb.direction === "bullish" ? "#34d399" : "#fb7185",
-          shape: msb.direction === "bullish" ? "arrowUp" : "arrowDown",
-          ...(compact ? {} : { text: "추세 확인" })
-        });
-      }
-      const chochTime = markerTime(choch?.occurredAt ?? null, candleTimes);
-      if (chochTime && choch) {
-        addMarker({
-          time: chochTime,
-          position: choch.direction === "bullish" ? "belowBar" : "aboveBar",
-          color: "#fbbf24",
-          shape: "circle",
-          ...(compact ? {} : { text: "전환 가능" })
-        });
-      }
-      if (markers.length) {
-        markers.sort((left, right) => Number(left.time) - Number(right.time));
-        createSeriesMarkers(series, markers);
-      }
-
-      const zoneLines = !compact && details ? [
-        ...(details.zones.orderBlock
-          ? [
-              { price: details.zones.orderBlock.top, color: "#2dd4bf", title: "큰 주문 구간 위" },
-              { price: details.zones.orderBlock.bottom, color: "#2dd4bf", title: "큰 주문 구간 아래" }
-            ]
-          : []),
-        ...(details.zones.fvg
-          ? [
-              { price: details.zones.fvg.top, color: "#38bdf8", title: "빠른 이동 구간 위" },
-              { price: details.zones.fvg.bottom, color: "#38bdf8", title: "빠른 이동 구간 아래" }
-            ]
-          : []),
-        details.location.poc
-          ? { price: details.location.poc.poc, color: "#f59e0b", title: "거래 집중 가격" }
-          : null
-      ].filter((line): line is { price: number; color: string; title: string } => Boolean(line && Number.isFinite(line.price))) : [];
-      zoneLines.forEach((line) => series.createPriceLine({
-        price: line.price,
-        color: line.color,
-        lineWidth: 1,
-        lineStyle: LineStyle.Dotted,
-        axisLabelVisible: true,
-        title: line.title
-      }));
-    }
+    markers.setMarkers(resolvedMarkers.map((marker) => seriesMarker(marker, compact)));
     chart.timeScale().fitContent();
-
-    const observer = new ResizeObserver(() => {
-      chart.applyOptions({ width: container.clientWidth });
-    });
-    observer.observe(container);
-    return () => {
-      observer.disconnect();
-      chart.remove();
-    };
-  }, [compact, snapshot]);
+  }, [compact, resolvedMarkers, visibleCandles]);
 
   if (snapshot.chart.candles.length === 0) {
     return (
@@ -157,5 +174,24 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
     );
   }
 
-  return <div ref={containerRef} className="w-full" role="img" aria-label={`${snapshot.symbol} 15분 캔들과 핵심 확인선 차트`} />;
+  return (
+    <section aria-label={`${snapshot.symbol} 15분 차트`}>
+      {compact ? (
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-1 px-2">
+          <p className="text-[11px] font-black text-ui-text">15분 차트에서 직접 확인</p>
+          <span className="text-[10px] font-semibold text-ui-subtle">
+            조건선 {counts.conditions} · 가격대 {counts.zones} · 구조 신호 {counts.signals}
+          </span>
+        </div>
+      ) : null}
+      <div
+        ref={setContainerRef}
+        className="w-full"
+        role="img"
+        aria-label={`${snapshot.symbol} 15분 캔들과 조건선, 가격대, 구조 신호 차트`}
+        aria-describedby={compact && legendItems.length ? legendId : undefined}
+      />
+      {compact ? <PerpetualChartLegend id={legendId} items={legendItems} /> : null}
+    </section>
+  );
 }

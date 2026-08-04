@@ -8,6 +8,7 @@ import { censusDurableGoodsActual, censusRetailSalesActual, isCensusDurableGoods
 import { dolClaimsValueForKind, expectedDolWeekEndedIso, fetchDolOfficialEnrichments, formatDolClaimsK } from "../src/lib/macro/sourceAdapters/dol";
 import { resolveMacroSourceTrust } from "../src/lib/macro/sourceTrust";
 import { isStoredMacroPayloadStale } from "../src/lib/macro/staleness";
+import { ensureNearestHighImpactUpcoming, isSameKstDate } from "../src/lib/homeMacroPriority";
 
 const base: MacroEventItem = {
   label: "Initial Jobless Claims",
@@ -36,6 +37,28 @@ const duplicate: MacroEventItem = {
   forecast: "211K",
   sourceUrl: "https://www.forexfactory.com/calendar"
 };
+
+const selectionNow = Date.parse("2026-08-04T00:00:00.000Z");
+const mediumUpcoming = Array.from({ length: 8 }, (_, index): MacroEventItem => ({
+  ...base,
+  label: `Regional Survey ${index + 1}`,
+  importance: 2,
+  releaseAt: new Date(selectionNow + (index + 1) * 60 * 60 * 1000).toISOString(),
+  source: "ForexFactory"
+}));
+const laterHighImpact: MacroEventItem = {
+  ...base,
+  label: "CPI",
+  importance: 3,
+  releaseAt: new Date(selectionNow + 12 * 60 * 60 * 1000).toISOString(),
+  source: "BLS"
+};
+const sortedUpcoming = [...mediumUpcoming, laterHighImpact].sort((left, right) => Date.parse(left.releaseAt) - Date.parse(right.releaseAt));
+const selectedCalendar = ensureNearestHighImpactUpcoming(sortedUpcoming, sortedUpcoming.slice(0, 8), 8);
+assert.equal(selectedCalendar.length, 8);
+assert.ok(selectedCalendar.some((item) => item.label === "CPI"), "the nearest high-impact event survives eight nearer medium events");
+assert.equal(isSameKstDate("2026-08-03T15:30:00.000Z", "2026-08-04T02:00:00.000Z"), true, "same KST date may cross UTC dates");
+assert.equal(isSameKstDate("2026-08-03T14:30:00.000Z", "2026-08-03T15:30:00.000Z"), false, "KST midnight separates events even within one UTC date");
 
 assert.equal(semanticMacroEventFamily(base.label), "initial-jobless-claims");
 assert.equal(semanticMacroEventFamily(duplicate.label), "initial-jobless-claims");
@@ -193,6 +216,11 @@ const macroSyncSource = readFileSync("src/lib/macro/macroSync.ts", "utf8");
 assert.match(macroSyncSource, /isFallback \? "degraded"/, "fallback sync runs are recorded as degraded rather than stored");
 const macroCalendarSource = readFileSync("src/lib/macroCalendar.ts", "utf8");
 assert.match(macroCalendarSource, /if \(sorted\.length === 0\) throw/, "an empty live result is degraded instead of storing static fallback rows as live data");
+assert.match(
+  macroCalendarSource,
+  /ensureNearestHighImpactUpcoming\(sortedUpcoming, sortedUpcoming\.slice\(0, upcomingLimit\), upcomingLimit\)/,
+  "calendar payload selection must preserve the nearest high-impact event beyond the initial limit"
+);
 const normalizeSource = readFileSync("src/lib/macro/normalizeMacroEvent.ts", "utf8");
 assert.match(
   normalizeSource,

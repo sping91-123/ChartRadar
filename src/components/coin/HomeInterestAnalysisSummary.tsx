@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, ArrowRight, Clock3, Database, Loader2, RefreshCw } from "lucide-react";
+import { AlertTriangle, ArrowRight, Clock3, Loader2, RefreshCw } from "lucide-react";
 import { HomeInterestMiniChart } from "@/components/coin/HomeInterestMiniChart";
 import { HomeTimeframeDirection } from "@/components/coin/HomeTimeframeDirection";
-import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
+import { ActionButton } from "@/components/ui/DesignPrimitives";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import type { HomeInterestAnalysisResponse, HomeInterestAnalysisSummary } from "@/lib/homeInterestAnalysis";
 import type { HomeInterestCoin } from "@/lib/homeInterestCoins";
@@ -108,9 +108,6 @@ export function HomeInterestAnalysisSummary({ coin }: { coin: HomeInterestCoin }
           <p className="truncate text-xs font-black text-ui-text">{snapshot.selection.base}/{snapshot.selection.quote}</p>
           <p className="truncate text-[10px] font-semibold text-ui-subtle">{snapshot.selection.exchangeLabel} 만기 없는 선물</p>
         </div>
-        <StatusPill tone="info" icon={Database} className="min-h-7 shrink-0 text-[10px]">
-          {snapshot.access === "coin_pro" ? "Coin Pro 분석" : "Basic 분석"}
-        </StatusPill>
       </div>
 
       <div className="mt-3 flex items-end justify-between gap-3">

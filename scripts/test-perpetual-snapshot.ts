@@ -482,15 +482,23 @@ assert.doesNotMatch(homeSource, />[^<{]*(스냅샷|상방 확인 중|하방 확�
 const macroSource = readFileSync(join(process.cwd(), "src/components/MacroTicker.tsx"), "utf8");
 assert.doesNotMatch(macroSource, /다음 매크로 ·/, "Home macro must not collapse the rich calendar card into a one-line summary");
 assert.match(macroSource, /오늘 거래 전 확인/, "Home macro must retain a visible daily-calendar heading");
-assert.doesNotMatch(macroSource, /data-testid="home-macro-detail"/, "Home macro must not repeat compact values inside an accordion");
+assert.match(macroSource, /<details[\s\S]*data-testid="home-macro-compact"/, "Home macro values must be hidden behind a native disclosure by default");
+assert.match(macroSource, /<summary/, "Home macro disclosure must retain keyboard semantics");
 assert.match(macroSource, /전체 일정 <ChevronRight/, "Home macro must link directly to the full schedule");
 assert.match(macroSource, /recentReleased \?\? upcomingWithin24Hours \?\? nearestUpcoming \?\? previousReleased/, "an upcoming official event must outrank an old release on the daily Home card");
 
 const compactChartSource = readFileSync(join(process.cwd(), "src/components/coin/PerpetualDecisionChart.tsx"), "utf8");
-assert.match(compactChartSource, /compact\s*\? \[snapshot\.summary\.primaryCondition\]/, "the compact chart must render at most the primary decision line");
-assert.match(compactChartSource, /!compact && details/, "advanced price zones must remain off the compact Home chart");
+assert.match(compactChartSource, /buildPerpetualChartOverlayModel/, "Home chart lines and legend must share the tested overlay model");
+assert.match(compactChartSource, /PerpetualChartLegend/, "compact Home chart must expose exact values outside the plotting area");
+assert.match(compactChartSource, /axisLabelVisible: compact \? line\.axisLabelVisible : true/, "only the compact primary line keeps its axis label");
+assert.match(compactChartSource, /compactPerpetualCandleLimit/, "compact candle density must respond at the tested width threshold");
 assert.match(compactChartSource, /rightOffsetPixels: 56/, "the latest Home candle must retain readable right-side space");
-assert.match(compactChartSource, /compact \? \{\} : \{ text: "추세 확인" \}/, "compact markers must not cover candles with text labels");
+assert.match(compactChartSource, /compact \? \{\} : \{ text:/, "compact markers must not cover candles with text labels");
+assert.match(compactChartSource, /line\.detailLabel/, "the full detail chart retains explanatory price-line labels");
+assert.match(compactChartSource, /allResolvedMarkers[\s\S]*visibleMarkerIds/, "signals outside the responsive plot window remain represented in the external legend");
+const compactLegendSource = readFileSync(join(process.cwd(), "src/components/coin/PerpetualChartLegend.tsx"), "utf8");
+assert.match(compactLegendSource, /<h3[\s\S]*<ul[\s\S]*<li/, "chart legend groups and entries use heading and list semantics");
+assert.match(compactLegendSource, /현재 차트 범위 밖/, "the legend explains when a preserved signal is outside the current candle window");
 
 const journalSource = readFileSync(join(process.cwd(), "src/components/JournalApp.tsx"), "utf8");
 for (const reviewSource of ["snapshot", "alert", "news"]) {

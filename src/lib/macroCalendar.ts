@@ -8,6 +8,7 @@ import {
   type MacroEventItem
 } from "@/data/macroEvents";
 import { hasConfirmedActualValue } from "@/lib/macro/macroStatus";
+import { ensureNearestHighImpactUpcoming } from "@/lib/homeMacroPriority";
 import { dedupeMacroCalendarItems } from "@/lib/macro/dedupeMacroCalendar";
 import { normalizeMacroEvents } from "@/lib/macro/normalizeMacroEvent";
 import { getBeaOfficialEnrichments } from "@/lib/macro/sourceAdapters/bea";
@@ -285,13 +286,14 @@ function isVisibleMacroImportance(item: MacroEventItem) {
 }
 
 function selectCalendarItems(items: MacroEventItem[], now: number, maxItems = 18) {
-  const upcoming = items
+  const upcomingLimit = Math.min(8, Math.max(0, maxItems));
+  const sortedUpcoming = items
     .filter((item) => {
       const time = Date.parse(item.releaseAt);
       return Number.isFinite(time) && time >= now;
     })
-    .sort((a, b) => Date.parse(a.releaseAt) - Date.parse(b.releaseAt))
-    .slice(0, 8);
+    .sort((a, b) => Date.parse(a.releaseAt) - Date.parse(b.releaseAt));
+  const upcoming = ensureNearestHighImpactUpcoming(sortedUpcoming, sortedUpcoming.slice(0, upcomingLimit), upcomingLimit);
   const upcomingKeys = new Set(upcoming.map(eventDedupeKey));
   const released = sortItems(
     items.filter((item) => {
