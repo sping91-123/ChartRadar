@@ -77,7 +77,12 @@ export function serializeHomeInterestAnalysis(
     compositeScore: snapshot.compositeScore,
     chart: {
       timeframe: "15m",
-      candles: snapshot.chartCandles.slice(-64)
+      candles: snapshot.chartCandles.slice(-64),
+      candlesByTimeframe: {
+        "15m": (snapshot.chartCandlesByTimeframe?.["15m"] ?? snapshot.chartCandles).slice(-64),
+        "1h": (snapshot.chartCandlesByTimeframe?.["1h"] ?? []).slice(-64),
+        "4h": (snapshot.chartCandlesByTimeframe?.["4h"] ?? []).slice(-64)
+      }
     },
     summary: summaryCopy(snapshot),
     timeframes,

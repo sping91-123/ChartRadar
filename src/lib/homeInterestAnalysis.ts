@@ -21,6 +21,7 @@ export interface HomeInterestAnalysisSummary {
   chart: {
     timeframe: "15m";
     candles: Candle[];
+    candlesByTimeframe: Record<HomeInterestSummaryTimeframe, Candle[]>;
   };
   summary: {
     headline: string;

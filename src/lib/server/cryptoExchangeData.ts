@@ -10,6 +10,7 @@ import {
   type MarketAnalysis,
   type TimeframeAnalysis
 } from "@/lib/marketAnalysis";
+import { chartTimeframeMs } from "@/lib/marketTime";
 import { fetchLiquidationPressureReport } from "@/lib/server/liquidationPressureSource";
 
 export type CryptoExchangeId = "binance" | "okx" | "bingx" | "bitget" | "gateio" | "bybit";
@@ -32,6 +33,7 @@ export interface CryptoHomeSnapshot {
   changePercent: number | null;
   quoteVolume: number | null;
   chartCandles: Candle[];
+  chartCandlesByTimeframe?: Partial<Record<ChartTimeframe, Candle[]>>;
   direction: "up" | "down" | "sideways";
   directionLabel: "상승세" | "하락세" | "횡보";
   compositeScore: number;
@@ -1360,7 +1362,7 @@ export async function getCryptoHomeTicker(exchangeId: CryptoExchangeId, rawSymbo
 export async function getCryptoHomeSnapshot(
   exchangeId: CryptoExchangeId,
   rawSymbol: string | null | undefined,
-  options: { requireEstablishedStructure?: boolean } = {}
+  options: { requireEstablishedStructure?: boolean; includeChartTimeframes?: boolean } = {}
 ): Promise<CryptoHomeSnapshot> {
   const selection = await resolveExchangeMarket(exchangeId, rawSymbol);
   const [tickerResult, candleResults] = await Promise.all([
@@ -1385,7 +1387,19 @@ export async function getCryptoHomeSnapshot(
   const compositeScore = scoreBreakdown.finalScore;
   const direction = directionForScore(compositeScore);
   const aggregate = buildAggregatePayload(analyses, scoreBreakdown, direction);
-  const previewCandles = candleResults.find((item) => item.timeframe === "15m")?.candles ?? hourlyCandles;
+  const updatedAt = new Date().toISOString();
+  const updatedAtMs = new Date(updatedAt).getTime();
+  const chartCandlesByTimeframe = Object.fromEntries(
+    candleResults
+      .filter((item) => item.timeframe === "15m" || item.timeframe === "1h" || item.timeframe === "4h")
+      .map((item) => [
+        item.timeframe,
+        item.candles
+          .filter((candle) => candle.time * 1000 + chartTimeframeMs[item.timeframe] <= updatedAtMs)
+          .slice(-96)
+      ])
+  ) as Partial<Record<ChartTimeframe, Candle[]>>;
+  const previewCandles = chartCandlesByTimeframe["15m"] ?? chartCandlesByTimeframe["1h"] ?? [];
   const snapshotTimeframes = analyses.map((item) => ({
     timeframe: item.timeframe,
     label: timeframeLabels[item.timeframe],
@@ -1408,7 +1422,8 @@ export async function getCryptoHomeSnapshot(
     price,
     changePercent,
     quoteVolume: tickerQuoteVolume(ticker),
-    chartCandles: previewCandles.slice(-96),
+    chartCandles: previewCandles,
+    ...(options.includeChartTimeframes ? { chartCandlesByTimeframe } : {}),
     direction,
     directionLabel: directionLabel(direction),
     compositeScore,
@@ -1418,6 +1433,6 @@ export async function getCryptoHomeSnapshot(
     pressure: pressureWithStatuses,
     strategyRadar: buildStrategyRadar(analysis, analyses, scoreBreakdown, direction, aggregate, pressureWithStatuses),
     aiInput: buildAiInput(selection, analysis, active, snapshotTimeframes, aggregate, pressureWithStatuses),
-    updatedAt: new Date().toISOString()
+    updatedAt
   };
 }

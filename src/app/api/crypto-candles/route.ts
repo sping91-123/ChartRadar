@@ -1,6 +1,7 @@
 // 코인 차트가 사용할 Binance USDT-M 캔들을 서버에서 중계합니다.
 import { NextResponse } from "next/server";
 import type { Candle, ChartTimeframe } from "@/lib/marketAnalysis";
+import { parseClosedBinanceKlines } from "@/lib/marketTime";
 import { rateLimit } from "@/lib/server/rateLimit";
 
 export const runtime = "nodejs";
@@ -34,7 +35,15 @@ function normalizeLimit(raw: string | null) {
   return Math.max(50, Math.min(500, Math.round(value)));
 }
 
-function parseRows(rows: unknown): Candle[] {
+function normalizeEndTime(raw: string | null) {
+  if (raw === null) return null;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0) return Number.NaN;
+  return Math.min(Math.round(value), Date.now());
+}
+
+function parseRows(rows: unknown, { closedOnly, asOfMs }: { closedOnly: boolean; asOfMs: number }): Candle[] {
+  if (closedOnly) return parseClosedBinanceKlines(rows, asOfMs).candles;
   if (!Array.isArray(rows)) return [];
   return rows.map((row) => {
     const values = Array.isArray(row) ? row : [];
@@ -56,11 +65,10 @@ function parseRows(rows: unknown): Candle[] {
   );
 }
 
-function candleEndpoints(params: URLSearchParams) {
-  return [
-    { source: "binance-usdt-m", url: `${BINANCE_FAPI}/fapi/v1/klines?${params.toString()}` },
-    { source: "binance-spot", url: `${BINANCE_SPOT_DATA_API}/api/v3/klines?${params.toString()}` }
-  ];
+function candleEndpoints(params: URLSearchParams, futuresOnly: boolean) {
+  const futures = { source: "binance-usdt-m", url: `${BINANCE_FAPI}/fapi/v1/klines?${params.toString()}` };
+  if (futuresOnly) return [futures];
+  return [futures, { source: "binance-spot", url: `${BINANCE_SPOT_DATA_API}/api/v3/klines?${params.toString()}` }];
 }
 
 export async function GET(request: Request) {
@@ -78,8 +86,11 @@ export async function GET(request: Request) {
   const symbol = normalizeSymbol(url.searchParams.get("symbol"));
   const timeframe = normalizeTimeframe(url.searchParams.get("timeframe"));
   const limit = normalizeLimit(url.searchParams.get("limit"));
+  const endTime = normalizeEndTime(url.searchParams.get("endTime"));
+  const closedOnly = url.searchParams.get("closedOnly") === "1" || url.searchParams.get("closedOnly") === "true";
+  const futuresOnly = url.searchParams.get("futuresOnly") === "1" || url.searchParams.get("futuresOnly") === "true";
 
-  if (!symbol || !timeframe) {
+  if (!symbol || !timeframe || (endTime !== null && !Number.isFinite(endTime))) {
     return NextResponse.json({ error: "지원하지 않는 코인 또는 타임프레임입니다." }, { status: 400 });
   }
 
@@ -88,11 +99,12 @@ export async function GET(request: Request) {
     interval: intervalMap[timeframe],
     limit: String(limit)
   });
+  if (endTime !== null) params.set("endTime", String(endTime));
 
   try {
     let lastError: unknown = null;
 
-    for (const endpoint of candleEndpoints(params)) {
+    for (const endpoint of candleEndpoints(params, futuresOnly)) {
       try {
         const response = await fetch(endpoint.url, {
           headers: { Accept: "application/json" },
@@ -100,7 +112,7 @@ export async function GET(request: Request) {
         });
         if (!response.ok) throw new Error(`Binance ${response.status}`);
 
-        const candles = parseRows(await response.json());
+        const candles = parseRows(await response.json(), { closedOnly, asOfMs: endTime ?? Date.now() });
         if (candles.length > 0) {
           return NextResponse.json({ candles, source: endpoint.source });
         }

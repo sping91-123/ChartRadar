@@ -27,6 +27,7 @@
     "test:product-events": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-product-events.js",
     "test:coin-product-contract": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-coin-product-contract.js",
     "test:home-interest-analysis": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-home-interest-analysis.js",
+    "test:pull-to-refresh": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-pull-to-refresh.js",
     "test:coin-usage-quotas": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-coin-usage-quotas.js",
     "test:push-targets": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-push-targets.js",
     "test:news-sources": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-news-sources.js",

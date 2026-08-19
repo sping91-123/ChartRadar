@@ -36,6 +36,7 @@ const basicSnapshot = {
   chart: { timeframe: "15m", candles },
   summary: { primaryCondition },
   publicEvidence: {
+    timeframe: "15m",
     events: {
       msb: { direction: "bullish", level: 175, occurredAt: collisionIso, ageBars: 5 },
       choch: { direction: "bullish", level: 176, occurredAt: collisionIso, ageBars: 5 }
@@ -49,6 +50,10 @@ assert.equal(basicModel.legendItems.filter((item) => item.group === "zone").leng
 assert.equal(basicModel.lines[0].lineWidth, 2);
 assert.equal(basicModel.lines[0].axisLabelVisible, true);
 
+const basicOneHourModel = buildPerpetualChartOverlayModel(basicSnapshot, "1h");
+assert.equal(basicOneHourModel.lines.length, 0, "Basic context charts do not inherit the 15-minute condition line");
+assert.equal(basicOneHourModel.markers.length, 0, "Basic context charts do not gain Pro signal details");
+
 const basicMarkers = resolvePerpetualChartMarkers(basicModel.markers, candles.slice(-64).map((candle) => candle.time));
 assert.equal(basicMarkers.length, 2, "same-candle MSB and CHoCH must both remain visible");
 assert.notEqual(basicMarkers[0].position, basicMarkers[1].position, "same-side marker collisions move CHoCH to the opposite side");
@@ -57,6 +62,7 @@ assert.equal(buildPerpetualSignalLegendItems(basicMarkers).length, 2);
 const oneOldSignalModel = buildPerpetualChartOverlayModel({
   ...basicSnapshot,
   publicEvidence: {
+    timeframe: "15m",
     events: {
       msb: { direction: "bullish", level: 175, occurredAt: new Date(candles[20].time * 1000).toISOString(), ageBars: 75 },
       choch: { direction: "bullish", level: 176, occurredAt: collisionIso, ageBars: 5 }
@@ -142,6 +148,34 @@ assert.equal(proModel.lines.find((line) => line.id === "order-block-top")?.detai
 assert.equal(proModel.lines.find((line) => line.id === "fvg-bottom")?.detailLabel, "빠른 이동 구간 아래");
 assert.equal(proModel.lines.find((line) => line.id === "poc")?.lineStyle, "dotted");
 assert.equal(proModel.lines.find((line) => line.id === "poc")?.detailLabel, "거래 집중 가격");
+
+const oneHourDetails = {
+  ...details,
+  events: {
+    ...details.events,
+    msb: { direction: "bearish", level: 150, occurredAt: collisionIso, ageBars: 2 },
+    choch: null
+  }
+};
+const contextSnapshot = {
+  ...proSnapshot,
+  pro: {
+    confirmationConditions: [
+      { ...primaryCondition, id: "confirmation-15m", role: "confirmation", threshold: 190 },
+      { ...primaryCondition, id: "confirmation-1h", role: "confirmation", timeframe: "1h", threshold: 200 }
+    ],
+    invalidationConditions: [],
+    multiTimeframeEvidence: [
+      { timeframe: "15m", details },
+      { timeframe: "1h", details: oneHourDetails }
+    ]
+  }
+} as unknown as PerpetualDecisionSnapshot;
+const oneHourModel = buildPerpetualChartOverlayModel(contextSnapshot, "1h");
+assert.equal(oneHourModel.legendItems.filter((item) => item.group === "condition").length, 1, "context charts use only same-timeframe conditions");
+assert.equal(oneHourModel.legendItems.filter((item) => item.group === "zone").length, 3, "Pro context charts use same-timeframe zones");
+assert.equal(oneHourModel.markers.length, 1, "Pro context charts use same-timeframe structure signals");
+assert.equal(oneHourModel.markers[0]?.level, 150);
 
 assert.equal(compactPerpetualCandleLimit(360), 64);
 assert.equal(compactPerpetualCandleLimit(767), 64);

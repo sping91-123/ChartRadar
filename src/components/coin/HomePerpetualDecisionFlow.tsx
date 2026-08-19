@@ -9,6 +9,7 @@ import { HomeInterestCoinSettingsDialog } from "@/components/coin/HomeInterestCo
 import { HomeTimeframeDirection } from "@/components/coin/HomeTimeframeDirection";
 import { PerpetualDecisionChart } from "@/components/coin/PerpetualDecisionChart";
 import { MacroTicker } from "@/components/MacroTicker";
+import { PullToRefresh, usePullToRefreshRegistration } from "@/components/PullToRefresh";
 import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import { hasMarketEntitlement } from "@/lib/billing";
@@ -291,6 +292,12 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
       window.clearTimeout(timeout);
     }
   }, []);
+
+  const refreshFromPull = useCallback(async () => {
+    const nextSnapshot = await load(asset, true);
+    if (!nextSnapshot) throw new Error("선물 시장 분석을 새로고침하지 못했습니다.");
+  }, [asset, load]);
+  usePullToRefreshRegistration(refreshFromPull);
 
   useEffect(() => {
     let cancelled = false;
@@ -583,11 +590,15 @@ function ShadowHomeCanaryGate() {
 }
 
 export function HomePerpetualDecisionFlow({ mode }: { mode: PerpetualRevenueCoreMode }) {
-  if (mode === "off") {
-    return <><MacroTicker compact market="crypto" homePriorityAware /><CoinRadarHomePanel /></>;
-  }
-  if (mode === "shadow") {
-    return <ShadowHomeCanaryGate />;
-  }
-  return <HomeRevenueCoreExperience />;
+  return (
+    <PullToRefresh>
+      {mode === "off" ? (
+        <><MacroTicker compact market="crypto" homePriorityAware /><CoinRadarHomePanel /></>
+      ) : mode === "shadow" ? (
+        <ShadowHomeCanaryGate />
+      ) : (
+        <HomeRevenueCoreExperience />
+      )}
+    </PullToRefresh>
+  );
 }

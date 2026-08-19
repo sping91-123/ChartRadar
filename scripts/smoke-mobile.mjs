@@ -231,6 +231,31 @@ if (
   fail("PWA web-only 등록과 safe area", "native guard, readyState 등록, safe-area 중 하나가 빠졌습니다.");
 }
 
+const pullToRefresh = readText("src/components/PullToRefresh.tsx");
+const homeDecisionFlow = readText("src/components/coin/HomePerpetualDecisionFlow.tsx");
+const majorsApp = readText("src/components/MajorsApp.tsx");
+if (
+  pullToRefresh.includes('document.querySelector<HTMLElement>(".app-scroll-root")') &&
+  pullToRefresh.includes('touchmove", onTouchMove, { passive: false }') &&
+  pullToRefresh.includes("[role='dialog'][aria-modal='true']") &&
+  pullToRefresh.includes('"[role=\'img\']"') &&
+  pullToRefresh.includes('aria-live="polite"')
+) {
+  pass("모바일 당겨서 새로고침 제스처 안전장치", "실제 스크롤 루트, 비수동 move, dialog·차트 제외, 상태 안내를 포함합니다.");
+} else {
+  fail("모바일 당겨서 새로고침 제스처 안전장치", "스크롤 루트, 제스처 제외 또는 접근성 상태가 빠져 있습니다.");
+}
+
+if (
+  homeDecisionFlow.includes("<PullToRefresh>") &&
+  homeDecisionFlow.includes("usePullToRefreshRegistration(refreshFromPull)") &&
+  majorsApp.includes("<PullToRefresh enabled={pullRefreshEnabled}>")
+) {
+  pass("코인 핵심 화면 당겨서 새로고침 연결", "Home과 BTC·ETH 상세 화면이 실제 client refetch handler에 연결됩니다.");
+} else {
+  fail("코인 핵심 화면 당겨서 새로고침 연결", "Home 또는 BTC·ETH 상세 화면의 refresh 연결이 빠져 있습니다.");
+}
+
 const failures = checks.filter((check) => !check.ok);
 for (const check of checks) {
   const mark = check.ok ? "PASS" : "FAIL";

@@ -27,6 +27,11 @@ const source = {
   price: 179,
   changePercent: 2.3,
   chartCandles: candles,
+  chartCandlesByTimeframe: {
+    "15m": candles,
+    "1h": candles.map((candle, index) => ({ ...candle, time: 1_750_000_000 + index * 3_600 })),
+    "4h": candles.map((candle, index) => ({ ...candle, time: 1_750_000_000 + index * 14_400 }))
+  },
   direction: "up",
   directionLabel: "상승세",
   compositeScore: 67,
@@ -54,6 +59,9 @@ const basic = serializeHomeInterestAnalysis(source, false);
 assert.equal(basic.access, "basic");
 assert.equal(basic.pro, undefined, "Basic response must omit the Pro object entirely");
 assert.equal(basic.chart.candles.length, 64, "Home only needs a compact 15-minute window");
+assert.deepEqual(Object.keys(basic.chart.candlesByTimeframe), ["15m", "1h", "4h"], "Home chart exposes only decision-engine timeframes");
+assert.equal(basic.chart.candlesByTimeframe["1h"].length, 64, "Home bounds each context chart window");
+assert.equal(basic.chart.candlesByTimeframe["4h"].length, 64, "Home bounds the four-hour chart window");
 assert.deepEqual(basic.timeframes.map((item) => item.timeframe), ["15m", "1h", "4h"]);
 assert.match(basic.summary.headline, /오르는 근거/);
 assert.match(basic.summary.topRisk, /엇갈려/, "mixed timeframes must disclose the conflict before direction");

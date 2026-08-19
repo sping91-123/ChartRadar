@@ -7,9 +7,11 @@ import { PerpetualEvidenceWorkbench } from "@/components/coin/PerpetualEvidenceW
 import { PerpetualMonitorManager } from "@/components/coin/PerpetualMonitorManager";
 import { NewsImpactContextCard } from "@/components/news/NewsImpactContextCard";
 import { PerpetualNewsContextStrip } from "@/components/news/PerpetualNewsContextStrip";
+import { usePullToRefreshRegistration } from "@/components/PullToRefresh";
 import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import { appendJournalEntry, decisionJournalContextFromSnapshot } from "@/lib/journal";
+import { isResolvedHistoricalPullLocked } from "@/lib/pullToRefresh";
 import { readPerpetualAlertContext } from "@/lib/perpetualAlertContext";
 import { decisionStateLabel, flowDirectionLabel, monitorConditionHeading, plainDirection, pressureDirectionLabel, qualityLabel } from "@/lib/perpetualDecisionCopy";
 import { isPerpetualSnapshotScopedStateCurrent, journalMonitorIdForSnapshot } from "@/lib/perpetualMonitor";
@@ -174,7 +176,8 @@ export function PerpetualDecisionExperience({
   source,
   attributionId,
   impactId,
-  initialAlertMonitorId
+  initialAlertMonitorId,
+  onHistoricalContinuityChange
 }: {
   asset: PerpetualAsset;
   requestedSnapshotId?: string | null;
@@ -182,6 +185,7 @@ export function PerpetualDecisionExperience({
   attributionId?: string | null;
   impactId?: string | null;
   initialAlertMonitorId?: string | null;
+  onHistoricalContinuityChange?: (locked: boolean) => void;
 }) {
   const { session } = useSupabaseAuth();
   const [state, setState] = useState<DecisionLoadState>({ status: "loading", snapshot: null, capabilities: null, continuity: null });
@@ -252,6 +256,13 @@ export function PerpetualDecisionExperience({
         : requestSource === "alert"
           ? exactLinkedContext ? "alert" : null
           : requestSource;
+      if (requestSource === "alert" || requestSource === "news") {
+        onHistoricalContinuityChange?.(isResolvedHistoricalPullLocked({
+          source: requestSource,
+          continuityStatus: nextContinuity.status,
+          hasNewsContext: Boolean(payload.newsContext)
+        }));
+      }
       initialRequestRef.current = nextSnapshot.id;
       effectiveSourceRef.current = nextEffectiveSource;
       setEffectiveSource(nextEffectiveSource);
@@ -287,7 +298,14 @@ export function PerpetualDecisionExperience({
     } finally {
       window.clearTimeout(timeout);
     }
-  }, [asset, impactId, initialAlertMonitorId]);
+  }, [asset, impactId, initialAlertMonitorId, onHistoricalContinuityChange]);
+
+  const refreshFromPull = useCallback(async () => {
+    const nextSnapshot = await load(true);
+    if (!nextSnapshot) throw new Error("선물 시장 분석을 새로고침하지 못했습니다.");
+    setMonitorRefreshKey((current) => current + 1);
+  }, [load]);
+  usePullToRefreshRegistration(refreshFromPull);
 
   useEffect(() => {
     setMonitorState({ status: "idle" });
@@ -784,8 +802,8 @@ export function PerpetualDecisionExperience({
 
       <section className="bg-ui-panel px-3 py-4 sm:px-5">
         <div className="flex items-start justify-between gap-3">
-          <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-subtle">가격 흐름</p><h2 className="mt-1 text-lg font-black text-ui-text">차트에서 흐름과 확인 가격을 같이 보세요</h2><p className="mt-1 text-xs leading-5 text-ui-muted">{displaySnapshot.pro ? "지금 분석에 사용한 15분 차트 위에 추세 확인·전환 신호와 중요한 가격을 표시합니다." : "지금 분석에 사용한 15분 봉과 먼저 확인할 가격을 함께 표시합니다."}</p></div>
-          <StatusPill tone="watch">15분</StatusPill>
+          <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-subtle">가격 흐름</p><h2 className="mt-1 text-lg font-black text-ui-text">차트에서 시간대별 흐름을 비교하세요</h2><p className="mt-1 text-xs leading-5 text-ui-muted">{displaySnapshot.pro ? "판단 기준은 15분으로 유지하고, 선택한 시간대의 추세·전환 신호와 중요한 가격대를 함께 표시합니다." : "판단 기준은 15분으로 유지하고, 1시간·4시간 확정 봉으로 큰 흐름을 비교할 수 있습니다."}</p></div>
+          <StatusPill tone="watch">차트 전환</StatusPill>
         </div>
         <div className="mt-3"><PerpetualDecisionChart snapshot={displaySnapshot} /></div>
       </section>

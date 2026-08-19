@@ -455,6 +455,16 @@ const parsed = parseClosedBinanceKlines(rows, asOf);
 assert.equal(parsed.candles.length, 1);
 assert.equal(parsed.droppedIncomplete, 1, "the still-open Binance kline must be excluded");
 
+const candleRouteSource = readFileSync(join(process.cwd(), "src/app/api/crypto-candles/route.ts"), "utf8");
+assert.match(candleRouteSource, /parseClosedBinanceKlines\(rows, asOfMs\)/, "closed chart requests reuse the confirmed-kline parser");
+assert.match(candleRouteSource, /params\.set\("endTime", String\(endTime\)\)/, "historical chart requests forward the snapshot timestamp");
+assert.match(candleRouteSource, /candleEndpoints\(params, futuresOnly\)/, "futures-only chart requests control spot fallback");
+
+const chartViewSource = readFileSync(join(process.cwd(), "src/lib/chartTimeframeView.ts"), "utf8");
+assert.match(chartViewSource, /closedOnly: "1"/);
+assert.match(chartViewSource, /futuresOnly: "1"/);
+assert.match(chartViewSource, /endTime: String\(asOfMs\)/);
+
 const source = readFileSync(join(process.cwd(), "src/lib/server/perpetualDecisionSource.ts"), "utf8");
 assert.match(source, /fapi\.binance\.com/);
 assert.doesNotMatch(source, /data-api\.binance\.vision|api\/v3\/klines/, "canonical source must not fall back to Binance spot");

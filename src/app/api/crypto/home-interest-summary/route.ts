@@ -49,7 +49,8 @@ export async function GET(request: Request) {
 
   try {
     const source = await getCryptoHomeSnapshot(exchangeId as CryptoExchangeId, symbol, {
-      requireEstablishedStructure: true
+      requireEstablishedStructure: true,
+      includeChartTimeframes: true
     });
     const snapshot = serializeHomeInterestAnalysis(source, canSeeProDetail);
     return privateJson({

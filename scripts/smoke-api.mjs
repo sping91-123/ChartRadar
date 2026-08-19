@@ -143,6 +143,13 @@ const checks = [
     expectedText: "지원하지 않는"
   },
   {
+    label: "코인 확정봉 비정상 기준 시각 차단",
+    path: "/data/candles?symbol=BTCUSDT&timeframe=1h&endTime=bad&closedOnly=1&futuresOnly=1",
+    method: "GET",
+    expectedStatus: [400],
+    expectedText: "타임프레임"
+  },
+  {
     label: "청산 압력 비정상 심볼 차단",
     path: "/api/liquidation-pressure?symbol=***&period=15m",
     method: "GET",

@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, ArrowRight, Clock3, Loader2, RefreshCw } from "lucide-react";
 import { HomeInterestMiniChart } from "@/components/coin/HomeInterestMiniChart";
 import { HomeTimeframeDirection } from "@/components/coin/HomeTimeframeDirection";
+import { usePullToRefreshRegistration } from "@/components/PullToRefresh";
 import { ActionButton } from "@/components/ui/DesignPrimitives";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import type { HomeInterestAnalysisResponse, HomeInterestAnalysisSummary } from "@/lib/homeInterestAnalysis";
@@ -15,7 +16,8 @@ import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 type SummaryState =
   | { status: "loading"; snapshot: null }
   | { status: "ready"; snapshot: HomeInterestAnalysisSummary }
-  | { status: "error"; snapshot: null; message: string };
+  | { status: "refreshing"; snapshot: HomeInterestAnalysisSummary }
+  | { status: "error"; snapshot: HomeInterestAnalysisSummary | null; message: string };
 
 function formatPrice(value: number) {
   const digits = value >= 100 ? 2 : value >= 10 ? 3 : value >= 1 ? 4 : 6;
@@ -48,27 +50,57 @@ export function HomeInterestAnalysisSummary({ coin }: { coin: HomeInterestCoin }
   const { session } = useSupabaseAuth();
   const [state, setState] = useState<SummaryState>({ status: "loading", snapshot: null });
   const [refreshKey, setRefreshKey] = useState(0);
+  const requestGeneration = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
 
-  const load = useCallback(async (signal?: AbortSignal) => {
-    setState({ status: "loading", snapshot: null });
+  const load = useCallback(async (silent = false) => {
+    const generation = ++requestGeneration.current;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    let timedOut = false;
+    const timeout = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 12_000);
+    setState((current) => silent && current.snapshot
+      ? { status: "refreshing", snapshot: current.snapshot }
+      : { status: "loading", snapshot: null });
     try {
-      const snapshot = await requestInterestSummary(coin, signal);
-      if (!signal?.aborted) setState({ status: "ready", snapshot });
+      const snapshot = await requestInterestSummary(coin, controller.signal);
+      if (controller.signal.aborted || generation !== requestGeneration.current) return null;
+      setState({ status: "ready", snapshot });
+      return snapshot;
     } catch (error) {
-      if (!signal?.aborted) {
-        setState({
-          status: "error",
-          snapshot: null,
-          message: error instanceof Error ? error.message : "관심코인 분석을 불러오지 못했습니다."
-        });
-      }
+      if (generation !== requestGeneration.current || (controller.signal.aborted && !timedOut)) return null;
+      setState((current) => ({
+        status: "error",
+        snapshot: current.snapshot,
+        message: error instanceof Error ? error.message : "관심코인 분석을 불러오지 못했습니다."
+      }));
+      return null;
+    } finally {
+      window.clearTimeout(timeout);
     }
   }, [coin]);
 
+  const refreshFromPull = useCallback(async () => {
+    const snapshot = await load(true);
+    if (!snapshot) {
+      setState((current) => current.status === "refreshing"
+        ? { status: "ready", snapshot: current.snapshot }
+        : current);
+      throw new Error("관심코인 분석을 새로고침하지 못했습니다.");
+    }
+  }, [load]);
+  usePullToRefreshRegistration(refreshFromPull);
+
   useEffect(() => {
-    const controller = new AbortController();
-    void load(controller.signal);
-    return () => controller.abort();
+    void load();
+    return () => {
+      requestGeneration.current += 1;
+      abortRef.current?.abort();
+    };
   }, [load, refreshKey, session?.accessToken]);
 
   if (state.status === "loading") {
@@ -81,7 +113,7 @@ export function HomeInterestAnalysisSummary({ coin }: { coin: HomeInterestCoin }
     );
   }
 
-  if (state.status === "error") {
+  if (state.status === "error" && !state.snapshot) {
     return (
       <section className="bg-ui-panel px-4 py-5">
         <p className="text-base font-black text-ui-text">{coin.base} 분석을 준비하지 못했습니다.</p>
@@ -92,6 +124,7 @@ export function HomeInterestAnalysisSummary({ coin }: { coin: HomeInterestCoin }
   }
 
   const snapshot = state.snapshot;
+  if (!snapshot) return null;
   const target = homeInterestDetailTarget(coin);
   const changeTone = snapshot.changePercent === null
     ? "text-ui-subtle"
@@ -157,11 +190,22 @@ export function HomeInterestAnalysisSummary({ coin }: { coin: HomeInterestCoin }
 
       <div className="mt-3 bg-ui-inset/25 px-1 py-2">
         <div className="mb-2 flex items-center justify-between gap-2 px-2">
-          <p className="text-[11px] font-black text-ui-text">15분 가격 흐름</p>
-          <span className="text-[10px] font-semibold text-ui-subtle">설명 없이 캔들만 표시</span>
+          <p className="text-[11px] font-black text-ui-text">시간대별 가격 흐름</p>
+          <span className="text-[10px] font-semibold text-ui-subtle">확정 봉 비교</span>
         </div>
-        <HomeInterestMiniChart candles={snapshot.chart.candles} symbol={`${snapshot.selection.base}/${snapshot.selection.quote}`} />
+        <HomeInterestMiniChart
+          candles={snapshot.chart.candles}
+          candlesByTimeframe={snapshot.chart.candlesByTimeframe}
+          symbol={`${snapshot.selection.base}/${snapshot.selection.quote}`}
+          asOf={snapshot.updatedAt}
+        />
       </div>
+      {state.status === "error" ? (
+        <div role="alert" className="mt-2 flex items-center justify-between gap-3 bg-ui-risk/10 px-3 py-2 text-xs font-semibold text-ui-risk">
+          <span>최신 갱신에 실패해 마지막 정상 분석을 보여드립니다.</span>
+          <button type="button" onClick={() => setRefreshKey((value) => value + 1)} className="min-h-11 shrink-0 underline">다시 시도</button>
+        </div>
+      ) : null}
     </section>
   );
 }

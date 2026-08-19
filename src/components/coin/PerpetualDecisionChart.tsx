@@ -13,7 +13,10 @@ import {
   type SeriesMarker,
   type Time
 } from "lightweight-charts";
+import { ChartTimeframeSelector } from "@/components/coin/ChartTimeframeSelector";
 import { PerpetualChartLegend } from "@/components/coin/PerpetualChartLegend";
+import { useChartTimeframeCandles } from "@/components/coin/useChartTimeframeCandles";
+import { chartViewTimeframeLabels } from "@/lib/chartTimeframeView";
 import {
   buildPerpetualChartOverlayModel,
   buildPerpetualSignalLegendItems,
@@ -46,6 +49,19 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
   const [compactCandleLimit, setCompactCandleLimit] = useState(64);
+  const {
+    timeframe,
+    setTimeframe,
+    candles,
+    isLoading,
+    error,
+    retry
+  } = useChartTimeframeCandles({
+    cacheKey: `${snapshot.id}:${snapshot.generatedAt}`,
+    symbol: snapshot.symbol,
+    asOf: snapshot.generatedAt,
+    initialCandles: snapshot.chart.candles
+  });
   const setContainerRef = useCallback((container: HTMLDivElement | null) => {
     containerRef.current = container;
     if (!compact || !container || container.clientWidth <= 0) return;
@@ -53,18 +69,18 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
     setCompactCandleLimit((current) => current === measuredLimit ? current : measuredLimit);
   }, [compact]);
   const legendId = `perpetual-chart-legend-${useId().replace(/:/g, "")}`;
-  const overlayModel = useMemo(() => buildPerpetualChartOverlayModel(snapshot), [snapshot]);
+  const overlayModel = useMemo(() => buildPerpetualChartOverlayModel(snapshot, timeframe), [snapshot, timeframe]);
   const visibleCandles = useMemo(
-    () => compact ? snapshot.chart.candles.slice(-compactCandleLimit) : snapshot.chart.candles,
-    [compact, compactCandleLimit, snapshot.chart.candles]
+    () => compact ? candles.slice(-compactCandleLimit) : candles,
+    [candles, compact, compactCandleLimit]
   );
   const resolvedMarkers = useMemo(
     () => resolvePerpetualChartMarkers(overlayModel.markers, visibleCandles.map((candle) => candle.time)),
     [overlayModel.markers, visibleCandles]
   );
   const allResolvedMarkers = useMemo(
-    () => resolvePerpetualChartMarkers(overlayModel.markers, snapshot.chart.candles.map((candle) => candle.time)),
-    [overlayModel.markers, snapshot.chart.candles]
+    () => resolvePerpetualChartMarkers(overlayModel.markers, candles.map((candle) => candle.time)),
+    [candles, overlayModel.markers]
   );
   const visibleMarkerIds = useMemo(
     () => new Set(resolvedMarkers.map((marker) => marker.id)),
@@ -166,32 +182,45 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
     chart.timeScale().fitContent();
   }, [compact, resolvedMarkers, visibleCandles]);
 
-  if (snapshot.chart.candles.length === 0) {
-    return (
-      <div className="flex min-h-36 items-center justify-center bg-ui-inset/55 px-4 text-center text-xs font-semibold leading-5 text-ui-muted" role="status">
-        확정 캔들 차트를 불러오지 못했습니다. 판단 상태와 저장 조건은 그대로 유지합니다.
-      </div>
-    );
-  }
+  const timeframeLabel = chartViewTimeframeLabels[timeframe];
 
   return (
-    <section aria-label={`${snapshot.symbol} 15분 차트`}>
-      {compact ? (
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-1 px-2">
-          <p className="text-[11px] font-black text-ui-text">15분 차트에서 직접 확인</p>
-          <span className="text-[10px] font-semibold text-ui-subtle">
-            조건선 {counts.conditions} · 가격대 {counts.zones} · 구조 신호 {counts.signals}
-          </span>
+    <section aria-label={`${snapshot.symbol} ${timeframeLabel} 차트`}>
+      <div className={`mb-2 ${compact ? "px-2" : ""}`}>
+        <div className="flex flex-wrap items-center justify-between gap-1">
+          <p className="text-[11px] font-black text-ui-text">{timeframeLabel} 확정 봉에서 직접 확인</p>
+          {compact ? (
+            <span className="text-[10px] font-semibold text-ui-subtle">
+              조건선 {counts.conditions} · 가격대 {counts.zones} · 구조 신호 {counts.signals}
+            </span>
+          ) : null}
         </div>
-      ) : null}
-      <div
-        ref={setContainerRef}
-        className="w-full"
-        role="img"
-        aria-label={`${snapshot.symbol} 15분 캔들과 조건선, 가격대, 구조 신호 차트`}
-        aria-describedby={compact && legendItems.length ? legendId : undefined}
-      />
-      {compact ? <PerpetualChartLegend id={legendId} items={legendItems} /> : null}
+        <ChartTimeframeSelector value={timeframe} onChange={setTimeframe} className="mt-2 w-full min-[390px]:ml-auto min-[390px]:w-56" />
+      </div>
+      <div className="relative" aria-busy={isLoading}>
+        <div
+          ref={setContainerRef}
+          className="w-full"
+          role="img"
+          aria-label={`${snapshot.symbol} ${timeframeLabel} 캔들과 조건선, 가격대, 구조 신호 차트`}
+          aria-describedby={compact && legendItems.length ? legendId : undefined}
+        />
+        {isLoading ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-ui-panel/80 px-4 text-center text-xs font-semibold text-ui-muted" role="status">
+            {timeframeLabel} 확정 봉을 불러오는 중입니다.
+          </div>
+        ) : error ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-ui-panel/90 px-4 text-center text-xs font-semibold leading-5 text-ui-muted" role="alert">
+            <p>{error}</p>
+            <button type="button" onClick={retry} className="min-h-11 rounded-ui-sm bg-ui-inset px-3 font-black text-ui-text">다시 불러오기</button>
+          </div>
+        ) : candles.length === 0 ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-ui-panel/90 px-4 text-center text-xs font-semibold leading-5 text-ui-muted" role="status">
+            {timeframeLabel} 확정 봉을 확인하지 못했습니다. 판단 상태와 저장 조건은 그대로 유지합니다.
+          </div>
+        ) : null}
+      </div>
+      {compact && legendItems.length ? <PerpetualChartLegend id={legendId} items={legendItems} /> : null}
     </section>
   );
 }

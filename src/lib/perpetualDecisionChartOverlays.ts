@@ -3,6 +3,7 @@ import type {
   PerpetualDecisionSnapshot,
   PerpetualTimedLevel
 } from "@/lib/perpetualDecisionSnapshot";
+import type { ChartViewTimeframe } from "@/lib/chartTimeframeView";
 
 export type PerpetualChartLineStyle = "solid" | "dashed" | "dotted";
 export type PerpetualChartLegendGroup = "condition" | "zone" | "signal";
@@ -174,17 +175,20 @@ function validMarker(kind: "msb" | "choch", event: PerpetualTimedLevel | null | 
   };
 }
 
-export function buildPerpetualChartOverlayModel(snapshot: PerpetualDecisionSnapshot): PerpetualChartOverlayModel {
+export function buildPerpetualChartOverlayModel(
+  snapshot: PerpetualDecisionSnapshot,
+  timeframe: ChartViewTimeframe = "15m"
+): PerpetualChartOverlayModel {
   const lines: PerpetualChartLineOverlay[] = [];
   const legendItems: PerpetualChartLegendItem[] = [];
   const conditions = [
     snapshot.summary.primaryCondition,
     ...(snapshot.pro?.confirmationConditions ?? []),
     ...(snapshot.pro?.invalidationConditions ?? [])
-  ];
+  ].filter((condition) => condition.timeframe === timeframe);
   conditions.forEach((condition) => addCondition(condition, lines, legendItems));
 
-  const details = snapshot.pro?.multiTimeframeEvidence.find((item) => item.timeframe === "15m")?.details;
+  const details = snapshot.pro?.multiTimeframeEvidence.find((item) => item.timeframe === timeframe)?.details;
   addRange(
     "order-block",
     "OB(큰 주문 구간)",
@@ -230,7 +234,7 @@ export function buildPerpetualChartOverlayModel(snapshot: PerpetualDecisionSnaps
     });
   }
 
-  const publicEvents = snapshot.publicEvidence?.events;
+  const publicEvents = snapshot.publicEvidence?.timeframe === timeframe ? snapshot.publicEvidence.events : undefined;
   const markers = [
     validMarker("msb", details?.events.msb ?? publicEvents?.msb),
     validMarker("choch", details?.events.choch ?? publicEvents?.choch)

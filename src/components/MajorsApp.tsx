@@ -10,9 +10,11 @@ import { CoinOptionsMarketPanel } from "@/components/coin/CoinOptionsMarketPanel
 import { PerpetualDecisionExperience } from "@/components/coin/PerpetualDecisionExperience";
 import { CoinStablecoinLiquidityPanel } from "@/components/coin/CoinStablecoinLiquidityPanel";
 import { Header } from "@/components/Header";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { RadarTopNav } from "@/components/RadarTopNav";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import type { MajorAssetId } from "@/lib/majorAssetRoute";
+import { shouldEnablePerpetualPullRefresh } from "@/lib/pullToRefresh";
 import type { PerpetualRevenueCoreMode } from "@/lib/server/perpetualRevenueCore";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 
@@ -47,7 +49,8 @@ function ShadowPerpetualCanaryGate({
   source,
   attributionId,
   impactId,
-  monitorId
+  monitorId,
+  onHistoricalContinuityChange
 }: {
   asset: MajorAssetId;
   selectedSymbols: Array<{ symbol: string; label: string }>;
@@ -56,6 +59,7 @@ function ShadowPerpetualCanaryGate({
   attributionId: string | null;
   impactId: string | null;
   monitorId: string | null;
+  onHistoricalContinuityChange: (locked: boolean) => void;
 }) {
   const { session, isLoading } = useSupabaseAuth();
   const [enabled, setEnabled] = useState(false);
@@ -91,6 +95,7 @@ function ShadowPerpetualCanaryGate({
       attributionId={attributionId}
       impactId={impactId}
       initialAlertMonitorId={monitorId}
+      onHistoricalContinuityChange={onHistoricalContinuityChange}
     />
   );
 }
@@ -116,6 +121,7 @@ export function MajorsApp({
 }) {
   const [activeAssetId, setActiveAssetId] = useState<MajorAssetId>(initialAsset);
   const [initialContinuityAvailable, setInitialContinuityAvailable] = useState(true);
+  const [historicalPullUnlocked, setHistoricalPullUnlocked] = useState(false);
   const activeAsset = majorAssetOptions.find((asset) => asset.id === activeAssetId) ?? majorAssetOptions[0];
   const selectedSymbols = useMemo(
     () => [{ symbol: activeAsset.apiSymbol, label: activeAsset.detail }],
@@ -124,6 +130,7 @@ export function MajorsApp({
   const selectedOptionCurrencies = useMemo(() => [activeAsset.detail], [activeAsset.detail]);
   const handleAssetChange = useCallback((next: MajorAssetId) => {
     setInitialContinuityAvailable(false);
+    setHistoricalPullUnlocked(true);
     setActiveAssetId(next);
     const url = new URL(window.location.href);
     url.searchParams.set("asset", next);
@@ -137,50 +144,63 @@ export function MajorsApp({
     url.searchParams.delete("monitor");
     window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
   }, []);
+  const handleHistoricalContinuityChange = useCallback((locked: boolean) => {
+    if (!locked) setHistoricalPullUnlocked(true);
+  }, []);
+  const pullRefreshEnabled = historicalPullUnlocked || shouldEnablePerpetualPullRefresh({
+    initialContinuityAvailable,
+    activeAsset: activeAssetId,
+    initialAsset,
+    initialSource
+  });
 
   return (
-    <main className="min-h-screen max-w-full overflow-x-hidden px-3 pb-28 sm:px-5 sm:pb-16">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 sm:gap-3">
-        <Header market="crypto" />
-        <RadarTopNav newsImpactEnabled={newsImpactEnabled} />
-        <CoinFuturesSwitch active={activeAssetId} onAssetChange={handleAssetChange} />
-        {revenueCoreMode === "on" ? (
-          <PerpetualDecisionExperience
-            key={activeAssetId}
-            asset={activeAssetId}
-            requestedSnapshotId={initialContinuityAvailable && activeAssetId === initialAsset ? initialSnapshotId : null}
-            source={initialContinuityAvailable && activeAssetId === initialAsset ? initialSource : null}
-            attributionId={initialContinuityAvailable && activeAssetId === initialAsset ? initialAttributionId : null}
-            impactId={initialContinuityAvailable && activeAssetId === initialAsset ? initialImpactId : null}
-            initialAlertMonitorId={initialContinuityAvailable && activeAssetId === initialAsset ? initialMonitorId : null}
-          />
-        ) : revenueCoreMode === "shadow" ? (
-          <ShadowPerpetualCanaryGate
-            asset={activeAssetId}
-            selectedSymbols={selectedSymbols}
-            requestedSnapshotId={initialContinuityAvailable && activeAssetId === initialAsset ? initialSnapshotId : null}
-            source={initialContinuityAvailable && activeAssetId === initialAsset ? initialSource : null}
-            attributionId={initialContinuityAvailable && activeAssetId === initialAsset ? initialAttributionId : null}
-            impactId={initialContinuityAvailable && activeAssetId === initialAsset ? initialImpactId : null}
-            monitorId={initialContinuityAvailable && activeAssetId === initialAsset ? initialMonitorId : null}
-          />
-        ) : (
-          <CoinFuturesBrief mode="major" symbols={selectedSymbols} />
-        )}
+    <PullToRefresh enabled={pullRefreshEnabled}>
+      <main className="min-h-screen max-w-full overflow-x-hidden px-3 pb-28 sm:px-5 sm:pb-16">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 sm:gap-3">
+          <Header market="crypto" />
+          <RadarTopNav newsImpactEnabled={newsImpactEnabled} />
+          <CoinFuturesSwitch active={activeAssetId} onAssetChange={handleAssetChange} />
+          {revenueCoreMode === "on" ? (
+            <PerpetualDecisionExperience
+              key={activeAssetId}
+              asset={activeAssetId}
+              requestedSnapshotId={initialContinuityAvailable && activeAssetId === initialAsset ? initialSnapshotId : null}
+              source={initialContinuityAvailable && activeAssetId === initialAsset ? initialSource : null}
+              attributionId={initialContinuityAvailable && activeAssetId === initialAsset ? initialAttributionId : null}
+              impactId={initialContinuityAvailable && activeAssetId === initialAsset ? initialImpactId : null}
+              initialAlertMonitorId={initialContinuityAvailable && activeAssetId === initialAsset ? initialMonitorId : null}
+              onHistoricalContinuityChange={handleHistoricalContinuityChange}
+            />
+          ) : revenueCoreMode === "shadow" ? (
+            <ShadowPerpetualCanaryGate
+              asset={activeAssetId}
+              selectedSymbols={selectedSymbols}
+              requestedSnapshotId={initialContinuityAvailable && activeAssetId === initialAsset ? initialSnapshotId : null}
+              source={initialContinuityAvailable && activeAssetId === initialAsset ? initialSource : null}
+              attributionId={initialContinuityAvailable && activeAssetId === initialAsset ? initialAttributionId : null}
+              impactId={initialContinuityAvailable && activeAssetId === initialAsset ? initialImpactId : null}
+              monitorId={initialContinuityAvailable && activeAssetId === initialAsset ? initialMonitorId : null}
+              onHistoricalContinuityChange={handleHistoricalContinuityChange}
+            />
+          ) : (
+            <CoinFuturesBrief mode="major" symbols={selectedSymbols} />
+          )}
 
-        <section className="border-t border-ui-line pt-4" aria-labelledby="perpetual-market-context-title">
-          <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">시장 전체 환경</p>
-          <h2 id="perpetual-market-context-title" className="mt-1 text-ui-heading font-semibold tracking-tight text-ui-text">BTC 도미넌스·환율·스테이블코인 흐름도 함께 봅니다</h2>
-          <p className="mt-1 text-ui-body text-ui-muted [word-break:keep-all]">위의 같은 시각 분석을 우선하고, 시장 전체 자금 환경이 충돌하는지 아래에서 교차 확인합니다.</p>
-        </section>
-        <CoinMarketEnvironmentPanel mode="major" />
-        <CoinStablecoinLiquidityPanel />
+          <section className="border-t border-ui-line pt-4" aria-labelledby="perpetual-market-context-title">
+            <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">시장 전체 환경</p>
+            <h2 id="perpetual-market-context-title" className="mt-1 text-ui-heading font-semibold tracking-tight text-ui-text">BTC 도미넌스·환율·스테이블코인 흐름도 함께 봅니다</h2>
+            <p className="mt-1 text-ui-body text-ui-muted [word-break:keep-all]">위의 같은 시각 분석을 우선하고, 시장 전체 자금 환경이 충돌하는지 아래에서 교차 확인합니다.</p>
+          </section>
+          <CoinMarketEnvironmentPanel mode="major" />
+          <CoinStablecoinLiquidityPanel />
 
-        <BackgroundEvidenceDisclosure>
-          {activeAsset.id === "btc" ? <CoinOnchainPulsePanel /> : null}
-          <CoinOptionsMarketPanel currencies={selectedOptionCurrencies} />
-        </BackgroundEvidenceDisclosure>
-      </div>
-    </main>
+          <BackgroundEvidenceDisclosure>
+            {activeAsset.id === "btc" ? <CoinOnchainPulsePanel /> : null}
+            <CoinOptionsMarketPanel currencies={selectedOptionCurrencies} />
+          </BackgroundEvidenceDisclosure>
+        </div>
+      </main>
+    </PullToRefresh>
   );
 }
