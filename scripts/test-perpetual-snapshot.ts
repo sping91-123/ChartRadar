@@ -7,6 +7,8 @@ import { isHomePriorityMacro } from "../src/lib/homeMacroPriority";
 import { analyzeTimeframe, type Candle } from "../src/lib/marketAnalysis";
 import { parseClosedBinanceKlines } from "../src/lib/marketTime";
 import { comparePerpetualShadowDecision } from "../src/lib/perpetualShadowComparison";
+import { decisionJournalContextFromSnapshot } from "../src/lib/journal";
+import type { ConfirmedCommonRangeOteV1 } from "../src/lib/confirmedCommonRangeOte";
 import { monitorConditionHeading } from "../src/lib/perpetualDecisionCopy";
 import {
   isPerpetualRevenueCoreScannerEnabled,
@@ -228,6 +230,46 @@ assert.ok(first.pro?.multiTimeframeEvidence.every((evidence) => evidence.details
 assert.doesNotMatch(first.summary.headline, /상방 구조|하방 구조|유지 조건|스냅샷/, "the main conclusion must be understandable without internal jargon");
 assert.ok(first.summary.primaryCondition.id.includes("perpetual-v1.0.0"), "monitor IDs must remain compatible with already saved v1.0 conditions");
 assert.ok(new Date(first.summary.primaryCondition.expiresAt).getTime() > new Date(generatedAt).getTime());
+
+const confirmedCommonRangeFixture: ConfirmedCommonRangeOteV1 = {
+  version: "confirmedCommonRangeV1",
+  sourceIndicatorVersion: "Coters-v2.48",
+  sourceTimeframe: "1h",
+  probeTimeframe: "15m",
+  closedOnly: true,
+  historyMode: "bounded-replay",
+  exactPineStateParity: false,
+  swingLength: 2,
+  maxAgeBars: 24,
+  sourceBarCount: 320,
+  rangeId: "BTCUSDT|1h|2026-07-19T11:00:00.000Z",
+  confirmedAt: "2026-07-19T11:00:00.000Z",
+  ageBars: 1,
+  rangeLow: 59_123.45,
+  rangeHigh: 61_987.65,
+  midpoint: 60_555.55,
+  activeZone: "none",
+  long: { valid: true, low: 59_725, high: 60_212, ideal: 59_968.5, touchedByLatestClosed15m: false },
+  short: { valid: true, low: 60_899, high: 61_386, ideal: 61_142.5, touchedByLatestClosed15m: false }
+};
+const withConfirmedCommonRange = buildPerpetualDecisionSnapshot(input({ confirmedCommonRangeV1: confirmedCommonRangeFixture }));
+assert.deepEqual(withConfirmedCommonRange.summary, first.summary, "shadow OTE evidence must not change the public decision");
+assert.deepEqual(withConfirmedCommonRange.publicEvidence, first.publicEvidence, "shadow OTE evidence must not enter Basic evidence");
+assert.deepEqual(withConfirmedCommonRange.pro?.confirmationConditions, first.pro?.confirmationConditions, "shadow OTE must not change confirmations");
+assert.deepEqual(withConfirmedCommonRange.pro?.invalidationConditions, first.pro?.invalidationConditions, "shadow OTE must not change invalidations");
+assert.deepEqual(withConfirmedCommonRange.pro?.multiTimeframeEvidence, first.pro?.multiTimeframeEvidence, "legacy OTE and timeframe evidence remain unchanged");
+assert.deepEqual(decisionJournalContextFromSnapshot(withConfirmedCommonRange), decisionJournalContextFromSnapshot(first), "journal context must ignore shadow OTE");
+assert.equal(withConfirmedCommonRange.engineVersion, first.engineVersion, "additive Pro evidence does not change engine semantics");
+assert.deepEqual(withConfirmedCommonRange.pro?.confirmedCommonRangeV1, confirmedCommonRangeFixture);
+for (const condition of [first.summary.primaryCondition, ...(first.pro?.confirmationConditions ?? []), ...(first.pro?.invalidationConditions ?? [])]) {
+  assert.equal(
+    isMonitorConditionMet(condition, withConfirmedCommonRange),
+    isMonitorConditionMet(condition, first),
+    `shadow OTE must not change monitor evaluation for ${condition.id}`
+  );
+}
+const shadowBasicText = JSON.stringify(serializeBasicPerpetualSnapshot(withConfirmedCommonRange));
+assert.doesNotMatch(shadowBasicText, /confirmedCommonRangeV1|59123\.45|61987\.65/, "Basic serialization must not expose shadow OTE fields or prices");
 
 const neutralFrames = [observation("15m", 15 * 60, 0), observation("1h", 60 * 60, 0), observation("4h", 4 * 60 * 60, 0)] as const;
 const neutralSnapshot = buildPerpetualDecisionSnapshot(input({

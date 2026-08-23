@@ -1,4 +1,5 @@
 import type { Candle, DirectionState, MarketRegime, TimeframeAnalysis } from "@/lib/marketAnalysis";
+import type { ConfirmedCommonRangeOteV1 } from "@/lib/confirmedCommonRangeOte";
 import type { LargeTradeFlowReport, LargeTradeSide } from "@/lib/largeTradeFlow";
 import type { LiquidationPressureReport, LiquidationPressureSide } from "@/lib/liquidationPressure";
 
@@ -140,6 +141,7 @@ export interface PerpetualDecisionSnapshot {
   };
   pro?: {
     detailVersion?: 1;
+    confirmedCommonRangeV1?: ConfirmedCommonRangeOteV1 | null;
     confirmationConditions: MonitorCondition[];
     invalidationConditions: MonitorCondition[];
     multiTimeframeEvidence: PerpetualDecisionEvidence[];
@@ -210,6 +212,7 @@ export interface BuildPerpetualDecisionInput {
   generatedAt: string;
   sourceStatus: PerpetualDecisionSnapshot["sourceStatus"];
   timeframes: [PerpetualTimeframeObservation, PerpetualTimeframeObservation, PerpetualTimeframeObservation];
+  confirmedCommonRangeV1?: ConfirmedCommonRangeOteV1 | null;
   pressure: LiquidationPressureReport | null;
   flow: LargeTradeFlowReport | null;
   previousSnapshot?: Pick<PerpetualDecisionSnapshot, "summary" | "generatedAt"> | null;
@@ -648,6 +651,9 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
     },
     pro: {
       detailVersion: 1,
+      ...(input.confirmedCommonRangeV1 !== undefined
+        ? { confirmedCommonRangeV1: input.confirmedCommonRangeV1 }
+        : {}),
       confirmationConditions: quality === "ready" ? confirmationConditions : [],
       invalidationConditions: quality === "ready" ? invalidationConditions : [],
       multiTimeframeEvidence: input.timeframes.map((observation) => ({

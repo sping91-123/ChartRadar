@@ -39,7 +39,17 @@ import {
 } from "@/lib/marketAnalysis";
 import { appendJournalEntry } from "@/lib/journal";
 import type { MarketBriefingInput } from "@/lib/ai/types";
-import { normalizePineDirection, parsePineSnapshot, pineDirectionForTimeframe, type PineSnapshot } from "@/lib/pineParity";
+import {
+  calculatePineParityScore,
+  normalizePineDirection,
+  parsePineSnapshot,
+  pineChartBasisComparable,
+  pineDirectionBasisComparable,
+  pineDirectionComparisonForTimeframe,
+  pineEmaComparison,
+  pineOteComparison,
+  type PineSnapshot
+} from "@/lib/pineParity";
 import { createRemoteJournalEntry } from "@/lib/remoteJournal";
 import { evaluateRadarDecision } from "@/lib/radarDecisionEngine";
 import { getActiveSupabaseSession } from "@/lib/supabase";
@@ -254,26 +264,44 @@ function radarPulseClasses(tone: RadarPulseTone) {
 
 function compareNumber(webValue: number | null, pineValue: number | null | undefined, tolerancePct = 0.0005) {
   if (webValue === null || pineValue === null || pineValue === undefined || !Number.isFinite(Number(pineValue))) {
-    return { result: "대기", matched: false };
+    return { result: "비교 제외", matched: false, comparable: false };
   }
 
   const diff = Math.abs(webValue - Number(pineValue));
   const tolerance = Math.max(Math.abs(webValue) * tolerancePct, 1e-8);
   return {
     result: diff <= tolerance ? "일치" : `차이 ${formatPrice(diff)}`,
-    matched: diff <= tolerance
+    matched: diff <= tolerance,
+    comparable: true
   };
 }
 
 function compareOptionalValue(webValue: string, pineValue: string | undefined) {
-  if (!pineValue) {
-    return { result: "대기", matched: false };
+  if (!webValue || !pineValue) {
+    return { result: "비교 제외", matched: false, comparable: false };
   }
 
   return {
     result: webValue === pineValue ? "일치" : "차이",
-    matched: webValue === pineValue
+    matched: webValue === pineValue,
+    comparable: true
   };
+}
+
+function skippedParity(result: "비교 제외" | "신뢰 제외" | "기준 다름") {
+  return { result, matched: false, comparable: false } as const;
+}
+
+function applyParityBasis(
+  comparison: { result: string; matched: boolean; comparable: boolean },
+  basisComparable: boolean
+) {
+  return comparison.comparable && !basisComparable ? skippedParity("기준 다름") : comparison;
+}
+
+function pineOteZoneLabel(value: ReturnType<typeof pineOteComparison>["zone"]) {
+  if (value === "both") return "양방향";
+  return stateLabel(value);
 }
 
 function MiniMetric({ label, value }: { label: string; value: string }) {
@@ -1155,12 +1183,28 @@ export function LiveMarketChart({
   const parityRows = useMemo<ParityRow[]>(() => {
     if (!activeAnalysis || !pineSnapshot) return [];
 
-    const pineMsbFromSnapshot = pineSnapshot.msb ? pineDirectionForTimeframe(pineSnapshot.msb, activeTimeframe) : "unknown";
-    const pineChochFromSnapshot = pineSnapshot.choch
-      ? pineDirectionForTimeframe(pineSnapshot.choch, activeTimeframe)
-      : "unknown";
-    const pineMsb = pineMsbFromSnapshot !== "unknown" ? pineMsbFromSnapshot : normalizePineDirection(pineSnapshot.market);
-    const pineChoch = pineChochFromSnapshot !== "unknown" ? pineChochFromSnapshot : normalizePineDirection(pineSnapshot.chochDir);
+    const pineMsbSample = pineDirectionComparisonForTimeframe(
+      pineSnapshot.msb,
+      pineSnapshot.market,
+      activeTimeframe,
+      pineSnapshot.mtfReliable,
+      pineSnapshot.chartTf
+    );
+    const pineChochSample = pineDirectionComparisonForTimeframe(
+      pineSnapshot.choch,
+      pineSnapshot.chochDir,
+      activeTimeframe,
+      pineSnapshot.mtfReliable,
+      pineSnapshot.chartTf
+    );
+    const pineMsb = pineMsbSample.direction;
+    const pineChoch = pineChochSample.direction;
+    const directionBasisComparable = pineDirectionBasisComparable(pineSnapshot, activeTimeframe, analysisMode, symbol);
+    const chartBasisComparable = pineChartBasisComparable(pineSnapshot, activeTimeframe, analysisMode, symbol);
+    const pineMsbComparable = pineMsbSample.comparable && directionBasisComparable;
+    const pineChochComparable = pineChochSample.comparable && directionBasisComparable;
+    const pineEma = pineEmaComparison(pineSnapshot, activeTimeframe, analysisMode, symbol);
+    const pineOte = pineOteComparison(pineSnapshot, activeTimeframe, analysisMode, symbol);
     const pineLatestFvg = pineSnapshot.latestFvg ??
       (pineSnapshot.fvgDir && pineSnapshot.fvgDir !== "none"
         ? {
@@ -1174,186 +1218,195 @@ export function LiveMarketChart({
       pineSnapshot.latestOb?.direction && pineSnapshot.latestOb.direction !== "none" ? pineSnapshot.latestOb.direction : undefined;
     const pineCisdDirection =
       pineSnapshot.latestCisd?.direction ?? (pineSnapshot.cisd && pineSnapshot.cisd !== "none" ? normalizePineDirection(pineSnapshot.cisd) : undefined);
+    const pineFvgBasisComparable = chartBasisComparable && pineSnapshot.latestFvg != null;
+    const pineCisdBasisComparable = chartBasisComparable && pineSnapshot.latestCisd != null;
     const rows: ParityRow[] = [
       {
         label: "MSB direction",
         web: stateLabel(activeAnalysis.msb),
         pine: stateLabel(pineMsb),
-        matched: activeAnalysis.msb === pineMsb,
-        result: activeAnalysis.msb === pineMsb ? "일치" : "차이",
+        comparable: pineMsbComparable,
+        matched: pineMsbComparable && activeAnalysis.msb === pineMsb,
+        result: !pineMsbComparable ? (pineMsbSample.reason === "unreliable" ? "신뢰 제외" : !directionBasisComparable || pineMsbSample.reason === "basis-mismatch" ? "기준 다름" : "비교 제외") : activeAnalysis.msb === pineMsb ? "일치" : "차이",
         importance: "core"
       },
       {
         label: "CHoCH direction",
         web: stateLabel(activeAnalysis.choch),
         pine: stateLabel(pineChoch),
-        matched: activeAnalysis.choch === pineChoch,
-        result: activeAnalysis.choch === pineChoch ? "일치" : "차이",
+        comparable: pineChochComparable,
+        matched: pineChochComparable && activeAnalysis.choch === pineChoch,
+        result: !pineChochComparable ? (pineChochSample.reason === "unreliable" ? "신뢰 제외" : !directionBasisComparable || pineChochSample.reason === "basis-mismatch" ? "기준 다름" : "비교 제외") : activeAnalysis.choch === pineChoch ? "일치" : "차이",
         importance: "core"
       },
       {
         label: "h0",
         web: activeAnalysis.debug.h0 ? formatPrice(activeAnalysis.debug.h0) : "-",
         pine: pineSnapshot.h0 ? formatPrice(Number(pineSnapshot.h0)) : "-",
-        ...compareNumber(activeAnalysis.debug.h0, pineSnapshot.h0),
+        ...applyParityBasis(compareNumber(activeAnalysis.debug.h0, pineSnapshot.h0), chartBasisComparable),
         importance: "major"
       },
       {
         label: "h1",
         web: activeAnalysis.debug.h1 ? formatPrice(activeAnalysis.debug.h1) : "-",
         pine: pineSnapshot.h1 ? formatPrice(Number(pineSnapshot.h1)) : "-",
-        ...compareNumber(activeAnalysis.debug.h1, pineSnapshot.h1),
+        ...applyParityBasis(compareNumber(activeAnalysis.debug.h1, pineSnapshot.h1), chartBasisComparable),
         importance: "major"
       },
       {
         label: "l0",
         web: activeAnalysis.debug.l0 ? formatPrice(activeAnalysis.debug.l0) : "-",
         pine: pineSnapshot.l0 ? formatPrice(Number(pineSnapshot.l0)) : "-",
-        ...compareNumber(activeAnalysis.debug.l0, pineSnapshot.l0),
+        ...applyParityBasis(compareNumber(activeAnalysis.debug.l0, pineSnapshot.l0), chartBasisComparable),
         importance: "major"
       },
       {
         label: "l1",
         web: activeAnalysis.debug.l1 ? formatPrice(activeAnalysis.debug.l1) : "-",
         pine: pineSnapshot.l1 ? formatPrice(Number(pineSnapshot.l1)) : "-",
-        ...compareNumber(activeAnalysis.debug.l1, pineSnapshot.l1),
+        ...applyParityBasis(compareNumber(activeAnalysis.debug.l1, pineSnapshot.l1), chartBasisComparable),
         importance: "major"
       },
       {
-        label: "EMA200 side",
-        web: stateLabel(activeAnalysis.ema200Side),
-        pine: stateLabel(pineSnapshot.ema200Side ?? "unknown"),
-        ...compareOptionalValue(activeAnalysis.ema200Side, pineSnapshot.ema200Side),
+        label: "EMA side",
+        web: `Radar EMA200 ${stateLabel(activeAnalysis.ema200Side)}`,
+        pine: `${pineEma.label} ${stateLabel(pineEma.side)}`,
+        ...(pineEma.available
+          ? pineEma.comparable
+            ? compareOptionalValue(activeAnalysis.ema200Side, pineEma.side)
+            : skippedParity("기준 다름")
+          : skippedParity("비교 제외")),
         importance: "major"
       },
       {
         label: "PD zone",
         web: stateLabel(activeAnalysis.premiumDiscount),
         pine: stateLabel(pineSnapshot.premiumDiscount ?? "unknown"),
-        ...compareOptionalValue(activeAnalysis.premiumDiscount, pineSnapshot.premiumDiscount),
+        ...applyParityBasis(compareOptionalValue(activeAnalysis.premiumDiscount, pineSnapshot.premiumDiscount), chartBasisComparable),
         importance: "major"
       },
       {
         label: "OTE zone",
         web: stateLabel(activeAnalysis.oteZone),
-        pine: stateLabel(pineSnapshot.oteZone ?? "unknown"),
-        ...compareOptionalValue(activeAnalysis.oteZone, pineSnapshot.oteZone),
+        pine: pineOteZoneLabel(pineOte.zone),
+        ...(pineOte.available
+          ? pineOte.comparable
+            ? compareOptionalValue(activeAnalysis.oteZone, pineOte.zone)
+            : skippedParity(pineOte.reliable ? "기준 다름" : "신뢰 제외")
+          : skippedParity("비교 제외")),
         importance: "major"
       },
       {
         label: "OB direction",
         web: activeAnalysis.latestOb ? stateLabel(activeAnalysis.latestOb.direction) : "-",
         pine: pineObDirection ? stateLabel(pineObDirection) : "-",
-        ...compareOptionalValue(activeAnalysis.latestOb?.direction ?? "", pineObDirection),
+        ...applyParityBasis(compareOptionalValue(activeAnalysis.latestOb?.direction ?? "", pineObDirection), chartBasisComparable),
         importance: "major"
       },
       {
         label: "OB top",
         web: activeAnalysis.latestOb ? formatPrice(activeAnalysis.latestOb.top) : "-",
         pine: pineSnapshot.latestOb?.top ? formatPrice(Number(pineSnapshot.latestOb.top)) : "-",
-        ...compareNumber(activeAnalysis.latestOb?.top ?? null, pineSnapshot.latestOb?.top),
+        ...applyParityBasis(compareNumber(activeAnalysis.latestOb?.top ?? null, pineSnapshot.latestOb?.top), chartBasisComparable),
         importance: "minor"
       },
       {
         label: "OB bottom",
         web: activeAnalysis.latestOb ? formatPrice(activeAnalysis.latestOb.bottom) : "-",
         pine: pineSnapshot.latestOb?.bottom ? formatPrice(Number(pineSnapshot.latestOb.bottom)) : "-",
-        ...compareNumber(activeAnalysis.latestOb?.bottom ?? null, pineSnapshot.latestOb?.bottom),
+        ...applyParityBasis(compareNumber(activeAnalysis.latestOb?.bottom ?? null, pineSnapshot.latestOb?.bottom), chartBasisComparable),
         importance: "minor"
       },
       {
         label: "FVG direction",
         web: activeAnalysis.latestFvg ? stateLabel(activeAnalysis.latestFvg.direction) : "-",
         pine: pineLatestFvg?.direction ? stateLabel(pineLatestFvg.direction) : "-",
-        ...compareOptionalValue(activeAnalysis.latestFvg?.direction ?? "", pineLatestFvg?.direction),
+        ...applyParityBasis(compareOptionalValue(activeAnalysis.latestFvg?.direction ?? "", pineLatestFvg?.direction), pineFvgBasisComparable),
         importance: "major"
       },
       {
         label: "FVG state",
         web: activeAnalysis.latestFvg?.state?.toUpperCase() ?? "-",
         pine: pineLatestFvg?.state?.toUpperCase() ?? "-",
-        ...compareOptionalValue(activeAnalysis.latestFvg?.state ?? "", pineLatestFvg?.state),
+        ...applyParityBasis(compareOptionalValue(activeAnalysis.latestFvg?.state ?? "", pineLatestFvg?.state), pineFvgBasisComparable),
         importance: "minor"
       },
       {
         label: "FVG top",
         web: activeAnalysis.latestFvg ? formatPrice(activeAnalysis.latestFvg.top) : "-",
         pine: pineLatestFvg?.top ? formatPrice(Number(pineLatestFvg.top)) : "-",
-        ...compareNumber(activeAnalysis.latestFvg?.top ?? null, pineLatestFvg?.top),
+        ...applyParityBasis(compareNumber(activeAnalysis.latestFvg?.top ?? null, pineLatestFvg?.top), pineFvgBasisComparable),
         importance: "minor"
       },
       {
         label: "FVG bottom",
         web: activeAnalysis.latestFvg ? formatPrice(activeAnalysis.latestFvg.bottom) : "-",
         pine: pineLatestFvg?.bottom ? formatPrice(Number(pineLatestFvg.bottom)) : "-",
-        ...compareNumber(activeAnalysis.latestFvg?.bottom ?? null, pineLatestFvg?.bottom),
+        ...applyParityBasis(compareNumber(activeAnalysis.latestFvg?.bottom ?? null, pineLatestFvg?.bottom), pineFvgBasisComparable),
         importance: "minor"
       },
       {
         label: "Sweep direction",
         web: activeAnalysis.latestSweep ? stateLabel(activeAnalysis.latestSweep.direction) : "-",
         pine: pineSnapshot.latestSweep?.direction ? stateLabel(pineSnapshot.latestSweep.direction) : "-",
-        ...compareOptionalValue(activeAnalysis.latestSweep?.direction ?? "", pineSnapshot.latestSweep?.direction),
+        ...applyParityBasis(compareOptionalValue(activeAnalysis.latestSweep?.direction ?? "", pineSnapshot.latestSweep?.direction), chartBasisComparable),
         importance: "minor"
       },
       {
         label: "Sweep level",
         web: activeAnalysis.latestSweep ? formatPrice(activeAnalysis.latestSweep.level) : "-",
         pine: pineSnapshot.latestSweep?.level ? formatPrice(Number(pineSnapshot.latestSweep.level)) : "-",
-        ...compareNumber(activeAnalysis.latestSweep?.level ?? null, pineSnapshot.latestSweep?.level),
+        ...applyParityBasis(compareNumber(activeAnalysis.latestSweep?.level ?? null, pineSnapshot.latestSweep?.level), chartBasisComparable),
         importance: "minor"
       },
       {
         label: "CISD direction",
         web: activeAnalysis.latestCisd ? stateLabel(activeAnalysis.latestCisd.direction) : "-",
         pine: pineCisdDirection ? stateLabel(pineCisdDirection) : "-",
-        ...compareOptionalValue(activeAnalysis.latestCisd?.direction ?? "", pineCisdDirection),
+        ...applyParityBasis(compareOptionalValue(activeAnalysis.latestCisd?.direction ?? "", pineCisdDirection), pineCisdBasisComparable),
         importance: "minor"
       },
       {
         label: "CISD level",
         web: activeAnalysis.latestCisd ? formatPrice(activeAnalysis.latestCisd.level) : "-",
         pine: pineSnapshot.latestCisd?.level ? formatPrice(Number(pineSnapshot.latestCisd.level)) : "-",
-        ...compareNumber(activeAnalysis.latestCisd?.level ?? null, pineSnapshot.latestCisd?.level),
+        ...applyParityBasis(compareNumber(activeAnalysis.latestCisd?.level ?? null, pineSnapshot.latestCisd?.level), pineCisdBasisComparable),
         importance: "minor"
       },
       {
         label: "hiPts count",
         web: String(activeAnalysis.debug.hiCount),
         pine: pineSnapshot.hiCount === undefined ? "-" : String(pineSnapshot.hiCount),
-        matched: pineSnapshot.hiCount === activeAnalysis.debug.hiCount,
-        result: pineSnapshot.hiCount === activeAnalysis.debug.hiCount ? "일치" : "차이",
+        ...applyParityBasis({
+          comparable: pineSnapshot.hiCount !== undefined,
+          matched: pineSnapshot.hiCount !== undefined && pineSnapshot.hiCount === activeAnalysis.debug.hiCount,
+          result: pineSnapshot.hiCount === undefined ? "비교 제외" : pineSnapshot.hiCount === activeAnalysis.debug.hiCount ? "일치" : "차이"
+        }, chartBasisComparable),
         importance: "minor"
       },
       {
         label: "loPts count",
         web: String(activeAnalysis.debug.loCount),
         pine: pineSnapshot.loCount === undefined ? "-" : String(pineSnapshot.loCount),
-        matched: pineSnapshot.loCount === activeAnalysis.debug.loCount,
-        result: pineSnapshot.loCount === activeAnalysis.debug.loCount ? "일치" : "차이",
+        ...applyParityBasis({
+          comparable: pineSnapshot.loCount !== undefined,
+          matched: pineSnapshot.loCount !== undefined && pineSnapshot.loCount === activeAnalysis.debug.loCount,
+          result: pineSnapshot.loCount === undefined ? "비교 제외" : pineSnapshot.loCount === activeAnalysis.debug.loCount ? "일치" : "차이"
+        }, chartBasisComparable),
         importance: "minor"
       }
     ];
 
     return rows.filter((row) => row.web !== "-" || row.pine !== "-");
-  }, [activeAnalysis, activeTimeframe, pineSnapshot]);
+  }, [activeAnalysis, activeTimeframe, analysisMode, pineSnapshot, symbol]);
 
   const parityScore = useMemo(() => {
-    if (!parityRows.length) return null;
-    const weighted = parityRows.reduce(
-      (acc, row) => {
-        const weight = row.importance === "core" ? 3 : row.importance === "major" ? 2 : 1;
-        return {
-          total: acc.total + weight,
-          matched: acc.matched + (row.matched ? weight : 0)
-        };
-      },
-      { total: 0, matched: 0 }
-    );
-    return Math.round((weighted.matched / weighted.total) * 100);
+    return calculatePineParityScore(parityRows);
   }, [parityRows]);
 
-  const parityMismatches = useMemo(() => parityRows.filter((row) => !row.matched), [parityRows]);
+  const parityMismatches = useMemo(() => parityRows.filter((row) => row.comparable && !row.matched), [parityRows]);
+  const parityComparableCount = parityRows.reduce((count, row) => count + (row.comparable ? 1 : 0), 0);
+  const paritySkippedCount = parityRows.length - parityComparableCount;
 
   const groupedReasons = useMemo(() => {
     if (!analysis) {
@@ -2881,16 +2934,17 @@ export function LiveMarketChart({
                       className="mt-3 min-h-24 w-full rounded-ui-sm border border-ui-line bg-ui-panel px-3 py-2 text-xs leading-5 text-slate-200 outline-none focus:border-accent-blue"
                     />
                     <p className="mt-2 text-[11px] leading-5 text-slate-500">
-                      지원 필드: market, chochDir, h0/h1/l0/l1, msb.{activeTimeframe}, choch.{activeTimeframe}, latestOb.*, latestFvg.*, fvgDir/fvgTop/fvgBottom, latestSweep.*, latestCisd.*, cisd
+                      지원 필드: schemaVersion, chartTf, barConfirmed, confirmedRequested, msb/choch, mtfReliable, emaLength/emaSide/emaSmooth, ote/oteZone, market, chochDir, h0/h1/l0/l1, latestOb.*, latestFvg.*, latestSweep.*, latestCisd.*, cisd · v2.48 OTE/FVG/CISD 별칭은 기준 차이로 정보만 표시
                     </p>
                     {pineSnapshotInput.trim() && !pineSnapshot ? (
                       <p className="mt-2 text-xs text-signal-danger">입력값을 읽지 못했습니다. JSON 또는 market=1, h0=... 형태로 넣어주세요.</p>
                     ) : null}
                     {parityRows.length > 0 ? (
-                      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                      <div className="mt-3 grid gap-3 sm:grid-cols-4">
                         <MiniMetric label="핵심 일치율" value={parityScore !== null ? `${parityScore}%` : "-"} />
-                        <MiniMetric label="대조 항목 수" value={String(parityRows.length)} />
+                        <MiniMetric label="대조 가능 항목" value={String(parityComparableCount)} />
                         <MiniMetric label="어긋난 항목" value={String(parityMismatches.length)} />
+                        <MiniMetric label="비교 제외" value={String(paritySkippedCount)} />
                       </div>
                     ) : null}
                     {parityMismatches.length > 0 ? (
@@ -2936,7 +2990,7 @@ export function LiveMarketChart({
                             </span>
                             <span>{row.web}</span>
                             <span>{row.pine}</span>
-                            <span className={row.matched ? "font-bold text-signal-success" : "font-bold text-signal-warning"}>
+                            <span className={!row.comparable ? "font-semibold text-slate-500" : row.matched ? "font-bold text-signal-success" : "font-bold text-signal-warning"}>
                               {row.result}
                             </span>
                           </div>

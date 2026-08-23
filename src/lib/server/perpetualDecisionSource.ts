@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { fetchLargeTradeFlowReport } from "@/lib/server/largeTradeFlowSource";
 import { fetchLiquidationPressureReport } from "@/lib/server/liquidationPressureSource";
 import { analyzeTimeframe, type Candle } from "@/lib/marketAnalysis";
+import { detectConfirmedCommonRangeOteV1 } from "@/lib/confirmedCommonRangeOte";
 import { parseClosedBinanceKlines, sourceAgeMs } from "@/lib/marketTime";
 import {
   buildPerpetualDecisionSnapshot,
@@ -447,6 +448,12 @@ async function generateSnapshot(asset: PerpetualAsset, asOf: Date, previousSnaps
   if (!Number.isFinite(price) || price <= 0) throw new Error(`${symbol} decision price unavailable`);
   const pressure = pressureResult.status === "fulfilled" ? pressureResult.value : null;
   const flow = flowResult.status === "fulfilled" ? flowResult.value : null;
+  const confirmedCommonRangeV1 = detectConfirmedCommonRangeOteV1({
+    symbol,
+    sourceCandles: candleRows[1].candles,
+    latestClosed15m: candleRows[0].candles.at(-1) ?? null,
+    asOfMs
+  });
   const observations = candleRows.map((row) => ({
     timeframe: row.timeframe,
     analysis: analyzeTimeframe(row.timeframe, row.candles, { requireEstablishedStructure: true }),
@@ -471,6 +478,7 @@ async function generateSnapshot(asset: PerpetualAsset, asOf: Date, previousSnaps
     generatedAt: asOf.toISOString(),
     sourceStatus,
     timeframes: observations,
+    confirmedCommonRangeV1,
     pressure,
     flow,
     previousSnapshot

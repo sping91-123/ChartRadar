@@ -14,6 +14,7 @@ import {
   transitionExplanation
 } from "@/lib/perpetualDecisionCopy";
 import type { DirectionState } from "@/lib/marketAnalysis";
+import type { ConfirmedCommonRangeOteV1 } from "@/lib/confirmedCommonRangeOte";
 import type { PerpetualDecisionEvidence, PerpetualDecisionSnapshot, PerpetualTimedLevel } from "@/lib/perpetualDecisionSnapshot";
 
 function tone(direction: DirectionState) {
@@ -145,7 +146,7 @@ function IctDetails({ evidence }: { evidence?: PerpetualDecisionEvidence }) {
         <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">{beginnerTerm("poc")}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{poc ? `${formatPrice(poc.poc)} · 현재가는 ${poc.position === "above" ? "위" : poc.position === "below" ? "아래" : "근처"}` : "거래 집중 가격 확인 중"}</p></article>
         <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">{beginnerTerm("pd")}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{pd === "premium" ? "최근 범위의 위쪽" : pd === "discount" ? "최근 범위의 아래쪽" : pd === "equilibrium" ? "최근 범위의 가운데" : "현재 위치 확인 중"}</p></article>
         <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">최근 가격 범위</p><p className="mt-1 text-xs leading-5 text-ui-muted">{range.low !== null && range.high !== null ? `${formatPrice(range.low)}~${formatPrice(range.high)} · 가운데 ${formatPrice(range.equilibrium)}` : "가격 범위 확인 중"}</p></article>
-        <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">되돌림 확인 구간(OTE)</p><p className="mt-1 text-xs leading-5 text-ui-muted">{ote ? details.location.oteZone === "long" ? `${formatPrice(ote.longLow)}~${formatPrice(ote.longHigh)} · 상방 확인 구간` : details.location.oteZone === "short" ? `${formatPrice(ote.shortLow)}~${formatPrice(ote.shortHigh)} · 하방 확인 구간` : "현재가는 주요 되돌림 구간 밖" : "구간 확인 중"}</p></article>
+        <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">기존 OTE(현재 TF 최근 20봉)</p><p className="mt-1 text-xs leading-5 text-ui-muted">{ote ? details.location.oteZone === "long" ? `${formatPrice(ote.longLow)}~${formatPrice(ote.longHigh)} · 상방 확인 구간` : details.location.oteZone === "short" ? `${formatPrice(ote.shortLow)}~${formatPrice(ote.shortHigh)} · 하방 확인 구간` : "현재가는 주요 되돌림 구간 밖" : "구간 확인 중"}</p></article>
       </div>
       <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
         <div className="bg-ui-inset/35 px-3 py-2"><p className="text-ui-subtle">매수·매도 과열도(RSI)</p><p className="mt-1 font-black text-ui-text">{typeof indicators.rsi14 === "number" ? indicators.rsi14.toFixed(1) : "확인 중"}</p></div>
@@ -154,6 +155,54 @@ function IctDetails({ evidence }: { evidence?: PerpetualDecisionEvidence }) {
         <div className="bg-ui-inset/35 px-3 py-2"><p className="text-ui-subtle">거래량</p><p className="mt-1 font-black text-ui-text">{typeof indicators.volumeRatio === "number" ? `평균의 ${indicators.volumeRatio.toFixed(2)}배` : "확인 중"}</p></div>
       </div>
     </div>
+  );
+}
+
+function ConfirmedCommonRangeOteCard({ model }: { model: ConfirmedCommonRangeOteV1 | null | undefined }) {
+  if (model === undefined) {
+    return <p className="mt-3 bg-ui-inset/35 px-3 py-3 text-xs leading-5 text-ui-muted">이전 분석에는 1시간 확정 공통범위 OTE가 저장되지 않았습니다.</p>;
+  }
+  if (model === null) {
+    return <p className="mt-3 bg-ui-inset/35 px-3 py-3 text-xs leading-5 text-ui-muted">교대하는 1시간 확정 고점·저점 범위를 확인 중입니다.</p>;
+  }
+
+  const activeZone = model.activeZone === "both"
+    ? "최근 확정 15분봉이 양쪽 구간을 모두 통과"
+    : model.activeZone === "long"
+      ? "최근 확정 15분봉이 매수 쪽 구간에 접촉"
+      : model.activeZone === "short"
+        ? "최근 확정 15분봉이 매도 쪽 구간에 접촉"
+        : "최근 확정 15분봉은 두 구간 밖";
+
+  return (
+    <section className="mt-3 bg-ui-inset/35 px-3 py-3" aria-label="1시간 확정 공통범위 OTE 검증 정보">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-xs font-black text-ui-text">1시간 확정 공통범위 OTE</p>
+          <p className="mt-1 text-[11px] leading-5 text-ui-muted">Coters v2.48 방식의 최근 구간 재현 · 판단·알림에는 아직 반영하지 않는 비교 근거</p>
+        </div>
+        <span className="bg-ui-panel px-2 py-1 text-[10px] font-black text-ui-watch">검증 중</span>
+      </div>
+      <p className="mt-2 text-xs font-semibold leading-5 text-ui-muted">
+        공통 범위 {formatPrice(model.rangeLow)}~{formatPrice(model.rangeHigh)} · {formatKstTime(model.confirmedAt)} 확정 · {model.ageBars}개 1시간봉 경과
+      </p>
+      <p className="mt-1 text-[11px] leading-5 text-ui-subtle">{activeZone}</p>
+      <p className="mt-1 text-[10px] leading-4 text-ui-subtle">
+        최근 {model.sourceBarCount}개 확정 1시간봉으로 다시 계산한 검증값입니다. TradingView가 더 오래 기억한 피벗 상태와는 달라질 수 있습니다.
+      </p>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <div className="bg-ui-panel/70 px-3 py-2">
+          <p className="text-[11px] font-black text-ui-long">매수 쪽 되돌림 확인 구간</p>
+          <p className="mt-1 text-xs font-semibold text-ui-text">{formatPrice(model.long.low)}~{formatPrice(model.long.high)} · 중심 {formatPrice(model.long.ideal)}</p>
+          <p className="mt-1 text-[10px] leading-4 text-ui-muted">{model.long.valid ? "유효" : "범위 저점 아래 1시간 종가로 무효"}{model.long.touchedByLatestClosed15m ? " · 최근 확정봉 접촉" : ""}</p>
+        </div>
+        <div className="bg-ui-panel/70 px-3 py-2">
+          <p className="text-[11px] font-black text-ui-short">매도 쪽 되돌림 확인 구간</p>
+          <p className="mt-1 text-xs font-semibold text-ui-text">{formatPrice(model.short.low)}~{formatPrice(model.short.high)} · 중심 {formatPrice(model.short.ideal)}</p>
+          <p className="mt-1 text-[10px] leading-4 text-ui-muted">{model.short.valid ? "유효" : "범위 고점 위 1시간 종가로 무효"}{model.short.touchedByLatestClosed15m ? " · 최근 확정봉 접촉" : ""}</p>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -320,7 +369,10 @@ export function PerpetualEvidenceWorkbench({ snapshot }: { snapshot: PerpetualDe
           <div className="mt-3 grid gap-2 md:grid-cols-3">{pro.multiTimeframeEvidence.map((evidence) => <TimeframeCard key={evidence.timeframe} evidence={evidence} />)}</div>
           <details className="group mt-3 border-t border-ui-line pt-2">
             <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-black text-ui-text marker:hidden [&::-webkit-details-marker]:hidden">고급 가격 구조 상세 보기 <ChevronDown size={16} className="transition group-open:rotate-180" aria-hidden /></summary>
-            <div className="mt-2"><IctDetails evidence={primary ?? pro.multiTimeframeEvidence[0]} /></div>
+            <div className="mt-2">
+              <IctDetails evidence={primary ?? pro.multiTimeframeEvidence[0]} />
+              <ConfirmedCommonRangeOteCard model={pro.confirmedCommonRangeV1} />
+            </div>
           </details>
         </section>
       ) : null}

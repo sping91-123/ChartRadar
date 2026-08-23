@@ -531,8 +531,14 @@ async function main() {
 
   const report = {
     generatedAt: new Date().toISOString(),
+    referenceContract: "Coters-v2.42 legacy structure only",
+    deterministicContracts: {
+      confirmedCommonRangeOte: "npm.cmd run test:perpetual-ote",
+      pineSnapshotSchema: "npm.cmd run test:pine-parity"
+    },
     notes: [
-      "Reference implementation follows Coters_v2.42 Pine defaults: useCloseForMSB=true, useVolFilter=true, ifvg_enabled=false.",
+      "This live comparison still follows Coters_v2.42 structure defaults: useCloseForMSB=true, useVolFilter=true, ifvg_enabled=false.",
+      "It must not be presented as v2.48 OTE parity; the v2.48 confirmed common-range contract is covered by the deterministic fixture command above.",
       "This validates structural parity, not trade profitability.",
       "FVG/OB mismatches are expected if the web engine only considers the latest zone while Pine keeps arrays of active boxes."
     ],

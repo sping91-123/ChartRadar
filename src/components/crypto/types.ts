@@ -38,6 +38,7 @@ export interface ParityRow {
   label: string;
   web: string;
   pine: string;
+  comparable: boolean;
   matched: boolean;
   result: string;
   importance: "core" | "major" | "minor";

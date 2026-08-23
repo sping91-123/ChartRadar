@@ -20,6 +20,8 @@
     "test:exchange-journal": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-exchange-journal.js && node .verify-dist/scripts/test-trade-quality.js && node .verify-dist/scripts/test-exchange-market-candles.js && node scripts/test-exchange-journal-ledger.mjs",
     "test:futures-brief": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-futures-brief.js",
     "test:perpetual-snapshot": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-perpetual-snapshot.js",
+    "test:perpetual-ote": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-perpetual-ote.js",
+    "test:pine-parity": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-pine-parity.js",
     "test:perpetual-chart-overlays": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-perpetual-chart-overlays.js",
     "test:perpetual-briefing": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-perpetual-briefing.js",
     "test:coin-market-metrics": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-coin-market-metrics.js",
