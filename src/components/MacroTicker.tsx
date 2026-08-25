@@ -7,7 +7,7 @@ import { CalendarClock, ChevronDown, ChevronRight, ExternalLink, Minus, Radio, T
 import { type MacroEventItem } from "@/data/macroEvents";
 import { isHighImpactMacroEvent, isHomePriorityMacro, isSameKstDate } from "@/lib/homeMacroPriority";
 import { getMacroCalendarFallbackPayload, type MacroCalendarPayload } from "@/lib/macroCalendar";
-import { assessMacroImpact, type MacroImpactAssessment } from "@/lib/macro/macroImpact";
+import { assessMacroImpact, supportsMacroImpactAssessment, type MacroImpactAssessment } from "@/lib/macro/macroImpact";
 import { StatusPill } from "@/components/ui/DesignPrimitives";
 import {
   fomcCompactFields,
@@ -573,6 +573,7 @@ export function MacroTicker({
   const nearestUpcoming = upcomingItems[0];
   const featuredUpcomingItems = upcomingItems.slice(0, isUpcomingExpanded ? 8 : 2);
   const laterUpcomingItems = upcomingItems.slice(1, 7);
+  const isCryptoHome = pathname === "/crypto/home";
   const isNewsMacroReport = compact && !homePriorityAware && (pathname === "/news" || pathname === "/crypto/news");
   const homePriorityItem = homePriorityAware ? getHomePriorityItem(displayItems) : undefined;
   const homeVisibleItems = homePriorityAware ? displayItems.filter(isHighImpactMacro) : [];
@@ -749,15 +750,41 @@ export function MacroTicker({
     const impactToneClass = macroImpactToneClass(impactAssessment);
     const homePreviousImpact = homePreviousRelease ? assessMacroImpact(homePreviousRelease) : null;
     const href = market === "stocks" ? "/schedule?market=global" : "/schedule?market=crypto";
+    const shouldShowPreviousReleaseSummary = !isReleased && homePreviousRelease && homePreviousRelease.id !== item.id && (!isCryptoHome || Boolean(homePreviousImpact));
+    const previousReleaseSummary = shouldShowPreviousReleaseSummary && homePreviousRelease ? (
+      <Link
+        href={href}
+        className="flex min-h-8 flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-ui-lg bg-ui-inset/35 px-2.5 py-1.5 text-[10.5px] font-semibold text-ui-muted transition hover:bg-ui-inset"
+        data-testid={isCryptoHome ? "home-previous-macro-release" : undefined}
+      >
+        <span className="min-w-0 flex-[1_1_210px] truncate"><strong className="text-ui-text">직전 발표</strong> · {macroLabel(homePreviousRelease.label)} · 실제 {displayActual(homePreviousRelease) || "확인 중"}</span>
+        <span className="inline-flex shrink-0 items-center gap-2">
+          {homePreviousImpact ? (
+            <span className={`rounded px-1.5 py-0.5 font-black ${macroImpactBadgeClass(homePreviousImpact)}`} title={`${macroImpactLensLabel(market)} · ${homePreviousImpact.reason}`}>
+              {macroImpactDisplayLabel(homePreviousImpact, market)}
+            </span>
+          ) : null}
+          <span className="text-ui-subtle">{homePreviousRelease.dateKst}</span>
+        </span>
+      </Link>
+    ) : null;
 
     if (homePriorityAware) {
       const homePrimaryValue = primaryValue || (isReleased ? "확인 중" : "발표 전");
       const isToday = isSameKstDate(item.releaseAt);
+      const supportsImpactAssessment = supportsMacroImpactAssessment(item);
+      const pendingImpactLabel = isFomcPolicyEvent
+        ? isReleased ? "정책 기조 분석 중" : "발표 후 정책 기조"
+        : isDocumentEvent(item)
+          ? isReleased ? "공식 내용 분석 중" : "공식 내용 확인 후 분석"
+          : !supportsImpactAssessment
+            ? isReleased ? "결과 해석 확인 중" : "발표 후 결과 해석"
+            : isReleased ? "결과 판정 대기" : "발표 후 호재·악재";
       const impactSummary = fomcAssessment
         ? `FOMC ${fomcAssessment.stanceLabel} · ${fomcAssessment.rationale} · ${fomcAssessment.coverageLabel} · 신뢰 ${fomcConfidenceLabel(fomcAssessment)}`
         : impactAssessment
         ? `${macroImpactDisplayLabel(impactAssessment, market)} · ${macroSurpriseLabel(impactAssessment)} · ${impactAssessment.reason} · ${impactAssessment.confidence === "confirmed" ? "공식 확정" : "잠정 해석"}`
-        : `${compactStatusLabel(item)} · ${isFomcPolicyEvent ? (isReleased ? "공식 성명 분석 중" : "발표 후 정책 기조 분석") : isReleased ? homeCalendarTrustLabel : "발표 후 호재·악재 판정"}`;
+        : `${compactStatusLabel(item)} · ${pendingImpactLabel}${isReleased ? ` · ${homeCalendarTrustLabel}` : ""}`;
 
       return (
         <section className="space-y-1.5" aria-labelledby="home-macro-title">
@@ -784,6 +811,8 @@ export function MacroTicker({
                       <span className={`inline-flex items-center gap-0.5 text-[10px] font-black leading-4 ${impactToneClass}`} aria-label={macroImpactDisplayLabel(impactAssessment, market)}>
                         <ImpactIcon size={11} aria-hidden /> {impactAssessment.badgeLabel}
                       </span>
+                    ) : isCryptoHome ? (
+                      <span className="text-[10px] font-black leading-4 text-ui-subtle">{pendingImpactLabel}</span>
                     ) : null}
                     <span className={`text-[10px] font-black leading-4 ${compactStateClass(item)}`}>{eventKind} · {compactStatusLabel(item)}</span>
                   </span>
@@ -818,6 +847,7 @@ export function MacroTicker({
               </div>
             </div>
           </details>
+          {previousReleaseSummary}
           {calendarWarningText ? <p className="rounded-ui-sm bg-ui-risk/[0.06] px-2.5 py-1.5 text-[10px] font-semibold leading-4 text-ui-risk" role="status">{calendarWarningText}</p> : null}
         </section>
       );
@@ -871,19 +901,7 @@ export function MacroTicker({
           </div>
           <ChevronRight size={14} className="shrink-0 text-slate-600 transition group-hover:text-accent-blue" aria-hidden />
         </Link>
-        {!isReleased && homePreviousRelease && homePreviousRelease.id !== item.id ? (
-          <Link href={href} className="flex min-h-8 flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded-ui-lg bg-ui-inset/35 px-2.5 py-1.5 text-[10.5px] font-semibold text-ui-muted transition hover:bg-ui-inset">
-            <span className="min-w-0 flex-[1_1_210px] truncate"><strong className="text-ui-text">직전 발표</strong> · {macroLabel(homePreviousRelease.label)} · 실제 {displayActual(homePreviousRelease) || "확인 중"}</span>
-            <span className="inline-flex shrink-0 items-center gap-2">
-              {homePreviousImpact ? (
-                <span className={`rounded px-1.5 py-0.5 font-black ${macroImpactBadgeClass(homePreviousImpact)}`} title={`${macroImpactLensLabel(market)} · ${homePreviousImpact.reason}`}>
-                  {macroImpactDisplayLabel(homePreviousImpact, market)}
-                </span>
-              ) : null}
-              <span className="text-ui-subtle">{homePreviousRelease.dateKst}</span>
-            </span>
-          </Link>
-        ) : null}
+        {previousReleaseSummary}
         {!homePriorityAware && calendarWarningText ? (
           <p className="rounded-ui bg-amber-400/[0.06] px-2.5 py-1.5 text-[10.5px] font-semibold leading-4 text-amber-200" role="status">
             {calendarWarningText}

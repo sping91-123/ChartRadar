@@ -58,18 +58,65 @@ function macroValuePeriod(value: string) {
   return null;
 }
 
+type MacroValuePart = {
+  period: "single" | "mom" | "yoy";
+  dimension: "percent" | "currency" | "scaled-count" | "plain";
+  value: number;
+};
+
+function splitMacroValueSegments(value: string) {
+  return value
+    .replace(/\bm\s*\/\s*m\b/gi, "__macro_mom__")
+    .replace(/\by\s*\/\s*y\b/gi, "__macro_yoy__")
+    .split(/\s*;\s*|\s*\/\s*/)
+    .map((segment) => segment
+      .replace(/__macro_mom__/g, "m/m")
+      .replace(/__macro_yoy__/g, "y/y")
+      .trim())
+    .filter(Boolean);
+}
+
+function numericMacroTokenCount(value: string) {
+  return value.replace(/,/g, "").match(/[+-]?\d+(?:\.\d+)?\s*(?:%|[KMBT]\b)?/gi)?.length ?? 0;
+}
+
 function parseMacroValueParts(value?: string) {
-  if (isEmptyMacroValue(value) || value!.includes(";") || /출처별 .* 상이/.test(value!)) return null;
-  const segments = value!.split("/").map((segment) => segment.trim()).filter(Boolean);
+  if (isEmptyMacroValue(value) || /출처별 .* 상이/.test(value!)) return null;
+  const segments = splitMacroValueSegments(value!);
   if (segments.length === 0) return null;
+  if (segments.some((segment) => numericMacroTokenCount(segment) !== 1)) return null;
 
   const parts = segments.map((segment) => ({
-    period: segments.length > 1 ? macroValuePeriod(segment) : "single",
+    period: macroValuePeriod(segment) ?? "single",
     dimension: macroValueDimension(segment),
     value: numericMacroValue(segment)
   }));
-  if (parts.some((part) => !part.period || !part.dimension || part.dimension === "mixed" || part.value === null)) return null;
-  return parts as Array<{ period: string; dimension: string; value: number }>;
+  if (parts.some((part) => !part.dimension || part.dimension === "mixed" || part.value === null)) return null;
+
+  const typedParts = parts as MacroValuePart[];
+  const uniqueKeys = new Set(typedParts.map((part) => `${part.period}:${part.dimension}`));
+  if (uniqueKeys.size !== typedParts.length) return null;
+  return typedParts;
+}
+
+function matchComparableMacroParts(actualParts: MacroValuePart[], expectedParts: MacroValuePart[]) {
+  const usedActualIndexes = new Set<number>();
+  const matches: Array<{ actual: MacroValuePart; expected: MacroValuePart }> = [];
+
+  for (const expected of expectedParts) {
+    const available = actualParts
+      .map((actual, index) => ({ actual, index }))
+      .filter(({ index }) => !usedActualIndexes.has(index))
+      .filter(({ actual }) => actual.dimension === expected.dimension && actual.period === expected.period);
+    const compatible = available;
+    if (compatible.length !== 1) return null;
+
+    const match = compatible[0];
+    usedActualIndexes.add(match.index);
+    matches.push({ actual: match.actual, expected });
+  }
+
+  return matches.length ? matches : null;
 }
 
 function macroImpactCategory(label: string): MacroImpactCategory | null {
@@ -83,6 +130,11 @@ function macroImpactCategory(label: string): MacroImpactCategory | null {
     /retail|\bgdp\b|\bpmi\b|\bism\b|durable|home sales|consumer confidence|consumer sentiment|michigan/.test(lower)
   ) return "growth_demand";
   return null;
+}
+
+export function supportsMacroImpactAssessment(item: MacroEventItem) {
+  if (item.isDocumentEvent || item.isNumericEvent === false || item.eventType === "document_release" || item.eventType === "meeting_event" || item.eventType === "speech_event") return false;
+  return macroImpactCategory(item.label) !== null;
 }
 
 function reasonFor(category: MacroImpactCategory, verdict: MacroImpactVerdict, surprise: "higher" | "lower" | "same" | "mixed") {
@@ -111,7 +163,7 @@ function reasonFor(category: MacroImpactCategory, verdict: MacroImpactVerdict, s
 export function assessMacroImpact(item: MacroEventItem, nowMs = Date.now()): MacroImpactAssessment | null {
   const releaseMs = Date.parse(item.releaseAt);
   if (!Number.isFinite(releaseMs) || releaseMs > nowMs) return null;
-  if (item.isDocumentEvent || item.isNumericEvent === false || item.eventType === "document_release" || item.eventType === "meeting_event" || item.eventType === "speech_event") return null;
+  if (!supportsMacroImpactAssessment(item)) return null;
 
   const confidence: MacroImpactConfidence | null = item.actualProvenance === "official"
     ? "confirmed"
@@ -123,14 +175,15 @@ export function assessMacroImpact(item: MacroEventItem, nowMs = Date.now()): Mac
 
   const actualParts = parseMacroValueParts(item.actualValue ?? item.actual);
   const expectedParts = parseMacroValueParts(item.consensusValue ?? item.forecast);
-  if (!actualParts || !expectedParts || actualParts.length !== expectedParts.length) return null;
-  if (actualParts.some((part, index) => part.period !== expectedParts[index].period || part.dimension !== expectedParts[index].dimension)) return null;
+  if (!actualParts || !expectedParts) return null;
+  const comparableParts = matchComparableMacroParts(actualParts, expectedParts);
+  if (!comparableParts) return null;
 
   const category = macroImpactCategory(item.label);
   if (!category) return null;
   const preferredSurprise = category === "labor_softness" ? "higher" : "lower";
-  const componentSurprises = actualParts.map((part, index) => {
-    const delta = part.value - expectedParts[index].value;
+  const componentSurprises = comparableParts.map(({ actual, expected }) => {
+    const delta = actual.value - expected.value;
     return Math.abs(delta) < 1e-9 ? "same" as const : delta > 0 ? "higher" as const : "lower" as const;
   });
   const componentVerdicts = componentSurprises.map<MacroImpactVerdict>((surprise) =>
@@ -154,8 +207,8 @@ export function assessMacroImpact(item: MacroEventItem, nowMs = Date.now()): Mac
     badgeLabel: confidence === "provisional" ? `잠정 ${verdict}` : verdict,
     reason: reasonFor(category, verdict, surprise),
     category,
-    actual: actualParts[0].value,
-    expected: expectedParts[0].value,
+    actual: comparableParts[0].actual.value,
+    expected: comparableParts[0].expected.value,
     surprise
   };
 }

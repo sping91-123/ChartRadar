@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import { type MacroEventItem } from "../src/data/macroEvents";
-import { assessMacroImpact } from "../src/lib/macro/macroImpact";
+import { assessMacroImpact, supportsMacroImpactAssessment } from "../src/lib/macro/macroImpact";
 
 const nowMs = Date.parse("2026-07-22T06:30:00.000Z");
 const base: MacroEventItem = {
@@ -88,6 +88,42 @@ assert.equal(assessMacroImpact({ ...claimsBase, actualValue: "220K", actual: "22
 const weakerPayroll = assessMacroImpact({ ...claimsBase, label: "Nonfarm Payrolls", actualValue: "120K", actual: "120K", consensusValue: "180K", forecast: "180K" }, nowMs);
 assert.equal(weakerPayroll?.verdict, "호재");
 
+const officialHomeSales = assessMacroImpact({
+  ...base,
+  label: "New Home Sales",
+  actualValue: "607K; -10.5% m/m",
+  actual: "607K; -10.5% m/m",
+  consensusValue: "0.62M",
+  forecast: "0.62M"
+}, nowMs);
+assert.equal(officialHomeSales?.verdict, "호재", "the comparable official level should restore the released Home verdict");
+assert.equal(officialHomeSales?.confidence, "confirmed");
+assert.equal(officialHomeSales?.surprise, "lower");
+assert.equal(officialHomeSales?.actual, 607_000);
+assert.equal(officialHomeSales?.expected, 620_000);
+assert.equal(supportsMacroImpactAssessment({ ...base, label: "New Home Sales" }), true);
+assert.equal(supportsMacroImpactAssessment({ ...base, label: "Trade Balance" }), false, "unsupported high-impact events must not promise a good-or-bad verdict");
+assert.equal(supportsMacroImpactAssessment({ ...base, label: "Fed Chair Testimony", eventType: "speech_event" }), false);
+assert.equal(assessMacroImpact({
+  ...base,
+  label: "New Home Sales",
+  actualValue: "-10.5% m/m; 607K",
+  actual: "-10.5% m/m; 607K",
+  consensusValue: "0.62M",
+  forecast: "0.62M"
+}, nowMs)?.verdict, "호재", "component order must not decide which actual is compared");
+assert.equal(assessMacroImpact({
+  ...base,
+  label: "New Home Sales",
+  actualValue: "620K; -10.5% m/m",
+  actual: "620K; -10.5% m/m",
+  consensusValue: "0.62M",
+  forecast: "0.62M"
+}, nowMs)?.verdict, "중립", "K and M values must be normalized before comparison");
+assert.equal(assessMacroImpact({ ...base, label: "New Home Sales", actualValue: "607K; 608K", consensusValue: "0.62M" }, nowMs), null, "duplicate comparable components must fail closed");
+assert.equal(assessMacroImpact({ ...base, label: "New Home Sales", actualValue: "607K; preliminary", consensusValue: "0.62M" }, nowMs), null, "an invalid composite component must fail closed");
+assert.equal(assessMacroImpact({ ...base, label: "New Home Sales", actualValue: "607K; -10.5% m/m", consensusValue: "-1.3%" }, nowMs), null, "an unlabeled forecast must not be forced onto a period-specific actual");
+
 assert.equal(assessMacroImpact({ ...base, releaseAt: "2026-07-23T12:30:00.000Z" }, nowMs), null, "upcoming events have no result interpretation");
 assert.equal(assessMacroImpact({ ...base, eventType: "document_release", isDocumentEvent: true }, nowMs), null);
 assert.equal(assessMacroImpact({ ...base, actualProvenance: "unknown" }, nowMs), null, "unknown actual provenance must fail closed");
@@ -97,6 +133,16 @@ assert.equal(
   assessMacroImpact({ ...base, label: "PPI", actualValue: "0.1% / 2.7%", actual: "0.1% / 2.7%", consensusValue: "0.2% / 2.6%", forecast: "0.2% / 2.6%" }, nowMs),
   null,
   "unlabeled combined values must not be classified from only their first number"
+);
+assert.equal(
+  assessMacroImpact({ ...base, label: "PPI", actualValue: "0.1%/2.7%", actual: "0.1%/2.7%", consensusValue: "0.2%/2.6%", forecast: "0.2%/2.6%" }, nowMs),
+  null,
+  "unlabeled combined values without separator spaces must also fail closed"
+);
+assert.equal(
+  assessMacroImpact({ ...base, label: "New Home Sales", actualValue: "607K (-10.5% m/m)", actual: "607K (-10.5% m/m)", consensusValue: "-1.3% m/m", forecast: "-1.3% m/m" }, nowMs),
+  null,
+  "multiple measurements inside one unstructured segment must not be reduced to the first number"
 );
 const conflictingPpi = assessMacroImpact({
   ...base,
@@ -140,8 +186,16 @@ const homeSummarySource = tickerSource.slice(homeSummaryStart, homeSummaryEnd);
 assert.doesNotMatch(homeDetailsOpeningTag, /\bopen(?:=|\s|>)/, "Home macro disclosure is closed by default");
 assert.doesNotMatch(homeSummarySource, /<dl|displayConsensusValue|displayPreviousValue|homePrimaryValue/, "actual, forecast, and previous values stay outside the collapsed summary");
 assert.match(homeSummarySource, /impactAssessment\.badgeLabel|fomcAssessment\.stanceLabel/, "released-event verdict remains visible in the collapsed summary");
+assert.match(homeSummarySource, /pendingImpactLabel/, "the collapsed Home card must explain that unreleased events are judged after release");
+assert.match(homeSummarySource, /isCryptoHome \? \([\s\S]*pendingImpactLabel/, "the new pending verdict cue must stay scoped to the actual crypto Home route");
 assert.match(homeSummarySource, /eventKind[\s\S]*compactStatusLabel\(item\)/, "collapsed Home macro shows both event status and remaining-time state");
 assert.ok(tickerSource.indexOf("{calendarWarningText", homeDetailsEnd) > homeDetailsEnd, "calendar warnings stay visible outside the disclosure");
+assert.ok(tickerSource.indexOf("{previousReleaseSummary}", homeDetailsEnd) > homeDetailsEnd, "Home must keep the previous released verdict visible below an upcoming event");
+assert.match(tickerSource, /home-previous-macro-release/, "the previous released verdict needs a stable Home regression hook");
+assert.match(tickerSource, /!isCryptoHome \|\| Boolean\(homePreviousImpact\)/, "Home must omit an untrusted previous-release verdict while news routes keep their prior compact layout");
+assert.match(tickerSource, /발표 후 호재·악재/, "the collapsed Home card must retain a neutral pre-release verdict cue");
+assert.match(tickerSource, /발표 후 결과 해석/, "unsupported numeric events must not promise a good-or-bad verdict");
+assert.match(tickerSource, /공식 내용 확인 후 분석/, "document and speech events must not promise a numeric good-or-bad verdict");
 assert.match(tickerSource, /displayItems\.filter\(isHighImpactMacro\)/, "Home must never fall back to a medium-impact event");
 assert.match(tickerSource, /오늘 발표/, "same-KST-date events must have a visible non-color label");
 assert.match(tickerSource, /border-signal-warning\/45 bg-signal-warning/, "today's Home macro event uses the actual gold warning token rather than a neutral watch color");
