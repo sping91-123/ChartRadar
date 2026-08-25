@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { analyzeTimeframe, type Candle } from "../src/lib/marketAnalysis";
 import { buildPerpetualDecisionSnapshot, type PerpetualTimeframeObservation, type SourceStatus } from "../src/lib/perpetualDecisionSnapshot";
+import { perpetualStructureTimeframes, type QualifiedMssState } from "../src/lib/qualifiedMss";
 import { buildPerpetualBriefingInput, fallbackPerpetualBriefing } from "../src/lib/server/perpetualBriefing";
 
 const generatedAt = "2026-07-21T01:15:00.000Z";
@@ -37,6 +38,43 @@ function observation(timeframe: "15m" | "1h" | "4h", seconds: number, slope: num
   };
 }
 
+function structureFixtures(): QualifiedMssState[] {
+  return perpetualStructureTimeframes.map((timeframe) => ({
+    contractVersion: "qualified-mss-v1",
+    sourceIndicatorVersion: "Coters-v2.49",
+    timeframe,
+    historyMode: "bounded-replay",
+    closedOnly: true,
+    historyStart: "2026-06-01T00:00:00.000Z",
+    lastClosedAt: generatedAt,
+    barCount: 1500,
+    warmupComplete: true,
+    integrity: "ready",
+    stability: {
+      checkedWindows: [1500, 960, 640, 320],
+      directionStable: true,
+      exactPineStateParity: false
+    },
+    trend: "bullish",
+    known: true,
+    trendStrength: 1,
+    latestMss: {
+      direction: "bullish",
+      level: 118_200,
+      occurredAt: generatedAt,
+      ageBars: 3,
+      pivotId: `${timeframe}-mss`,
+      sourceAt: generatedAt,
+      confirmedAt: generatedAt,
+      qualityMode: "Displacement",
+      quality: { bodyAtrRatio: 0.9, breakAtrRatio: 0.12, closeLocation: 0.75 }
+    },
+    activeMsb: null,
+    activeChoch: null,
+    eventCursor: `mss:${timeframe}:bullish`
+  }));
+}
+
 const snapshot = buildPerpetualDecisionSnapshot({
   id: "33333333-3333-4333-8333-333333333333",
   fingerprint: "briefing-fixture",
@@ -50,6 +88,7 @@ const snapshot = buildPerpetualDecisionSnapshot({
     observation("1h", 60 * 60, 1.5),
     observation("4h", 4 * 60 * 60, 1)
   ],
+  structureTimeframes: structureFixtures(),
   pressure: null,
   flow: null,
   previousSnapshot: null
@@ -60,7 +99,19 @@ const input = buildPerpetualBriefingInput(snapshot);
 assert.equal(input.symbol, "BTCUSDT");
 assert.equal(input.hideNumericScores, true, "the beginner AI prompt must not present internal model scores as user evidence");
 assert.equal(input.scenario, null, "snapshot-native AI must not invent an entry or target scenario");
-assert.match(input.analysisScope ?? "", /저장한 15분·1시간·4시간 분석/);
+assert.match(input.analysisScope ?? "", /저장한 1분·5분·15분·1시간·4시간·1일 확정 구조 종합 분석/);
+
+const { analysisConsensus: _legacyConsensus, ...legacySummary } = snapshot.summary;
+const legacySnapshot = {
+  ...snapshot,
+  payloadSchemaVersion: undefined,
+  engineVersion: "perpetual-v2.0.0",
+  summary: legacySummary
+};
+const legacyInput = buildPerpetualBriefingInput(legacySnapshot);
+assert.match(legacyInput.analysisScope ?? "", /기존 15분·1시간·4시간 MSB·CHoCH 분석/);
+assert.doesNotMatch(legacyInput.analysisScope ?? "", /1분·5분|확정 구조 종합/);
+assert.ok(legacyInput.aggregate?.keySignals.every((signal) => !signal.includes("MSS ")), "legacy evidence must not be relabelled as v3 MSS");
 assert.ok(input.timeframes.every((item) => !/bullish|bearish|unknown/.test(`${item.msb} ${item.choch}`)), "AI input should receive beginner-facing direction labels");
 
 const fallback = fallbackPerpetualBriefing(snapshot);

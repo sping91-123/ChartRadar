@@ -22,7 +22,7 @@ import {
   type HomeInterestCoin
 } from "@/lib/homeInterestCoins";
 import { canonicalAssetForHomeCoin } from "@/lib/homeInterestRouting";
-import { beginnerTerm, decisionStateLabel, flowDirectionLabel, monitorConditionHeading, plainDirection, pressureDirectionLabel, qualityLabel } from "@/lib/perpetualDecisionCopy";
+import { decisionStateLabel, flowDirectionLabel, monitorConditionDisplayLabel, monitorConditionHeading, monitorConditionOutcomeCopy, pressureDirectionLabel, qualityLabel } from "@/lib/perpetualDecisionCopy";
 import type { CryptoHomeTicker } from "@/lib/server/cryptoExchangeData";
 import type { PerpetualAsset, PerpetualDecisionSnapshot, SnapshotQuality } from "@/lib/perpetualDecisionSnapshot";
 import type { PerpetualSnapshotCapabilities, PerpetualSnapshotResponse } from "@/lib/perpetualApi";
@@ -211,35 +211,47 @@ function HomeEvidenceSummary({ snapshot }: { snapshot: PerpetualDecisionSnapshot
   if (!evidence) {
     return <p className="mt-3 bg-ui-inset/55 px-3 py-3 text-xs leading-5 text-ui-muted">이전 분석이라 쉬운 근거 카드가 없습니다. 다음 자동 분석부터 표시됩니다.</p>;
   }
-  const cards = [
-    { label: beginnerTerm("msb"), value: plainDirection(evidence.structure), detail: evidence.events?.msb ? `${formatPrice(evidence.events.msb.level)}에서 최근 추세 확인` : "최근 중요한 고점·저점을 넘은 방향" },
-    { label: beginnerTerm("choch"), value: plainDirection(evidence.transition), detail: evidence.events?.choch ? `${formatPrice(evidence.events.choch.level)}에서 전환 신호` : "기존 흐름이 바뀌기 시작한 방향" },
-    { label: "몰린 포지션", value: evidence.pressure ? pressureDirectionLabel(evidence.pressure.dominantSide) : "확인 중", detail: "반대 움직임 때 강제 청산이 커질 수 있는 쪽" },
-    { label: "큰 금액 체결", value: evidence.flow ? flowDirectionLabel(evidence.flow.dominantSide) : "확인 중", detail: "최근 큰 금액 매수와 매도 중 더 강한 쪽" }
+  const context = evidence.context ?? [];
+  const groups = [
+    { label: "큰 흐름", detail: "1일·4시간", timeframes: ["1d", "4h"] as const },
+    { label: "현재 구조", detail: "1시간·15분", timeframes: ["1h", "15m"] as const },
+    { label: "단기 반응", detail: "5분·1분", timeframes: ["5m", "1m"] as const }
   ];
   return (
     <section className="mt-3 border-t border-ui-line pt-3" aria-labelledby="home-evidence-title">
-      <h2 id="home-evidence-title" className="text-sm font-black text-ui-text">왜 이렇게 보나요?</h2>
-      <p className="mt-0.5 text-[11px] leading-5 text-ui-muted">결론에 사용한 네 가지 근거를 숨기지 않고 보여드립니다.</p>
-      <div className="mt-2 grid grid-cols-2 gap-1.5">
-        {cards.map((card) => (
-          <article key={card.label} className="min-w-0 bg-ui-inset/55 px-2.5 py-2.5">
-            <p className="text-[10px] font-black leading-4 text-ui-subtle [word-break:keep-all]">{card.label}</p>
-            <p className="mt-1 text-xs font-black leading-5 text-ui-text [word-break:keep-all]">{card.value}</p>
-            <p className="mt-0.5 text-[10px] leading-4 text-ui-muted [word-break:keep-all]">{card.detail}</p>
+      <h2 id="home-evidence-title" className="text-sm font-black text-ui-text">근거</h2>
+      <div className="mt-2 grid gap-1.5">
+        {groups.map((group) => (
+          <article key={group.label} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-ui-inset/55 px-2.5 py-2.5">
+            <div className="min-w-0">
+              <p className="text-xs font-black text-ui-text">{group.label}</p>
+              <p className="mt-0.5 text-[11px] leading-4 text-ui-subtle">{group.detail} 확정 구조(MSS)</p>
+            </div>
+            <div className="grid grid-cols-2 gap-1" aria-label={`${group.label} 시간대별 방향`}>
+              {group.timeframes.map((timeframe) => {
+                const item = context.find((entry) => entry.timeframe === timeframe);
+                return (
+                  <p key={timeframe} className="min-w-[3.75rem] bg-ui-panel/70 px-1.5 py-1 text-center text-[11px] font-semibold text-ui-muted">
+                    <span className="block font-black text-ui-subtle">{item?.label ?? timeframe}</span>
+                    <HomeTimeframeDirection direction={item?.trend ?? "unknown"} />
+                  </p>
+                );
+              })}
+            </div>
           </article>
         ))}
       </div>
-      {evidence.context?.length ? (
-        <div className="mt-2 grid grid-cols-3 gap-1" aria-label="시간대별 흐름">
-          {evidence.context.map((item) => (
-            <p key={item.timeframe} className="bg-ui-inset/40 px-2 py-1.5 text-center text-[10px] font-semibold text-ui-muted">
-              <span className="block font-black text-ui-text">{item.label}</span>
-              <HomeTimeframeDirection direction={item.structure} />
-            </p>
-          ))}
-        </div>
-      ) : null}
+      <p className="mt-2 text-[11px] leading-5 text-ui-subtle">Coters v2.49 기본 기준을 제한 이력으로 근사 재현합니다. MSS는 확정 추세, MSB는 추세 지속, CHoCH는 전환 경고입니다.</p>
+      <div className="mt-2 grid grid-cols-2 gap-1.5">
+        <article className="min-w-0 bg-ui-inset/40 px-2.5 py-2">
+          <p className="text-[11px] font-black text-ui-subtle">몰린 포지션</p>
+          <p className="mt-1 text-[11px] font-semibold leading-4 text-ui-text [word-break:keep-all]">{evidence.pressure ? pressureDirectionLabel(evidence.pressure.dominantSide) : "확인 중"}</p>
+        </article>
+        <article className="min-w-0 bg-ui-inset/40 px-2.5 py-2">
+          <p className="text-[11px] font-black text-ui-subtle">큰 금액 체결</p>
+          <p className="mt-1 text-[11px] font-semibold leading-4 text-ui-text [word-break:keep-all]">{evidence.flow ? flowDirectionLabel(evidence.flow.dominantSide) : "확인 중"}</p>
+        </article>
+      </div>
       <p className="mt-2 bg-ui-brand/8 px-2.5 py-2 text-[11px] font-semibold leading-5 text-ui-muted">
         <span className="font-black text-ui-text">지난 분석 이후</span> · {evidence.previousChange
           ? `이전에는 ${decisionStateLabel(evidence.previousChange.from)}, 지금은 ${decisionStateLabel(evidence.previousChange.to)}입니다.`
@@ -365,12 +377,12 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
     return (
       <section className="bg-ui-panel px-3 py-4 sm:px-4" aria-busy="true" aria-label={`${assetCopy[asset].label} 선물 시장 분석을 불러오는 중`}>
         <p className="inline-flex items-center gap-1 text-xs font-black text-ui-brand"><Loader2 className="animate-spin" size={14} aria-hidden /> {assetCopy[asset].label} 분석 중</p>
-        <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.12em] text-ui-subtle">바이낸스 만기 없는 선물 · 15분 흐름 기준</p>
+        <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.12em] text-ui-subtle">바이낸스 만기 없는 선물 · 여러 시간대 확정봉 종합</p>
         <div className="mt-2 h-7 w-4/5 animate-pulse bg-ui-inset" />
         <div className="mt-2 h-7 w-3/5 animate-pulse bg-ui-inset" />
         <div className="mt-4 grid grid-cols-2 gap-2">
           <div className="min-h-20 animate-pulse bg-ui-risk/10 px-3 py-3 text-[11px] font-bold text-ui-risk">가장 큰 위험 확인 중</div>
-          <div className="min-h-20 animate-pulse bg-ui-brand/8 px-3 py-3 text-[11px] font-bold text-ui-brand">확인할 가격 계산 중</div>
+          <div className="min-h-20 animate-pulse bg-ui-brand/8 px-3 py-3 text-[11px] font-bold text-ui-brand">다음 판단 기준 계산 중</div>
         </div>
         <p className="mt-3 text-xs leading-5 text-ui-muted">차트 흐름, 몰린 포지션, 큰 금액 체결을 같은 시각으로 맞추고 있습니다.</p>
       </section>
@@ -394,9 +406,16 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
     : snapshot;
   const displayQuality: SnapshotQuality = displaySnapshot.quality;
   const quality = qualityCopy(displayQuality);
-  const capabilities = state.capabilities;
   const degradedSources = Object.entries(displaySnapshot.sourceStatus).filter(([, source]) => source.status !== "ready");
   const detailHref = `/crypto/perpetual?asset=${asset}&timeframe=15m&snapshot=${encodeURIComponent(displaySnapshot.id)}&source=home${journeyId ? `&attribution=${encodeURIComponent(journeyId)}` : ""}`;
+  const conditionOutcome = monitorConditionOutcomeCopy(displaySnapshot.summary.primaryCondition);
+  const reactionFramesPending = ["1m", "5m"].some((timeframe) => {
+    const item = displaySnapshot.publicEvidence?.context?.find((entry) => entry.timeframe === timeframe);
+    return !item?.known || item.integrity !== "ready";
+  });
+  const analysisScope = reactionFramesPending
+    ? "큰 흐름·현재 구조 종합 · 단기 반응 확인 중"
+    : "여러 시간대 확정봉 종합";
 
   return (
     <section className="bg-ui-panel px-3 py-3 sm:px-4 sm:py-4" aria-labelledby="home-decision-title">
@@ -410,7 +429,7 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
 
       <div className={`${displayQuality !== "ready" ? "mt-2" : ""} flex items-end justify-between gap-3`}>
         <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ui-subtle">바이낸스 만기 없는 선물 · 15분 흐름 기준</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ui-subtle">바이낸스 만기 없는 선물 · {analysisScope}</p>
           <h1 id="home-decision-title" className="mt-1 text-[1.35rem] font-black leading-7 tracking-tight text-ui-text [word-break:keep-all]">
             {displaySnapshot.summary.headline}
           </h1>
@@ -433,7 +452,10 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
         </div>
         <div className="bg-ui-inset/65 px-3 py-2.5">
           <p className="text-[10px] font-black uppercase tracking-[0.1em] text-ui-brand">{monitorConditionHeading(displaySnapshot.summary.primaryCondition)}</p>
-          <p className="mt-1 text-xs font-black leading-5 text-ui-text [word-break:keep-all]">{displaySnapshot.summary.primaryCondition.label}</p>
+          <p className="mt-1 text-xs font-black leading-5 text-ui-text [word-break:keep-all]">{monitorConditionDisplayLabel(displaySnapshot.summary.primaryCondition)}</p>
+          <p className="mt-1.5 text-[10.5px] font-semibold leading-4 text-ui-muted [word-break:keep-all]">{conditionOutcome.met}</p>
+          <p className="mt-0.5 text-[10.5px] leading-4 text-ui-subtle [word-break:keep-all]">{conditionOutcome.unmet}</p>
+          <p className="mt-1 text-[9.5px] leading-4 text-ui-subtle [word-break:keep-all]">{conditionOutcome.note}</p>
         </div>
       </div>
 
@@ -454,8 +476,6 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
         전체 선물 분석과 조건 알림 보기 <ArrowRight size={16} aria-hidden />
       </Link>
 
-      <HomeEvidenceSummary snapshot={displaySnapshot} />
-
       <div className="mt-3 bg-ui-inset/25 px-1 py-2">
         <PerpetualDecisionChart snapshot={displaySnapshot} compact />
         {degradedSources.length ? (
@@ -467,11 +487,7 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
         ) : null}
       </div>
 
-      <p className="mt-1.5 text-center text-[10.5px] font-semibold leading-4 text-ui-muted">
-        {capabilities?.canSeeProDetail
-          ? "상세 화면에서 시간대별 신호 가격, 상세 포지션·큰 체결 수치, 고급 가격 구간과 AI 설명을 함께 확인할 수 있습니다."
-          : "Pro는 시간대별 신호가 나온 가격·시각과 상세 포지션·큰 체결 수치, AI 설명을 보여주고 중요한 조건을 최대 5분 간격으로 확인합니다."}
-      </p>
+      <HomeEvidenceSummary snapshot={displaySnapshot} />
 
     </section>
   );

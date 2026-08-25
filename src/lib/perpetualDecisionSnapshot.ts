@@ -2,12 +2,27 @@ import type { Candle, DirectionState, MarketRegime, TimeframeAnalysis } from "@/
 import type { ConfirmedCommonRangeOteV1 } from "@/lib/confirmedCommonRangeOte";
 import type { LargeTradeFlowReport, LargeTradeSide } from "@/lib/largeTradeFlow";
 import type { LiquidationPressureReport, LiquidationPressureSide } from "@/lib/liquidationPressure";
+import {
+  buildHierarchicalPerpetualDecision,
+  type HierarchicalPerpetualDecision
+} from "./hierarchicalPerpetualDecision";
+import {
+  perpetualStructureTimeframes,
+  type PerpetualStructureTimeframe,
+  type QualifiedMssState
+} from "./qualifiedMss";
 
-export const perpetualDecisionEngineVersion = "perpetual-v2.0.0";
-// Price monitor IDs remain stable. State monitors use their own semantic version so older
-// baselines cannot fire solely because the decision engine changed.
-export const perpetualMonitorConditionVersion = "perpetual-v1.0.0";
-export const perpetualDecisionStateConditionVersion = "perpetual-state-v2.0.0";
+export const perpetualDecisionEngineVersion = "perpetual-v3.0.0";
+// All v3 monitor IDs use a new semantic prefix so v2 conditions cannot be
+// evaluated against the six-timeframe MSS hierarchy.
+export const perpetualMonitorConditionVersion = "perpetual-condition-v3.0.0";
+export const perpetualDecisionStateConditionVersion = "perpetual-state-v3.0.0";
+
+export function hasQualifiedMssSemantics(
+  snapshot: Pick<PerpetualDecisionSnapshot, "engineVersion" | "payloadSchemaVersion">
+) {
+  return snapshot.engineVersion === perpetualDecisionEngineVersion && snapshot.payloadSchemaVersion === 3;
+}
 
 export type PerpetualAsset = "btc" | "eth";
 export type PerpetualSymbol = "BTCUSDT" | "ETHUSDT";
@@ -34,6 +49,7 @@ export interface MonitorCondition {
   timeframe: "15m" | "1h" | "4h";
   label: string;
   threshold: number | null;
+  basis?: string;
   baselineState?: DecisionState;
   targetState?: DecisionState;
   baselinePressure?: LiquidationPressureSide;
@@ -60,6 +76,7 @@ export interface PerpetualPriceZone {
 
 export interface PerpetualEvidenceDetails {
   events: {
+    mss: PerpetualTimedLevel | null;
     msb: PerpetualTimedLevel | null;
     choch: PerpetualTimedLevel | null;
     sweep: PerpetualTimedLevel | null;
@@ -82,6 +99,18 @@ export interface PerpetualEvidenceDetails {
   >;
 }
 
+export interface PerpetualStructureEvidence {
+  timeframe: PerpetualStructureTimeframe;
+  label: string;
+  trend: DirectionState;
+  continuation: DirectionState;
+  warning: DirectionState;
+  observedAt: string | null;
+  historyMode: "bounded-replay";
+  known: boolean;
+  integrity: QualifiedMssState["integrity"];
+}
+
 export interface PerpetualDecisionEvidence {
   timeframe: "15m" | "1h" | "4h";
   label: string;
@@ -101,6 +130,7 @@ export interface SnapshotChange {
 }
 
 export interface PerpetualDecisionSnapshot {
+  payloadSchemaVersion?: 3;
   id: string;
   fingerprint: string;
   engineVersion: string;
@@ -126,8 +156,8 @@ export interface PerpetualDecisionSnapshot {
     timeframe: "15m";
     structure: DirectionState;
     transition: DirectionState;
-    events?: Pick<PerpetualEvidenceDetails["events"], "msb" | "choch">;
-    context?: Array<Pick<PerpetualDecisionEvidence, "timeframe" | "label" | "structure" | "transition" | "regime">>;
+    events?: Pick<PerpetualEvidenceDetails["events"], "mss" | "msb" | "choch">;
+    context?: PerpetualStructureEvidence[];
     pressure: Pick<LiquidationPressureReport, "dominantSide" | "grade" | "summary"> | null;
     flow: Pick<LargeTradeFlowReport, "dominantSide" | "grade" | "summary"> | null;
     previousChange?: SnapshotChange | null;
@@ -138,6 +168,7 @@ export interface PerpetualDecisionSnapshot {
     topRisk: string;
     reasons: [string, string];
     primaryCondition: MonitorCondition;
+    analysisConsensus?: HierarchicalPerpetualDecision;
   };
   pro?: {
     detailVersion?: 1;
@@ -145,6 +176,7 @@ export interface PerpetualDecisionSnapshot {
     confirmationConditions: MonitorCondition[];
     invalidationConditions: MonitorCondition[];
     multiTimeframeEvidence: PerpetualDecisionEvidence[];
+    qualifiedMssEvidence?: QualifiedMssState[];
     pressure: {
       dominantSide: LiquidationPressureSide;
       grade: LiquidationPressureReport["grade"];
@@ -212,16 +244,26 @@ export interface BuildPerpetualDecisionInput {
   generatedAt: string;
   sourceStatus: PerpetualDecisionSnapshot["sourceStatus"];
   timeframes: [PerpetualTimeframeObservation, PerpetualTimeframeObservation, PerpetualTimeframeObservation];
+  structureTimeframes: QualifiedMssState[];
   confirmedCommonRangeV1?: ConfirmedCommonRangeOteV1 | null;
   pressure: LiquidationPressureReport | null;
   flow: LargeTradeFlowReport | null;
-  previousSnapshot?: Pick<PerpetualDecisionSnapshot, "summary" | "generatedAt"> | null;
+  previousSnapshot?: Pick<PerpetualDecisionSnapshot, "summary" | "generatedAt" | "engineVersion"> | null;
 }
 
 const timeframeLabels: Record<PerpetualTimeframeObservation["timeframe"], string> = {
   "15m": "15분",
   "1h": "1시간",
   "4h": "4시간"
+};
+
+const structureTimeframeLabels: Record<PerpetualStructureTimeframe, string> = {
+  "1m": "1분",
+  "5m": "5분",
+  "15m": "15분",
+  "1h": "1시간",
+  "4h": "4시간",
+  "1d": "1일"
 };
 
 const tickSizes: Record<PerpetualAsset, number> = {
@@ -231,22 +273,6 @@ const tickSizes: Record<PerpetualAsset, number> = {
 
 function addHours(iso: string, hours: number) {
   return new Date(new Date(iso).getTime() + hours * 60 * 60 * 1000).toISOString();
-}
-
-function directionValue(direction: DirectionState) {
-  if (direction === "bullish") return 1;
-  if (direction === "bearish") return -1;
-  return 0;
-}
-
-function structureValue(observation: PerpetualTimeframeObservation, weight: number) {
-  return (directionValue(observation.analysis.msb) + directionValue(observation.analysis.choch) * 0.55) * weight;
-}
-
-function structureLabel(direction: DirectionState) {
-  if (direction === "bullish") return "오르는 흐름";
-  if (direction === "bearish") return "내리는 흐름";
-  return "방향이 뚜렷하지 않음";
 }
 
 function occurredAt(candleTimes: number[] | undefined, index: number) {
@@ -300,12 +326,26 @@ function priceZone(
   };
 }
 
-function evidenceDetails(observation: PerpetualTimeframeObservation): PerpetualEvidenceDetails {
+function qualifiedTimedLevel(event: QualifiedMssState["latestMss"] | QualifiedMssState["activeMsb"] | QualifiedMssState["activeChoch"]): PerpetualTimedLevel | null {
+  if (!event) return null;
+  return {
+    direction: event.direction,
+    level: event.level,
+    occurredAt: event.occurredAt,
+    ageBars: event.ageBars
+  };
+}
+
+function evidenceDetails(
+  observation: PerpetualTimeframeObservation,
+  qualified?: QualifiedMssState
+): PerpetualEvidenceDetails {
   const { analysis, candleTimes } = observation;
   return {
     events: {
-      msb: timedLevel(analysis.latestMsbEvent, candleTimes),
-      choch: timedLevel(analysis.latestChochEvent, candleTimes),
+      mss: qualifiedTimedLevel(qualified?.latestMss ?? null),
+      msb: qualified ? qualifiedTimedLevel(qualified.activeMsb) : timedLevel(analysis.latestMsbEvent, candleTimes),
+      choch: qualified ? qualifiedTimedLevel(qualified.activeChoch) : timedLevel(analysis.latestChochEvent, candleTimes),
       sweep: timedLevel(analysis.latestSweep, candleTimes),
       cisd: timedLevel(analysis.latestCisd, candleTimes)
     },
@@ -350,7 +390,8 @@ function priceCondition({
   timeframe,
   role,
   direction,
-  threshold
+  threshold,
+  basis
 }: {
   asset: PerpetualAsset;
   generatedAt: string;
@@ -358,6 +399,7 @@ function priceCondition({
   role: MonitorConditionRole;
   direction: "above" | "below";
   threshold: number;
+  basis: string;
 }): MonitorCondition {
   const kind = direction === "above" ? "price_cross_above" : "price_cross_below";
   const hours = timeframe === "15m" ? 24 : timeframe === "1h" ? 72 : 14 * 24;
@@ -367,8 +409,9 @@ function priceCondition({
     kind,
     role,
     timeframe,
-    label: `${timeframeLabels[timeframe]} 가격 구간이 끝났을 때 ${normalized.toLocaleString("ko-KR")} ${direction === "above" ? "위" : "아래"}인지 확인`,
+    label: `${basis} ${normalized.toLocaleString("ko-KR")} ${direction === "above" ? "위" : "아래"}에서 ${timeframeLabels[timeframe]}봉이 마감하면 ${role === "invalidation" ? "현재 해석을" : "현재 방향 근거가 유지되는지"} 최신 분석에서 다시 판단합니다.`,
     threshold: normalized,
+    basis,
     expiresAt: addHours(generatedAt, hours)
   };
 }
@@ -396,14 +439,6 @@ function flowValue(flow: LargeTradeFlowReport | null, status: SourceStatus) {
   const strength = flow.grade === "extreme" ? 1.7 : flow.grade === "heated" ? 1.4 : flow.grade === "normal" ? 1 : 0.45;
   if (flow.dominantSide === "buy") return strength;
   if (flow.dominantSide === "sell") return -strength;
-  return 0;
-}
-
-function pressureValue(pressure: LiquidationPressureReport | null, status: SourceStatus) {
-  if (!pressure || status.status === "unavailable") return 0;
-  const strength = pressure.grade === "extreme" ? 1.1 : pressure.grade === "heated" ? 0.8 : 0.45;
-  if (pressure.dominantSide === "upsideShorts") return strength;
-  if (pressure.dominantSide === "downsideLongs") return -strength;
   return 0;
 }
 
@@ -435,31 +470,44 @@ function nextThreshold(
   asset: PerpetualAsset,
   price: number,
   observation: PerpetualTimeframeObservation,
-  direction: "above" | "below"
+  direction: "above" | "below",
+  qualified?: QualifiedMssState
 ) {
+  const eventLevel = (
+    event: { direction: "bullish" | "bearish"; level: number } | null | undefined
+  ) => event?.direction === (direction === "above" ? "bullish" : "bearish") ? event.level : undefined;
   const candidates = direction === "above"
     ? [
-        observation.analysis.buySideLiquidity?.level,
-        observation.analysis.condition.donchianHigh,
-        observation.analysis.latestMsbEvent?.level,
-        observation.analysis.latestChochEvent?.level,
-        observation.rangeHigh
+        { value: observation.analysis.buySideLiquidity?.level, basis: "위쪽 유동성 가격" },
+        { value: observation.analysis.condition.donchianHigh, basis: "최근 범위 고점" },
+        { value: eventLevel(qualified?.latestMss), basis: "확정 구조(MSS) 돌파선" },
+        { value: eventLevel(qualified?.activeMsb), basis: "추세 지속(MSB) 돌파선" },
+        { value: eventLevel(qualified?.activeChoch), basis: "전환 경고(CHoCH) 돌파선" },
+        { value: eventLevel(observation.analysis.latestMsbEvent), basis: "최근 구조 돌파선" },
+        { value: eventLevel(observation.analysis.latestChochEvent), basis: "최근 전환 돌파선" },
+        { value: observation.rangeHigh, basis: "최근 확정봉 고점" }
       ]
     : [
-        observation.analysis.sellSideLiquidity?.level,
-        observation.analysis.condition.donchianLow,
-        observation.analysis.latestMsbEvent?.level,
-        observation.analysis.latestChochEvent?.level,
-        observation.rangeLow
+        { value: observation.analysis.sellSideLiquidity?.level, basis: "아래쪽 유동성 가격" },
+        { value: observation.analysis.condition.donchianLow, basis: "최근 범위 저점" },
+        { value: eventLevel(qualified?.latestMss), basis: "확정 구조(MSS) 돌파선" },
+        { value: eventLevel(qualified?.activeMsb), basis: "추세 지속(MSB) 돌파선" },
+        { value: eventLevel(qualified?.activeChoch), basis: "전환 경고(CHoCH) 돌파선" },
+        { value: eventLevel(observation.analysis.latestMsbEvent), basis: "최근 구조 돌파선" },
+        { value: eventLevel(observation.analysis.latestChochEvent), basis: "최근 전환 돌파선" },
+        { value: observation.rangeLow, basis: "최근 확정봉 저점" }
       ];
   const valid = candidates
-    .filter((value): value is number => Number.isFinite(value))
-    .filter((value) => (direction === "above" ? value > price : value < price))
-    .sort((left, right) => (direction === "above" ? left - right : right - left));
-  const fallback = direction === "above" ? price * 1.002 : price * 0.998;
-  const value = valid[0] ?? fallback;
+    .filter((candidate): candidate is { value: number; basis: string } => Number.isFinite(candidate.value))
+    .filter((candidate) => (direction === "above" ? candidate.value > price : candidate.value < price))
+    .sort((left, right) => (direction === "above" ? left.value - right.value : right.value - left.value));
+  const selected = valid[0];
+  if (!selected) return null;
   const tick = tickSizes[asset];
-  return Math.round(value / tick) * tick;
+  return {
+    value: Math.round(selected.value / tick) * tick,
+    basis: selected.basis
+  };
 }
 
 function qualityHeadline(quality: SnapshotQuality) {
@@ -471,77 +519,89 @@ function qualityHeadline(quality: SnapshotQuality) {
 
 export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInput): PerpetualDecisionSnapshot {
   const byTimeframe = new Map(input.timeframes.map((observation) => [observation.timeframe, observation]));
+  const qualifiedByTimeframe = new Map(input.structureTimeframes.map((observation) => [observation.timeframe, observation]));
   const primary = byTimeframe.get("15m") ?? input.timeframes[0];
   const hourly = byTimeframe.get("1h") ?? input.timeframes[1];
   const fourHourly = byTimeframe.get("4h") ?? input.timeframes[2];
+  const qualifiedPrimary = qualifiedByTimeframe.get("15m");
+  const qualifiedHourly = qualifiedByTimeframe.get("1h");
+  const qualifiedFourHourly = qualifiedByTimeframe.get("4h");
+  const analysisConsensus = buildHierarchicalPerpetualDecision(input.structureTimeframes);
   const quality = resolveSnapshotQuality(input.sourceStatus);
-  const structureScore = structureValue(primary, 1.7) + structureValue(hourly, 1.2) + structureValue(fourHourly, 1.35);
   const currentFlowValue = flowValue(input.flow, input.sourceStatus.flow);
-  const currentPressureValue = pressureValue(input.pressure, input.sourceStatus.pressure);
-  const totalScore = structureScore + currentFlowValue + currentPressureValue;
-  const primarySide = directionValue(primary.analysis.msb) || directionValue(primary.analysis.choch);
-  const higherSide = directionValue(hourly.analysis.msb) + directionValue(fourHourly.analysis.msb);
+  const consensusSide = analysisConsensus.finalDirection === "bullish" ? 1 : analysisConsensus.finalDirection === "bearish" ? -1 : 0;
   const flowSide = Math.sign(currentFlowValue);
-  const flowConflict = primarySide !== 0 && flowSide !== 0 && primarySide !== flowSide && Math.abs(input.flow?.imbalancePercent ?? 0) >= 20;
-  const timeframeConflict = primarySide !== 0 && higherSide !== 0 && primarySide !== Math.sign(higherSide);
+  const flowConflict = consensusSide !== 0 && flowSide !== 0 && consensusSide !== flowSide && Math.abs(input.flow?.imbalancePercent ?? 0) >= 20;
+  const hierarchyConflict = analysisConsensus.conflict === "macro" || analysisConsensus.conflict === "macro_current" || analysisConsensus.conflict === "current";
 
   let state: DecisionState;
-  if (quality !== "ready" || flowConflict || (timeframeConflict && input.pressure?.grade === "extreme")) state = "risk";
-  else if (totalScore >= 3.2) state = "upside_watch";
-  else if (totalScore <= -3.2) state = "downside_watch";
+  if (quality !== "ready" || flowConflict || hierarchyConflict) state = "risk";
+  else if (analysisConsensus.finalDirection === "bullish") state = "upside_watch";
+  else if (analysisConsensus.finalDirection === "bearish") state = "downside_watch";
   else state = "neutral";
 
   const safeHeadline = qualityHeadline(quality);
   const riskHeadline = flowConflict
-    ? "가격 흐름과 큰 금액 체결이 엇갈려 지금은 기다릴 때입니다."
-    : timeframeConflict
-      ? "짧은 흐름과 큰 흐름이 엇갈려 지금은 기다릴 때입니다."
-      : input.pressure?.grade === "extreme"
-        ? "한쪽 포지션 쏠림이 커 지금은 변동성에 주의할 때입니다."
-        : "근거가 엇갈려 지금은 기다릴 때입니다.";
+    ? "여러 시간대 구조와 큰 금액 체결이 엇갈려 지금은 기다릴 때입니다."
+    : analysisConsensus.conflict === "macro"
+      ? "1일과 4시간 큰 흐름이 엇갈려 방향 판단을 기다립니다."
+      : analysisConsensus.conflict === "macro_current"
+        ? "큰 흐름과 현재 구조가 반대라 지금은 기다릴 때입니다."
+        : analysisConsensus.conflict === "current"
+          ? "1시간과 15분 현재 구조가 엇갈려 지금은 기다릴 때입니다."
+          : "근거가 엇갈려 지금은 기다릴 때입니다.";
   const headline =
     safeHeadline ??
     (state === "upside_watch"
       ? "현재는 오르는 근거가 더 많습니다."
       : state === "downside_watch"
         ? "현재는 내리는 근거가 더 많습니다."
-        : state === "risk"
+      : state === "risk"
           ? riskHeadline
-          : "한쪽 힘이 뚜렷하지 않아 다음 움직임을 기다립니다.");
+          : "큰 흐름과 현재 구조가 같은 방향으로 모이길 기다립니다.");
 
   const topRisk =
     quality !== "ready"
       ? "일부 데이터가 늦거나 비어 있어 현재 결론을 그대로 믿기 어렵습니다."
       : flowConflict
-        ? "15분 가격 흐름과 큰 금액 체결이 반대라 첫 움직임이 되돌려질 수 있습니다."
-        : timeframeConflict
-          ? "15분 흐름과 1시간·4시간 흐름이 반대라 짧게 크게 흔들릴 수 있습니다."
+        ? "확정 구조와 큰 금액 체결이 반대라 첫 움직임이 되돌려질 수 있습니다."
+        : hierarchyConflict
+          ? "상위 시간대와 현재 구조가 정렬되지 않아 짧은 반응만 보고 방향을 바꾸기 어렵습니다."
+          : analysisConsensus.reaction === "rejecting"
+            ? "5분·1분 단기 반응이 큰 흐름과 반대라 되돌림이 커질 수 있습니다."
+            : analysisConsensus.layers.some((layer) => layer.warningDirection !== "unknown")
+              ? "CHoCH 전환 경고가 있어 확정 구조가 유지되는지 다음 봉에서 다시 봐야 합니다."
           : input.pressure?.grade === "extreme"
             ? "한쪽 포지션이 많이 몰려 있어 급격한 반대 움직임이 나올 수 있습니다."
             : primary.analysis.condition.volatilityState === "expanded"
               ? "평소보다 움직임이 커 작은 변동에도 현재 해석이 자주 바뀔 수 있습니다."
               : state === "neutral"
                 ? "방향 근거가 약한 구간이라 작은 움직임을 추세로 오해하기 쉽습니다."
-                : "확인 가격에 닿기 전에 따라가면 되돌림에 흔들릴 수 있습니다.";
+                : "다음 판단 기준이 충족되기 전에 따라가면 되돌림에 흔들릴 수 있습니다.";
 
   const reasons: [string, string] = [
-    `15분은 ${structureLabel(primary.analysis.msb)}, 1시간은 ${structureLabel(hourly.analysis.msb)}, 4시간은 ${structureLabel(fourHourly.analysis.msb)}입니다.`,
+    `${analysisConsensus.layers[0].detail} ${analysisConsensus.layers[1].detail} ${analysisConsensus.layers[2].detail}`,
     input.flow && input.pressure
       ? `${publicFlowSummary(input.flow)} ${publicPressureSummary(input.pressure)}`
       : "몰린 포지션이나 큰 금액 체결 데이터가 부족해 차트 흐름만으로 단정하지 않습니다."
   ];
 
   const primaryDirection: "above" | "below" = state === "downside_watch" ? "below" : "above";
-  const primaryCondition = state === "risk" || state === "neutral"
+  const primaryThreshold = state === "risk" || state === "neutral"
+    ? null
+    : nextThreshold(input.asset, input.price, primary, primaryDirection, qualifiedPrimary);
+  const primaryCondition = state === "risk" || state === "neutral" || !primaryThreshold
     ? stateChangeCondition(
         input.asset,
         input.generatedAt,
         state,
-        state === "neutral"
-          ? "15분·1시간·4시간 근거가 한쪽으로 모이는지 확인"
+        !primaryThreshold && state !== "risk" && state !== "neutral"
+          ? "현재 방향 판단이 바뀌면 최신 분석에서 다시 봅니다."
+          : state === "neutral"
+          ? "1일·4시간 큰 흐름과 1시간·15분 현재 구조가 같은 방향으로 모이면 다시 판단합니다."
           : quality === "ready"
-          ? "15분 가격 흐름과 큰 금액 체결이 같은 방향으로 모이는지 확인"
-          : "빠진 데이터가 다시 들어오고 방향 신호가 한쪽으로 모이는지 확인"
+          ? "엇갈린 시간대 구조와 큰 금액 체결이 정리되면 다시 판단합니다."
+          : "빠진 데이터가 다시 들어오고 방향 신호가 한쪽으로 모이면 다시 판단합니다."
       )
     : priceCondition({
         asset: input.asset,
@@ -549,51 +609,71 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
         timeframe: "15m",
         role: "primary",
         direction: primaryDirection,
-        threshold: nextThreshold(input.asset, input.price, primary, primaryDirection)
+        threshold: primaryThreshold.value,
+        basis: primaryThreshold.basis
       });
 
   const hasDirectionalScenario = state === "upside_watch" || state === "downside_watch";
   const scenarioDirection: "above" | "below" = state === "downside_watch" ? "below" : "above";
   const inverseDirection: "above" | "below" = scenarioDirection === "above" ? "below" : "above";
-  const confirmationConditions = hasDirectionalScenario ? [
+  const confirmationThreshold = hasDirectionalScenario
+    ? nextThreshold(input.asset, input.price, hourly, scenarioDirection, qualifiedHourly)
+    : null;
+  const confirmationConditions = hasDirectionalScenario && confirmationThreshold ? [
     priceCondition({
       asset: input.asset,
       generatedAt: input.generatedAt,
       timeframe: "1h",
       role: "confirmation",
       direction: scenarioDirection,
-      threshold: nextThreshold(input.asset, input.price, hourly, scenarioDirection)
+      threshold: confirmationThreshold.value,
+      basis: confirmationThreshold.basis
     })
   ] : [];
+  const primaryInvalidationThreshold = hasDirectionalScenario
+    ? nextThreshold(input.asset, input.price, primary, inverseDirection, qualifiedPrimary)
+    : null;
+  const higherInvalidationThreshold = hasDirectionalScenario
+    ? nextThreshold(input.asset, input.price, fourHourly, inverseDirection, qualifiedFourHourly)
+    : null;
   const invalidationConditions = hasDirectionalScenario ? [
-    priceCondition({
+    ...(primaryInvalidationThreshold ? [priceCondition({
       asset: input.asset,
       generatedAt: input.generatedAt,
       timeframe: "15m",
       role: "invalidation",
       direction: inverseDirection,
-      threshold: nextThreshold(input.asset, input.price, primary, inverseDirection)
-    }),
-    priceCondition({
+      threshold: primaryInvalidationThreshold.value,
+      basis: primaryInvalidationThreshold.basis
+    })] : []),
+    ...(higherInvalidationThreshold ? [priceCondition({
       asset: input.asset,
       generatedAt: input.generatedAt,
       timeframe: "4h",
       role: "invalidation",
       direction: inverseDirection,
-      threshold: nextThreshold(input.asset, input.price, fourHourly, inverseDirection)
-    })
+      threshold: higherInvalidationThreshold.value,
+      basis: higherInvalidationThreshold.basis
+    })] : [])
   ] : [];
 
-  const previousChange = input.previousSnapshot && input.previousSnapshot.summary.state !== state
+  const previousChange = input.previousSnapshot &&
+    input.previousSnapshot.engineVersion === perpetualDecisionEngineVersion &&
+    input.previousSnapshot.summary.state !== state
     ? {
         from: input.previousSnapshot.summary.state,
         to: state,
         changedAt: input.generatedAt
       }
     : null;
-  const publicPrimaryDetails = evidenceDetails(primary);
+  const publicPrimaryDetails = evidenceDetails(primary, qualifiedPrimary);
+  const primaryStructure: DirectionState = qualifiedPrimary?.trend ?? "unknown";
+  const primaryWarning: DirectionState = qualifiedPrimary
+    ? qualifiedPrimary.activeChoch?.direction ?? (qualifiedPrimary.known ? "neutral" : "unknown")
+    : "unknown";
 
   return {
+    payloadSchemaVersion: 3,
     id: input.id,
     fingerprint: input.fingerprint,
     engineVersion: perpetualDecisionEngineVersion,
@@ -613,19 +693,31 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
     sourceStatus: input.sourceStatus,
     publicEvidence: {
       timeframe: "15m",
-      structure: primary.analysis.msb,
-      transition: primary.analysis.choch,
+      structure: primaryStructure,
+      transition: primaryWarning,
       events: {
+        mss: publicPrimaryDetails.events.mss,
         msb: publicPrimaryDetails.events.msb,
         choch: publicPrimaryDetails.events.choch
       },
-      context: input.timeframes.map((observation) => ({
-        timeframe: observation.timeframe,
-        label: timeframeLabels[observation.timeframe],
-        structure: observation.analysis.msb,
-        transition: observation.analysis.choch,
-        regime: observation.analysis.condition.regime
-      })),
+      context: perpetualStructureTimeframes.map((timeframe) => {
+        const qualified = qualifiedByTimeframe.get(timeframe);
+        return {
+          timeframe,
+          label: structureTimeframeLabels[timeframe],
+          trend: (qualified?.trend ?? "unknown") as DirectionState,
+          continuation: qualified
+            ? qualified.activeMsb?.direction ?? (qualified.known ? "neutral" : "unknown")
+            : "unknown",
+          warning: qualified
+            ? qualified.activeChoch?.direction ?? (qualified.known ? "neutral" : "unknown")
+            : "unknown",
+          observedAt: qualified?.lastClosedAt ?? null,
+          historyMode: "bounded-replay" as const,
+          known: qualified?.known ?? false,
+          integrity: qualified?.integrity ?? "unavailable"
+        };
+      }),
       pressure: input.pressure
         ? {
             dominantSide: input.pressure.dominantSide,
@@ -647,7 +739,8 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
       headline,
       topRisk,
       reasons,
-      primaryCondition
+      primaryCondition,
+      analysisConsensus
     },
     pro: {
       detailVersion: 1,
@@ -656,17 +749,27 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
         : {}),
       confirmationConditions: quality === "ready" ? confirmationConditions : [],
       invalidationConditions: quality === "ready" ? invalidationConditions : [],
-      multiTimeframeEvidence: input.timeframes.map((observation) => ({
-        timeframe: observation.timeframe,
-        label: timeframeLabels[observation.timeframe],
-        structure: observation.analysis.msb,
-        transition: observation.analysis.choch,
-        score: observation.analysis.score,
-        regime: observation.analysis.condition.regime,
-        observedAt: observation.observedAt,
-        closedPrice: observation.closedPrice,
-        details: evidenceDetails(observation)
-      })),
+      qualifiedMssEvidence: input.structureTimeframes,
+      multiTimeframeEvidence: input.timeframes.map((observation) => {
+        const qualified = qualifiedByTimeframe.get(observation.timeframe);
+        const structure = (qualified?.trend ?? "unknown") as DirectionState;
+        const transition: DirectionState = qualified
+          ? qualified.activeChoch?.direction ?? (qualified.known ? "neutral" : "unknown")
+          : "unknown";
+        return {
+          timeframe: observation.timeframe,
+          label: timeframeLabels[observation.timeframe],
+          structure,
+          transition,
+          score: qualified
+            ? (qualified.trend === "bullish" ? 1 : qualified.trend === "bearish" ? -1 : 0) * qualified.trendStrength
+            : 0,
+          regime: observation.analysis.condition.regime,
+          observedAt: observation.observedAt,
+          closedPrice: observation.closedPrice,
+          details: evidenceDetails(observation, qualified)
+        };
+      }),
       pressure: input.pressure
         ? {
             dominantSide: input.pressure.dominantSide,
@@ -722,11 +825,12 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
 
 export function serializeBasicPerpetualSnapshot(snapshot: PerpetualDecisionSnapshot): PerpetualDecisionSnapshot {
   const { pro: _pro, ...basic } = snapshot;
-  return basic;
+  const { analysisConsensus: _analysisConsensus, ...summary } = basic.summary;
+  return { ...basic, summary };
 }
 
 export function serializeStoredPerpetualSnapshot(snapshot: PerpetualDecisionSnapshot): PerpetualDecisionSnapshot {
-  const basic = serializeBasicPerpetualSnapshot(snapshot);
+  const { pro: _pro, ...basic } = snapshot;
   return {
     ...basic,
     chart: {
@@ -742,7 +846,19 @@ export function findSnapshotCondition(snapshot: PerpetualDecisionSnapshot, condi
   return [...snapshot.pro.confirmationConditions, ...snapshot.pro.invalidationConditions].find((condition) => condition.id === conditionId) ?? null;
 }
 
+export function isMonitorConditionCompatible(
+  condition: MonitorCondition,
+  snapshot: Pick<PerpetualDecisionSnapshot, "engineVersion">
+) {
+  if (snapshot.engineVersion !== perpetualDecisionEngineVersion) return false;
+  if (condition.kind === "decision_state_change") {
+    return condition.id.startsWith(`${perpetualDecisionStateConditionVersion}:`);
+  }
+  return condition.id.startsWith(`${perpetualMonitorConditionVersion}:`);
+}
+
 export function isMonitorConditionMet(condition: MonitorCondition, snapshot: PerpetualDecisionSnapshot) {
+  if (!isMonitorConditionCompatible(condition, snapshot)) return false;
   const closedPrice = snapshot.pro?.multiTimeframeEvidence.find(
     (evidence) => evidence.timeframe === condition.timeframe
   )?.closedPrice;
@@ -753,7 +869,6 @@ export function isMonitorConditionMet(condition: MonitorCondition, snapshot: Per
     return condition.threshold !== null && typeof closedPrice === "number" && Number.isFinite(closedPrice) && closedPrice <= condition.threshold;
   }
   if (condition.kind === "decision_state_change") {
-    if (!condition.id.startsWith(`${perpetualDecisionStateConditionVersion}:`)) return false;
     if (condition.targetState) return snapshot.summary.state === condition.targetState;
     const alignedDirection = snapshot.summary.state === "upside_watch" || snapshot.summary.state === "downside_watch";
     return Boolean(condition.baselineState && snapshot.summary.state !== condition.baselineState && alignedDirection);

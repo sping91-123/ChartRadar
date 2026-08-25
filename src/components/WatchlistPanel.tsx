@@ -142,7 +142,7 @@ function WatchlistProCta() {
         <div>
           <p className="text-xs font-black text-cyan-100">Coin Pro 관심 코인 상세 판단</p>
           <p className="mt-1 text-sm leading-6 text-slate-300 [word-break:keep-all]">
-            BTC·ETH와 알트의 위험, 확인할 가격, 해석을 다시 볼 조건, 세부 근거는 Coin Pro에서 확인할 수 있습니다.
+            BTC·ETH와 알트의 첫 판단 기준은 Basic에서도 보고, 추가 조건·세부 위험과 근거는 Coin Pro에서 확인할 수 있습니다.
           </p>
         </div>
         <CoinProConversionLink
@@ -284,7 +284,7 @@ function WatchlistSetupCard({ setup, canShowProDetails }: { setup: ScoutSetupPay
         </>
       ) : (
         <p className="mt-2 text-[10px] leading-5 text-slate-500">
-          Basic에서는 방향 요약만 제공합니다. 확인할 가격, 해석을 다시 볼 조건, 세부 위험은 Pro에서 확인할 수 있습니다.
+          Basic에서는 방향 요약과 첫 판단 기준을 제공합니다. 추가 조건과 세부 위험은 Pro에서 확인할 수 있습니다.
         </p>
       )}
     </article>

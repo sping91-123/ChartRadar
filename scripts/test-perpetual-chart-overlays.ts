@@ -54,10 +54,29 @@ const basicOneHourModel = buildPerpetualChartOverlayModel(basicSnapshot, "1h");
 assert.equal(basicOneHourModel.lines.length, 0, "Basic context charts do not inherit the 15-minute condition line");
 assert.equal(basicOneHourModel.markers.length, 0, "Basic context charts do not gain Pro signal details");
 
-const basicMarkers = resolvePerpetualChartMarkers(basicModel.markers, candles.slice(-64).map((candle) => candle.time));
+const basicMarkers = resolvePerpetualChartMarkers(basicModel.markers, candles.slice(-48).map((candle) => candle.time));
 assert.equal(basicMarkers.length, 2, "same-candle MSB and CHoCH must both remain visible");
 assert.notEqual(basicMarkers[0].position, basicMarkers[1].position, "same-side marker collisions move CHoCH to the opposite side");
 assert.equal(buildPerpetualSignalLegendItems(basicMarkers).length, 2);
+const legacySignalLegend = buildPerpetualSignalLegendItems(basicMarkers, undefined, true);
+assert.match(legacySignalLegend.find((item) => item.id === "signal-msb")?.label ?? "", /MSB\(구조 흐름\)/);
+assert.match(legacySignalLegend.find((item) => item.id === "signal-choch")?.label ?? "", /CHoCH\(전환 신호\)/);
+
+const mssOnlyModel = buildPerpetualChartOverlayModel({
+  ...basicSnapshot,
+  publicEvidence: {
+    timeframe: "15m",
+    events: {
+      mss: { direction: "bullish", level: 174, occurredAt: collisionIso, ageBars: 5 },
+      msb: null,
+      choch: null
+    }
+  }
+} as unknown as PerpetualDecisionSnapshot);
+const mssMarker = resolvePerpetualChartMarkers(mssOnlyModel.markers, candles.map((candle) => candle.time))[0];
+assert.equal(mssMarker?.kind, "mss", "qualified MSS must have its own chart marker");
+assert.equal(mssMarker?.shape, "square");
+assert.match(buildPerpetualSignalLegendItems([mssMarker])[0]?.label ?? "", /MSS\(구조 확정\)/);
 
 const oneOldSignalModel = buildPerpetualChartOverlayModel({
   ...basicSnapshot,
@@ -70,9 +89,9 @@ const oneOldSignalModel = buildPerpetualChartOverlayModel({
   }
 } as unknown as PerpetualDecisionSnapshot);
 const allSignals = resolvePerpetualChartMarkers(oneOldSignalModel.markers, candles.map((candle) => candle.time));
-const visibleSignals = resolvePerpetualChartMarkers(oneOldSignalModel.markers, candles.slice(-64).map((candle) => candle.time));
+const visibleSignals = resolvePerpetualChartMarkers(oneOldSignalModel.markers, candles.slice(-48).map((candle) => candle.time));
 const allSignalLegend = buildPerpetualSignalLegendItems(allSignals, new Set(visibleSignals.map((marker) => marker.id)));
-assert.equal(allSignalLegend.length, 2, "signals outside the current 64-candle plot remain available in the external legend");
+assert.equal(allSignalLegend.length, 2, "signals outside the current 48-candle plot remain available in the external legend");
 assert.equal(allSignalLegend.find((item) => item.id === "signal-msb")?.outsideVisibleRange, true);
 assert.match(allSignalLegend.find((item) => item.id === "signal-msb")?.value ?? "", /\d{2}\. \d{2}\./, "signal legends include their KST occurrence time");
 
@@ -130,8 +149,8 @@ assert.deepEqual(
   {
     id: "condition-primary",
     group: "condition",
-    label: "1차 확인",
-    detailLabel: "먼저 확인",
+    label: "판단 기준",
+    detailLabel: "다음 판단 기준",
     price: 180,
     color: "#fbbf24",
     lineWidth: 2,
@@ -177,8 +196,8 @@ assert.equal(oneHourModel.legendItems.filter((item) => item.group === "zone").le
 assert.equal(oneHourModel.markers.length, 1, "Pro context charts use same-timeframe structure signals");
 assert.equal(oneHourModel.markers[0]?.level, 150);
 
-assert.equal(compactPerpetualCandleLimit(360), 64);
-assert.equal(compactPerpetualCandleLimit(767), 64);
+assert.equal(compactPerpetualCandleLimit(360), 48);
+assert.equal(compactPerpetualCandleLimit(767), 48);
 assert.equal(compactPerpetualCandleLimit(768), 96);
 assert.equal(compactPerpetualCandleLimit(1440), 96);
 

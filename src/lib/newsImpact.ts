@@ -215,11 +215,17 @@ function directionForState(state: DecisionState) {
 
 function structureSignal(before: PerpetualDecisionSnapshot, after: PerpetualDecisionSnapshot, direction: number) {
   if (!before.pro || !after.pro || direction === 0) return 0;
-  const beforeScore = before.pro.multiTimeframeEvidence.reduce((sum, evidence) => sum + evidence.score, 0);
-  const afterScore = after.pro.multiTimeframeEvidence.reduce((sum, evidence) => sum + evidence.score, 0);
+  const normalizedScore = (snapshot: PerpetualDecisionSnapshot) => {
+    const consensus = snapshot.summary.analysisConsensus?.normalizedScore;
+    if (typeof consensus === "number" && Number.isFinite(consensus)) return consensus;
+    const evidence = snapshot.pro?.multiTimeframeEvidence ?? [];
+    return evidence.length ? evidence.reduce((sum, item) => sum + item.score, 0) / evidence.length : 0;
+  };
+  const beforeScore = normalizedScore(before);
+  const afterScore = normalizedScore(after);
   const deltaTowardState = (afterScore - beforeScore) * direction;
-  if (deltaTowardState >= 0.75) return 1;
-  if (deltaTowardState <= -0.75) return -1;
+  if (deltaTowardState >= 0.15) return 1;
+  if (deltaTowardState <= -0.15) return -1;
   return 0;
 }
 

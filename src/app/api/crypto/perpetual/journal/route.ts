@@ -132,7 +132,7 @@ export async function POST(request: Request) {
         user_id: entitlement.userId,
         title: `${snapshot.symbol} ${source === "news" ? "뉴스 판단 복기" : "선물 시장 분석"}`,
         bias: decisionStateLabel(snapshot.summary.state),
-        note: `${snapshot.summary.topRisk}\n${monitorCondition ? "연결한 감시 조건" : "다음 확인"}: ${monitorCondition?.label ?? snapshot.summary.primaryCondition.label}`,
+        note: `${snapshot.summary.topRisk}\n${monitorCondition ? "연결한 감시 조건" : "다음 판단 기준"}: ${monitorCondition?.label ?? snapshot.summary.primaryCondition.label}`,
         market: "crypto",
         source,
         symbol: snapshot.symbol,

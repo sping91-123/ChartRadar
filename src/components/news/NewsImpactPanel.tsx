@@ -80,7 +80,7 @@ function nextCheckCopy(event: NewsImpactEvent) {
   if (reaction.stage === "detected") return `${formatNewsImpactTime(reaction.nextCheckAt)} 전후 ${event.status === "revised" ? `${updatedPrefix} ` : `${anchor} `}마감된 15분 반응을 확인합니다.`;
   if (reaction.stage === "provisional_15m") return `${formatNewsImpactTime(reaction.nextCheckAt)} 전후 ${event.status === "revised" ? updatedPrefix : anchor} 60분 반응을 확인합니다.`;
   return reaction.evaluatedAt
-    ? `${formatNewsImpactTime(reaction.evaluatedAt)} 기준 ${event.status === "revised" ? updatedPrefix : anchor} 60분 반응 확인을 마쳤습니다. 현재 시장 화면에서 위험과 확인 가격을 다시 보세요.`
+    ? `${formatNewsImpactTime(reaction.evaluatedAt)} 기준 ${event.status === "revised" ? updatedPrefix : anchor} 60분 반응 확인을 마쳤습니다. 현재 시장 화면에서 위험과 다음 판단 기준을 다시 보세요.`
     : "최종 반응 평가 시각을 확인하고 있습니다.";
 }
 
@@ -246,7 +246,7 @@ function formatMetricValue(metric: NewsReactionMetric, value: number | null) {
 function officialRelevanceCopy(event: NewsImpactEvent, market: NewsMarket) {
   if (event.category === "macro") {
     return market === "crypto"
-      ? "금리·물가·고용 발표는 달러와 위험자산 변동성을 키울 수 있어 BTC·ETH의 현재 위험과 확인 가격을 다시 볼 이유가 됩니다."
+      ? "금리·물가·고용 발표는 달러와 위험자산 변동성을 키울 수 있어 BTC·ETH의 현재 위험과 다음 판단 기준을 다시 볼 이유가 됩니다."
       : "금리·물가·고용 발표는 지수선물·달러·채권금리와 섹터 흐름이 동시에 바뀌는 계기가 될 수 있습니다.";
   }
   if (event.category === "regulation") {

@@ -9,10 +9,11 @@ const groupCopy: Record<PerpetualChartLegendGroup, string> = {
 function MarkerGlyph({ item }: { item: PerpetualChartLegendItem }) {
   if (item.markerShape === "arrowUp") return <span aria-hidden>↑</span>;
   if (item.markerShape === "arrowDown") return <span aria-hidden>↓</span>;
+  if (item.markerShape === "square") return <span aria-hidden>■</span>;
   return <span aria-hidden>●</span>;
 }
 
-export function PerpetualChartLegend({ id, items }: { id: string; items: PerpetualChartLegendItem[] }) {
+export function PerpetualChartLegend({ id, items, timeframeLabel }: { id: string; items: PerpetualChartLegendItem[]; timeframeLabel: string }) {
   const groups = (["condition", "zone", "signal"] as const)
     .map((group) => ({ group, items: items.filter((item) => item.group === group) }))
     .filter((entry) => entry.items.length > 0);
@@ -20,14 +21,14 @@ export function PerpetualChartLegend({ id, items }: { id: string; items: Perpetu
   if (!groups.length) return null;
 
   return (
-    <section id={id} className="mt-2 space-y-2 overflow-x-hidden px-2" aria-labelledby={`${id}-title`}>
-      <h2 id={`${id}-title`} className="sr-only">15분 차트 범례</h2>
+    <section id={id} className="mt-1.5 space-y-1.5 overflow-x-hidden px-2" aria-labelledby={`${id}-title`}>
+      <h2 id={`${id}-title`} className="sr-only">{timeframeLabel} 차트 범례</h2>
       {groups.map(({ group, items: groupItems }) => (
         <div key={group} className="min-w-0">
           <h3 className="text-[11px] font-black tracking-[0.04em] text-ui-subtle">{groupCopy[group]}</h3>
-          <ul className="mt-1 grid min-w-0 grid-cols-2 gap-1 sm:flex sm:flex-wrap">
+          <ul className="mt-0.5 grid min-w-0 grid-cols-2 gap-1 sm:flex sm:flex-wrap">
             {groupItems.map((item) => (
-              <li key={item.id} className="flex min-w-0 items-center gap-2 rounded-ui-sm bg-ui-inset/55 px-2 py-1.5 text-[11px] leading-4 sm:text-xs">
+              <li key={item.id} className="flex min-w-0 items-center gap-1.5 rounded-ui-sm bg-ui-inset/55 px-1.5 py-1 text-[11px] leading-4">
                 {item.group === "signal" ? (
                   <span className="grid h-4 w-4 shrink-0 place-items-center text-xs font-black" style={{ color: item.color }}>
                     <MarkerGlyph item={item} />

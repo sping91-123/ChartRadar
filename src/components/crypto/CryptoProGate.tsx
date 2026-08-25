@@ -113,7 +113,7 @@ export function CryptoDetailScopeNotice({ hasCoinPro }: { hasCoinPro: boolean })
       <span className="mt-1 block">
         {hasCoinPro
           ? "Pro에서는 아래에서 구조, 기술 지표, 리스크 점검을 이어서 확인합니다."
-          : "Basic에서는 방향 요약만 제공합니다. 확인할 가격, 해석을 다시 볼 조건, 세부 위험은 Pro에서 확인할 수 있습니다."}
+          : "Basic에서는 방향 요약과 첫 판단 기준을 제공합니다. 추가 조건과 세부 위험은 Pro에서 확인할 수 있습니다."}
       </span>
     </div>
   );
@@ -124,7 +124,7 @@ export function CryptoBasicAltDetailLock() {
     <div className="mt-3 border-t border-cyan-300/25 pt-3">
       <p className="text-xs font-black text-cyan-100">Coin Pro 상세 판단 보조</p>
       <p className="mt-1 text-sm leading-6 text-slate-300 [word-break:keep-all]">
-        Basic에서는 방향 요약만 제공합니다. 해석을 다시 볼 가격, 구체적인 확인 가격, AI 설명, 세부 위험은 Coin Pro에서 확인할 수 있습니다.
+        Basic에서는 방향 요약과 첫 판단 기준을 제공합니다. 추가 강화·무효화 기준, AI 설명과 세부 위험은 Coin Pro에서 확인할 수 있습니다.
       </p>
     </div>
   );
@@ -139,8 +139,8 @@ export function CryptoAiBriefingGateNotice({ isBasicAltView }: { isBasicAltView:
       </h3>
       <p className="mt-2 text-sm leading-6 text-slate-300 [word-break:keep-all]">
         {isBasicAltView
-          ? "Basic에서는 방향 요약만 제공합니다. 구체 조건, 확인 가격, 해석을 다시 볼 가격을 풀어주는 AI 상세 설명은 Coin Pro에서 확인할 수 있습니다."
-          : "Basic에서는 방향 요약만 제공합니다. 구체 조건, 확인 가격, 해석을 다시 볼 가격을 풀어주는 AI 상세 설명은 Pro에서 확인할 수 있습니다."}
+          ? "Basic에서는 방향 요약과 첫 판단 기준을 제공합니다. 추가 조건을 풀어주는 AI 상세 설명은 Coin Pro에서 확인할 수 있습니다."
+          : "Basic에서는 방향 요약과 첫 판단 기준을 제공합니다. 추가 조건을 풀어주는 AI 상세 설명은 Pro에서 확인할 수 있습니다."}
       </p>
     </div>
   );

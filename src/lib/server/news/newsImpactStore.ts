@@ -1,4 +1,4 @@
-import type { PerpetualAsset, PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
+import { hasQualifiedMssSemantics, type PerpetualAsset, type PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
 import {
   type GlobalReactionObservation,
   type NewsImpactClassification,
@@ -938,10 +938,19 @@ export async function readNewsDecisionContext(reactionId: string, asset: Perpetu
 }
 
 export function snapshotReactionMetrics(before: PerpetualDecisionSnapshot | null, after: PerpetualDecisionSnapshot | null) {
-  const evidenceScore = (snapshot: PerpetualDecisionSnapshot | null) => snapshot?.pro?.multiTimeframeEvidence.reduce((sum, evidence) => sum + evidence.score, 0) ?? null;
+  const evidenceScore = (snapshot: PerpetualDecisionSnapshot | null) => {
+    if (!snapshot) return null;
+    const consensus = snapshot.summary.analysisConsensus?.normalizedScore;
+    if (hasQualifiedMssSemantics(snapshot) && typeof consensus === "number" && Number.isFinite(consensus)) return consensus;
+    const evidence = snapshot.pro?.multiTimeframeEvidence ?? [];
+    return evidence.length ? evidence.reduce((sum, item) => sum + item.score, 0) / evidence.length : null;
+  };
+  const comparableStructure = Boolean(before && after && before.engineVersion === after.engineVersion);
+  const beforeStructure = comparableStructure ? evidenceScore(before) : null;
+  const afterStructure = comparableStructure ? evidenceScore(after) : null;
   const items: NewsReactionMetric[] = [
     { key: "price", label: "가격", before: before?.price ?? null, after: after?.price ?? null, change: before && after ? after.price - before.price : null, unit: "USDT" },
-    { key: "structure", label: "다중 시간대 구조 점수", before: evidenceScore(before), after: evidenceScore(after), change: before && after ? (evidenceScore(after) ?? 0) - (evidenceScore(before) ?? 0) : null, unit: "score" },
+    { key: "structure", label: "다중 시간대 구조 점수", before: beforeStructure, after: afterStructure, change: beforeStructure !== null && afterStructure !== null ? afterStructure - beforeStructure : null, unit: "score" },
     { key: "flow", label: "대형 체결 불균형", before: before?.pro?.flow?.imbalancePercent ?? null, after: after?.pro?.flow?.imbalancePercent ?? null, change: null, unit: "%" },
     { key: "pressure", label: "상방-하방 청산 압력", before: before?.pro?.pressure ? before.pro.pressure.upsideShortPressure - before.pro.pressure.downsideLongPressure : null, after: after?.pro?.pressure ? after.pro.pressure.upsideShortPressure - after.pro.pressure.downsideLongPressure : null, change: null, unit: "pt" }
   ];

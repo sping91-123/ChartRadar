@@ -11,10 +11,16 @@ export function plainDirection(direction: DirectionState) {
 }
 
 export function structureExplanation(direction: DirectionState) {
-  if (direction === "bullish") return "최근 중요한 고점을 넘어 오르는 흐름이 이어지고 있어요.";
-  if (direction === "bearish") return "최근 중요한 저점을 내려가 내리는 흐름이 이어지고 있어요.";
-  if (direction === "neutral") return "최근 고점과 저점 사이에 있어 한쪽 방향이 뚜렷하지 않아요.";
-  return "추세 방향을 판단할 데이터가 아직 충분하지 않아요.";
+  if (direction === "bullish") return "확정된 상승 구조 안에서 중요한 고점을 다시 넘어 흐름이 이어지고 있어요.";
+  if (direction === "bearish") return "확정된 하락 구조 안에서 중요한 저점을 다시 내려가 흐름이 이어지고 있어요.";
+  if (direction === "neutral") return "확정 구조를 이어갈 추가 돌파는 아직 뚜렷하지 않아요.";
+  return "추세 지속 신호를 판단할 데이터가 아직 충분하지 않아요.";
+}
+
+export function confirmedStructureExplanation(direction: DirectionState) {
+  if (direction === "bullish") return "강한 종가 돌파가 품질 조건을 통과해 상승 구조로 확정됐어요.";
+  if (direction === "bearish") return "강한 종가 돌파가 품질 조건을 통과해 하락 구조로 확정됐어요.";
+  return "강한 종가 돌파가 확인되기 전이라 구조 방향을 정하지 않아요.";
 }
 
 export function transitionExplanation(direction: DirectionState) {
@@ -61,17 +67,55 @@ export function qualityLabel(quality: SnapshotQuality) {
 }
 
 export function monitorConditionHeading(condition: MonitorCondition) {
+  void condition;
+  return "다음 판단 기준";
+}
+
+export function monitorConditionDisplayLabel(condition: MonitorCondition) {
+  const isPriceCondition = condition.kind === "price_cross_above" || condition.kind === "price_cross_below";
+  if (isPriceCondition && typeof condition.threshold === "number" && Number.isFinite(condition.threshold)) {
+    const price = condition.threshold.toLocaleString("ko-KR", { maximumFractionDigits: 4 });
+    const side = condition.kind === "price_cross_above" ? "위" : "아래";
+    return `${condition.basis ?? "저장된 기준선"} ${price} ${side}에서 ${condition.timeframe}봉 마감`;
+  }
+  return condition.label
+    .replace(/확인(?:할)?\s+가격/g, "다음 판단 기준")
+    .replace(/다음\s+확인\s+조건/g, "다음 판단 기준");
+}
+
+export function monitorConditionOutcomeCopy(condition: MonitorCondition) {
   const isPriceCondition =
     (condition.kind === "price_cross_above" || condition.kind === "price_cross_below") &&
     typeof condition.threshold === "number" &&
     Number.isFinite(condition.threshold);
-  return isPriceCondition ? "지금 확인할 가격" : "지금 확인할 조건";
+  if (isPriceCondition) {
+    return {
+      met: condition.role === "invalidation"
+        ? "충족하면 · 현재 해석을 그대로 유지하지 않고 최신 분석에서 다시 판단합니다."
+        : "충족하면 · 최신 분석을 불러와 현재 방향 근거가 유지되는지 다시 판단합니다.",
+      unmet: "아직 아니면 · 현재 결론을 확정으로 보지 않고 가격을 따라가지 않습니다.",
+      note: `${condition.basis ? `기준 출처 · ${condition.basis} · ` : ""}봉 마감 기준이며 자동 주문이나 진입 지시가 아닙니다.`
+    };
+  }
+  if (condition.baselineState === "upside_watch" || condition.baselineState === "downside_watch") {
+    return {
+      met: "현재 방향 판단이 달라지면 · 최신 분석에서 새 근거와 위험을 다시 봅니다.",
+      unmet: "방향 판단이 유지되면 · 기존 결론도 확정이나 진입 지시로 보지 않습니다.",
+      note: "상태가 바뀌어도 자동 주문이나 진입 지시로 사용하지 않습니다."
+    };
+  }
+  return {
+    met: "근거가 한쪽으로 모이면 · 최신 분석에서 방향을 다시 판단합니다.",
+    unmet: "계속 섞여 있으면 · 결론을 서두르지 않고 기다립니다.",
+    note: "상태가 바뀌어도 자동 주문이나 진입 지시로 사용하지 않습니다."
+  };
 }
 
-export function beginnerTerm(term: "msb" | "choch" | "ob" | "fvg" | "sweep" | "cisd" | "poc" | "pd") {
+export function beginnerTerm(term: "mss" | "msb" | "choch" | "ob" | "fvg" | "sweep" | "cisd" | "poc" | "pd") {
   const labels = {
-    msb: "추세 방향 확인 (MSB)",
-    choch: "추세 전환 가능성 (CHoCH)",
+    mss: "확정 구조 추세 (MSS)",
+    msb: "추세 지속 (MSB)",
+    choch: "전환 경고 (CHoCH)",
     ob: "큰 주문이 반응했던 구간 (OB)",
     fvg: "가격이 빠르게 지나간 구간 (FVG)",
     sweep: "고점·저점을 잠깐 넘긴 흔들기 (Sweep)",

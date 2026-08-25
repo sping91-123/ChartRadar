@@ -201,7 +201,13 @@ async function evaluateCryptoReaction(
     return null;
   }
   const classified = classifyCryptoNewsReaction(before, after);
-  const nextCondition = after ? {
+  const comparable = Boolean(
+    before &&
+    after &&
+    before.engineVersion === after.engineVersion &&
+    classified.classification !== "insufficient_data"
+  );
+  const nextCondition = comparable && after ? {
     label: after.summary.primaryCondition.label,
     timeframe: after.summary.primaryCondition.timeframe,
     kind: after.summary.primaryCondition.kind,

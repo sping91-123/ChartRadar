@@ -10,6 +10,7 @@ import { comparePerpetualShadowDecision } from "../src/lib/perpetualShadowCompar
 import { decisionJournalContextFromSnapshot } from "../src/lib/journal";
 import type { ConfirmedCommonRangeOteV1 } from "../src/lib/confirmedCommonRangeOte";
 import { monitorConditionHeading } from "../src/lib/perpetualDecisionCopy";
+import { perpetualStructureTimeframes, type PerpetualStructureTimeframe, type QualifiedMssState } from "../src/lib/qualifiedMss";
 import {
   isPerpetualRevenueCoreScannerEnabled,
   isPerpetualRevenueCoreCanaryWindowActive,
@@ -49,8 +50,8 @@ const baseCondition: MonitorCondition = {
   baselineState: "risk",
   expiresAt: "2026-07-20T12:00:00.000Z"
 };
-assert.equal(monitorConditionHeading(baseCondition), "지금 확인할 조건", "non-price checks must not be mislabeled as a price");
-assert.equal(monitorConditionHeading({ ...baseCondition, kind: "price_cross_above", threshold: 60_000 }), "지금 확인할 가격");
+assert.equal(monitorConditionHeading(baseCondition), "다음 판단 기준", "state checks use the same plain-language heading");
+assert.equal(monitorConditionHeading({ ...baseCondition, kind: "price_cross_above", threshold: 60_000 }), "다음 판단 기준");
 
 const refreshNow = Date.parse(generatedAt);
 assert.equal(perpetualSnapshotRefreshDelay("2026-07-19T12:02:00.000Z", refreshNow), 60_000, "far expiry must retain the one-minute refresh ceiling");
@@ -130,6 +131,53 @@ function observation(timeframe: "15m" | "1h" | "4h", seconds: number, slope = 2)
   };
 }
 
+function qualifiedState(
+  timeframe: PerpetualStructureTimeframe,
+  direction: "bullish" | "bearish" | "unknown" = "bullish"
+): QualifiedMssState {
+  const known = direction !== "unknown";
+  const eventDirection = known ? direction : "bullish";
+  const occurredAt = "2026-07-19T11:45:00.000Z";
+  return {
+    contractVersion: "qualified-mss-v1",
+    sourceIndicatorVersion: "Coters-v2.49",
+    timeframe,
+    historyMode: "bounded-replay",
+    closedOnly: true,
+    historyStart: "2026-06-01T00:00:00.000Z",
+    lastClosedAt: generatedAt,
+    barCount: 1500,
+    warmupComplete: true,
+    integrity: known ? "ready" : "unstable",
+    stability: {
+      checkedWindows: [1500, 960, 640, 320],
+      directionStable: known,
+      exactPineStateParity: false
+    },
+    trend: direction,
+    known,
+    trendStrength: known ? 1 : 0,
+    latestMss: known ? {
+      direction: eventDirection,
+      level: eventDirection === "bullish" ? 60_400 : 60_900,
+      occurredAt,
+      ageBars: 3,
+      pivotId: `${timeframe}-mss`,
+      sourceAt: occurredAt,
+      confirmedAt: "2026-07-19T12:00:00.000Z",
+      qualityMode: "Displacement",
+      quality: { bodyAtrRatio: 0.9, breakAtrRatio: 0.12, closeLocation: 0.75 }
+    } : null,
+    activeMsb: null,
+    activeChoch: null,
+    eventCursor: known ? `mss:${timeframe}:${direction}` : null
+  };
+}
+
+function qualifiedStructures(direction: "bullish" | "bearish" | "unknown" = "bullish") {
+  return perpetualStructureTimeframes.map((timeframe) => qualifiedState(timeframe, direction));
+}
+
 const noBreakStructure = analyzeTimeframe("15m", candles(15 * 60, 0), { requireEstablishedStructure: true });
 assert.equal(noBreakStructure.msb, "unknown", "structure must not default to bullish before a confirmed break");
 assert.equal(noBreakStructure.choch, "unknown", "transition must stay unknown before a market direction is established");
@@ -196,7 +244,7 @@ const sellFlow = buildLargeTradeFlowReport(
 
 function input(overrides: Partial<BuildPerpetualDecisionInput> = {}): BuildPerpetualDecisionInput {
   const frames = [observation("15m", 15 * 60), observation("1h", 60 * 60), observation("4h", 4 * 60 * 60)] as const;
-  return {
+  const base: BuildPerpetualDecisionInput = {
     id: "11111111-1111-4111-8111-111111111111",
     fingerprint: "fixture-fingerprint",
     asset: "btc",
@@ -205,10 +253,15 @@ function input(overrides: Partial<BuildPerpetualDecisionInput> = {}): BuildPerpe
     generatedAt,
     sourceStatus: { candles: ready, pressure: ready, flow: ready },
     timeframes: [...frames],
+    structureTimeframes: qualifiedStructures(),
     pressure,
     flow,
-    previousSnapshot: null,
-    ...overrides
+    previousSnapshot: null
+  };
+  return {
+    ...base,
+    ...overrides,
+    structureTimeframes: overrides.structureTimeframes ?? base.structureTimeframes
   };
 }
 
@@ -218,18 +271,32 @@ assert.deepEqual(first, second, "fixed input must produce a deterministic snapsh
 assert.equal(first.asset, "btc");
 assert.equal(first.symbol, "BTCUSDT");
 assert.equal(first.exchange, "binance");
-assert.equal(first.engineVersion, "perpetual-v2.0.0", "changed structure semantics must not reuse earlier storage buckets");
+assert.equal(first.engineVersion, "perpetual-v3.0.0", "six-timeframe MSS semantics must use a new storage bucket");
 assert.equal(first.chart.candles.length, 96);
 assert.equal(first.quality, "ready");
 assert.ok(first.publicEvidence, "Basic payload must retain useful 15m structure, pressure, and flow evidence");
-assert.equal(first.publicEvidence.context?.length, 3, "Basic must see the 15m, 1h, and 4h direction summary without paid raw metrics");
+assert.equal(first.publicEvidence.context?.length, 6, "Basic must see all six qualified structure directions without paid raw metrics");
 assert.ok(first.publicEvidence.pressure?.summary.includes("강제 청산"), "Basic pressure copy must explain the practical risk in plain language");
 assert.ok(first.publicEvidence.flow?.summary.includes("큰 금액"), "Basic flow copy must explain what the observed trades mean");
 assert.equal(first.pro?.detailVersion, 1, "new snapshots must include the snapshot-native detail contract");
 assert.ok(first.pro?.multiTimeframeEvidence.every((evidence) => evidence.details), "all paid timeframes must retain their detailed evidence");
 assert.doesNotMatch(first.summary.headline, /상방 구조|하방 구조|유지 조건|스냅샷/, "the main conclusion must be understandable without internal jargon");
-assert.ok(first.summary.primaryCondition.id.includes("perpetual-v1.0.0"), "monitor IDs must remain compatible with already saved v1.0 conditions");
+assert.ok(first.summary.primaryCondition.id.includes("perpetual-condition-v3.0.0"), "v3 price conditions must not collide with older monitor semantics");
 assert.ok(new Date(first.summary.primaryCondition.expiresAt).getTime() > new Date(generatedAt).getTime());
+assert.equal(
+  isMonitorConditionMet({ ...first.summary.primaryCondition, id: first.summary.primaryCondition.id.replace("perpetual-condition-v3.0.0", "perpetual-v1.0.0") }, first),
+  false,
+  "an older price monitor must fail closed against a v3 snapshot"
+);
+const firstV3FromV2 = buildPerpetualDecisionSnapshot(input({
+  id: "11111111-1111-4111-8111-111111111116",
+  previousSnapshot: {
+    engineVersion: "perpetual-v2.0.0",
+    generatedAt: "2026-07-19T11:59:00.000Z",
+    summary: { ...first.summary, state: "downside_watch" }
+  }
+}));
+assert.equal(firstV3FromV2.publicEvidence?.previousChange, null, "the first v3 snapshot must not report a false change from v2 semantics");
 
 const confirmedCommonRangeFixture: ConfirmedCommonRangeOteV1 = {
   version: "confirmedCommonRangeV1",
@@ -276,6 +343,7 @@ const neutralSnapshot = buildPerpetualDecisionSnapshot(input({
   id: "11111111-1111-4111-8111-111111111115",
   fingerprint: "neutral-no-break-fixture",
   timeframes: [...neutralFrames],
+  structureTimeframes: qualifiedStructures("unknown"),
   pressure: null,
   flow: null
 }));
@@ -293,7 +361,7 @@ const riskFromNeutral = {
   ...neutralSnapshot,
   summary: { ...neutralSnapshot.summary, state: "risk" as const }
 };
-assert.equal(isMonitorConditionMet(neutralSnapshot.summary.primaryCondition, changedFromNeutral), true, "a v2 state condition must trigger after evidence aligns directionally");
+assert.equal(isMonitorConditionMet(neutralSnapshot.summary.primaryCondition, changedFromNeutral), true, "a v3 state condition must trigger after evidence aligns directionally");
 assert.equal(isMonitorConditionMet(neutralSnapshot.summary.primaryCondition, riskFromNeutral), false, "neutral-to-risk must not be reported as directional alignment");
 assert.equal(
   isMonitorConditionMet({ ...neutralSnapshot.summary.primaryCondition, id: "perpetual-v1.0.0:btc:15m:primary:decision_state_change:state" }, neutralSnapshot),
@@ -311,7 +379,7 @@ assert.equal(readyConflict.summary.state, "risk");
 assert.notEqual(readyConflict.summary.primaryCondition.id, neutralSnapshot.summary.primaryCondition.id, "risk and neutral state baselines must not share a monitor ID");
 assert.match(
   readyConflict.summary.primaryCondition.label,
-  /15분 가격 흐름과 큰 금액 체결이 같은 방향/,
+  /엇갈린 시간대 구조와 큰 금액 체결/,
   "a ready conflict must describe the conflicting evidence instead of claiming data is missing"
 );
 const neutralFromRisk = {
@@ -332,31 +400,35 @@ timed15m.analysis = {
   latestChochEvent: { timeframe: "15m", type: "choch", direction: "bearish", index: 250, level: 60_500 }
 };
 const timedFrames = [timed15m, observation("1h", 60 * 60), observation("4h", 4 * 60 * 60)] as const;
+const timedStructures = qualifiedStructures().map((state) => state.timeframe === "15m" ? {
+  ...state,
+  activeMsb: {
+    direction: "bullish" as const,
+    level: 60_560,
+    occurredAt: new Date(timed15m.candleTimes![280]! * 1_000).toISOString(),
+    ageBars: 39,
+    pivotId: "15m-msb-timed"
+  },
+  activeChoch: {
+    direction: "bearish" as const,
+    level: 60_500,
+    occurredAt: new Date(timed15m.candleTimes![250]! * 1_000).toISOString(),
+    ageBars: 69,
+    pivotId: "15m-choch-timed"
+  }
+} : state);
 const timedSnapshot = buildPerpetualDecisionSnapshot(input({
   id: "11111111-1111-4111-8111-111111111113",
   fingerprint: "timed-evidence-fixture",
-  timeframes: [...timedFrames]
+  timeframes: [...timedFrames],
+  structureTimeframes: timedStructures
 }));
 assert.equal(timedSnapshot.publicEvidence?.events?.msb?.level, 60_560, "Basic must retain the exact 15m MSB level used by the chart marker");
 assert.equal(timedSnapshot.publicEvidence?.events?.choch?.level, 60_500, "Basic must retain the exact 15m CHoCH level used by the chart marker");
-let checkedTimedEvents = 0;
-timedFrames.forEach((frame, index) => {
-  const storedEvidence = timedSnapshot.pro?.multiTimeframeEvidence[index];
-  for (const [rawEvent, storedEvent] of [
-    [frame.analysis.latestMsbEvent, storedEvidence?.details?.events.msb],
-    [frame.analysis.latestChochEvent, storedEvidence?.details?.events.choch]
-  ] as const) {
-    if (!rawEvent) continue;
-    checkedTimedEvents += 1;
-    assert.ok(storedEvent, "a detected structure event must be retained in the paid evidence contract");
-    assert.equal(
-      storedEvent.occurredAt,
-      new Date(frame.candleTimes![rawEvent.index]! * 1_000).toISOString(),
-      "an analyzer candle index must be converted to the exact UTC candle time"
-    );
-  }
-});
-assert.ok(checkedTimedEvents > 0, "the fixture must exercise at least one timed MSB or CHoCH event");
+const storedTimedEvidence = timedSnapshot.pro?.multiTimeframeEvidence.find((item) => item.timeframe === "15m");
+assert.equal(storedTimedEvidence?.details?.events.msb?.occurredAt, timedStructures.find((item) => item.timeframe === "15m")?.activeMsb?.occurredAt);
+assert.equal(storedTimedEvidence?.details?.events.choch?.occurredAt, timedStructures.find((item) => item.timeframe === "15m")?.activeChoch?.occurredAt);
+assert.equal(storedTimedEvidence?.details?.events.mss?.level, 60_400, "qualified MSS must be retained separately from continuation and warning events");
 
 const ethSnapshot = buildPerpetualDecisionSnapshot(input({
   id: "11111111-1111-4111-8111-111111111112",
@@ -374,9 +446,11 @@ for (const condition of [ethSnapshot.summary.primaryCondition, ...ethSnapshot.pr
 
 const basic = serializeBasicPerpetualSnapshot(first);
 assert.equal(Object.prototype.hasOwnProperty.call(basic, "pro"), false, "Basic payload must omit the pro key entirely");
+assert.equal(basic.summary.analysisConsensus, undefined, "Basic payload must not expose internal layer strengths or normalized score");
 assert.ok(basic.publicEvidence, "Basic serialization must not strip the useful public evidence");
 const stored = serializeStoredPerpetualSnapshot(first);
 assert.equal(Object.prototype.hasOwnProperty.call(stored, "pro"), false, "stored public payload must omit the pro key");
+assert.ok(stored.summary.analysisConsensus, "stored public payload must retain v3 continuity for server-side Pro reconstruction");
 assert.equal(stored.chart.candles.length, 0, "raw candles must not be stored in snapshot payloads");
 const storedPayloadText = JSON.stringify({ publicPayload: stored, proPayload: first.pro });
 assert.doesNotMatch(storedPayloadText, /"originIndex"\s*:/, "stored evidence must convert analyzer indexes into timestamps");
@@ -406,9 +480,10 @@ const staleFallback = buildStalePerpetualDecisionFallback(first);
 assert.equal(staleFallback.quality, "stale");
 assert.equal(staleFallback.summary.state, "risk", "stale fallback must not preserve a directional state");
 assert.equal(staleFallback.summary.primaryCondition.kind, "decision_state_change");
+assert.deepEqual(staleFallback.summary.analysisConsensus, first.summary.analysisConsensus, "stale fallback must retain the v3 analysis scope without making it actionable");
 assert.ok(
   staleFallback.summary.primaryCondition.id.startsWith(`${perpetualDecisionStateConditionVersion}:`),
-  "stale recovery monitors must use the v2 state-condition contract"
+  "stale recovery monitors must use the v3 state-condition contract"
 );
 assert.equal(
   isMonitorConditionMet(staleFallback.summary.primaryCondition, first),
@@ -461,7 +536,9 @@ const priceConditions = [
 ].filter((condition) => condition.kind === "price_cross_above" || condition.kind === "price_cross_below");
 assert.deepEqual(new Set(priceConditions.map((condition) => condition.timeframe)), new Set(["15m", "1h", "4h"]));
 for (const condition of priceConditions) {
-  assert.match(condition.label, /가격 구간이 끝났을 때 .* (?:위|아래)인지 확인/, "monitor copy must explain the closed-candle rule as a beginner action");
+  assert.match(condition.label, /(?:위|아래)에서 (?:15분|1시간|4시간)봉이 마감하면/, "monitor copy must explain the closed-candle rule and the next action");
+  assert.ok(condition.basis, "price conditions must expose the real structural source of the threshold");
+  assert.doesNotMatch(condition.basis ?? "", /MSS (?:고점|저점)|MSB (?:고점|저점)|CHoCH (?:고점|저점)/, "event thresholds must use a direction-neutral basis name");
   const threshold = condition.threshold ?? first.price;
   const metPrice = condition.kind === "price_cross_above" ? threshold + 1 : threshold - 1;
   const notMetPrice = condition.kind === "price_cross_above" ? threshold - 1 : threshold + 1;
@@ -509,6 +586,10 @@ assert.match(chartViewSource, /endTime: String\(asOfMs\)/);
 
 const source = readFileSync(join(process.cwd(), "src/lib/server/perpetualDecisionSource.ts"), "utf8");
 assert.match(source, /fapi\.binance\.com/);
+assert.match(source, /perpetualStructureTimeframes\.map\(\(timeframe\) => fetchClosedCandles\(symbol, timeframe, asOfMs, 1_500\)\)/, "snapshot generation must request 1500 closed candles for all six native timeframes");
+assert.match(source, /analyzeStableQualifiedMss\(timeframe, row\.candles\)/, "each native timeframe must use the boundary-stabilized v2.49 MSS replay");
+assert.match(readFileSync(join(process.cwd(), "src/lib/perpetualDecisionSnapshot.ts"), "utf8"), /event\?\.direction === \(direction === "above" \? "bullish" : "bearish"\)/, "threshold candidates must match the direction of the broken pivot");
+assert.match(source, /memory\?\.engineVersion === perpetualDecisionEngineVersion/, "an explicit older snapshot must not become the current v3 baseline");
 assert.doesNotMatch(source, /data-api\.binance\.vision|api\/v3\/klines/, "canonical source must not fall back to Binance spot");
 assert.match(source, /endTime: String\(asOfMs\)/, "historical alert snapshots must hydrate candles at their generated time");
 assert.match(source, /asOf = new Date\(snapshot\.generatedAt\)/);
@@ -531,6 +612,14 @@ assert.doesNotMatch(
 );
 const homeSource = readFileSync(join(process.cwd(), "src/components/coin/HomePerpetualDecisionFlow.tsx"), "utf8");
 assert.doesNotMatch(homeSource, />[^<{]*(스냅샷|상방 확인 중|하방 확인 중|다음 확인 조건)[^<{]*</, "Home must not render internal or unexplained decision jargon");
+assert.match(homeSource, />근거<\/h2>/, "Home evidence section uses the requested short title");
+assert.doesNotMatch(homeSource, /왜 이렇게 보나요|결론에 사용한 네 가지 근거|상세 화면에서 시간대별 신호 가격/, "removed Home helper and promo copy must not return");
+assert.match(homeSource, /여러 시간대 확정봉 종합/, "Home must describe the six-timeframe decision scope");
+assert.match(homeSource, /monitorConditionOutcomeCopy/, "Home must explain what happens when the next criterion is met or not met");
+assert.ok(
+  homeSource.indexOf("<PerpetualDecisionChart snapshot={displaySnapshot} compact />") < homeSource.indexOf("<HomeEvidenceSummary snapshot={displaySnapshot} />"),
+  "the compact chart must appear before the evidence section"
+);
 const macroSource = readFileSync(join(process.cwd(), "src/components/MacroTicker.tsx"), "utf8");
 assert.doesNotMatch(macroSource, /다음 매크로 ·/, "Home macro must not collapse the rich calendar card into a one-line summary");
 assert.match(macroSource, /오늘 거래 전 확인/, "Home macro must retain a visible daily-calendar heading");
@@ -545,12 +634,22 @@ assert.match(compactChartSource, /PerpetualChartLegend/, "compact Home chart mus
 assert.match(compactChartSource, /axisLabelVisible: compact \? line\.axisLabelVisible : true/, "only the compact primary line keeps its axis label");
 assert.match(compactChartSource, /compactPerpetualCandleLimit/, "compact candle density must respond at the tested width threshold");
 assert.match(compactChartSource, /rightOffsetPixels: 56/, "the latest Home candle must retain readable right-side space");
+assert.match(compactChartSource, /height: compact \? 240 : 360/, "the compact chart must use the less cramped 240px height");
+assert.match(compactChartSource, /applyOptions\(\{ width, height: compact \? 240 : 360 \}\)/, "responsive resize must preserve the compact chart height");
+assert.match(compactChartSource, /data-pull-to-refresh-ignore=""/, "Home and detail chart surfaces must not start pull-to-refresh");
+assert.doesNotMatch(compactChartSource, /조건선 \{counts\.conditions\}/, "the cramped overlay counts must be removed");
 assert.match(compactChartSource, /compact \? \{\} : \{ text:/, "compact markers must not cover candles with text labels");
 assert.match(compactChartSource, /line\.detailLabel/, "the full detail chart retains explanatory price-line labels");
 assert.match(compactChartSource, /allResolvedMarkers[\s\S]*visibleMarkerIds/, "signals outside the responsive plot window remain represented in the external legend");
 const compactLegendSource = readFileSync(join(process.cwd(), "src/components/coin/PerpetualChartLegend.tsx"), "utf8");
 assert.match(compactLegendSource, /<h3[\s\S]*<ul[\s\S]*<li/, "chart legend groups and entries use heading and list semantics");
 assert.match(compactLegendSource, /현재 차트 범위 밖/, "the legend explains when a preserved signal is outside the current candle window");
+assert.match(compactLegendSource, /\{timeframeLabel\} 차트 범례/, "the hidden legend title must follow the selected timeframe");
+const experienceSource = readFileSync(join(process.cwd(), "src/components/coin/PerpetualDecisionExperience.tsx"), "utf8");
+const workbenchSource = readFileSync(join(process.cwd(), "src/components/coin/PerpetualEvidenceWorkbench.tsx"), "utf8");
+assert.match(experienceSource, /hasQualifiedMssSemantics\(displaySnapshot\)/, "detail summary copy must branch between v2 and v3 meanings");
+assert.match(workbenchSource, /hasQualifiedMssSemantics\(snapshot\)/, "saved v2 evidence must not be relabelled as MSS");
+assert.match(workbenchSource, /구조 흐름 \(MSB\)[\s\S]*전환 신호 \(CHoCH\)/, "legacy evidence retains its stored MSB and CHoCH labels");
 
 const journalSource = readFileSync(join(process.cwd(), "src/components/JournalApp.tsx"), "utf8");
 for (const reviewSource of ["snapshot", "alert", "news"]) {

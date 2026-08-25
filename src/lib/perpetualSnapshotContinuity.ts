@@ -74,7 +74,10 @@ export function buildStalePerpetualDecisionFallback(snapshot: PerpetualDecisionS
         threshold: null,
         baselineState: "risk",
         expiresAt: snapshot.expiresAt
-      }
+      },
+      ...(snapshot.summary.analysisConsensus
+        ? { analysisConsensus: snapshot.summary.analysisConsensus }
+        : {})
     },
     sourceStatus: {
       candles: { ...snapshot.sourceStatus.candles, status: "stale", detail: "최신 갱신 실패로 마지막 정상 판단을 맥락용으로만 표시합니다." },

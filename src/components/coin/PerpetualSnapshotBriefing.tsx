@@ -96,7 +96,7 @@ export function PerpetualSnapshotBriefing({
         )}
       </div>
 
-      {enabled && state.status === "idle" ? <p className="mt-4 bg-ui-inset/55 px-3 py-3 text-sm leading-6 text-ui-muted">버튼을 누르면 어려운 구조 용어를 풀어 현재 흐름, 가장 큰 위험, 지금 확인할 가격 순서로 설명합니다.</p> : null}
+      {enabled && state.status === "idle" ? <p className="mt-4 bg-ui-inset/55 px-3 py-3 text-sm leading-6 text-ui-muted">버튼을 누르면 어려운 구조 용어를 풀어 현재 흐름, 가장 큰 위험, 다음 판단 기준 순서로 설명합니다.</p> : null}
       {hasPro && !enabled ? <p className="mt-4 bg-ui-inset/55 px-3 py-3 text-sm leading-6 text-ui-muted">이전 분석에는 AI가 읽을 상세 근거가 저장되지 않았습니다. 다음 자동 분석부터 쉬운 설명을 이용할 수 있습니다.</p> : null}
       {state.status === "ready" ? (
         <div className="mt-4 border-t border-ui-line pt-4">

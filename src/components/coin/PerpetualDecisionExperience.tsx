@@ -13,10 +13,10 @@ import { withSupabaseAuth } from "@/lib/authFetch";
 import { appendJournalEntry, decisionJournalContextFromSnapshot } from "@/lib/journal";
 import { isResolvedHistoricalPullLocked } from "@/lib/pullToRefresh";
 import { readPerpetualAlertContext } from "@/lib/perpetualAlertContext";
-import { decisionStateLabel, flowDirectionLabel, monitorConditionHeading, plainDirection, pressureDirectionLabel, qualityLabel } from "@/lib/perpetualDecisionCopy";
+import { decisionStateLabel, flowDirectionLabel, monitorConditionDisplayLabel, monitorConditionHeading, monitorConditionOutcomeCopy, plainDirection, pressureDirectionLabel, qualityLabel } from "@/lib/perpetualDecisionCopy";
 import { isPerpetualSnapshotScopedStateCurrent, journalMonitorIdForSnapshot } from "@/lib/perpetualMonitor";
 import type { CryptoHomeTicker } from "@/lib/server/cryptoExchangeData";
-import type { MonitorCondition, PerpetualAsset, PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
+import { hasQualifiedMssSemantics, type MonitorCondition, type PerpetualAsset, type PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
 import type { NewsDecisionContext } from "@/lib/newsImpact";
 import type { PerpetualSnapshotCapabilities, PerpetualSnapshotResponse } from "@/lib/perpetualApi";
 import {
@@ -88,6 +88,34 @@ function formatAsOf(value: string) {
 
 function formatPrice(value: number) {
   return value.toLocaleString("en-US", { maximumFractionDigits: value >= 10_000 ? 0 : 2 });
+}
+
+function LivePerpetualPrice({ asset, snapshotPrice }: { asset: PerpetualAsset; snapshotPrice: number }) {
+  const [livePrice, setLivePrice] = useState(snapshotPrice);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function tick() {
+      try {
+        const params = new URLSearchParams({ exchange: "binance", symbol: assetSymbols[asset].tickerSymbol });
+        const response = await fetch(`/api/crypto-home-ticker?${params.toString()}`, { cache: "no-store" });
+        const payload = (await response.json()) as { ticker?: CryptoHomeTicker };
+        if (!cancelled && response.ok && payload.ticker?.price) setLivePrice(payload.ticker.price);
+      } catch {
+        // Keep the immutable snapshot price when the live ticker is unavailable.
+      }
+    }
+
+    setLivePrice(snapshotPrice);
+    void tick();
+    const timer = window.setInterval(tick, 5_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [asset, snapshotPrice]);
+
+  return <p className="shrink-0 text-2xl font-black tabular-nums text-ui-text">{formatPrice(livePrice)}</p>;
 }
 
 function decisionTone(state: PerpetualDecisionSnapshot["summary"]["state"]) {
@@ -195,7 +223,6 @@ export function PerpetualDecisionExperience({
   const [effectiveSource, setEffectiveSource] = useState<"home" | "alert" | "news" | null>(source ?? null);
   const [newsContext, setNewsContext] = useState<NewsDecisionContext | null>(null);
   const [monitorRefreshKey, setMonitorRefreshKey] = useState(0);
-  const [livePrice, setLivePrice] = useState<number | null>(null);
   const [activationPending, setActivationPending] = useState(false);
   const [activationConditionId, setActivationConditionId] = useState<string | null>(null);
   const generationRef = useRef(0);
@@ -424,28 +451,6 @@ export function PerpetualDecisionExperience({
       });
     }
   }, [attributionId, effectiveSource, exactAlertContext, initialAlertMonitorId, requestedSnapshotId, session, snapshot, source, state.capabilities, state.continuity?.status]);
-  useEffect(() => {
-    if (!snapshot) return;
-    let cancelled = false;
-    async function tick() {
-      try {
-        const params = new URLSearchParams({ exchange: "binance", symbol: assetSymbols[asset].tickerSymbol });
-        const response = await fetch(`/api/crypto-home-ticker?${params.toString()}`, { cache: "no-store" });
-        const payload = (await response.json()) as { ticker?: CryptoHomeTicker };
-        if (!cancelled && response.ok && payload.ticker?.price) setLivePrice(payload.ticker.price);
-      } catch {
-        // Keep the immutable snapshot price when the live ticker is unavailable.
-      }
-    }
-    setLivePrice(snapshot.price);
-    void tick();
-    const timer = window.setInterval(tick, 5_000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, [asset, snapshot]);
-
   const createMonitor = useCallback(async (condition: MonitorCondition) => {
     if (!snapshot) return;
     const monitorSnapshotId = snapshot.id;
@@ -603,7 +608,7 @@ export function PerpetualDecisionExperience({
         appendJournalEntry({
           title: `${snapshot.symbol} 선물 시장 분석`,
           bias: decisionStateLabel(snapshot.summary.state),
-          note: `${snapshot.summary.topRisk}\n다음 확인: ${snapshot.summary.primaryCondition.label}`,
+          note: `${snapshot.summary.topRisk}\n다음 판단 기준: ${snapshot.summary.primaryCondition.label}`,
           market: "crypto",
           source: journalSource,
           symbol: snapshot.symbol,
@@ -631,7 +636,7 @@ export function PerpetualDecisionExperience({
         <div className="mt-2 h-8 w-2/3 animate-pulse bg-ui-inset" />
         <div className="mt-5 grid grid-cols-2 gap-2">
           <div className="min-h-24 animate-pulse bg-ui-risk/10 px-3 py-3 text-xs font-bold text-ui-risk">가장 큰 위험 확인 중</div>
-          <div className="min-h-24 animate-pulse bg-ui-brand/8 px-3 py-3 text-xs font-bold text-ui-brand">확인할 가격 계산 중</div>
+          <div className="min-h-24 animate-pulse bg-ui-brand/8 px-3 py-3 text-xs font-bold text-ui-brand">다음 판단 기준 계산 중</div>
         </div>
       </section>
     );
@@ -669,6 +674,15 @@ export function PerpetualDecisionExperience({
     monitorState
   ) ? monitorState : { status: "idle" } as const;
   const quickEvidence = displaySnapshot.publicEvidence;
+  const primaryConditionOutcome = monitorConditionOutcomeCopy(displaySnapshot.summary.primaryCondition);
+  const qualifiedMssSemantics = hasQualifiedMssSemantics(displaySnapshot);
+  const reactionFramesPending = qualifiedMssSemantics && ["1m", "5m"].some((timeframe) => {
+    const item = displaySnapshot.publicEvidence?.context?.find((entry) => entry.timeframe === timeframe);
+    return !item?.known || item.integrity !== "ready";
+  });
+  const decisionScopeLabel = qualifiedMssSemantics
+    ? reactionFramesPending ? "큰 흐름·현재 구조 종합 · 단기 반응 확인 중" : "여러 시간대 확정봉 종합"
+    : "저장된 15분·1시간·4시간 분석";
   const monitorRouteKey = asset === "eth" ? "perpetual_eth" : "perpetual_btc";
   const monitorReturnParams = new URLSearchParams({ asset, timeframe: "15m", snapshot: displaySnapshot.id });
   if (effectiveSource) monitorReturnParams.set("source", effectiveSource);
@@ -721,17 +735,17 @@ export function PerpetualDecisionExperience({
         <div className="flex items-start gap-2 bg-ui-watch/10 px-3 py-2 text-xs font-semibold leading-5 text-ui-watch">
           <History size={15} className="mt-0.5 shrink-0" aria-hidden />
           {source === "alert"
-            ? "알림을 받았던 당시 분석이 만료되어 최신 분석으로 바꿨습니다. 확인 가격을 다시 봐주세요."
+            ? "알림을 받았던 당시 분석이 만료되어 최신 분석으로 바꿨습니다. 다음 판단 기준을 다시 봐주세요."
             : source === "news"
               ? "뉴스에서 연결한 당시 분석이 만료되어 최신 분석으로 바꿨습니다. 다른 시점의 뉴스 해석은 자동으로 섞지 않았습니다."
-              : "Home에서 본 뒤 시장 데이터가 달라져 최신 분석으로 바꿨습니다. 확인 가격을 다시 봐주세요."}
+              : "Home에서 본 뒤 시장 데이터가 달라져 최신 분석으로 바꿨습니다. 다음 판단 기준을 다시 봐주세요."}
         </div>
       ) : null}
 
       <section className="bg-ui-panel px-3 py-4 sm:px-5" aria-labelledby="perpetual-decision-title">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-subtle">{assetSymbols[asset].label} · 바이낸스 만기 없는 선물 · 15분 흐름 기준</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-subtle">{assetSymbols[asset].label} · 바이낸스 만기 없는 선물 · {decisionScopeLabel}</p>
             <p className="mt-1 inline-flex items-center gap-1 text-[10.5px] font-semibold text-ui-muted"><Clock3 size={12} aria-hidden /> {formatAsOf(displaySnapshot.generatedAt)} 기준 분석</p>
           </div>
           <div className="flex gap-1">
@@ -742,7 +756,7 @@ export function PerpetualDecisionExperience({
 
         <div className="mt-3 flex flex-col gap-1.5 min-[390px]:flex-row min-[390px]:items-end min-[390px]:justify-between min-[390px]:gap-3">
           <h1 id="perpetual-decision-title" className="min-w-0 max-w-3xl text-2xl font-black leading-8 tracking-tight text-ui-text [word-break:keep-all]">{displaySnapshot.summary.headline}</h1>
-          <p className="shrink-0 text-2xl font-black tabular-nums text-ui-text">{formatPrice(livePrice ?? displaySnapshot.price)}</p>
+          <LivePerpetualPrice asset={asset} snapshotPrice={displaySnapshot.price} />
         </div>
 
         <div className="mt-3 grid gap-2 md:grid-cols-2">
@@ -752,7 +766,10 @@ export function PerpetualDecisionExperience({
           </div>
           <div className="bg-ui-inset/65 px-3 py-3">
             <p className="text-[10px] font-black uppercase tracking-[0.1em] text-ui-brand">{monitorConditionHeading(displaySnapshot.summary.primaryCondition)}</p>
-            <p className="mt-1 text-sm font-black leading-6 text-ui-text [word-break:keep-all]">{displaySnapshot.summary.primaryCondition.label}</p>
+            <p className="mt-1 text-sm font-black leading-6 text-ui-text [word-break:keep-all]">{monitorConditionDisplayLabel(displaySnapshot.summary.primaryCondition)}</p>
+            <p className="mt-1.5 text-[11px] font-semibold leading-5 text-ui-muted [word-break:keep-all]">{primaryConditionOutcome.met}</p>
+            <p className="text-[11px] leading-5 text-ui-subtle [word-break:keep-all]">{primaryConditionOutcome.unmet}</p>
+            <p className="mt-1 text-[10px] leading-4 text-ui-subtle [word-break:keep-all]">{primaryConditionOutcome.note}</p>
           </div>
         </div>
 
@@ -761,7 +778,7 @@ export function PerpetualDecisionExperience({
         </ul>
 
         <div className="mt-3 flex flex-col gap-2 border-t border-ui-line pt-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="order-2 text-xs leading-5 text-ui-muted sm:order-1">알림은 주문을 실행하지 않습니다. 선택한 가격 조건을 최대 5분마다 확인합니다.</p>
+          <p className="order-2 text-xs leading-5 text-ui-muted sm:order-1">알림은 주문을 실행하지 않습니다. 선택한 판단 조건을 최대 5분마다 평가합니다.</p>
           <div className="order-1 flex flex-col gap-2 sm:order-2 sm:flex-row">
             <MonitorAction condition={displaySnapshot.summary.primaryCondition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} onUpgrade={trackMonitorUpgrade} prefilled={activationConditionId === displaySnapshot.summary.primaryCondition.id} />
             {session ? (
@@ -779,10 +796,18 @@ export function PerpetualDecisionExperience({
         </div>
         {savesSnapshotWithoutNews ? <p className="mt-2 text-[11px] font-semibold leading-5 text-ui-watch">현재 플랜에서는 선물 분석만 저장됩니다. 공식 뉴스와 발표 전후 비교까지 함께 복기하는 기능은 Coin Pro에서 열립니다.</p> : null}
 
-        {quickEvidence ? (
-          <div className="mt-3 grid grid-cols-2 gap-1.5 border-t border-ui-line pt-3 sm:grid-cols-4" aria-label="현재 판단 근거 요약">
-            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">추세 확인(MSB)</span>{plainDirection(quickEvidence.structure)}</p>
-            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">흐름 전환(CHoCH)</span>{plainDirection(quickEvidence.transition)}</p>
+        {quickEvidence && qualifiedMssSemantics ? (
+          <div className="mt-3 grid grid-cols-2 gap-1.5 border-t border-ui-line pt-3 sm:grid-cols-5" aria-label="현재 판단 근거 요약">
+            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">확정 구조(MSS)</span>{plainDirection(quickEvidence.structure)}</p>
+            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">추세 지속(MSB)</span>{plainDirection(quickEvidence.events?.msb?.direction ?? (quickEvidence.structure === "unknown" ? "unknown" : "neutral"))}</p>
+            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">전환 경고(CHoCH)</span>{plainDirection(quickEvidence.transition)}</p>
+            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">몰린 포지션</span>{quickEvidence.pressure ? pressureDirectionLabel(quickEvidence.pressure.dominantSide) : "확인 중"}</p>
+            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">큰 금액 체결</span>{quickEvidence.flow ? flowDirectionLabel(quickEvidence.flow.dominantSide) : "확인 중"}</p>
+          </div>
+        ) : quickEvidence ? (
+          <div className="mt-3 grid grid-cols-2 gap-1.5 border-t border-ui-line pt-3 sm:grid-cols-4" aria-label="저장된 판단 근거 요약">
+            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">구조 흐름(MSB)</span>{plainDirection(quickEvidence.structure)}</p>
+            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">전환 신호(CHoCH)</span>{plainDirection(quickEvidence.transition)}</p>
             <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">몰린 포지션</span>{quickEvidence.pressure ? pressureDirectionLabel(quickEvidence.pressure.dominantSide) : "확인 중"}</p>
             <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">큰 금액 체결</span>{quickEvidence.flow ? flowDirectionLabel(quickEvidence.flow.dominantSide) : "확인 중"}</p>
           </div>
@@ -802,7 +827,7 @@ export function PerpetualDecisionExperience({
 
       <section className="bg-ui-panel px-3 py-4 sm:px-5">
         <div className="flex items-start justify-between gap-3">
-          <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-subtle">가격 흐름</p><h2 className="mt-1 text-lg font-black text-ui-text">차트에서 시간대별 흐름을 비교하세요</h2><p className="mt-1 text-xs leading-5 text-ui-muted">{displaySnapshot.pro ? "판단 기준은 15분으로 유지하고, 선택한 시간대의 추세·전환 신호와 중요한 가격대를 함께 표시합니다." : "판단 기준은 15분으로 유지하고, 1시간·4시간 확정 봉으로 큰 흐름을 비교할 수 있습니다."}</p></div>
+          <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-subtle">가격 흐름</p><h2 className="mt-1 text-lg font-black text-ui-text">차트에서 표시 시간대를 비교하세요</h2><p className="mt-1 text-xs leading-5 text-ui-muted">{qualifiedMssSemantics ? "결론은 1분부터 1일까지 종합하고, 차트는 선택한 15분·1시간·4시간 확정봉의 구조와 판단 기준을 보여줍니다." : "이 저장 분석은 15분·1시간·4시간 기준입니다. 차트 신호도 저장 당시의 MSB·CHoCH 의미로 표시합니다."}</p></div>
           <StatusPill tone="watch">차트 전환</StatusPill>
         </div>
         <div className="mt-3"><PerpetualDecisionChart snapshot={displaySnapshot} /></div>
@@ -817,13 +842,13 @@ export function PerpetualDecisionExperience({
       ) : displaySnapshot.pro ? (
         <section className="bg-ui-panel px-3 py-4 sm:px-5">
           <div className="flex items-start justify-between gap-3">
-            <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand">Coin Pro</p><h2 className="mt-1 text-lg font-black text-ui-text">어떤 경우에 현재 해석이 더 강해지거나 바뀌나요?</h2><p className="mt-1 text-xs leading-5 text-ui-muted">원하는 가격 조건을 저장하면 최대 5분 간격으로 확인해 알려드립니다.</p></div>
+            <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand">Coin Pro</p><h2 className="mt-1 text-lg font-black text-ui-text">어떤 경우에 현재 해석이 더 강해지거나 바뀌나요?</h2><p className="mt-1 text-xs leading-5 text-ui-muted">원하는 판단 조건을 저장하면 최대 5분 간격으로 평가해 알려드립니다.</p></div>
             <StatusPill tone="long" icon={ShieldAlert}>{capabilities.activeMonitorCount}/{capabilities.monitorLimit}</StatusPill>
           </div>
           <div className="mt-3 divide-y divide-ui-line border-y border-ui-line">
             {conditions.slice(1).map((condition) => (
               <div key={condition.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <div><p className="text-xs font-black text-ui-text">{condition.role === "confirmation" ? "흐름이 더 강해지는 확인 가격" : "이 조건이 나오면 해석을 다시 봐야 해요"}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{condition.label}</p></div>
+                <div><p className="text-xs font-black text-ui-text">{condition.role === "confirmation" ? "방향 근거 강화 기준" : "해석 재검토 기준"}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{monitorConditionDisplayLabel(condition)}</p></div>
                 <MonitorAction condition={condition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} onUpgrade={trackMonitorUpgrade} prefilled={activationConditionId === condition.id} />
               </div>
             ))}

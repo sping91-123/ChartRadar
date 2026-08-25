@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, Loader2, Pause, Play, X } from "lucide-react";
 import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
+import { monitorConditionDisplayLabel, monitorConditionOutcomeCopy } from "@/lib/perpetualDecisionCopy";
 import type { PerpetualMonitorCapabilities, PerpetualScenarioMonitor } from "@/lib/perpetualMonitor";
 
 type ManagerState =
@@ -165,7 +166,7 @@ export function PerpetualMonitorManager({
           </div>
         ) : null}
         {monitors.length === 0 && !loading ? (
-          <p className="text-xs leading-5 text-ui-muted">저장된 조건이 없습니다. 최신 정상 분석에서 확인할 가격을 선택할 수 있습니다.</p>
+          <p className="text-xs leading-5 text-ui-muted">저장된 조건이 없습니다. 최신 정상 분석에서 다음 판단 기준을 선택할 수 있습니다.</p>
         ) : (
           <div className="divide-y divide-ui-line">
             {monitors.map((monitor) => {
@@ -174,10 +175,11 @@ export function PerpetualMonitorManager({
               return (
                 <article key={monitor.id} className="py-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs font-black text-ui-text">{monitor.asset.toUpperCase()} · {monitor.timeframe}</p>
+                    <p className="text-xs font-black text-ui-text">{monitor.asset.toUpperCase()} · {monitor.condition.kind === "decision_state_change" ? "여러 시간대 종합" : monitor.timeframe}</p>
                     <StatusPill tone={status.tone}>{status.label}</StatusPill>
                   </div>
-                  <p className="mt-1 text-xs font-semibold leading-5 text-ui-muted [word-break:keep-all]">{monitor.condition.label}</p>
+                  <p className="mt-1 text-xs font-semibold leading-5 text-ui-muted [word-break:keep-all]">{monitorConditionDisplayLabel(monitor.condition)}</p>
+                  <p className="mt-0.5 text-[10.5px] leading-4 text-ui-subtle">{monitorConditionOutcomeCopy(monitor.condition).met}</p>
                   <p className="mt-1 text-[10.5px] text-ui-subtle">{expiryCopy(monitor.expiresAt)}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {monitor.status === "active" ? (
@@ -226,10 +228,10 @@ export function PerpetualMonitorManager({
                 return (
                   <article key={monitor.id} className="py-2.5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-xs font-black text-ui-text">{monitor.asset.toUpperCase()} · {monitor.timeframe}</p>
+                      <p className="text-xs font-black text-ui-text">{monitor.asset.toUpperCase()} · {monitor.condition.kind === "decision_state_change" ? "여러 시간대 종합" : monitor.timeframe}</p>
                       <StatusPill tone={status.tone}>{status.label}</StatusPill>
                     </div>
-                    <p className="mt-1 text-xs font-semibold leading-5 text-ui-muted [word-break:keep-all]">{monitor.condition.label}</p>
+                    <p className="mt-1 text-xs font-semibold leading-5 text-ui-muted [word-break:keep-all]">{monitorConditionDisplayLabel(monitor.condition)}</p>
                     <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
                       <time className="text-[10.5px] text-ui-subtle" dateTime={status.time}>{historyTimeCopy(status.time)}</time>
                       {reviewLinks.length > 0 ? (

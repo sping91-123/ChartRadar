@@ -21,6 +21,8 @@ export interface DecisionJournalContext {
   asset: "btc" | "eth";
   symbol: "BTCUSDT" | "ETHUSDT";
   snapshotId: string;
+  engineVersion?: string;
+  payloadSchemaVersion?: number;
   generatedAt: string;
   quality: "ready" | "partial" | "stale" | "unavailable";
   state: "neutral" | "upside_watch" | "downside_watch" | "risk";
@@ -31,6 +33,7 @@ export interface DecisionJournalContext {
     label: string;
     role: "primary" | "confirmation" | "invalidation";
   };
+  analysisConsensus?: NonNullable<PerpetualDecisionSnapshot["summary"]["analysisConsensus"]>;
   monitorCondition?: {
     id: string;
     label: string;
@@ -47,6 +50,8 @@ export function decisionJournalContextFromSnapshot(snapshot: PerpetualDecisionSn
     asset: snapshot.asset,
     symbol: snapshot.symbol,
     snapshotId: snapshot.id,
+    engineVersion: snapshot.engineVersion,
+    ...(snapshot.payloadSchemaVersion ? { payloadSchemaVersion: snapshot.payloadSchemaVersion } : {}),
     generatedAt: snapshot.generatedAt,
     quality: snapshot.quality,
     state: snapshot.summary.state,
@@ -56,7 +61,8 @@ export function decisionJournalContextFromSnapshot(snapshot: PerpetualDecisionSn
       id: snapshot.summary.primaryCondition.id,
       label: snapshot.summary.primaryCondition.label,
       role: snapshot.summary.primaryCondition.role
-    }
+    },
+    ...(snapshot.summary.analysisConsensus ? { analysisConsensus: snapshot.summary.analysisConsensus } : {})
   };
 }
 

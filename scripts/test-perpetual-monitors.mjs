@@ -11,6 +11,10 @@ const journalReconcileMigration = readFileSync(
   join(process.cwd(), "supabase/migrations/20260720053200_reconcile_journal_columns.sql"),
   "utf8"
 );
+const v3MonitorExpiryMigration = readFileSync(
+  join(process.cwd(), "supabase/migrations/20260825132923_perpetual_v3_monitor_expiry.sql"),
+  "utf8"
+);
 const experienceSource = readFileSync(
   join(process.cwd(), "src/components/coin/PerpetualDecisionExperience.tsx"),
   "utf8"
@@ -58,6 +62,7 @@ const snapshots = [
   "40000000-0000-4000-8000-000000000005",
   "40000000-0000-4000-8000-000000000006"
 ];
+const legacySnapshot = "40000000-0000-4000-8000-000000000007";
 
 async function asRole(db, role, sql, params = []) {
   await db.exec(`set role ${role}`);
@@ -91,14 +96,14 @@ function condition(id, threshold, expiresAt = new Date(Date.now() + 86_400_000).
   };
 }
 
-async function insertSnapshot(db, id, asset, offsetMinutes, quality = "ready", generatedAt = new Date()) {
+async function insertSnapshot(db, id, asset, offsetMinutes, quality = "ready", generatedAt = new Date(), engineVersion = "perpetual-v3.0.0") {
   const symbol = asset === "btc" ? "BTCUSDT" : "ETHUSDT";
   const generated = new Date(generatedAt.getTime() + offsetMinutes * 60_000);
   await db.query(
     `insert into public.perpetual_decision_snapshots (
       id,fingerprint,asset,symbol,engine_version,bucket_at,generated_at,expires_at,quality
-    ) values ($1,$2,$3,$4,'perpetual-v1.0.0',$5,$5,$6,$7)`,
-    [id, `fingerprint-${id}`, asset, symbol, generated.toISOString(), new Date(Date.now() + 3_600_000).toISOString(), quality]
+    ) values ($1,$2,$3,$4,$5,$6,$6,$7,$8)`,
+    [id, `fingerprint-${id}`, asset, symbol, engineVersion, generated.toISOString(), new Date(Date.now() + 3_600_000).toISOString(), quality]
   );
 }
 
@@ -188,6 +193,8 @@ try {
   await db.exec(migration);
   await db.exec(journalReconcileMigration);
   await db.exec(journalReconcileMigration);
+  await db.exec(v3MonitorExpiryMigration);
+  await db.exec(v3MonitorExpiryMigration);
 
   for (const columnName of ["market", "scout_snapshot", "outcome", "outcome_at", "updated_at"]) {
     assert.equal(
@@ -323,6 +330,7 @@ try {
   for (let index = 0; index < snapshots.length; index += 1) {
     await insertSnapshot(db, snapshots[index], index === 5 ? "eth" : "btc", index);
   }
+  await insertSnapshot(db, legacySnapshot, "btc", 7, "ready", new Date(), "perpetual-v2.0.0");
 
   const basicCondition = condition("basic-primary", 100);
   const first = await asRole(db, "service_role", "select * from public.create_perpetual_monitor($1,$2,$3,$4,$5)", [
@@ -441,13 +449,17 @@ try {
     "update public.perpetual_scenario_monitors set status='paused',expires_at=now()-interval '1 minute' where id=$1",
     [paidMonitorIds[1]]
   );
-  const expired = await asRole(db, "service_role", "select public.expire_perpetual_monitors('test-v1') as count");
-  assert.equal(expired.rows[0].count, 1);
+  const legacyMonitor = await asRole(db, "service_role", "select * from public.create_perpetual_monitor($1,$2,$3,$4,$5)", [
+    ids.paid, legacySnapshot, "legacy-v2-condition", condition("legacy-v2-condition", 116), 20
+  ]);
+  const expired = await asRole(db, "service_role", "select public.expire_perpetual_monitors('perpetual-v3.0.0') as count");
+  assert.equal(expired.rows[0].count, 2, "time-expired and incompatible-engine monitors must be closed together");
   assert.equal((await db.query("select status from public.perpetual_scenario_monitors where id=$1", [paidMonitorIds[1]])).rows[0].status, "expired");
+  assert.equal((await db.query("select status from public.perpetual_scenario_monitors where id=$1", [legacyMonitor.rows[0].id])).rows[0].status, "expired");
   assert.equal(
     (await db.query("select count(*)::int as count from public.perpetual_decision_outcomes where outcome='expired'")).rows[0].count,
-    1,
-    "paused expiry must create a global expired outcome"
+    2,
+    "time and engine-version expiry must create global expired outcomes"
   );
 
   for (let index = 0; index < 20; index += 1) {

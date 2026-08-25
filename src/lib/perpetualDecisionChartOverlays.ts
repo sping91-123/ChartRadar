@@ -21,9 +21,9 @@ export interface PerpetualChartLineOverlay {
 }
 
 export interface PerpetualChartMarkerOverlay {
-  id: "msb" | "choch";
-  kind: "msb" | "choch";
-  label: "MSB" | "CHoCH";
+  id: "mss" | "msb" | "choch";
+  kind: "mss" | "msb" | "choch";
+  label: "MSS" | "MSB" | "CHoCH";
   direction: "bullish" | "bearish";
   level: number;
   occurredAt: string;
@@ -33,7 +33,7 @@ export interface PerpetualChartMarkerOverlay {
 export interface ResolvedPerpetualChartMarker extends PerpetualChartMarkerOverlay {
   time: number;
   position: "aboveBar" | "belowBar";
-  shape: "arrowUp" | "arrowDown" | "circle";
+  shape: "arrowUp" | "arrowDown" | "circle" | "square";
 }
 
 export interface PerpetualChartLegendItem {
@@ -62,7 +62,8 @@ const overlayColors = {
   fvg: "#38bdf8",
   poc: "#f59e0b",
   bullish: "#34d399",
-  bearish: "#fb7185"
+  bearish: "#fb7185",
+  mss: "#fbbf24"
 } as const;
 
 function isFinitePrice(value: unknown): value is number {
@@ -76,12 +77,12 @@ export function formatPerpetualChartPrice(value: number) {
 
 function conditionCopy(condition: MonitorCondition) {
   if (condition.role === "confirmation") {
-    return { label: "추가 확인", detailLabel: "추가 확인", color: overlayColors.confirmation, lineWidth: 1 as const, lineStyle: "dashed" as const };
+    return { label: "근거 강화", detailLabel: "근거 강화", color: overlayColors.confirmation, lineWidth: 1 as const, lineStyle: "dashed" as const };
   }
   if (condition.role === "invalidation") {
     return { label: "무효화", detailLabel: "해석 재확인", color: overlayColors.invalidation, lineWidth: 1 as const, lineStyle: "dashed" as const };
   }
-  return { label: "1차 확인", detailLabel: "먼저 확인", color: overlayColors.primary, lineWidth: 2 as const, lineStyle: "solid" as const };
+  return { label: "판단 기준", detailLabel: "다음 판단 기준", color: overlayColors.primary, lineWidth: 2 as const, lineStyle: "solid" as const };
 }
 
 function addCondition(
@@ -162,16 +163,16 @@ function addRange(
   });
 }
 
-function validMarker(kind: "msb" | "choch", event: PerpetualTimedLevel | null | undefined): PerpetualChartMarkerOverlay | null {
+function validMarker(kind: "mss" | "msb" | "choch", event: PerpetualTimedLevel | null | undefined): PerpetualChartMarkerOverlay | null {
   if (!event || !isFinitePrice(event.level) || !event.occurredAt || !Number.isFinite(Date.parse(event.occurredAt))) return null;
   return {
     id: kind,
     kind,
-    label: kind === "msb" ? "MSB" : "CHoCH",
+    label: kind === "mss" ? "MSS" : kind === "msb" ? "MSB" : "CHoCH",
     direction: event.direction,
     level: event.level,
     occurredAt: event.occurredAt,
-    color: event.direction === "bullish" ? overlayColors.bullish : overlayColors.bearish
+    color: kind === "mss" ? overlayColors.mss : event.direction === "bullish" ? overlayColors.bullish : overlayColors.bearish
   };
 }
 
@@ -236,6 +237,7 @@ export function buildPerpetualChartOverlayModel(
 
   const publicEvents = snapshot.publicEvidence?.timeframe === timeframe ? snapshot.publicEvidence.events : undefined;
   const markers = [
+    validMarker("mss", details?.events.mss ?? publicEvents?.mss),
     validMarker("msb", details?.events.msb ?? publicEvents?.msb),
     validMarker("choch", details?.events.choch ?? publicEvents?.choch)
   ].filter((marker): marker is PerpetualChartMarkerOverlay => marker !== null);
@@ -257,7 +259,7 @@ export function resolvePerpetualChartMarkers(
     const preferredPosition = marker.direction === "bullish" ? "belowBar" : "aboveBar";
     let position: ResolvedPerpetualChartMarker["position"] = preferredPosition;
     const preferredKey = `${time}:${preferredPosition}`;
-    if (marker.kind === "choch" && occupied.has(preferredKey)) {
+    if (marker.kind !== "mss" && occupied.has(preferredKey)) {
       position = preferredPosition === "belowBar" ? "aboveBar" : "belowBar";
     }
     occupied.add(`${time}:${position}`);
@@ -265,7 +267,7 @@ export function resolvePerpetualChartMarkers(
       ...marker,
       time,
       position,
-      shape: marker.kind === "choch" ? "circle" : marker.direction === "bullish" ? "arrowUp" : "arrowDown"
+      shape: marker.kind === "mss" ? "square" : marker.kind === "choch" ? "circle" : marker.direction === "bullish" ? "arrowUp" : "arrowDown"
     });
   }
 
@@ -285,12 +287,17 @@ function formatSignalTime(time: number) {
 
 export function buildPerpetualSignalLegendItems(
   markers: ResolvedPerpetualChartMarker[],
-  visibleMarkerIds?: ReadonlySet<PerpetualChartMarkerOverlay["id"]>
+  visibleMarkerIds?: ReadonlySet<PerpetualChartMarkerOverlay["id"]>,
+  legacyStructureSemantics = false
 ): PerpetualChartLegendItem[] {
   return markers.map((marker) => ({
     id: `signal-${marker.id}`,
     group: "signal",
-    label: marker.kind === "msb" ? "MSB(추세 확인)" : "CHoCH(전환 가능)",
+    label: marker.kind === "mss"
+      ? "MSS(구조 확정)"
+      : marker.kind === "msb"
+        ? legacyStructureSemantics ? "MSB(구조 흐름)" : "MSB(추세 지속)"
+        : legacyStructureSemantics ? "CHoCH(전환 신호)" : "CHoCH(전환 경고)",
     value: `${marker.direction === "bullish" ? "상방" : "하방"} · ${formatPerpetualChartPrice(marker.level)} · ${formatSignalTime(marker.time)}`,
     color: marker.color,
     markerShape: marker.shape,
@@ -299,5 +306,5 @@ export function buildPerpetualSignalLegendItems(
 }
 
 export function compactPerpetualCandleLimit(containerWidth: number) {
-  return containerWidth >= 768 ? 96 : 64;
+  return containerWidth >= 768 ? 96 : 48;
 }

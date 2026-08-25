@@ -45,6 +45,8 @@ const globalBoardRoute = readFileSync(join(process.cwd(), "src/app/api/stocks/ma
 assert.match(perpetualSource, /snapshot\.generatedAt < beforeAt/, "surprise-event crypto baselines must be strictly earlier than first detection");
 assert.match(perpetualSource, /generated_at=lt\.\$\{encodeURIComponent\(beforeAt\)\}/, "stored crypto baselines must reject a same-timestamp snapshot");
 assert.match(newsStoreSource, /observed_at=lt\.\$\{encodeURIComponent\(beforeAt\)\}/, "Global baselines must reject a same-timestamp observation");
+assert.match(newsStoreSource, /analysisConsensus\?\.normalizedScore[\s\S]*hasQualifiedMssSemantics\(snapshot\)/, "v3 NEWS metrics must use the normalized six-timeframe consensus");
+assert.match(newsStoreSource, /before\.engineVersion === after\.engineVersion/, "NEWS structure metrics must fail closed across decision-engine versions");
 assert.match(newsListRoute, /const offset = pro \? decodeNewsCursor[^:]+: 0;/, "Basic callers cannot forge pagination cursors past the top three events");
 assert.match(newsDetailRoute, /30 \* 24 \* 60 \* 60_000/, "Pro event details enforce the 30-day product contract");
 assert.match(globalBoardRoute, /requestedEventId \? 7 : 1/, "a Basic seven-day NEWS fallback remains reachable from the Global CTA");

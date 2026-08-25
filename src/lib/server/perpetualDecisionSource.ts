@@ -5,6 +5,13 @@ import { analyzeTimeframe, type Candle } from "@/lib/marketAnalysis";
 import { detectConfirmedCommonRangeOteV1 } from "@/lib/confirmedCommonRangeOte";
 import { parseClosedBinanceKlines, sourceAgeMs } from "@/lib/marketTime";
 import {
+  analyzeStableQualifiedMss,
+  perpetualStructureTimeframes,
+  unavailableQualifiedMss,
+  type PerpetualStructureTimeframe,
+  type QualifiedMssState
+} from "@/lib/qualifiedMss";
+import {
   buildPerpetualDecisionSnapshot,
   perpetualDecisionEngineVersion,
   serializeStoredPerpetualSnapshot,
@@ -47,9 +54,12 @@ const generationPromises = perpetualDecisionMemoryStore.generationPromises;
 let warnedPersistenceFailure = false;
 
 const timeframeFreshnessMs = {
+  "1m": 3 * 60 * 1000,
+  "5m": 8 * 60 * 1000,
   "15m": 20 * 60 * 1000,
   "1h": 70 * 60 * 1000,
-  "4h": 250 * 60 * 1000
+  "4h": 250 * 60 * 1000,
+  "1d": 25 * 60 * 60 * 1000
 } as const;
 
 type SnapshotContinuityStatus = "same" | "refreshed" | "current";
@@ -106,8 +116,13 @@ async function fetchJson<T>(url: string) {
   }
 }
 
-async function fetchClosedCandles(symbol: PerpetualSymbol, timeframe: "15m" | "1h" | "4h", asOfMs: number) {
-  const params = new URLSearchParams({ symbol, interval: timeframe, limit: "320", endTime: String(asOfMs) });
+async function fetchClosedCandles(
+  symbol: PerpetualSymbol,
+  timeframe: PerpetualStructureTimeframe,
+  asOfMs: number,
+  limit = 320
+) {
+  const params = new URLSearchParams({ symbol, interval: timeframe, limit: String(limit), endTime: String(asOfMs) });
   const rows = await fetchJson<unknown>(`${BINANCE_FAPI}/fapi/v1/klines?${params.toString()}`);
   const parsed = parseClosedBinanceKlines(rows, asOfMs);
   if (parsed.candles.length < 60 || !parsed.observedAt) {
@@ -134,17 +149,40 @@ export async function fetchPerpetualFuturesPrice(symbol: PerpetualSymbol) {
 }
 
 function candleSourceStatus(
-  rows: Array<{ timeframe: "15m" | "1h" | "4h"; observedAt: string; droppedIncomplete: number }>,
+  rows: Array<{ timeframe: PerpetualStructureTimeframe; observedAt: string; droppedIncomplete: number }>,
   asOfMs: number,
-  priceFallback: boolean
+  priceFallback: boolean,
+  qualifiedStructures: QualifiedMssState[]
 ): SourceStatus {
-  if (rows.length !== 3) return { status: "unavailable", observedAt: null, detail: "필수 확정 캔들을 받지 못했습니다." };
-  const stale = rows.filter((row) => sourceAgeMs(row.observedAt, asOfMs) > timeframeFreshnessMs[row.timeframe]);
+  const required = ["15m", "1h", "4h", "1d"] as const;
+  const missingRequired = required.filter((timeframe) => !rows.some((row) => row.timeframe === timeframe));
   const observedAt = rows.find((row) => row.timeframe === "15m")?.observedAt ?? rows[0]?.observedAt ?? null;
+  if (!rows.some((row) => row.timeframe === "15m")) {
+    return { status: "unavailable", observedAt, detail: "15분 확정 캔들을 받지 못했습니다." };
+  }
+  if (missingRequired.length) {
+    return { status: "partial", observedAt, detail: `${missingRequired.join("·")} 확정 구조를 받지 못해 종합 방향을 보류합니다.` };
+  }
+  const invalidRequired = qualifiedStructures.filter((structure) => (
+    required.includes(structure.timeframe as (typeof required)[number]) && structure.integrity !== "ready"
+  ));
+  if (invalidRequired.length) {
+    return { status: "partial", observedAt, detail: `${invalidRequired.map((structure) => structure.timeframe).join("·")} 구조 이력이 불완전해 종합 방향을 보류합니다.` };
+  }
+  const stale = rows.filter((row) => required.includes(row.timeframe as (typeof required)[number]) && sourceAgeMs(row.observedAt, asOfMs) > timeframeFreshnessMs[row.timeframe]);
   if (priceFallback) return { status: "partial", observedAt, detail: "선물 현재가를 받지 못해 마지막 확정가를 사용했습니다." };
   if (stale.length) return { status: "stale", observedAt, detail: `${stale.map((row) => row.timeframe).join("·")} 확정 캔들의 시차가 큽니다.` };
   const dropped = rows.reduce((sum, row) => sum + row.droppedIncomplete, 0);
-  return { status: "ready", observedAt, detail: `진행 중 캔들 ${dropped}개를 제외했습니다.` };
+  const missingReaction = ["1m", "5m"].filter((timeframe) => (
+    qualifiedStructures.find((structure) => structure.timeframe === timeframe)?.integrity !== "ready"
+  ));
+  return {
+    status: "ready",
+    observedAt,
+    detail: missingReaction.length
+      ? `진행 중 캔들 ${dropped}개를 제외했습니다. ${missingReaction.join("·")} 단기 반응은 확인 중입니다.`
+      : `6개 시간대에서 진행 중 캔들 ${dropped}개를 제외했습니다.`
+  };
 }
 
 function pressureSourceStatus(report: Awaited<ReturnType<typeof fetchLiquidationPressureReport>> | null, asOfMs: number): SourceStatus {
@@ -184,6 +222,7 @@ function canonicalFingerprint(input: {
   asset: PerpetualAsset;
   price: number;
   observations: PerpetualTimeframeObservation[];
+  qualifiedStructures: QualifiedMssState[];
   pressure: Awaited<ReturnType<typeof fetchLiquidationPressureReport>> | null;
   flow: Awaited<ReturnType<typeof fetchLargeTradeFlowReport>> | null;
 }) {
@@ -201,6 +240,13 @@ function canonicalFingerprint(input: {
       score: observation.analysis.score,
       rangeHigh: observation.rangeHigh,
       rangeLow: observation.rangeLow
+    })),
+    qualifiedStructures: input.qualifiedStructures.map((structure) => ({
+      timeframe: structure.timeframe,
+      lastClosedAt: structure.lastClosedAt,
+      integrity: structure.integrity,
+      trend: structure.trend,
+      eventCursor: structure.eventCursor
     })),
     pressure: input.pressure
       ? {
@@ -279,7 +325,7 @@ export async function getPerpetualDecisionSnapshotById(id: string) {
 
 async function loadLatestStoredSnapshot(asset: PerpetualAsset) {
   const memory = memoryLatestByAsset.get(asset);
-  if (memory) return memory;
+  if (memory?.engineVersion === perpetualDecisionEngineVersion) return memory;
   if (!isSupabaseAdminConfigured()) return null;
   try {
     const rows = await supabaseAdminRest<StoredSnapshotRow[]>(
@@ -432,17 +478,47 @@ export async function hydratePerpetualDecisionChart(
 async function generateSnapshot(asset: PerpetualAsset, asOf: Date, previousSnapshot: PerpetualDecisionSnapshot | null) {
   const symbol = symbolFor(asset);
   const asOfMs = asOf.getTime();
-  const candleRows = await Promise.all([
-    fetchClosedCandles(symbol, "15m", asOfMs),
-    fetchClosedCandles(symbol, "1h", asOfMs),
-    fetchClosedCandles(symbol, "4h", asOfMs)
-  ]);
-  const [priceResult, pressureResult, flowResult] = await Promise.allSettled([
+  const marketResultsPromise = Promise.allSettled([
     fetchPerpetualFuturesPrice(symbol),
     fetchLiquidationPressureReport(symbol, "1h"),
     fetchLargeTradeFlowReport(symbol)
-  ]);
-  const fallbackPrice = candleRows[0].candles.at(-1)?.close ?? 0;
+  ] as const);
+  const candleResults = await Promise.allSettled(
+    perpetualStructureTimeframes.map((timeframe) => fetchClosedCandles(symbol, timeframe, asOfMs, 1_500))
+  );
+  const availableCandleRows = candleResults
+    .filter((result): result is PromiseFulfilledResult<Awaited<ReturnType<typeof fetchClosedCandles>>> => result.status === "fulfilled")
+    .map((result) => result.value);
+  const candleByTimeframe = new Map(availableCandleRows.map((row) => [row.timeframe, row]));
+  const primaryRow = candleByTimeframe.get("15m");
+  const hourlyRow = candleByTimeframe.get("1h");
+  const fourHourlyRow = candleByTimeframe.get("4h");
+  if (!primaryRow || !hourlyRow || !fourHourlyRow) {
+    const missing = [!primaryRow && "15m", !hourlyRow && "1h", !fourHourlyRow && "4h"].filter(Boolean).join("·");
+    throw new Error(`${symbol} required closed futures candles unavailable: ${missing}`);
+  }
+  const candleRows = [primaryRow, hourlyRow, fourHourlyRow] as const;
+  const qualifiedStructures = perpetualStructureTimeframes.map((timeframe) => {
+    const row = candleByTimeframe.get(timeframe);
+    if (!row) return unavailableQualifiedMss(timeframe);
+    const analyzed = analyzeStableQualifiedMss(timeframe, row.candles);
+    if ((timeframe === "1m" || timeframe === "5m") && sourceAgeMs(row.observedAt, asOfMs) > timeframeFreshnessMs[timeframe]) {
+      return {
+        ...analyzed,
+        integrity: "unavailable" as const,
+        trend: "unknown" as const,
+        known: false,
+        trendStrength: 0,
+        latestMss: null,
+        activeMsb: null,
+        activeChoch: null,
+        eventCursor: null
+      };
+    }
+    return analyzed;
+  });
+  const [priceResult, pressureResult, flowResult] = await marketResultsPromise;
+  const fallbackPrice = primaryRow.candles.at(-1)?.close ?? 0;
   const priceFallback = priceResult.status !== "fulfilled";
   const price = priceResult.status === "fulfilled" ? priceResult.value : fallbackPrice;
   if (!Number.isFinite(price) || price <= 0) throw new Error(`${symbol} decision price unavailable`);
@@ -450,34 +526,43 @@ async function generateSnapshot(asset: PerpetualAsset, asOf: Date, previousSnaps
   const flow = flowResult.status === "fulfilled" ? flowResult.value : null;
   const confirmedCommonRangeV1 = detectConfirmedCommonRangeOteV1({
     symbol,
-    sourceCandles: candleRows[1].candles,
-    latestClosed15m: candleRows[0].candles.at(-1) ?? null,
+    sourceCandles: hourlyRow.candles,
+    latestClosed15m: primaryRow.candles.at(-1) ?? null,
     asOfMs
   });
-  const observations = candleRows.map((row) => ({
-    timeframe: row.timeframe,
-    analysis: analyzeTimeframe(row.timeframe, row.candles, { requireEstablishedStructure: true }),
+  const observation = <T extends PerpetualTimeframeObservation["timeframe"]>(
+    timeframe: T,
+    row: Awaited<ReturnType<typeof fetchClosedCandles>>
+  ): PerpetualTimeframeObservation => ({
+    timeframe,
+    analysis: analyzeTimeframe(timeframe, row.candles, { requireEstablishedStructure: true }),
     observedAt: row.observedAt,
     closedPrice: row.closedPrice,
     rangeHigh: row.rangeHigh,
     rangeLow: row.rangeLow,
     candleTimes: row.candles.map((candle) => candle.time)
-  })) as [PerpetualTimeframeObservation, PerpetualTimeframeObservation, PerpetualTimeframeObservation];
+  });
+  const observations = [
+    observation("15m", primaryRow),
+    observation("1h", hourlyRow),
+    observation("4h", fourHourlyRow)
+  ] as [PerpetualTimeframeObservation, PerpetualTimeframeObservation, PerpetualTimeframeObservation];
   const sourceStatus = {
-    candles: candleSourceStatus(candleRows, asOfMs, priceFallback),
+    candles: candleSourceStatus(availableCandleRows, asOfMs, priceFallback, qualifiedStructures),
     pressure: pressureSourceStatus(pressure, asOfMs),
     flow: flowSourceStatus(flow, asOfMs)
   };
-  const fingerprint = canonicalFingerprint({ asset, price, observations, pressure, flow });
+  const fingerprint = canonicalFingerprint({ asset, price, observations, qualifiedStructures, pressure, flow });
   return buildPerpetualDecisionSnapshot({
     id: randomUUID(),
     fingerprint,
     asset,
     price,
-    chartCandles: candleRows[0].candles,
+    chartCandles: primaryRow.candles,
     generatedAt: asOf.toISOString(),
     sourceStatus,
     timeframes: observations,
+    structureTimeframes: qualifiedStructures,
     confirmedCommonRangeV1,
     pressure,
     flow,

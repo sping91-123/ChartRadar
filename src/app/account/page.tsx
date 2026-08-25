@@ -101,7 +101,7 @@ function AccountPlanSection({
         <MarketAccessRow
           label="Coin Pro 권한"
           isOpen={hasCryptoAccess}
-          description="Coin Pro에서는 코인 홈, 현물, 선물 화면의 세부 근거, 확인할 가격, 해석을 다시 볼 조건을 확인합니다."
+          description="Coin Pro에서는 Basic의 첫 판단 기준에 더해 추가 강화·무효화 기준, 세부 근거와 알림을 확인합니다."
         />
         <MarketAccessRow
           label="Global Pro 권한"

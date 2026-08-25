@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cryptoAlertConditionLimit } from "@/lib/coinCapabilities";
-import { findSnapshotCondition, isMonitorConditionMet, perpetualDecisionEngineVersion, type PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
+import { findSnapshotCondition, isMonitorConditionCompatible, isMonitorConditionMet, perpetualDecisionEngineVersion, type PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
 import { isUuid, type PerpetualMonitorStatus } from "@/lib/perpetualMonitor";
 import {
   getPerpetualDecisionSnapshotById,
@@ -162,7 +162,7 @@ export async function POST(request: Request) {
   }
 
   const snapshot = await getPerpetualDecisionSnapshotById(body.snapshotId);
-  if (!snapshot || snapshot.quality !== "ready" || new Date(snapshot.expiresAt).getTime() <= Date.now()) {
+  if (!snapshot || snapshot.engineVersion !== perpetualDecisionEngineVersion || snapshot.quality !== "ready" || new Date(snapshot.expiresAt).getTime() <= Date.now()) {
     return privateJson({
       error: "로그인 중 분석이 갱신됐거나 감시 가능한 시간이 지났습니다. 최신 상태에서 조건을 다시 확인해 주세요.",
       code: "snapshot_not_actionable",
@@ -177,6 +177,9 @@ export async function POST(request: Request) {
       code: "condition_not_available"
     }, { status: entitlement.isPaid ? 400 : 403 });
   }
+  if (!isMonitorConditionCompatible(condition, snapshot)) {
+    return privateJson({ error: "이전 분석 기준의 조건입니다. 최신 분석에서 다시 저장해 주세요.", code: "snapshot_not_actionable" }, { status: 409 });
+  }
   if (new Date(condition.expiresAt).getTime() <= Date.now()) {
     return privateJson({ error: "이 조건은 이미 만료됐습니다. 최신 상태를 다시 확인해 주세요.", code: "snapshot_not_actionable" }, { status: 409 });
   }
@@ -186,7 +189,7 @@ export async function POST(request: Request) {
   } catch {
     return privateJson({ error: "최신 상태를 확인하지 못해 조건 감시를 저장하지 않았습니다.", code: "snapshot_not_actionable" }, { status: 409 });
   }
-  if (currentSnapshot.quality !== "ready") {
+  if (currentSnapshot.engineVersion !== perpetualDecisionEngineVersion || currentSnapshot.quality !== "ready") {
     return privateJson({ error: "최신 데이터가 정상화된 뒤 조건 감시를 저장해 주세요.", code: "snapshot_not_actionable" }, { status: 409 });
   }
   if (isMonitorConditionMet(condition, currentSnapshot)) {

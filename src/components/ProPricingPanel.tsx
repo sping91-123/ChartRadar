@@ -365,7 +365,7 @@ function getPlanPayoffCopy(plan: BillingPlan) {
 
   return {
     title: "Pro 판단 보조 기준이 열립니다.",
-    items: ["확인할 가격", "해석을 다시 볼 조건", "알림·복기 흐름"]
+    items: ["추가 강화·무효화 기준", "세부 가격·수치", "알림·복기 흐름"]
   };
 }
 
@@ -1016,7 +1016,7 @@ export function ProPricingPanel({
             </AppSurface>
             <AppSurface tone="inset" variant="report" padding="md">
               <StatusPill tone="watch">과거 예시 · 실시간 데이터 아님</StatusPill>
-              <p className="mt-2 text-sm font-black text-ui-text">“1시간 방향 유지, 확인 가격 접근”</p>
+              <p className="mt-2 text-sm font-black text-ui-text">“1시간 방향 유지, 판단 기준 접근”</p>
               <p className="mt-1 text-xs leading-5 text-ui-muted">예시 감시를 저장하면 조건 도달 시점의 스냅샷과 근거를 복기에 연결합니다. Basic 사용자에게 실제 Pro payload를 전달하지 않습니다.</p>
             </AppSurface>
           </div>
@@ -1031,7 +1031,7 @@ export function ProPricingPanel({
           </div>
           <div className="border-t border-ui-line pt-3">
             <StatusPill tone="info">Pro</StatusPill>
-            <p className="mt-2 text-sm font-semibold leading-6 text-ui-text [word-break:keep-all]">확인할 가격, 해석을 다시 볼 조건, 세부 근거까지 확인</p>
+            <p className="mt-2 text-sm font-semibold leading-6 text-ui-text [word-break:keep-all]">추가 강화·무효화 기준, 세부 가격·수치와 근거까지 확인</p>
           </div>
           <div className="border-t border-ui-line pt-3">
             <StatusPill tone="watch" icon={Sparkles}>All Market</StatusPill>
@@ -1090,7 +1090,7 @@ export function ProPricingPanel({
           <SectionHeader eyebrow="DAILY FLOW" title="Coin Pro를 매일 쓰는 세 단계" description="화면을 한 번 보고 끝내지 않고, 확인할 조건을 저장하고 결과를 복기하는 흐름입니다." />
           <div className="grid gap-2 sm:grid-cols-3">
             <ValueCard label="1 · 확인" value="Home에서 상태·위험 확인" detail="BTC 또는 ETH를 고르고 현재 시장과 가장 큰 위험을 5초 안에 확인합니다." tone="info" />
-            <ValueCard label="2 · 감시" value="중요 조건을 앱에 맡김" detail="확인할 가격과 판단 변경 조건을 최대 20개까지 저장해 최대 5분 간격으로 확인합니다." tone="watch" />
+            <ValueCard label="2 · 감시" value="중요 조건을 앱에 맡김" detail="판단 기준과 판단 변경 조건을 최대 20개까지 저장해 최대 5분 간격으로 평가합니다." tone="watch" />
             <ValueCard label="3 · 복기" value="알림 당시 근거를 다시 봄" detail="알림 당시의 선물 분석과 확인 조건을 판단 기록에서 다시 보며 다음 판단 기준을 다듬습니다." tone="long" />
           </div>
         </section>

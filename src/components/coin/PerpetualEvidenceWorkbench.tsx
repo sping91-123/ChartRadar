@@ -6,6 +6,7 @@ import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
 import { CoinProConversionLink } from "@/components/CoinProConversionLink";
 import {
   beginnerTerm,
+  confirmedStructureExplanation,
   flowDirectionLabel,
   plainDirection,
   pressureDirectionLabel,
@@ -15,7 +16,7 @@ import {
 } from "@/lib/perpetualDecisionCopy";
 import type { DirectionState } from "@/lib/marketAnalysis";
 import type { ConfirmedCommonRangeOteV1 } from "@/lib/confirmedCommonRangeOte";
-import type { PerpetualDecisionEvidence, PerpetualDecisionSnapshot, PerpetualTimedLevel } from "@/lib/perpetualDecisionSnapshot";
+import { hasQualifiedMssSemantics, type PerpetualDecisionEvidence, type PerpetualDecisionSnapshot, type PerpetualTimedLevel } from "@/lib/perpetualDecisionSnapshot";
 
 function tone(direction: DirectionState) {
   if (direction === "bullish") return "long" as const;
@@ -88,26 +89,36 @@ function eventDetail(event: PerpetualTimedLevel | null | undefined) {
   return `${formatPrice(event.level)} · ${occurred} · ${age}`;
 }
 
-function StructureCard({ kind, direction, event }: { kind: "msb" | "choch"; direction: DirectionState; event?: PerpetualTimedLevel | null }) {
-  const explanation = kind === "msb" ? structureExplanation(direction) : transitionExplanation(direction);
+function StructureCard({ kind, direction, event, legacy = false }: { kind: "mss" | "msb" | "choch"; direction: DirectionState; event?: PerpetualTimedLevel | null; legacy?: boolean }) {
+  const explanation = legacy && kind === "msb"
+    ? direction === "bullish"
+      ? "저장 당시 기준에서 중요한 고점을 넘어 상승 구조로 읽었습니다."
+      : direction === "bearish"
+        ? "저장 당시 기준에서 중요한 저점을 내려가 하락 구조로 읽었습니다."
+        : "저장 당시 구조 방향이 뚜렷하지 않았습니다."
+    : kind === "mss"
+    ? confirmedStructureExplanation(direction)
+    : kind === "msb"
+      ? structureExplanation(direction)
+      : transitionExplanation(direction);
   return (
     <article className="bg-ui-inset/55 px-3 py-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-[11px] font-black text-ui-text">{beginnerTerm(kind)}</p>
-          <p className="mt-1 text-[10.5px] leading-4 text-ui-subtle">{kind === "msb" ? "중요한 고점·저점을 넘었는지 봅니다." : "기존 흐름이 바뀌기 시작했는지 봅니다."}</p>
+          <p className="text-[11px] font-black text-ui-text">{legacy && kind === "msb" ? "구조 흐름 (MSB)" : legacy && kind === "choch" ? "전환 신호 (CHoCH)" : beginnerTerm(kind)}</p>
+          <p className="mt-1 text-[10.5px] leading-4 text-ui-subtle">{legacy ? "저장 당시 분석 규칙의 의미를 그대로 표시합니다." : kind === "mss" ? "종가 돌파와 추진봉 품질을 통과했는지 봅니다." : kind === "msb" ? "확정 추세와 같은 방향의 지속 돌파를 봅니다." : "확정 추세 반대편의 초기 경고를 봅니다."}</p>
         </div>
         <StatusPill tone={tone(direction)} icon={directionIcon(direction)}>{plainDirection(direction)}</StatusPill>
       </div>
       <p className="mt-2 text-xs font-semibold leading-5 text-ui-muted [word-break:keep-all]">{explanation}</p>
       <p className="mt-2 border-t border-ui-line pt-2 text-[11px] font-semibold leading-5 text-ui-muted">
-        {kind === "msb" ? "최근 추세 확인" : "최근 전환 신호"} · {eventDetail(event)}
+        {legacy ? kind === "msb" ? "최근 구조 흐름" : "최근 전환 신호" : kind === "mss" ? "최근 구조 확정" : kind === "msb" ? "최근 추세 지속" : "최근 전환 경고"} · {eventDetail(event)}
       </p>
     </article>
   );
 }
 
-function TimeframeCard({ evidence }: { evidence: PerpetualDecisionEvidence }) {
+function TimeframeCard({ evidence, qualifiedMssSemantics }: { evidence: PerpetualDecisionEvidence; qualifiedMssSemantics: boolean }) {
   return (
     <article className="bg-ui-inset/50 px-3 py-3">
       <div className="flex items-center justify-between gap-2">
@@ -115,12 +126,13 @@ function TimeframeCard({ evidence }: { evidence: PerpetualDecisionEvidence }) {
         <StatusPill tone={tone(evidence.structure)}>{regimeLabel(evidence.regime)}</StatusPill>
       </div>
       <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
-        <div><dt className="text-ui-subtle">추세 방향</dt><dd className="mt-1 font-black text-ui-text">{plainDirection(evidence.structure)}</dd></div>
-        <div><dt className="text-ui-subtle">전환 가능성</dt><dd className="mt-1 font-black text-ui-text">{plainDirection(evidence.transition)}</dd></div>
+        <div><dt className="text-ui-subtle">{qualifiedMssSemantics ? "확정 구조(MSS)" : "구조 흐름(MSB)"}</dt><dd className="mt-1 font-black text-ui-text">{plainDirection(evidence.structure)}</dd></div>
+        <div><dt className="text-ui-subtle">{qualifiedMssSemantics ? "전환 경고(CHoCH)" : "전환 신호(CHoCH)"}</dt><dd className="mt-1 font-black text-ui-text">{plainDirection(evidence.transition)}</dd></div>
       </dl>
       <div className="mt-3 space-y-1 border-t border-ui-line pt-2 text-[11px] leading-5 text-ui-muted">
-        <p>최근 추세 확인: {eventDetail(evidence.details?.events.msb)}</p>
-        <p>최근 전환 신호: {eventDetail(evidence.details?.events.choch)}</p>
+        {qualifiedMssSemantics ? <p>최근 구조 확정: {eventDetail(evidence.details?.events.mss)}</p> : null}
+        <p>{qualifiedMssSemantics ? "최근 추세 지속" : "최근 구조 흐름"}: {eventDetail(evidence.details?.events.msb)}</p>
+        <p>{qualifiedMssSemantics ? "최근 전환 경고" : "최근 전환 신호"}: {eventDetail(evidence.details?.events.choch)}</p>
       </div>
     </article>
   );
@@ -235,20 +247,39 @@ function BasicProValueCard({ snapshot }: { snapshot: PerpetualDecisionSnapshot }
 }
 
 export function PerpetualEvidenceWorkbench({ snapshot }: { snapshot: PerpetualDecisionSnapshot }) {
+  const qualifiedMssSemantics = hasQualifiedMssSemantics(snapshot);
   const publicEvidence = snapshot.publicEvidence;
   const pro = snapshot.pro;
   const primary = pro?.multiTimeframeEvidence.find((item) => item.timeframe === "15m");
   const structure = publicEvidence?.structure ?? primary?.structure ?? "unknown";
+  const continuation = publicEvidence?.events?.msb?.direction ?? primary?.details?.events.msb?.direction ?? (structure === "unknown" ? "unknown" : "neutral");
   const transition = publicEvidence?.transition ?? primary?.transition ?? "unknown";
   const pressure = publicEvidence?.pressure ?? pro?.pressure ?? null;
   const flow = publicEvidence?.flow ?? pro?.flow ?? null;
-  const context = publicEvidence?.context ?? pro?.multiTimeframeEvidence.map((evidence) => ({
+  const contextOrder = ["1d", "4h", "1h", "15m", "5m", "1m"] as const;
+  const qualifiedContext = (publicEvidence?.context ?? pro?.qualifiedMssEvidence?.map((evidence) => ({
     timeframe: evidence.timeframe,
-    label: evidence.label,
-    structure: evidence.structure,
-    transition: evidence.transition,
-    regime: evidence.regime
-  })) ?? [];
+    label: evidence.timeframe,
+    trend: evidence.trend as DirectionState,
+    continuation: (evidence.activeMsb?.direction ?? (evidence.known ? "neutral" : "unknown")) as DirectionState,
+    warning: (evidence.activeChoch?.direction ?? (evidence.known ? "neutral" : "unknown")) as DirectionState,
+    observedAt: evidence.lastClosedAt,
+    historyMode: evidence.historyMode,
+    known: evidence.known,
+    integrity: evidence.integrity
+  })) ?? []).slice().sort((left, right) => contextOrder.indexOf(left.timeframe) - contextOrder.indexOf(right.timeframe));
+  const rawLegacyContext = publicEvidence?.context as unknown as Array<{
+    timeframe: "15m" | "1h" | "4h";
+    label: string;
+    structure: DirectionState;
+    transition: DirectionState;
+  }> | undefined;
+  const legacyContext = pro?.multiTimeframeEvidence.map((item) => ({
+    timeframe: item.timeframe,
+    label: item.label,
+    structure: item.structure,
+    transition: item.transition
+  })) ?? rawLegacyContext ?? [];
 
   return (
     <div className="space-y-3">
@@ -256,26 +287,45 @@ export function PerpetualEvidenceWorkbench({ snapshot }: { snapshot: PerpetualDe
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand"><CircleHelp size={12} aria-hidden /> 판단 과정</p>
-            <h2 id="perpetual-evidence-title" className="mt-1 text-xl font-black text-ui-text">왜 이렇게 보나요?</h2>
-            <p className="mt-1 text-xs leading-5 text-ui-muted">결론에 사용한 차트 흐름, 몰린 포지션, 큰 금액 체결을 쉬운 말로 순서대로 보여드립니다.</p>
+            <h2 id="perpetual-evidence-title" className="mt-1 text-xl font-black text-ui-text">근거</h2>
+            <p className="mt-1 text-xs leading-5 text-ui-muted">{qualifiedMssSemantics ? "1일·4시간 큰 흐름, 1시간·15분 현재 구조, 5분·1분 단기 반응을 계층적으로 종합합니다." : "이전 분석은 저장 당시의 15분·1시간·4시간 MSB·CHoCH 의미를 그대로 보여드립니다."}</p>
           </div>
-          <StatusPill tone="watch" icon={BarChart3}>15분 기준</StatusPill>
+          <StatusPill tone="watch" icon={BarChart3}>{qualifiedMssSemantics ? "여러 시간대 종합" : "저장 분석"}</StatusPill>
         </div>
-        <div className="mt-3 grid gap-2 md:grid-cols-2">
-          <StructureCard kind="msb" direction={structure} event={publicEvidence?.events?.msb ?? primary?.details?.events.msb} />
-          <StructureCard kind="choch" direction={transition} event={publicEvidence?.events?.choch ?? primary?.details?.events.choch} />
-        </div>
-        {context.length > 0 ? (
-          <div className="mt-3 grid grid-cols-3 gap-1.5" aria-label="15분, 1시간, 4시간 흐름 비교">
-            {context.map((item) => (
+        {qualifiedMssSemantics ? (
+          <div className="mt-3 grid gap-2 md:grid-cols-3">
+            <StructureCard kind="mss" direction={structure} event={publicEvidence?.events?.mss ?? primary?.details?.events.mss} />
+            <StructureCard kind="msb" direction={continuation} event={publicEvidence?.events?.msb ?? primary?.details?.events.msb} />
+            <StructureCard kind="choch" direction={transition} event={publicEvidence?.events?.choch ?? primary?.details?.events.choch} />
+          </div>
+        ) : (
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            <StructureCard legacy kind="msb" direction={structure} event={publicEvidence?.events?.msb ?? primary?.details?.events.msb} />
+            <StructureCard legacy kind="choch" direction={transition} event={publicEvidence?.events?.choch ?? primary?.details?.events.choch} />
+          </div>
+        )}
+        {qualifiedMssSemantics && qualifiedContext.length > 0 ? (
+          <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-6" aria-label="1일, 4시간, 1시간, 15분, 5분, 1분 확정 구조 비교">
+            {qualifiedContext.map((item) => (
               <article key={item.timeframe} className="min-w-0 bg-ui-inset/45 px-2 py-2.5 text-center">
-                <p className="text-[10px] font-black text-ui-subtle">{item.label}</p>
+                <p className="text-[11px] font-black text-ui-subtle">{item.label}</p>
+                <p className={`mt-1 text-xs font-black ${item.trend === "bullish" ? "text-ui-long" : item.trend === "bearish" ? "text-ui-short" : "text-ui-text"}`}>{plainDirection(item.trend)}</p>
+                <p className="mt-0.5 truncate text-[11px] text-ui-muted">경고 {plainDirection(item.warning)}</p>
+              </article>
+            ))}
+          </div>
+        ) : !qualifiedMssSemantics && legacyContext.length > 0 ? (
+          <div className="mt-3 grid grid-cols-3 gap-1.5" aria-label="저장된 시간대별 구조 비교">
+            {legacyContext.map((item) => (
+              <article key={item.timeframe} className="min-w-0 bg-ui-inset/45 px-2 py-2.5 text-center">
+                <p className="text-[11px] font-black text-ui-subtle">{item.label}</p>
                 <p className={`mt-1 text-xs font-black ${item.structure === "bullish" ? "text-ui-long" : item.structure === "bearish" ? "text-ui-short" : "text-ui-text"}`}>{plainDirection(item.structure)}</p>
-                <p className="mt-0.5 truncate text-[10px] text-ui-muted">전환 {plainDirection(item.transition)}</p>
+                <p className="mt-0.5 text-[11px] text-ui-muted">전환 {plainDirection(item.transition)}</p>
               </article>
             ))}
           </div>
         ) : null}
+        {qualifiedMssSemantics ? <p className="mt-2 text-[11px] leading-5 text-ui-subtle">Coters v2.49 기본 추진봉 기준을 앱에서 제한 이력으로 근사 재현합니다. MSS는 확정 추세, MSB는 그 추세의 지속, CHoCH는 반대편 전환 경고이며 TradingView의 전체 누적 상태와 완전 동일하다고 보지 않습니다.</p> : null}
         {!publicEvidence && !primary ? <p className="mt-3 text-xs leading-5 text-ui-watch">이전 분석이라 기본 구조 카드가 없습니다. 다음 자동 갱신부터 표시됩니다.</p> : null}
       </section>
 
@@ -365,8 +415,8 @@ export function PerpetualEvidenceWorkbench({ snapshot }: { snapshot: PerpetualDe
 
       {pro ? (
         <section className="bg-ui-panel px-3 py-4 sm:px-5" aria-labelledby="perpetual-mtf-title">
-          <div><p className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand"><Layers3 size={12} aria-hidden /> Coin Pro</p><h2 id="perpetual-mtf-title" className="mt-1 text-lg font-black text-ui-text">시간을 넓혀도 같은 방향인가요?</h2><p className="mt-1 text-xs leading-5 text-ui-muted">15분만 보지 않고 1시간·4시간 흐름까지 비교해 짧은 움직임에 속을 가능성을 줄입니다.</p></div>
-          <div className="mt-3 grid gap-2 md:grid-cols-3">{pro.multiTimeframeEvidence.map((evidence) => <TimeframeCard key={evidence.timeframe} evidence={evidence} />)}</div>
+          <div><p className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand"><Layers3 size={12} aria-hidden /> Coin Pro</p><h2 id="perpetual-mtf-title" className="mt-1 text-lg font-black text-ui-text">표시 시간대의 정밀 구조</h2><p className="mt-1 text-xs leading-5 text-ui-muted">{qualifiedMssSemantics ? "종합 결론은 6개 시간대를 사용하고, 여기서는 15분·1시간·4시간의 가격·구간 수치를 자세히 보여드립니다." : "저장 당시 15분·1시간·4시간 분석의 가격·구간 수치를 기존 의미 그대로 보여드립니다."}</p></div>
+          <div className="mt-3 grid gap-2 md:grid-cols-3">{pro.multiTimeframeEvidence.map((evidence) => <TimeframeCard key={evidence.timeframe} evidence={evidence} qualifiedMssSemantics={qualifiedMssSemantics} />)}</div>
           <details className="group mt-3 border-t border-ui-line pt-2">
             <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-black text-ui-text marker:hidden [&::-webkit-details-marker]:hidden">고급 가격 구조 상세 보기 <ChevronDown size={16} className="transition group-open:rotate-180" aria-hidden /></summary>
             <div className="mt-2">
