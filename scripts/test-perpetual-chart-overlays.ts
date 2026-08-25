@@ -59,8 +59,8 @@ assert.equal(basicMarkers.length, 2, "same-candle MSB and CHoCH must both remain
 assert.notEqual(basicMarkers[0].position, basicMarkers[1].position, "same-side marker collisions move CHoCH to the opposite side");
 assert.equal(buildPerpetualSignalLegendItems(basicMarkers).length, 2);
 const legacySignalLegend = buildPerpetualSignalLegendItems(basicMarkers, undefined, true);
-assert.match(legacySignalLegend.find((item) => item.id === "signal-msb")?.label ?? "", /MSB\(구조 흐름\)/);
-assert.match(legacySignalLegend.find((item) => item.id === "signal-choch")?.label ?? "", /CHoCH\(전환 신호\)/);
+assert.match(legacySignalLegend.find((item) => item.id === "signal-msb")?.label ?? "", /저장 당시 가격 구조 \(MSB\)/);
+assert.match(legacySignalLegend.find((item) => item.id === "signal-choch")?.label ?? "", /저장 당시 전환 신호 \(CHoCH\)/);
 
 const mssOnlyModel = buildPerpetualChartOverlayModel({
   ...basicSnapshot,
@@ -76,7 +76,7 @@ const mssOnlyModel = buildPerpetualChartOverlayModel({
 const mssMarker = resolvePerpetualChartMarkers(mssOnlyModel.markers, candles.map((candle) => candle.time))[0];
 assert.equal(mssMarker?.kind, "mss", "qualified MSS must have its own chart marker");
 assert.equal(mssMarker?.shape, "square");
-assert.match(buildPerpetualSignalLegendItems([mssMarker])[0]?.label ?? "", /MSS\(구조 확정\)/);
+assert.match(buildPerpetualSignalLegendItems([mssMarker])[0]?.label ?? "", /새 추세 확인 \(MSS\)/);
 
 const oneOldSignalModel = buildPerpetualChartOverlayModel({
   ...basicSnapshot,
@@ -131,7 +131,7 @@ const proSnapshot = {
   pro: {
     confirmationConditions: [{ ...primaryCondition, id: "confirmation", role: "confirmation", threshold: 190 }],
     invalidationConditions: [
-      { ...primaryCondition, id: "invalidation", role: "invalidation", threshold: 160 },
+      { ...primaryCondition, id: "invalidation", kind: "price_cross_below", role: "invalidation", threshold: 160 },
       { ...primaryCondition, id: "invalid-null", role: "invalidation", threshold: null }
     ],
     multiTimeframeEvidence: [{ timeframe: "15m", details }]
@@ -149,8 +149,8 @@ assert.deepEqual(
   {
     id: "condition-primary",
     group: "condition",
-    label: "판단 기준",
-    detailLabel: "다음 판단 기준",
+    label: "지금 볼 가격",
+    detailLabel: "가장 먼저 볼 가격",
     price: 180,
     color: "#fbbf24",
     lineWidth: 2,
@@ -161,12 +161,17 @@ assert.deepEqual(
 );
 assert.equal(proModel.lines.find((line) => line.id === "condition-confirmation")?.lineStyle, "dashed");
 assert.equal(proModel.lines.find((line) => line.id === "condition-confirmation")?.color, "#60a5fa");
-assert.equal(proModel.lines.find((line) => line.id === "condition-invalidation")?.detailLabel, "해석 재확인");
+assert.equal(proModel.legendItems.find((item) => item.id === "condition-confirmation")?.value, "190 위에서 봉 마감");
+assert.equal(proModel.lines.find((line) => line.id === "condition-invalidation")?.detailLabel, "현재 판단 재검토");
 assert.equal(proModel.lines.find((line) => line.id === "condition-invalidation")?.color, "#fb7185");
-assert.equal(proModel.lines.find((line) => line.id === "order-block-top")?.detailLabel, "큰 주문 구간 위");
-assert.equal(proModel.lines.find((line) => line.id === "fvg-bottom")?.detailLabel, "빠른 이동 구간 아래");
+assert.equal(proModel.legendItems.find((item) => item.id === "condition-invalidation")?.value, "160 아래에서 봉 마감");
+assert.equal(proModel.lines.find((line) => line.id === "order-block-top")?.detailLabel, "강한 움직임 시작 가격대 위");
+assert.equal(proModel.lines.find((line) => line.id === "fvg-bottom")?.detailLabel, "빠르게 지나간 가격대 아래");
 assert.equal(proModel.lines.find((line) => line.id === "poc")?.lineStyle, "dotted");
-assert.equal(proModel.lines.find((line) => line.id === "poc")?.detailLabel, "거래 집중 가격");
+assert.equal(proModel.lines.find((line) => line.id === "poc")?.detailLabel, "거래가 가장 많이 쌓인 가격");
+for (const item of [...proModel.legendItems, ...buildPerpetualSignalLegendItems(basicMarkers)]) {
+  assert.doesNotMatch(item.label, /^(?:OB|FVG|POC|MSS|MSB|CHoCH)\b/, "chart labels must lead with plain meaning before technical terms");
+}
 
 const oneHourDetails = {
   ...details,

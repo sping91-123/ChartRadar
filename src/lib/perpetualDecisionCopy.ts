@@ -68,7 +68,25 @@ export function qualityLabel(quality: SnapshotQuality) {
 
 export function monitorConditionHeading(condition: MonitorCondition) {
   void condition;
-  return "다음 판단 기준";
+  return "다음에 확인할 것";
+}
+
+const conditionTimeframeCopy: Record<MonitorCondition["timeframe"], string> = {
+  "15m": "15분",
+  "1h": "1시간",
+  "4h": "4시간"
+};
+
+export function plainConditionBasis(basis: string | undefined) {
+  if (!basis) return "저장된 가격 기준";
+  return basis
+    .replace(/확정 구조\(MSS\) 돌파선/g, "새 추세 확인선 (MSS)")
+    .replace(/추세 지속\(MSB\) 돌파선/g, "현재 추세 지속선 (MSB)")
+    .replace(/전환 경고\(CHoCH\) 돌파선/g, "반대 방향 전환 주의선 (CHoCH)")
+    .replace(/위쪽 유동성 가격/g, "이전 고점 주변 반응 가격")
+    .replace(/아래쪽 유동성 가격/g, "이전 저점 주변 반응 가격")
+    .replace(/최근 구조 돌파선/g, "최근 중요 가격 돌파선")
+    .replace(/최근 전환 돌파선/g, "최근 반대 방향 움직임 기준선");
 }
 
 export function monitorConditionDisplayLabel(condition: MonitorCondition) {
@@ -76,52 +94,124 @@ export function monitorConditionDisplayLabel(condition: MonitorCondition) {
   if (isPriceCondition && typeof condition.threshold === "number" && Number.isFinite(condition.threshold)) {
     const price = condition.threshold.toLocaleString("ko-KR", { maximumFractionDigits: 4 });
     const side = condition.kind === "price_cross_above" ? "위" : "아래";
-    return `${condition.basis ?? "저장된 기준선"} ${price} ${side}에서 ${condition.timeframe}봉 마감`;
+    return `${conditionTimeframeCopy[condition.timeframe]}봉이 ${price} ${side}에서 끝나는지 확인`;
   }
   return condition.label
-    .replace(/확인(?:할)?\s+가격/g, "다음 판단 기준")
-    .replace(/다음\s+확인\s+조건/g, "다음 판단 기준");
+    .replace(/확인(?:할)?\s+가격/g, "다음에 확인할 것")
+    .replace(/다음\s+확인\s+조건/g, "다음에 확인할 것");
 }
 
 export function monitorConditionOutcomeCopy(condition: MonitorCondition) {
+  const threshold = condition.threshold;
   const isPriceCondition =
     (condition.kind === "price_cross_above" || condition.kind === "price_cross_below") &&
-    typeof condition.threshold === "number" &&
-    Number.isFinite(condition.threshold);
+    typeof threshold === "number" &&
+    Number.isFinite(threshold);
   if (isPriceCondition) {
+    const price = threshold.toLocaleString("ko-KR", { maximumFractionDigits: 4 });
+    const side = condition.kind === "price_cross_above" ? "위" : "아래";
+    const direction = condition.kind === "price_cross_above" ? "오르는" : "내리는";
     return {
       met: condition.role === "invalidation"
-        ? "충족하면 · 현재 해석을 그대로 유지하지 않고 최신 분석에서 다시 판단합니다."
-        : "충족하면 · 최신 분석을 불러와 현재 방향 근거가 유지되는지 다시 판단합니다.",
-      unmet: "아직 아니면 · 현재 결론을 확정으로 보지 않고 가격을 따라가지 않습니다.",
-      note: `${condition.basis ? `기준 출처 · ${condition.basis} · ` : ""}봉 마감 기준이며 자동 주문이나 진입 지시가 아닙니다.`
+        ? `${price} ${side}에서 끝나면 → 현재 해석을 유지하지 않고 최신 분석으로 다시 판단합니다.`
+        : `${price} ${side}에서 끝나면 → ${direction} 근거가 계속되는지 최신 분석으로 다시 확인합니다.`,
+      unmet: "그 전까지 → 이 조건만으로 방향이 확정됐다고 보지 않습니다.",
+      note: `전문 기준 · ${plainConditionBasis(condition.basis)} · 봉 마감 기준 · 자동 주문 아님`
     };
   }
   if (condition.baselineState === "upside_watch" || condition.baselineState === "downside_watch") {
     return {
-      met: "현재 방향 판단이 달라지면 · 최신 분석에서 새 근거와 위험을 다시 봅니다.",
-      unmet: "방향 판단이 유지되면 · 기존 결론도 확정이나 진입 지시로 보지 않습니다.",
+      met: "현재 방향이 달라지면 → 최신 분석에서 새 근거와 위험을 다시 봅니다.",
+      unmet: "방향이 그대로면 → 기존 결론도 확정이나 진입 지시로 보지 않습니다.",
       note: "상태가 바뀌어도 자동 주문이나 진입 지시로 사용하지 않습니다."
     };
   }
   return {
-    met: "근거가 한쪽으로 모이면 · 최신 분석에서 방향을 다시 판단합니다.",
-    unmet: "계속 섞여 있으면 · 결론을 서두르지 않고 기다립니다.",
+    met: "근거가 한쪽으로 모이면 → 최신 분석에서 방향을 다시 판단합니다.",
+    unmet: "계속 섞여 있으면 → 방향을 정하지 않고 기다립니다.",
     note: "상태가 바뀌어도 자동 주문이나 진입 지시로 사용하지 않습니다."
   };
 }
 
-export function beginnerTerm(term: "mss" | "msb" | "choch" | "ob" | "fvg" | "sweep" | "cisd" | "poc" | "pd") {
-  const labels = {
-    mss: "확정 구조 추세 (MSS)",
-    msb: "추세 지속 (MSB)",
-    choch: "전환 경고 (CHoCH)",
-    ob: "큰 주문이 반응했던 구간 (OB)",
-    fvg: "가격이 빠르게 지나간 구간 (FVG)",
-    sweep: "고점·저점을 잠깐 넘긴 흔들기 (Sweep)",
-    cisd: "매수·매도 주도권 변화 (CISD)",
-    poc: "거래가 가장 많이 쌓인 가격 (POC)",
-    pd: "최근 가격 범위에서의 현재 위치 (PD)"
-  } as const;
-  return labels[term];
+export const perpetualTermCopy = {
+  mss: {
+    easyLabel: "새 추세 확인",
+    technicalLabel: "MSS",
+    description: "중요한 가격을 강한 종가로 넘어 새 방향이 확인된 상태입니다."
+  },
+  msb: {
+    easyLabel: "현재 추세 지속 확인",
+    technicalLabel: "MSB",
+    description: "새 추세가 확인된 뒤 같은 방향의 중요 가격을 한 번 더 넘어선 상태입니다."
+  },
+  choch: {
+    easyLabel: "반대 방향 전환 주의",
+    technicalLabel: "CHoCH",
+    description: "기존 흐름의 반대 움직임이 나타난 초기 경고이며, 전환 확정은 아닙니다."
+  },
+  ob: {
+    easyLabel: "강한 움직임이 시작된 가격대",
+    technicalLabel: "OB",
+    description: "과거에 강한 움직임이 시작된 곳으로, 다시 반응할 수 있는 후보 가격대입니다. 실제 주문 잔량을 뜻하지는 않습니다."
+  },
+  fvg: {
+    easyLabel: "가격이 빠르게 지나간 구간",
+    technicalLabel: "FVG",
+    description: "거래가 성기게 지나간 곳으로, 되돌림 때 반응할 수 있지만 반드시 채워지는 것은 아닙니다."
+  },
+  sweep: {
+    easyLabel: "고점·저점을 잠깐 넘었다가 돌아온 움직임",
+    technicalLabel: "Sweep",
+    description: "이전 고점이나 저점을 잠깐 벗어난 뒤 다시 범위 안으로 돌아온 움직임입니다."
+  },
+  cisd: {
+    easyLabel: "단기 매수·매도 주도권 변화",
+    technicalLabel: "CISD",
+    description: "짧은 흐름에서 매수와 매도 중 우세한 쪽이 바뀐 보조 근거입니다."
+  },
+  poc: {
+    easyLabel: "선택 구간에서 거래가 가장 많이 쌓인 가격",
+    technicalLabel: "POC",
+    description: "선택한 시간대와 계산 범위 안에서 거래량이 가장 많이 모인 가격입니다."
+  },
+  pd: {
+    easyLabel: "최근 가격 범위에서 현재 위치",
+    technicalLabel: "PD",
+    description: "현재 가격이 최근 범위의 위쪽·가운데·아래쪽 중 어디에 있는지 보여줍니다."
+  },
+  ote: {
+    easyLabel: "되돌림 반응 후보 구간",
+    technicalLabel: "OTE",
+    description: "최근 가격 범위로 계산한 되돌림 후보이며, 진입 지시가 아닙니다."
+  }
+} as const;
+
+export type PerpetualBeginnerTerm = keyof typeof perpetualTermCopy;
+
+export function beginnerTerm(term: PerpetualBeginnerTerm) {
+  const copy = perpetualTermCopy[term];
+  return `${copy.easyLabel} (${copy.technicalLabel})`;
+}
+
+export function legacyStructureTerm(kind: "msb" | "choch") {
+  return kind === "msb" ? "저장 당시 가격 구조 (MSB)" : "저장 당시 전환 신호 (CHoCH)";
+}
+
+export function plainDecisionText(value: string) {
+  return value
+    .replace(/다음 판단 기준/g, "다음에 확인할 조건")
+    .replace(/여러 시간대 구조/g, "여러 시간대 가격 흐름")
+    .replace(/시간대 구조/g, "시간대 방향")
+    .replace(/현재 구조가/g, "현재 방향이")
+    .replace(/현재 구조와/g, "현재 방향과")
+    .replace(/현재 구조를/g, "현재 방향을")
+    .replace(/현재 구조/g, "현재 방향")
+    .replace(/CHoCH 전환 경고가/g, "반대 방향으로 바뀔 가능성이")
+    .replace(/확정 구조\(MSS\)가/g, "확인된 가격 흐름이")
+    .replace(/확정 구조\(MSS\)를/g, "확인된 가격 흐름을")
+    .replace(/확정 구조\(MSS\)/g, "확인된 가격 흐름")
+    .replace(/확정 구조와/g, "확인된 가격 흐름과")
+    .replace(/확정 구조가/g, "확인된 가격 흐름이")
+    .replace(/확정 구조를/g, "확인된 가격 흐름을")
+    .replace(/확정 구조/g, "확인된 가격 흐름");
 }

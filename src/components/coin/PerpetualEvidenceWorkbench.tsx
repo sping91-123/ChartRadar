@@ -8,6 +8,7 @@ import {
   beginnerTerm,
   confirmedStructureExplanation,
   flowDirectionLabel,
+  legacyStructureTerm,
   plainDirection,
   pressureDirectionLabel,
   regimeLabel,
@@ -105,14 +106,14 @@ function StructureCard({ kind, direction, event, legacy = false }: { kind: "mss"
     <article className="bg-ui-inset/55 px-3 py-3">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-[11px] font-black text-ui-text">{legacy && kind === "msb" ? "구조 흐름 (MSB)" : legacy && kind === "choch" ? "전환 신호 (CHoCH)" : beginnerTerm(kind)}</p>
-          <p className="mt-1 text-[10.5px] leading-4 text-ui-subtle">{legacy ? "저장 당시 분석 규칙의 의미를 그대로 표시합니다." : kind === "mss" ? "종가 돌파와 추진봉 품질을 통과했는지 봅니다." : kind === "msb" ? "확정 추세와 같은 방향의 지속 돌파를 봅니다." : "확정 추세 반대편의 초기 경고를 봅니다."}</p>
+          <p className="text-[11px] font-black text-ui-text">{legacy ? legacyStructureTerm(kind === "mss" ? "msb" : kind) : beginnerTerm(kind)}</p>
+          <p className="mt-1 text-[10.5px] leading-4 text-ui-subtle">{legacy ? "저장 당시 분석 규칙의 의미를 그대로 표시합니다." : kind === "mss" ? "종가 돌파와 강한 움직임의 품질을 통과했는지 봅니다." : kind === "msb" ? "확인된 추세와 같은 방향으로 중요 가격을 다시 넘었는지 봅니다." : "확인된 추세 반대편으로 움직일 가능성을 미리 봅니다."}</p>
         </div>
         <StatusPill tone={tone(direction)} icon={directionIcon(direction)}>{plainDirection(direction)}</StatusPill>
       </div>
       <p className="mt-2 text-xs font-semibold leading-5 text-ui-muted [word-break:keep-all]">{explanation}</p>
       <p className="mt-2 border-t border-ui-line pt-2 text-[11px] font-semibold leading-5 text-ui-muted">
-        {legacy ? kind === "msb" ? "최근 구조 흐름" : "최근 전환 신호" : kind === "mss" ? "최근 구조 확정" : kind === "msb" ? "최근 추세 지속" : "최근 전환 경고"} · {eventDetail(event)}
+        {legacy ? kind === "msb" ? "최근 저장 당시 가격 구조" : "최근 저장 당시 전환 신호" : kind === "mss" ? "최근 새 추세 확인" : kind === "msb" ? "최근 현재 추세 지속" : "최근 반대 방향 전환 주의"} · {eventDetail(event)}
       </p>
     </article>
   );
@@ -126,13 +127,13 @@ function TimeframeCard({ evidence, qualifiedMssSemantics }: { evidence: Perpetua
         <StatusPill tone={tone(evidence.structure)}>{regimeLabel(evidence.regime)}</StatusPill>
       </div>
       <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
-        <div><dt className="text-ui-subtle">{qualifiedMssSemantics ? "확정 구조(MSS)" : "구조 흐름(MSB)"}</dt><dd className="mt-1 font-black text-ui-text">{plainDirection(evidence.structure)}</dd></div>
-        <div><dt className="text-ui-subtle">{qualifiedMssSemantics ? "전환 경고(CHoCH)" : "전환 신호(CHoCH)"}</dt><dd className="mt-1 font-black text-ui-text">{plainDirection(evidence.transition)}</dd></div>
+        <div><dt className="text-ui-subtle">{qualifiedMssSemantics ? beginnerTerm("mss") : legacyStructureTerm("msb")}</dt><dd className="mt-1 font-black text-ui-text">{plainDirection(evidence.structure)}</dd></div>
+        <div><dt className="text-ui-subtle">{qualifiedMssSemantics ? beginnerTerm("choch") : legacyStructureTerm("choch")}</dt><dd className="mt-1 font-black text-ui-text">{plainDirection(evidence.transition)}</dd></div>
       </dl>
       <div className="mt-3 space-y-1 border-t border-ui-line pt-2 text-[11px] leading-5 text-ui-muted">
-        {qualifiedMssSemantics ? <p>최근 구조 확정: {eventDetail(evidence.details?.events.mss)}</p> : null}
-        <p>{qualifiedMssSemantics ? "최근 추세 지속" : "최근 구조 흐름"}: {eventDetail(evidence.details?.events.msb)}</p>
-        <p>{qualifiedMssSemantics ? "최근 전환 경고" : "최근 전환 신호"}: {eventDetail(evidence.details?.events.choch)}</p>
+        {qualifiedMssSemantics ? <p>최근 새 추세 확인: {eventDetail(evidence.details?.events.mss)}</p> : null}
+        <p>{qualifiedMssSemantics ? "최근 현재 추세 지속" : "최근 저장 당시 가격 구조"}: {eventDetail(evidence.details?.events.msb)}</p>
+        <p>{qualifiedMssSemantics ? "최근 반대 방향 전환 주의" : "최근 저장 당시 전환 신호"}: {eventDetail(evidence.details?.events.choch)}</p>
       </div>
     </article>
   );
@@ -153,12 +154,12 @@ function IctDetails({ evidence }: { evidence?: PerpetualDecisionEvidence }) {
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">{beginnerTerm("ob")}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{ob ? `${formatPrice(ob.bottom)}~${formatPrice(ob.top)}${ob.isInside ? " · 현재 이 구간 안" : ""}` : "최근 뚜렷한 구간 없음"}</p></article>
         <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">{beginnerTerm("fvg")}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{fvg ? `${formatPrice(fvg.bottom)}~${formatPrice(fvg.top)} · ${fvg.state === "ifvg" ? "방향이 바뀐 구간" : "재확인 가능 구간"}` : "최근 뚜렷한 구간 없음"}</p></article>
-        <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">{beginnerTerm("sweep")}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{details.events.sweep ? `${plainDirection(details.events.sweep.direction)} · ${eventDetail(details.events.sweep)}` : "최근 뚜렷한 흔들기 없음"}</p></article>
+        <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">{beginnerTerm("sweep")}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{details.events.sweep ? `${plainDirection(details.events.sweep.direction)} · ${eventDetail(details.events.sweep)}` : "최근 뚜렷한 움직임 없음"}</p></article>
         <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">{beginnerTerm("cisd")}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{details.events.cisd ? `${plainDirection(details.events.cisd.direction)} · ${eventDetail(details.events.cisd)}` : "최근 뚜렷한 변화 없음"}</p></article>
         <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">{beginnerTerm("poc")}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{poc ? `${formatPrice(poc.poc)} · 현재가는 ${poc.position === "above" ? "위" : poc.position === "below" ? "아래" : "근처"}` : "거래 집중 가격 확인 중"}</p></article>
         <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">{beginnerTerm("pd")}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{pd === "premium" ? "최근 범위의 위쪽" : pd === "discount" ? "최근 범위의 아래쪽" : pd === "equilibrium" ? "최근 범위의 가운데" : "현재 위치 확인 중"}</p></article>
         <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">최근 가격 범위</p><p className="mt-1 text-xs leading-5 text-ui-muted">{range.low !== null && range.high !== null ? `${formatPrice(range.low)}~${formatPrice(range.high)} · 가운데 ${formatPrice(range.equilibrium)}` : "가격 범위 확인 중"}</p></article>
-        <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">기존 OTE(현재 TF 최근 20봉)</p><p className="mt-1 text-xs leading-5 text-ui-muted">{ote ? details.location.oteZone === "long" ? `${formatPrice(ote.longLow)}~${formatPrice(ote.longHigh)} · 상방 확인 구간` : details.location.oteZone === "short" ? `${formatPrice(ote.shortLow)}~${formatPrice(ote.shortHigh)} · 하방 확인 구간` : "현재가는 주요 되돌림 구간 밖" : "구간 확인 중"}</p></article>
+        <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">최근 20개 봉의 {beginnerTerm("ote")}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{ote ? details.location.oteZone === "long" ? `${formatPrice(ote.longLow)}~${formatPrice(ote.longHigh)} · 오를 때의 되돌림 후보` : details.location.oteZone === "short" ? `${formatPrice(ote.shortLow)}~${formatPrice(ote.shortHigh)} · 내릴 때의 되돌림 후보` : "현재가는 계산된 되돌림 후보 밖" : "구간 확인 중"}</p></article>
       </div>
       <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
         <div className="bg-ui-inset/35 px-3 py-2"><p className="text-ui-subtle">매수·매도 과열도(RSI)</p><p className="mt-1 font-black text-ui-text">{typeof indicators.rsi14 === "number" ? indicators.rsi14.toFixed(1) : "확인 중"}</p></div>
@@ -172,7 +173,7 @@ function IctDetails({ evidence }: { evidence?: PerpetualDecisionEvidence }) {
 
 function ConfirmedCommonRangeOteCard({ model }: { model: ConfirmedCommonRangeOteV1 | null | undefined }) {
   if (model === undefined) {
-    return <p className="mt-3 bg-ui-inset/35 px-3 py-3 text-xs leading-5 text-ui-muted">이전 분석에는 1시간 확정 공통범위 OTE가 저장되지 않았습니다.</p>;
+    return <p className="mt-3 bg-ui-inset/35 px-3 py-3 text-xs leading-5 text-ui-muted">이전 분석에는 1시간 확정 구간으로 계산한 되돌림 후보(OTE)가 저장되지 않았습니다.</p>;
   }
   if (model === null) {
     return <p className="mt-3 bg-ui-inset/35 px-3 py-3 text-xs leading-5 text-ui-muted">교대하는 1시간 확정 고점·저점 범위를 확인 중입니다.</p>;
@@ -187,11 +188,11 @@ function ConfirmedCommonRangeOteCard({ model }: { model: ConfirmedCommonRangeOte
         : "최근 확정 15분봉은 두 구간 밖";
 
   return (
-    <section className="mt-3 bg-ui-inset/35 px-3 py-3" aria-label="1시간 확정 공통범위 OTE 검증 정보">
+    <section className="mt-3 bg-ui-inset/35 px-3 py-3" aria-label="1시간 확정 구간의 되돌림 후보 OTE 검증 정보">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-xs font-black text-ui-text">1시간 확정 공통범위 OTE</p>
-          <p className="mt-1 text-[11px] leading-5 text-ui-muted">Coters v2.48 방식의 최근 구간 재현 · 판단·알림에는 아직 반영하지 않는 비교 근거</p>
+          <p className="text-xs font-black text-ui-text">1시간 확정 구간의 되돌림 후보 (OTE)</p>
+          <p className="mt-1 text-[11px] leading-5 text-ui-muted">Coters v2.48 방식으로 별도 계산 · 현재 판단과 알림에는 아직 반영하지 않는 비교 근거</p>
         </div>
         <span className="bg-ui-panel px-2 py-1 text-[10px] font-black text-ui-watch">검증 중</span>
       </div>
@@ -226,8 +227,8 @@ function BasicProValueCard({ snapshot }: { snapshot: PerpetualDecisionSnapshot }
         <h2 className="mt-1 text-base font-black text-ui-text">수치만 더 보는 게 아니라, 놓치기 쉬운 조건을 앱이 최대 5분 간격으로 확인합니다</h2>
         <ul className="mt-2 grid gap-1 text-xs leading-5 text-ui-muted sm:grid-cols-2">
           <li>· 1시간·4시간 신호가 실제로 나온 가격·시각</li>
-          <li>· 고급 가격 구간과 상세 포지션·큰 체결 수치</li>
-          <li>· 같은 분석을 초보자 말로 풀어주는 AI 설명</li>
+          <li>· 세부 가격 반응 구간과 상세 포지션·큰 체결 수치</li>
+          <li>· 현재 수치까지 연결해 풀어주는 맞춤 AI 설명</li>
           <li>· 무료 1개 · Coin Pro 최대 20개 조건 감시·알림</li>
         </ul>
       </div>
@@ -238,7 +239,7 @@ function BasicProValueCard({ snapshot }: { snapshot: PerpetualDecisionSnapshot }
         returnTo={`/crypto/perpetual?asset=${snapshot.asset}&timeframe=15m&snapshot=${encodeURIComponent(snapshot.id)}`}
         symbol={snapshot.asset.toUpperCase()}
         surface="perpetual"
-        className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-ui-sm bg-ui-brand px-3 text-sm font-semibold text-white transition hover:brightness-110 sm:w-auto"
+        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-ui-sm bg-ui-brand px-3 text-sm font-semibold text-white transition hover:brightness-110 sm:w-auto"
       >
         Pro 기능 모두 보기
       </CoinProConversionLink>
@@ -288,7 +289,7 @@ export function PerpetualEvidenceWorkbench({ snapshot }: { snapshot: PerpetualDe
           <div>
             <p className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand"><CircleHelp size={12} aria-hidden /> 판단 과정</p>
             <h2 id="perpetual-evidence-title" className="mt-1 text-xl font-black text-ui-text">근거</h2>
-            <p className="mt-1 text-xs leading-5 text-ui-muted">{qualifiedMssSemantics ? "1일·4시간 큰 흐름, 1시간·15분 현재 구조, 5분·1분 단기 반응을 계층적으로 종합합니다." : "이전 분석은 저장 당시의 15분·1시간·4시간 MSB·CHoCH 의미를 그대로 보여드립니다."}</p>
+            <p className="mt-1 text-xs leading-5 text-ui-muted">{qualifiedMssSemantics ? "1일·4시간 큰 흐름, 1시간·15분 현재 방향, 5분·1분 단기 반응을 순서대로 종합합니다." : "이전 분석은 저장 당시의 15분·1시간·4시간 가격 구조와 전환 신호를 기존 의미 그대로 보여드립니다."}</p>
           </div>
           <StatusPill tone="watch" icon={BarChart3}>{qualifiedMssSemantics ? "여러 시간대 종합" : "저장 분석"}</StatusPill>
         </div>
@@ -305,7 +306,7 @@ export function PerpetualEvidenceWorkbench({ snapshot }: { snapshot: PerpetualDe
           </div>
         )}
         {qualifiedMssSemantics && qualifiedContext.length > 0 ? (
-          <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-6" aria-label="1일, 4시간, 1시간, 15분, 5분, 1분 확정 구조 비교">
+          <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-6" aria-label="1일, 4시간, 1시간, 15분, 5분, 1분 가격 흐름 비교">
             {qualifiedContext.map((item) => (
               <article key={item.timeframe} className="min-w-0 bg-ui-inset/45 px-2 py-2.5 text-center">
                 <p className="text-[11px] font-black text-ui-subtle">{item.label}</p>
@@ -325,7 +326,7 @@ export function PerpetualEvidenceWorkbench({ snapshot }: { snapshot: PerpetualDe
             ))}
           </div>
         ) : null}
-        {qualifiedMssSemantics ? <p className="mt-2 text-[11px] leading-5 text-ui-subtle">Coters v2.49 기본 추진봉 기준을 앱에서 제한 이력으로 근사 재현합니다. MSS는 확정 추세, MSB는 그 추세의 지속, CHoCH는 반대편 전환 경고이며 TradingView의 전체 누적 상태와 완전 동일하다고 보지 않습니다.</p> : null}
+        {qualifiedMssSemantics ? <details className="group mt-2 border-t border-ui-line pt-1.5"><summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-[11px] font-black text-ui-muted marker:hidden [&::-webkit-details-marker]:hidden">계산 기준과 전문 용어 보기 <ChevronDown size={14} className="transition group-open:rotate-180" aria-hidden /></summary><p className="bg-ui-inset/35 px-2.5 py-2 text-[11px] leading-5 text-ui-subtle">Coters v2.49 추진봉 기준을 앱에서 제한된 확정봉 이력으로 재현합니다. 새 추세 확인(MSS), 현재 추세 지속 확인(MSB), 반대 방향 전환 주의(CHoCH)를 구분하며 TradingView의 전체 누적 상태와 완전히 같지는 않을 수 있습니다.</p></details> : null}
         {!publicEvidence && !primary ? <p className="mt-3 text-xs leading-5 text-ui-watch">이전 분석이라 기본 구조 카드가 없습니다. 다음 자동 갱신부터 표시됩니다.</p> : null}
       </section>
 
@@ -415,10 +416,10 @@ export function PerpetualEvidenceWorkbench({ snapshot }: { snapshot: PerpetualDe
 
       {pro ? (
         <section className="bg-ui-panel px-3 py-4 sm:px-5" aria-labelledby="perpetual-mtf-title">
-          <div><p className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand"><Layers3 size={12} aria-hidden /> Coin Pro</p><h2 id="perpetual-mtf-title" className="mt-1 text-lg font-black text-ui-text">표시 시간대의 정밀 구조</h2><p className="mt-1 text-xs leading-5 text-ui-muted">{qualifiedMssSemantics ? "종합 결론은 6개 시간대를 사용하고, 여기서는 15분·1시간·4시간의 가격·구간 수치를 자세히 보여드립니다." : "저장 당시 15분·1시간·4시간 분석의 가격·구간 수치를 기존 의미 그대로 보여드립니다."}</p></div>
+          <div><p className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand"><Layers3 size={12} aria-hidden /> Coin Pro</p><h2 id="perpetual-mtf-title" className="mt-1 text-lg font-black text-ui-text">시간대별 가격 흐름과 반응 구간</h2><p className="mt-1 text-xs leading-5 text-ui-muted">{qualifiedMssSemantics ? "종합 결론은 6개 시간대를 사용하고, 여기서는 15분·1시간·4시간의 정확한 가격과 시각을 자세히 보여드립니다." : "저장 당시 15분·1시간·4시간 분석의 가격과 시각을 기존 의미 그대로 보여드립니다."}</p></div>
           <div className="mt-3 grid gap-2 md:grid-cols-3">{pro.multiTimeframeEvidence.map((evidence) => <TimeframeCard key={evidence.timeframe} evidence={evidence} qualifiedMssSemantics={qualifiedMssSemantics} />)}</div>
           <details className="group mt-3 border-t border-ui-line pt-2">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-black text-ui-text marker:hidden [&::-webkit-details-marker]:hidden">고급 가격 구조 상세 보기 <ChevronDown size={16} className="transition group-open:rotate-180" aria-hidden /></summary>
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-black text-ui-text marker:hidden [&::-webkit-details-marker]:hidden">가격대와 전문 근거 자세히 보기 (OB·FVG·POC·OTE) <ChevronDown size={16} className="transition group-open:rotate-180" aria-hidden /></summary>
             <div className="mt-2">
               <IctDetails evidence={primary ?? pro.multiTimeframeEvidence[0]} />
               <ConfirmedCommonRangeOteCard model={pro.confirmedCommonRangeV1} />

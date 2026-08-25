@@ -13,7 +13,7 @@ export function HomeTimeframeDirection({ direction }: { direction: DirectionStat
   return (
     <span className={`mt-0.5 inline-flex items-center justify-center gap-0.5 ${copy.tone}`} aria-label={copy.label}>
       <Icon size={14} strokeWidth={2.6} aria-hidden />
-      <span className="sr-only">{copy.label}</span>
+      <span className="text-[10px] font-black">{copy.label}</span>
     </span>
   );
 }

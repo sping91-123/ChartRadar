@@ -1,9 +1,9 @@
 import type { PerpetualChartLegendGroup, PerpetualChartLegendItem } from "@/lib/perpetualDecisionChartOverlays";
 
 const groupCopy: Record<PerpetualChartLegendGroup, string> = {
-  condition: "조건선",
-  zone: "가격대",
-  signal: "구조 신호"
+  condition: "먼저 볼 가격",
+  zone: "반응을 볼 가격대",
+  signal: "가격 흐름 변화"
 };
 
 function MarkerGlyph({ item }: { item: PerpetualChartLegendItem }) {

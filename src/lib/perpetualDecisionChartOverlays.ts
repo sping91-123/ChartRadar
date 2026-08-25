@@ -77,12 +77,12 @@ export function formatPerpetualChartPrice(value: number) {
 
 function conditionCopy(condition: MonitorCondition) {
   if (condition.role === "confirmation") {
-    return { label: "근거 강화", detailLabel: "근거 강화", color: overlayColors.confirmation, lineWidth: 1 as const, lineStyle: "dashed" as const };
+    return { label: "방향 강화 기준", detailLabel: "방향 강화 기준", color: overlayColors.confirmation, lineWidth: 1 as const, lineStyle: "dashed" as const };
   }
   if (condition.role === "invalidation") {
-    return { label: "무효화", detailLabel: "해석 재확인", color: overlayColors.invalidation, lineWidth: 1 as const, lineStyle: "dashed" as const };
+    return { label: "현재 판단 재검토", detailLabel: "현재 판단 재검토", color: overlayColors.invalidation, lineWidth: 1 as const, lineStyle: "dashed" as const };
   }
-  return { label: "판단 기준", detailLabel: "다음 판단 기준", color: overlayColors.primary, lineWidth: 2 as const, lineStyle: "solid" as const };
+  return { label: "지금 볼 가격", detailLabel: "가장 먼저 볼 가격", color: overlayColors.primary, lineWidth: 2 as const, lineStyle: "solid" as const };
 }
 
 function addCondition(
@@ -108,7 +108,7 @@ function addCondition(
     id,
     group: "condition",
     label: copy.label,
-    value: formatPerpetualChartPrice(condition.threshold),
+    value: `${formatPerpetualChartPrice(condition.threshold)} ${condition.kind === "price_cross_below" ? "아래" : "위"}에서 봉 마감`,
     color: copy.color,
     lineWidth: copy.lineWidth,
     lineStyle: copy.lineStyle
@@ -192,8 +192,8 @@ export function buildPerpetualChartOverlayModel(
   const details = snapshot.pro?.multiTimeframeEvidence.find((item) => item.timeframe === timeframe)?.details;
   addRange(
     "order-block",
-    "OB(큰 주문 구간)",
-    { top: "큰 주문 구간 위", bottom: "큰 주문 구간 아래" },
+    "강한 움직임 시작 가격대 (OB)",
+    { top: "강한 움직임 시작 가격대 위", bottom: "강한 움직임 시작 가격대 아래" },
     overlayColors.orderBlock,
     details?.zones.orderBlock?.top,
     details?.zones.orderBlock?.bottom,
@@ -202,8 +202,8 @@ export function buildPerpetualChartOverlayModel(
   );
   addRange(
     "fvg",
-    "FVG(빠른 이동 구간)",
-    { top: "빠른 이동 구간 위", bottom: "빠른 이동 구간 아래" },
+    "빠르게 지나간 가격대 (FVG)",
+    { top: "빠르게 지나간 가격대 위", bottom: "빠르게 지나간 가격대 아래" },
     overlayColors.fvg,
     details?.zones.fvg?.top,
     details?.zones.fvg?.bottom,
@@ -216,8 +216,8 @@ export function buildPerpetualChartOverlayModel(
     lines.push({
       id: "poc",
       group: "zone",
-      label: "POC(거래 집중 가격)",
-      detailLabel: "거래 집중 가격",
+      label: "거래가 가장 많이 쌓인 가격 (POC)",
+      detailLabel: "거래가 가장 많이 쌓인 가격",
       price: poc,
       color: overlayColors.poc,
       lineWidth: 1,
@@ -227,7 +227,7 @@ export function buildPerpetualChartOverlayModel(
     legendItems.push({
       id: "poc",
       group: "zone",
-      label: "POC(거래 집중 가격)",
+      label: "거래가 가장 많이 쌓인 가격 (POC)",
       value: formatPerpetualChartPrice(poc),
       color: overlayColors.poc,
       lineWidth: 1,
@@ -294,11 +294,11 @@ export function buildPerpetualSignalLegendItems(
     id: `signal-${marker.id}`,
     group: "signal",
     label: marker.kind === "mss"
-      ? "MSS(구조 확정)"
+      ? "새 추세 확인 (MSS)"
       : marker.kind === "msb"
-        ? legacyStructureSemantics ? "MSB(구조 흐름)" : "MSB(추세 지속)"
-        : legacyStructureSemantics ? "CHoCH(전환 신호)" : "CHoCH(전환 경고)",
-    value: `${marker.direction === "bullish" ? "상방" : "하방"} · ${formatPerpetualChartPrice(marker.level)} · ${formatSignalTime(marker.time)}`,
+        ? legacyStructureSemantics ? "저장 당시 가격 구조 (MSB)" : "현재 추세 지속 확인 (MSB)"
+        : legacyStructureSemantics ? "저장 당시 전환 신호 (CHoCH)" : "반대 방향 전환 주의 (CHoCH)",
+    value: `${marker.direction === "bullish" ? "위쪽" : "아래쪽"} · ${formatPerpetualChartPrice(marker.level)} · ${formatSignalTime(marker.time)}`,
     color: marker.color,
     markerShape: marker.shape,
     outsideVisibleRange: visibleMarkerIds !== undefined && !visibleMarkerIds.has(marker.id)

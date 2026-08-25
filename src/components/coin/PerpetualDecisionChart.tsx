@@ -34,13 +34,13 @@ function lightweightLineStyle(style: PerpetualChartLineStyle) {
   return LineStyle.Solid;
 }
 
-function seriesMarker(marker: ResolvedPerpetualChartMarker, compact: boolean, qualifiedMssSemantics: boolean): SeriesMarker<Time> {
+function seriesMarker(marker: ResolvedPerpetualChartMarker, showText: boolean, qualifiedMssSemantics: boolean): SeriesMarker<Time> {
   return {
     time: marker.time as Time,
     position: marker.position,
     color: marker.color,
     shape: marker.shape,
-    ...(compact ? {} : { text: marker.kind === "mss" ? "구조 확정" : marker.kind === "msb" ? qualifiedMssSemantics ? "추세 지속" : "구조 흐름" : qualifiedMssSemantics ? "전환 경고" : "전환 신호" })
+    ...(showText ? { text: marker.kind === "mss" ? "새 추세" : marker.kind === "msb" ? qualifiedMssSemantics ? "추세 지속" : "가격 구조" : qualifiedMssSemantics ? "전환 주의" : "전환 신호" } : {})
   };
 }
 
@@ -52,6 +52,8 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
   const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null);
   const priceLinesRef = useRef<IPriceLine[]>([]);
   const [compactCandleLimit, setCompactCandleLimit] = useState(48);
+  const [showMarkerText, setShowMarkerText] = useState(false);
+  const [showAllOverlays, setShowAllOverlays] = useState(!compact);
   const {
     timeframe,
     setTimeframe,
@@ -67,12 +69,28 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
   });
   const setContainerRef = useCallback((container: HTMLDivElement | null) => {
     containerRef.current = container;
-    if (!compact || !container || container.clientWidth <= 0) return;
-    const measuredLimit = compactPerpetualCandleLimit(container.clientWidth);
-    setCompactCandleLimit((current) => current === measuredLimit ? current : measuredLimit);
+    if (!container || container.clientWidth <= 0) return;
+    setShowMarkerText(!compact && container.clientWidth >= 520);
+    if (compact) {
+      const measuredLimit = compactPerpetualCandleLimit(container.clientWidth);
+      setCompactCandleLimit((current) => current === measuredLimit ? current : measuredLimit);
+    }
   }, [compact]);
   const legendId = `perpetual-chart-legend-${useId().replace(/:/g, "")}`;
-  const overlayModel = useMemo(() => buildPerpetualChartOverlayModel(snapshot, timeframe), [snapshot, timeframe]);
+  const fullOverlayModel = useMemo(() => buildPerpetualChartOverlayModel(snapshot, timeframe), [snapshot, timeframe]);
+  const primaryLineId = `condition-${snapshot.summary.primaryCondition.id}`;
+  const coreLine = fullOverlayModel.lines.find((line) => line.id === primaryLineId)
+    ?? fullOverlayModel.lines.find((line) => line.group === "condition");
+  const coreLineId = coreLine?.id ?? null;
+  const hasAdvancedOverlays = fullOverlayModel.lines.some((line) => line.id !== coreLineId) || fullOverlayModel.markers.length > 0;
+  const overlayModel = useMemo(() => {
+    if (!compact || showAllOverlays) return fullOverlayModel;
+    return {
+      lines: fullOverlayModel.lines.filter((line) => line.id === coreLineId),
+      legendItems: fullOverlayModel.legendItems.filter((item) => item.id === coreLineId),
+      markers: []
+    };
+  }, [compact, coreLineId, fullOverlayModel, showAllOverlays]);
   const visibleCandles = useMemo(
     () => compact ? candles.slice(-compactCandleLimit) : candles,
     [candles, compact, compactCandleLimit]
@@ -139,6 +157,8 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
       const width = container.clientWidth;
       if (width <= 0) return;
       chart.applyOptions({ width, height: compact ? 240 : 360 });
+      const nextShowMarkerText = !compact && width >= 520;
+      setShowMarkerText((current) => current === nextShowMarkerText ? current : nextShowMarkerText);
       if (compact) {
         const nextLimit = compactPerpetualCandleLimit(width);
         setCompactCandleLimit((current) => current === nextLimit ? current : nextLimit);
@@ -166,8 +186,8 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
       color: line.color,
       lineWidth: line.lineWidth,
       lineStyle: lightweightLineStyle(line.lineStyle),
-      axisLabelVisible: compact ? line.axisLabelVisible : true,
-      title: compact ? "" : line.detailLabel
+      axisLabelVisible: line.axisLabelVisible,
+      title: ""
     }));
     priceLinesRef.current = priceLines;
 
@@ -190,16 +210,31 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
       low: candle.low,
       close: candle.close
     })));
-    markers.setMarkers(resolvedMarkers.map((marker) => seriesMarker(marker, compact, qualifiedMssSemantics)));
+    markers.setMarkers(resolvedMarkers.map((marker) => seriesMarker(marker, showMarkerText, qualifiedMssSemantics)));
     chart.timeScale().fitContent();
-  }, [compact, qualifiedMssSemantics, resolvedMarkers, visibleCandles]);
+  }, [qualifiedMssSemantics, resolvedMarkers, showMarkerText, visibleCandles]);
 
   const timeframeLabel = chartViewTimeframeLabels[timeframe];
 
   return (
     <section aria-label={`${snapshot.symbol} ${timeframeLabel} 차트`} data-pull-to-refresh-ignore="">
       <div className={`mb-2 ${compact ? "px-2" : ""}`}>
-        <p className="text-[11px] font-black text-ui-text">{timeframeLabel} 확정 봉에서 직접 확인</p>
+        <div className="flex min-h-11 items-center justify-between gap-2">
+          <div>
+            <p className="text-[11px] font-black text-ui-text">{timeframeLabel}봉에서 가격과 흐름 확인</p>
+            {compact ? <p className="mt-0.5 text-[10px] leading-4 text-ui-subtle">{showAllOverlays && hasAdvancedOverlays ? "반응 가격대와 흐름 신호까지 표시 중" : coreLineId ? "이 시간대에서 가장 먼저 볼 가격만 표시" : "이 시간대에 표시할 판단 가격 없음"}</p> : null}
+          </div>
+          {compact && hasAdvancedOverlays ? (
+            <button
+              type="button"
+              aria-pressed={showAllOverlays}
+              onClick={() => setShowAllOverlays((current) => !current)}
+              className="min-h-11 shrink-0 rounded-ui-sm bg-ui-inset px-2.5 text-[10px] font-black text-ui-text"
+            >
+              {showAllOverlays ? "핵심만 보기" : "가격대·흐름 보기"}
+            </button>
+          ) : null}
+        </div>
         <ChartTimeframeSelector value={timeframe} onChange={setTimeframe} className="mt-2 w-full min-[390px]:ml-auto min-[390px]:w-56" />
       </div>
       <div className="relative" aria-busy={isLoading}>
@@ -207,8 +242,8 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
           ref={setContainerRef}
           className="w-full"
           role="img"
-          aria-label={`${snapshot.symbol} ${timeframeLabel} 캔들과 조건선, 가격대, 구조 신호 차트`}
-          aria-describedby={compact && legendItems.length ? legendId : undefined}
+          aria-label={`${snapshot.symbol} ${timeframeLabel} 캔들과 다음에 볼 가격, 반응 가격대, 가격 흐름 신호 차트`}
+          aria-describedby={legendItems.length ? legendId : undefined}
         />
         {isLoading ? (
           <div className="absolute inset-0 flex items-center justify-center bg-ui-panel/80 px-4 text-center text-xs font-semibold text-ui-muted" role="status">
@@ -225,7 +260,7 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
           </div>
         ) : null}
       </div>
-      {compact && legendItems.length ? <PerpetualChartLegend id={legendId} items={legendItems} timeframeLabel={timeframeLabel} /> : null}
+      {legendItems.length ? <PerpetualChartLegend id={legendId} items={legendItems} timeframeLabel={timeframeLabel} /> : null}
     </section>
   );
 }

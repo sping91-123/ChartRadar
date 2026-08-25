@@ -13,7 +13,7 @@ import { withSupabaseAuth } from "@/lib/authFetch";
 import { appendJournalEntry, decisionJournalContextFromSnapshot } from "@/lib/journal";
 import { isResolvedHistoricalPullLocked } from "@/lib/pullToRefresh";
 import { readPerpetualAlertContext } from "@/lib/perpetualAlertContext";
-import { decisionStateLabel, flowDirectionLabel, monitorConditionDisplayLabel, monitorConditionHeading, monitorConditionOutcomeCopy, plainDirection, pressureDirectionLabel, qualityLabel } from "@/lib/perpetualDecisionCopy";
+import { decisionStateLabel, flowDirectionLabel, legacyStructureTerm, monitorConditionDisplayLabel, monitorConditionHeading, monitorConditionOutcomeCopy, perpetualTermCopy, plainDecisionText, plainDirection, pressureDirectionLabel, qualityLabel } from "@/lib/perpetualDecisionCopy";
 import { isPerpetualSnapshotScopedStateCurrent, journalMonitorIdForSnapshot } from "@/lib/perpetualMonitor";
 import type { CryptoHomeTicker } from "@/lib/server/cryptoExchangeData";
 import { hasQualifiedMssSemantics, type MonitorCondition, type PerpetualAsset, type PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
@@ -608,12 +608,12 @@ export function PerpetualDecisionExperience({
         appendJournalEntry({
           title: `${snapshot.symbol} 선물 시장 분석`,
           bias: decisionStateLabel(snapshot.summary.state),
-          note: `${snapshot.summary.topRisk}\n다음 판단 기준: ${snapshot.summary.primaryCondition.label}`,
+          note: `${plainDecisionText(snapshot.summary.topRisk)}\n다음에 확인할 것: ${monitorConditionDisplayLabel(snapshot.summary.primaryCondition)}`,
           market: "crypto",
           source: journalSource,
           symbol: snapshot.symbol,
           timeframe: snapshot.primaryTimeframe,
-          verdict: snapshot.summary.headline,
+          verdict: plainDecisionText(snapshot.summary.headline),
           decisionSnapshotId: snapshot.id,
           monitorId: monitorId ?? undefined,
           decisionContext: decisionJournalContextFromSnapshot(snapshot)
@@ -636,7 +636,7 @@ export function PerpetualDecisionExperience({
         <div className="mt-2 h-8 w-2/3 animate-pulse bg-ui-inset" />
         <div className="mt-5 grid grid-cols-2 gap-2">
           <div className="min-h-24 animate-pulse bg-ui-risk/10 px-3 py-3 text-xs font-bold text-ui-risk">가장 큰 위험 확인 중</div>
-          <div className="min-h-24 animate-pulse bg-ui-brand/8 px-3 py-3 text-xs font-bold text-ui-brand">다음 판단 기준 계산 중</div>
+          <div className="min-h-24 animate-pulse bg-ui-brand/8 px-3 py-3 text-xs font-bold text-ui-brand">다음에 확인할 것 계산 중</div>
         </div>
       </section>
     );
@@ -681,7 +681,7 @@ export function PerpetualDecisionExperience({
     return !item?.known || item.integrity !== "ready";
   });
   const decisionScopeLabel = qualifiedMssSemantics
-    ? reactionFramesPending ? "큰 흐름·현재 구조 종합 · 단기 반응 확인 중" : "여러 시간대 확정봉 종합"
+    ? reactionFramesPending ? "큰 흐름·현재 방향 종합 · 단기 반응 확인 중" : "여러 시간대 확정봉 종합"
     : "저장된 15분·1시간·4시간 분석";
   const monitorRouteKey = asset === "eth" ? "perpetual_eth" : "perpetual_btc";
   const monitorReturnParams = new URLSearchParams({ asset, timeframe: "15m", snapshot: displaySnapshot.id });
@@ -735,10 +735,10 @@ export function PerpetualDecisionExperience({
         <div className="flex items-start gap-2 bg-ui-watch/10 px-3 py-2 text-xs font-semibold leading-5 text-ui-watch">
           <History size={15} className="mt-0.5 shrink-0" aria-hidden />
           {source === "alert"
-            ? "알림을 받았던 당시 분석이 만료되어 최신 분석으로 바꿨습니다. 다음 판단 기준을 다시 봐주세요."
+            ? "알림을 받았던 당시 분석이 만료되어 최신 분석으로 바꿨습니다. 다음에 확인할 것을 다시 봐주세요."
             : source === "news"
               ? "뉴스에서 연결한 당시 분석이 만료되어 최신 분석으로 바꿨습니다. 다른 시점의 뉴스 해석은 자동으로 섞지 않았습니다."
-              : "Home에서 본 뒤 시장 데이터가 달라져 최신 분석으로 바꿨습니다. 다음 판단 기준을 다시 봐주세요."}
+              : "Home에서 본 뒤 시장 데이터가 달라져 최신 분석으로 바꿨습니다. 다음에 확인할 것을 다시 봐주세요."}
         </div>
       ) : null}
 
@@ -755,14 +755,14 @@ export function PerpetualDecisionExperience({
         </div>
 
         <div className="mt-3 flex flex-col gap-1.5 min-[390px]:flex-row min-[390px]:items-end min-[390px]:justify-between min-[390px]:gap-3">
-          <h1 id="perpetual-decision-title" className="min-w-0 max-w-3xl text-2xl font-black leading-8 tracking-tight text-ui-text [word-break:keep-all]">{displaySnapshot.summary.headline}</h1>
+          <h1 id="perpetual-decision-title" className="min-w-0 max-w-3xl text-2xl font-black leading-8 tracking-tight text-ui-text [word-break:keep-all]">{plainDecisionText(displaySnapshot.summary.headline)}</h1>
           <LivePerpetualPrice asset={asset} snapshotPrice={displaySnapshot.price} />
         </div>
 
         <div className="mt-3 grid gap-2 md:grid-cols-2">
           <div className="bg-ui-risk/10 px-3 py-3">
             <p className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.1em] text-ui-risk"><AlertTriangle size={12} aria-hidden /> 가장 큰 위험</p>
-            <p className="mt-1 text-sm font-semibold leading-6 text-ui-text [word-break:keep-all]">{displaySnapshot.summary.topRisk}</p>
+            <p className="mt-1 text-sm font-semibold leading-6 text-ui-text [word-break:keep-all]">{plainDecisionText(displaySnapshot.summary.topRisk)}</p>
           </div>
           <div className="bg-ui-inset/65 px-3 py-3">
             <p className="text-[10px] font-black uppercase tracking-[0.1em] text-ui-brand">{monitorConditionHeading(displaySnapshot.summary.primaryCondition)}</p>
@@ -774,7 +774,7 @@ export function PerpetualDecisionExperience({
         </div>
 
         <ul className="mt-3 grid gap-1.5 text-xs font-semibold leading-5 text-ui-muted md:grid-cols-2">
-          {displaySnapshot.summary.reasons.map((reason) => <li key={reason}>· {reason}</li>)}
+          {displaySnapshot.summary.reasons.map((reason) => <li key={reason}>· {plainDecisionText(reason)}</li>)}
         </ul>
 
         <div className="mt-3 flex flex-col gap-2 border-t border-ui-line pt-3 sm:flex-row sm:items-center sm:justify-between">
@@ -798,18 +798,18 @@ export function PerpetualDecisionExperience({
 
         {quickEvidence && qualifiedMssSemantics ? (
           <div className="mt-3 grid grid-cols-2 gap-1.5 border-t border-ui-line pt-3 sm:grid-cols-5" aria-label="현재 판단 근거 요약">
-            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">확정 구조(MSS)</span>{plainDirection(quickEvidence.structure)}</p>
-            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">추세 지속(MSB)</span>{plainDirection(quickEvidence.events?.msb?.direction ?? (quickEvidence.structure === "unknown" ? "unknown" : "neutral"))}</p>
-            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">전환 경고(CHoCH)</span>{plainDirection(quickEvidence.transition)}</p>
-            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">몰린 포지션</span>{quickEvidence.pressure ? pressureDirectionLabel(quickEvidence.pressure.dominantSide) : "확인 중"}</p>
-            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">큰 금액 체결</span>{quickEvidence.flow ? flowDirectionLabel(quickEvidence.flow.dominantSide) : "확인 중"}</p>
+            <p className="bg-ui-inset/45 px-2.5 py-2 text-[11px] text-ui-muted"><span className="block font-black text-ui-text">{perpetualTermCopy.mss.easyLabel}</span><span className="block text-[9.5px] text-ui-subtle">전문 기준 · MSS</span>{plainDirection(quickEvidence.structure)}</p>
+            <p className="bg-ui-inset/45 px-2.5 py-2 text-[11px] text-ui-muted"><span className="block font-black text-ui-text">{perpetualTermCopy.msb.easyLabel}</span><span className="block text-[9.5px] text-ui-subtle">전문 기준 · MSB</span>{plainDirection(quickEvidence.events?.msb?.direction ?? (quickEvidence.structure === "unknown" ? "unknown" : "neutral"))}</p>
+            <p className="bg-ui-inset/45 px-2.5 py-2 text-[11px] text-ui-muted"><span className="block font-black text-ui-text">{perpetualTermCopy.choch.easyLabel}</span><span className="block text-[9.5px] text-ui-subtle">전문 기준 · CHoCH</span>{plainDirection(quickEvidence.transition)}</p>
+            <p className="bg-ui-inset/45 px-2.5 py-2 text-[11px] text-ui-muted"><span className="block font-black text-ui-text">몰린 포지션</span>{quickEvidence.pressure ? pressureDirectionLabel(quickEvidence.pressure.dominantSide) : "확인 중"}</p>
+            <p className="col-span-2 bg-ui-inset/45 px-2.5 py-2 text-[11px] text-ui-muted sm:col-span-1"><span className="block font-black text-ui-text">큰 금액 체결</span>{quickEvidence.flow ? flowDirectionLabel(quickEvidence.flow.dominantSide) : "확인 중"}</p>
           </div>
         ) : quickEvidence ? (
           <div className="mt-3 grid grid-cols-2 gap-1.5 border-t border-ui-line pt-3 sm:grid-cols-4" aria-label="저장된 판단 근거 요약">
-            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">구조 흐름(MSB)</span>{plainDirection(quickEvidence.structure)}</p>
-            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">전환 신호(CHoCH)</span>{plainDirection(quickEvidence.transition)}</p>
-            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">몰린 포지션</span>{quickEvidence.pressure ? pressureDirectionLabel(quickEvidence.pressure.dominantSide) : "확인 중"}</p>
-            <p className="bg-ui-inset/45 px-2.5 py-2 text-[10.5px] text-ui-muted"><span className="block font-black text-ui-text">큰 금액 체결</span>{quickEvidence.flow ? flowDirectionLabel(quickEvidence.flow.dominantSide) : "확인 중"}</p>
+            <p className="bg-ui-inset/45 px-2.5 py-2 text-[11px] text-ui-muted"><span className="block font-black text-ui-text">{legacyStructureTerm("msb")}</span>{plainDirection(quickEvidence.structure)}</p>
+            <p className="bg-ui-inset/45 px-2.5 py-2 text-[11px] text-ui-muted"><span className="block font-black text-ui-text">{legacyStructureTerm("choch")}</span>{plainDirection(quickEvidence.transition)}</p>
+            <p className="bg-ui-inset/45 px-2.5 py-2 text-[11px] text-ui-muted"><span className="block font-black text-ui-text">몰린 포지션</span>{quickEvidence.pressure ? pressureDirectionLabel(quickEvidence.pressure.dominantSide) : "확인 중"}</p>
+            <p className="bg-ui-inset/45 px-2.5 py-2 text-[11px] text-ui-muted"><span className="block font-black text-ui-text">큰 금액 체결</span>{quickEvidence.flow ? flowDirectionLabel(quickEvidence.flow.dominantSide) : "확인 중"}</p>
           </div>
         ) : null}
         {currentMonitorState.status === "saved" || currentMonitorState.status === "error" ? (
@@ -826,9 +826,8 @@ export function PerpetualDecisionExperience({
       {!newsContext ? <PerpetualNewsContextStrip asset={asset} snapshotId={displaySnapshot.id} /> : null}
 
       <section className="bg-ui-panel px-3 py-4 sm:px-5">
-        <div className="flex items-start justify-between gap-3">
-          <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-subtle">가격 흐름</p><h2 className="mt-1 text-lg font-black text-ui-text">차트에서 표시 시간대를 비교하세요</h2><p className="mt-1 text-xs leading-5 text-ui-muted">{qualifiedMssSemantics ? "결론은 1분부터 1일까지 종합하고, 차트는 선택한 15분·1시간·4시간 확정봉의 구조와 판단 기준을 보여줍니다." : "이 저장 분석은 15분·1시간·4시간 기준입니다. 차트 신호도 저장 당시의 MSB·CHoCH 의미로 표시합니다."}</p></div>
-          <StatusPill tone="watch">차트 전환</StatusPill>
+        <div>
+          <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-subtle">가격 흐름</p><h2 className="mt-1 text-lg font-black text-ui-text">시간대별 가격 흐름을 비교하세요</h2><p className="mt-1 text-xs leading-5 text-ui-muted">{qualifiedMssSemantics ? "결론은 1분부터 1일까지 종합합니다. 차트에서는 15분·1시간·4시간봉의 가격 흐름과 다음에 볼 가격을 비교할 수 있습니다." : "이 저장 분석은 15분·1시간·4시간 기준입니다. 차트에는 저장 당시 가격 구조와 전환 신호를 기존 의미 그대로 표시합니다."}</p></div>
         </div>
         <div className="mt-3"><PerpetualDecisionChart snapshot={displaySnapshot} /></div>
       </section>

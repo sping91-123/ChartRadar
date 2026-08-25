@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
-import { AlertTriangle, ArrowRight, Clock3, Database, Loader2, RefreshCw, Settings2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, ChevronDown, Clock3, Database, Loader2, RefreshCw, Settings2 } from "lucide-react";
 import { CoinRadarHomePanel } from "@/components/coin/CoinRadarHomePanel";
 import { HomeInterestAnalysisSummary } from "@/components/coin/HomeInterestAnalysisSummary";
 import { HomeInterestCoinSettingsDialog } from "@/components/coin/HomeInterestCoinSettingsDialog";
@@ -13,6 +13,7 @@ import { PullToRefresh, usePullToRefreshRegistration } from "@/components/PullTo
 import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import { hasMarketEntitlement } from "@/lib/billing";
+import type { DirectionState } from "@/lib/marketAnalysis";
 import {
   defaultHomeInterestCoin,
   homeInterestCoinsStorageKey,
@@ -22,7 +23,7 @@ import {
   type HomeInterestCoin
 } from "@/lib/homeInterestCoins";
 import { canonicalAssetForHomeCoin } from "@/lib/homeInterestRouting";
-import { decisionStateLabel, flowDirectionLabel, monitorConditionDisplayLabel, monitorConditionHeading, monitorConditionOutcomeCopy, pressureDirectionLabel, qualityLabel } from "@/lib/perpetualDecisionCopy";
+import { decisionStateLabel, flowDirectionLabel, monitorConditionDisplayLabel, monitorConditionHeading, monitorConditionOutcomeCopy, perpetualTermCopy, plainDecisionText, pressureDirectionLabel, qualityLabel } from "@/lib/perpetualDecisionCopy";
 import type { CryptoHomeTicker } from "@/lib/server/cryptoExchangeData";
 import type { PerpetualAsset, PerpetualDecisionSnapshot, SnapshotQuality } from "@/lib/perpetualDecisionSnapshot";
 import type { PerpetualSnapshotCapabilities, PerpetualSnapshotResponse } from "@/lib/perpetualApi";
@@ -169,7 +170,7 @@ function HomeInterestTabs({
             ref={settingsButtonRef}
             type="button"
             onClick={onOpenSettings}
-            className="grid h-9 w-9 place-items-center rounded-ui-sm bg-ui-inset text-ui-muted transition hover:text-ui-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-brand"
+            className="grid h-11 w-11 place-items-center rounded-ui-sm bg-ui-inset text-ui-muted transition hover:text-ui-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-brand"
             aria-label="홈 분석 코인 설정"
             aria-expanded={settingsOpen}
             aria-controls="home-interest-settings-dialog"
@@ -194,7 +195,7 @@ function HomeInterestTabs({
               tabIndex={active ? 0 : -1}
               onClick={() => onSelect(coin)}
               onKeyDown={(event) => handleTabKeyDown(event, index)}
-              className={`min-h-10 shrink-0 rounded-ui-sm px-3 text-left transition ${active ? "bg-ui-brand text-white" : "bg-ui-inset text-ui-muted hover:text-ui-text"}`}
+              className={`min-h-11 shrink-0 rounded-ui-sm px-3 text-left transition ${active ? "bg-ui-brand text-white" : "bg-ui-inset text-ui-muted hover:text-ui-text"}`}
             >
               <span className="block text-xs font-black">{coin.base}/{coin.quote}</span>
               <span className={`block text-[9px] font-semibold ${active ? "text-white/75" : "text-ui-subtle"}`}>{coin.exchangeLabel}</span>
@@ -214,34 +215,57 @@ function HomeEvidenceSummary({ snapshot }: { snapshot: PerpetualDecisionSnapshot
   const context = evidence.context ?? [];
   const groups = [
     { label: "큰 흐름", detail: "1일·4시간", timeframes: ["1d", "4h"] as const },
-    { label: "현재 구조", detail: "1시간·15분", timeframes: ["1h", "15m"] as const },
+    { label: "현재 방향", detail: "1시간·15분", timeframes: ["1h", "15m"] as const },
     { label: "단기 반응", detail: "5분·1분", timeframes: ["5m", "1m"] as const }
   ];
   return (
     <section className="mt-3 border-t border-ui-line pt-3" aria-labelledby="home-evidence-title">
       <h2 id="home-evidence-title" className="text-sm font-black text-ui-text">근거</h2>
       <div className="mt-2 grid gap-1.5">
-        {groups.map((group) => (
-          <article key={group.label} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-ui-inset/55 px-2.5 py-2.5">
-            <div className="min-w-0">
-              <p className="text-xs font-black text-ui-text">{group.label}</p>
-              <p className="mt-0.5 text-[11px] leading-4 text-ui-subtle">{group.detail} 확정 구조(MSS)</p>
-            </div>
-            <div className="grid grid-cols-2 gap-1" aria-label={`${group.label} 시간대별 방향`}>
-              {group.timeframes.map((timeframe) => {
-                const item = context.find((entry) => entry.timeframe === timeframe);
-                return (
-                  <p key={timeframe} className="min-w-[3.75rem] bg-ui-panel/70 px-1.5 py-1 text-center text-[11px] font-semibold text-ui-muted">
-                    <span className="block font-black text-ui-subtle">{item?.label ?? timeframe}</span>
-                    <HomeTimeframeDirection direction={item?.trend ?? "unknown"} />
+        {groups.map((group) => {
+          const items = group.timeframes.map((timeframe) => context.find((entry) => entry.timeframe === timeframe));
+          const trends: DirectionState[] = items.map((item) => item?.trend ?? "unknown");
+          const groupState = trends.every((trend) => trend === "bullish")
+            ? "둘 다 위쪽"
+            : trends.every((trend) => trend === "bearish")
+              ? "둘 다 아래쪽"
+              : trends.some((trend) => trend === "unknown")
+                ? "일부 확인 중"
+                : trends.includes("bullish") && trends.includes("bearish")
+                  ? "방향 엇갈림"
+                  : trends.every((trend) => trend === "neutral")
+                    ? "둘 다 뚜렷하지 않음"
+                    : "한쪽만 방향 확인";
+          return (
+            <article key={group.label} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-ui-inset/55 px-2.5 py-2.5">
+              <div className="min-w-0">
+                <p className="text-xs font-black text-ui-text">{group.label}</p>
+                <p className="mt-0.5 text-[11px] font-semibold leading-4 text-ui-muted">{group.detail} · {groupState}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-1" aria-label={`${group.label} 시간대별 방향`}>
+                {group.timeframes.map((timeframe, index) => (
+                  <p key={timeframe} className="min-w-[4.5rem] bg-ui-panel/70 px-1.5 py-1 text-center text-[11px] font-semibold text-ui-muted">
+                    <span className="block font-black text-ui-subtle">{items[index]?.label ?? timeframe}</span>
+                    <HomeTimeframeDirection direction={items[index]?.trend ?? "unknown"} />
                   </p>
-                );
-              })}
-            </div>
-          </article>
-        ))}
+                ))}
+              </div>
+            </article>
+          );
+        })}
       </div>
-      <p className="mt-2 text-[11px] leading-5 text-ui-subtle">Coters v2.49 기본 기준을 제한 이력으로 근사 재현합니다. MSS는 확정 추세, MSB는 추세 지속, CHoCH는 전환 경고입니다.</p>
+      <details className="group mt-2 border-t border-ui-line pt-1.5">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-[11px] font-black text-ui-muted marker:hidden [&::-webkit-details-marker]:hidden">
+          전문 용어 뜻 보기
+          <ChevronDown size={14} className="transition group-open:rotate-180" aria-hidden />
+        </summary>
+        <ul className="space-y-1.5 bg-ui-inset/35 px-2.5 py-2 text-[11px] leading-5 text-ui-muted">
+          {(["mss", "msb", "choch"] as const).map((term) => (
+            <li key={term}><span className="font-black text-ui-text">{perpetualTermCopy[term].easyLabel}</span> · 전문 기준 {perpetualTermCopy[term].technicalLabel}<br />{perpetualTermCopy[term].description}</li>
+          ))}
+          <li className="text-ui-subtle">Coters v2.49 기준을 제한된 확정봉 이력으로 재현해 전체 TradingView 누적 상태와는 차이가 날 수 있습니다.</li>
+        </ul>
+      </details>
       <div className="mt-2 grid grid-cols-2 gap-1.5">
         <article className="min-w-0 bg-ui-inset/40 px-2.5 py-2">
           <p className="text-[11px] font-black text-ui-subtle">몰린 포지션</p>
@@ -382,7 +406,7 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
         <div className="mt-2 h-7 w-3/5 animate-pulse bg-ui-inset" />
         <div className="mt-4 grid grid-cols-2 gap-2">
           <div className="min-h-20 animate-pulse bg-ui-risk/10 px-3 py-3 text-[11px] font-bold text-ui-risk">가장 큰 위험 확인 중</div>
-          <div className="min-h-20 animate-pulse bg-ui-brand/8 px-3 py-3 text-[11px] font-bold text-ui-brand">다음 판단 기준 계산 중</div>
+          <div className="min-h-20 animate-pulse bg-ui-brand/8 px-3 py-3 text-[11px] font-bold text-ui-brand">다음에 확인할 것 계산 중</div>
         </div>
         <p className="mt-3 text-xs leading-5 text-ui-muted">차트 흐름, 몰린 포지션, 큰 금액 체결을 같은 시각으로 맞추고 있습니다.</p>
       </section>
@@ -414,7 +438,7 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
     return !item?.known || item.integrity !== "ready";
   });
   const analysisScope = reactionFramesPending
-    ? "큰 흐름·현재 구조 종합 · 단기 반응 확인 중"
+    ? "큰 흐름·현재 방향 종합 · 단기 반응 확인 중"
     : "여러 시간대 확정봉 종합";
 
   return (
@@ -427,14 +451,14 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
         </div>
       </div> : null}
 
-      <div className={`${displayQuality !== "ready" ? "mt-2" : ""} flex items-end justify-between gap-3`}>
+      <div className={`${displayQuality !== "ready" ? "mt-2" : ""} flex flex-col items-start gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-3`}>
         <div className="min-w-0">
           <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ui-subtle">바이낸스 만기 없는 선물 · {analysisScope}</p>
           <h1 id="home-decision-title" className="mt-1 text-[1.35rem] font-black leading-7 tracking-tight text-ui-text [word-break:keep-all]">
-            {displaySnapshot.summary.headline}
+            {plainDecisionText(displaySnapshot.summary.headline)}
           </h1>
         </div>
-        <div className="shrink-0 text-right">
+        <div className="shrink-0 text-left sm:text-right">
           <p className="text-xl font-black tabular-nums text-ui-text">{formatPrice(livePrice ?? displaySnapshot.price)}</p>
           <p className={`mt-0.5 text-[10px] font-black tabular-nums ${liveChange === null ? "text-ui-subtle" : liveChange > 0 ? "text-ui-long" : liveChange < 0 ? "text-ui-short" : "text-ui-muted"}`}>{formatChange(liveChange)}</p>
           <p className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-semibold text-ui-subtle">
@@ -448,14 +472,14 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
           <p className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.1em] text-ui-risk">
             <AlertTriangle size={12} aria-hidden /> 가장 큰 위험
           </p>
-          <p className="mt-1 text-xs font-semibold leading-5 text-ui-text [word-break:keep-all]">{displaySnapshot.summary.topRisk}</p>
+          <p className="mt-1 text-xs font-semibold leading-5 text-ui-text [word-break:keep-all]">{plainDecisionText(displaySnapshot.summary.topRisk)}</p>
         </div>
         <div className="bg-ui-inset/65 px-3 py-2.5">
           <p className="text-[10px] font-black uppercase tracking-[0.1em] text-ui-brand">{monitorConditionHeading(displaySnapshot.summary.primaryCondition)}</p>
           <p className="mt-1 text-xs font-black leading-5 text-ui-text [word-break:keep-all]">{monitorConditionDisplayLabel(displaySnapshot.summary.primaryCondition)}</p>
           <p className="mt-1.5 text-[10.5px] font-semibold leading-4 text-ui-muted [word-break:keep-all]">{conditionOutcome.met}</p>
           <p className="mt-0.5 text-[10.5px] leading-4 text-ui-subtle [word-break:keep-all]">{conditionOutcome.unmet}</p>
-          <p className="mt-1 text-[9.5px] leading-4 text-ui-subtle [word-break:keep-all]">{conditionOutcome.note}</p>
+          <p className="mt-1 text-[10.5px] leading-4 text-ui-subtle [word-break:keep-all]">{conditionOutcome.note}</p>
         </div>
       </div>
 

@@ -9,7 +9,7 @@ import { parseClosedBinanceKlines } from "../src/lib/marketTime";
 import { comparePerpetualShadowDecision } from "../src/lib/perpetualShadowComparison";
 import { decisionJournalContextFromSnapshot } from "../src/lib/journal";
 import type { ConfirmedCommonRangeOteV1 } from "../src/lib/confirmedCommonRangeOte";
-import { monitorConditionHeading } from "../src/lib/perpetualDecisionCopy";
+import { beginnerTerm, legacyStructureTerm, monitorConditionDisplayLabel, monitorConditionHeading, monitorConditionOutcomeCopy, plainConditionBasis, plainDecisionText } from "../src/lib/perpetualDecisionCopy";
 import { perpetualStructureTimeframes, type PerpetualStructureTimeframe, type QualifiedMssState } from "../src/lib/qualifiedMss";
 import {
   isPerpetualRevenueCoreScannerEnabled,
@@ -50,8 +50,23 @@ const baseCondition: MonitorCondition = {
   baselineState: "risk",
   expiresAt: "2026-07-20T12:00:00.000Z"
 };
-assert.equal(monitorConditionHeading(baseCondition), "다음 판단 기준", "state checks use the same plain-language heading");
-assert.equal(monitorConditionHeading({ ...baseCondition, kind: "price_cross_above", threshold: 60_000 }), "다음 판단 기준");
+assert.equal(monitorConditionHeading(baseCondition), "다음에 확인할 것", "state checks use the same plain-language heading");
+const priceCopyCondition: MonitorCondition = {
+  ...baseCondition,
+  kind: "price_cross_above",
+  threshold: 60_000,
+  basis: "확정 구조(MSS) 돌파선"
+};
+assert.equal(monitorConditionHeading(priceCopyCondition), "다음에 확인할 것");
+assert.equal(monitorConditionDisplayLabel(priceCopyCondition), "15분봉이 60,000 위에서 끝나는지 확인");
+assert.match(monitorConditionOutcomeCopy(priceCopyCondition).met, /60,000 위에서 끝나면 → 오르는 근거/);
+assert.match(monitorConditionOutcomeCopy(priceCopyCondition).unmet, /그 전까지 →/);
+assert.match(monitorConditionOutcomeCopy(priceCopyCondition).note, /전문 기준 · 새 추세 확인선 \(MSS\).*자동 주문 아님/);
+assert.equal(plainConditionBasis("전환 경고(CHoCH) 돌파선"), "반대 방향 전환 주의선 (CHoCH)");
+assert.equal(beginnerTerm("ob"), "강한 움직임이 시작된 가격대 (OB)");
+assert.equal(beginnerTerm("ote"), "되돌림 반응 후보 구간 (OTE)");
+assert.equal(legacyStructureTerm("msb"), "저장 당시 가격 구조 (MSB)", "legacy structure semantics must remain explicit");
+assert.equal(plainDecisionText("현재 구조와 다음 판단 기준을 봅니다."), "현재 방향과 다음에 확인할 조건을 봅니다.");
 
 const refreshNow = Date.parse(generatedAt);
 assert.equal(perpetualSnapshotRefreshDelay("2026-07-19T12:02:00.000Z", refreshNow), 60_000, "far expiry must retain the one-minute refresh ceiling");
@@ -616,6 +631,8 @@ assert.match(homeSource, />근거<\/h2>/, "Home evidence section uses the reques
 assert.doesNotMatch(homeSource, /왜 이렇게 보나요|결론에 사용한 네 가지 근거|상세 화면에서 시간대별 신호 가격/, "removed Home helper and promo copy must not return");
 assert.match(homeSource, /여러 시간대 확정봉 종합/, "Home must describe the six-timeframe decision scope");
 assert.match(homeSource, /monitorConditionOutcomeCopy/, "Home must explain what happens when the next criterion is met or not met");
+assert.match(homeSource, /전문 용어 뜻 보기/, "Home must keep technical terms behind progressive disclosure");
+assert.doesNotMatch(homeSource, /확정 구조\(MSS\)/, "Home evidence must lead with meaning instead of MSS jargon");
 assert.ok(
   homeSource.indexOf("<PerpetualDecisionChart snapshot={displaySnapshot} compact />") < homeSource.indexOf("<HomeEvidenceSummary snapshot={displaySnapshot} />"),
   "the compact chart must appear before the evidence section"
@@ -631,15 +648,22 @@ assert.match(macroSource, /recentReleased \?\? upcomingWithin24Hours \?\? neares
 const compactChartSource = readFileSync(join(process.cwd(), "src/components/coin/PerpetualDecisionChart.tsx"), "utf8");
 assert.match(compactChartSource, /buildPerpetualChartOverlayModel/, "Home chart lines and legend must share the tested overlay model");
 assert.match(compactChartSource, /PerpetualChartLegend/, "compact Home chart must expose exact values outside the plotting area");
-assert.match(compactChartSource, /axisLabelVisible: compact \? line\.axisLabelVisible : true/, "only the compact primary line keeps its axis label");
+assert.match(compactChartSource, /axisLabelVisible: line\.axisLabelVisible/, "only the primary line keeps its axis label in Home and detail charts");
 assert.match(compactChartSource, /compactPerpetualCandleLimit/, "compact candle density must respond at the tested width threshold");
 assert.match(compactChartSource, /rightOffsetPixels: 56/, "the latest Home candle must retain readable right-side space");
 assert.match(compactChartSource, /height: compact \? 240 : 360/, "the compact chart must use the less cramped 240px height");
 assert.match(compactChartSource, /applyOptions\(\{ width, height: compact \? 240 : 360 \}\)/, "responsive resize must preserve the compact chart height");
 assert.match(compactChartSource, /data-pull-to-refresh-ignore=""/, "Home and detail chart surfaces must not start pull-to-refresh");
 assert.doesNotMatch(compactChartSource, /조건선 \{counts\.conditions\}/, "the cramped overlay counts must be removed");
-assert.match(compactChartSource, /compact \? \{\} : \{ text:/, "compact markers must not cover candles with text labels");
-assert.match(compactChartSource, /line\.detailLabel/, "the full detail chart retains explanatory price-line labels");
+assert.match(compactChartSource, /showText \? \{ text:/, "marker text must remain optional without removing the marker shape");
+assert.match(compactChartSource, /!compact && container\.clientWidth >= 520/, "narrow detail charts must hide marker text that would cover candles");
+assert.match(compactChartSource, /markers\.setMarkers\(resolvedMarkers\.map/, "narrow charts must keep marker shapes while their exact meaning stays in the legend");
+assert.match(compactChartSource, /showAllOverlays[\s\S]*가격대·흐름 보기/, "Home chart must default to a simple view with an explicit detail toggle");
+assert.match(compactChartSource, /line\.id === primaryLineId\)[\s\S]*line\.group === "condition"/, "context charts must fall back to their own first condition line");
+assert.match(compactChartSource, /이 시간대에 표시할 판단 가격 없음/, "a context chart without a condition line must explain the empty overlay state");
+assert.match(compactChartSource, /showAllOverlays && hasAdvancedOverlays/, "an empty context chart must not claim that advanced overlays are visible");
+assert.match(compactChartSource, /title: ""/, "price-line titles stay outside the candles in the readable legend");
+assert.match(compactChartSource, /aria-describedby=\{legendItems\.length/, "Home and detail charts must both be connected to their legends");
 assert.match(compactChartSource, /allResolvedMarkers[\s\S]*visibleMarkerIds/, "signals outside the responsive plot window remain represented in the external legend");
 const compactLegendSource = readFileSync(join(process.cwd(), "src/components/coin/PerpetualChartLegend.tsx"), "utf8");
 assert.match(compactLegendSource, /<h3[\s\S]*<ul[\s\S]*<li/, "chart legend groups and entries use heading and list semantics");
@@ -649,7 +673,7 @@ const experienceSource = readFileSync(join(process.cwd(), "src/components/coin/P
 const workbenchSource = readFileSync(join(process.cwd(), "src/components/coin/PerpetualEvidenceWorkbench.tsx"), "utf8");
 assert.match(experienceSource, /hasQualifiedMssSemantics\(displaySnapshot\)/, "detail summary copy must branch between v2 and v3 meanings");
 assert.match(workbenchSource, /hasQualifiedMssSemantics\(snapshot\)/, "saved v2 evidence must not be relabelled as MSS");
-assert.match(workbenchSource, /구조 흐름 \(MSB\)[\s\S]*전환 신호 \(CHoCH\)/, "legacy evidence retains its stored MSB and CHoCH labels");
+assert.match(workbenchSource, /legacyStructureTerm/, "legacy evidence must use the explicit saved-analysis copy branch");
 
 const journalSource = readFileSync(join(process.cwd(), "src/components/JournalApp.tsx"), "utf8");
 for (const reviewSource of ["snapshot", "alert", "news"]) {
