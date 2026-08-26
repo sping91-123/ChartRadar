@@ -12,12 +12,14 @@ import {
   type ISeriesApi,
   type ISeriesMarkersPluginApi,
   type SeriesMarker,
+  type TickMarkType,
   type Time
 } from "lightweight-charts";
 import { ChartTimeframeSelector } from "@/components/coin/ChartTimeframeSelector";
 import { PerpetualChartLegend } from "@/components/coin/PerpetualChartLegend";
 import { useChartTimeframeCandles } from "@/components/coin/useChartTimeframeCandles";
 import { chartViewTimeframeLabels } from "@/lib/chartTimeframeView";
+import { formatPerpetualChartTick, formatPerpetualChartTime } from "@/lib/perpetualChartTime";
 import {
   buildPerpetualChartOverlayModel,
   buildPerpetualSignalLegendItems,
@@ -122,6 +124,9 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
         textColor: "#94a3b8",
         attributionLogo: false
       },
+      localization: {
+        timeFormatter: (time: Time) => formatPerpetualChartTime(time)
+      },
       grid: {
         vertLines: { color: "rgba(148,163,184,0.06)" },
         horzLines: { color: "rgba(148,163,184,0.08)" }
@@ -131,6 +136,7 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
         borderColor: "rgba(148,163,184,0.16)",
         timeVisible: true,
         secondsVisible: false,
+        tickMarkFormatter: (time: Time, tickMarkType: TickMarkType) => formatPerpetualChartTick(time, tickMarkType),
         ...(compact ? { rightOffsetPixels: 56 } : {})
       },
       handleScroll: !compact,
@@ -221,7 +227,7 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
       <div className={`mb-2 ${compact ? "px-2" : ""}`}>
         <div className="flex min-h-11 items-center justify-between gap-2">
           <div>
-            <p className="text-[11px] font-black text-ui-text">{timeframeLabel}봉에서 가격과 흐름 확인</p>
+            <p className="text-[11px] font-black text-ui-text">{timeframeLabel}봉 가격 흐름 · 한국 시간(KST)</p>
             {compact ? <p className="mt-0.5 text-[10px] leading-4 text-ui-subtle">{showAllOverlays && hasAdvancedOverlays ? "반응 가격대와 흐름 신호까지 표시 중" : coreLineId ? "이 시간대에서 가장 먼저 볼 가격만 표시" : "이 시간대에 표시할 판단 가격 없음"}</p> : null}
           </div>
           {compact && hasAdvancedOverlays ? (

@@ -5,6 +5,7 @@ import {
   compactPerpetualCandleLimit,
   resolvePerpetualChartMarkers
 } from "../src/lib/perpetualDecisionChartOverlays";
+import { formatPerpetualChartTick, formatPerpetualChartTime } from "../src/lib/perpetualChartTime";
 import type { PerpetualDecisionSnapshot } from "../src/lib/perpetualDecisionSnapshot";
 
 const candleStart = 1_780_000_000;
@@ -19,6 +20,13 @@ const candles = Array.from({ length: 96 }, (_, index) => ({
 const collisionTime = candles[90].time;
 const collisionIso = new Date(collisionTime * 1000).toISOString();
 const expiresAt = "2026-08-05T00:00:00.000Z";
+
+const kstFixtureTime = Date.UTC(2026, 7, 25, 15, 0) / 1000;
+assert.equal(formatPerpetualChartTime(kstFixtureTime), "08/26 00:00 KST");
+assert.equal(formatPerpetualChartTick(kstFixtureTime, 0), "2026");
+assert.equal(formatPerpetualChartTick(kstFixtureTime, 1), "8월");
+assert.equal(formatPerpetualChartTick(kstFixtureTime, 2), "08/26");
+assert.equal(formatPerpetualChartTick(kstFixtureTime, 3), "00:00");
 
 const primaryCondition = {
   id: "primary",

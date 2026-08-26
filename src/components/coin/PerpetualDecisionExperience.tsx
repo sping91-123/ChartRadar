@@ -78,6 +78,7 @@ function formatAsOf(value: string) {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return "시각 확인 필요";
   return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
