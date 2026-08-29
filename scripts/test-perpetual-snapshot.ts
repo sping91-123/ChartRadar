@@ -641,9 +641,14 @@ const homeSource = readFileSync(join(process.cwd(), "src/components/coin/HomePer
 assert.doesNotMatch(homeSource, />[^<{]*(스냅샷|상방 확인 중|하방 확인 중|다음 확인 조건)[^<{]*</, "Home must not render internal or unexplained decision jargon");
 assert.match(homeSource, />근거<\/h2>/, "Home evidence section uses the requested short title");
 assert.doesNotMatch(homeSource, /왜 이렇게 보나요|결론에 사용한 네 가지 근거|상세 화면에서 시간대별 신호 가격/, "removed Home helper and promo copy must not return");
-assert.match(homeSource, /여러 시간대 확정봉 종합/, "Home must describe the six-timeframe decision scope");
+assert.doesNotMatch(homeSource, /바이낸스 만기 없는 선물|여러 시간대 확정봉 종합/, "Home must not repeat the analysis scope above the decision headline");
 assert.match(homeSource, /monitorConditionOutcomeCopy/, "Home must explain what happens when the next criterion is met or not met");
-assert.match(homeSource, /전문 용어 뜻 보기/, "Home must keep technical terms behind progressive disclosure");
+assert.match(homeSource, /지금 주의할 점/, "Home must label the caution card in plain, actionable language");
+assert.doesNotMatch(homeSource, /전문 용어 뜻 보기|evidence\.pressure|evidence\.flow|evidence\.previousChange/, "Home must end after the compact timeframe evidence rows");
+assert.match(homeSource, /group inline-flex min-h-11/, "Home coin tabs must retain a 44px touch target");
+assert.match(homeSource, /inline-flex h-10 items-center rounded-ui-sm/, "Home coin tabs must keep the compact 40px visible box");
+assert.match(homeSource, /aria-label=\{`\$\{coin\.base\}\/\$\{coin\.quote\} · \$\{coin\.exchangeLabel\}`\}/, "Home coin tabs must retain the exchange in their accessible name");
+assert.doesNotMatch(homeSource, /<span[^>]*>\{coin\.exchangeLabel\}<\/span>/, "Home coin tabs must not render the exchange as visible secondary text");
 assert.doesNotMatch(homeSource, /확정 구조\(MSS\)/, "Home evidence must lead with meaning instead of MSS jargon");
 assert.ok(
   homeSource.indexOf("<PerpetualDecisionChart snapshot={displaySnapshot} compact />") < homeSource.indexOf("<HomeEvidenceSummary snapshot={displaySnapshot} />"),
