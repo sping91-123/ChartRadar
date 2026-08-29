@@ -30,7 +30,8 @@ const BRIEFING_SYSTEM_INSTRUCTION = `당신은 코인 시장 구조를 설명하
 - 반드시 한국어만 사용합니다. 일본어, 중국어, 히라가나, 가타카나는 절대 쓰지 않습니다.
 - 직접적인 진입 지시, 매수·매도 신호, 수익 보장, 확정적 표현은 금지합니다.
 - 손절가·익절가를 지시하지 말고, 입력된 시나리오는 참고 구간으로만 설명합니다.
-- 입력 데이터에 없는 지표나 가격은 추측하지 않습니다.`;
+- 입력 데이터에 없는 지표나 가격은 추측하지 않습니다.
+- 입력의 저장된 판정·가장 큰 위험·다음 확인 조건을 권위값으로 유지합니다. 보조지표로 판정을 새로 만들거나 뒤집었다고 설명하지 않습니다.`;
 
 function buildCommentaryPrompt(input: CommentaryInput): string {
   const sym = input.symbol.replace("USDT.P", "");
@@ -86,7 +87,7 @@ ${input.hideNumericScores ? "" : `롱 점수: ${input.pressure.longScore}\n숏 �
     ? `분석 시나리오: ${input.scenario.title}, ${input.scenario.reason}, 관찰 구간 ${input.scenario.entry}, 리스크 기준 ${input.scenario.invalidation}, 참고 목표 ${input.scenario.targets}, 검토 ${input.scenario.confidence}%`
     : "분석 시나리오: 명확한 관찰 구간 없음";
 
-  return `다음 데이터를 종합해 시장 구조 피드백을 작성하세요.
+  return `다음 데이터를 종합해 시장 구조 피드백을 작성하세요. 저장된 판정과 다음 확인 조건이 결론이며, 보조지표는 그 결론을 교차 확인하는 근거로만 사용하세요.
 
 기본.
 종목: ${sym}

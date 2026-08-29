@@ -11,6 +11,10 @@ import {
   type PerpetualStructureTimeframe,
   type QualifiedMssState
 } from "./qualifiedMss";
+import {
+  buildPublicTechnicalEvidence,
+  type PerpetualPublicTechnicalEvidence
+} from "./perpetualAnalysisPerspective";
 
 export const perpetualDecisionEngineVersion = "perpetual-v3.0.0";
 // All v3 monitor IDs use a new semantic prefix so v2 conditions cannot be
@@ -74,6 +78,46 @@ export interface PerpetualPriceZone {
   state?: "fvg" | "ifvg";
 }
 
+export type PerpetualTechnicalIndicatorDetails = Pick<
+  TimeframeAnalysis["condition"],
+  | "regime"
+  | "regimeScore"
+  | "rsi14"
+  | "rsiState"
+  | "macdLine"
+  | "macdSignal"
+  | "macdHistogram"
+  | "macdState"
+  | "ema20"
+  | "ema50"
+  | "ema200"
+  | "emaStack"
+  | "emaSlope"
+  | "adx14"
+  | "plusDi14"
+  | "minusDi14"
+  | "dmiState"
+  | "supertrendDirection"
+  | "supertrendValue"
+  | "donchianHigh"
+  | "donchianLow"
+  | "donchianPosition"
+  | "keltnerMiddle"
+  | "keltnerUpper"
+  | "keltnerLower"
+  | "keltnerPosition"
+  | "atr14"
+  | "atrPercent"
+  | "volatilityState"
+  | "volumeRatio"
+  | "volumeState"
+  | "bollingerMiddle"
+  | "bollingerUpper"
+  | "bollingerLower"
+  | "bollingerPosition"
+  | "bollingerWidthPercentile"
+>;
+
 export interface PerpetualEvidenceDetails {
   events: {
     mss: PerpetualTimedLevel | null;
@@ -93,10 +137,7 @@ export interface PerpetualEvidenceDetails {
     oteZone: TimeframeAnalysis["oteZone"];
     oteLevels: TimeframeAnalysis["oteLevels"];
   };
-  indicators: Pick<
-    TimeframeAnalysis["condition"],
-    "rsi14" | "rsiState" | "macdState" | "atrPercent" | "volatilityState" | "volumeRatio" | "volumeState" | "bollingerPosition"
-  >;
+  indicators: PerpetualTechnicalIndicatorDetails;
 }
 
 export interface PerpetualStructureEvidence {
@@ -158,6 +199,7 @@ export interface PerpetualDecisionSnapshot {
     transition: DirectionState;
     events?: Pick<PerpetualEvidenceDetails["events"], "mss" | "msb" | "choch">;
     context?: PerpetualStructureEvidence[];
+    technical?: PerpetualPublicTechnicalEvidence;
     pressure: Pick<LiquidationPressureReport, "dominantSide" | "grade" | "summary"> | null;
     flow: Pick<LargeTradeFlowReport, "dominantSide" | "grade" | "summary"> | null;
     previousChange?: SnapshotChange | null;
@@ -172,6 +214,7 @@ export interface PerpetualDecisionSnapshot {
   };
   pro?: {
     detailVersion?: 1;
+    technicalDetailVersion?: 1;
     confirmedCommonRangeV1?: ConfirmedCommonRangeOteV1 | null;
     confirmationConditions: MonitorCondition[];
     invalidationConditions: MonitorCondition[];
@@ -361,14 +404,42 @@ function evidenceDetails(
       oteLevels: analysis.oteLevels
     },
     indicators: {
+      regime: analysis.condition.regime,
+      regimeScore: analysis.condition.regimeScore,
       rsi14: analysis.condition.rsi14,
       rsiState: analysis.condition.rsiState,
+      macdLine: analysis.condition.macdLine,
+      macdSignal: analysis.condition.macdSignal,
+      macdHistogram: analysis.condition.macdHistogram,
       macdState: analysis.condition.macdState,
+      ema20: analysis.condition.ema20,
+      ema50: analysis.condition.ema50,
+      ema200: analysis.condition.ema200,
+      emaStack: analysis.condition.emaStack,
+      emaSlope: analysis.condition.emaSlope,
+      adx14: analysis.condition.adx14,
+      plusDi14: analysis.condition.plusDi14,
+      minusDi14: analysis.condition.minusDi14,
+      dmiState: analysis.condition.dmiState,
+      supertrendDirection: analysis.condition.supertrendDirection,
+      supertrendValue: analysis.condition.supertrendValue,
+      donchianHigh: analysis.condition.donchianHigh,
+      donchianLow: analysis.condition.donchianLow,
+      donchianPosition: analysis.condition.donchianPosition,
+      keltnerMiddle: analysis.condition.keltnerMiddle,
+      keltnerUpper: analysis.condition.keltnerUpper,
+      keltnerLower: analysis.condition.keltnerLower,
+      keltnerPosition: analysis.condition.keltnerPosition,
+      atr14: analysis.condition.atr14,
       atrPercent: analysis.condition.atrPercent,
       volatilityState: analysis.condition.volatilityState,
       volumeRatio: analysis.condition.volumeRatio,
       volumeState: analysis.condition.volumeState,
-      bollingerPosition: analysis.condition.bollingerPosition
+      bollingerMiddle: analysis.condition.bollingerMiddle,
+      bollingerUpper: analysis.condition.bollingerUpper,
+      bollingerLower: analysis.condition.bollingerLower,
+      bollingerPosition: analysis.condition.bollingerPosition,
+      bollingerWidthPercentile: analysis.condition.bollingerWidthPercentile
     }
   };
 }
@@ -718,6 +789,7 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
           integrity: qualified?.integrity ?? "unavailable"
         };
       }),
+      technical: buildPublicTechnicalEvidence(primary.analysis.condition, primary.observedAt, primary.closedPrice),
       pressure: input.pressure
         ? {
             dominantSide: input.pressure.dominantSide,
@@ -744,6 +816,7 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
     },
     pro: {
       detailVersion: 1,
+      technicalDetailVersion: 1,
       ...(input.confirmedCommonRangeV1 !== undefined
         ? { confirmedCommonRangeV1: input.confirmedCommonRangeV1 }
         : {}),

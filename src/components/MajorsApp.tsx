@@ -156,7 +156,7 @@ export function MajorsApp({
 
   return (
     <PullToRefresh enabled={pullRefreshEnabled}>
-      <main className="min-h-screen max-w-full overflow-x-hidden px-3 pb-28 sm:px-5 sm:pb-16">
+      <main className="min-h-screen max-w-full overflow-x-clip px-3 pb-28 sm:px-5 sm:pb-16">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 sm:gap-3">
           <Header market="crypto" />
           <RadarTopNav newsImpactEnabled={newsImpactEnabled} />

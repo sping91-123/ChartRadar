@@ -124,7 +124,7 @@ function TimeframeCard({ evidence, qualifiedMssSemantics }: { evidence: Perpetua
     <article className="bg-ui-inset/50 px-3 py-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-black text-ui-text">{evidence.label}</p>
-        <StatusPill tone={tone(evidence.structure)}>{regimeLabel(evidence.regime)}</StatusPill>
+        <StatusPill tone={tone(evidence.structure)}>구조 {plainDirection(evidence.structure)}</StatusPill>
       </div>
       <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
         <div><dt className="text-ui-subtle">{qualifiedMssSemantics ? beginnerTerm("mss") : legacyStructureTerm("msb")}</dt><dd className="mt-1 font-black text-ui-text">{plainDirection(evidence.structure)}</dd></div>
@@ -148,10 +148,8 @@ function IctDetails({ evidence }: { evidence?: PerpetualDecisionEvidence }) {
   const pd = details.location.premiumDiscount;
   const range = details.location.dealingRange;
   const ote = details.location.oteLevels;
-  const indicators = details.indicators;
   return (
-    <div className="space-y-2">
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">{beginnerTerm("ob")}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{ob ? `${formatPrice(ob.bottom)}~${formatPrice(ob.top)}${ob.isInside ? " · 현재 이 구간 안" : ""}` : "최근 뚜렷한 구간 없음"}</p></article>
         <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">{beginnerTerm("fvg")}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{fvg ? `${formatPrice(fvg.bottom)}~${formatPrice(fvg.top)} · ${fvg.state === "ifvg" ? "방향이 바뀐 구간" : "재확인 가능 구간"}` : "최근 뚜렷한 구간 없음"}</p></article>
         <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">{beginnerTerm("sweep")}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{details.events.sweep ? `${plainDirection(details.events.sweep.direction)} · ${eventDetail(details.events.sweep)}` : "최근 뚜렷한 움직임 없음"}</p></article>
@@ -160,13 +158,6 @@ function IctDetails({ evidence }: { evidence?: PerpetualDecisionEvidence }) {
         <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">{beginnerTerm("pd")}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{pd === "premium" ? "최근 범위의 위쪽" : pd === "discount" ? "최근 범위의 아래쪽" : pd === "equilibrium" ? "최근 범위의 가운데" : "현재 위치 확인 중"}</p></article>
         <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">최근 가격 범위</p><p className="mt-1 text-xs leading-5 text-ui-muted">{range.low !== null && range.high !== null ? `${formatPrice(range.low)}~${formatPrice(range.high)} · 가운데 ${formatPrice(range.equilibrium)}` : "가격 범위 확인 중"}</p></article>
         <article className="bg-ui-inset/50 px-3 py-3"><p className="text-xs font-black text-ui-text">최근 20개 봉의 {beginnerTerm("ote")}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{ote ? details.location.oteZone === "long" ? `${formatPrice(ote.longLow)}~${formatPrice(ote.longHigh)} · 오를 때의 되돌림 후보` : details.location.oteZone === "short" ? `${formatPrice(ote.shortLow)}~${formatPrice(ote.shortHigh)} · 내릴 때의 되돌림 후보` : "현재가는 계산된 되돌림 후보 밖" : "구간 확인 중"}</p></article>
-      </div>
-      <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-        <div className="bg-ui-inset/35 px-3 py-2"><p className="text-ui-subtle">매수·매도 과열도(RSI)</p><p className="mt-1 font-black text-ui-text">{typeof indicators.rsi14 === "number" ? indicators.rsi14.toFixed(1) : "확인 중"}</p></div>
-        <div className="bg-ui-inset/35 px-3 py-2"><p className="text-ui-subtle">추세 속도(MACD)</p><p className="mt-1 font-black text-ui-text">{indicators.macdState === "rising" ? "상승" : indicators.macdState === "falling" ? "하락" : indicators.macdState === "neutral" ? "중립" : "확인 중"}</p></div>
-        <div className="bg-ui-inset/35 px-3 py-2"><p className="text-ui-subtle">평균 변동 폭(ATR)</p><p className="mt-1 font-black text-ui-text">{formatPercent(indicators.atrPercent)}</p></div>
-        <div className="bg-ui-inset/35 px-3 py-2"><p className="text-ui-subtle">거래량</p><p className="mt-1 font-black text-ui-text">{typeof indicators.volumeRatio === "number" ? `평균의 ${indicators.volumeRatio.toFixed(2)}배` : "확인 중"}</p></div>
-      </div>
     </div>
   );
 }
@@ -219,17 +210,18 @@ function ConfirmedCommonRangeOteCard({ model }: { model: ConfirmedCommonRangeOte
   );
 }
 
-function BasicProValueCard({ snapshot }: { snapshot: PerpetualDecisionSnapshot }) {
+function BasicProValueCard({ snapshot, focus = "combined" }: { snapshot: PerpetualDecisionSnapshot; focus?: "combined" | "ict" }) {
+  const ictFocus = focus === "ict";
   return (
     <section className="flex flex-col gap-3 border-l-2 border-ui-brand bg-ui-panel px-3 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
       <div>
         <p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand">Coin Pro에서 이어지는 분석</p>
-        <h2 className="mt-1 text-base font-black text-ui-text">수치만 더 보는 게 아니라, 놓치기 쉬운 조건을 앱이 최대 5분 간격으로 확인합니다</h2>
+        <h2 className="mt-1 text-base font-black text-ui-text">{ictFocus ? "1시간·4시간 ICT 신호의 정확한 가격과 시각까지 이어서 봅니다" : "수치만 더 보는 게 아니라, 놓치기 쉬운 조건을 앱이 최대 5분 간격으로 확인합니다"}</h2>
         <ul className="mt-2 grid gap-1 text-xs leading-5 text-ui-muted sm:grid-cols-2">
           <li>· 1시간·4시간 신호가 실제로 나온 가격·시각</li>
-          <li>· 세부 가격 반응 구간과 상세 포지션·큰 체결 수치</li>
-          <li>· 현재 수치까지 연결해 풀어주는 맞춤 AI 설명</li>
-          <li>· 무료 1개 · Coin Pro 최대 20개 조건 감시·알림</li>
+          <li>· OB·FVG·POC·OTE 세부 가격 반응 구간</li>
+          {ictFocus ? <li>· 15분·1시간·4시간 구조의 정확한 비교</li> : <li>· 현재 수치까지 연결해 풀어주는 맞춤 AI 설명</li>}
+          {ictFocus ? <li>· 판단 강화·재검토 조건 감시·알림</li> : <li>· 무료 1개 · Coin Pro 최대 20개 조건 감시·알림</li>}
         </ul>
       </div>
       <CoinProConversionLink
@@ -247,7 +239,7 @@ function BasicProValueCard({ snapshot }: { snapshot: PerpetualDecisionSnapshot }
   );
 }
 
-export function PerpetualEvidenceWorkbench({ snapshot }: { snapshot: PerpetualDecisionSnapshot }) {
+export function PerpetualEvidenceWorkbench({ snapshot, mode = "combined" }: { snapshot: PerpetualDecisionSnapshot; mode?: "combined" | "ict" }) {
   const qualifiedMssSemantics = hasQualifiedMssSemantics(snapshot);
   const publicEvidence = snapshot.publicEvidence;
   const pro = snapshot.pro;
@@ -287,11 +279,11 @@ export function PerpetualEvidenceWorkbench({ snapshot }: { snapshot: PerpetualDe
       <section className="bg-ui-panel px-3 py-4 sm:px-5" aria-labelledby="perpetual-evidence-title">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand"><CircleHelp size={12} aria-hidden /> 판단 과정</p>
-            <h2 id="perpetual-evidence-title" className="mt-1 text-xl font-black text-ui-text">근거</h2>
-            <p className="mt-1 text-xs leading-5 text-ui-muted">{qualifiedMssSemantics ? "1일·4시간 큰 흐름, 1시간·15분 현재 방향, 5분·1분 단기 반응을 순서대로 종합합니다." : "이전 분석은 저장 당시의 15분·1시간·4시간 가격 구조와 전환 신호를 기존 의미 그대로 보여드립니다."}</p>
+            <p className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand"><CircleHelp size={12} aria-hidden /> {mode === "ict" ? "ICT 구조" : "판단 과정"}</p>
+            <h2 id="perpetual-evidence-title" className="mt-1 text-xl font-black text-ui-text">{mode === "ict" ? "구조 신호와 가격 반응 구간" : "근거"}</h2>
+            <p className="mt-1 text-xs leading-5 text-ui-muted">{qualifiedMssSemantics ? mode === "ict" ? "MSS·MSB·CHoCH와 가격 반응 구간만 분리해 봅니다. RSI·MACD 같은 기술지표는 이 관점에 섞지 않습니다." : "1일·4시간 큰 흐름, 1시간·15분 현재 방향, 5분·1분 단기 반응을 순서대로 종합합니다." : "이전 분석은 저장 당시의 15분·1시간·4시간 가격 구조와 전환 신호를 기존 의미 그대로 보여드립니다."}</p>
           </div>
-          <StatusPill tone="watch" icon={BarChart3}>{qualifiedMssSemantics ? "여러 시간대 종합" : "저장 분석"}</StatusPill>
+          <StatusPill tone="watch" icon={BarChart3}>{mode === "ict" ? "ICT 전용" : qualifiedMssSemantics ? "여러 시간대 종합" : "저장 분석"}</StatusPill>
         </div>
         {qualifiedMssSemantics ? (
           <div className="mt-3 grid gap-2 md:grid-cols-3">
@@ -311,7 +303,7 @@ export function PerpetualEvidenceWorkbench({ snapshot }: { snapshot: PerpetualDe
               <article key={item.timeframe} className="min-w-0 bg-ui-inset/45 px-2 py-2.5 text-center">
                 <p className="text-[11px] font-black text-ui-subtle">{item.label}</p>
                 <p className={`mt-1 text-xs font-black ${item.trend === "bullish" ? "text-ui-long" : item.trend === "bearish" ? "text-ui-short" : "text-ui-text"}`}>{plainDirection(item.trend)}</p>
-                <p className="mt-0.5 truncate text-[11px] text-ui-muted">경고 {plainDirection(item.warning)}</p>
+                <p className="mt-0.5 text-[11px] leading-4 text-ui-muted">경고 {plainDirection(item.warning)}</p>
               </article>
             ))}
           </div>
@@ -326,15 +318,14 @@ export function PerpetualEvidenceWorkbench({ snapshot }: { snapshot: PerpetualDe
             ))}
           </div>
         ) : null}
+        {mode === "combined" && publicEvidence?.technical ? <p className="mt-3 bg-ui-inset/35 px-3 py-2 text-xs font-semibold leading-5 text-ui-muted">15분 기술 레짐은 {regimeLabel(publicEvidence.technical.regime)}입니다. 이 값은 위 구조 판단을 바꾸지 않는 교차확인 근거입니다.</p> : null}
         {qualifiedMssSemantics ? <details className="group mt-2 border-t border-ui-line pt-1.5"><summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-[11px] font-black text-ui-muted marker:hidden [&::-webkit-details-marker]:hidden">계산 기준과 전문 용어 보기 <ChevronDown size={14} className="transition group-open:rotate-180" aria-hidden /></summary><p className="bg-ui-inset/35 px-2.5 py-2 text-[11px] leading-5 text-ui-subtle">Coters v2.49 추진봉 기준을 앱에서 제한된 확정봉 이력으로 재현합니다. 새 추세 확인(MSS), 현재 추세 지속 확인(MSB), 반대 방향 전환 주의(CHoCH)를 구분하며 TradingView의 전체 누적 상태와 완전히 같지는 않을 수 있습니다.</p></details> : null}
-        {!publicEvidence && !primary ? <p className="mt-3 text-xs leading-5 text-ui-watch">이전 분석이라 기본 구조 카드가 없습니다. 다음 자동 갱신부터 표시됩니다.</p> : null}
+        {!publicEvidence && !primary ? <p className="mt-3 text-xs leading-5 text-ui-watch">이 저장 분석에는 기본 구조 근거가 포함되지 않았습니다.</p> : null}
       </section>
 
-      {pro
-        ? <PerpetualSnapshotBriefing key={snapshot.id} snapshotId={snapshot.id} hasPro enabled={pro.detailVersion === 1} />
-        : <BasicProValueCard snapshot={snapshot} />}
+      {mode === "combined" && pro ? <PerpetualSnapshotBriefing key={snapshot.id} snapshotId={snapshot.id} hasPro enabled={pro.detailVersion === 1} available={snapshot.quality === "ready"} /> : null}
 
-      <section className="bg-ui-panel px-3 py-4 sm:px-5" aria-labelledby="perpetual-flow-title">
+      {mode === "combined" ? <section className="bg-ui-panel px-3 py-4 sm:px-5" aria-labelledby="perpetual-flow-title">
         <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-subtle">포지션과 체결</p><h2 id="perpetual-flow-title" className="mt-1 text-lg font-black text-ui-text">실제로 어느 쪽에 돈이 몰렸나요?</h2></div>
         <div className="mt-3 grid gap-2 md:grid-cols-2">
           <article className="bg-ui-inset/55 px-3 py-3">
@@ -364,7 +355,7 @@ export function PerpetualEvidenceWorkbench({ snapshot }: { snapshot: PerpetualDe
               <div className="bg-ui-inset/45 px-3 py-2"><p className="text-ui-subtle">큰 체결 건수</p><p className="mt-1 font-black text-ui-text">{pro.flow ? `${pro.flow.largeTradeCount}건` : "확인 중"}</p></div>
             </div>
             <details className="group border-t border-ui-line pt-2 md:col-span-2">
-              <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 text-xs font-black text-ui-text marker:hidden [&::-webkit-details-marker]:hidden">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-xs font-black text-ui-text marker:hidden [&::-webkit-details-marker]:hidden">
                 Pro 상세 포지션·큰 체결 수치 보기
                 <ChevronDown size={15} className="transition group-open:rotate-180" aria-hidden />
               </summary>
@@ -412,16 +403,19 @@ export function PerpetualEvidenceWorkbench({ snapshot }: { snapshot: PerpetualDe
             </details>
           </div>
         ) : null}
-      </section>
+      </section> : null}
 
-      {pro ? (
+      {mode === "combined" && !pro ? <BasicProValueCard snapshot={snapshot} /> : null}
+      {mode === "ict" && !pro ? <BasicProValueCard snapshot={snapshot} focus="ict" /> : null}
+
+      {mode === "ict" && pro ? (
         <section className="bg-ui-panel px-3 py-4 sm:px-5" aria-labelledby="perpetual-mtf-title">
           <div><p className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand"><Layers3 size={12} aria-hidden /> Coin Pro</p><h2 id="perpetual-mtf-title" className="mt-1 text-lg font-black text-ui-text">시간대별 가격 흐름과 반응 구간</h2><p className="mt-1 text-xs leading-5 text-ui-muted">{qualifiedMssSemantics ? "종합 결론은 6개 시간대를 사용하고, 여기서는 15분·1시간·4시간의 정확한 가격과 시각을 자세히 보여드립니다." : "저장 당시 15분·1시간·4시간 분석의 가격과 시각을 기존 의미 그대로 보여드립니다."}</p></div>
           <div className="mt-3 grid gap-2 md:grid-cols-3">{pro.multiTimeframeEvidence.map((evidence) => <TimeframeCard key={evidence.timeframe} evidence={evidence} qualifiedMssSemantics={qualifiedMssSemantics} />)}</div>
           <details className="group mt-3 border-t border-ui-line pt-2">
-            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-black text-ui-text marker:hidden [&::-webkit-details-marker]:hidden">가격대와 전문 근거 자세히 보기 (OB·FVG·POC·OTE) <ChevronDown size={16} className="transition group-open:rotate-180" aria-hidden /></summary>
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-black text-ui-text marker:hidden [&::-webkit-details-marker]:hidden">15분 가격대와 전문 근거 자세히 보기 (OB·FVG·POC·OTE) <ChevronDown size={16} className="transition group-open:rotate-180" aria-hidden /></summary>
             <div className="mt-2">
-              <IctDetails evidence={primary ?? pro.multiTimeframeEvidence[0]} />
+              <IctDetails evidence={primary} />
               <ConfirmedCommonRangeOteCard model={pro.confirmedCommonRangeV1} />
             </div>
           </details>

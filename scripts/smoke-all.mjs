@@ -15,6 +15,7 @@ const checks = [
   ["test:push-outbox", npmCommand, ["run", "test:push-outbox"]],
   ["test:alert-preferences", npmCommand, ["run", "test:alert-preferences"]],
   ["test:perpetual-snapshot", npmCommand, ["run", "test:perpetual-snapshot"]],
+  ["test:perpetual-perspectives", npmCommand, ["run", "test:perpetual-perspectives"]],
   ["test:perpetual-briefing", npmCommand, ["run", "test:perpetual-briefing"]],
   ["test:coin-market-metrics", npmCommand, ["run", "test:coin-market-metrics"]],
   ["test:perpetual-monitors", npmCommand, ["run", "test:perpetual-monitors"]],

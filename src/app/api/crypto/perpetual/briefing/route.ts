@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { AIProviderError, getAIProviderCandidates } from "@/lib/ai";
 import { type PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
-import { buildPerpetualBriefingInput, fallbackPerpetualBriefing } from "@/lib/server/perpetualBriefing";
+import { buildPerpetualBriefingInput, fallbackPerpetualBriefing, isPerpetualBriefingOutputSafe } from "@/lib/server/perpetualBriefing";
 import {
   acquireSharedPerpetualBriefingLease,
   getSharedPerpetualBriefing,
@@ -17,7 +17,7 @@ import { getCoinCapabilityPolicy } from "@/lib/coinCapabilities";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const PROMPT_VERSION = "perpetual-beginner-v1";
+const PROMPT_VERSION = "perpetual-beginner-v3";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const PROVIDER_TIMEOUT_MS = 18_000;
 const CACHE_MAX_ENTRIES = 3_000;
@@ -104,6 +104,9 @@ export async function POST(request: Request) {
   }
   const snapshot = await getPerpetualDecisionSnapshotById(body.snapshotId);
   if (!snapshot) return privateJson({ error: "요청한 분석을 찾지 못했습니다." }, { status: 404 });
+  if (snapshot.quality !== "ready") {
+    return privateJson({ error: "최신 데이터가 정상인 분석에서만 AI 설명을 만들 수 있습니다.", code: "snapshot_not_ready" }, { status: 409 });
+  }
   if (snapshot.pro?.detailVersion !== 1) {
     return privateJson({ error: "이전 분석에는 AI 설명에 필요한 상세 근거가 저장되지 않았습니다.", code: "snapshot_detail_unavailable" }, { status: 409 });
   }
@@ -112,12 +115,13 @@ export async function POST(request: Request) {
   const now = Date.now();
   pruneCache(now);
   const hit = cache.get(cacheKey);
-  if (hit && hit.expiresAt > now) {
+  if (hit && hit.expiresAt > now && isPerpetualBriefingOutputSafe(snapshot, hit.briefing)) {
     return privateJson({ snapshotId: snapshot.id, generatedAt: snapshot.generatedAt, briefing: hit.briefing, model: hit.model, cached: true });
   }
+  if (hit) cache.delete(cacheKey);
 
   const sharedHit = await getSharedPerpetualBriefing(cacheKey);
-  if (sharedHit) {
+  if (sharedHit && isPerpetualBriefingOutputSafe(snapshot, sharedHit.briefing)) {
     cache.set(cacheKey, { ...sharedHit, expiresAt: now + CACHE_TTL_MS });
     pruneCache(now);
     return privateJson({
@@ -134,7 +138,7 @@ export async function POST(request: Request) {
     if (lease.status === "busy") {
       await new Promise((resolve) => setTimeout(resolve, 350));
       const completedByFirstRequest = await getSharedPerpetualBriefing(cacheKey);
-      if (completedByFirstRequest) {
+      if (completedByFirstRequest && isPerpetualBriefingOutputSafe(snapshot, completedByFirstRequest.briefing)) {
         cache.set(cacheKey, { ...completedByFirstRequest, expiresAt: Date.now() + CACHE_TTL_MS });
         pruneCache(Date.now());
         return privateJson({
@@ -154,7 +158,7 @@ export async function POST(request: Request) {
   try {
     // A previous request can populate the cache between our first GET and lease acquisition.
     const lockedHit = await getSharedPerpetualBriefing(cacheKey);
-    if (lockedHit) {
+    if (lockedHit && isPerpetualBriefingOutputSafe(snapshot, lockedHit.briefing)) {
       cache.set(cacheKey, { ...lockedHit, expiresAt: Date.now() + CACHE_TTL_MS });
       pruneCache(Date.now());
       return privateJson({
@@ -200,7 +204,12 @@ export async function POST(request: Request) {
         const remainingMs = providerDeadline - Date.now();
         if (remainingMs <= 0) break;
         try {
-          briefing = clean(await withTimeout(provider.generateMarketBriefing(input), remainingMs));
+          const candidate = clean(await withTimeout(provider.generateMarketBriefing(input), remainingMs));
+          if (!isPerpetualBriefingOutputSafe(snapshot, candidate)) {
+            console.warn(`[perpetual-briefing] ${provider.model} output rejected by the saved-decision guard`);
+            continue;
+          }
+          briefing = candidate;
           model = provider.model;
           break;
         } catch (error) {

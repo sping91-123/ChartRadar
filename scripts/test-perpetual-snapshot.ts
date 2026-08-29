@@ -291,10 +291,21 @@ assert.equal(first.chart.candles.length, 96);
 assert.equal(first.quality, "ready");
 assert.ok(first.publicEvidence, "Basic payload must retain useful 15m structure, pressure, and flow evidence");
 assert.equal(first.publicEvidence.context?.length, 6, "Basic must see all six qualified structure directions without paid raw metrics");
+assert.equal(first.publicEvidence.technical?.timeframe, "15m", "Basic must retain a useful fixed-timeframe technical cross-check");
+assert.equal(first.publicEvidence.technical?.role, "cross_check", "technical evidence must not become a second operational verdict");
+assert.equal(first.publicEvidence.technical?.observedAt, input().timeframes[0].observedAt, "Basic technical evidence must retain the actual closed-candle observation time");
+assert.equal(first.publicEvidence.technical?.closedPrice, input().timeframes[0].closedPrice, "Basic technical evidence must retain the actual closed price instead of the live snapshot price");
+assert.equal(first.publicEvidence.technical?.regime, first.pro?.multiTimeframeEvidence.find((item) => item.timeframe === "15m")?.regime);
 assert.ok(first.publicEvidence.pressure?.summary.includes("강제 청산"), "Basic pressure copy must explain the practical risk in plain language");
 assert.ok(first.publicEvidence.flow?.summary.includes("큰 금액"), "Basic flow copy must explain what the observed trades mean");
 assert.equal(first.pro?.detailVersion, 1, "new snapshots must include the snapshot-native detail contract");
+assert.equal(first.pro?.technicalDetailVersion, 1, "new snapshots must identify the complete technical detail contract");
 assert.ok(first.pro?.multiTimeframeEvidence.every((evidence) => evidence.details), "all paid timeframes must retain their detailed evidence");
+assert.equal(
+  first.pro?.multiTimeframeEvidence.find((evidence) => evidence.timeframe === "15m")?.details?.indicators.ema200,
+  input().timeframes[0].analysis.condition.ema200,
+  "Pro evidence must retain the exact full indicator condition calculated for that timeframe"
+);
 assert.doesNotMatch(first.summary.headline, /상방 구조|하방 구조|유지 조건|스냅샷/, "the main conclusion must be understandable without internal jargon");
 assert.ok(first.summary.primaryCondition.id.includes("perpetual-condition-v3.0.0"), "v3 price conditions must not collide with older monitor semantics");
 assert.ok(new Date(first.summary.primaryCondition.expiresAt).getTime() > new Date(generatedAt).getTime());
@@ -463,6 +474,7 @@ const basic = serializeBasicPerpetualSnapshot(first);
 assert.equal(Object.prototype.hasOwnProperty.call(basic, "pro"), false, "Basic payload must omit the pro key entirely");
 assert.equal(basic.summary.analysisConsensus, undefined, "Basic payload must not expose internal layer strengths or normalized score");
 assert.ok(basic.publicEvidence, "Basic serialization must not strip the useful public evidence");
+assert.ok(basic.publicEvidence?.technical, "Basic serialization must retain the 15m technical cross-check");
 const stored = serializeStoredPerpetualSnapshot(first);
 assert.equal(Object.prototype.hasOwnProperty.call(stored, "pro"), false, "stored public payload must omit the pro key");
 assert.ok(stored.summary.analysisConsensus, "stored public payload must retain v3 continuity for server-side Pro reconstruction");

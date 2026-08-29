@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Activity, AlertTriangle, Bell, BookOpen, CheckCircle2, Clock3, Database, History, Loader2, RefreshCw, ShieldAlert } from "lucide-react";
 import { PerpetualDecisionChart } from "@/components/coin/PerpetualDecisionChart";
-import { PerpetualEvidenceWorkbench } from "@/components/coin/PerpetualEvidenceWorkbench";
+import { PerpetualAnalysisWorkspace } from "@/components/coin/PerpetualAnalysisWorkspace";
 import { PerpetualMonitorManager } from "@/components/coin/PerpetualMonitorManager";
 import { NewsImpactContextCard } from "@/components/news/NewsImpactContextCard";
 import { PerpetualNewsContextStrip } from "@/components/news/PerpetualNewsContextStrip";
@@ -826,14 +826,17 @@ export function PerpetualDecisionExperience({
       {newsContext ? <NewsImpactContextCard context={newsContext} /> : null}
       {!newsContext ? <PerpetualNewsContextStrip asset={asset} snapshotId={displaySnapshot.id} /> : null}
 
-      <section className="bg-ui-panel px-3 py-4 sm:px-5">
-        <div>
-          <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-subtle">가격 흐름</p><h2 className="mt-1 text-lg font-black text-ui-text">시간대별 가격 흐름을 비교하세요</h2><p className="mt-1 text-xs leading-5 text-ui-muted">{qualifiedMssSemantics ? "결론은 1분부터 1일까지 종합합니다. 차트에서는 15분·1시간·4시간봉의 가격 흐름과 다음에 볼 가격을 비교할 수 있습니다." : "이 저장 분석은 15분·1시간·4시간 기준입니다. 차트에는 저장 당시 가격 구조와 전환 신호를 기존 의미 그대로 표시합니다."}</p></div>
-        </div>
-        <div className="mt-3"><PerpetualDecisionChart snapshot={displaySnapshot} /></div>
-      </section>
-
-      <PerpetualEvidenceWorkbench snapshot={displaySnapshot} />
+      <PerpetualAnalysisWorkspace
+        snapshot={displaySnapshot}
+        chart={(
+          <section className="bg-ui-panel px-3 py-4 sm:px-5">
+            <div>
+              <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-subtle">모든 관점 공통 차트 · 시간대 별도 선택</p><h2 className="mt-1 text-lg font-black text-ui-text">시간대별 가격 흐름을 비교하세요</h2><p className="mt-1 text-xs leading-5 text-ui-muted">{qualifiedMssSemantics ? "결론은 1분부터 1일까지 종합합니다. 차트에서는 15분·1시간·4시간봉의 가격 흐름과 다음에 볼 가격을 비교할 수 있습니다." : "이 저장 분석은 15분·1시간·4시간 기준입니다. 차트에는 저장 당시 가격 구조와 전환 신호를 기존 의미 그대로 표시합니다."}</p></div>
+            </div>
+            <div className="mt-3"><PerpetualDecisionChart snapshot={displaySnapshot} /></div>
+          </section>
+        )}
+      />
 
       {state.status === "error" ? (
         <section className="bg-ui-panel px-3 py-4 text-sm leading-6 text-ui-muted sm:px-5">
