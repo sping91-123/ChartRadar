@@ -181,6 +181,14 @@ function latestFundingRate(rows: FundingRateRow[]) {
   return sortedRows[sortedRows.length - 1] ?? rows[0] ?? null;
 }
 
+function latestObservedAt<T>(rows: T[], readTimestamp: (row: T) => unknown) {
+  return rows.reduce<number | null>((latest, row) => {
+    const timestamp = Number(readTimestamp(row));
+    if (!Number.isFinite(timestamp) || timestamp <= 0) return latest;
+    return latest === null ? timestamp : Math.max(latest, timestamp);
+  }, null);
+}
+
 function baseFromUsdtSymbol(symbol: string) {
   return symbol.toUpperCase().replace(/USDT$/, "");
 }
@@ -371,14 +379,18 @@ export async function fetchLiquidationPressureReport(symbol: string, period: str
   }
   const binanceFundingRate = toNumber(premiumIndexPayload?.lastFundingRate) ?? toNumber(latestFunding?.fundingRate);
   const supplementalFundingRate = binanceFundingRate === null ? await fetchSupplementalFundingRate(symbol) : null;
-  const observedAt = [
-    ...fundingRows.map((row) => Number(row.fundingTime)),
-    ...openInterestRows.map((row) => Number(row.timestamp)),
-    ...globalLongShortRows.map((row) => Number(row.timestamp)),
-    ...topAccountRows.map((row) => Number(row.timestamp)),
-    ...topPositionRows.map((row) => Number(row.timestamp)),
-    ...takerRows.map((row) => Number(row.timestamp))
-  ].reduce((latest, timestamp) => (Number.isFinite(timestamp) ? Math.max(latest, timestamp) : latest), 0);
+  const evidenceObservedAt = {
+    fundingRate: latestObservedAt(fundingRows, (row) => row.fundingTime),
+    openInterest: latestObservedAt(openInterestRows, (row) => row.timestamp),
+    globalLongShort: latestObservedAt(globalLongShortRows, (row) => row.timestamp),
+    topAccountLongShort: latestObservedAt(topAccountRows, (row) => row.timestamp),
+    topPositionLongShort: latestObservedAt(topPositionRows, (row) => row.timestamp),
+    takerFlow: latestObservedAt(takerRows, (row) => row.timestamp)
+  };
+  const observedAt = Object.values(evidenceObservedAt).reduce<number>(
+    (latest, timestamp) => timestamp === null ? latest : Math.max(latest, timestamp),
+    0
+  );
 
   return buildLiquidationPressureReport({
     symbol,
@@ -394,6 +406,7 @@ export async function fetchLiquidationPressureReport(symbol: string, period: str
     topAccountLongShort: parseLongShort(topAccountRows[0] ?? null),
     topPositionLongShort: parseLongShort(topPositionRows[0] ?? null),
     takerFlow: parseTakerFlow(takerRows[0] ?? null),
+    evidenceObservedAt,
     updatedAt: observedAt || Date.now()
   });
 }

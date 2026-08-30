@@ -332,7 +332,8 @@ export async function fetchBinanceCandles(
   symbol: string,
   timeframe: ChartTimeframe,
   limit = 320,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  options: { allowSpotFallback?: boolean } = {}
 ): Promise<Candle[]> {
   const normalizedSymbol = symbol.toUpperCase().replace(".P", "");
   const params = new URLSearchParams({
@@ -348,10 +349,12 @@ export async function fetchBinanceCandles(
   });
   const isBrowser = typeof window !== "undefined";
   if (!isBrowser) {
-    const endpoints = [
-      `https://fapi.binance.com/fapi/v1/klines?${params.toString()}`,
-      `https://data-api.binance.vision/api/v3/klines?${params.toString()}`
-    ];
+    const endpoints = options.allowSpotFallback === false
+      ? [`https://fapi.binance.com/fapi/v1/klines?${params.toString()}`]
+      : [
+          `https://fapi.binance.com/fapi/v1/klines?${params.toString()}`,
+          `https://data-api.binance.vision/api/v3/klines?${params.toString()}`
+        ];
     let lastError: unknown = null;
 
     for (const endpoint of endpoints) {

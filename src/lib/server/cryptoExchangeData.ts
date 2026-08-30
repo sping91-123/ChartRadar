@@ -10,7 +10,8 @@ import {
   type MarketAnalysis,
   type TimeframeAnalysis
 } from "@/lib/marketAnalysis";
-import { chartTimeframeMs } from "@/lib/marketTime";
+import { classifyCryptoHomeSnapshotQuality, findExchangeMarket } from "@/lib/cryptoHomeSnapshotSafety";
+import { filterClosedCandlesAt } from "@/lib/marketTime";
 import { fetchLiquidationPressureReport } from "@/lib/server/liquidationPressureSource";
 
 export type CryptoExchangeId = "binance" | "okx" | "bingx" | "bitget" | "gateio" | "bybit";
@@ -25,6 +26,15 @@ export interface CryptoExchangeMarket {
   settle: string;
   active: boolean;
   quoteVolume?: number | null;
+}
+
+export type CryptoHomeSnapshotQuality = "ready" | "partial" | "stale";
+
+export class CryptoExchangeMarketNotFoundError extends Error {
+  constructor(exchangeId: CryptoExchangeId, symbol: string) {
+    super(`${exchangeId} USDT swap market not found: ${symbol}`);
+    this.name = "CryptoExchangeMarketNotFoundError";
+  }
 }
 
 export interface CryptoHomeSnapshot {
@@ -42,6 +52,7 @@ export interface CryptoHomeSnapshot {
   timeframes: Array<{
     timeframe: ChartTimeframe;
     label: string;
+    observedAt: string;
     msb: DirectionState;
     choch: DirectionState;
     score: number;
@@ -127,6 +138,11 @@ export interface CryptoHomeSnapshot {
     }>;
     scenario: null;
   };
+  generatedAt: string;
+  observedAt: string;
+  expiresAt: string;
+  quality: CryptoHomeSnapshotQuality;
+  qualityDetail: string;
   updatedAt: string;
 }
 
@@ -166,6 +182,7 @@ export interface CryptoHomeTicker {
 }
 
 const timeframes: ChartTimeframe[] = ["5m", "15m", "1h", "4h", "1d"];
+const homeSnapshotTtlMs = 60_000;
 const timeframeLabels: Record<ChartTimeframe, string> = {
   "5m": "5분",
   "15m": "15분",
@@ -198,6 +215,7 @@ const exchangeConfigs: Record<
 };
 
 const marketCache = new Map<CryptoExchangeId, { expiresAt: number; markets: CryptoExchangeMarket[] }>();
+const marketUniverseQuality = new Map<CryptoExchangeId, "live" | "fallback" | "unavailable">();
 const exchangeCache = new Map<CryptoExchangeId, any>();
 const MARKET_CACHE_TTL_MS = 5 * 60 * 1000;
 const BINANCE_FAPI = "https://fapi.binance.com";
@@ -410,8 +428,8 @@ function changePercentFromHourlyCandles(candles: Candle[], latestPrice: number |
 
 async function fetchFallback24hChangePercent(selection: CryptoExchangeMarket, latestPrice: number | null | undefined) {
   try {
-    const candles = await fetchExchangeCandles(selection.exchangeId, selection.symbol, "1h", 80);
-    return changePercentFromHourlyCandles(candles, latestPrice);
+    const result = await fetchExchangeCandles(selection.exchangeId, selection.symbol, "1h", 80);
+    return changePercentFromHourlyCandles(result.candles, latestPrice);
   } catch (error) {
     console.warn("[cryptoExchangeData] 24h change fallback failed:", selection.exchangeId, selection.symbol, error);
     return null;
@@ -682,6 +700,7 @@ export async function getExchangeMarkets(exchangeId: CryptoExchangeId) {
     try {
       const markets = await fetchBinanceFuturesMarketsDirect();
       marketCache.set(exchangeId, { markets, expiresAt: Date.now() + MARKET_CACHE_TTL_MS });
+      marketUniverseQuality.set(exchangeId, "live");
       return markets;
     } catch (error) {
       console.warn("[cryptoExchangeData] Binance direct market universe failed:", error);
@@ -711,11 +730,23 @@ export async function getExchangeMarkets(exchangeId: CryptoExchangeId) {
     if (!markets.length) throw new Error(`${exchangeId} returned no USDT swap markets`);
     const enrichedMarkets = await enrichMarketVolumes(exchangeId, markets);
     marketCache.set(exchangeId, { markets: enrichedMarkets, expiresAt: Date.now() + MARKET_CACHE_TTL_MS });
+    marketUniverseQuality.set(exchangeId, "live");
     return enrichedMarkets;
   } catch (error) {
     console.warn("[cryptoExchangeData] market universe failed:", exchangeId, error);
-    const fallback = exchangeId === "binance" ? await fetchBinanceFuturesMarketsDirect().catch(() => fallbackBinanceMarkets()) : [];
+    let fallback: CryptoExchangeMarket[] = [];
+    let fallbackQuality: "live" | "fallback" | "unavailable" = "unavailable";
+    if (exchangeId === "binance") {
+      try {
+        fallback = await fetchBinanceFuturesMarketsDirect();
+        fallbackQuality = "live";
+      } catch {
+        fallback = fallbackBinanceMarkets();
+        fallbackQuality = "fallback";
+      }
+    }
     marketCache.set(exchangeId, { markets: fallback, expiresAt: Date.now() + 60_000 });
+    marketUniverseQuality.set(exchangeId, fallbackQuality);
     return fallback;
   }
 }
@@ -723,16 +754,14 @@ export async function getExchangeMarkets(exchangeId: CryptoExchangeId) {
 export async function resolveExchangeMarket(exchangeId: CryptoExchangeId, symbol: string | null | undefined) {
   const markets = await getExchangeMarkets(exchangeId);
   const target = symbol?.trim();
-  if (!target) return markets.find((market) => market.base === "BTC") ?? markets[0] ?? fallbackBinanceMarkets()[0];
-  const compactTarget = target.toUpperCase().replace(".P", "").replace("/", "").replace(":USDT", "");
-  return (
-    markets.find((market) => market.symbol === target || market.marketId === target) ??
-    markets.find((market) => market.base.toUpperCase() === target.toUpperCase()) ??
-    markets.find((market) => market.marketId.toUpperCase() === compactTarget || `${market.base.toUpperCase()}USDT` === compactTarget) ??
-    markets.find((market) => market.base === "BTC") ??
-    markets[0] ??
-    fallbackBinanceMarkets()[0]
-  );
+  if (!markets.length) throw new Error(`${exchangeId} USDT swap markets unavailable`);
+  if (!target) return markets.find((market) => market.base === "BTC") ?? markets[0]!;
+  const selection = findExchangeMarket(markets, target);
+  if (!selection) {
+    if (marketUniverseQuality.get(exchangeId) !== "live") throw new Error(`${exchangeId} USDT swap markets unavailable`);
+    throw new CryptoExchangeMarketNotFoundError(exchangeId, target);
+  }
+  return selection;
 }
 
 function parseOhlcvRows(rows: unknown): Candle[] {
@@ -760,20 +789,37 @@ function parseOhlcvRows(rows: unknown): Candle[] {
     );
 }
 
-async function fetchExchangeCandles(exchangeId: CryptoExchangeId, symbol: string, timeframe: ChartTimeframe, limit = 320) {
+async function fetchExchangeCandles(
+  exchangeId: CryptoExchangeId,
+  symbol: string,
+  timeframe: ChartTimeframe,
+  limit = 320,
+  asOfMs = Date.now()
+) {
   const exchange = exchangeFor(exchangeId);
+  let candles: Candle[];
   try {
     const rows = await exchange.fetchOHLCV(symbol, timeframe, undefined, limit, { type: "swap", subType: "linear" });
-    const candles = parseOhlcvRows(rows);
-    if (candles.length < 60) throw new Error(`${exchangeId} ${symbol} ${timeframe} candles unavailable`);
-    return candles;
+    candles = parseOhlcvRows(rows);
   } catch (error) {
     if (exchangeId === "binance") {
-      const normalized = symbol.toUpperCase().split(":")[0]?.replace("/", "") ?? "BTCUSDT";
-      return fetchBinanceCandles(normalized, timeframe, limit);
+      const normalized = symbol.toUpperCase().split(":")[0]?.replace("/", "");
+      if (!normalized) throw error;
+      candles = await fetchBinanceCandles(normalized, timeframe, limit, undefined, { allowSpotFallback: false });
+    } else {
+      throw error;
     }
-    throw error;
   }
+  let closed = filterClosedCandlesAt(candles, timeframe, asOfMs);
+  if (closed.candles.length < 60 && exchangeId === "binance") {
+    const normalized = symbol.toUpperCase().split(":")[0]?.replace("/", "");
+    if (normalized) {
+      const directCandles = await fetchBinanceCandles(normalized, timeframe, limit, undefined, { allowSpotFallback: false });
+      closed = filterClosedCandlesAt(directCandles, timeframe, asOfMs);
+    }
+  }
+  if (closed.candles.length < 60) throw new Error(`${exchangeId} ${symbol} ${timeframe} closed candles unavailable`);
+  return closed;
 }
 
 function directionValue(direction: DirectionState) {
@@ -864,6 +910,39 @@ function formatLongShortSnapshot(snapshot: LiquidationPressureReport["globalLong
 function formatTakerFlow(flow: LiquidationPressureReport["takerFlow"]) {
   if (flow.buyPercent === null || flow.sellPercent === null) return "데이터 없음";
   return `매수 ${flow.buyPercent.toFixed(1)}% / 매도 ${flow.sellPercent.toFixed(1)}%`;
+}
+
+function pressureQualityEvidence(report: LiquidationPressureReport) {
+  const fundingEvidenceMaxAgeMs = 9 * 60 * 60 * 1000;
+  const completedHourlyEvidenceMaxAgeMs = 130 * 60 * 1000;
+  return [
+    {
+      available: report.fundingRatePercent !== null,
+      observedAt: report.evidenceObservedAt.fundingRate,
+      maxAgeMs: fundingEvidenceMaxAgeMs
+    },
+    {
+      available: report.openInterestChangePercent !== null,
+      observedAt: report.evidenceObservedAt.openInterest
+    },
+    {
+      available: report.globalLongShort.longPercent !== null && report.globalLongShort.shortPercent !== null,
+      observedAt: report.evidenceObservedAt.globalLongShort
+    },
+    {
+      available: report.topAccountLongShort.longPercent !== null && report.topAccountLongShort.shortPercent !== null,
+      observedAt: report.evidenceObservedAt.topAccountLongShort
+    },
+    {
+      available: report.topPositionLongShort.longPercent !== null && report.topPositionLongShort.shortPercent !== null,
+      observedAt: report.evidenceObservedAt.topPositionLongShort
+    },
+    {
+      available: report.takerFlow.buyPercent !== null && report.takerFlow.sellPercent !== null,
+      observedAt: report.evidenceObservedAt.takerFlow,
+      maxAgeMs: completedHourlyEvidenceMaxAgeMs
+    }
+  ];
 }
 
 function pressurePayload(report: LiquidationPressureReport, source: CryptoHomeSnapshot["pressure"]["source"]) {
@@ -1364,22 +1443,31 @@ export async function getCryptoHomeSnapshot(
   rawSymbol: string | null | undefined,
   options: { requireEstablishedStructure?: boolean; includeChartTimeframes?: boolean } = {}
 ): Promise<CryptoHomeSnapshot> {
+  const generatedAtMs = Date.now();
+  const generatedAt = new Date(generatedAtMs).toISOString();
+  const expiresAt = new Date(generatedAtMs + homeSnapshotTtlMs).toISOString();
   const selection = await resolveExchangeMarket(exchangeId, rawSymbol);
   const [tickerResult, candleResults] = await Promise.all([
     fetchSelectionTicker(selection).catch((error: unknown) => {
       console.warn("[cryptoExchangeData] ticker failed:", selection.exchangeId, selection.symbol, error);
       return null;
     }),
-    Promise.all(timeframes.map(async (timeframe) => ({ timeframe, candles: await fetchExchangeCandles(selection.exchangeId, selection.symbol, timeframe) })))
+    Promise.all(timeframes.map(async (timeframe) => {
+      const closed = await fetchExchangeCandles(selection.exchangeId, selection.symbol, timeframe, 320, generatedAtMs);
+      if (!closed.observedAt) throw new Error(`${selection.exchangeId} ${selection.symbol} ${timeframe} closed candle observation unavailable`);
+      return { timeframe, candles: closed.candles, observedAt: closed.observedAt };
+    }))
   ]);
 
   const analyses = candleResults.map(({ timeframe, candles }) => analyzeTimeframe(timeframe, candles, {
     requireEstablishedStructure: options.requireEstablishedStructure ?? false
   }));
+  const primaryCandles = candleResults.find((item) => item.timeframe === "15m")?.candles ?? [];
   const hourlyCandles = candleResults.find((item) => item.timeframe === "1h")?.candles ?? [];
-  const latestCandle = hourlyCandles.at(-1) ?? candleResults[0]?.candles.at(-1);
+  const latestCandle = primaryCandles.at(-1);
   const ticker = isRecord(tickerResult) ? tickerResult : null;
-  const price = tickerLastPrice(ticker) ?? latestCandle?.close ?? 0;
+  const liveTickerPrice = tickerLastPrice(ticker);
+  const price = liveTickerPrice ?? latestCandle?.close ?? 0;
   const changePercent = tickerChangePercent(ticker) ?? changePercentFromHourlyCandles(hourlyCandles, price);
   const scoreBreakdown = compositeStructureScore(analyses);
   const active = chooseRepresentativeAnalysis(analyses, scoreBreakdown);
@@ -1387,22 +1475,19 @@ export async function getCryptoHomeSnapshot(
   const compositeScore = scoreBreakdown.finalScore;
   const direction = directionForScore(compositeScore);
   const aggregate = buildAggregatePayload(analyses, scoreBreakdown, direction);
-  const updatedAt = new Date().toISOString();
-  const updatedAtMs = new Date(updatedAt).getTime();
   const chartCandlesByTimeframe = Object.fromEntries(
     candleResults
       .filter((item) => item.timeframe === "15m" || item.timeframe === "1h" || item.timeframe === "4h")
       .map((item) => [
         item.timeframe,
-        item.candles
-          .filter((candle) => candle.time * 1000 + chartTimeframeMs[item.timeframe] <= updatedAtMs)
-          .slice(-96)
+        item.candles.slice(-96)
       ])
   ) as Partial<Record<ChartTimeframe, Candle[]>>;
   const previewCandles = chartCandlesByTimeframe["15m"] ?? chartCandlesByTimeframe["1h"] ?? [];
   const snapshotTimeframes = analyses.map((item) => ({
     timeframe: item.timeframe,
     label: timeframeLabels[item.timeframe],
+    observedAt: candleResults.find((result) => result.timeframe === item.timeframe)?.observedAt ?? generatedAt,
     msb: item.msb,
     choch: item.choch,
     score: item.score,
@@ -1416,6 +1501,17 @@ export async function getCryptoHomeSnapshot(
     ...pressure,
     exchangeStatuses
   };
+  const observedAtByTimeframe = Object.fromEntries(
+    candleResults.map((item) => [item.timeframe, item.observedAt])
+  ) as Partial<Record<ChartTimeframe, string>>;
+  const observedAt = observedAtByTimeframe["15m"] ?? generatedAt;
+  const quality = classifyCryptoHomeSnapshotQuality({
+    asOfMs: generatedAtMs,
+    observedAtByTimeframe,
+    hasLiveTicker: liveTickerPrice !== null,
+    pressureSource: pressure.source,
+    pressureEvidence: pressureQualityEvidence(pressure.report)
+  });
 
   return {
     selection,
@@ -1433,6 +1529,11 @@ export async function getCryptoHomeSnapshot(
     pressure: pressureWithStatuses,
     strategyRadar: buildStrategyRadar(analysis, analyses, scoreBreakdown, direction, aggregate, pressureWithStatuses),
     aiInput: buildAiInput(selection, analysis, active, snapshotTimeframes, aggregate, pressureWithStatuses),
-    updatedAt
+    generatedAt,
+    observedAt,
+    expiresAt,
+    quality: quality.quality,
+    qualityDetail: quality.detail,
+    updatedAt: generatedAt
   };
 }

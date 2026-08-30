@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCoinCapabilityPolicy } from "@/lib/coinCapabilities";
 import type { CryptoExchangeId } from "@/lib/server/cryptoExchangeData";
-import { getCryptoHomeSnapshot, normalizeCryptoExchangeId } from "@/lib/server/cryptoExchangeData";
+import { CryptoExchangeMarketNotFoundError, getCryptoHomeSnapshot, normalizeCryptoExchangeId } from "@/lib/server/cryptoExchangeData";
 import { serializeHomeInterestAnalysis } from "@/lib/server/homeInterestAnalysis";
 import { rateLimit } from "@/lib/server/rateLimit";
 import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
@@ -62,6 +62,9 @@ export async function GET(request: Request) {
       }
     });
   } catch (error) {
+    if (error instanceof CryptoExchangeMarketNotFoundError) {
+      return privateJson({ error: "선택한 거래소에서 해당 USDT 선물 종목을 찾지 못했습니다. 관심코인 설정을 다시 확인해 주세요." }, { status: 404 });
+    }
     console.error("[api/crypto/home-interest-summary] error:", error);
     return privateJson({ error: "선택한 관심코인 분석을 만들지 못했습니다." }, { status: 503 });
   }

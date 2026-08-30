@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { CandlestickSeries, createChart, type ISeriesApi } from "lightweight-charts";
+import { CandlestickSeries, createChart, type ISeriesApi, type TickMarkType, type Time } from "lightweight-charts";
 import { ChartTimeframeSelector } from "@/components/coin/ChartTimeframeSelector";
 import { useChartTimeframeCandles } from "@/components/coin/useChartTimeframeCandles";
 import { chartViewTimeframeLabels, type ChartViewTimeframe } from "@/lib/chartTimeframeView";
 import { getChartThemeOptions, observeChartThemeChange } from "@/lib/chartTheme";
 import type { Candle } from "@/lib/marketAnalysis";
+import { formatPerpetualChartTick, formatPerpetualChartTime } from "@/lib/perpetualChartTime";
 
 export function HomeInterestMiniChart({
   candles,
@@ -44,6 +45,9 @@ export function HomeInterestMiniChart({
       height: 180,
       ...theme,
       layout: { ...theme.layout, background: { color: "transparent" } },
+      localization: {
+        timeFormatter: (time: Time) => formatPerpetualChartTime(time)
+      },
       grid: {
         vertLines: { color: "rgba(148,163,184,0.04)" },
         horzLines: { color: "rgba(148,163,184,0.07)" }
@@ -52,6 +56,7 @@ export function HomeInterestMiniChart({
         ...theme.timeScale,
         timeVisible: true,
         secondsVisible: false,
+        tickMarkFormatter: (time: Time, tickMarkType: TickMarkType) => formatPerpetualChartTick(time, tickMarkType),
         rightOffsetPixels: 48
       },
       handleScroll: false,
@@ -79,6 +84,7 @@ export function HomeInterestMiniChart({
           ...next.timeScale,
           timeVisible: true,
           secondsVisible: false,
+          tickMarkFormatter: (time: Time, tickMarkType: TickMarkType) => formatPerpetualChartTick(time, tickMarkType),
           rightOffsetPixels: 48
         }
       });

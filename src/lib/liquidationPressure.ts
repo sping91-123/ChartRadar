@@ -22,6 +22,15 @@ export interface LiquidationBand {
   distancePercent: number;
 }
 
+export interface LiquidationPressureEvidenceObservedAt {
+  fundingRate: number | null;
+  openInterest: number | null;
+  globalLongShort: number | null;
+  topAccountLongShort: number | null;
+  topPositionLongShort: number | null;
+  takerFlow: number | null;
+}
+
 export interface LiquidationPressureReport {
   symbol: string;
   period: string;
@@ -43,6 +52,7 @@ export interface LiquidationPressureReport {
   summary: string;
   warning: string;
   bands: LiquidationBand[];
+  evidenceObservedAt: LiquidationPressureEvidenceObservedAt;
   updatedAt: number;
 }
 
@@ -60,6 +70,7 @@ export interface BuildLiquidationPressureInput {
   topAccountLongShort?: LongShortSnapshot;
   topPositionLongShort?: LongShortSnapshot;
   takerFlow?: TakerFlowSnapshot;
+  evidenceObservedAt?: Partial<LiquidationPressureEvidenceObservedAt>;
   updatedAt?: number;
 }
 
@@ -74,6 +85,15 @@ const fallbackTakerFlow: TakerFlowSnapshot = {
   sellVolume: null,
   buyPercent: null,
   sellPercent: null
+};
+
+const emptyEvidenceObservedAt: LiquidationPressureEvidenceObservedAt = {
+  fundingRate: null,
+  openInterest: null,
+  globalLongShort: null,
+  topAccountLongShort: null,
+  topPositionLongShort: null,
+  takerFlow: null
 };
 
 function clamp(value: number, min = 0, max = 100) {
@@ -202,6 +222,7 @@ export function buildLiquidationPressureReport(input: BuildLiquidationPressureIn
     summary: summaryFor(side, grade),
     warning: "Binance 공개 데이터로 레버리지 쏠림과 변동성 압력을 추정합니다. 실제 청산맵처럼 단정하기보다 가격 반응과 함께 확인하세요.",
     bands: buildBands(markPrice),
+    evidenceObservedAt: { ...emptyEvidenceObservedAt, ...input.evidenceObservedAt },
     updatedAt: input.updatedAt ?? Date.now()
   };
 }

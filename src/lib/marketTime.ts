@@ -29,6 +29,31 @@ export interface ClosedCandleSet {
   droppedIncomplete: number;
 }
 
+export function filterClosedCandlesAt(
+  candles: Candle[],
+  timeframe: ChartTimeframe,
+  asOfMs: number
+): ClosedCandleSet {
+  const closeGuardMs = asOfMs - 1_000;
+  let droppedIncomplete = 0;
+  let latestCloseTime = 0;
+  const closedCandles = candles.filter((candle) => {
+    const closeTime = candle.time * 1000 + chartTimeframeMs[timeframe];
+    if (!Number.isFinite(closeTime) || closeTime > closeGuardMs) {
+      droppedIncomplete += 1;
+      return false;
+    }
+    latestCloseTime = Math.max(latestCloseTime, closeTime);
+    return true;
+  });
+
+  return {
+    candles: closedCandles,
+    observedAt: latestCloseTime > 0 ? new Date(latestCloseTime).toISOString() : null,
+    droppedIncomplete
+  };
+}
+
 export function parseClosedBinanceKlines(rows: unknown, asOfMs: number): ClosedCandleSet {
   if (!Array.isArray(rows)) return { candles: [], observedAt: null, droppedIncomplete: 0 };
   let droppedIncomplete = 0;
