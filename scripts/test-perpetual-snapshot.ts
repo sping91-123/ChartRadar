@@ -643,10 +643,12 @@ assert.match(homeSource, />근거<\/h2>/, "Home evidence section uses the reques
 assert.doesNotMatch(homeSource, /왜 이렇게 보나요|결론에 사용한 네 가지 근거|상세 화면에서 시간대별 신호 가격/, "removed Home helper and promo copy must not return");
 assert.doesNotMatch(homeSource, /바이낸스 만기 없는 선물|여러 시간대 확정봉 종합/, "Home must not repeat the analysis scope above the decision headline");
 assert.match(homeSource, /monitorConditionOutcomeCopy/, "Home must explain what happens when the next criterion is met or not met");
+assert.match(homeSource, /const showConditionNote = [\s\S]*?price_cross_above[\s\S]*?price_cross_below/, "Home must retain the candle-close note only for price conditions");
+assert.match(homeSource, /showConditionNote \? <p[^>]*>\{conditionOutcome\.note\}<\/p> : null/, "Home must omit the redundant state-change disclaimer without removing the price-condition note");
 assert.match(homeSource, /지금 주의할 점/, "Home must label the caution card in plain, actionable language");
 assert.doesNotMatch(homeSource, /전문 용어 뜻 보기|evidence\.pressure|evidence\.flow|evidence\.previousChange/, "Home must end after the compact timeframe evidence rows");
 assert.match(homeSource, /group inline-flex min-h-11/, "Home coin tabs must retain a 44px touch target");
-assert.match(homeSource, /inline-flex h-10 items-center rounded-ui-sm/, "Home coin tabs must keep the compact 40px visible box");
+assert.match(homeSource, /inline-flex h-9 items-center rounded-ui-sm/, "Home coin tabs must use the shorter 36px visible box");
 assert.match(homeSource, /aria-label=\{`\$\{coin\.base\}\/\$\{coin\.quote\} · \$\{coin\.exchangeLabel\}`\}/, "Home coin tabs must retain the exchange in their accessible name");
 assert.doesNotMatch(homeSource, /<span[^>]*>\{coin\.exchangeLabel\}<\/span>/, "Home coin tabs must not render the exchange as visible secondary text");
 assert.doesNotMatch(homeSource, /확정 구조\(MSS\)/, "Home evidence must lead with meaning instead of MSS jargon");
@@ -663,6 +665,9 @@ assert.match(macroSource, /전체 일정 <ChevronRight/, "Home macro must link d
 assert.match(macroSource, /recentReleased \?\? upcomingWithin24Hours \?\? nearestUpcoming \?\? previousReleased/, "an upcoming official event must outrank an old release on the daily Home card");
 
 const compactChartSource = readFileSync(join(process.cwd(), "src/components/coin/PerpetualDecisionChart.tsx"), "utf8");
+const timeframeSelectorSource = readFileSync(join(process.cwd(), "src/components/coin/ChartTimeframeSelector.tsx"), "utf8");
+assert.match(timeframeSelectorSource, /group flex min-h-11 items-center justify-center/, "short chart button boxes must stay vertically centered inside their 44px touch targets");
+assert.match(timeframeSelectorSource, /compact \? "h-9" : "min-h-11"/, "only compact chart button boxes use the shorter 36px visual height");
 assert.match(compactChartSource, /buildPerpetualChartOverlayModel/, "Home chart lines and legend must share the tested overlay model");
 assert.match(compactChartSource, /PerpetualChartLegend/, "compact Home chart must expose exact values outside the plotting area");
 assert.match(compactChartSource, /axisLabelVisible: line\.axisLabelVisible/, "only the primary line keeps its axis label in Home and detail charts");
@@ -670,11 +675,17 @@ assert.match(compactChartSource, /compactPerpetualCandleLimit/, "compact candle 
 assert.match(compactChartSource, /rightOffsetPixels: 56/, "the latest Home candle must retain readable right-side space");
 assert.match(compactChartSource, /height: compact \? 240 : 360/, "the compact chart must use the less cramped 240px height");
 assert.match(compactChartSource, /applyOptions\(\{ width, height: compact \? 240 : 360 \}\)/, "responsive resize must preserve the compact chart height");
+assert.match(compactChartSource, /handleScroll: compact \? \{[\s\S]*?horzTouchDrag: true,[\s\S]*?vertTouchDrag: false/, "Home chart must pan horizontally without blocking vertical page scroll");
+assert.match(compactChartSource, /handleScale: compact \? \{[\s\S]*?mouseWheel: true,[\s\S]*?pinch: true/, "Home chart must support wheel and pinch zoom");
+assert.match(compactChartSource, /axisPressedMouseMove: false/, "Home chart must not expose cramped axis-drag scaling");
+assert.match(compactChartSource, /TrackingModeExitMode\.OnTouchEnd/, "mobile crosshair tracking must release as soon as the touch ends");
+assert.match(compactChartSource, /<ChartTimeframeSelector[^>]*compact=\{compact\}/, "Home chart must request the shorter timeframe button boxes");
 assert.match(compactChartSource, /data-pull-to-refresh-ignore=""/, "Home and detail chart surfaces must not start pull-to-refresh");
 assert.doesNotMatch(compactChartSource, /조건선 \{counts\.conditions\}/, "the cramped overlay counts must be removed");
 assert.match(compactChartSource, /showText \? \{ text:/, "marker text must remain optional without removing the marker shape");
 assert.match(compactChartSource, /!compact && container\.clientWidth >= 520/, "narrow detail charts must hide marker text that would cover candles");
 assert.match(compactChartSource, /markers\.setMarkers\(resolvedMarkers\.map/, "narrow charts must keep marker shapes while their exact meaning stays in the legend");
+assert.doesNotMatch(compactChartSource, /markers\.setMarkers[\s\S]{0,300}chart\.timeScale\(\)\.fitContent\(\)/, "overlay toggles must not reset the user's zoomed chart range");
 assert.match(compactChartSource, /showAllOverlays[\s\S]*가격대·흐름 보기/, "Home chart must default to a simple view with an explicit detail toggle");
 assert.match(compactChartSource, /line\.id === primaryLineId\)[\s\S]*line\.group === "condition"/, "context charts must fall back to their own first condition line");
 assert.match(compactChartSource, /이 시간대에 표시할 판단 가격 없음/, "a context chart without a condition line must explain the empty overlay state");

@@ -198,7 +198,7 @@ function HomeInterestTabs({
               onKeyDown={(event) => handleTabKeyDown(event, index)}
               className="group inline-flex min-h-11 shrink-0 items-center rounded-ui-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ui-brand"
             >
-              <span className={`inline-flex h-10 items-center rounded-ui-sm px-3 text-xs font-black transition ${active ? "bg-ui-brand text-white" : "bg-ui-inset text-ui-muted group-hover:text-ui-text"}`}>
+              <span className={`inline-flex h-9 items-center rounded-ui-sm px-3 text-xs font-black transition ${active ? "bg-ui-brand text-white" : "bg-ui-inset text-ui-muted group-hover:text-ui-text"}`}>
                 {coin.base}/{coin.quote}
               </span>
             </button>
@@ -407,6 +407,8 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
   const degradedSources = Object.entries(displaySnapshot.sourceStatus).filter(([, source]) => source.status !== "ready");
   const detailHref = `/crypto/perpetual?asset=${asset}&timeframe=15m&snapshot=${encodeURIComponent(displaySnapshot.id)}&source=home${journeyId ? `&attribution=${encodeURIComponent(journeyId)}` : ""}`;
   const conditionOutcome = monitorConditionOutcomeCopy(displaySnapshot.summary.primaryCondition);
+  const showConditionNote = displaySnapshot.summary.primaryCondition.kind === "price_cross_above" ||
+    displaySnapshot.summary.primaryCondition.kind === "price_cross_below";
   return (
     <section className="bg-ui-panel px-3 py-3 sm:px-4 sm:py-4" aria-labelledby="home-decision-title">
       {displayQuality !== "ready" ? <div className="flex items-center justify-end gap-2">
@@ -444,7 +446,7 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
           <p className="mt-1 text-xs font-black leading-5 text-ui-text [word-break:keep-all]">{monitorConditionDisplayLabel(displaySnapshot.summary.primaryCondition)}</p>
           <p className="mt-1.5 text-[10.5px] font-semibold leading-4 text-ui-muted [word-break:keep-all]">{conditionOutcome.met}</p>
           <p className="mt-0.5 text-[10.5px] leading-4 text-ui-subtle [word-break:keep-all]">{conditionOutcome.unmet}</p>
-          <p className="mt-1 text-[10.5px] leading-4 text-ui-subtle [word-break:keep-all]">{conditionOutcome.note}</p>
+          {showConditionNote ? <p className="mt-1 text-[10.5px] leading-4 text-ui-subtle [word-break:keep-all]">{conditionOutcome.note}</p> : null}
         </div>
       </div>
 

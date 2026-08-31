@@ -4,7 +4,9 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import {
   CandlestickSeries,
   ColorType,
+  CrosshairMode,
   LineStyle,
+  TrackingModeExitMode,
   createChart,
   createSeriesMarkers,
   type IChartApi,
@@ -132,6 +134,7 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
         horzLines: { color: "rgba(148,163,184,0.08)" }
       },
       rightPriceScale: { borderColor: "rgba(148,163,184,0.16)" },
+      crosshair: { mode: CrosshairMode.Magnet },
       timeScale: {
         borderColor: "rgba(148,163,184,0.16)",
         timeVisible: true,
@@ -139,8 +142,21 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
         tickMarkFormatter: (time: Time, tickMarkType: TickMarkType) => formatPerpetualChartTick(time, tickMarkType),
         ...(compact ? { rightOffsetPixels: 56 } : {})
       },
-      handleScroll: !compact,
-      handleScale: !compact
+      handleScroll: compact ? {
+        mouseWheel: true,
+        pressedMouseMove: true,
+        horzTouchDrag: true,
+        // Keep vertical swipes available for the mobile page while the compact
+        // chart handles horizontal panning like a TradingView chart.
+        vertTouchDrag: false
+      } : true,
+      handleScale: compact ? {
+        mouseWheel: true,
+        pinch: true,
+        axisPressedMouseMove: false,
+        axisDoubleClickReset: true
+      } : true,
+      ...(compact ? { trackingMode: { exitMode: TrackingModeExitMode.OnTouchEnd } } : {})
     });
     const series = chart.addSeries(CandlestickSeries, {
       upColor: "#34d399",
@@ -207,8 +223,7 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
   useEffect(() => {
     const chart = chartRef.current;
     const series = seriesRef.current;
-    const markers = markersRef.current;
-    if (!chart || !series || !markers) return;
+    if (!chart || !series) return;
     series.setData(visibleCandles.map((candle) => ({
       time: candle.time as Time,
       open: candle.open,
@@ -216,9 +231,14 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
       low: candle.low,
       close: candle.close
     })));
-    markers.setMarkers(resolvedMarkers.map((marker) => seriesMarker(marker, showMarkerText, qualifiedMssSemantics)));
     chart.timeScale().fitContent();
-  }, [qualifiedMssSemantics, resolvedMarkers, showMarkerText, visibleCandles]);
+  }, [visibleCandles]);
+
+  useEffect(() => {
+    const markers = markersRef.current;
+    if (!markers) return;
+    markers.setMarkers(resolvedMarkers.map((marker) => seriesMarker(marker, showMarkerText, qualifiedMssSemantics)));
+  }, [qualifiedMssSemantics, resolvedMarkers, showMarkerText]);
 
   const timeframeLabel = chartViewTimeframeLabels[timeframe];
 
@@ -241,14 +261,14 @@ export function PerpetualDecisionChart({ snapshot, compact = false }: { snapshot
             </button>
           ) : null}
         </div>
-        <ChartTimeframeSelector value={timeframe} onChange={setTimeframe} className="mt-2 w-full min-[390px]:ml-auto min-[390px]:w-56" />
+        <ChartTimeframeSelector value={timeframe} onChange={setTimeframe} compact={compact} className="mt-2 w-full min-[390px]:ml-auto min-[390px]:w-56" />
       </div>
       <div className="relative" aria-busy={isLoading}>
         <div
           ref={setContainerRef}
           className="w-full"
           role="img"
-          aria-label={`${snapshot.symbol} ${timeframeLabel} 캔들과 다음에 볼 가격, 반응 가격대, 가격 흐름 신호 차트`}
+          aria-label={`${snapshot.symbol} ${timeframeLabel} 캔들과 다음에 볼 가격, 반응 가격대, 가격 흐름 신호 차트. 가로로 드래그해 이동하고 핀치 또는 휠로 확대·축소할 수 있습니다.`}
           aria-describedby={legendItems.length ? legendId : undefined}
         />
         {isLoading ? (
