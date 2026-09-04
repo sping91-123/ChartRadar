@@ -6,14 +6,13 @@ import { AlertTriangle, ArrowRight, Clock3, Database, Loader2, RefreshCw, Settin
 import { CoinRadarHomePanel } from "@/components/coin/CoinRadarHomePanel";
 import { HomeInterestAnalysisSummary } from "@/components/coin/HomeInterestAnalysisSummary";
 import { HomeInterestCoinSettingsDialog } from "@/components/coin/HomeInterestCoinSettingsDialog";
-import { HomeTimeframeDirection } from "@/components/coin/HomeTimeframeDirection";
+import { HomeQualifiedTimeframeDirection } from "@/components/coin/HomeQualifiedTimeframeDirection";
 import { PerpetualDecisionChart } from "@/components/coin/PerpetualDecisionChart";
 import { MacroTicker } from "@/components/MacroTicker";
 import { PullToRefresh, usePullToRefreshRegistration } from "@/components/PullToRefresh";
 import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import { hasMarketEntitlement } from "@/lib/billing";
-import type { DirectionState } from "@/lib/marketAnalysis";
 import {
   defaultHomeInterestCoin,
   homeInterestCoinsStorageKey,
@@ -23,6 +22,7 @@ import {
   type HomeInterestCoin
 } from "@/lib/homeInterestCoins";
 import { canonicalAssetForHomeCoin } from "@/lib/homeInterestRouting";
+import { homeTimeframeGroupLabel, resolveHomeTimeframeSignal } from "@/lib/homeTimeframeSignal";
 import { monitorConditionDisplayLabel, monitorConditionHeading, monitorConditionOutcomeCopy, plainDecisionText, qualityLabel } from "@/lib/perpetualDecisionCopy";
 import type { CryptoHomeTicker } from "@/lib/server/cryptoExchangeData";
 import type { PerpetualAsset, PerpetualDecisionSnapshot, SnapshotQuality } from "@/lib/perpetualDecisionSnapshot";
@@ -226,18 +226,13 @@ function HomeEvidenceSummary({ snapshot }: { snapshot: PerpetualDecisionSnapshot
       <div className="mt-2 grid gap-1.5">
         {groups.map((group) => {
           const items = group.timeframes.map((timeframe) => context.find((entry) => entry.timeframe === timeframe));
-          const trends: DirectionState[] = items.map((item) => item?.trend ?? "unknown");
-          const groupState = trends.every((trend) => trend === "bullish")
-            ? "둘 다 위쪽"
-            : trends.every((trend) => trend === "bearish")
-              ? "둘 다 아래쪽"
-              : trends.some((trend) => trend === "unknown")
-                ? "일부 확인 중"
-                : trends.includes("bullish") && trends.includes("bearish")
-                  ? "방향 엇갈림"
-                  : trends.every((trend) => trend === "neutral")
-                    ? "둘 다 뚜렷하지 않음"
-                    : "한쪽만 방향 확인";
+          const signals = items.map((item) => resolveHomeTimeframeSignal({
+            trend: item?.trend ?? "unknown",
+            continuation: item?.continuation ?? "unknown",
+            warning: item?.warning ?? "unknown",
+            known: item?.known ?? false
+          }));
+          const groupState = homeTimeframeGroupLabel(signals);
           return (
             <article key={group.label} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 bg-ui-inset/55 px-2.5 py-2.5">
               <div className="min-w-0">
@@ -246,9 +241,15 @@ function HomeEvidenceSummary({ snapshot }: { snapshot: PerpetualDecisionSnapshot
               </div>
               <div className="grid grid-cols-2 gap-1" aria-label={`${group.label} 시간대별 방향`}>
                 {group.timeframes.map((timeframe, index) => (
-                  <p key={timeframe} className="min-w-[4.5rem] bg-ui-panel/70 px-1.5 py-1 text-center text-[11px] font-semibold text-ui-muted">
+                  <p key={timeframe} className="min-w-[5.75rem] bg-ui-panel/70 px-1.5 py-1.5 text-center text-[11px] font-semibold text-ui-muted">
                     <span className="block font-black text-ui-subtle">{items[index]?.label ?? timeframe}</span>
-                    <HomeTimeframeDirection direction={items[index]?.trend ?? "unknown"} />
+                    <HomeQualifiedTimeframeDirection
+                      trend={items[index]?.trend ?? "unknown"}
+                      continuation={items[index]?.continuation ?? "unknown"}
+                      warning={items[index]?.warning ?? "unknown"}
+                      known={items[index]?.known ?? false}
+                      observedAt={items[index]?.observedAt}
+                    />
                   </p>
                 ))}
               </div>

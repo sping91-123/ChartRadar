@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { buildLargeTradeFlowReport } from "../src/lib/largeTradeFlow";
 import { buildLiquidationPressureReport } from "../src/lib/liquidationPressure";
 import { isHomePriorityMacro } from "../src/lib/homeMacroPriority";
+import { homeTimeframeGroupLabel, resolveHomeTimeframeSignal } from "../src/lib/homeTimeframeSignal";
 import { analyzeTimeframe, type Candle } from "../src/lib/marketAnalysis";
 import { parseClosedBinanceKlines } from "../src/lib/marketTime";
 import { comparePerpetualShadowDecision } from "../src/lib/perpetualShadowComparison";
@@ -40,6 +41,49 @@ import {
 
 const generatedAt = "2026-07-19T12:00:00.000Z";
 const ready: SourceStatus = { status: "ready", observedAt: "2026-07-19T11:59:00.000Z", detail: "fixture" };
+const supportedBullishSignal = resolveHomeTimeframeSignal({ trend: "bullish", continuation: "bullish", warning: "neutral", known: true });
+const bearishWarningSignal = resolveHomeTimeframeSignal({ trend: "bullish", continuation: "bullish", warning: "bearish", known: true });
+assert.equal(supportedBullishSignal.state, "bullish_supported", "aligned MSB must strengthen the confirmed bullish MSS state");
+assert.equal(bearishWarningSignal.state, "bearish_reversal_warning", "opposite CHoCH must surface before the confirmed MSS trend flips");
+assert.equal(bearishWarningSignal.trend, "bullish", "an early CHoCH warning must not rewrite the confirmed MSS direction");
+assert.equal(
+  resolveHomeTimeframeSignal({ trend: "bearish", continuation: "bearish", warning: "bullish", known: true }).state,
+  "bullish_reversal_warning",
+  "the bullish reversal-warning rule must mirror the bearish case"
+);
+assert.equal(
+  resolveHomeTimeframeSignal({ trend: "bullish", continuation: "neutral", warning: "neutral", known: true }).state,
+  "bullish",
+  "neutral MSB and CHoCH values mean no active event, not a conflicting neutral direction"
+);
+assert.equal(
+  resolveHomeTimeframeSignal({ trend: "bullish", continuation: "bullish", warning: "bearish", known: false }).state,
+  "unknown",
+  "unknown evidence integrity must fail closed even when directional values are present"
+);
+assert.equal(
+  homeTimeframeGroupLabel([
+    resolveHomeTimeframeSignal({ trend: "bullish", continuation: "bullish", warning: "bearish", known: false }),
+    resolveHomeTimeframeSignal({ trend: "bearish", continuation: "bearish", warning: "bullish", known: false })
+  ]),
+  "둘 다 확인 중",
+  "a group must not expose directional values when evidence integrity is unknown"
+);
+assert.equal(
+  resolveHomeTimeframeSignal({ trend: "bullish", continuation: "bullish", warning: "bullish", known: true }).state,
+  "conflict",
+  "a same-direction CHoCH must be surfaced as an invariant conflict"
+);
+assert.equal(
+  homeTimeframeGroupLabel([supportedBullishSignal, bearishWarningSignal]),
+  "둘 다 상승 · 하락 전환 주의",
+  "a group with an opposite bearish CHoCH must preserve the MSS direction and append the warning"
+);
+assert.equal(
+  resolveHomeTimeframeSignal({ trend: "bullish", continuation: "bearish", warning: "bearish", known: true }).state,
+  "conflict",
+  "an impossible continuation direction must fail visibly even when a plausible CHoCH is present"
+);
 const baseCondition: MonitorCondition = {
   id: "label-fixture",
   kind: "decision_state_change",
@@ -638,6 +682,7 @@ assert.doesNotMatch(
   "the required pressure source must not silently substitute Binance spot prices"
 );
 const homeSource = readFileSync(join(process.cwd(), "src/components/coin/HomePerpetualDecisionFlow.tsx"), "utf8");
+const homeTimeframeDirectionSource = readFileSync(join(process.cwd(), "src/components/coin/HomeQualifiedTimeframeDirection.tsx"), "utf8");
 assert.doesNotMatch(homeSource, />[^<{]*(스냅샷|상방 확인 중|하방 확인 중|다음 확인 조건)[^<{]*</, "Home must not render internal or unexplained decision jargon");
 assert.match(homeSource, />근거<\/h2>/, "Home evidence section uses the requested short title");
 assert.doesNotMatch(homeSource, /왜 이렇게 보나요|결론에 사용한 네 가지 근거|상세 화면에서 시간대별 신호 가격/, "removed Home helper and promo copy must not return");
@@ -652,6 +697,17 @@ assert.match(homeSource, /inline-flex h-9 items-center rounded-ui-sm/, "Home coi
 assert.match(homeSource, /aria-label=\{`\$\{coin\.base\}\/\$\{coin\.quote\} · \$\{coin\.exchangeLabel\}`\}/, "Home coin tabs must retain the exchange in their accessible name");
 assert.doesNotMatch(homeSource, /<span[^>]*>\{coin\.exchangeLabel\}<\/span>/, "Home coin tabs must not render the exchange as visible secondary text");
 assert.doesNotMatch(homeSource, /확정 구조\(MSS\)/, "Home evidence must lead with meaning instead of MSS jargon");
+assert.match(homeSource, /continuation=\{items\[index\]\?\.continuation/, "Home timeframe cards must include the MSB continuation state");
+assert.match(homeSource, /warning=\{items\[index\]\?\.warning/, "Home timeframe cards must include the CHoCH warning state");
+assert.match(homeSource, /observedAt=\{items\[index\]\?\.observedAt\}/, "Home timeframe cards must show the closed-candle observation time");
+assert.doesNotMatch(homeTimeframeDirectionSource, /\b(?:MSS|MSB|CHoCH)\b/, "Home must explain all three structure roles without specialist acronyms");
+assert.doesNotMatch(homeTimeframeDirectionSource, /진행 중/, "confirmed-only Home timeframe evidence must not be presented as a forming candle");
+assert.match(homeTimeframeDirectionSource, /확정 추세 · 상승[\s\S]*확정 추세 · 하락/, "Home must label the confirmed trend role in Korean");
+assert.match(homeTimeframeDirectionSource, /상승 흐름 지속[\s\S]*하락 흐름 지속[\s\S]*추세 지속 신호 없음/, "Home must distinguish continuation direction from an inactive continuation event");
+assert.match(homeTimeframeDirectionSource, /상승 전환 주의[\s\S]*하락 전환 주의/, "Home must distinguish early CHoCH direction without calling it confirmed");
+assert.match(homeTimeframeDirectionSource, /전환 주의 신호 없음/, "an inactive reversal-warning event must not imply that all market risk is absent");
+assert.match(homeTimeframeDirectionSource, /KST · 확정봉/, "Home timeframe evidence must label its closed-candle time zone explicitly");
+assert.match(homeTimeframeDirectionSource, /timeZone: "Asia\/Seoul"/, "Home timeframe evidence must format its confirmed time in KST");
 assert.ok(
   homeSource.indexOf("<PerpetualDecisionChart snapshot={displaySnapshot} compact />") < homeSource.indexOf("<HomeEvidenceSummary snapshot={displaySnapshot} />"),
   "the compact chart must appear before the evidence section"
