@@ -1,4 +1,5 @@
 "use client";
+import { startVisiblePolling } from "@/lib/visiblePolling";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -864,10 +865,10 @@ export function CoinRadarHomePanel() {
     const { selection, price, changePercent, quoteVolume, updatedAt } = state.snapshot;
     setTickerState({ selection, price, changePercent, quoteVolume, updatedAt });
 
-    async function loadTicker() {
+    async function loadTicker(signal: AbortSignal) {
       try {
         const params = new URLSearchParams({ exchange: selection.exchangeId, symbol: selection.symbol });
-        const response = await fetch(`/api/crypto-home-ticker?${params.toString()}`, { cache: "no-store" });
+        const response = await fetch(`/api/crypto-home-ticker?${params.toString()}`, { cache: "no-store", signal });
         const payload = (await response.json()) as { ticker?: CryptoHomeTicker };
         if (!cancelled && response.ok && payload.ticker) {
           setTickerState(payload.ticker);
@@ -877,11 +878,10 @@ export function CoinRadarHomePanel() {
       }
     }
 
-    void loadTicker();
-    const timer = window.setInterval(loadTicker, 5000);
+    const stopPolling = startVisiblePolling(loadTicker);
     return () => {
       cancelled = true;
-      window.clearInterval(timer);
+      stopPolling();
     };
   }, [state]);
 

@@ -1,4 +1,5 @@
 "use client";
+import { startVisiblePolling } from "@/lib/visiblePolling";
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
@@ -351,10 +352,10 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
   useEffect(() => {
     if (!snapshot) return;
     let cancelled = false;
-    async function tick() {
+    async function tick(signal: AbortSignal) {
       try {
         const params = new URLSearchParams({ exchange: "binance", symbol: assetCopy[asset].symbol });
-        const response = await fetch(`/api/crypto-home-ticker?${params.toString()}`, { cache: "no-store" });
+        const response = await fetch(`/api/crypto-home-ticker?${params.toString()}`, { cache: "no-store", signal });
         const payload = (await response.json()) as { ticker?: CryptoHomeTicker };
         if (!cancelled && response.ok && payload.ticker?.price) {
           setLivePrice(payload.ticker.price);
@@ -365,11 +366,10 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
       }
     }
     setLivePrice(snapshot.price);
-    void tick();
-    const timer = window.setInterval(tick, 5_000);
+    const stopPolling = startVisiblePolling(tick);
     return () => {
       cancelled = true;
-      window.clearInterval(timer);
+      stopPolling();
     };
   }, [asset, snapshot]);
 

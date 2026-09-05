@@ -1,5 +1,6 @@
 ﻿import ccxt from "ccxt";
 import { buildLiquidationPressureReport, type BuildLiquidationPressureInput, type LiquidationPressureReport } from "@/lib/liquidationPressure";
+import { createShortLivedCache } from "@/lib/shortLivedCache";
 import {
   analyzeTimeframe,
   fetchBinanceCandles,
@@ -1420,8 +1421,14 @@ function buildStrategyRadar(
   ];
 }
 
+const liveTickerCache = createShortLivedCache<CryptoHomeTicker>(2_000);
+
 export async function getCryptoHomeTicker(exchangeId: CryptoExchangeId, rawSymbol: string | null | undefined): Promise<CryptoHomeTicker> {
   const selection = await resolveExchangeMarket(exchangeId, rawSymbol);
+  return liveTickerCache(`${selection.exchangeId}:${selection.marketId}`, () => loadCryptoHomeTicker(selection));
+}
+
+async function loadCryptoHomeTicker(selection: CryptoExchangeMarket): Promise<CryptoHomeTicker> {
   const tickerResult = await fetchSelectionTicker(selection).catch((error: unknown) => {
     console.warn("[cryptoExchangeData] ticker failed:", selection.exchangeId, selection.symbol, error);
     return null;

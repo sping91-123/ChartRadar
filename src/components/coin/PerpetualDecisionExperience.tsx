@@ -1,4 +1,5 @@
 "use client";
+import { startVisiblePolling } from "@/lib/visiblePolling";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Activity, AlertTriangle, Bell, BookOpen, CheckCircle2, Clock3, Database, History, Loader2, RefreshCw, ShieldAlert } from "lucide-react";
@@ -96,10 +97,10 @@ function LivePerpetualPrice({ asset, snapshotPrice }: { asset: PerpetualAsset; s
 
   useEffect(() => {
     let cancelled = false;
-    async function tick() {
+    async function tick(signal: AbortSignal) {
       try {
         const params = new URLSearchParams({ exchange: "binance", symbol: assetSymbols[asset].tickerSymbol });
-        const response = await fetch(`/api/crypto-home-ticker?${params.toString()}`, { cache: "no-store" });
+        const response = await fetch(`/api/crypto-home-ticker?${params.toString()}`, { cache: "no-store", signal });
         const payload = (await response.json()) as { ticker?: CryptoHomeTicker };
         if (!cancelled && response.ok && payload.ticker?.price) setLivePrice(payload.ticker.price);
       } catch {
@@ -108,11 +109,10 @@ function LivePerpetualPrice({ asset, snapshotPrice }: { asset: PerpetualAsset; s
     }
 
     setLivePrice(snapshotPrice);
-    void tick();
-    const timer = window.setInterval(tick, 5_000);
+    const stopPolling = startVisiblePolling(tick);
     return () => {
       cancelled = true;
-      window.clearInterval(timer);
+      stopPolling();
     };
   }, [asset, snapshotPrice]);
 

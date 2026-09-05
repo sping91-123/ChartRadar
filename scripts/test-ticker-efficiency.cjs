@@ -1,0 +1,44 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const ts = require('typescript');
+function load(file, globals = {}) {
+  const exports = {};
+  const js = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  vm.runInNewContext(js, { exports, AbortController, setTimeout, clearTimeout, setInterval, clearInterval, ...globals });
+  return exports;
+}
+const flush = () => new Promise(resolve => setImmediate(resolve));
+(async () => {
+  let now = 1000;
+  const { createShortLivedCache } = load('src/lib/shortLivedCache.ts', { Date: { now: () => now } });
+  const cache = createShortLivedCache(2000);
+  let count = 0;
+  const source = async () => ++count;
+  assert.deepEqual(await Promise.all([cache('btc', source), cache('btc', source)]), [1, 1]);
+  assert.equal(await cache('btc', source), 1);
+  assert.equal(await cache('eth', source), 2);
+  now += 2000;
+  assert.equal(await cache('btc', source), 3);
+  await assert.rejects(cache('fail', async () => { throw Error('offline'); }));
+  assert.equal(await cache('fail', source), 4);
+  let interval, listener, calls = 0, finish, activeSignal;
+  const doc = { visibilityState: 'hidden', addEventListener: (_, fn) => listener = fn, removeEventListener: () => listener = undefined };
+  const { startVisiblePolling } = load('src/lib/visiblePolling.ts', { document: doc, setInterval: fn => { interval = fn; return 1; }, clearInterval: () => interval = undefined });
+  const stop = startVisiblePolling(signal => { calls++; activeSignal = signal; return new Promise(resolve => finish = resolve); });
+  assert.equal(calls, 0);
+  doc.visibilityState = 'visible'; listener();
+  assert.equal(calls, 1);
+  interval(); listener();
+  assert.equal(calls, 1, 'slow requests must not overlap');
+  finish(); await flush(); interval();
+  assert.equal(calls, 2);
+  finish(); await flush(); doc.visibilityState = 'hidden'; interval();
+  assert.equal(calls, 2);
+  doc.visibilityState = 'visible'; listener();
+  assert.equal(calls, 3, 'returning to page refreshes immediately');
+  stop(); assert.equal(activeSignal.aborted, true);
+  assert.equal(interval, undefined); assert.equal(listener, undefined);
+  finish(); await flush();
+  console.log('PASS ticker cache isolation, coalescing, expiry, error retry, visibility, overlap, resume and cleanup');
+})().catch(error => { console.error(error); process.exitCode = 1; });
