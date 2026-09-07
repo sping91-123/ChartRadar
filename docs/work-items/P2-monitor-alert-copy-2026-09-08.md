@@ -1,7 +1,7 @@
 # 조건 감시의 대상과 알림 시점 설명
 
 - 요청: 처음 사용하는 사람이 무엇을 감시하고 언제 무엇을 알려주는지 이해할 수 있게 문구와 배치를 다듬는다.
-- 상태: 로컬 구현 및 검증 완료. 대표의 ‘다 다듬고 나면 알아서 커푸배까지 진행’ 지시에 따라 커밋·푸시·운영 배포를 진행한다.
+- 상태: 구현·검증·커밋·푸시·운영 배포 완료. 대표의 ‘다 다듬고 나면 알아서 커푸배까지 진행’ 지시에 따라 진행했다.
 
 ## 확인한 실제 기준
 
@@ -29,3 +29,17 @@
 - 데이터 지연 시 저장 비활성, 과거 가격 79,066 고정과 새 감시 차단을 확인했다. 최종 브라우저 page error 0건.
 - 검수 중 ‘이하으로’ 조사를 수정하고 재빌드·재검증했다.
 - 화면과 검사 결과: `output/playwright/monitor-copy-2026-09-08/`.
+
+## 운영 반영 — 2026-09-08 00:19 KST
+
+- 앱 코드 `0051c68407f550dcb386f3d028fd1d81547e9750`을 기존 `origin/codex/news-impact-v2-release-record`에 푸시하고 로컬/원격 SHA 일치를 확인했다.
+- Vercel production `dpl_3NdnsGQBDRAoXbrzMRRu5SQeLnMC` READY, 배포 Git SHA 동일. `chartradar.kr`과 `www.chartradar.kr` alias 반영을 확인했다.
+- 배포 주소: https://chart-radar-6kcire3e7-sping91-4500s-projects.vercel.app
+- Vercel 운영 빌드 및 타입 검사 통과. 실제 `/api/health`와 BTC·ETH snapshot 모두 HTTP 200, 두 분석 quality=ready. 비로그인 Pro 세부 정보 공개는 차단된 상태다.
+- 운영 Home에서 ‘방향이 뚜렷해지면 알림 설정’과 다음 화면에서 저장하는 안내를 확인했다. 클릭 후 상세의 실제 발생 기준·최대 5분 간격·KST 종료 시각·조건 충족 시 1회 기록 후 종료가 표시됐다.
+- 비로그인 알림 설정 버튼이 현재 분석과 `#monitor-condition`을 로그인 복귀 경로에 보존했다.
+- 운영 외부 Chrome 360/390/508px에서 가로 넘침이 없고 과거 분석 79,066 고정 및 정확한 ‘79,080 이상으로 마감’ 문구를 확인했다. 과거 화면에 새 감시 안내가 나타나지 않았다.
+- 운영 검증에서 page error 및 console error 0건. 배포 완료부터 00:19 KST까지 Vercel runtime error cluster와 해당 배포 error/warning/fatal 로그도 없었다.
+- 이번 배포의 실제 로그인 계정 저장·FCM 재전송은 수행하지 않았다. 관련 저장 흐름은 위 로컬 모의 검증이며, 앞선 실기기 FCM 수신 확인과 구분한다. 테스트폰은 연결됐지만 잠금 상태여서 이번 문구 재검증은 운영 외부 Chrome으로 마쳤다.
+- 원격 소유권 검토는 GitHub 읽기 전용 API에서 기존 저장소가 공개 저장소이며 현재 인증 계정이 소유자이고 admin/push 권한이 있음을 확인해 해소했다. 인증값을 출력하거나 파일에 저장하지 않았다. 임시 확인 스크립트와 CLI 호스트명 보조 파일을 삭제했다.
+- 결과: `output/playwright/monitor-copy-2026-09-08/production-results.json`, `production-home-390.png`, `production-setup-*.png`.
