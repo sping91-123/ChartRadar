@@ -25,7 +25,7 @@ import {
 } from "@/lib/homeInterestCoins";
 import { canonicalAssetForHomeCoin } from "@/lib/homeInterestRouting";
 import { homeTimeframeGroupLabel, resolveHomeTimeframeSignal } from "@/lib/homeTimeframeSignal";
-import { monitorConditionDisplayLabel, monitorConditionHeading, monitorConditionOutcomeCopy, plainDecisionText, qualityLabel } from "@/lib/perpetualDecisionCopy";
+import { monitorAlertCopy, monitorConditionDisplayLabel, monitorConditionHeading, monitorConditionOutcomeCopy, plainDecisionText, qualityLabel } from "@/lib/perpetualDecisionCopy";
 import type { CryptoHomeTicker } from "@/lib/server/cryptoExchangeData";
 import type { PerpetualAsset, PerpetualDecisionSnapshot, SnapshotQuality } from "@/lib/perpetualDecisionSnapshot";
 import type { PerpetualSnapshotCapabilities, PerpetualSnapshotResponse } from "@/lib/perpetualApi";
@@ -409,6 +409,7 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
   const degradedSources = Object.entries(displaySnapshot.sourceStatus).filter(([, source]) => source.status !== "ready");
   const detailHref = homePerpetualHref(asset, displaySnapshot.id, journeyId);
   const conditionOutcome = monitorConditionOutcomeCopy(displaySnapshot.summary.primaryCondition);
+  const alertCopy = monitorAlertCopy(displaySnapshot.summary.primaryCondition);
   const showConditionNote = displaySnapshot.summary.primaryCondition.kind === "price_cross_above" ||
     displaySnapshot.summary.primaryCondition.kind === "price_cross_below";
   return (
@@ -446,7 +447,7 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
         <div className="bg-ui-inset/65 px-3 py-2.5">
           <p className="text-[10px] font-black uppercase tracking-[0.1em] text-ui-brand">{monitorConditionHeading(displaySnapshot.summary.primaryCondition)}</p>
           <p className="mt-1 text-xs font-black leading-5 text-ui-text [word-break:keep-all]">{monitorConditionDisplayLabel(displaySnapshot.summary.primaryCondition)}</p>
-          <p className="mt-1.5 text-[10.5px] font-semibold leading-4 text-ui-muted [word-break:keep-all]">{conditionOutcome.met}</p>
+          <p className="mt-1.5 text-[10.5px] font-semibold leading-4 text-ui-muted [word-break:keep-all]">{displayQuality === "ready" ? alertCopy.trigger : conditionOutcome.met}</p>
           <p className="mt-0.5 text-[10.5px] leading-4 text-ui-subtle [word-break:keep-all]">{conditionOutcome.unmet}</p>
           {showConditionNote ? <p className="mt-1 text-[10.5px] leading-4 text-ui-subtle [word-break:keep-all]">{conditionOutcome.note}</p> : null}
         </div>
@@ -464,10 +465,11 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
           attributionId: journeyId ?? undefined,
           properties: { quality: displaySnapshot.quality, source: "home", intent: "monitor" }
         })}
-        className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-ui-sm bg-ui-brand px-4 text-sm font-black text-white transition hover:brightness-110"
+        className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-ui-sm bg-ui-brand px-4 py-2 text-center text-sm font-black leading-5 text-white transition hover:brightness-110 [word-break:keep-all]"
       >
-        {displayQuality !== "ready" ? "최신 조건 다시 확인" : session ? "이 조건 감시 설정" : "무료 감시 1개 시작하기"} <ArrowRight size={16} aria-hidden />
+        {displayQuality !== "ready" ? "최신 조건 다시 확인" : alertCopy.action.replace("받기", "설정")} <ArrowRight size={16} className="shrink-0" aria-hidden />
       </Link>
+      {displayQuality === "ready" ? <p className="mt-1.5 text-center text-[10.5px] leading-4 text-ui-muted [word-break:keep-all]">다음 화면에서 확인 후 저장 · 무료 1개 · 최대 5분 간격 확인<br />조건 충족 시 알림함에 1회 기록합니다. 앱 알림 연결 시 푸시도 받습니다.</p> : null}
       <Link href={detailHref} onClick={() => void trackProductEvent({ eventName: "home_perpetual_opened", surface: "home", asset: displaySnapshot.asset, snapshotId: displaySnapshot.id, attributionId: journeyId ?? undefined, properties: { quality: displaySnapshot.quality, source: "home", intent: "analysis" } })} className="mt-1 flex min-h-10 items-center justify-center text-xs font-semibold text-ui-muted underline underline-offset-4">전체 선물 분석 보기</Link>
 
       <div className="mt-3 bg-ui-inset/25 px-1 py-2">

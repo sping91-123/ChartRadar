@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, Loader2, Pause, Play, X } from "lucide-react";
 import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
-import { monitorConditionDisplayLabel, monitorConditionOutcomeCopy } from "@/lib/perpetualDecisionCopy";
+import { monitorAlertCopy, monitorConditionDisplayLabel } from "@/lib/perpetualDecisionCopy";
 import type { PerpetualMonitorCapabilities, PerpetualScenarioMonitor } from "@/lib/perpetualMonitor";
 import { monitorEvaluationStatus } from "@/lib/perpetualMonitoringStatus";
 import { startVisiblePolling } from "@/lib/visiblePolling";
@@ -189,7 +189,8 @@ export function PerpetualMonitorManager({
                     <StatusPill tone={status.tone}>{status.label}</StatusPill>
                   </div>
                   <p className="mt-1 text-xs font-semibold leading-5 text-ui-muted [word-break:keep-all]">{monitorConditionDisplayLabel(monitor.condition)}</p>
-                  <p className="mt-0.5 text-[10.5px] leading-4 text-ui-subtle">{monitorConditionOutcomeCopy(monitor.condition).met}</p>
+                  <p className="mt-1 text-xs leading-5 text-ui-text [word-break:keep-all]">알림 기준 · {monitorAlertCopy(monitor.condition).trigger}</p>
+                  <p className="mt-0.5 text-[10.5px] leading-4 text-ui-subtle">조건 충족 시 알림함에 1회 기록 후 감시 종료 · 앱 알림 연결 시 푸시</p>
                   <p className="mt-1 text-[10.5px] text-ui-subtle">{expiryCopy(monitor.expiresAt)}</p>
                   <div className="mt-2 border-l-2 border-ui-line pl-3 text-xs leading-5">
                     <p className={evaluation.delayed ? "font-semibold text-ui-risk" : "font-semibold text-ui-text"}>{evaluation.label}</p>

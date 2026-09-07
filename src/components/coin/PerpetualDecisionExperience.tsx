@@ -16,7 +16,7 @@ import { withSupabaseAuth } from "@/lib/authFetch";
 import { appendJournalEntry, decisionJournalContextFromSnapshot } from "@/lib/journal";
 import { isResolvedHistoricalPullLocked } from "@/lib/pullToRefresh";
 import { readPerpetualAlertContext } from "@/lib/perpetualAlertContext";
-import { decisionStateLabel, flowDirectionLabel, legacyStructureTerm, monitorConditionDisplayLabel, monitorConditionHeading, monitorConditionOutcomeCopy, perpetualTermCopy, plainDecisionText, plainDirection, pressureDirectionLabel, qualityLabel } from "@/lib/perpetualDecisionCopy";
+import { decisionStateLabel, flowDirectionLabel, legacyStructureTerm, monitorAlertCopy, monitorAlertExpiry, monitorConditionDisplayLabel, monitorConditionHeading, monitorConditionOutcomeCopy, perpetualTermCopy, plainDecisionText, plainDirection, pressureDirectionLabel, qualityLabel } from "@/lib/perpetualDecisionCopy";
 import { isPerpetualSnapshotScopedStateCurrent, journalMonitorIdForSnapshot } from "@/lib/perpetualMonitor";
 import type { CryptoHomeTicker } from "@/lib/server/cryptoExchangeData";
 import { hasQualifiedMssSemantics, type MonitorCondition, type PerpetualAsset, type PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
@@ -145,7 +145,6 @@ function MonitorAction({
   snapshotId,
   upgradeHref,
   onUpgrade,
-  prefilled = false,
   existingMonitor
 }: {
   condition: MonitorCondition;
@@ -157,7 +156,6 @@ function MonitorAction({
   snapshotId: string;
   upgradeHref: string;
   onUpgrade: (condition: MonitorCondition) => void;
-  prefilled?: boolean;
   existingMonitor?: PerpetualScenarioMonitor;
 }) {
   const operationBusy = monitorState.status === "saving";
@@ -175,7 +173,7 @@ function MonitorAction({
   if (!isAuthenticated || capabilities.requiresAuth) {
     return (
       <ActionButton href={`/login?returnTo=${encodeURIComponent(currentReturnTo())}`} tone="primary" className="w-full sm:w-auto">
-        <Bell size={15} aria-hidden /> 로그인하고 조건 감시
+        <Bell size={15} aria-hidden /> 로그인하고 이 알림 설정
       </ActionButton>
     );
   }
@@ -201,10 +199,10 @@ function MonitorAction({
       tone={saved ? "secondary" : "primary"}
       disabled={disabled || operationBusy || saved}
       onClick={() => onCreate(condition)}
-      className="w-full sm:w-auto"
+      className="min-h-11 w-full py-2 text-center leading-5 sm:w-auto [word-break:keep-all]"
     >
       {operationBusy ? <Loader2 className="animate-spin" size={15} aria-hidden /> : saved ? <CheckCircle2 size={15} aria-hidden /> : <Bell size={15} aria-hidden />}
-      {operationBusy ? "조건 저장 중" : saved ? "감시 저장됨" : capabilities.setupRequired ? "저장소 준비 필요" : !actionable ? "데이터 정상화 후 가능" : prefilled ? "준비된 조건 감시 저장" : "이 조건 감시하기"}
+      {operationBusy ? "알림 조건 저장 중" : saved ? "감시 저장됨" : capabilities.setupRequired ? "저장소 준비 필요" : !actionable ? "데이터 정상화 후 가능" : <span>{monitorAlertCopy(condition).action.replace(/ 알림 받기$/, "")} <span className="whitespace-nowrap">알림 받기</span></span>}
     </ActionButton>
   );
 }
@@ -503,7 +501,8 @@ export function PerpetualDecisionExperience({
         });
         throw new Error(payload.error ?? "조건 감시를 저장하지 못했습니다.");
       }
-      setMonitorState({ status: "saved", conditionId: condition.id, monitorId: payload.monitor.id, snapshotId: snapshot.id, message: "최대 5분 간격 감시가 시작됐습니다." });
+      const savedMessage = `${monitorAlertCopy(condition).trigger} 최대 5분 간격으로 확인하고, 조건 충족 시 1회 기록 후 감시를 마칩니다.`;
+      setMonitorState({ status: "saved", conditionId: condition.id, monitorId: payload.monitor.id, snapshotId: snapshot.id, message: savedMessage });
       setActivationPending(false);
       setActivationConditionId(null);
       if (typeof window !== "undefined") {
@@ -522,8 +521,8 @@ export function PerpetualDecisionExperience({
             ? {
                 ...current,
                 message: pushState.registrationStage === "enabled" && pushState.synced
-                  ? "최대 5분 간격 감시가 시작됐고 앱 알림도 연결됐습니다."
-                  : `감시는 시작됐습니다. ${pushState.lastError ?? "앱 알림 연결은 알림 설정에서 다시 확인해 주세요."}`
+                  ? `${savedMessage} 앱 푸시도 연결됐습니다.`
+                  : `${savedMessage} ${pushState.lastError ?? "앱 알림 연결은 알림 설정에서 다시 확인해 주세요."}`
               }
             : current);
         });
@@ -700,6 +699,8 @@ export function PerpetualDecisionExperience({
   ) ? monitorState : { status: "idle" } as const;
   const quickEvidence = displaySnapshot.publicEvidence;
   const primaryConditionOutcome = monitorConditionOutcomeCopy(displaySnapshot.summary.primaryCondition);
+  const primaryAlertCopy = monitorAlertCopy(displaySnapshot.summary.primaryCondition);
+  const primarySavedMonitor = savedCondition(displaySnapshot.summary.primaryCondition);
   const qualifiedMssSemantics = hasQualifiedMssSemantics(displaySnapshot);
   const reactionFramesPending = qualifiedMssSemantics && ["1m", "5m"].some((timeframe) => {
     const item = displaySnapshot.publicEvidence?.context?.find((entry) => entry.timeframe === timeframe);
@@ -807,10 +808,13 @@ export function PerpetualDecisionExperience({
           </div>
         </div>
 
-        <div id="monitor-condition" className="mt-3 flex scroll-mt-24 flex-col gap-2 border-t border-ui-line pt-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="order-2 text-xs leading-5 text-ui-muted sm:order-1">Basic 감시 1개 무료 · 최대 5분 간격 확인<br />알림 연결 시 조건 변화를 알려드립니다. 주문은 실행하지 않습니다.</p>
-          <div className="order-1 flex flex-col gap-2 sm:order-2 sm:flex-row">
-            {reviewingSnapshot ? <p className="text-xs leading-5 text-ui-muted">새 조건 감시는 현재 분석에서 설정할 수 있습니다.</p> : <MonitorAction condition={displaySnapshot.summary.primaryCondition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} onUpgrade={trackMonitorUpgrade} prefilled={activationConditionId === displaySnapshot.summary.primaryCondition.id} existingMonitor={savedCondition(displaySnapshot.summary.primaryCondition)} />}
+        <div id="monitor-condition" className="mt-3 scroll-mt-24 border-t border-ui-line pt-3">
+          {!reviewingSnapshot ? <div className="mb-2 text-xs leading-5 [word-break:keep-all]">
+            <p className="font-semibold text-ui-text">{primaryAlertCopy.trigger}</p>
+            <p className="text-ui-muted">최대 5분 간격 확인 · {monitorAlertExpiry(primarySavedMonitor?.expiresAt ?? displaySnapshot.summary.primaryCondition.expiresAt)}</p>
+          </div> : null}
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {reviewingSnapshot ? <p className="text-xs leading-5 text-ui-muted">새 조건 감시는 현재 분석에서 설정할 수 있습니다.</p> : <MonitorAction condition={displaySnapshot.summary.primaryCondition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} onUpgrade={trackMonitorUpgrade} existingMonitor={primarySavedMonitor} />}
             {session ? (
               <ActionButton
                 tone="secondary"
@@ -823,6 +827,10 @@ export function PerpetualDecisionExperience({
               </ActionButton>
             ) : null}
           </div>
+          {!reviewingSnapshot ? <p className="mt-2 text-[11px] leading-5 text-ui-muted [word-break:keep-all]">Basic 1개 무료 · 조건 충족 시 알림함에 1회 기록 후 감시 종료<br />앱 알림 연결 시 푸시도 받습니다. 알림을 열어 당시 근거와 남은 위험을 확인하세요.</p> : null}
+          {currentMonitorState.status === "saved" || currentMonitorState.status === "error" ? (
+            <p role={currentMonitorState.status === "error" ? "alert" : "status"} aria-live="polite" className={`mt-2 text-xs font-semibold leading-5 [word-break:keep-all] ${currentMonitorState.status === "saved" ? "text-ui-long" : "text-ui-risk"}`}>{currentMonitorState.message}</p>
+          ) : null}
         </div>
         {!reviewingSnapshot ? <BrowserConditionNotifications /> : null}
         {savesSnapshotWithoutNews ? <p className="mt-2 text-[11px] font-semibold leading-5 text-ui-watch">현재 플랜에서는 선물 분석만 저장됩니다. 공식 뉴스와 발표 전후 비교까지 함께 복기하는 기능은 Coin Pro에서 열립니다.</p> : null}
@@ -849,9 +857,6 @@ export function PerpetualDecisionExperience({
           </div>
         ) : null}
         </details>
-        {currentMonitorState.status === "saved" || currentMonitorState.status === "error" ? (
-          <p role={currentMonitorState.status === "error" ? "alert" : "status"} aria-live="polite" className={`mt-2 text-xs font-semibold ${currentMonitorState.status === "saved" ? "text-ui-long" : "text-ui-risk"}`}>{currentMonitorState.message}</p>
-        ) : null}
         {currentJournalState.status === "saved" || currentJournalState.status === "error" ? (
           <p role={currentJournalState.status === "error" ? "alert" : "status"} aria-live="polite" className={`mt-2 text-xs font-semibold ${currentJournalState.status === "saved" ? "text-ui-long" : "text-ui-risk"}`}>
             {currentJournalState.message} {currentJournalState.status === "saved" ? <a href="/journal?market=crypto" className="underline">저장한 판단 보기</a> : null}
@@ -889,14 +894,14 @@ export function PerpetualDecisionExperience({
       ) : displaySnapshot.pro ? (
         <section className="bg-ui-panel px-3 py-4 sm:px-5">
           <div className="flex items-start justify-between gap-3">
-            <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand">Coin Pro</p><h2 className="mt-1 text-lg font-black text-ui-text">어떤 경우에 현재 해석이 더 강해지거나 바뀌나요?</h2><p className="mt-1 text-xs leading-5 text-ui-muted">원하는 판단 조건을 저장하면 최대 5분 간격으로 평가해 알려드립니다.</p></div>
+            <div><p className="text-[10px] font-black uppercase tracking-[0.12em] text-ui-brand">Coin Pro</p><h2 className="mt-1 text-lg font-black text-ui-text">어떤 경우에 현재 해석이 더 강해지거나 바뀌나요?</h2><p className="mt-1 text-xs leading-5 text-ui-muted">각 조건을 최대 5분 간격으로 확인합니다. 충족하면 알림함에 1회 기록하고 해당 감시를 마칩니다.</p></div>
             <StatusPill tone="long" icon={ShieldAlert}>{capabilities.activeMonitorCount}/{capabilities.monitorLimit}</StatusPill>
           </div>
           <div className="mt-3 divide-y divide-ui-line border-y border-ui-line">
             {conditions.slice(1).map((condition) => (
               <div key={condition.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <div><p className="text-xs font-black text-ui-text">{condition.role === "confirmation" ? "방향 근거 강화 기준" : "해석 재검토 기준"}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{monitorConditionDisplayLabel(condition)}</p></div>
-                <MonitorAction condition={condition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable && !reviewingSnapshot} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} onUpgrade={trackMonitorUpgrade} prefilled={activationConditionId === condition.id} existingMonitor={savedCondition(condition)} />
+                <div><p className="text-xs font-black text-ui-text">{condition.role === "confirmation" ? "방향 근거 강화 기준" : "해석 재검토 기준"}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{monitorAlertCopy(condition).trigger}</p><p className="text-[11px] leading-5 text-ui-subtle">{monitorAlertCopy(condition).waiting} · {monitorAlertExpiry(savedCondition(condition)?.expiresAt ?? condition.expiresAt)}</p></div>
+                <MonitorAction condition={condition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable && !reviewingSnapshot} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} onUpgrade={trackMonitorUpgrade} existingMonitor={savedCondition(condition)} />
               </div>
             ))}
           </div>

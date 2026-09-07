@@ -93,12 +93,52 @@ export function monitorConditionDisplayLabel(condition: MonitorCondition) {
   const isPriceCondition = condition.kind === "price_cross_above" || condition.kind === "price_cross_below";
   if (isPriceCondition && typeof condition.threshold === "number" && Number.isFinite(condition.threshold)) {
     const price = condition.threshold.toLocaleString("ko-KR", { maximumFractionDigits: 4 });
-    const side = condition.kind === "price_cross_above" ? "위" : "아래";
-    return `${conditionTimeframeCopy[condition.timeframe]}봉이 ${price} ${side}에서 끝나는지 확인`;
+    const side = condition.kind === "price_cross_above" ? "이상으로" : "이하로";
+    return `${conditionTimeframeCopy[condition.timeframe]}봉이 ${price} ${side} 마감하는지 확인`;
   }
   return condition.label
     .replace(/확인(?:할)?\s+가격/g, "다음에 확인할 것")
     .replace(/다음\s+확인\s+조건/g, "다음에 확인할 것");
+}
+
+export function monitorAlertCopy(condition: MonitorCondition) {
+  if ((condition.kind === "price_cross_above" || condition.kind === "price_cross_below") &&
+      typeof condition.threshold === "number" && Number.isFinite(condition.threshold)) {
+    const price = condition.threshold.toLocaleString("ko-KR", { maximumFractionDigits: 4 });
+    const side = condition.kind === "price_cross_above" ? "이상으로" : "이하로";
+    const closing = `${conditionTimeframeCopy[condition.timeframe]}봉이 ${price} ${side} 마감하면`;
+    return {
+      trigger: `${closing} 알려드립니다.`,
+      action: `${closing} 알림 받기`,
+      waiting: "가격이 잠깐 닿는 것만으로는 알리지 않습니다."
+    };
+  }
+  if (condition.kind === "decision_state_change") {
+    // Match the evaluator: without an explicit target, only a new directional state triggers.
+    const target = condition.targetState ?? (condition.baselineState === "upside_watch" ? "downside_watch"
+      : condition.baselineState === "downside_watch" ? "upside_watch" : null);
+    return {
+      trigger: target ? `종합 판단이 ‘${decisionStateLabel(target)}’로 바뀌면 알려드립니다.`
+        : "종합 판단이 ‘오르는 힘 우세’ 또는 ‘내리는 힘 우세’가 되면 알려드립니다.",
+      action: target ? `${decisionStateLabel(target)}로 바뀌면 알림 받기` : "방향이 뚜렷해지면 알림 받기",
+      waiting: condition.targetState ? "지정한 판단이 될 때까지 기다립니다."
+        : "‘신호 엇갈림’이나 ‘방향 대기’로 바뀌는 것만으로는 알리지 않습니다."
+    };
+  }
+  const pressureLabels = { upsideShorts: "숏 청산 압력 우세", downsideLongs: "롱 청산 압력 우세", balanced: "롱·숏 압력 균형" };
+  return {
+    trigger: condition.targetPressure ? `청산 압력이 ‘${pressureLabels[condition.targetPressure]}’ 상태가 되면 알려드립니다.`
+      : `청산 압력의 쏠림이 저장 당시${condition.baselinePressure ? ` ‘${pressureLabels[condition.baselinePressure]}’` : ""}와 달라지면 알려드립니다.`,
+    action: "청산 압력 조건을 충족하면 알림 받기",
+    waiting: "청산 압력은 가격이 움직일 때 강제 정리가 몰릴 수 있는 방향입니다."
+  };
+}
+
+export function monitorAlertExpiry(expiresAt: string) {
+  const date = new Date(expiresAt);
+  return Number.isFinite(date.getTime())
+    ? `${new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(date)} KST까지`
+    : "감시 종료 시각 확인 필요";
 }
 
 export function monitorConditionOutcomeCopy(condition: MonitorCondition) {
@@ -109,26 +149,19 @@ export function monitorConditionOutcomeCopy(condition: MonitorCondition) {
     Number.isFinite(threshold);
   if (isPriceCondition) {
     const price = threshold.toLocaleString("ko-KR", { maximumFractionDigits: 4 });
-    const side = condition.kind === "price_cross_above" ? "위" : "아래";
+    const side = condition.kind === "price_cross_above" ? "이상으로" : "이하로";
     const direction = condition.kind === "price_cross_above" ? "오르는" : "내리는";
     return {
       met: condition.role === "invalidation"
-        ? `${price} ${side}에서 끝나면 → 현재 해석을 유지하지 않고 최신 분석으로 다시 판단합니다.`
-        : `${price} ${side}에서 끝나면 → ${direction} 근거가 계속되는지 최신 분석으로 다시 확인합니다.`,
-      unmet: "그 전까지 → 이 조건만으로 방향이 확정됐다고 보지 않습니다.",
+        ? `${price} ${side} 마감하면 → 현재 해석을 유지하지 않고 최신 분석으로 다시 판단합니다.`
+        : `${price} ${side} 마감하면 → ${direction} 근거가 계속되는지 최신 분석으로 다시 확인합니다.`,
+      unmet: monitorAlertCopy(condition).waiting,
       note: `전문 기준 · ${plainConditionBasis(condition.basis)} · 봉 마감 기준 · 자동 주문 아님`
     };
   }
-  if (condition.baselineState === "upside_watch" || condition.baselineState === "downside_watch") {
-    return {
-      met: "현재 방향이 달라지면 → 최신 분석에서 새 근거와 위험을 다시 봅니다.",
-      unmet: "방향이 그대로면 → 기존 결론도 확정이나 진입 지시로 보지 않습니다.",
-      note: "상태가 바뀌어도 자동 주문이나 진입 지시로 사용하지 않습니다."
-    };
-  }
   return {
-    met: "근거가 한쪽으로 모이면 → 최신 분석에서 방향을 다시 판단합니다.",
-    unmet: "계속 섞여 있으면 → 방향을 정하지 않고 기다립니다.",
+    met: "조건 확인 후 → 당시 근거와 남은 위험을 확인해 다시 판단합니다.",
+    unmet: monitorAlertCopy(condition).waiting,
     note: "상태가 바뀌어도 자동 주문이나 진입 지시로 사용하지 않습니다."
   };
 }

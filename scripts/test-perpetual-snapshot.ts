@@ -103,9 +103,9 @@ const priceCopyCondition: MonitorCondition = {
   basis: "확정 구조(MSS) 돌파선"
 };
 assert.equal(monitorConditionHeading(priceCopyCondition), "다음에 확인할 것");
-assert.equal(monitorConditionDisplayLabel(priceCopyCondition), "15분봉이 60,000 위에서 끝나는지 확인");
-assert.match(monitorConditionOutcomeCopy(priceCopyCondition).met, /60,000 위에서 끝나면 → 오르는 근거/);
-assert.match(monitorConditionOutcomeCopy(priceCopyCondition).unmet, /그 전까지 →/);
+assert.equal(monitorConditionDisplayLabel(priceCopyCondition), "15분봉이 60,000 이상으로 마감하는지 확인");
+assert.match(monitorConditionOutcomeCopy(priceCopyCondition).met, /60,000 이상으로 마감하면 → 오르는 근거/);
+assert.match(monitorConditionOutcomeCopy(priceCopyCondition).unmet, /잠깐 닿는 것만으로는 알리지 않습니다/);
 assert.match(monitorConditionOutcomeCopy(priceCopyCondition).note, /전문 기준 · 새 추세 확인선 \(MSS\).*자동 주문 아님/);
 assert.equal(plainConditionBasis("전환 경고(CHoCH) 돌파선"), "반대 방향 전환 주의선 (CHoCH)");
 assert.equal(beginnerTerm("ob"), "강한 움직임이 시작된 가격대 (OB)");
