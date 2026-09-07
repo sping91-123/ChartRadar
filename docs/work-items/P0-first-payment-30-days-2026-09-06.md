@@ -1,6 +1,6 @@
 # 첫 유료 결제까지 30일: 제품과 운영의 고정 기준
 
-기준일: 2026-09-06 KST. 목표 기한: 2026-10-06 23:59 KST. 대표 요청에 따른 로컬 구현이며 push/release/deploy는 별도 승인 대상이다.
+기준일: 2026-09-06 KST. 목표 기한: 2026-10-06 23:59 KST. 대표 승인에 따라 2026-09-07 KST에 운영 배포까지 완료했다.
 
 ## 결정과 범위
 
@@ -28,7 +28,7 @@
 - [x] B. Pro: 조작 가능한 이용 예시, 비교, 직접 구매 버튼, 중복 섹션 축약.
 - [x] C. 알트·현물·글로벌·복기: 주 행동 앞당기기, 보조 자료와 선택 입력 축약.
 - [x] D. 노출 계측·타입·빌드·권한/결제/분석 회귀·모바일 흐름 검증.
-- [x] E. 배포 검토 자료와 30일 운영안 준비. 실제 배포·모집·결제 성과는 아래 운영 조건으로 별도 기록.
+- [x] E. 배포 검토 자료와 30일 운영안 준비 및 운영 반영. 모집·실제 결제 성과는 아래 운영 조건으로 별도 기록.
 
 ## 첫 30일 운영안 (대표 실행용, 외부 발송/게시하지 않음)
 
@@ -77,10 +77,16 @@
 - 최초 빌드의 새 컴포넌트 닫는 태그 누락, 문구 검사 1건, 복기 빈 화면의 잘못된 상세 링크를 수정하고 재검증했다. 뉴스 검증 대기는 로컬 NEWS_IMPACT_V1=off 때문이었으며 on 모드 재검증을 통과했다.
 - 증거: `output/playwright/conversion-2026-09-06/`의 build.txt, routes.json, actions.json, mobile-360.json 및 PNG. 해당 폴더는 gitignore된 로컬 확인 자료다.
 
-### 운영 완료 조건 (아직 미실행)
+### 운영 배포 기록
 
-1. 대표 승인 후 scoped commit/push/deploy, upstream SHA·운영 route·공개 API/Pro 경계·런타임 로그 확인. 현재는 로컬 수정이며 운영 사용자에게 반영되지 않았다.
-2. Android 실제 적격 계정의 로그인→감시→알림 권한→스토어 체험·취소·복원·서버 권한 확인. 외부 Chrome의 스토어 링크 검증을 실기기 구매 성공으로 표현하지 않는다.
+- 커밋 `affa6f040f7218f2ec00dcacac8260fa8ba49ecb`를 `codex/news-impact-v2-release-record`에 push했고 upstream SHA 일치를 확인했다.
+- Vercel deployment `dpl_ELUhGd2zMZ9ruY1hViPAseUv3MmN`은 `READY / production`이며 `https://chartradar.kr` alias가 연결됐다.
+- 운영 `GET /api/health`는 `ok=true`, 익명 `GET /api/crypto-home-snapshot?asset=btc`는 `quality=ready`, `access=basic`, Pro `pro` 속성 없음, `Cache-Control: no-store, max-age=0, private`, `Vary: Authorization`을 반환했다.
+- 외부 Chrome 390×844에서 첫 진입의 무료 시작, Pro 가격·14일 체험 확인·자동 갱신·해지 안내와 Google Play CTA를 확인했다. 콘솔 오류/경고는 0건이며 신규 Vercel error log도 없었다.
+
+### 운영 완료 조건 (배포 후 남은 항목)
+
+1. Android 실제 적격 계정의 로그인→감시→알림 권한→스토어 체험·취소·복원·서버 권한 확인. 외부 Chrome의 스토어 링크 검증을 실기기 구매 성공으로 표현하지 않는다.
 3. 배포 시각을 측정 기준으로 기록하고 위 30일 운영안의 모집을 실행한다. 모집 문안을 발송하거나 코호트 상태를 임의로 시작하지 않았다.
 4. 기존 저장 분석은 생성 당시 문구를 유지할 수 있다. 배포 후 새 분석 생성에서도 구체적인 관망 사유와 확인 조건이 반영되는지 확인한다. 기록을 새 문구로 덮어 당시 판단을 바꾸지 않는다.
 5. 만기와 실제 스토어 유료 원장을 확인해야 첫 결제 목표 달성이다. 현재는 실제 결제가 발생했다고 주장할 수 없다.
