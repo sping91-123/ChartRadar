@@ -3,8 +3,10 @@ import type {
   MonitorConditionKind,
   MonitorConditionRole,
   PerpetualAsset,
+  PerpetualDecisionSnapshot,
   PerpetualSymbol
 } from "@/lib/perpetualDecisionSnapshot";
+import { decisionStateLabel, plainDecisionText } from "./perpetualDecisionCopy";
 
 export type PerpetualMonitorStatus =
   | "active"
@@ -31,6 +33,7 @@ export interface PerpetualScenarioMonitor {
   triggeredAt: string | null;
   createdAt: string;
   updatedAt: string;
+  lastEvaluation?: { quality: PerpetualDecisionSnapshot["quality"]; generatedAt: string; headline: string } | null;
 }
 
 export interface PerpetualMonitorRow {
@@ -101,14 +104,28 @@ export function toPerpetualScenarioMonitor(row: PerpetualMonitorRow): PerpetualS
   };
 }
 
-export function monitorNotificationCopy(condition: MonitorCondition) {
-  if (condition.role === "invalidation") {
-    return { title: "시나리오 무효화", body: `${condition.label} 조건이 확인되었습니다.` };
+export function monitorNotificationCopy(condition: MonitorCondition, snapshot: PerpetualDecisionSnapshot) {
+  const kind = condition.role === "invalidation" ? "시나리오 무효화"
+    : condition.kind === "decision_state_change" || condition.kind === "pressure_state_change" ? "판단 변경" : "관찰 조건 충족";
+  const time = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(snapshot.generatedAt));
+  const price = (value: number) => value.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  let change = plainDecisionText(snapshot.summary.headline);
+  if (condition.kind === "decision_state_change" && condition.baselineState) {
+    change = `${decisionStateLabel(condition.baselineState)} → ${decisionStateLabel(snapshot.summary.state)}`;
+  } else if (condition.kind === "price_cross_above" || condition.kind === "price_cross_below") {
+    const closedPrice = snapshot.pro?.multiTimeframeEvidence.find(item => item.timeframe === condition.timeframe)?.closedPrice;
+    const frame = condition.timeframe === "15m" ? "15분" : condition.timeframe === "1h" ? "1시간" : "4시간";
+    const side = condition.kind === "price_cross_above" ? "이상" : "이하";
+    change = `${frame} 확정봉 종가${typeof closedPrice === "number" && Number.isFinite(closedPrice) ? ` ${price(closedPrice)}` : ""} · 저장 기준 ${condition.threshold !== null ? price(condition.threshold) : "가격"} ${side}`;
+  } else if (condition.kind === "pressure_state_change") {
+    const pressure = { upsideShorts: "숏 청산 압력", downsideLongs: "롱 청산 압력", balanced: "압력 균형" };
+    const current = snapshot.pro?.pressure?.dominantSide;
+    change = `${condition.baselinePressure ? pressure[condition.baselinePressure] : "이전 압력"} → ${current ? pressure[current] : "압력 변화 확인"}`;
   }
-  if (condition.kind === "decision_state_change" || condition.kind === "pressure_state_change") {
-    return { title: "판단 변경", body: `${condition.label} 조건이 확인되었습니다.` };
-  }
-  return { title: "관찰 조건 충족", body: `${condition.label} 조건이 확인되었습니다.` };
+  return {
+    title: `${snapshot.asset.toUpperCase()} · ${kind}`,
+    body: `${time} KST · ${change}. 주의: ${plainDecisionText(snapshot.summary.topRisk)} 알림 당시 근거를 확인하세요.`
+  };
 }
 
 export function pendingEventNeedsDelivery(

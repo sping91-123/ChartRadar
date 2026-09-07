@@ -315,7 +315,7 @@ export async function runPerpetualMonitorScan(options: PerpetualMonitorScanOptio
       result.triggered += 1;
       if (dryRun) continue;
 
-      const copy = monitorNotificationCopy(row.condition);
+      const copy = monitorNotificationCopy(row.condition, snapshot);
       const payload = {
         type: "perpetual_scenario",
         destination: "perpetual_snapshot",

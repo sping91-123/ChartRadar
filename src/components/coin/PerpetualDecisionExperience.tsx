@@ -181,7 +181,11 @@ function MonitorAction({
   }
 
   if (saved || existingMonitor) {
-    return <ActionButton href="#saved-monitors" onNavigate={() => document.getElementById("saved-monitors")?.setAttribute("open", "")} tone="secondary" className="w-full sm:w-auto"><CheckCircle2 size={15} aria-hidden /> {existingMonitor?.status === "paused" || existingMonitor?.status === "paused_entitlement" ? "저장한 감시 상태 확인" : "저장된 감시 보기"}</ActionButton>;
+    return <ActionButton onClick={() => {
+      const details = document.getElementById("saved-monitors");
+      details?.setAttribute("open", "");
+      details?.scrollIntoView({ block: "start" });
+    }} tone="secondary" className="w-full sm:w-auto"><CheckCircle2 size={15} aria-hidden /> {existingMonitor?.status === "paused" || existingMonitor?.status === "paused_entitlement" ? "저장한 감시 상태 확인" : "저장된 감시 보기"}</ActionButton>;
   }
 
   if (!actionable) {
@@ -674,6 +678,7 @@ export function PerpetualDecisionExperience({
     ? buildStalePerpetualDecisionFallback(snapshot)
     : snapshot;
   const displayQuality: PerpetualDecisionSnapshot["quality"] = displaySnapshot.quality;
+  const reviewingSnapshot = (effectiveSource === "alert" || effectiveSource === "news") && state.continuity?.status === "same";
   const monitorActionable =
     displayQuality === "ready" &&
     !exactAlertContext &&
@@ -761,6 +766,13 @@ export function PerpetualDecisionExperience({
               : "Home에서 본 뒤 시장 데이터가 달라져 최신 분석으로 바꿨습니다. 다음에 확인할 것을 다시 봐주세요."}
         </div>
       ) : null}
+      {reviewingSnapshot ? (
+        <div className="border-l-2 border-ui-brand bg-ui-brand/10 px-3 py-3 text-sm leading-6 text-ui-text">
+          <p className="font-black">{effectiveSource === "alert" ? "알림 당시 분석 복기" : "뉴스 연결 당시 분석 복기"}</p>
+          <p className="mt-1 text-xs text-ui-muted">{formatAsOf(displaySnapshot.generatedAt)}의 가격과 판단을 그대로 보여드립니다. 아래 조건과 위험도 당시 기준입니다.</p>
+          <ActionButton href={`/crypto/perpetual?asset=${asset}`} tone="secondary" className="mt-2 w-full sm:w-auto">현재 분석 보기</ActionButton>
+        </div>
+      ) : null}
 
       <section className="bg-ui-panel px-3 py-4 sm:px-5" aria-labelledby="perpetual-decision-title">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -769,14 +781,16 @@ export function PerpetualDecisionExperience({
             <p className="mt-1 inline-flex items-center gap-1 text-[10.5px] font-semibold text-ui-muted"><Clock3 size={12} aria-hidden /> {formatAsOf(displaySnapshot.generatedAt)} 기준 분석</p>
           </div>
           <div className="flex gap-1">
-            <StatusPill tone={displayQuality === "ready" ? "long" : "risk"} icon={Database}>{qualityLabel(displayQuality)}</StatusPill>
+            <StatusPill tone={displayQuality === "ready" ? "long" : "risk"} icon={Database}>{reviewingSnapshot ? "당시 분석 기록" : qualityLabel(displayQuality)}</StatusPill>
             <StatusPill tone={decisionTone(displaySnapshot.summary.state)} icon={Activity}>{decisionStateLabel(displaySnapshot.summary.state)}</StatusPill>
           </div>
         </div>
 
         <div className="mt-3 flex flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
-          <h1 id="perpetual-decision-title" className="min-w-0 max-w-3xl text-xl font-bold leading-7 tracking-tight text-ui-text [word-break:keep-all]">{plainDecisionText(displaySnapshot.summary.headline)}</h1>
-          <LivePerpetualPrice asset={asset} snapshotPrice={displaySnapshot.price} />
+          <h1 id="perpetual-decision-title" className="min-w-0 max-w-3xl text-xl font-bold leading-7 tracking-tight text-ui-text [word-break:keep-all]">{reviewingSnapshot ? `당시 판단: ${plainDecisionText(displaySnapshot.summary.headline).replace(/^현재는\s*/, "")}` : plainDecisionText(displaySnapshot.summary.headline)}</h1>
+          {reviewingSnapshot ? (
+            <div><p className="text-xs font-semibold text-ui-muted">당시 가격 · USDT</p><p className="text-2xl font-black tabular-nums text-ui-text">{formatPrice(displaySnapshot.price)}</p></div>
+          ) : <LivePerpetualPrice asset={asset} snapshotPrice={displaySnapshot.price} />}
         </div>
 
         <div className="mt-3 grid gap-2 md:grid-cols-2">
@@ -796,7 +810,7 @@ export function PerpetualDecisionExperience({
         <div id="monitor-condition" className="mt-3 flex scroll-mt-24 flex-col gap-2 border-t border-ui-line pt-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="order-2 text-xs leading-5 text-ui-muted sm:order-1">Basic 감시 1개 무료 · 최대 5분 간격 확인<br />알림 연결 시 조건 변화를 알려드립니다. 주문은 실행하지 않습니다.</p>
           <div className="order-1 flex flex-col gap-2 sm:order-2 sm:flex-row">
-            <MonitorAction condition={displaySnapshot.summary.primaryCondition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} onUpgrade={trackMonitorUpgrade} prefilled={activationConditionId === displaySnapshot.summary.primaryCondition.id} existingMonitor={savedCondition(displaySnapshot.summary.primaryCondition)} />
+            {reviewingSnapshot ? <p className="text-xs leading-5 text-ui-muted">새 조건 감시는 현재 분석에서 설정할 수 있습니다.</p> : <MonitorAction condition={displaySnapshot.summary.primaryCondition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} onUpgrade={trackMonitorUpgrade} prefilled={activationConditionId === displaySnapshot.summary.primaryCondition.id} existingMonitor={savedCondition(displaySnapshot.summary.primaryCondition)} />}
             {session ? (
               <ActionButton
                 tone="secondary"
@@ -810,7 +824,7 @@ export function PerpetualDecisionExperience({
             ) : null}
           </div>
         </div>
-        <BrowserConditionNotifications />
+        {!reviewingSnapshot ? <BrowserConditionNotifications /> : null}
         {savesSnapshotWithoutNews ? <p className="mt-2 text-[11px] font-semibold leading-5 text-ui-watch">현재 플랜에서는 선물 분석만 저장됩니다. 공식 뉴스와 발표 전후 비교까지 함께 복기하는 기능은 Coin Pro에서 열립니다.</p> : null}
 
         <details className="mt-3 border-t border-ui-line pt-2">
@@ -852,7 +866,7 @@ export function PerpetualDecisionExperience({
       />
 
       {newsContext ? <NewsImpactContextCard context={newsContext} /> : null}
-      {!newsContext ? <PerpetualNewsContextStrip asset={asset} snapshotId={displaySnapshot.id} /> : null}
+      {!newsContext && !reviewingSnapshot ? <PerpetualNewsContextStrip asset={asset} snapshotId={displaySnapshot.id} /> : null}
 
       <ProgressiveDetails title="차트와 시간대별 근거 펼치기" description="기술적 관점·가격 흐름·수급을 더 확인하고 싶을 때 봅니다.">
       <PerpetualAnalysisWorkspace
@@ -882,7 +896,7 @@ export function PerpetualDecisionExperience({
             {conditions.slice(1).map((condition) => (
               <div key={condition.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div><p className="text-xs font-black text-ui-text">{condition.role === "confirmation" ? "방향 근거 강화 기준" : "해석 재검토 기준"}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{monitorConditionDisplayLabel(condition)}</p></div>
-                <MonitorAction condition={condition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} onUpgrade={trackMonitorUpgrade} prefilled={activationConditionId === condition.id} existingMonitor={savedCondition(condition)} />
+                <MonitorAction condition={condition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable && !reviewingSnapshot} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} onUpgrade={trackMonitorUpgrade} prefilled={activationConditionId === condition.id} existingMonitor={savedCondition(condition)} />
               </div>
             ))}
           </div>

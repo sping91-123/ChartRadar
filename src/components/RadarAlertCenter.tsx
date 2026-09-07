@@ -406,7 +406,11 @@ export function RadarAlertCenter({ compact = false, market = "crypto", newsImpac
   const [setupMatches, setSetupMatches] = useState<SetupAlertMatch[]>([]);
   const [monitorStatus, setMonitorStatus] = useState<SetupAlertMonitorStatus | null>(null);
   const [permission, setPermission] = useState<PermissionState>("default");
-  const [appPushState, setAppPushState] = useState<AppPushDeviceState>(() => readAppPushState());
+  // Native device storage is available only after hydration; keep the first render identical to the server.
+  const [appPushState, setAppPushState] = useState<AppPushDeviceState>({
+    supported: false, platform: "web", permission: "unsupported", token: null, markets: [], synced: false,
+    registrationStage: "idle", lastFailureStage: null, updatedAt: null, lastError: null, lastNotificationTitle: null
+  });
   const [isRequesting, setIsRequesting] = useState(false);
   const [activeTestKind, setActiveTestKind] = useState<PushTestKind | null>(null);
   const [isDisablingPush, setIsDisablingPush] = useState(false);
@@ -651,13 +655,9 @@ export function RadarAlertCenter({ compact = false, market = "crypto", newsImpac
 
     setActiveTestKind(kind);
     try {
-      const result = (await sendAndroidAppPushTest(kind)) as { logged?: boolean };
+      await sendAndroidAppPushTest(kind);
       const message = getPushTestMessage(kind);
-      setTestResult(
-        result.logged === false
-          ? `${message.label}을 보냈습니다. 수신 여부를 휴대폰 알림 영역에서 확인해 주세요.`
-          : `${message.label}을 보냈습니다. 휴대폰 알림 영역에서 수신 여부를 확인해 주세요.`
-      );
+      setTestResult(`${message.label} 발송을 요청했습니다. 휴대폰 알림창에서 알림을 눌러 확인해 주세요. 발송 성공과 기기 수신은 별도로 확인합니다.`);
     } catch (error) {
       setTestResult(error instanceof Error ? error.message : "테스트 알림 발송에 실패했습니다.");
     } finally {
@@ -791,6 +791,16 @@ export function RadarAlertCenter({ compact = false, market = "crypto", newsImpac
           </div>
         </div>
 
+        {isAndroidAppPush ? (
+          <div className="mt-4 border-y border-ui-line py-3">
+            <ActionButton tone="secondary" onClick={() => void requestTestPush("default")} disabled={!canSendAppPushTest || Boolean(activeTestKind)} className="w-full sm:w-auto">
+              {activeTestKind === "default" ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <BellRing size={16} aria-hidden />} 이 휴대폰으로 수신 확인
+            </ActionButton>
+            <p className="mt-2 text-xs leading-5 text-ui-muted">이 계정에 연결된 현재 휴대폰으로 테스트 알림 1건을 보냅니다. 실제 시장 조건 알림과 구분됩니다.</p>
+            <p className="mt-1 text-xs text-ui-muted">{appPushState.lastReceiptAt ? `이 기기에서 알림 수신 또는 열기 확인: ${formatAppPushUpdatedAt(appPushState.lastReceiptAt)}` : "이 기기에서 알림 수신은 아직 확인되지 않았습니다."}</p>
+            {testResult ? <p role="status" className="mt-2 text-xs leading-5 text-ui-brand">{testResult}</p> : null}
+          </div>
+        ) : null}
         <div className="mt-4">
           <DataRow className={alertRowClassName} label="앱 푸시 연결" value={<StatusPill tone={isAndroidAppPush ? appPushConnectionTone(appPushState) : "info"}>{isAndroidAppPush ? appPushConnectionLabel(appPushState) : "앱에서 사용 가능"}</StatusPill>} />
           <DataRow className={alertRowClassName} label="알림 권한" value={<StatusPill tone={permissionTone(permission, appPushState, isAndroidAppPush)}>{permissionSummaryLabel(permission, appPushState, isAndroidAppPush)}</StatusPill>} />

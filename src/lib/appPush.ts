@@ -31,6 +31,7 @@ export interface AppPushDeviceState {
   updatedAt: string | null;
   lastError: string | null;
   lastNotificationTitle: string | null;
+  lastReceiptAt?: string | null;
 }
 
 export interface AppPushPreferences {
@@ -535,7 +536,7 @@ export async function sendAndroidAppPushTest(kind: PushTestKind = "default") {
       Authorization: `Bearer ${session.accessToken}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ kind })
+    body: JSON.stringify({ kind, token: readAppPushState().token })
   });
 
   const payload = (await response.json().catch(() => ({}))) as { error?: string };
@@ -554,12 +555,14 @@ export async function registerAppPushListeners() {
     writeAppPushState({
       ...readAppPushState(),
       lastNotificationTitle: notification.title ?? "차트 레이더 앱 알림",
+      lastReceiptAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
   });
 
   await PushNotifications.addListener("pushNotificationActionPerformed", (event) => {
     const pushData = pushActionData(event as PushNotificationActionEvent);
+    writeAppPushState({ ...readAppPushState(), lastReceiptAt: new Date().toISOString() });
     rememberPerpetualAlertContext(pushData);
     const targetPath = resolvePushTargetPath(pushData);
     console.info("[app-push] notification action performed", {

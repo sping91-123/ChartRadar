@@ -15,6 +15,37 @@ import { readOptionalJson } from "../src/lib/server/push/optionalJson";
 import { resolvePushScannerOrigin } from "../src/lib/server/push/scannerOrigin";
 import { shouldConnectPushAfterFirstMonitor } from "../src/lib/firstMonitorPush";
 import type { AppPushDeviceState } from "../src/lib/appPush";
+import { pushTestRequest } from "../src/lib/pushReceiptTest";
+import { monitorEvaluationStatus } from "../src/lib/perpetualMonitoringStatus";
+import type { PerpetualScenarioMonitor } from "../src/lib/perpetualMonitor";
+
+const receiptToken = "fixture-current-device-token";
+assert.deepEqual(pushTestRequest({ kind: "default", token: receiptToken }, false), { kind: "default", token: receiptToken });
+assert.equal(pushTestRequest({ kind: "crypto", token: receiptToken }, false), null, "ordinary users cannot send market examples");
+assert.equal(pushTestRequest({ kind: "default" }, false), null, "ordinary tests must specify their current device");
+assert.equal(pushTestRequest({ kind: "unknown", token: receiptToken }, true), null);
+assert.equal(pushTestRequest({ kind: "default", token: "x".repeat(4097) }, false), null);
+assert.equal(pushTestRequest({ kind: "default", token: "token&user_id=another-account" }, false), null);
+assert.deepEqual(pushTestRequest({ kind: "crypto" }, true), { kind: "crypto", token: null }, "legacy administrator callers remain compatible");
+assert.equal(resolvePushTargetPath({ type: "push_test", kind: "default", market: "crypto", targetPath: "/alerts" }), "/alerts", "receipt confirmation must not be redirected to Home");
+assert.equal(resolvePushTargetPath({ type: "push_test", kind: "crypto", market: "crypto", targetPath: "/crypto" }), "/crypto");
+
+const monitorNow = Date.parse("2026-09-07T14:00:00Z");
+const monitored = {
+  id: "monitor", snapshotId: "snapshot", lastSnapshotId: "last", conditionId: "condition",
+  condition: { id: "condition", kind: "decision_state_change", role: "primary", timeframe: "15m", label: "방향 정렬 확인", threshold: null, expiresAt: "2026-09-08T00:00:00Z" },
+  asset: "btc", symbol: "BTCUSDT", timeframe: "15m", conditionKind: "decision_state_change", conditionRole: "primary", status: "active",
+  expiresAt: "2026-09-08T00:00:00Z", lastEvaluatedAt: "2026-09-07T13:59:00Z", triggeredAt: null, createdAt: "2026-09-07T13:50:00Z", updatedAt: "2026-09-07T13:59:00Z",
+  lastEvaluation: { quality: "ready", generatedAt: "2026-09-07T13:58:00Z", headline: "1시간과 15분 방향이 엇갈립니다." }
+} satisfies PerpetualScenarioMonitor;
+assert.match(monitorEvaluationStatus(monitored, monitorNow).detail, /1시간과 15분/);
+assert.equal(monitorEvaluationStatus(monitored, monitorNow).nextAt, "2026-09-07T14:04:00.000Z");
+assert.equal(monitorEvaluationStatus({ ...monitored, lastEvaluatedAt: null }, monitorNow).label, "첫 검사 대기");
+assert.equal(monitorEvaluationStatus({ ...monitored, lastEvaluatedAt: "2026-09-07T13:50:00Z" }, monitorNow).delayed, true);
+assert.equal(monitorEvaluationStatus({ ...monitored, lastEvaluation: { ...monitored.lastEvaluation, quality: "partial" } }, monitorNow).label, "일부 데이터 부족", "insufficient data must not be called a non-trigger");
+assert.equal(monitorEvaluationStatus({ ...monitored, lastEvaluation: null }, monitorNow).label, "최근 검사 완료");
+assert.equal(monitorEvaluationStatus({ ...monitored, status: "paused" }, monitorNow).nextAt, null);
+assert.equal(monitorEvaluationStatus({ ...monitored, expiresAt: "2026-09-07T13:00:00Z" }, monitorNow).label, "감시 기간 종료");
 
 function pushState(patch: Partial<AppPushDeviceState>): AppPushDeviceState {
   return {

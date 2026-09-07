@@ -9,6 +9,7 @@ import { analyzeTimeframe, type Candle } from "../src/lib/marketAnalysis";
 import { parseClosedBinanceKlines } from "../src/lib/marketTime";
 import { comparePerpetualShadowDecision } from "../src/lib/perpetualShadowComparison";
 import { decisionJournalContextFromSnapshot } from "../src/lib/journal";
+import { monitorNotificationCopy } from "../src/lib/perpetualMonitor";
 import type { ConfirmedCommonRangeOteV1 } from "../src/lib/confirmedCommonRangeOte";
 import { beginnerTerm, legacyStructureTerm, monitorConditionDisplayLabel, monitorConditionHeading, monitorConditionOutcomeCopy, plainConditionBasis, plainDecisionText } from "../src/lib/perpetualDecisionCopy";
 import { perpetualStructureTimeframes, type PerpetualStructureTimeframe, type QualifiedMssState } from "../src/lib/qualifiedMss";
@@ -325,6 +326,16 @@ function input(overrides: Partial<BuildPerpetualDecisionInput> = {}): BuildPerpe
 }
 
 const first = buildPerpetualDecisionSnapshot(input());
+const changedNotification = monitorNotificationCopy(baseCondition, { ...first, summary: { ...first.summary, state: "upside_watch" } });
+assert.equal(changedNotification.title, "BTC · 판단 변경");
+assert.match(changedNotification.body, /신호 엇갈림 → 오르는 힘 우세/);
+assert.match(changedNotification.body, /KST/);
+assert.match(changedNotification.body, /주의:/);
+assert.doesNotMatch(changedNotification.body, /조건이 확인되었습니다/, "do not append an ambiguous future instruction to a triggered event");
+const priceNotification = monitorNotificationCopy({ ...priceCopyCondition, role: "invalidation" }, first);
+assert.equal(priceNotification.title, "BTC · 시나리오 무효화");
+assert.match(priceNotification.body, /15분 확정봉 종가.*저장 기준 60,000 이상/);
+assert.match(monitorNotificationCopy({ ...baseCondition, kind: "pressure_state_change", baselinePressure: "balanced" }, first).body, /압력 균형 →/);
 const second = buildPerpetualDecisionSnapshot(input());
 assert.deepEqual(first, second, "fixed input must produce a deterministic snapshot");
 assert.equal(first.asset, "btc");

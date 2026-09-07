@@ -58,8 +58,12 @@ function payloadString(payload: Record<string, unknown> | null, keys: string[]) 
 
 function alertKindLabel(payload: Record<string, unknown> | null, ruleId: string) {
   const kind = payloadString(payload, ["alertKind", "alert_kind", "kind", "type"]);
-  if (!kind) return ruleId;
-  return kind.replaceAll("_", " ");
+  if (ruleId === "push-test") return "수신 테스트";
+  const labels: Record<string, string> = {
+    macro: "경제 일정", macro_event: "경제 일정", market_scout: "시장 조건", watchlist: "관심 코인",
+    global_momentum: "글로벌 흐름", liquidation: "청산 압력", news_impact: "뉴스 영향", risk_off: "위험 증가"
+  };
+  return labels[kind ?? ""] ?? "조건 알림";
 }
 
 function alertScoreLabel(payload: Record<string, unknown> | null) {

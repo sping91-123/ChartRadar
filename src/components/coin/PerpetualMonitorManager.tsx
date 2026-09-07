@@ -5,6 +5,8 @@ import { Bell, ChevronDown, Loader2, Pause, Play, X } from "lucide-react";
 import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
 import { monitorConditionDisplayLabel, monitorConditionOutcomeCopy } from "@/lib/perpetualDecisionCopy";
 import type { PerpetualMonitorCapabilities, PerpetualScenarioMonitor } from "@/lib/perpetualMonitor";
+import { monitorEvaluationStatus } from "@/lib/perpetualMonitoringStatus";
+import { startVisiblePolling } from "@/lib/visiblePolling";
 
 type ManagerState =
   | { status: "idle" | "loading"; monitors: PerpetualScenarioMonitor[]; history: PerpetualScenarioMonitor[] }
@@ -41,6 +43,7 @@ function historyTimeCopy(value: string) {
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return "시각 확인 필요";
   return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
     month: "numeric",
     day: "numeric",
     hour: "2-digit",
@@ -60,6 +63,7 @@ export function PerpetualMonitorManager({
 }) {
   const [state, setState] = useState<ManagerState>({ status: "idle", monitors: [], history: [] });
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
   const generationRef = useRef(0);
 
   const load = useCallback(async (signal?: AbortSignal) => {
@@ -109,6 +113,11 @@ export function PerpetualMonitorManager({
     };
   }, [load, refreshKey]);
 
+  useEffect(() => {
+    if (!open || !accessToken || busyId) return;
+    return startVisiblePolling(signal => load(signal), 60_000);
+  }, [open, accessToken, busyId, load]);
+
   const updateMonitor = useCallback(async (monitor: PerpetualScenarioMonitor, action: MonitorAction) => {
     if (!accessToken || busyId) return;
     if (action === "cancel" && !window.confirm("이 감시 조건을 취소할까요? 취소한 조건은 다시 시작할 수 없습니다.")) return;
@@ -144,7 +153,7 @@ export function PerpetualMonitorManager({
   const history = state.history;
   const loading = state.status === "loading";
   return (
-    <details id="saved-monitors" className="group scroll-mt-24 bg-ui-panel px-3 py-3 sm:px-5">
+    <details id="saved-monitors" onToggle={event => setOpen(event.currentTarget.open)} className="group scroll-mt-24 bg-ui-panel px-3 py-3 sm:px-5">
       <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 marker:hidden [&::-webkit-details-marker]:hidden">
         <span className="flex min-w-0 items-center gap-2">
           <Bell size={15} className="shrink-0 text-ui-brand" aria-hidden />
@@ -172,6 +181,7 @@ export function PerpetualMonitorManager({
             {monitors.map((monitor) => {
               const status = statusCopy(monitor.status);
               const busy = busyId === monitor.id;
+              const evaluation = monitorEvaluationStatus(monitor);
               return (
                 <article key={monitor.id} className="py-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -181,6 +191,12 @@ export function PerpetualMonitorManager({
                   <p className="mt-1 text-xs font-semibold leading-5 text-ui-muted [word-break:keep-all]">{monitorConditionDisplayLabel(monitor.condition)}</p>
                   <p className="mt-0.5 text-[10.5px] leading-4 text-ui-subtle">{monitorConditionOutcomeCopy(monitor.condition).met}</p>
                   <p className="mt-1 text-[10.5px] text-ui-subtle">{expiryCopy(monitor.expiresAt)}</p>
+                  <div className="mt-2 border-l-2 border-ui-line pl-3 text-xs leading-5">
+                    <p className={evaluation.delayed ? "font-semibold text-ui-risk" : "font-semibold text-ui-text"}>{evaluation.label}</p>
+                    <p className="text-ui-muted">{evaluation.detail}</p>
+                    <p className="mt-1 text-ui-subtle">마지막 검사: {monitor.lastEvaluatedAt ? `${historyTimeCopy(monitor.lastEvaluatedAt)} KST` : "아직 없음"}</p>
+                    {evaluation.nextAt ? <p className="text-ui-subtle">다음 확인: 약 {historyTimeCopy(evaluation.nextAt)} KST · 최대 5분 간격</p> : null}
+                  </div>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {monitor.status === "active" ? (
                       <ActionButton tone="secondary" disabled={busy} onClick={() => void updateMonitor(monitor, "pause")}>

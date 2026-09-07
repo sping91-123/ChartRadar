@@ -1,4 +1,4 @@
-import type { MonitorCondition, PerpetualAsset } from "@/lib/perpetualDecisionSnapshot";
+import type { MonitorCondition, PerpetualAsset, PerpetualDecisionSnapshot } from "@/lib/perpetualDecisionSnapshot";
 import {
   toPerpetualScenarioMonitor,
   type PerpetualMonitorRow,
@@ -58,7 +58,21 @@ export async function listUserPerpetualMonitors(
   const rows = await supabaseAdminRest<PerpetualMonitorRow[]>(
     `perpetual_scenario_monitors?select=${monitorSelect}&user_id=eq.${encodeURIComponent(userId)}${statusFilter}&order=created_at.desc&limit=100`
   );
-  return rows.map(toPerpetualScenarioMonitor);
+  const monitors = rows.map(toPerpetualScenarioMonitor);
+  const ids = Array.from(new Set(rows.filter(row => row.status === "active").map(row => row.last_snapshot_id).filter((id): id is string => Boolean(id))));
+  if (!ids.length) return monitors;
+  // Read only the snapshots referenced by this authenticated user's own monitors.
+  const evaluations = await supabaseAdminRest<Array<{
+    id: string;
+    quality: PerpetualDecisionSnapshot["quality"];
+    generated_at: string;
+    headline: string | null;
+  }>>(`perpetual_decision_snapshots?select=id,quality,generated_at,headline:public_payload->summary->>headline&id=in.(${ids.map(encodeURIComponent).join(",")})`).catch(() => []);
+  const byId = new Map(evaluations.map(item => [item.id, item]));
+  return monitors.map(monitor => {
+    const evaluation = monitor.lastSnapshotId ? byId.get(monitor.lastSnapshotId) : null;
+    return { ...monitor, lastEvaluation: evaluation ? { quality: evaluation.quality, generatedAt: evaluation.generated_at, headline: evaluation.headline ?? "저장한 조건을 계속 확인합니다." } : null };
+  });
 }
 
 export async function listRecentTerminalPerpetualMonitors(

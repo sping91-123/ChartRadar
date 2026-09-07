@@ -135,6 +135,7 @@ export function resolvePushTargetPath(data: PushTargetData | null | undefined) {
     return "/alerts";
   }
   const explicitTargetPath = sanitizePushTargetPath(payload.targetPath);
+  if (normalizedValue(payload.type) === "push_test" && normalizedValue(payload.kind) === "default") return "/alerts";
   if (explicitTargetPath && explicitTargetPath !== "/alerts") return explicitTargetPath;
 
   const metadataTargetPath = routeFromPushMetadata(payload);
