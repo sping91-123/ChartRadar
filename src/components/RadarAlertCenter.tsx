@@ -1,6 +1,7 @@
 "use client";
 // 사용자가 받을 레이더 알림 조건을 설정하고 Pro 가치를 확인하는 패널입니다.
 import { useEffect, useMemo, useState } from "react";
+import { BrowserConditionNotifications } from "@/components/BrowserConditionNotifications";
 import { BellRing, CheckCircle2, Clock3, Crown, Loader2, Newspaper, Radar, ShieldCheck } from "lucide-react";
 import { ActionButton, AppSurface, DataRow, MetricRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import {
@@ -748,7 +749,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto", newsImpac
         </AppSurface>
       ) : null}
 
-      <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
+      {isAndroidAppPush || isGlobal ? <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -831,6 +832,8 @@ export function RadarAlertCenter({ compact = false, market = "crypto", newsImpac
           </AppSurface>
         ) : null}
       </PanelCard>
+
+      : <BrowserConditionNotifications />}
 
       {toast ? (
         <AppSurface as="p" tone="inset" padding="sm" className="text-xs leading-5 text-ui-brand shadow-none">

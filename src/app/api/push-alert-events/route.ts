@@ -7,6 +7,10 @@ import { newsImpactRuntimePolicy } from "@/lib/server/newsImpactMode";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function privateJson(body: unknown, init: { status?: number } = {}) {
+  return NextResponse.json(body, { ...init, headers: { "Cache-Control": "private, no-store, max-age=0", Vary: "Authorization" } });
+}
+
 interface PushAlertEventRow {
   id: string;
   market: "crypto" | "stocks";
@@ -56,16 +60,17 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const market = normalizeMarket(url.searchParams.get("market"));
     const limit = normalizeLimit(url.searchParams.get("limit"));
+    const kindFilter = url.searchParams.get("kind") === "perpetual" ? "&rule_id=eq.perpetual_scenario" : "";
     const rows = await supabaseAdminRest<PushAlertEventRow[]>(
       `push_alert_events?select=id,market,rule_id,event_key,title,body,payload,sent_at,created_at,notification_kind,delivery_status,read_at&user_id=eq.${encodeURIComponent(
         user.id
-      )}&market=eq.${market}&order=sent_at.desc&limit=${limit}`
+      )}&market=eq.${market}${kindFilter}&order=created_at.desc&limit=${limit}`
     );
 
     const events = newsImpactRuntimePolicy().expose
       ? rows
       : rows.filter((row) => row.notification_kind !== "news_impact" && row.rule_id !== "news-impact");
-    return NextResponse.json({ events, market });
+    return privateJson({ events, market });
   } catch (error) {
     console.error("[api/push-alert-events] error:", error);
     return NextResponse.json({ error: "알림 기록을 불러오지 못했습니다." }, { status: 500 });

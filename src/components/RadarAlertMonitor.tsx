@@ -1,6 +1,7 @@
 "use client";
 // 앱이 켜져 있는 동안 시장별 레이더 감시 조건을 주기적으로 다시 확인한다.
 import { useCallback, useEffect, useRef } from "react";
+import { BrowserPerpetualAlertMonitor } from "@/components/BrowserPerpetualAlertMonitor";
 import { chartTimeframes, type Candle, type ChartTimeframe, type TradingMode } from "@/lib/marketAnalysis";
 import { isAndroidNativeApp, registerAppPushListeners } from "@/lib/appPush";
 import type { ProScoutSetup, ScoutSetup, ScoutSetupPayload } from "@/lib/setupScout";
@@ -256,5 +257,5 @@ export function RadarAlertMonitor() {
     };
   }, [runCheck, runMarketCheck]);
 
-  return null;
+  return <BrowserPerpetualAlertMonitor />;
 }

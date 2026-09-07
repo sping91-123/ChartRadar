@@ -6,6 +6,7 @@ import { Activity, AlertTriangle, Bell, BookOpen, CheckCircle2, Clock3, Database
 import { PerpetualDecisionChart } from "@/components/coin/PerpetualDecisionChart";
 import { PerpetualAnalysisWorkspace } from "@/components/coin/PerpetualAnalysisWorkspace";
 import { PerpetualMonitorManager } from "@/components/coin/PerpetualMonitorManager";
+import { BrowserConditionNotifications } from "@/components/BrowserConditionNotifications";
 import { ProgressiveDetails } from "@/components/ProgressiveDetails";
 import { NewsImpactContextCard } from "@/components/news/NewsImpactContextCard";
 import { PerpetualNewsContextStrip } from "@/components/news/PerpetualNewsContextStrip";
@@ -171,14 +172,6 @@ function MonitorAction({
     );
   }
 
-  if (!actionable) {
-    return (
-      <ActionButton tone="secondary" disabled className="w-full sm:w-auto">
-        <Bell size={15} aria-hidden /> 데이터 정상화 후 가능
-      </ActionButton>
-    );
-  }
-
   if (!isAuthenticated || capabilities.requiresAuth) {
     return (
       <ActionButton href={`/login?returnTo=${encodeURIComponent(currentReturnTo())}`} tone="primary" className="w-full sm:w-auto">
@@ -189,6 +182,10 @@ function MonitorAction({
 
   if (saved || existingMonitor) {
     return <ActionButton href="#saved-monitors" onNavigate={() => document.getElementById("saved-monitors")?.setAttribute("open", "")} tone="secondary" className="w-full sm:w-auto"><CheckCircle2 size={15} aria-hidden /> {existingMonitor?.status === "paused" || existingMonitor?.status === "paused_entitlement" ? "저장한 감시 상태 확인" : "저장된 감시 보기"}</ActionButton>;
+  }
+
+  if (!actionable) {
+    return <ActionButton tone="secondary" disabled className="w-full sm:w-auto"><Bell size={15} aria-hidden /> 최신 분석 확인 후 감시 가능</ActionButton>;
   }
 
   if (capabilities.activeMonitorCount >= capabilities.monitorLimit) {
@@ -751,7 +748,7 @@ export function PerpetualDecisionExperience({
       {activationPending ? (
         <div className="border-l-2 border-ui-brand bg-ui-brand/10 px-3 py-3 text-sm leading-6 text-ui-text">
           <p className="font-black">보던 시장으로 돌아왔습니다. 첫 감시 조건이 아래에 준비되어 있습니다.</p>
-          <p className="mt-1 text-xs text-ui-muted">조건을 직접 확인해 저장한 뒤에만 Android 알림 권한을 요청합니다.</p>
+          <p className="mt-1 text-xs text-ui-muted">조건을 확인해 저장하고, 사용할 기기의 알림을 연결해 주세요.</p>
         </div>
       ) : null}
       {continuityRefreshed ? (
@@ -797,7 +794,7 @@ export function PerpetualDecisionExperience({
         </div>
 
         <div id="monitor-condition" className="mt-3 flex scroll-mt-24 flex-col gap-2 border-t border-ui-line pt-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="order-2 text-xs leading-5 text-ui-muted sm:order-1">Basic 감시 1개 무료 · 최대 5분 간격 확인<br />앱 알림 연결 시 알려드립니다. 주문은 실행하지 않습니다.</p>
+          <p className="order-2 text-xs leading-5 text-ui-muted sm:order-1">Basic 감시 1개 무료 · 최대 5분 간격 확인<br />알림 연결 시 조건 변화를 알려드립니다. 주문은 실행하지 않습니다.</p>
           <div className="order-1 flex flex-col gap-2 sm:order-2 sm:flex-row">
             <MonitorAction condition={displaySnapshot.summary.primaryCondition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} onUpgrade={trackMonitorUpgrade} prefilled={activationConditionId === displaySnapshot.summary.primaryCondition.id} existingMonitor={savedCondition(displaySnapshot.summary.primaryCondition)} />
             {session ? (
@@ -813,6 +810,7 @@ export function PerpetualDecisionExperience({
             ) : null}
           </div>
         </div>
+        <BrowserConditionNotifications />
         {savesSnapshotWithoutNews ? <p className="mt-2 text-[11px] font-semibold leading-5 text-ui-watch">현재 플랜에서는 선물 분석만 저장됩니다. 공식 뉴스와 발표 전후 비교까지 함께 복기하는 기능은 Coin Pro에서 열립니다.</p> : null}
 
         <details className="mt-3 border-t border-ui-line pt-2">
