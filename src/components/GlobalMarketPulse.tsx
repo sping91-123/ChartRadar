@@ -1,10 +1,12 @@
 "use client";
 // 글로벌 주요 자산의 미국장 30초 체크 판단을 보여주는 대시보드입니다.
 import Link from "next/link";
+import { ProgressiveDetails } from "@/components/ProgressiveDetails";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, BarChart3, CalendarClock, Gauge, LineChart, Loader2, Lock, Newspaper, RefreshCw, ShieldAlert, Sparkles, type LucideIcon } from "lucide-react";
 import { withSupabaseAuth } from "@/lib/authFetch";
+import { globalDataReferenceLabel, type GlobalDataAsOf } from "@/lib/globalMarketPresentation";
 import { newsImpactClassificationLabel, newsImpactTone } from "@/lib/newsImpactPresentation";
 
 type MarketMode = "Risk-On" | "Neutral" | "Risk-Off";
@@ -82,6 +84,7 @@ type RelationshipCheck = {
 type DashboardPayload = {
   capabilities: { canSeeProDetail: boolean; newsImpactEnabled: boolean };
   updatedAt: string;
+  dataAsOf?: GlobalDataAsOf | null;
   headline: string;
   marketMode: MarketMode;
   strength: number;
@@ -634,12 +637,9 @@ export function GlobalMarketPulse({ requestedEventId = null }: { requestedEventI
           <div>
             <p className="text-xs font-semibold text-ui-brand">미국장 30초 체크 · 장전/장중 판단 루틴</p>
             <h2 className="mt-1 text-xl font-semibold text-ui-text">오늘의 글로벌 레이더</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-ui-muted [word-break:keep-all]">
-              오늘의 판정, 시장 온도계, 먼저 볼 자산, 관계성 체크를 한 화면에서 판단 보조 자료로 정리합니다.
-            </p>
           </div>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
+        <div className="flex flex-wrap gap-2">
           <Link
             href="/global/assets"
             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-ui-sm bg-ui-elevated px-3 text-xs font-semibold text-ui-brand transition hover:bg-ui-inset hover:text-ui-text"
@@ -647,7 +647,6 @@ export function GlobalMarketPulse({ requestedEventId = null }: { requestedEventI
             <BarChart3 size={13} aria-hidden />
             자산 레이더 보기
           </Link>
-          {showPaywall ? <ProCta /> : null}
           <button
             type="button"
             onClick={() => load()}
@@ -726,7 +725,10 @@ export function GlobalMarketPulse({ requestedEventId = null }: { requestedEventI
               {payload.dataWarning ? (
                 <p className="mt-3 rounded-ui-sm bg-amber-400/10 px-3 py-2 text-xs font-medium leading-5 text-amber-100 [word-break:keep-all]">{payload.dataWarning}</p>
               ) : null}
-              <p className="mt-3 text-[11px] font-medium text-ui-muted">최근 업데이트. {formatTime(payload.updatedAt)} KST</p>
+              <div className="mt-3 text-[11px] font-medium leading-5 text-ui-muted">
+                <p>{globalDataReferenceLabel(payload.dataAsOf)}</p>
+                <p>서버 확인 {formatTime(payload.updatedAt)} KST · 휴장 중에는 최근 거래일 자료를 표시합니다.</p>
+              </div>
             </article>
 
             <FocusAssetStrip items={focusAssets} />
@@ -747,6 +749,7 @@ export function GlobalMarketPulse({ requestedEventId = null }: { requestedEventI
             </div>
           ) : null}
 
+          <ProgressiveDetails title="글로벌 판정의 세부 근거 펼치기" description="시장 온도계·관계성·이벤트·섹터를 더 확인합니다.">
           <div className="mt-4 rounded-ui-lg bg-ui-elevated p-3">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ui-subtle">세부 근거</p>
             <h3 className="mt-1 text-base font-semibold text-ui-text">판정 근거</h3>
@@ -770,6 +773,7 @@ export function GlobalMarketPulse({ requestedEventId = null }: { requestedEventI
             <LeaderBlock payload={payload} isPaid={isPaid} />
             {payload.capabilities.newsImpactEnabled ? <NewsBlock payload={payload} isPaid={isPaid} /> : null}
           </div>
+          </ProgressiveDetails>
         </>
       ) : null}
     </section>

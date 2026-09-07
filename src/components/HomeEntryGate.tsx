@@ -5,8 +5,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Bitcoin, TrendingUp } from "lucide-react";
-import { GoogleLoginButton } from "@/components/GoogleLoginButton";
-import { KakaoLoginButton } from "@/components/KakaoLoginButton";
 import { getSupabaseSession } from "@/lib/supabase";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { readPreferredMarket, savePreferredMarket, type PreferredMarket } from "@/lib/marketPreference";
@@ -31,28 +29,23 @@ const marketEntries = [
 
 function LoginPrompt({ onBrowseBasic }: { onBrowseBasic: () => void }) {
   return (
-    <main className="grid min-h-screen place-items-center overflow-hidden px-3 py-6 sm:px-6 sm:py-8">
-      <section className="w-[calc(100vw-1.5rem)] max-w-md border-y border-white/10 py-5 text-center sm:w-full sm:py-8">
-        <div className="flex flex-col items-center gap-5">
-          <p className="max-w-full text-center text-sm font-semibold leading-6 text-slate-300">
-            로그인하면 관심 종목, 알림, 복기 페이지 등을
-            <br />
-            같은 계정에서 이어서 사용할 수 있습니다.
-          </p>
-          <div className="grid w-full min-w-0 gap-2 [&>*]:min-w-0">
-            <GoogleLoginButton returnTo="/" />
-            <KakaoLoginButton returnTo="/" />
-            <button
-              type="button"
-              onClick={onBrowseBasic}
-              className="mx-auto grid h-10 w-full max-w-full grid-cols-[40px_1fr_40px] items-center rounded border border-[#dadce0] bg-white px-0 text-[14px] font-medium text-[#3c4043] shadow-none transition hover:bg-[#f8fafd]"
-            >
-              <span aria-hidden />
-              <span className="text-center">로그인 없이 둘러보기</span>
-              <span aria-hidden />
-            </button>
-          </div>
+    <main className="min-h-[100dvh] px-5 py-10 sm:py-16">
+      <section className="mx-auto w-full max-w-lg">
+        <p className="text-sm font-semibold text-ui-brand">차트 레이더 · BTC·ETH 판단 보조</p>
+        <h1 className="mt-5 text-3xl font-bold leading-tight tracking-tight text-ui-text [word-break:keep-all]">계속 차트를 볼 수 없다면,<br />기다릴 조건을 남기세요.</h1>
+        <p className="mt-4 text-sm leading-6 text-ui-muted">지금의 방향과 위험을 확인하고, 다시 볼 조건 1개를 무료로 감시할 수 있습니다.</p>
+        <ol className="my-6 space-y-3 border-y border-ui-line py-5 text-sm text-ui-text">
+          <li><span className="mr-3 font-bold text-ui-brand">01</span>지금 기다리는 이유 확인</li>
+          <li><span className="mr-3 font-bold text-ui-brand">02</span>조건을 저장하고 앱에 감시 맡기기</li>
+          <li><span className="mr-3 font-bold text-ui-brand">03</span>조건이 오면 당시 분석 다시 보기</li>
+        </ol>
+        <button type="button" onClick={onBrowseBasic} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-ui-sm bg-ui-brand px-4 text-sm font-bold text-white">로그인 없이 오늘의 조건 보기 <ArrowRight size={17} aria-hidden /></button>
+        <p className="mt-2 text-center text-xs leading-5 text-ui-muted">Basic 무료 · 카드 등록 없음 · 감시 저장 시 로그인</p>
+        <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-ui-muted">
+          <Link href="/login?returnTo=%2Fcrypto%2Fhome" className="inline-flex min-h-11 items-center underline underline-offset-4">기존 계정으로 로그인</Link>
+          <Link href="/global" onClick={() => savePreferredMarket("global")} className="inline-flex min-h-11 items-center underline underline-offset-4">글로벌 시장 보기</Link>
         </div>
+        <p className="mt-4 text-xs leading-5 text-ui-subtle">거래소 시장 자료와 확정된 캔들로 판단 조건을 정리합니다. 조건 충족 시 재확인을 돕는 서비스이며, 주문을 실행하거나 수익을 보장하지 않습니다.</p>
       </section>
     </main>
   );
@@ -146,7 +139,10 @@ export function HomeEntryGate() {
   ]);
 
   const startBasicBrowse = () => {
+    savePreferredMarket("coin");
+    setPreferredMarket("coin");
     setBasicBrowse(true);
+    router.push("/crypto/home");
   };
 
   const loadingView = (

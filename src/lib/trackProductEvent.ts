@@ -3,6 +3,7 @@
 import type { ClientProductEventInput, ClientProductEventName, ProductEventSurface } from "@/lib/productEvents";
 import type { PerpetualAsset } from "@/lib/perpetualDecisionSnapshot";
 import { getActiveSupabaseSession } from "@/lib/supabase";
+import { Capacitor } from "@capacitor/core";
 
 const anonymousStorageKey = "chartRadar.productAnalytics.anonymousId";
 const funnelStorageKey = "chartRadar.productAnalytics.funnelSession.v1";
@@ -71,7 +72,11 @@ export async function trackProductEvent(params: {
       monitorId: params.monitorId,
       newsEventId: params.newsEventId,
       newsReactionId: params.newsReactionId,
-      properties: params.properties
+      properties: {
+        ...params.properties,
+        // Capture the same platform at the gate and paywall; the server still applies its allowlist.
+        platform: Capacitor.isNativePlatform() ? Capacitor.getPlatform() : "web"
+      }
     };
     await fetch("/api/product-events", {
       method: "POST",

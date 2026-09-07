@@ -4,11 +4,13 @@ import type { CoinProPlacement } from "@/lib/coinProConversion";
 import { Crown } from "lucide-react";
 
 interface CryptoProCtaLinkProps {
+  symbol?: string;
   size?: "sm" | "md";
   placement?: CoinProPlacement;
 }
 
 interface CryptoAltAnalysisGateBannerProps {
+  symbol?: string;
   hasCoinPro: boolean;
   allowed: boolean;
   limit: number;
@@ -16,19 +18,22 @@ interface CryptoAltAnalysisGateBannerProps {
 }
 
 interface CryptoAltAnalysisLimitNoticeProps {
+  selectedSymbol?: string;
   limit: number;
   symbols: string[];
   onSelectSymbol: (symbol: string) => void;
   getSymbolLabel: (symbol: string) => string;
 }
 
-export function CryptoProCtaLink({ size = "sm", placement = "crypto_detail_lock" }: CryptoProCtaLinkProps) {
+export function CryptoProCtaLink({ size = "sm", placement = "crypto_detail_lock", symbol }: CryptoProCtaLinkProps) {
   const isLarge = size === "md";
   return (
     <CoinProConversionLink
       source={placement === "alt_daily_limit" ? "alt-analysis-limit" : "alt-analysis"}
       placement={placement}
       routeKey="alts"
+      symbol={symbol}
+      returnTo={symbol ? `/crypto/perpetual/alts?symbol=${encodeURIComponent(symbol)}` : undefined}
       surface="alts"
       className={
         isLarge
@@ -43,6 +48,7 @@ export function CryptoProCtaLink({ size = "sm", placement = "crypto_detail_lock"
 }
 
 export function CryptoAltAnalysisGateBanner({
+  symbol,
   hasCoinPro,
   allowed,
   limit,
@@ -63,13 +69,14 @@ export function CryptoAltAnalysisGateBanner({
                 : "오늘 무료 알트 분석을 모두 사용했습니다. Coin Pro에서는 BTC/ETH·알트 리스크와 추적 조건을 반복 확인할 수 있습니다."}
           </p>
         </div>
-        {!hasCoinPro ? <CryptoProCtaLink placement={allowed ? "alt_usage_banner" : "alt_daily_limit"} /> : null}
+        {!hasCoinPro ? <CryptoProCtaLink symbol={symbol} placement={allowed ? "alt_usage_banner" : "alt_daily_limit"} /> : null}
       </div>
     </div>
   );
 }
 
 export function CryptoAltAnalysisLimitNotice({
+  selectedSymbol,
   limit,
   symbols,
   onSelectSymbol,
@@ -86,7 +93,7 @@ export function CryptoAltAnalysisLimitNotice({
             새로운 알트의 추적 조건과 리스크까지 확인하려면 Coin Pro가 필요합니다.
           </p>
         </div>
-        <CryptoProCtaLink size="md" placement="alt_daily_limit" />
+        <CryptoProCtaLink symbol={selectedSymbol} size="md" placement="alt_daily_limit" />
       </div>
       {symbols.length > 0 ? (
         <div className="mt-4 flex flex-wrap gap-2">

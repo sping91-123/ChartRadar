@@ -1,0 +1,26 @@
+import assert from "node:assert/strict";
+import { homePerpetualHref, findSavedCondition } from "../src/lib/perpetualActivation";
+import { safeReturnTo } from "../src/lib/authRedirect";
+import { sanitizeProductEventProperties } from "../src/lib/productEvents";
+import type { PerpetualScenarioMonitor } from "../src/lib/perpetualMonitor";
+
+const href = homePerpetualHref("eth", "snapshot&example", "journey", true);
+const parsed = new URL(href, "https://chartradar.kr");
+assert.equal(parsed.searchParams.get("snapshot"), "snapshot&example");
+assert.equal(parsed.searchParams.get("asset"), "eth");
+assert.equal(parsed.searchParams.get("source"), "home");
+assert.equal(parsed.searchParams.get("attribution"), "journey");
+assert.equal(parsed.hash, "#monitor-condition");
+assert.equal(safeReturnTo(href), href, "login must preserve the chosen condition section");
+assert.equal(new URL(homePerpetualHref("btc", "snapshot", null), parsed.origin).hash, "");
+const now = Date.parse("2026-09-06T12:00:00Z");
+const monitor = { id: "saved", asset: "eth", conditionId: "condition", status: "active", expiresAt: new Date(now + 60_000).toISOString() } as PerpetualScenarioMonitor;
+assert.equal(findSavedCondition([monitor], "eth", "condition", now)?.id, "saved");
+assert.equal(findSavedCondition([monitor], "btc", "condition", now), undefined);
+assert.equal(findSavedCondition([monitor], "eth", "other-condition", now), undefined);
+assert.equal(findSavedCondition([monitor], "eth", "condition", now + 60_000), undefined);
+for (const status of ["paused", "paused_entitlement"] as const) assert.ok(findSavedCondition([{ ...monitor, status }], "eth", "condition", now));
+for (const status of ["triggered", "expired", "canceled"] as const) assert.equal(findSavedCondition([{ ...monitor, status }], "eth", "condition", now), undefined);
+assert.deepEqual(sanitizeProductEventProperties("pro_gate_viewed", { platform: "android", authState: "authenticated", token: "private" }), { platform: "android", authState: "authenticated" });
+assert.deepEqual(sanitizeProductEventProperties("home_perpetual_opened", { intent: "monitor", source: "home", token: "private" }), { intent: "monitor", source: "home" });
+console.log("Perpetual first monitor links, saved condition matching, and measurement passed.");

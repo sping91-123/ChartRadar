@@ -70,7 +70,7 @@ export function buildStalePerpetualDecisionFallback(snapshot: PerpetualDecisionS
         kind: "decision_state_change",
         role: "primary",
         timeframe: "15m",
-        label: "필수 데이터가 다시 정상화됐는지 확인",
+        label: "확정봉·포지션 쏠림·큰 금액 체결의 최신 갱신을 먼저 확인합니다. 이전 방향은 참고용이며 정상화된 데이터로 다시 비교합니다.",
         threshold: null,
         baselineState: "risk",
         expiresAt: snapshot.expiresAt

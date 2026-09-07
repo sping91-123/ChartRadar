@@ -784,7 +784,7 @@ function ScoreDialog({ snapshot, onClose }: { snapshot: CryptoHomeSnapshot; onCl
 }
 
 export function CoinRadarHomePanel() {
-  const { profile } = useSupabaseAuth();
+  const { profile, session } = useSupabaseAuth();
   const isPaid = hasMarketEntitlement(profile?.plan, "crypto");
   const [coins, setCoins] = useState<HomeInterestCoin[]>([defaultHomeInterestCoin]);
   const [activeCoin, setActiveCoin] = useState<HomeInterestCoin>(defaultHomeInterestCoin);
@@ -828,9 +828,9 @@ export function CoinRadarHomePanel() {
     }
     try {
       const params = new URLSearchParams({ exchange: coin.exchangeId, symbol: coin.symbol });
-      const response = await fetch(`/api/crypto-home-snapshot?${params.toString()}`, { cache: "no-store", signal });
-      const payload = (await response.json()) as { snapshot?: CryptoHomeSnapshot; error?: string };
-      if (!response.ok || !payload.snapshot) throw new Error(payload.error ?? "홈 분석을 불러오지 못했습니다.");
+      const response = await fetch(`/api/crypto-home-snapshot?${params.toString()}`, await withSupabaseAuth({ cache: "no-store", signal }));
+      const payload = (await response.json()) as { snapshot?: CryptoHomeSnapshot; capabilities?: { canSeeProDetail: boolean }; error?: string };
+      if (!response.ok || !payload.snapshot || !payload.capabilities?.canSeeProDetail) throw new Error(payload.error ?? "상세 분석 권한을 다시 확인해 주세요.");
       if (shouldCommit) {
         if (signal?.aborted || generation !== snapshotGenerationRef.current) return null;
         setState({ status: "ready", snapshot: payload.snapshot });
@@ -851,7 +851,7 @@ export function CoinRadarHomePanel() {
       snapshotGenerationRef.current += 1;
       snapshotAbortRef.current?.abort();
     };
-  }, [activeCoin, loadSnapshot]);
+  }, [activeCoin, loadSnapshot, session?.accessToken]);
 
   useEffect(() => () => evidenceAbortRef.current?.abort(), []);
 

@@ -178,3 +178,8 @@ export function serializeHomeInterestAnalysis(
       : {})
   };
 }
+
+// Keep anonymous compatibility responses on the same allowlisted projection.
+export function serializeLegacyHomeSnapshot(snapshot: CryptoHomeSnapshot, canSeeProDetail: boolean) {
+  return canSeeProDetail ? snapshot : serializeHomeInterestAnalysis(snapshot, false);
+}

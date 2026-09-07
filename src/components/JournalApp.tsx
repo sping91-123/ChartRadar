@@ -569,7 +569,7 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
   const [symbol, setSymbol] = useState("");
   const [direction, setDirection] = useState<DirectionType>("관망");
   const [result, setResult] = useState<TradeResult>("진행 중");
-  const [rResult, setRResult] = useState<RResult>("0R");
+  const [rResult, setRResult] = useState<RResult | null>(null);
   const [customRResult, setCustomRResult] = useState("");
   const [entryReasons, setEntryReasons] = useState<string[]>([]);
   const [keptPrinciples, setKeptPrinciples] = useState<string[]>([]);
@@ -768,7 +768,7 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
     setSymbol("");
     setDirection("관망");
     setResult("진행 중");
-    setRResult("0R");
+    setRResult(null);
     setCustomRResult("");
     setEntryReasons([]);
     setKeptPrinciples([]);
@@ -794,7 +794,7 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
   async function addEntry() {
     if (!isSubmitReady) return;
 
-    const selectedRResult = rResult === "직접 입력" ? customRResult.trim() || "직접 입력" : rResult;
+    const selectedRResult = rResult === "직접 입력" ? customRResult.trim() || "직접 입력" : rResult ?? "기록 대기";
     const outcome = resultToOutcome(result);
     const noteLines = [
       `시장/종목: ${symbol.trim()}`,
@@ -928,13 +928,15 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
                   <StatusPill tone="info" icon={ClipboardCheck}>오늘의 복기</StatusPill>
                   <StatusPill tone={market === "stocks" ? "watch" : "info"}>{marketLabel}</StatusPill>
                 </div>
-                <h1 className="max-w-full text-xl font-semibold leading-tight tracking-tight text-ui-text [overflow-wrap:anywhere] sm:text-2xl">오늘의 판단을 다음 기준으로 정리합니다.</h1>
+                <h1 className="max-w-full text-xl font-semibold leading-tight tracking-tight text-ui-text [overflow-wrap:anywhere] sm:text-2xl">다음에 확인할 기준 한 줄을 남기세요.</h1>
               </div>
             </div>
           </div>
 
           <div className="grid gap-6 py-4">
             {market === "crypto" ? (
+              <details open={journalMode === "exchange"} className="border-b border-ui-line pb-2">
+                <summary className="min-h-10 cursor-pointer py-2 text-xs font-semibold text-ui-muted">기록 방식 선택 · 직접 기록 / 거래소 연결</summary>
               <JournalModeSelector
                 mode={journalMode}
                 canUseExchange={canUseExchangeJournal}
@@ -942,6 +944,7 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
                 isChecking={isExchangeCapabilityChecking}
                 onChange={setJournalMode}
               />
+              </details>
             ) : null}
 
             {market === "crypto" && journalMode === "exchange" ? (
@@ -975,6 +978,7 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
                 className="grid gap-6"
               >
 
+            {summary.total > 0 ? <details className="border-y border-ui-line px-3 py-2"><summary className="min-h-10 cursor-pointer py-2 text-sm font-semibold text-ui-text">누적 복기 요약 · {summary.total}건</summary>
             <PanelCard variant="report" padding="lg">
               <SectionHeader
                 title="오늘의 복기"
@@ -1013,6 +1017,9 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
               </div>
             </PanelCard>
 
+            </details> : null}
+
+            {pendingRadarEntries.length > 0 ? <>
             <section id="pending-radar" className="scroll-mt-4 scroll-mb-56">
             <PanelCard variant="report" padding="lg">
               <SectionHeader
@@ -1060,11 +1067,13 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
             </PanelCard>
             </section>
 
+            </> : <div className="bg-ui-brand/5 px-3 py-3 text-xs leading-5 text-ui-muted"><p>먼저 분석에서 판단을 저장하면 종목과 당시 조건을 다시 입력하지 않아도 됩니다.</p><ActionButton href={market === "crypto" ? "/crypto/perpetual?asset=btc" : "/global"} tone="secondary" className="mt-2 w-full">현재 분석에서 판단 가져오기</ActionButton></div>}
+
             <section id="quick-journal-form" className="scroll-mt-4 scroll-mb-64 min-w-0 max-w-full overflow-hidden">
             <PanelCard variant="report" padding="lg" className="overflow-hidden">
               <SectionHeader
-                title="기록할 내용"
-                action={<StatusPill tone="info" icon={ListChecks}>30초 복기</StatusPill>}
+                title="필수 3개만 남기면 저장됩니다"
+                action={<StatusPill tone="info" icon={ListChecks}>간단 기록</StatusPill>}
               />
 
               <div className="mt-5 grid min-w-0 gap-4">
@@ -1091,6 +1100,18 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
                   </label>
                 </div>
 
+                <label className="grid min-w-0 gap-2 text-ui-label font-semibold text-ui-subtle" htmlFor="journal-next-fix">
+                  다음 판단 전 체크 한 줄
+                  <input
+                    id="journal-next-fix"
+                    value={nextFix}
+                    onChange={(event) => setNextFix(event.target.value)}
+                    placeholder="예: 다음 판단 전 손절 기준을 먼저 적고 확인하기"
+                    className="min-h-11 w-full min-w-0 max-w-full border-b border-ui-line bg-transparent px-0 text-[15px] font-semibold text-ui-text outline-none placeholder:text-ui-subtle focus:border-ui-brand sm:min-h-12 sm:text-base"
+                  />
+                </label>
+
+                <details className="border-y border-ui-line py-2"><summary className="min-h-10 cursor-pointer py-2 text-sm font-semibold text-ui-muted">방향·결과·원칙·메모 추가 (선택)</summary><div className="mt-3 grid gap-4">
                 <div className="grid min-w-0 gap-3 lg:grid-cols-3">
                   <ChipGroup label="방향" options={directions} selected={[direction]} onToggle={(item) => setDirection(item as DirectionType)} />
                   <ChipGroup label="결과" options={resultOptions} selected={[result]} onToggle={(item) => setResult(item as TradeResult)} tone="green" />
@@ -1147,17 +1168,6 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
                   tone="red"
                 />
 
-                <label className="grid min-w-0 gap-2 text-ui-label font-semibold text-ui-subtle" htmlFor="journal-next-fix">
-                  다음 판단 전 체크 한 줄
-                  <input
-                    id="journal-next-fix"
-                    value={nextFix}
-                    onChange={(event) => setNextFix(event.target.value)}
-                    placeholder="예: 다음 판단 전 손절 기준을 먼저 적고 확인하기"
-                    className="min-h-11 w-full min-w-0 max-w-full border-b border-ui-line bg-transparent px-0 text-[15px] font-semibold text-ui-text outline-none placeholder:text-ui-subtle focus:border-ui-brand sm:min-h-12 sm:text-base"
-                  />
-                </label>
-
                 <label className="grid min-w-0 gap-2 text-ui-label font-semibold text-ui-subtle" htmlFor="journal-memo">
                   선택 메모
                   <textarea
@@ -1169,6 +1179,8 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
                     className="w-full min-w-0 max-w-full resize-none border-b border-ui-line bg-transparent px-0 py-2 text-[15px] leading-7 text-ui-text outline-none placeholder:text-ui-subtle focus:border-ui-brand sm:text-base"
                   />
                 </label>
+
+                </div></details>
 
                 <AppSurface tone="inset" variant="report" padding="md">
                   <p className="text-xs font-semibold text-ui-muted">

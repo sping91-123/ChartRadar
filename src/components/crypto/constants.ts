@@ -8,6 +8,7 @@ export const symbols = [
   "XRPUSDT.P",
   "SOLUSDT.P",
   "DOGEUSDT.P",
+  "BNBUSDT.P",
   "ADAUSDT.P",
   "LINKUSDT.P",
   "AVAXUSDT.P",

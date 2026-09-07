@@ -33,6 +33,7 @@ export function CoinProConversionLink({
 }) {
   const { session, isLoading } = useSupabaseAuth();
   const trackedGateRef = useRef<string | null>(null);
+  const linkRef = useRef<HTMLAnchorElement>(null);
   const properties = useMemo(() => ({
     source,
     placement,
@@ -46,12 +47,22 @@ export function CoinProConversionLink({
     if (isLoading) return;
     const trackingKey = `${source}:${placement}:${routeKey}:${symbol ?? ""}`;
     if (trackedGateRef.current === trackingKey) return;
-    trackedGateRef.current = trackingKey;
-    void trackProductEvent({ eventName: "pro_gate_viewed", surface, properties });
+    const target = linkRef.current;
+    if (!target || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.5)) return;
+      if (trackedGateRef.current === trackingKey) return;
+      trackedGateRef.current = trackingKey;
+      void trackProductEvent({ eventName: "pro_gate_viewed", surface, properties });
+      observer.disconnect();
+    }, { threshold: 0.5 });
+    observer.observe(target);
+    return () => observer.disconnect();
   }, [isLoading, placement, properties, routeKey, source, surface, symbol]);
 
   return (
     <Link
+      ref={linkRef}
       href={buildCoinProHref({ source, placement, routeKey, returnTo, symbol })}
       className={className}
       onClick={() => {

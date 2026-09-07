@@ -449,7 +449,7 @@ assert.equal(readyConflict.summary.state, "risk");
 assert.notEqual(readyConflict.summary.primaryCondition.id, neutralSnapshot.summary.primaryCondition.id, "risk and neutral state baselines must not share a monitor ID");
 assert.match(
   readyConflict.summary.primaryCondition.label,
-  /엇갈린 시간대 구조와 큰 금액 체결/,
+  /상승 구조와 큰 금액 매도.*다음 체결 갱신/,
   "a ready conflict must describe the conflicting evidence instead of claiming data is missing"
 );
 const neutralFromRisk = {
@@ -595,7 +595,7 @@ const partial = buildPerpetualDecisionSnapshot(input({
 assert.equal(partial.quality, "partial");
 assert.equal(partial.summary.state, "risk", "partial data must not force a directional watch state");
 assert.equal(partial.summary.primaryCondition.kind, "decision_state_change");
-assert.match(partial.summary.primaryCondition.label, /빠진 데이터/, "partial data must explain what needs to recover");
+assert.match(partial.summary.primaryCondition.label, /포지션 쏠림 갱신/, "partial data must name the source that needs recovery");
 assert.deepEqual(partial.pro?.confirmationConditions, [], "partial data must not expose confirmation thresholds");
 assert.deepEqual(partial.pro?.invalidationConditions, [], "partial data must not expose invalidation thresholds");
 
@@ -776,3 +776,26 @@ assert.match(journalSource, /저장 당시 선물 판단/, "the saved decision c
 assert.match(journalSource, /판단 당시 뉴스 맥락/, "the saved official-news context must remain visible during review");
 
 console.log("Perpetual decision snapshot matrix passed.");
+
+// Wait guidance changes presentation only: exact source/conflict, same state monitor semantics.
+for (const [flipped, expected] of [
+  [["4h"], /1일 상승·4시간 하락.*다음 4시간·1일 확정봉/],
+  [["15m"], /1시간 상승·15분 하락.*다음 15분·1시간 확정봉/],
+  [["15m", "1h"], /1일·4시간 상승과 1시간·15분 하락.*다음 확정봉/]
+] as const) {
+  const caseSnapshot = buildPerpetualDecisionSnapshot(input({
+    structureTimeframes: qualifiedStructures().map((state) => qualifiedState(state.timeframe, (flipped as readonly string[]).includes(state.timeframe) ? "bearish" : "bullish"))
+  }));
+  assert.equal(caseSnapshot.summary.state, "risk");
+  assert.match(caseSnapshot.summary.primaryCondition.label, expected);
+  assert.equal(caseSnapshot.summary.primaryCondition.id, readyConflict.summary.primaryCondition.id);
+  assert.equal(caseSnapshot.summary.primaryCondition.threshold, null);
+  assert.equal(serializeBasicPerpetualSnapshot(caseSnapshot).summary.primaryCondition.label, caseSnapshot.summary.primaryCondition.label);
+  assert.equal(isMonitorConditionMet(caseSnapshot.summary.primaryCondition, first), true);
+  assert.equal(isMonitorConditionMet(caseSnapshot.summary.primaryCondition, neutralFromRisk), false);
+}
+assert.match(neutralSnapshot.summary.primaryCondition.label, /확정 구조가 아직 부족/);
+const staleConflict = buildStalePerpetualDecisionFallback(readyConflict);
+assert.match(staleConflict.summary.primaryCondition.label, /최신 갱신.*이전 방향은 참고용/);
+assert.doesNotMatch(staleConflict.summary.primaryCondition.label, /상승 구조와 큰 금액 매도/);
+console.log("Specific wait guidance and unchanged monitor semantics passed.");

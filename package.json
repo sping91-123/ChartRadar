@@ -29,6 +29,7 @@
     "test:coin-market-metrics": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-coin-market-metrics.js",
     "test:perpetual-monitors": "node scripts/test-perpetual-monitors.mjs",
     "test:product-events": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-product-events.js",
+    "test:normalization": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-home-interest-analysis.js && node .verify-dist/scripts/test-global-market-presentation.js && node .verify-dist/scripts/test-native-purchase-errors.js && node .verify-dist/scripts/test-perpetual-activation.js && node scripts/test-conversion-health.mjs",
     "test:coin-product-contract": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-coin-product-contract.js",
     "test:home-interest-analysis": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-home-interest-analysis.js",
     "test:pull-to-refresh": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-pull-to-refresh.js",

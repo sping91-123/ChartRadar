@@ -2,6 +2,8 @@
 
 ## 상태
 
+2026-09-06 재점검: 아래 기준선은 8월 1일의 기록이다. 운영에서 이후 검증된 체험 1명을 확인했으나, 등록 cohort 시작을 뜻하지 않는다. 이번 정상화 변경도 아직 배포 전이며 `NOT_STARTED`를 임의로 해제하지 않는다. 코드·운영·성과 확인 상태는 [문제별 정상화 기록](P1-normalization-2026-09-06.md)에서 구분한다.
+
 - 로컬 구현: `IMPLEMENTED / RELEASE_VERIFIED`
 - 운영 설정: `CONFIGURED / PLAY_REVIEW_SUBMITTED`
 - 신규 cohort: `NOT_STARTED`
@@ -97,14 +99,21 @@ with eligible as (
   group by funnel_session_hash, event_name
 )
 select
-  count(distinct funnel_session_hash) filter (where event_name = 'pro_gate_viewed') as gate_users,
-  count(distinct funnel_session_hash) filter (where event_name = 'paywall_viewed') as paywall_users,
-  count(distinct funnel_session_hash) filter (where event_name = 'verified_trial_started') as trial_users,
-  count(distinct funnel_session_hash) filter (where event_name = 'trial_converted') as converted_users
+  count(distinct funnel_session_hash) filter (where event_name = 'pro_gate_viewed') as gate_sessions,
+  count(distinct funnel_session_hash) filter (where event_name = 'paywall_viewed') as paywall_sessions
 from first_event;
 ```
 
 정확한 순차 전환은 같은 funnel 안에서 각 단계의 `first_at`이 앞 단계 이후인지 검증하고, 체험·전환의 최종 분모는 billing ledger에서 검증된 사용자만 사용한다.
+
+### 2026-09-06 이후 관찰 보고
+
+- `node scripts/report-conversion-health.mjs <product-events-export.json> <시작 ISO> <종료 ISO>`: 명시한 반개방 기간의 읽기 전용 이벤트 export를 집계한다. 입력 원본은 저장소에 커밋하지 않는다. 출력은 집계만 포함한다.
+- `event_id`, `event_name`, `occurred_at`, `traffic_class`, `user_id`, `funnel_session_hash`, `properties` 열을 사용한다. `traffic_class='user'`만 포함하고 event_id 중복을 제거한다.
+- gate→paywall은 같은 **세션**에서 gate 이후 paywall이 있는지 확인한다. 한 사람이 여러 세션을 가질 수 있다. gate 이전의 paywall만으로 순차 전환에 포함하지 않는다.
+- 체험·유료 전환은 서버 검증 이벤트의 **사용자** 수로 집계한다. 24시간 첫 감시는 24시간 관찰을 마친 체험자, D15 전환은 15일 관찰을 마친 체험자가 분모다. 표본이 없으면 비율은 null이며 0%가 아니다.
+- gate의 플랫폼 누락은 missing으로 표시한다. 이번 배포 이후 이벤트부터 platform을 보존하며 과거 값을 추정해 채우지 않는다.
+- `journal_saved`는 서버 연계 복기 범위이며 기기 내 수동 복기 전체 사용량을 뜻하지 않는다. 보고서는 참고 관찰용이며 적격 cohort·D7 유지율·충분한 표본을 대신하지 않는다.
 
 ## 로컬 검증 결과
 

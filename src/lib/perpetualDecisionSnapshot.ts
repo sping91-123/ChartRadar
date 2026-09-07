@@ -16,6 +16,8 @@ import {
   type PerpetualPublicTechnicalEvidence
 } from "./perpetualAnalysisPerspective";
 
+import { perpetualWaitConditionLabel } from "./perpetualWaitCondition";
+
 export const perpetualDecisionEngineVersion = "perpetual-v3.0.0";
 // All v3 monitor IDs use a new semantic prefix so v2 conditions cannot be
 // evaluated against the six-timeframe MSS hierarchy.
@@ -668,11 +670,7 @@ export function buildPerpetualDecisionSnapshot(input: BuildPerpetualDecisionInpu
         state,
         !primaryThreshold && state !== "risk" && state !== "neutral"
           ? "현재 방향 판단이 바뀌면 최신 분석에서 다시 봅니다."
-          : state === "neutral"
-          ? "1일·4시간 큰 흐름과 1시간·15분 현재 구조가 같은 방향으로 모이면 다시 판단합니다."
-          : quality === "ready"
-          ? "엇갈린 시간대 구조와 큰 금액 체결이 정리되면 다시 판단합니다."
-          : "빠진 데이터가 다시 들어오고 방향 신호가 한쪽으로 모이면 다시 판단합니다."
+          : perpetualWaitConditionLabel({ quality, sourceStatus: input.sourceStatus, consensus: analysisConsensus, states: input.structureTimeframes, flowConflict })
       )
     : priceCondition({
         asset: input.asset,

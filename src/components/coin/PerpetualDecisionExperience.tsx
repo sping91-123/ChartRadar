@@ -6,6 +6,7 @@ import { Activity, AlertTriangle, Bell, BookOpen, CheckCircle2, Clock3, Database
 import { PerpetualDecisionChart } from "@/components/coin/PerpetualDecisionChart";
 import { PerpetualAnalysisWorkspace } from "@/components/coin/PerpetualAnalysisWorkspace";
 import { PerpetualMonitorManager } from "@/components/coin/PerpetualMonitorManager";
+import { ProgressiveDetails } from "@/components/ProgressiveDetails";
 import { NewsImpactContextCard } from "@/components/news/NewsImpactContextCard";
 import { PerpetualNewsContextStrip } from "@/components/news/PerpetualNewsContextStrip";
 import { usePullToRefreshRegistration } from "@/components/PullToRefresh";
@@ -31,6 +32,8 @@ import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
 import { buildCoinProHref } from "@/lib/coinProConversion";
 import { isAndroidNativeApp, readAppPushState, registerAndroidAppPush } from "@/lib/appPush";
 import { shouldConnectPushAfterFirstMonitor } from "@/lib/firstMonitorPush";
+import { findSavedCondition } from "@/lib/perpetualActivation";
+import type { PerpetualScenarioMonitor } from "@/lib/perpetualMonitor";
 
 type DecisionLoadState =
   | { status: "loading"; snapshot: null; capabilities: null; continuity: null }
@@ -128,7 +131,7 @@ function decisionTone(state: PerpetualDecisionSnapshot["summary"]["state"]) {
 
 function currentReturnTo() {
   if (typeof window === "undefined") return "/crypto/perpetual";
-  return `${window.location.pathname}${window.location.search}`;
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`;
 }
 
 function MonitorAction({
@@ -141,7 +144,8 @@ function MonitorAction({
   snapshotId,
   upgradeHref,
   onUpgrade,
-  prefilled = false
+  prefilled = false,
+  existingMonitor
 }: {
   condition: MonitorCondition;
   capabilities: PerpetualSnapshotCapabilities;
@@ -153,6 +157,7 @@ function MonitorAction({
   upgradeHref: string;
   onUpgrade: (condition: MonitorCondition) => void;
   prefilled?: boolean;
+  existingMonitor?: PerpetualScenarioMonitor;
 }) {
   const operationBusy = monitorState.status === "saving";
   const saved = monitorState.status === "saved" && monitorState.snapshotId === snapshotId && monitorState.conditionId === condition.id;
@@ -180,6 +185,10 @@ function MonitorAction({
         <Bell size={15} aria-hidden /> 로그인하고 조건 감시
       </ActionButton>
     );
+  }
+
+  if (saved || existingMonitor) {
+    return <ActionButton href="#saved-monitors" onNavigate={() => document.getElementById("saved-monitors")?.setAttribute("open", "")} tone="secondary" className="w-full sm:w-auto"><CheckCircle2 size={15} aria-hidden /> {existingMonitor?.status === "paused" || existingMonitor?.status === "paused_entitlement" ? "저장한 감시 상태 확인" : "저장된 감시 보기"}</ActionButton>;
   }
 
   if (capabilities.activeMonitorCount >= capabilities.monitorLimit) {
@@ -216,7 +225,8 @@ export function PerpetualDecisionExperience({
   initialAlertMonitorId?: string | null;
   onHistoricalContinuityChange?: (locked: boolean) => void;
 }) {
-  const { session } = useSupabaseAuth();
+  const { session, user } = useSupabaseAuth();
+  const [monitorInventory, setMonitorInventory] = useState<{ userId: string | undefined; monitors: PerpetualScenarioMonitor[] }>({ userId: undefined, monitors: [] });
   const [state, setState] = useState<DecisionLoadState>({ status: "loading", snapshot: null, capabilities: null, continuity: null });
   const [monitorState, setMonitorState] = useState<MonitorState>({ status: "idle" });
   const [journalState, setJournalState] = useState<JournalState>({ status: "idle" });
@@ -361,6 +371,12 @@ export function PerpetualDecisionExperience({
   }, [asset, load, requestedSnapshotId, session?.accessToken]);
 
   const snapshot = state.snapshot;
+  const hasSnapshot = Boolean(snapshot);
+  useEffect(() => {
+    if (hasSnapshot && window.location.hash === "#monitor-condition") {
+      document.getElementById("monitor-condition")?.scrollIntoView({ block: "center" });
+    }
+  }, [asset, hasSnapshot]);
   const exactAlertContext = effectiveSource === "alert" && state.continuity?.status === "same";
   useEffect(() => {
     if (typeof window === "undefined" || !snapshot || !state.capabilities?.canSeeProDetail) {
@@ -432,6 +448,8 @@ export function PerpetualDecisionExperience({
       snapshot.quality === "ready" &&
       !exactAlertContext &&
       new Date(snapshot.expiresAt).getTime() > Date.now() &&
+      !(monitorState.status === "saved" && monitorState.conditionId === snapshot.summary.primaryCondition.id && monitorState.snapshotId === snapshot.id) &&
+      !(monitorInventory.userId === user?.id && findSavedCondition(monitorInventory.monitors, asset, snapshot.summary.primaryCondition.id)) &&
       capabilities.activeMonitorCount >= capabilities.monitorLimit
     );
     if (monitorLimitGateVisible && !trackedGateRef.current) {
@@ -451,7 +469,7 @@ export function PerpetualDecisionExperience({
         }
       });
     }
-  }, [attributionId, effectiveSource, exactAlertContext, initialAlertMonitorId, requestedSnapshotId, session, snapshot, source, state.capabilities, state.continuity?.status]);
+  }, [asset, attributionId, effectiveSource, exactAlertContext, initialAlertMonitorId, monitorInventory, monitorState, requestedSnapshotId, session, snapshot, source, state.capabilities, state.continuity?.status, user?.id]);
   const createMonitor = useCallback(async (condition: MonitorCondition) => {
     if (!snapshot) return;
     const monitorSnapshotId = snapshot.id;
@@ -539,7 +557,8 @@ export function PerpetualDecisionExperience({
     }
   }, [effectiveSource, snapshot, state.capabilities?.scenarioMonitorCount]);
 
-  const handleMonitorUsageChange = useCallback((count: number) => {
+  const handleMonitorUsageChange = useCallback((count: number, monitors: PerpetualScenarioMonitor[]) => {
+    setMonitorInventory({ userId: user?.id, monitors });
     setState((current) => {
       if (!current.capabilities || current.capabilities.activeMonitorCount === count) return current;
       return {
@@ -547,7 +566,7 @@ export function PerpetualDecisionExperience({
         capabilities: { ...current.capabilities, activeMonitorCount: count }
       };
     });
-  }, []);
+  }, [user?.id]);
 
   const saveJournal = useCallback(async () => {
     if (!snapshot || !session) return;
@@ -666,6 +685,9 @@ export function PerpetualDecisionExperience({
   const conditions = displaySnapshot.pro
     ? [displaySnapshot.summary.primaryCondition, ...displaySnapshot.pro.confirmationConditions, ...displaySnapshot.pro.invalidationConditions]
     : [displaySnapshot.summary.primaryCondition];
+  const savedCondition = (condition: MonitorCondition) => monitorInventory.userId === user?.id && session
+    ? findSavedCondition(monitorInventory.monitors, asset, condition.id)
+    : undefined;
   const currentJournalState = journalState.status === "idle" || isPerpetualSnapshotScopedStateCurrent(
     displaySnapshot.id,
     journalState
@@ -689,7 +711,7 @@ export function PerpetualDecisionExperience({
   if (effectiveSource) monitorReturnParams.set("source", effectiveSource);
   if (effectiveSource === "alert" && alertMonitorId) monitorReturnParams.set("monitor", alertMonitorId);
   if (effectiveSource === "news" && newsContext?.reactionId) monitorReturnParams.set("impact", newsContext.reactionId);
-  const monitorReturnTo = `/crypto/perpetual?${monitorReturnParams.toString()}`;
+  const monitorReturnTo = `/crypto/perpetual?${monitorReturnParams.toString()}#monitor-condition`;
   const monitorUpgradeHref = buildCoinProHref({
     source: "perpetual-monitor",
     placement: "perpetual_monitor_lock",
@@ -755,8 +777,8 @@ export function PerpetualDecisionExperience({
           </div>
         </div>
 
-        <div className="mt-3 flex flex-col gap-1.5 min-[390px]:flex-row min-[390px]:items-end min-[390px]:justify-between min-[390px]:gap-3">
-          <h1 id="perpetual-decision-title" className="min-w-0 max-w-3xl text-2xl font-black leading-8 tracking-tight text-ui-text [word-break:keep-all]">{plainDecisionText(displaySnapshot.summary.headline)}</h1>
+        <div className="mt-3 flex flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
+          <h1 id="perpetual-decision-title" className="min-w-0 max-w-3xl text-xl font-bold leading-7 tracking-tight text-ui-text [word-break:keep-all]">{plainDecisionText(displaySnapshot.summary.headline)}</h1>
           <LivePerpetualPrice asset={asset} snapshotPrice={displaySnapshot.price} />
         </div>
 
@@ -774,14 +796,10 @@ export function PerpetualDecisionExperience({
           </div>
         </div>
 
-        <ul className="mt-3 grid gap-1.5 text-xs font-semibold leading-5 text-ui-muted md:grid-cols-2">
-          {displaySnapshot.summary.reasons.map((reason) => <li key={reason}>· {plainDecisionText(reason)}</li>)}
-        </ul>
-
-        <div className="mt-3 flex flex-col gap-2 border-t border-ui-line pt-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="order-2 text-xs leading-5 text-ui-muted sm:order-1">알림은 주문을 실행하지 않습니다. 선택한 판단 조건을 최대 5분마다 평가합니다.</p>
+        <div id="monitor-condition" className="mt-3 flex scroll-mt-24 flex-col gap-2 border-t border-ui-line pt-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="order-2 text-xs leading-5 text-ui-muted sm:order-1">Basic 감시 1개 무료 · 최대 5분 간격 확인<br />앱 알림 연결 시 알려드립니다. 주문은 실행하지 않습니다.</p>
           <div className="order-1 flex flex-col gap-2 sm:order-2 sm:flex-row">
-            <MonitorAction condition={displaySnapshot.summary.primaryCondition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} onUpgrade={trackMonitorUpgrade} prefilled={activationConditionId === displaySnapshot.summary.primaryCondition.id} />
+            <MonitorAction condition={displaySnapshot.summary.primaryCondition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} onUpgrade={trackMonitorUpgrade} prefilled={activationConditionId === displaySnapshot.summary.primaryCondition.id} existingMonitor={savedCondition(displaySnapshot.summary.primaryCondition)} />
             {session ? (
               <ActionButton
                 tone="secondary"
@@ -797,6 +815,11 @@ export function PerpetualDecisionExperience({
         </div>
         {savesSnapshotWithoutNews ? <p className="mt-2 text-[11px] font-semibold leading-5 text-ui-watch">현재 플랜에서는 선물 분석만 저장됩니다. 공식 뉴스와 발표 전후 비교까지 함께 복기하는 기능은 Coin Pro에서 열립니다.</p> : null}
 
+        <details className="mt-3 border-t border-ui-line pt-2">
+          <summary className="min-h-10 cursor-pointer py-2 text-xs font-semibold text-ui-muted">이 판단의 이유와 용어 확인</summary>
+          <ul className="grid gap-1.5 text-xs leading-5 text-ui-muted">
+            {displaySnapshot.summary.reasons.map((reason) => <li key={reason}>· {plainDecisionText(reason)}</li>)}
+          </ul>
         {quickEvidence && qualifiedMssSemantics ? (
           <div className="mt-3 grid grid-cols-2 gap-1.5 border-t border-ui-line pt-3 sm:grid-cols-5" aria-label="현재 판단 근거 요약">
             <p className="bg-ui-inset/45 px-2.5 py-2 text-[11px] text-ui-muted"><span className="block font-black text-ui-text">{perpetualTermCopy.mss.easyLabel}</span><span className="block text-[9.5px] text-ui-subtle">전문 기준 · MSS</span>{plainDirection(quickEvidence.structure)}</p>
@@ -813,6 +836,7 @@ export function PerpetualDecisionExperience({
             <p className="bg-ui-inset/45 px-2.5 py-2 text-[11px] text-ui-muted"><span className="block font-black text-ui-text">큰 금액 체결</span>{quickEvidence.flow ? flowDirectionLabel(quickEvidence.flow.dominantSide) : "확인 중"}</p>
           </div>
         ) : null}
+        </details>
         {currentMonitorState.status === "saved" || currentMonitorState.status === "error" ? (
           <p role={currentMonitorState.status === "error" ? "alert" : "status"} aria-live="polite" className={`mt-2 text-xs font-semibold ${currentMonitorState.status === "saved" ? "text-ui-long" : "text-ui-risk"}`}>{currentMonitorState.message}</p>
         ) : null}
@@ -823,9 +847,16 @@ export function PerpetualDecisionExperience({
         ) : null}
       </section>
 
+      <PerpetualMonitorManager
+        accessToken={session?.accessToken}
+        refreshKey={monitorRefreshKey}
+        onUsageChange={handleMonitorUsageChange}
+      />
+
       {newsContext ? <NewsImpactContextCard context={newsContext} /> : null}
       {!newsContext ? <PerpetualNewsContextStrip asset={asset} snapshotId={displaySnapshot.id} /> : null}
 
+      <ProgressiveDetails title="차트와 시간대별 근거 펼치기" description="기술적 관점·가격 흐름·수급을 더 확인하고 싶을 때 봅니다.">
       <PerpetualAnalysisWorkspace
         snapshot={displaySnapshot}
         chart={(
@@ -837,6 +868,7 @@ export function PerpetualDecisionExperience({
           </section>
         )}
       />
+      </ProgressiveDetails>
 
       {state.status === "error" ? (
         <section className="bg-ui-panel px-3 py-4 text-sm leading-6 text-ui-muted sm:px-5">
@@ -852,18 +884,12 @@ export function PerpetualDecisionExperience({
             {conditions.slice(1).map((condition) => (
               <div key={condition.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div><p className="text-xs font-black text-ui-text">{condition.role === "confirmation" ? "방향 근거 강화 기준" : "해석 재검토 기준"}</p><p className="mt-1 text-xs leading-5 text-ui-muted">{monitorConditionDisplayLabel(condition)}</p></div>
-                <MonitorAction condition={condition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} onUpgrade={trackMonitorUpgrade} prefilled={activationConditionId === condition.id} />
+                <MonitorAction condition={condition} capabilities={capabilities} monitorState={monitorState} onCreate={createMonitor} isAuthenticated={Boolean(session)} actionable={monitorActionable} snapshotId={displaySnapshot.id} upgradeHref={monitorUpgradeHref} onUpgrade={trackMonitorUpgrade} prefilled={activationConditionId === condition.id} existingMonitor={savedCondition(condition)} />
               </div>
             ))}
           </div>
         </section>
       ) : null}
-
-      <PerpetualMonitorManager
-        accessToken={session?.accessToken}
-        refreshKey={monitorRefreshKey}
-        onUsageChange={handleMonitorUsageChange}
-      />
 
       {state.status === "error" ? (
         <div role="alert" className="flex items-center justify-between gap-3 bg-ui-risk/10 px-3 py-2 text-xs font-semibold text-ui-risk">

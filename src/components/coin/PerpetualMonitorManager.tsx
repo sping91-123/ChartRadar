@@ -56,7 +56,7 @@ export function PerpetualMonitorManager({
 }: {
   accessToken?: string | null;
   refreshKey: number;
-  onUsageChange: (count: number) => void;
+  onUsageChange: (count: number, monitors: PerpetualScenarioMonitor[]) => void;
 }) {
   const [state, setState] = useState<ManagerState>({ status: "idle", monitors: [], history: [] });
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -88,7 +88,7 @@ export function PerpetualMonitorManager({
       const monitors = payload.monitors.filter((monitor) => manageableStatuses.has(monitor.status));
       const history = (payload.history ?? []).filter((monitor) => !manageableStatuses.has(monitor.status)).slice(0, 5);
       setState({ status: "ready", monitors, history, capabilities: payload.capabilities });
-      onUsageChange(payload.capabilities.activeMonitorCount);
+      onUsageChange(payload.capabilities.activeMonitorCount, monitors);
     } catch (error) {
       if (signal?.aborted || generation !== generationRef.current) return;
       setState((current) => ({
@@ -144,7 +144,7 @@ export function PerpetualMonitorManager({
   const history = state.history;
   const loading = state.status === "loading";
   return (
-    <details className="group bg-ui-panel px-3 py-3 sm:px-5">
+    <details id="saved-monitors" className="group scroll-mt-24 bg-ui-panel px-3 py-3 sm:px-5">
       <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 marker:hidden [&::-webkit-details-marker]:hidden">
         <span className="flex min-w-0 items-center gap-2">
           <Bell size={15} className="shrink-0 text-ui-brand" aria-hidden />

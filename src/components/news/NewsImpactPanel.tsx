@@ -191,7 +191,7 @@ function LockedReactionPreview({ href, requiresAuth }: { href: string; requiresA
         <LockKeyhole className="mt-0.5 shrink-0 text-ui-brand" size={17} aria-hidden />
         <div>
           <h2 id="locked-news-evidence-title" className="text-sm font-black text-ui-text">Pro는 발표 전후를 같은 기준으로 비교합니다</h2>
-          <p className="mt-1 text-xs leading-5 text-ui-muted">기사 수를 늘리는 기능이 아닙니다. 발표 당시 상태와 15분·60분 뒤 가격·구조·큰 금액 체결을 나란히 보고, 그 판단을 복기에 저장합니다.</p>
+          <p className="mt-1 text-xs leading-5 text-ui-muted">발표 당시 상태와 15분·60분 뒤 가격·구조·큰 금액 체결을 나란히 보고, 그 판단을 복기에 저장합니다. 같은 시간에 일어난 가격 변화를 비교하며, 발표가 원인이라고 단정하지 않습니다.</p>
         </div>
       </div>
       <div className="mt-3 grid grid-cols-3 gap-px overflow-hidden bg-ui-line" aria-label="잠긴 발표 전후 비교 미리보기">
@@ -650,6 +650,7 @@ export function NewsImpactPanel({ market, initialAsset = "btc", requestedEventId
   return (
     <div className="space-y-3">
       <section className="bg-ui-panel px-3 py-3 sm:px-5">
+        <h1 className="mb-3 text-lg font-bold text-ui-text">공식 발표 뒤, 판단이 달라졌는지 확인하세요</h1>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <nav aria-label="뉴스 시장" className="flex gap-1">
             <a href="/crypto/news?asset=btc" aria-current={market === "crypto" ? "page" : undefined} className={`min-h-9 px-3 py-2 text-xs font-black ${market === "crypto" ? "bg-ui-brand text-white" : "bg-ui-inset text-ui-muted"}`}>코인</a>
@@ -666,10 +667,9 @@ export function NewsImpactPanel({ market, initialAsset = "btc", requestedEventId
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold text-ui-muted">
           <span className="inline-flex items-center gap-1"><Database size={12} aria-hidden /> {qualityLabel(payload.quality)}</span>
           <span className="inline-flex items-center gap-1"><Clock3 size={12} aria-hidden /> 생성 {formatNewsImpactTime(payload.generatedAt)}</span>
-          <span>공식 출처 {officialSourceCount}곳 연결</span>
-          <span>최근 24시간 관련 사건 {payload.sourceHealth.accepted24h}건</span>
           {refreshing ? <Loader2 className="animate-spin" size={12} aria-label="갱신 중" /> : null}
         </div>
+        <details className="mt-1 text-[11px] leading-5 text-ui-muted"><summary className="min-h-8 cursor-pointer py-1">출처 수집 상태 확인</summary><p>공식 출처 {officialSourceCount}곳 연결 · 최근 24시간 관련 사건 {payload.sourceHealth.accepted24h}건</p></details>
         {error ? <p role="alert" className="mt-2 flex items-start gap-1.5 bg-ui-watch/10 px-2 py-1.5 text-xs font-semibold leading-5 text-ui-watch"><AlertTriangle className="mt-0.5 shrink-0" size={13} aria-hidden />{error}</p> : null}
         {deepLinkError ? (
           <div role="alert" className="mt-2 bg-ui-risk/10 px-2 py-1.5 text-xs font-semibold leading-5 text-ui-risk">

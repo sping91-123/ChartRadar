@@ -392,14 +392,10 @@ export function RadarInsightPanel({
         ) : (
           <LockedValue label="다음 확인 기준" />
         )}
-        {isPro ? (
-          <div className="rounded-ui-sm bg-ui-elevated px-3 py-3">
-            <p className="text-xs font-black text-slate-200">업데이트 시각</p>
-            <p className="mt-2 text-xs font-bold leading-5 text-slate-300">{formatUpdatedAt(insight.updatedAt)}</p>
-          </div>
-        ) : (
-          <LockedValue label="업데이트 시각" />
-        )}
+        <div className="rounded-ui-sm bg-ui-elevated px-3 py-3">
+          <p className="text-xs font-black text-slate-200">분석 생성 시각</p>
+          <p className="mt-2 text-xs font-bold leading-5 text-slate-300">{formatUpdatedAt(insight.updatedAt)}</p>
+        </div>
       </div>
     </section>
   );

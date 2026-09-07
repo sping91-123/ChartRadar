@@ -3,6 +3,7 @@ import { Capacitor } from "@capacitor/core";
 import { Purchases, type PurchasesOfferings, type PurchasesPackage, type PurchasesStoreProduct, type SubscriptionOption } from "@revenuecat/purchases-capacitor";
 import { getStoreProductIdentifier, hasStoreEntitlementForPlan, type BillingPlan, type BillingPlanId } from "@/lib/billing";
 import { supabaseAuthRefreshEvent } from "@/lib/supabase";
+import { diagnosePurchaseError, type PurchaseErrorDiagnostic } from "@/lib/nativePurchaseErrors";
 
 type NativePurchasePlatform = "android" | "ios";
 
@@ -48,6 +49,7 @@ export type NativePurchaseErrorCode =
   | "base_plan_not_found"
   | "purchase_cancelled"
   | "purchase_failed"
+  | `sdk_${string}`
   | "entitlement_missing";
 
 export type NativeEntitlementPendingCode =
@@ -97,7 +99,7 @@ export interface NativePurchaseStageEvent {
 export class NativePurchaseError extends Error {
   code: NativePurchaseErrorCode;
 
-  constructor(code: NativePurchaseErrorCode, message: string) {
+  constructor(code: NativePurchaseErrorCode, message: string, readonly diagnostic?: PurchaseErrorDiagnostic) {
     super(message);
     this.name = "NativePurchaseError";
     this.code = code;
@@ -375,18 +377,9 @@ export async function refreshNativeEntitlement(params: NativeRestoreParams): Pro
 }
 
 function normalizePurchaseError(error: unknown) {
-  if (
-    error &&
-    typeof error === "object" &&
-    "userCancelled" in error &&
-    (error as { userCancelled?: boolean }).userCancelled
-  ) {
-    return new NativePurchaseError("purchase_cancelled", "Purchase was cancelled by the user.");
-  }
-
   if (error instanceof NativePurchaseError) return error;
-  if (error instanceof Error) return error;
-  return new NativePurchaseError("purchase_failed", "Native purchase failed.");
+  const diagnostic = diagnosePurchaseError(error);
+  return new NativePurchaseError(diagnostic.code as NativePurchaseErrorCode, diagnostic.message, diagnostic);
 }
 
 async function purchaseMatchedProduct(params: NativePurchaseParams & { platform: NativePurchasePlatform; product: PurchasesStoreProduct; aPackage?: PurchasesPackage | null }) {
@@ -514,6 +507,7 @@ export async function purchaseNativePlan(params: NativePurchaseParams): Promise<
       await purchaseAndroidStoreProduct({ ...params, product });
     } else {
       logNativePurchase("getOfferings start", { planId: params.plan.id, productId, packageId: getRevenueCatPackageId(params.plan) });
+      emitNativePurchaseStage(params, "get_products_start", { planId: params.plan.id, productId });
       const offerings = await Purchases.getOfferings().catch((error) => {
         warnNativePurchase("getOfferings error", { planId: params.plan.id, productId });
         throw error;

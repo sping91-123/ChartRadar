@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { classifyCryptoHomeSnapshotQuality, findExchangeMarket } from "../src/lib/cryptoHomeSnapshotSafety";
 import { filterClosedCandlesAt } from "../src/lib/marketTime";
-import { serializeHomeInterestAnalysis } from "../src/lib/server/homeInterestAnalysis";
+import { serializeHomeInterestAnalysis, serializeLegacyHomeSnapshot } from "../src/lib/server/homeInterestAnalysis";
 import { canonicalAssetForHomeCoin, homeInterestDetailTarget } from "../src/lib/homeInterestRouting";
 import type { CryptoHomeSnapshot } from "../src/lib/server/cryptoExchangeData";
 
@@ -205,6 +205,25 @@ const forbidden = new Set([
 ]);
 assert.equal(hasForbiddenKey(basic, forbidden), null, "Basic projection must not expose raw analysis internals");
 assert.equal(hasForbiddenKey(pro, forbidden), null, "Pro projection must remain a bounded Home summary");
+
+const sensitiveSource = {
+  ...source,
+  analysis: { proPlan: { entryLow: 101, invalidation: 97 }, timeframeAnalyses: [{ price: 109 }] },
+  aiInput: { internalEvidence: "private" },
+  strategyRadar: [{ entry: 101 }],
+  futurePrivateField: { secretAnalysis: true }
+} as unknown as CryptoHomeSnapshot;
+const legacyBasic = serializeLegacyHomeSnapshot(sensitiveSource, false);
+assert.deepEqual(legacyBasic, basic, "the legacy anonymous endpoint must use the current allowlisted Basic projection");
+assert.equal(hasForbiddenKey(legacyBasic, forbidden), null);
+assert.equal("futurePrivateField" in legacyBasic, false, "new raw fields must not silently become public");
+assert.equal(serializeLegacyHomeSnapshot(sensitiveSource, true), sensitiveSource, "verified Coin Pro keeps the legacy detail contract");
+
+const legacyRouteSource = readFileSync("src/app/api/crypto-home-snapshot/route.ts", "utf8");
+assert.match(legacyRouteSource, /getRequestEntitlement\(request, "crypto"\)/);
+assert.match(legacyRouteSource, /entitlement\.isPaid && !failClosed/);
+assert.match(legacyRouteSource, /serializeLegacyHomeSnapshot\(source, canSeeProDetail\)/);
+assert.match(legacyRouteSource, /private, no-store/);
 
 const binanceBtc: CryptoHomeSnapshot["selection"] = { ...source.selection, base: "BTC", symbol: "BTC/USDT:USDT", marketId: "BTCUSDT" };
 const okxBtc: CryptoHomeSnapshot["selection"] = { ...binanceBtc, exchangeId: "okx", exchangeLabel: "OKX", marketId: "BTC-USDT-SWAP" };

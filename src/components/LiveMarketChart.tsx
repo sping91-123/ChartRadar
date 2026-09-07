@@ -1625,6 +1625,8 @@ export function LiveMarketChart({
           : "scroll-mt-24 rounded-ui-lg bg-ui-panel p-4 pb-6 sm:p-5"
       }
     >
+      <details open={!altOnly} className={altOnly ? "mb-3 border-b border-ui-line pb-2" : ""}>
+        <summary className={altOnly ? "min-h-10 cursor-pointer py-2 text-xs font-semibold text-ui-muted" : "hidden"}>분석 시간대·관점 설정 · {activeTimeframe}</summary>
       <CryptoControlBar
         timeframes={modeTimeframes}
         activeTimeframe={activeTimeframe}
@@ -1633,6 +1635,8 @@ export function LiveMarketChart({
         activeMode={radarProfile}
         onModeChange={setRadarProfile}
       />
+      {altOnly ? renderStructureCriteriaPanel() : null}
+      </details>
 
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -1766,6 +1770,7 @@ export function LiveMarketChart({
 
       {altOnly ? (
         <CryptoAltAnalysisGateBanner
+          symbol={symbol}
           hasCoinPro={hasCoinPro}
           allowed={visibleAltAnalysisGate.allowed}
           limit={visibleAltAnalysisGate.limit}
@@ -1773,10 +1778,11 @@ export function LiveMarketChart({
         />
       ) : null}
 
-      {renderStructureCriteriaPanel()}
+      {!altOnly ? renderStructureCriteriaPanel() : null}
 
       {altOnly && !visibleAltAnalysisGate.allowed ? (
         <CryptoAltAnalysisLimitNotice
+          selectedSymbol={symbol}
           limit={visibleAltAnalysisGate.limit}
           symbols={visibleAltAnalysisGate.symbols}
           onSelectSymbol={selectSymbol}
@@ -1793,7 +1799,8 @@ export function LiveMarketChart({
             summaryMetrics={isMajorScreen ? buildMajorSummaryMetrics(analysis, activeAnalysis, visibleRadarInsight) : undefined}
           />
           {!isMajorScreen ? (
-          <div>
+          <details open={!altOnly}>
+            <summary className={altOnly ? "min-h-10 cursor-pointer py-2 text-xs font-semibold text-ui-muted" : "hidden"}>이 분석을 읽는 순서 확인</summary>
             <BeginnerActionGuide
               title="지금은 이 순서로 보면 됩니다"
               summary={
@@ -1825,7 +1832,7 @@ export function LiveMarketChart({
                   : "Basic 안내는 판단 보조 요약입니다. 실제 판단에 필요한 조건, 손절·해석을 다시 볼 기준, 세부 위험은 Pro에서 전체 맥락으로 확인합니다."
               }
             />
-          </div>
+          </details>
           ) : null}
         </CryptoSummarySection>
       ) : (

@@ -1,6 +1,7 @@
 // 글로벌 주요 자산의 하루 변동률과 미국장 30초 체크 대시보드 데이터를 제공하는 API 라우트입니다.
 import { NextResponse } from "next/server";
 import { globalMarketModeFromScore, type GlobalMarketMode } from "@/lib/globalMarketMode";
+import { globalDataAsOf, globalPressureForChange as pressureFromItem, globalProxyInterpretation } from "@/lib/globalMarketPresentation";
 import { isUuid } from "@/lib/perpetualMonitor";
 import { getMacroCalendarPayload } from "@/lib/macroCalendar";
 import type { MacroEventItem } from "@/data/macroEvents";
@@ -27,6 +28,7 @@ type PressureTone = "supportive" | "burden" | "mixed";
 type DashboardRole = "index_future" | "macro_proxy" | "sector" | "leader" | "core";
 
 type BoardItem = {
+  candleTime: number;
   symbol: string;
   name: string;
   group: string;
@@ -144,31 +146,10 @@ function proxyNote(symbol: string) {
   return undefined;
 }
 
-function pressureFromItem(symbol: string, changePercent: number): PressureTone {
-  const direction = signedChange(changePercent);
-  if (direction === 0) return "mixed";
-  if (symbol === "^VIX" || symbol === "VIXY" || symbol === "UUP" || symbol === "GLD") {
-    return direction > 0 ? "burden" : "supportive";
-  }
-  if (symbol === "CL=F") {
-    if (changePercent >= 1.2) return "burden";
-    if (changePercent <= -1.2) return "supportive";
-    return "mixed";
-  }
-  return direction > 0 ? "supportive" : "burden";
-}
-
 function interpretationForItem(symbol: string, changePercent: number, pressure: PressureTone) {
   const formatted = `${changePercent >= 0 ? "+" : ""}${changePercent.toFixed(2)}%`;
-  if (symbol === "^VIX" || symbol === "VIXY") {
-    return pressure === "burden" ? `변동성 프록시가 ${formatted}로 올라 리스크 점검이 우선입니다.` : `변동성 프록시가 ${formatted}로 안정되어 위험자산에 우호적입니다.`;
-  }
-  if (symbol === "UUP") {
-    return pressure === "burden" ? `UUP 달러 프록시가 ${formatted}로 강해 성장주에는 부담입니다.` : `UUP 달러 프록시가 ${formatted}로 약해 위험자산 부담이 줄었습니다.`;
-  }
-  if (symbol === "TLT" || symbol === "ZN=F" || symbol === "IEF" || symbol === "SHY") {
-    return pressure === "supportive" ? `${itemLabel(symbol)}가 ${formatted}로 올라 금리 부담 완화 프록시로 봅니다.` : `${itemLabel(symbol)}가 ${formatted}로 약해 금리 부담을 점검해야 합니다.`;
-  }
+  const proxyInterpretation = globalProxyInterpretation(symbol, changePercent, itemLabel(symbol));
+  if (proxyInterpretation) return proxyInterpretation;
   if (symbol === "CL=F") {
     return pressure === "burden" ? `유가가 ${formatted}로 올라 인플레이션 부담을 남깁니다.` : pressure === "supportive" ? `유가가 ${formatted}로 내려 비용 부담은 완화 쪽입니다.` : `유가는 ${formatted}로 중립권입니다.`;
   }
@@ -193,6 +174,7 @@ async function loadBoardItem(symbol: string): Promise<BoardItem> {
   const info = findStockSymbol(symbol);
   const pressure = pressureFromItem(symbol, changePercent);
   return {
+    candleTime: latest.time,
     symbol,
     name: info?.name ?? symbol,
     group: info?.group ?? "index_etf",
@@ -705,6 +687,7 @@ function topRisk(eventRisk: Awaited<ReturnType<typeof buildEventRisk>>, macroBlo
 type MarketBoardPayload = {
   capabilities: { canSeeProDetail: boolean; newsImpactEnabled: boolean };
   updatedAt: string;
+  dataAsOf: ReturnType<typeof globalDataAsOf>;
   headline: string;
   marketMode: MarketMode;
   strength: number;
@@ -834,6 +817,7 @@ export async function GET(request: Request) {
       newsImpactEnabled: isNewsImpactReadEnabled(newsImpactMode())
     },
     updatedAt: new Date().toISOString(),
+    dataAsOf: globalDataAsOf(items.map((item) => item.candleTime)),
     headline,
     marketMode,
     strength,

@@ -14,6 +14,7 @@ import { PullToRefresh, usePullToRefreshRegistration } from "@/components/PullTo
 import { ActionButton, StatusPill } from "@/components/ui/DesignPrimitives";
 import { withSupabaseAuth } from "@/lib/authFetch";
 import { hasMarketEntitlement } from "@/lib/billing";
+import { homePerpetualHref } from "@/lib/perpetualActivation";
 import {
   defaultHomeInterestCoin,
   homeInterestCoinsStorageKey,
@@ -406,7 +407,7 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
   const displayQuality: SnapshotQuality = displaySnapshot.quality;
   const quality = qualityCopy(displayQuality);
   const degradedSources = Object.entries(displaySnapshot.sourceStatus).filter(([, source]) => source.status !== "ready");
-  const detailHref = `/crypto/perpetual?asset=${asset}&timeframe=15m&snapshot=${encodeURIComponent(displaySnapshot.id)}&source=home${journeyId ? `&attribution=${encodeURIComponent(journeyId)}` : ""}`;
+  const detailHref = homePerpetualHref(asset, displaySnapshot.id, journeyId);
   const conditionOutcome = monitorConditionOutcomeCopy(displaySnapshot.summary.primaryCondition);
   const showConditionNote = displaySnapshot.summary.primaryCondition.kind === "price_cross_above" ||
     displaySnapshot.summary.primaryCondition.kind === "price_cross_below";
@@ -454,19 +455,20 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
       {state.status === "error" ? <p className="mt-2 text-[11px] font-semibold text-ui-risk">최신 갱신 실패 · 마지막 정상 분석을 참고용으로 보여드립니다.</p> : null}
 
       <Link
-        href={detailHref}
+        href={homePerpetualHref(asset, displaySnapshot.id, journeyId, true)}
         onClick={() => void trackProductEvent({
           eventName: "home_perpetual_opened",
           surface: "home",
           asset: displaySnapshot.asset,
           snapshotId: displaySnapshot.id,
           attributionId: journeyId ?? undefined,
-          properties: { quality: displaySnapshot.quality, source: "home" }
+          properties: { quality: displaySnapshot.quality, source: "home", intent: "monitor" }
         })}
         className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-ui-sm bg-ui-brand px-4 text-sm font-black text-white transition hover:brightness-110"
       >
-        전체 선물 분석과 조건 알림 보기 <ArrowRight size={16} aria-hidden />
+        {displayQuality !== "ready" ? "최신 조건 다시 확인" : session ? "이 조건 감시 설정" : "무료 감시 1개 시작하기"} <ArrowRight size={16} aria-hidden />
       </Link>
+      <Link href={detailHref} onClick={() => void trackProductEvent({ eventName: "home_perpetual_opened", surface: "home", asset: displaySnapshot.asset, snapshotId: displaySnapshot.id, attributionId: journeyId ?? undefined, properties: { quality: displaySnapshot.quality, source: "home", intent: "analysis" } })} className="mt-1 flex min-h-10 items-center justify-center text-xs font-semibold text-ui-muted underline underline-offset-4">전체 선물 분석 보기</Link>
 
       <div className="mt-3 bg-ui-inset/25 px-1 py-2">
         <PerpetualDecisionChart snapshot={displaySnapshot} compact />
@@ -485,7 +487,7 @@ function HomeDecisionHero({ asset }: { asset: PerpetualAsset }) {
   );
 }
 
-function HomeRevenueCoreExperience() {
+function HomeRevenueCoreExperience({ snapshotsEnabled = true }: { snapshotsEnabled?: boolean }) {
   const { profile, isLoading } = useSupabaseAuth();
   const isPaid = hasMarketEntitlement(profile?.plan, "crypto");
   const [coins, setCoins] = useState<HomeInterestCoin[]>([defaultHomeInterestCoin]);
@@ -531,10 +533,9 @@ function HomeRevenueCoreExperience() {
     );
   }
 
-  const canonicalAsset = canonicalAssetForHomeCoin(activeCoin);
+  const canonicalAsset = snapshotsEnabled ? canonicalAssetForHomeCoin(activeCoin) : null;
   return (
     <div className="flex flex-col gap-2 pt-1">
-      <MacroTicker compact market="crypto" homePriorityAware />
       <HomeInterestTabs
         coins={coins}
         activeCoin={activeCoin}
@@ -555,6 +556,7 @@ function HomeRevenueCoreExperience() {
           ? <HomeDecisionHero key={canonicalAsset} asset={canonicalAsset} />
           : <HomeInterestAnalysisSummary key={`${activeCoin.exchangeId}:${activeCoin.symbol}`} coin={activeCoin} />}
       </div>
+      <MacroTicker compact market="crypto" homePriorityAware />
       {settingsOpen ? (
         <HomeInterestCoinSettingsDialog
           coins={coins}
@@ -566,6 +568,14 @@ function HomeRevenueCoreExperience() {
       ) : null}
     </div>
   );
+}
+
+function LegacyHomeExperience() {
+  const { profile, isLoading } = useSupabaseAuth();
+  if (isLoading || !hasMarketEntitlement(profile?.plan, "crypto")) {
+    return <HomeRevenueCoreExperience snapshotsEnabled={false} />;
+  }
+  return <><MacroTicker compact market="crypto" homePriorityAware /><CoinRadarHomePanel /></>;
 }
 
 function ShadowHomeCanaryGate() {
@@ -594,14 +604,14 @@ function ShadowHomeCanaryGate() {
   }, [isLoading, session?.accessToken]);
 
   if (enabled) return <HomeRevenueCoreExperience />;
-  return <><SnapshotShadowProbe /><MacroTicker compact market="crypto" homePriorityAware /><CoinRadarHomePanel /></>;
+  return <><SnapshotShadowProbe /><LegacyHomeExperience /></>;
 }
 
 export function HomePerpetualDecisionFlow({ mode }: { mode: PerpetualRevenueCoreMode }) {
   return (
     <PullToRefresh>
       {mode === "off" ? (
-        <><MacroTicker compact market="crypto" homePriorityAware /><CoinRadarHomePanel /></>
+        <LegacyHomeExperience />
       ) : mode === "shadow" ? (
         <ShadowHomeCanaryGate />
       ) : (

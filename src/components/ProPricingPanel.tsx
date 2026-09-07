@@ -25,6 +25,7 @@ import {
   type NativePurchaseStageEvent
 } from "@/lib/mobilePurchases";
 import { useSupabaseAuth } from "@/lib/useSupabaseAuth";
+import { retainPurchaseOperation } from "@/lib/nativePurchaseErrors";
 import { adoptFunnelSessionId, getFunnelSessionId, trackProductEvent } from "@/lib/trackProductEvent";
 import {
   buildCoinProPlayStoreUrl,
@@ -33,6 +34,9 @@ import {
   type CoinProSource
 } from "@/lib/coinProConversion";
 import { ActionButton, AppSurface, DataRow, MetricRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
+import { ProgressiveDetails } from "@/components/ProgressiveDetails";
+import { ConditionWalkthrough } from "@/components/coin/ConditionWalkthrough";
+import { CoinProValueComparison } from "@/components/coin/CoinProValueComparison";
 
 type CheckoutState =
   | { status: "idle" }
@@ -132,6 +136,7 @@ function nativeCheckoutErrorMessage(error: unknown, lastStage?: NativePurchaseSt
   }
 
   if (error instanceof NativePurchaseError) {
+    if (error.diagnostic) return error.diagnostic.message;
     if (error.code === "purchase_cancelled") return "결제가 취소되었습니다.";
     if (error.code === "configure_timeout") {
       return "Android 결제 서비스 연결 단계에서 응답이 지연되고 있습니다. 앱을 완전히 닫았다가 다시 열고, Play 스토어 계정 상태를 확인한 뒤 다시 시도해 주세요.";
@@ -166,8 +171,8 @@ function scopeCopy(scope: BillingPageScope, placement: CoinProPlacement = "direc
               body: "Basic 새 AI 브리핑 1회에서 Coin Pro 하루 24회로 늘리고, 조건 감시·알림·당시 근거 복기로 이어갑니다."
             }
           : {
-              title: "매일 확인하고, 조건이 오면 다시 보는 Coin Pro",
-              body: "Basic의 상태·위험·시간대별 방향 위에, 1시간·4시간 신호의 발생 가격·시각과 고급 구간·AI 해설·조건 20개·알림 당시 복기를 엽니다."
+              title: "여러 조건을 맡기고, 확인할 때 돌아오세요.",
+              body: "BTC·ETH의 확인·판단 변경 조건을 함께 감시하고, 알림 당시 근거를 다시 봅니다."
             };
     return {
       eyebrow: "COIN PRO",
@@ -460,12 +465,12 @@ function PlanCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
-            <StatusPill tone={planScopeTone(plan)}>{planScopeLabel(plan)}</StatusPill>
+            {plan.id !== "crypto_monthly" ? <StatusPill tone={planScopeTone(plan)}>{planScopeLabel(plan)}</StatusPill> : null}
             {isCurrent ? <StatusPill tone="long">현재 플랜</StatusPill> : null}
             {isCovered && !isCurrent ? <StatusPill tone="long">현재 권한에 포함</StatusPill> : null}
           </div>
-          <h3 className="mt-3 break-keep text-ui-title font-semibold tracking-tight text-ui-text">{plan.displayName}</h3>
-          <p className="mt-1 text-ui-label font-semibold text-ui-subtle">{plan.periodLabel}</p>
+          <h3 className="mt-1 break-keep text-ui-title font-semibold tracking-tight text-ui-text">{plan.id === "crypto_monthly" ? "Coin Pro 월간 구독" : plan.displayName}</h3>
+          {plan.id !== "crypto_monthly" ? <p className="mt-1 text-ui-label font-semibold text-ui-subtle">{plan.periodLabel}</p> : null}
         </div>
       </div>
 
@@ -503,9 +508,10 @@ function PlanCard({
         )}
       </div>
 
-      <p className="mt-3 text-ui-body text-ui-muted [word-break:keep-all]">{displayCopy.description}</p>
       <p className="mt-3 text-xs font-semibold leading-5 text-ui-subtle [word-break:keep-all]">{plan.renewalText}</p>
-
+      <ProgressiveDetails title="포함 기능과 이용 범위">
+      <p className="text-xs font-semibold text-ui-muted">{plan.displayName}</p>
+      <p className="text-ui-body text-ui-muted [word-break:keep-all]">{displayCopy.description}</p>
       <ul className="mt-4 space-y-2 text-sm text-ui-muted">
         {displayCopy.highlights.map((item) => (
           <li key={item} className="flex gap-2 [word-break:keep-all]">
@@ -534,6 +540,7 @@ function PlanCard({
         <MetricRow label="관심목록" value={<span className="block max-w-[9rem] whitespace-normal break-keep">{plan.limits.watchlist}</span>} />
         <MetricRow label="알림" value={<span className="block max-w-[9rem] whitespace-normal break-keep">{plan.limits.alerts}</span>} />
       </AppSurface>
+      </ProgressiveDetails>
 
       <div className="mt-auto pt-5">
         {isBusy && busyStageText ? (
@@ -845,7 +852,7 @@ export function ProPricingPanel({
     ]);
     logNativeCheckout("native purchase start", { planId: plan.id });
     const handleNativeStage = (event: NativePurchaseStageEvent) => {
-      lastNativeStageRef.current = event;
+      lastNativeStageRef.current = retainPurchaseOperation(lastNativeStageRef.current, event);
       if (event.stage === "purchase_success" && !storeSucceeded) {
         storeSucceeded = true;
         void trackProductEvent({
@@ -949,6 +956,11 @@ export function ProPricingPanel({
           provider: "revenuecat",
           ...(cancelled ? {} : {
             code: error instanceof NativePurchaseError ? error.code : isTimeout ? "timeout" : "unknown",
+            ...(error instanceof NativePurchaseError && error.diagnostic ? {
+              ...(error.diagnostic.sdkCode ? { sdkCode: error.diagnostic.sdkCode } : {}),
+              category: error.diagnostic.category,
+              retryable: error.diagnostic.retryable
+            } : {}),
             stage: currentNativeStage() || "unknown"
           })
         })
@@ -999,31 +1011,12 @@ export function ProPricingPanel({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <p className="text-ui-label font-semibold uppercase tracking-[0.12em] text-ui-subtle">{copy.eyebrow}</p>
-            <h1 className="text-ui-heading font-semibold tracking-tight text-ui-text">{copy.title}</h1>
+            <h1 className="text-ui-heading font-semibold tracking-tight text-ui-text [word-break:keep-all]">{copy.title}</h1>
             <p className="mt-1 max-w-3xl text-ui-body text-ui-muted [word-break:keep-all]">{copy.body}</p>
           </div>
-          <StatusPill tone={session ? "info" : "locked"} className="self-start">{currentPlanLabel}</StatusPill>
+          {session ? <StatusPill tone="info" className="self-start">{currentPlanLabel}</StatusPill> : null}
         </div>
-        {marketScope === "crypto" ? (
-          <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
-            <AppSurface tone="inset" variant="report" padding="md" className="border-l-2 border-ui-brand">
-              <StatusPill tone={coinTrialEligibility === false ? "watch" : "info"}>{coinTrialHero.badge}</StatusPill>
-              <p className="mt-2 text-base font-black text-ui-text">{coinTrialHero.title}</p>
-              <p className="mt-1 text-xs leading-5 text-ui-muted">
-                {coinTrialHero.body}
-              </p>
-              <p className="mt-3 text-sm font-black text-ui-text">20개 조건 감시 → 알림 → 당시 가격·뉴스·근거 복기</p>
-            </AppSurface>
-            <AppSurface tone="inset" variant="report" padding="md">
-              <StatusPill tone="watch">과거 예시 · 실시간 데이터 아님</StatusPill>
-              <p className="mt-2 text-sm font-black text-ui-text">“1시간 방향 유지, 판단 기준 접근”</p>
-              <p className="mt-1 text-xs leading-5 text-ui-muted">예시 감시를 저장하면 조건 도달 시점의 스냅샷과 근거를 복기에 연결합니다. Basic 사용자에게 실제 Pro payload를 전달하지 않습니다.</p>
-            </AppSurface>
-          </div>
-        ) : null}
-        {marketScope === "crypto" ? <ActionButton href="#pro-plans" tone="primary" className="mt-4 min-h-11 w-full text-sm sm:w-auto">
-          14일 체험·월 29,000원 확인
-        </ActionButton> : null}
+        {marketScope === "crypto" ? <p className="mt-3 text-xs leading-5 text-ui-muted">{coinTrialHero.title} · 적용 여부는 스토어에서 확인</p> : null}
         {marketScope !== "crypto" ? <div className="mt-5 grid gap-3 sm:grid-cols-3">
           <div className="border-t border-ui-line pt-3">
             <StatusPill tone="locked">Basic</StatusPill>
@@ -1043,8 +1036,10 @@ export function ProPricingPanel({
         </ActionButton> : null}
       </AppSurface>
 
+      {marketScope === "crypto" ? <CoinProValueComparison /> : null}
+
       <div id="pro-plans" className="flex scroll-mt-24 flex-col gap-3">
-        <SectionHeader eyebrow="AVAILABLE PLANS" title="현재 플랜과 가격 선택" description={plansDescription} />
+        {marketScope !== "crypto" ? <SectionHeader eyebrow="AVAILABLE PLANS" title="현재 플랜과 가격 선택" description={plansDescription} /> : null}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {paidPlans.map((plan) => (
             <PlanCard
@@ -1085,21 +1080,19 @@ export function ProPricingPanel({
         </AppSurface>
       ) : null}
 
-      {marketScope === "crypto" ? (
-        <section className="flex flex-col gap-3" aria-labelledby="coin-pro-daily-flow">
-          <SectionHeader eyebrow="DAILY FLOW" title="Coin Pro를 매일 쓰는 세 단계" description="화면을 한 번 보고 끝내지 않고, 확인할 조건을 저장하고 결과를 복기하는 흐름입니다." />
-          <div className="grid gap-2 sm:grid-cols-3">
-            <ValueCard label="1 · 확인" value="Home에서 상태·위험 확인" detail="BTC 또는 ETH를 고르고 현재 시장과 가장 큰 위험을 5초 안에 확인합니다." tone="info" />
-            <ValueCard label="2 · 감시" value="중요 조건을 앱에 맡김" detail="판단 기준과 판단 변경 조건을 최대 20개까지 저장해 최대 5분 간격으로 평가합니다." tone="watch" />
-            <ValueCard label="3 · 복기" value="알림 당시 근거를 다시 봄" detail="알림 당시의 선물 분석과 확인 조건을 판단 기록에서 다시 보며 다음 판단 기준을 다듬습니다." tone="long" />
-          </div>
-        </section>
-      ) : null}
-
+      {marketScope === "crypto" ? <>
+        <ConditionWalkthrough />
+        <ActionButton href="/crypto/home" tone="secondary" className="w-full">무료 감시 1개부터 사용하기</ActionButton>
+        <ProgressiveDetails title="판단 기준과 알림의 한계 확인">
+          <p className="text-sm leading-6 text-ui-muted">Binance USDT-M BTC·ETH의 시장 자료를 사용합니다. 공식 방향은 확정된 캔들 기준이며, 진행 중인 가격만으로 확정 방향을 뒤집지 않습니다. 각 분석의 기준 시각과 데이터 상태를 화면에서 확인할 수 있습니다.</p>
+          <p className="text-sm leading-6 text-ui-muted">조건은 최대 5분 간격으로 평가합니다. 데이터가 늦거나 앱 알림 권한이 꺼져 있으면 확인·수신이 지연될 수 있습니다. 조건 충족은 매매 지시가 아니며 이후 위험과 판단 변경 기준을 다시 확인해야 합니다.</p>
+          <ProUnlocksSection marketScope={marketScope} />
+        </ProgressiveDetails>
+      </> : <>
       <section className="flex flex-col gap-3">
         <SectionHeader
           eyebrow="BASIC VS PRO"
-          title="가격보다 먼저 보는 차이"
+          title="Basic과 Pro의 차이"
           description="Basic은 첫 판단을 빠르게 보여주고, Pro는 그 판단이 왜 나왔는지와 언제 다시 봐야 하는지를 더 깊게 엽니다."
         />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -1111,6 +1104,9 @@ export function ProPricingPanel({
 
       <ProUnlocksSection marketScope={marketScope} />
 
+      </>}
+
+      <ProgressiveDetails title="현재 계정과 이용 권한 확인">
       <div className={`grid gap-4 ${marketScope === "crypto" ? "" : "lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]"}`}>
         <PanelCard variant="flat" padding="none" className="border-t border-ui-line py-5">
           <SectionHeader
@@ -1143,6 +1139,8 @@ export function ProPricingPanel({
           </div>
         </PanelCard> : null}
       </div>
+
+      </ProgressiveDetails>
 
       {nativePurchaseAvailable ? (
         <ActionButton onClick={restoreCheckout} disabled={checkoutState.status === "restoring"} tone="secondary" className="w-full sm:w-auto">

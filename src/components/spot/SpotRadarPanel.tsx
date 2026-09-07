@@ -2,6 +2,7 @@
 // 업비트/빗썸 KRW 현물 시장을 주문 기능 없이 관찰 후보 중심으로 보여줍니다.
 import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, HelpCircle, LineChart, Search, X } from "lucide-react";
+import { ProgressiveDetails } from "@/components/ProgressiveDetails";
 import { ActionButton, DataRow, PanelCard, SectionHeader, StatusPill } from "@/components/ui/DesignPrimitives";
 import type { SpotChartRadarPayload, SpotChartSummary, SpotChartTone, SpotExchange, SpotRadarCategory, SpotRadarItem, SpotRadarPayload } from "@/lib/spotRadarTypes";
 
@@ -557,16 +558,19 @@ function SpotPriorityPanel({
   chartPayload,
   loading,
   error,
-  action
+  action,
+  onObserve
 }: {
   payload: SpotRadarPayload | null;
   chartPayload: SpotChartRadarPayload | null;
   loading: boolean;
   error: string | null;
   action?: ReactNode;
+  onObserve: (market: string) => void;
 }) {
   const groups = payload ? buildSpotPriorityGroups(payload, chartPayload) : [];
-  const invalidationItems = groups.flatMap((group) => group.items).slice(0, 3);
+  const seen = new Set<string>();
+  const visibleGroups = groups.map((group) => ({ ...group, items: group.items.filter(({ item }) => { const key = `${item.exchange}:${item.market}`; if (seen.size >= 3 || seen.has(key)) return false; seen.add(key); return true; }) })).filter((group) => group.items.length > 0);
 
   return (
     <PanelCard variant="report" padding="md" className="space-y-4 rounded-ui-lg bg-ui-panel">
@@ -579,7 +583,7 @@ function SpotPriorityPanel({
       ) : (
         <>
           <div className="grid gap-2 lg:grid-cols-2">
-            {groups.map((group) => (
+            {visibleGroups.map((group) => (
               <article key={group.label} className="min-w-0 rounded-ui-sm bg-ui-elevated px-3 py-3">
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -602,7 +606,8 @@ function SpotPriorityPanel({
                           </div>
                           <p className="mt-1 text-sm leading-6 text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]">{reason}</p>
                           <p className="mt-1 text-sm leading-6 text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]">다시 볼 기준: {plan.summaryLabel}</p>
-                          <p className="mt-1 text-sm leading-6 text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]">확인 필요: {item.check}</p>
+                          <p className="mt-1 text-xs leading-5 text-ui-risk">무효화 {formatOptionalPrice(plan.invalidationPrice)} · {item.risk}</p>
+                          <ActionButton tone="secondary" onClick={() => onObserve(item.market)} className="mt-2 w-full">{item.symbol} 관심 코인으로 계속 보기</ActionButton>
                         </div>
                       );
                     })
@@ -614,40 +619,7 @@ function SpotPriorityPanel({
             ))}
           </div>
 
-          <div className="rounded-ui-sm bg-ui-elevated px-3 py-3">
-            <div className="flex min-w-0 items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-ui-label font-semibold uppercase tracking-[0.08em] text-ui-subtle">무효화/리스크 기준</p>
-                <p className="mt-1 text-sm font-semibold leading-5 text-ui-text [word-break:keep-all]">아래 가격과 리스크 조건이 흔들리면 관찰 강도를 낮춥니다.</p>
-              </div>
-              <StatusPill tone="risk" className="shrink-0">
-                기준
-              </StatusPill>
-            </div>
-            <div className="mt-3 grid gap-2 md:grid-cols-3">
-              {invalidationItems.length > 0 ? (
-                invalidationItems.map(({ item, chart }) => {
-                  const plan = buildSpotPricePlan(item, chart);
-                  return (
-                    <article key={`risk-${item.market}`} className="min-w-0 rounded-ui-sm bg-ui-inset px-3 py-3">
-                      <div className="flex min-w-0 items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-base font-semibold text-ui-text">{item.symbol}</p>
-                          <p className="mt-1 text-xs font-semibold text-ui-short">무효화 {formatOptionalPrice(plan.invalidationPrice)}</p>
-                        </div>
-                        <StatusPill tone="watch" className="shrink-0">
-                          조건 대기
-                        </StatusPill>
-                      </div>
-                      <p className="mt-2 text-sm leading-6 text-ui-muted [overflow-wrap:anywhere] [word-break:keep-all]">{item.risk}</p>
-                    </article>
-                  );
-                })
-              ) : (
-                <p className="rounded-ui-sm bg-ui-inset px-3 py-3 text-sm leading-6 text-ui-muted">무효화 요약은 관찰 후보가 잡히면 표시합니다.</p>
-              )}
-            </div>
-          </div>
+          {visibleGroups.length === 0 ? <p className="text-sm leading-6 text-ui-muted">지금은 확인할 후보가 없습니다. 아래 시장 요약이나 관심 코인을 확인하세요.</p> : null}
         </>
       )}
     </PanelCard>
@@ -1144,6 +1116,7 @@ export function SpotRadarPanel() {
       {watchMarket ? personalSpotPanel : null}
 
       <SpotPriorityPanel
+        onObserve={selectWatchMarket}
         payload={payload}
         chartPayload={chartPayload}
         loading={isLoading}
@@ -1156,6 +1129,8 @@ export function SpotRadarPanel() {
         }
       />
 
+      {watchMarket ? null : personalSpotPanel}
+      <ProgressiveDetails title="시장 전체 후보와 차트 근거 펼치기">
       <PanelCard variant="report" padding="lg" className="space-y-2">
         <SectionHeader title="시장 요약" />
 
@@ -1212,7 +1187,7 @@ export function SpotRadarPanel() {
         )}
       </PanelCard>
 
-      {watchMarket ? null : personalSpotPanel}
+      </ProgressiveDetails>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import type { PerpetualAsset } from "@/lib/perpetualDecisionSnapshot";
 import { coinProPlacements, coinProRouteKeys, coinProSources } from "./coinProConversion";
+import { purchaseErrorCategories, purchaseSdkCodes } from "./nativePurchaseErrors";
 
 export const clientProductEventNames = [
   "home_snapshot_viewed",
@@ -101,9 +102,9 @@ const surfaces = new Set<string>([
 const funnelKeys = ["source", "placement", "routeKey", "symbol", "offerId", "platform", "authState", "variant"] as const;
 const propertyKeys: Record<ClientProductEventName, ReadonlySet<string>> = {
   home_snapshot_viewed: new Set(["quality", "mode", "agreement"]),
-  home_perpetual_opened: new Set(["quality", "source"]),
+  home_perpetual_opened: new Set(["quality", "source", "intent"]),
   perpetual_snapshot_viewed: new Set(["quality", "continuity", "source"]),
-  pro_gate_viewed: new Set(["source", "placement", "routeKey", "symbol", "authState", "variant", "reason"]),
+  pro_gate_viewed: new Set([...funnelKeys, "reason"]),
   pro_cta_clicked: new Set(funnelKeys),
   monitor_failed: new Set(["code", "conditionRole", "source"]),
   scenario_opened: new Set(["source"]),
@@ -114,7 +115,7 @@ const propertyKeys: Record<ClientProductEventName, ReadonlySet<string>> = {
   purchase_started: new Set([...funnelKeys, "planId", "provider"]),
   store_purchase_succeeded: new Set([...funnelKeys, "planId", "provider"]),
   entitlement_sync_pending: new Set([...funnelKeys, "planId", "provider", "code"]),
-  purchase_failed: new Set([...funnelKeys, "planId", "provider", "code", "stage"]),
+  purchase_failed: new Set([...funnelKeys, "planId", "provider", "code", "stage", "sdkCode", "category", "retryable"]),
   purchase_cancelled: new Set([...funnelKeys, "planId", "provider"]),
   news_impact_viewed: new Set(["market", "classification", "source"]),
   news_source_opened: new Set(["market", "source"]),
@@ -195,6 +196,7 @@ function safePropertyScalar(eventName: ClientProductEventName, key: string, valu
     return safeFunnelScalar(key, value);
   }
   if (key === "quality") return enumValue(value, new Set(["ready", "partial", "stale", "unavailable"]));
+  if (key === "intent") return enumValue(value, new Set(["monitor", "analysis"]));
   if (key === "mode") return enumValue(value, new Set(["off", "shadow", "on"]));
   if (key === "agreement") return enumValue(value, new Set(["agreement", "mismatch", "insufficient"]));
   if (key === "continuity") return enumValue(value, new Set(["same", "refreshed", "current"]));
@@ -206,6 +208,9 @@ function safePropertyScalar(eventName: ClientProductEventName, key: string, valu
   if (key === "provider") return enumValue(value, allowedProviders);
   if (key === "reason") return enumValue(value, new Set(["monitor_limit"]));
   if (key === "stage") return enumValue(value, allowedPurchaseStages);
+  if (key === "sdkCode") return enumValue(value, purchaseSdkCodes);
+  if (key === "category") return enumValue(value, purchaseErrorCategories);
+  if (key === "retryable") return typeof value === "boolean" ? value : null;
   if (key === "code") return safeMachineCode(value);
   if (key === "enabled") return typeof value === "boolean" ? value : null;
   return null;
