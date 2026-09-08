@@ -35,6 +35,7 @@
     "test:pull-to-refresh": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-pull-to-refresh.js",
     "test:coin-usage-quotas": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-coin-usage-quotas.js",
     "test:push-targets": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-push-targets.js && node scripts/test-push-receipt-route.mjs",
+    "test:push-entitlements": "node scripts/test-push-entitlements.mjs",
     "test:news-sources": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-news-sources.js",
     "test:news-runtime": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-news-runtime.js",
     "test:macro-calendar": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-macro-calendar.js",

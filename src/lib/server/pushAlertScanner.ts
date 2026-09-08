@@ -199,7 +199,8 @@ export async function runPushAlertScan(context: ScanContext) {
       const recentSinceIso = new Date(Date.now() - maxRecentEventLookbackHours * 60 * 60000).toISOString();
       const recentRows = await recentSentEvents(userId, recentSinceIso);
       const recentRowsForUser = [...recentRows];
-      const plan = userPlan(subscriptionsByUser, userId);
+      const plan = await userPlan(subscriptionsByUser, userId);
+      if (plan === null) continue;
       const userPresets = presetsByUser.get(userId) ?? [];
 
       const userGenericEvents = genericEvents.map((event) => personalizeEventForUser(event, userPresets));
