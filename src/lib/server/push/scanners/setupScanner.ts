@@ -1,7 +1,7 @@
 import { getLiquidCryptoSymbols } from "@/lib/cryptoUniverse";
 import { chartTimeframes, type ChartTimeframe, type TradingMode } from "@/lib/marketAnalysis";
 import { scanAllSetups, type ScoutSetup } from "@/lib/setupScout";
-import { sideLabel, stockQuality, topPushSetups } from "@/lib/server/push/eventBuilders";
+import { sideLabel, stockQuality } from "@/lib/server/push/eventBuilders";
 import { fetchStockCandles } from "@/lib/stockMarket";
 import { analyzeTechnicalRadar } from "@/lib/technicalRadar";
 
@@ -73,10 +73,7 @@ export async function scanCryptoSetups() {
   ]);
   const symbols = Array.from(new Set(["BTCUSDT.P", "ETHUSDT.P", ...symbolGroups.flat()]));
   const settled = await Promise.allSettled(
-    cryptoModes.map(async (mode) => {
-      const all = await scanAllSetups({ mode, riskProfile: "radar", symbols });
-      return topPushSetups(all, 16);
-    })
+    cryptoModes.map((mode) => scanAllSetups({ mode, riskProfile: "radar", symbols }))
   );
   return settled.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
 }

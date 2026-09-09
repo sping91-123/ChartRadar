@@ -1,4 +1,5 @@
 import type { ScoutSetup } from "@/lib/setupScout";
+import { passesSetupPushQuality } from "@/lib/server/push/eligibility";
 import {
   buildRiskOffEvent,
   buildSemiconductorLeadershipEvent,
@@ -23,16 +24,28 @@ export function buildGenericPushEvents(
   optionalEventSources: OptionalEventSourceResult[]
 ): GenericPushEvents {
   const globalCompositeEvents = [buildRiskOffEvent(stockMomentumSetups), buildSemiconductorLeadershipEvent(stockMomentumSetups)];
-  const rawCryptoMarketScoutEvents = topPushSetups(cryptoSetups, 8).map((setup, index) =>
+  // Qualify every timeframe before symbol deduplication or delivery quotas.
+  // Otherwise a higher-scoring, ineligible 5m/evidence-poor setup hides a
+  // valid candidate, and a crowded alt leaderboard can exclude BTC/ETH.
+  const qualifiedCryptoSetups = cryptoSetups.filter((setup) =>
+    passesSetupPushQuality(setupToEvent(setup, "radar-grade", "crypto", "radar-grade"))
+  );
+  const rawCryptoMarketScoutEvents = topPushSetups(qualifiedCryptoSetups, qualifiedCryptoSetups.length).map((setup, index) =>
     setupToEvent(setup, "radar-grade", "crypto", "radar-grade", index + 1)
   );
   const limitedCryptoMarketScoutEvents = limitCryptoMarketScoutEvents(rawCryptoMarketScoutEvents);
+  // Preserve bounded rejected samples for the existing quality-skip diagnostics.
+  // They never consume qualified delivery slots and the scanner rejects them.
+  const rejectedCryptoMarketScoutEvents = topPushSetups(cryptoSetups, 8)
+    .map((setup) => setupToEvent(setup, "radar-grade", "crypto", "radar-grade"))
+    .filter((event) => !passesSetupPushQuality(event));
   const rawStockMarketScoutEvents = topPushSetups(stockMomentumSetups, 6).map((setup, index) =>
     setupToEvent(setup, "stock-momentum", "stocks", "stock-momentum", index + 1)
   );
   const limitedStockMarketScoutEvents = limitGlobalMarketScoutEvents(rawStockMarketScoutEvents);
   const events = [
     ...limitedCryptoMarketScoutEvents.events,
+    ...rejectedCryptoMarketScoutEvents,
     ...limitedStockMarketScoutEvents.events,
     ...globalCompositeEvents,
     ...optionalEventSources.map((source) => source.event)
