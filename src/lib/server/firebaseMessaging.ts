@@ -14,6 +14,7 @@ interface FcmMessageParams {
   data?: Record<string, string>;
   channelId?: string;
   tag?: string;
+  ttlSeconds?: number;
 }
 
 let cachedAccessToken: { value: string; expiresAt: number } | null = null;
@@ -138,6 +139,7 @@ export async function sendFcmMessage(params: FcmMessageParams) {
           data: params.data ?? {},
           android: {
             priority: "HIGH",
+            ...(params.ttlSeconds !== undefined ? { ttl: `${Math.max(0, Math.min(86400, Math.floor(params.ttlSeconds)))}s` } : {}),
             notification: {
               channel_id: params.channelId ?? "radar-alerts",
               icon: "ic_stat_chart_radar",

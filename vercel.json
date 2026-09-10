@@ -41,6 +41,10 @@
   },
   "crons": [
     {
+      "path": "/api/rapid-move-cron",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/push-cron",
       "schedule": "*/5 * * * *"
     },

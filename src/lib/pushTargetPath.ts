@@ -127,6 +127,11 @@ function routeFromPushMetadata(data: PushTargetData) {
 
 export function resolvePushTargetPath(data: PushTargetData | null | undefined) {
   const payload = data ?? {};
+  if (normalizedValue(payload.destination) === "rapid_price_move" || normalizedValue(payload.type) === "rapid_price_move") {
+    return typeof payload.event_key === "string" && /^rapid-price-move:(BTCUSDT|ETHUSDT):(up|down):\d{10}$/.test(payload.event_key)
+      ? `/crypto/price-alert?event=${encodeURIComponent(payload.event_key)}`
+      : "/crypto/alertlist";
+  }
   if (normalizedValue(payload.destination) === "crypto_scout" && normalizedValue(payload.type) === "radar_grade" && normalizedValue(payload.market) === "crypto") {
     const symbol = normalizedSymbol(payload.symbol);
     const timeframe = stringValue(payload.timeframe);

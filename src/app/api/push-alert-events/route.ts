@@ -3,6 +3,7 @@ import { fetchSupabaseUserOnServer, isSupabaseAdminConfigured, supabaseAdminRest
 import { rateLimit } from "@/lib/server/rateLimit";
 import { isUuid } from "@/lib/perpetualMonitor";
 import { newsImpactRuntimePolicy } from "@/lib/server/newsImpactMode";
+import { isRapidMoveEventKey } from "@/lib/rapidPriceMove";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -59,12 +60,15 @@ export async function GET(request: Request) {
     const user = await fetchSupabaseUserOnServer(accessToken);
     const url = new URL(request.url);
     const market = normalizeMarket(url.searchParams.get("market"));
+    const eventKey = url.searchParams.get("event");
+    if (eventKey !== null && !isRapidMoveEventKey(eventKey)) return privateJson({ error: "알림 주소가 올바르지 않습니다." }, { status: 400 });
+    const eventFilter = eventKey ? `&event_key=eq.${encodeURIComponent(eventKey)}&rule_id=eq.rapid-price-move` : "";
     const limit = normalizeLimit(url.searchParams.get("limit"));
     const kindFilter = url.searchParams.get("kind") === "perpetual" ? "&rule_id=eq.perpetual_scenario" : "";
     const rows = await supabaseAdminRest<PushAlertEventRow[]>(
       `push_alert_events?select=id,market,rule_id,event_key,title,body,payload,sent_at,created_at,notification_kind,delivery_status,read_at&user_id=eq.${encodeURIComponent(
         user.id
-      )}&market=eq.${market}${kindFilter}&order=created_at.desc&limit=${limit}`
+      )}&market=eq.${market}${kindFilter}${eventFilter}&order=created_at.desc&limit=${eventKey ? 1 : limit}`
     );
 
     const events = newsImpactRuntimePolicy().expose

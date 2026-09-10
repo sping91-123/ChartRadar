@@ -1,6 +1,7 @@
 // Chart Radar 알림 규칙과 사용자-facing 설명을 관리합니다.
 export type RadarAlertRuleId =
   | "radar-grade"
+  | "rapid-price-move"
   | "liquidation-pressure"
   | "watchlist-surge"
   | "macro-news"
@@ -24,6 +25,15 @@ export interface RadarAlertRule {
 }
 
 export const radarAlertRules: RadarAlertRule[] = [
+  {
+    id: "rapid-price-move", category: "crypto", tier: "pro",
+    title: "BTC·ETH 급등·급락", shortTitle: "급등·급락",
+    description: "BTC·ETH가 짧은 시간에 크게 움직이면 변화율과 확인할 가격 범위를 알려줍니다.",
+    trigger: "확정 1분봉 기준 · BTC 5분 ±1% 또는 15분 ±2%, ETH 5분 ±1.5% 또는 15분 ±3%.",
+    cadence: "1분마다 확인 · 같은 방향의 반복 제한",
+    value: "알림 당시 차트와 변동 전 고가·저가를 확인하고 현재 분석으로 이어집니다.",
+    defaultEnabled: true
+  },
   {
     id: "radar-grade",
     category: "crypto",

@@ -50,6 +50,7 @@ export interface PushAlertEvent {
     | "market_scout"
     | "watchlist"
     | "liquidation"
+    | "rapid_move"
     | "macro"
     | "global"
     | "global_momentum"
@@ -64,7 +65,7 @@ export interface PushAlertEvent {
   auditEvidence?: {
     version: 1;
     capturedAt: string;
-    source: "liquidation_inputs" | "scout_derived_inputs" | "macro_calendar";
+    source: "liquidation_inputs" | "scout_derived_inputs" | "macro_calendar" | "rapid_move_candles";
     snapshot: Record<string, unknown>;
   };
   score?: number;
