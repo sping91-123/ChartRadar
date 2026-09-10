@@ -5,12 +5,14 @@ import type { RecentPushAlertEventRow } from "@/lib/server/push/duplicateGuard";
 const cryptoAltMarketScoutCooldownMinutes = 360;
 const setupSymbolCooldownMinutes = 120;
 const liquidationPressureCooldownMinutes = 180;
+const unchangedPressureCooldownMinutes = 24 * 60;
+const materialPressureIncrease = 10;
 const cryptoAltMarketScoutGlobalCooldownMinutes = 60;
 const macroReminderDailyLimit = 3;
 
 export interface CooldownDecision {
   blocked: boolean;
-  reason: "symbol_cooldown" | "market_scout_limit" | "macro_daily_limit" | null;
+  reason: "symbol_cooldown" | "market_scout_limit" | "macro_daily_limit" | "unchanged_pressure" | "same_release" | null;
   minutes: number;
 }
 
@@ -58,11 +60,35 @@ function cooldownMinutesForEvent(event: PushAlertEvent) {
 
 export function cooldownDecisionForEvent(recentRows: RecentPushAlertEventRow[], event: PushAlertEvent): CooldownDecision {
   if (event.ruleId === "macro-event-reminder") {
+    // A release can arrive from multiple sources with different labels or ISO
+    // offsets. Compare its instant, including records made before grouping.
+    const releaseMinute = Math.floor(Date.parse(event.data.releaseAt ?? "") / 60000);
+    const sameRelease = Number.isFinite(releaseMinute) && recentRows.some((row) =>
+      row.rule_id === "macro-event-reminder" &&
+      Math.floor(Date.parse(recentPayloadValue(row, "releaseAt") ?? "") / 60000) === releaseMinute
+    );
+    if (sameRelease) return { blocked: true, reason: "same_release", minutes: 24 * 60 };
     const recentMacroCount = recentRows.filter((row) => (
       row.rule_id === "macro-event-reminder" && recentEventAgeMinutes(row) < 24 * 60
     )).length;
     if (recentMacroCount >= macroReminderDailyLimit) {
       return { blocked: true, reason: "macro_daily_limit", minutes: 24 * 60 };
+    }
+  }
+  if (event.ruleId === "liquidation-pressure") {
+    const previous = recentRows
+      .filter((row) => recentRowMatchesEventSymbol(row, event) && recentEventAgeMinutes(row) < unchangedPressureCooldownMinutes)
+      .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
+    if (previous) {
+      const previousPressure = Number(recentPayloadValue(previous, "pressure") ?? Number.NaN);
+      const pressure = Number(event.data.pressure ?? Number.NaN);
+      const previousSide = recentPayloadValue(previous, "pressure_side");
+      const sideChanged = Boolean(previousSide && event.data.pressure_side && previousSide !== event.data.pressure_side);
+      const becameExtreme = Number.isFinite(previousPressure) && previousPressure < 75 && pressure >= 75;
+      const increased = Number.isFinite(previousPressure) && pressure >= previousPressure + materialPressureIncrease;
+      if (!sideChanged && !becameExtreme && !increased) {
+        return { blocked: true, reason: "unchanged_pressure", minutes: unchangedPressureCooldownMinutes };
+      }
     }
   }
   const symbolCooldownMinutes = cooldownMinutesForEvent(event);

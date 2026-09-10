@@ -78,7 +78,7 @@ function setupEvidenceLabels(setup: ScoutSetup) {
 
 function setupMarketScoutTitle(setup: ScoutSetup, market: SetupAlertMarket) {
   if (market === "stocks") return "글로벌 레이더 후보";
-  return isCryptoMajor(setup.symbol) ? `${compactSymbol(setup.symbol)} 레이더 후보` : "알트 레이더 후보";
+  return `${compactSymbol(setup.symbol)} ${setup.timeframe} ${setup.plan.side === "long" ? "상방" : "하방"} 후보`;
 }
 
 function setupMarketScoutBody(setup: ScoutSetup, market: SetupAlertMarket) {
@@ -86,10 +86,9 @@ function setupMarketScoutBody(setup: ScoutSetup, market: SetupAlertMarket) {
   if (market === "stocks") {
     return `${stockSignalLabel(setup.symbol)}가 글로벌 후보에 잡혔습니다. 앱에서 점수와 근거를 확인해 주세요.`;
   }
-  if (isCryptoMajor(setup.symbol)) {
-    return `${symbol}가 레이더 후보에 잡혔습니다. 점수와 조건을 확인해 주세요.`;
-  }
-  return `${symbol}가 시장 스캔 후보에 잡혔습니다. 앱에서 근거를 확인해 주세요.`;
+  const evidence = setupEvidenceLabels(setup).map((label) => ({ 거래량: "거래량 증가", 변동성: "변동성 확대", 구조: "가격 구조" })[label] ?? label);
+  const reason = evidence.length ? `${evidence.join("·")} 근거가 겹쳤습니다.` : `${symbol}의 후보 점수 기준이 충족됐습니다.`;
+  return `${reason} 다음 ${setup.timeframe} 봉에서 ${setup.plan.side === "long" ? "상승" : "하락"} 구조 유지 여부를 확인하세요.`;
 }
 
 export function setupToEvent(
@@ -124,6 +123,8 @@ export function setupToEvent(
       is_market_scout: "true",
       is_watchlist: "false",
       evidence: evidenceLabels.join(","),
+      score: String(setup.score),
+      ...(market === "crypto" && !isCryptoMajor(setup.symbol) ? { destination: "crypto_scout" } : {}),
       ...(marketScoutRank !== undefined ? { market_scout_rank: String(marketScoutRank) } : {})
     },
     score: setup.score,

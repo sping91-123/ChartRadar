@@ -32,7 +32,13 @@ const stubs = {
       if (path.startsWith("push_tokens?")) return [{ id: "fixture-device", user_id: owner, token: "fixture-token", markets: ["crypto"], rule_ids: ["radar-grade"] }];
       if (path.startsWith("subscriptions?")) return subscriptions;
       if (path.startsWith("push_alert_presets?")) return [];
-      if (path.startsWith("push_alert_events?")) return [];
+      if (path.startsWith("push_alert_events?")) {
+        if (path.includes("created_at=gte.")) {
+          const since = new URLSearchParams(path.split("?")[1]).get("created_at").slice(4);
+          assert.ok(Date.now() - Date.parse(since) >= 24 * 3600000 - 1000, "the scanner must load a full day for daily reminder and unchanged-pressure limits");
+        }
+        return [];
+      }
       if (path === "push_alert_events" && options?.method === "POST") {
         records.push(options.body);
         return null;

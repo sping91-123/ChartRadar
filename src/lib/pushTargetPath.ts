@@ -127,6 +127,15 @@ function routeFromPushMetadata(data: PushTargetData) {
 
 export function resolvePushTargetPath(data: PushTargetData | null | undefined) {
   const payload = data ?? {};
+  if (normalizedValue(payload.destination) === "crypto_scout" && normalizedValue(payload.type) === "radar_grade" && normalizedValue(payload.market) === "crypto") {
+    const symbol = normalizedSymbol(payload.symbol);
+    const timeframe = stringValue(payload.timeframe);
+    if (/^[A-Z0-9]{2,30}USDT\.P$/.test(symbol) && !isCryptoMajorSymbol(symbol) && ["15m", "1h", "4h", "1d"].includes(timeframe)) {
+      const params = new URLSearchParams({ symbol, timeframe, source: "alert" });
+      return `/crypto/perpetual/alts?${params.toString()}`;
+    }
+    return "/alts";
+  }
   const newsTarget = newsImpactTarget(payload);
   if (newsTarget) return newsTarget;
   const perpetualTarget = perpetualSnapshotTarget(payload);

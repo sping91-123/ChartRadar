@@ -26,13 +26,14 @@ export default async function CryptoPerpetualAltsPage({ searchParams }: { search
   const focusedAlt = focusedAltMap[focus as keyof typeof focusedAltMap];
   const rawSymbol = Array.isArray(params.symbol) ? params.symbol[0] : params.symbol;
   const requestedSymbol = typeof rawSymbol === "string" ? rawSymbol.trim().toUpperCase().replace(/USDT(?:\.P)?$/, "") : null;
+  const rawTimeframe = Array.isArray(params.timeframe) ? params.timeframe[0] : params.timeframe;
   return (
     <main className="min-h-screen px-3 pb-28 sm:px-5 sm:pb-16">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 sm:gap-3">
         <Header market="crypto" />
         <RadarTopNav newsImpactEnabled={isNewsImpactUiEnabled(newsImpactMode())} />
         <CoinFuturesSwitch active="alts" />
-        <AltAnalysisEntry initialFocus={focusedAlt?.label ?? requestedSymbol} />
+        <AltAnalysisEntry initialFocus={focusedAlt?.label ?? requestedSymbol} initialTimeframe={rawTimeframe} />
         <ProgressiveDetails title="알트 전체 수급과 포지션 비교" description="선택 종목 분석과 별도로 SOL·XRP·DOGE·BNB의 흐름을 비교합니다.">
         <CoinFuturesBrief mode="alts" symbols={focusedAlt ? [focusedAlt] : undefined} />
         <AltFuturesSignalSection initialFocus={focusedAlt?.label ?? null} />

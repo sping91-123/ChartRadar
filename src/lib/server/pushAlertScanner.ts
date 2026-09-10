@@ -30,7 +30,7 @@ import type {
 } from "@/lib/server/push/types";
 import { supabaseAdminRest } from "@/lib/server/supabaseAdmin";
 
-const maxRecentEventLookbackHours = 6;
+const maxRecentEventLookbackHours = 24;
 
 function safeErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);

@@ -391,14 +391,17 @@ export function LiveMarketChart({
   majorOnly = false,
   altOnly = false,
   selectedSymbol,
+  initialTimeframe,
   hideSymbolSelector = false
 }: {
   majorOnly?: boolean;
   altOnly?: boolean;
   selectedSymbol?: string;
+  initialTimeframe?: ChartTimeframe;
   hideSymbolSelector?: boolean;
 } = {}) {
-  const controlledSymbol = selectedSymbol && symbols.includes(selectedSymbol) ? selectedSymbol : null;
+  const controlledSymbol = selectedSymbol && /^[A-Z0-9]{2,30}USDT\.P$/.test(selectedSymbol)
+    && (!majorOnly || majorSymbols.includes(selectedSymbol)) && (!altOnly || !majorSymbols.includes(selectedSymbol)) ? selectedSymbol : null;
   const initialSymbol = controlledSymbol ?? (altOnly ? altSymbols[0] : majorSymbols[0]);
   const { profile } = useSupabaseAuth();
   const hasCoinPro = hasMarketEntitlement(profile?.plan, "crypto");
@@ -418,7 +421,7 @@ export function LiveMarketChart({
   const briefingAbortRef = useRef<AbortController | null>(null);
 
   const [symbol, setSymbol] = useState(initialSymbol);
-  const [activeTimeframe, setActiveTimeframe] = useState<ChartTimeframe>("15m");
+  const [activeTimeframe, setActiveTimeframe] = useState<ChartTimeframe>(initialTimeframe ?? "15m");
   const [candles, setCandles] = useState<Candle[]>([]);
   const [analysis, setAnalysis] = useState<MarketAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -459,7 +462,7 @@ export function LiveMarketChart({
     return otherSymbols.filter((item) => item.includes(query) || symbolLabel(item).includes(query));
   }, [otherSymbolQuery, otherSymbols]);
   const isOtherSymbolActive = otherSymbols.includes(symbol);
-  const chartTitle = altOnly ? "알트코인 레이더" : "코인 레이더";
+  const chartTitle = altOnly ? `${symbolLabel(symbol)} ${activeTimeframe} 현재 분석` : "코인 레이더";
   const chartDescription = altOnly
     ? "선택한 알트코인의 구조, 과열, 변동성, 브리핑을 BTC/ETH와 같은 방식으로 확인합니다."
     : "BTC와 ETH의 구조, 추세, 변동성, 시장 브리핑을 한 화면에서 확인합니다.";
@@ -521,7 +524,7 @@ export function LiveMarketChart({
     if (!controlledSymbol && storedSymbol && symbols.includes(storedSymbol) && (!altOnly || !majorSymbols.includes(storedSymbol))) {
       setSymbol(storedSymbol);
     }
-    if (storedTimeframe && chartTimeframes.includes(storedTimeframe)) {
+    if (!initialTimeframe && storedTimeframe && chartTimeframes.includes(storedTimeframe)) {
       setActiveTimeframe(storedTimeframe);
     }
     if (storedMode === "confirmed" || storedMode === "aggressive") {
@@ -536,7 +539,7 @@ export function LiveMarketChart({
     if ([5, 7, 9].includes(storedStructureSensitivity)) {
       setStructureSensitivity(storedStructureSensitivity);
     }
-  }, [altOnly, controlledSymbol]);
+  }, [altOnly, controlledSymbol, initialTimeframe]);
 
   useEffect(() => {
     if (controlledSymbol) return;
@@ -1652,9 +1655,9 @@ export function LiveMarketChart({
             >
               <BarChart3 size={21} aria-hidden />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className={isMajorScreen ? "text-ui-heading font-semibold tracking-tight text-ui-text" : "text-xl font-black text-white"}>{chartTitle}</h2>
+                <h2 className={isMajorScreen ? "text-ui-heading font-semibold tracking-tight text-ui-text" : "break-all text-xl font-black text-white"}>{chartTitle}</h2>
                 {!isMajorScreen ? (
                   <span className="rounded-ui-sm bg-ui-active px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-ui-text">
                     Live
