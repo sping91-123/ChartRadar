@@ -22,6 +22,9 @@
     "src/app/api/push-cron/route.ts": {
       "regions": ["sin1"]
     },
+    "src/app/api/rapid-move-cron/route.ts": {
+      "regions": ["sin1"]
+    },
     "src/app/api/macro-sync/route.ts": {
       "regions": ["icn1"]
     },

@@ -10,6 +10,7 @@ const now = Math.floor(Date.now() / 60000) * 60000 + 10000;
 class TestDate extends Date { static now() { return now; } }
 const owner = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 let admin = true, deleted = false, failFcm = false, sourceFlat = false, queryCount = 0;
+let sourceStatus = 200;
 let tokens = [{ id: "fixture-device", user_id: owner, token: "fixture-token", markets: ["crypto"], rule_ids: ["rapid-price-move"] }];
 const records = new Map(), sent = [], queries = [];
 const stubs = {
@@ -64,7 +65,7 @@ function load(file) {
     process: { env: { CRON_SECRET: "fixture-cron", NODE_ENV: "production" } },
     fetch: async url => {
       assert.match(url, /^https:\/\/fapi.binance.com\/fapi\/v1\/klines\?symbol=(BTCUSDT|ETHUSDT)&interval=1m&limit=62$/);
-      return { ok: true, json: async () => fixtureCandles(sourceFlat ? 0 : 2).map(c => [c.time * 1000, String(c.open), String(c.high), String(c.low), String(c.close), String(c.volume), (c.time + 60) * 1000 - 1]) };
+      return { ok: sourceStatus === 200, status: sourceStatus, json: async () => fixtureCandles(sourceFlat ? 0 : 2).map(c => [c.time * 1000, String(c.open), String(c.high), String(c.low), String(c.close), String(c.volume), (c.time + 60) * 1000 - 1]) };
     },
     require: name => {
       if (name in stubs) return stubs[name];
@@ -147,6 +148,15 @@ await check("natural quiet scans use no account reads; dry-run and Basic/deletio
   admin = false; assert.equal((await runRapidMoveScan()).sent, 0);
   admin = true; deleted = true; assert.equal((await runRapidMoveScan()).sent, 0); deleted = false;
   assert.equal(records.size, 0);
+});
+await check("cron is pinned to Singapore and reports source HTTP failures without account reads", async () => {
+  const config = JSON.parse(readFileSync("vercel.json", "utf8"));
+  assert.deepEqual(config.functions["src/app/api/rapid-move-cron/route.ts"].regions, ["sin1"]);
+  sourceStatus = 451; queryCount = 0;
+  const result = await runRapidMoveScan();
+  sourceStatus = 200;
+  assert.equal(result.sourceCount, 0); assert.equal(result.candidates, 0); assert.equal(queryCount, 0);
+  assert.deepEqual([...result.errors], ["BTCUSDT:source_http_451", "ETHUSDT:source_http_451"]);
 });
 await check("deep links and authenticated history return the exact owned event only", async () => {
   assert.equal(resolvePushTargetPath(event.data), `/crypto/price-alert?event=${encodeURIComponent(event.eventKey)}`);

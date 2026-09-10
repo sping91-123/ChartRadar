@@ -63,7 +63,10 @@ export async function runRapidMoveScan({ dryRun = false }: { dryRun?: boolean } 
   const events: PushAlertEvent[] = [];
   sources.forEach((source, i) => {
     if (source.status === "fulfilled") { result.sourceCount++; if (source.value) events.push(source.value); }
-    else result.errors.push(`${symbols[i]}:source_unavailable`);
+    else {
+      const status = String(source.reason?.message ?? "").match(/futures candles HTTP (\d{3})$/)?.[1];
+      result.errors.push(`${symbols[i]}:${status ? `source_http_${status}` : "source_unavailable"}`);
+    }
   });
   result.candidates = events.length;
   // Quiet markets cost only two bounded market requests, with no account reads.
