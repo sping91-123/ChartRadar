@@ -102,6 +102,7 @@ export function setupToEvent(
   const isGlobalMomentum = market === "stocks" && ruleId === "stock-momentum";
   const evidenceLabels = setupEvidenceLabels(setup);
   const alertKind = market === "stocks" ? stockSetupAlertKind(setup.symbol) : "market_scout";
+  const active = asArray(setup.analysis?.timeframeAnalyses).find((analysis) => analysis.timeframe === setup.timeframe);
   return {
     market,
     ruleId,
@@ -109,6 +110,36 @@ export function setupToEvent(
     eventKey: `${prefix}:${market}:${setup.symbol}:${setup.timeframe}:${side}:${eventBucket(15)}`,
     title: setupMarketScoutTitle(setup, market),
     body: setupMarketScoutBody(setup, market),
+    auditEvidence: {
+      version: 1,
+      capturedAt: new Date().toISOString(),
+      source: "scout_derived_inputs",
+      snapshot: {
+        symbol: setup.symbol,
+        timeframe: setup.timeframe,
+        side,
+        score: setup.score,
+        quality: setup.plan.quality,
+        sourceUpdatedAt: setup.scannedAt ?? null,
+        currentPrice: setup.currentPrice ?? null,
+        evidenceLabels: [...evidenceLabels],
+        active: active ? {
+          volumeState: active.condition.volumeState,
+          volumeRatio: active.condition.volumeRatio ?? null,
+          volatilityState: active.condition.volatilityState,
+          hasDisplacement: Boolean(active.latestDisplacement),
+          displacementDirection: active.latestDisplacement?.direction ?? null,
+          msb: active.msb,
+          choch: active.choch,
+          cisdDirection: active.latestCisd?.direction ?? null,
+          sweepDirection: active.latestSweep?.direction ?? null,
+          inOb: Boolean(active.inOb),
+          obDirection: active.latestOb?.direction ?? null,
+          inFvg: Boolean(active.inFvg),
+          fvgDirection: active.latestFvg?.direction ?? null
+        } : null
+      }
+    },
     data: {
       type: ruleId,
       market,

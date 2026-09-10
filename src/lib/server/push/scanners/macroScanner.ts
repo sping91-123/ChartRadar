@@ -26,6 +26,7 @@ export async function scanMacroCalendarEvent(origin: string, market: SetupAlertM
   const response = await fetch(`${origin}/api/macro-calendar`, { cache: "no-store" });
   const payload = await readOptionalJson<{
     isStale?: boolean;
+    sourceUpdatedAt?: string | number | null;
     items?: Array<{
       label?: string;
       releaseAt?: string;
@@ -61,6 +62,22 @@ export async function scanMacroCalendarEvent(origin: string, market: SetupAlertM
     eventKey: `macro-event-reminder:release:${releaseMinute}`,
     title: `${timeKst} 주요 일정 · 발표 전 확인`,
     body: `${eventLabel} 발표 예정(한국시간). 일정에서 발표 내용과 예상치를 확인하고 가격 반응을 함께 보세요.`,
+    auditEvidence: {
+      version: 1,
+      capturedAt: new Date(now).toISOString(),
+      source: "macro_calendar",
+      snapshot: {
+        releaseAt,
+        sourceUpdatedAt: payload.sourceUpdatedAt ?? null,
+        sourceIsStale: payload.isStale ?? null,
+        leadMinutes: (releaseMinute * 60000 - now) / 60000,
+        // Preserve bounded source labels, not the complete calendar response.
+        items: upcoming
+          .filter((item) => Math.floor(Date.parse(item.releaseAt ?? "") / 60000) === releaseMinute)
+          .slice(0, 12)
+          .map((item) => ({ label: item.label, releaseAt: item.releaseAt, importance: item.importance, state: item.state ?? null }))
+      }
+    },
     data: {
       type: "macro_event",
       market,

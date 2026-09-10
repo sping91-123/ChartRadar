@@ -11,8 +11,27 @@ let report = {
   symbol: "BTCUSDT", period: "15m", grade: "heated", dominantSide: "downsideLongs",
   upsideShortPressure: 23, downsideLongPressure: 59, globalLongShort: { longPercent: 67.4, shortPercent: 32.6 }
 };
+let recordingEnabled = false;
+const recordedEvents = [];
+const fcmCalls = [];
+let failDelivery = false;
 const stubs = {
-  "@/lib/server/supabaseAdmin": { supabaseAdminRest: async () => { throw new Error("Unexpected database access"); } },
+  "@/lib/server/supabaseAdmin": { supabaseAdminRest: async (path, options) => {
+    assert.ok(recordingEnabled, "Unexpected database access");
+    if (!options) {
+      assert.match(path, /^push_alert_events\?select=id&/);
+      return [];
+    }
+    assert.equal(path, "push_alert_events");
+    assert.equal(options.method, "POST");
+    recordedEvents.push(JSON.parse(JSON.stringify(options.body)));
+    return [];
+  } },
+  "@/lib/server/firebaseMessaging": { sendFcmMessage: async (message) => {
+    fcmCalls.push(message);
+    if (failDelivery) throw new Error("fixture delivery failure");
+    return { name: "fixture-message" };
+  } },
   "@/lib/server/liquidationPressureSource": { fetchLiquidationPressureReport: async () => report }
 };
 const cache = new Map();
@@ -45,6 +64,8 @@ const { scanMacroCalendarEvent } = load("src/lib/server/push/scanners/macroScann
 const { setupToEvent } = load("src/lib/server/push/eventBuilders.ts");
 const { personalizeEventForUser } = load("src/lib/server/push/personalization.ts");
 const { resolvePushTargetPath } = load("src/lib/pushTargetPath.ts");
+const { sendEventToUser } = load("src/lib/server/push/sendPush.ts");
+const { buildLiquidationPressureReport } = load("src/lib/liquidationPressure.ts");
 const failures = [];
 async function check(label, fn) {
   try { await fn(); console.log(`PASS ${label}`); }
@@ -56,7 +77,7 @@ const recent = (event, minutes, patch = {}) => ({
 });
 const pressureEvent = await scanLiquidationEvent();
 await check("pressure copy names the vulnerable side, observed evidence and next check", () => {
-  assert.match(pressureEvent.title, /롱 쏠림.*하락 시 위험/);
+  assert.match(pressureEvent.title, /하락 시 롱 청산 주의/);
   assert.match(pressureEvent.body, /67.4%.*추정 59\/100.*15분봉.*지지 유지/);
   assert.equal(pressureEvent.data.pressure_side, "downsideLongs");
 });
@@ -79,7 +100,10 @@ await check("normal pressure does not generate an alert; short-side copy uses re
   report = { ...report, grade: "normal" };
   assert.equal(await scanLiquidationEvent(), null);
   report = { ...report, grade: "heated", dominantSide: "upsideShorts", upsideShortPressure: 60, downsideLongPressure: 23 };
-  assert.match((await scanLiquidationEvent()).body, /숏 계정 32.6%.*저항 돌파/);
+  const shortEvent = await scanLiquidationEvent();
+  assert.match(shortEvent.body, /숏 계정 32.6%.*저항 돌파/);
+  assert.match(shortEvent.title, /상승 시 숏 청산 주의/);
+  assert.doesNotMatch(shortEvent.title, /쏠림/);
 });
 const item = (label, at = releaseAt) => ({ label, releaseAt: at, importance: 3 });
 calendar = { items: [item("Core PPI MoM"), item("Core PPI m/m"), item("PPI MoM"), item("Initial Jobless Claims")] };
@@ -126,6 +150,54 @@ await check("an alt push opens the notified symbol and timeframe with safe metad
   assert.equal(resolvePushTargetPath({ ...scout.data, symbol: "https://evil.invalid", targetPath: "//evil.invalid" }), "/alts");
   assert.equal(resolvePushTargetPath({ ...scout.data, timeframe: "5m" }), "/alts");
   assert.equal(resolvePushTargetPath({ ...scout.data, symbol: "BTCUSDT.P" }), "/alts");
+});
+await check("pressure evidence preserves the inputs needed to reproduce its estimate", async () => {
+  const observedAt = now - 15 * 60000;
+  report = buildLiquidationPressureReport({
+    symbol: "BTCUSDT", period: "15m", markPrice: 80000, fundingRate: 0.0001,
+    openInterestChangePercent: 2,
+    globalLongShort: { longPercent: 70, shortPercent: 30, ratio: 70 / 30 },
+    topAccountLongShort: { longPercent: 65, shortPercent: 35, ratio: 65 / 35 },
+    topPositionLongShort: { longPercent: 67, shortPercent: 33, ratio: 67 / 33 },
+    takerFlow: { buyPercent: 55, sellPercent: 45, buyVolume: 55, sellVolume: 45 },
+    evidenceObservedAt: { globalLongShort: observedAt }, updatedAt: observedAt
+  });
+  const event = await scanLiquidationEvent();
+  const stored = JSON.parse(JSON.stringify(event.auditEvidence));
+  const s = stored.snapshot;
+  const replay = buildLiquidationPressureReport({ ...s, fundingRate: s.fundingRatePercent / 100, updatedAt: s.sourceUpdatedAt });
+  assert.equal(replay.downsideLongPressure, Number(event.data.pressure));
+  assert.equal(replay.dominantSide, event.data.pressure_side);
+  assert.equal(s.evidenceObservedAt.globalLongShort, observedAt);
+  assert.notEqual(stored.capturedAt, new Date(s.sourceUpdatedAt).toISOString());
+});
+await check("scout and macro audits preserve derived evidence and source labels without inventing timestamps", () => {
+  assert.equal(scout.auditEvidence.source, "scout_derived_inputs");
+  assert.equal(scout.auditEvidence.snapshot.score, 90);
+  assert.equal(scout.auditEvidence.snapshot.quality, "A");
+  assert.equal(scout.auditEvidence.snapshot.active.msb, "bullish");
+  assert.equal(scout.auditEvidence.snapshot.active.volumeState, "high");
+  assert.equal(scout.auditEvidence.snapshot.sourceUpdatedAt, null);
+  assert.equal(macroEvent.auditEvidence.snapshot.items.length, 4);
+  assert.ok(macroEvent.auditEvidence.snapshot.leadMinutes > 0 && macroEvent.auditEvidence.snapshot.leadMinutes <= 60);
+  assert.equal(macroEvent.auditEvidence.snapshot.sourceUpdatedAt, null);
+});
+await check("successful sends persist server evidence; FCM payload and failed-send history stay separate", async () => {
+  recordingEnabled = true;
+  const tokens = [{ id: "fixture-device", user_id: "fixture-user", token: "fixture-token", markets: ["crypto"], rule_ids: ["radar-grade"] }];
+  const personalized = personalizeEventForUser(scout, []);
+  const result = await sendEventToUser("fixture-user", tokens, personalized);
+  assert.equal(result.sent, 1);
+  assert.equal(recordedEvents.length, 1);
+  assert.deepEqual(recordedEvents[0].payload.auditEvidence, JSON.parse(JSON.stringify(scout.auditEvidence)));
+  assert.equal(recordedEvents[0].payload.sentCount, 1);
+  assert.equal(fcmCalls[0].data.auditEvidence, undefined);
+  assert.ok(Object.values(fcmCalls[0].data).every(value => typeof value === "string"));
+  failDelivery = true;
+  const failed = await sendEventToUser("fixture-user", tokens, personalized);
+  assert.equal(failed.failed, 1);
+  assert.equal(recordedEvents.length, 1);
+  recordingEnabled = false;
 });
 if (failures.length) process.exitCode = 1;
 else console.log("Push usefulness regression passed; no live FCM or database writes.");

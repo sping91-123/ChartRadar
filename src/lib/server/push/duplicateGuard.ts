@@ -44,7 +44,8 @@ export async function recordSentEvent(userId: string, event: PushAlertEvent, sen
       body: event.body,
       payload: {
         ...event.data,
-        sentCount
+        sentCount,
+        ...(event.auditEvidence ? { auditEvidence: event.auditEvidence } : {})
       }
     }
   });

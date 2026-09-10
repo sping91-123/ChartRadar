@@ -60,6 +60,13 @@ export interface PushAlertEvent {
   title: string;
   body: string;
   data: Record<string, string>;
+  // Server record only. Never attach this snapshot to the FCM data payload.
+  auditEvidence?: {
+    version: 1;
+    capturedAt: string;
+    source: "liquidation_inputs" | "scout_derived_inputs" | "macro_calendar";
+    snapshot: Record<string, unknown>;
+  };
   score?: number;
   quality?: ScoutSetup["plan"]["quality"];
   symbol?: string;
