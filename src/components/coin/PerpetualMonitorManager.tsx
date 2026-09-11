@@ -66,6 +66,21 @@ export function PerpetualMonitorManager({
   const [open, setOpen] = useState(false);
   const generationRef = useRef(0);
 
+  useEffect(() => {
+    let frame: number | undefined;
+    const openFromLink = () => {
+      if (window.location.hash !== "#saved-monitors") return;
+      setOpen(true);
+      frame = requestAnimationFrame(() => document.getElementById("saved-monitors")?.scrollIntoView({ block: "start" }));
+    };
+    openFromLink();
+    window.addEventListener("hashchange", openFromLink);
+    return () => {
+      window.removeEventListener("hashchange", openFromLink);
+      if (frame !== undefined) cancelAnimationFrame(frame);
+    };
+  }, [accessToken]);
+
   const load = useCallback(async (signal?: AbortSignal) => {
     if (!accessToken) {
       setState({ status: "idle", monitors: [], history: [] });
@@ -153,7 +168,7 @@ export function PerpetualMonitorManager({
   const history = state.history;
   const loading = state.status === "loading";
   return (
-    <details id="saved-monitors" onToggle={event => setOpen(event.currentTarget.open)} className="group scroll-mt-24 bg-ui-panel px-3 py-3 sm:px-5">
+    <details id="saved-monitors" open={open} onToggle={event => setOpen(event.currentTarget.open)} className="group scroll-mt-24 bg-ui-panel px-3 py-3 sm:px-5">
       <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 marker:hidden [&::-webkit-details-marker]:hidden">
         <span className="flex min-w-0 items-center gap-2">
           <Bell size={15} className="shrink-0 text-ui-brand" aria-hidden />

@@ -61,7 +61,7 @@ type MonitorState =
 type JournalState =
   | { status: "idle" }
   | { status: "saving"; snapshotId: string }
-  | { status: "saved"; snapshotId: string; message: string }
+  | { status: "saved"; snapshotId: string; message: string; journalId?: string }
   | { status: "error"; snapshotId: string; message: string };
 
 class JournalRouteError extends Error {
@@ -602,7 +602,7 @@ export function PerpetualDecisionExperience({
         throw new JournalRouteError(payload.error ?? "판단 기록을 저장하지 못했습니다.", response.status >= 500);
       }
       if (!payload.journal) throw new JournalRouteError("판단 기록 저장 응답을 확인하지 못했습니다.", false);
-      setJournalState({ status: "saved", snapshotId: journalSnapshotId, message: "지금 보고 있는 분석을 판단 기록에 저장했습니다." });
+      setJournalState({ status: "saved", snapshotId: journalSnapshotId, journalId: payload.journal.id, message: "지금 보고 있는 분석을 판단 기록에 저장했습니다." });
     } catch (error) {
       if (journalSource === "news") {
         setJournalState({
@@ -829,7 +829,7 @@ export function PerpetualDecisionExperience({
           </div>
           {!reviewingSnapshot ? <p className="mt-2 text-[11px] leading-5 text-ui-muted [word-break:keep-all]">Basic 1개 무료 · 조건 충족 시 알림함에 1회 기록 후 감시 종료<br />앱 알림 연결 시 푸시도 받습니다. 알림을 열어 당시 근거와 남은 위험을 확인하세요.</p> : null}
           {currentMonitorState.status === "saved" || currentMonitorState.status === "error" ? (
-            <p role={currentMonitorState.status === "error" ? "alert" : "status"} aria-live="polite" className={`mt-2 text-xs font-semibold leading-5 [word-break:keep-all] ${currentMonitorState.status === "saved" ? "text-ui-long" : "text-ui-risk"}`}>{currentMonitorState.message}</p>
+            <p role={currentMonitorState.status === "error" ? "alert" : "status"} aria-live="polite" className={`mt-2 text-xs font-semibold leading-5 [word-break:keep-all] ${currentMonitorState.status === "saved" ? "text-ui-long" : "text-ui-risk"}`}>{currentMonitorState.message} {currentMonitorState.status === "saved" ? <a href="/crypto/tracking" className="underline">내 조건 상태 이어보기</a> : null}</p>
           ) : null}
         </div>
         {!reviewingSnapshot ? <BrowserConditionNotifications /> : null}
@@ -859,7 +859,7 @@ export function PerpetualDecisionExperience({
         </details>
         {currentJournalState.status === "saved" || currentJournalState.status === "error" ? (
           <p role={currentJournalState.status === "error" ? "alert" : "status"} aria-live="polite" className={`mt-2 text-xs font-semibold ${currentJournalState.status === "saved" ? "text-ui-long" : "text-ui-risk"}`}>
-            {currentJournalState.message} {currentJournalState.status === "saved" ? <a href="/journal?market=crypto" className="underline">저장한 판단 보기</a> : null}
+            {currentJournalState.message} {currentJournalState.status === "saved" ? <a href={currentJournalState.journalId ? `/crypto/tracking?review=${encodeURIComponent(currentJournalState.journalId)}` : "/journal?market=crypto"} className="underline">이 판단 이어서 확인</a> : null}
           </p>
         ) : null}
       </section>

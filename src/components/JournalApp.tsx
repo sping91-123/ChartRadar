@@ -707,7 +707,7 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
   );
 
   const pendingRadarEntries = useMemo(
-    () => directMarketEntries.filter((entry) => isReviewableRadarEntry(entry) && !entry.outcome).slice(0, 4),
+    () => directMarketEntries.filter((entry) => isReviewableRadarEntry(entry) && !entry.outcome && !entry.decisionContext?.review).slice(0, 4),
     [directMarketEntries]
   );
 
@@ -929,6 +929,7 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
                   <StatusPill tone={market === "stocks" ? "watch" : "info"}>{marketLabel}</StatusPill>
                 </div>
                 <h1 className="max-w-full text-xl font-semibold leading-tight tracking-tight text-ui-text [overflow-wrap:anywhere] sm:text-2xl">다음에 확인할 기준 한 줄을 남기세요.</h1>
+                {market === "crypto" ? <Link href="/crypto/tracking" className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-ui-brand underline">내 조건·판단 기록 이어보기</Link> : null}
               </div>
             </div>
           </div>
@@ -1048,13 +1049,14 @@ export function JournalApp({ initialMarket = "crypto", newsImpactEnabled = false
                           <DataRow label="저장 시간" value={formatDateTime(entry.createdAt)} />
                           <DataRow label="체크포인트" value="확인" detail={checkpoint} />
                         </div>
-                        <OutcomeButtons entry={entry} onOutcome={recordOutcome} />
+                        {entry.decisionContext && session?.accessToken && !loadJournalEntries(journalOwnerId).some(local => local.id === entry.id) ? <ActionButton href={`/crypto/tracking?review=${encodeURIComponent(entry.id)}`} className="mt-3 w-full">당시 기준에 확인 기록 남기기</ActionButton> : <><OutcomeButtons entry={entry} onOutcome={recordOutcome} />
                         <ActionButton
                           onClick={() => startFromRadar(entry)}
                           className="mt-3 w-full whitespace-normal break-keep"
                         >
                           결과 입력 후 복기 작성
                         </ActionButton>
+                        </>}
                       </AppSurface>
                     );
                   })}

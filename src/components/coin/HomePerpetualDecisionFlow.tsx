@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type RefO
 import { AlertTriangle, ArrowRight, Clock3, Database, Loader2, RefreshCw, Settings2 } from "lucide-react";
 import { CoinRadarHomePanel } from "@/components/coin/CoinRadarHomePanel";
 import { HomeInterestAnalysisSummary } from "@/components/coin/HomeInterestAnalysisSummary";
+import { DecisionWorkspace } from "@/components/coin/DecisionWorkspace";
 import { HomeInterestCoinSettingsDialog } from "@/components/coin/HomeInterestCoinSettingsDialog";
 import { HomeQualifiedTimeframeDirection } from "@/components/coin/HomeQualifiedTimeframeDirection";
 import { PerpetualDecisionChart } from "@/components/coin/PerpetualDecisionChart";
@@ -538,6 +539,8 @@ function HomeRevenueCoreExperience({ snapshotsEnabled = true }: { snapshotsEnabl
   const canonicalAsset = snapshotsEnabled ? canonicalAssetForHomeCoin(activeCoin) : null;
   return (
     <div className="flex flex-col gap-2 pt-1">
+      <MacroTicker compact market="crypto" homePriorityAware />
+      {snapshotsEnabled ? <DecisionWorkspace compact /> : null}
       <HomeInterestTabs
         coins={coins}
         activeCoin={activeCoin}
@@ -558,7 +561,6 @@ function HomeRevenueCoreExperience({ snapshotsEnabled = true }: { snapshotsEnabl
           ? <HomeDecisionHero key={canonicalAsset} asset={canonicalAsset} />
           : <HomeInterestAnalysisSummary key={`${activeCoin.exchangeId}:${activeCoin.symbol}`} coin={activeCoin} />}
       </div>
-      <MacroTicker compact market="crypto" homePriorityAware />
       {settingsOpen ? (
         <HomeInterestCoinSettingsDialog
           coins={coins}

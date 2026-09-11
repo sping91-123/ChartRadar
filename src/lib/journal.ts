@@ -18,6 +18,7 @@ export interface ScoutSnapshot {
 export type OutcomeType = "win" | "loss" | "breakeven" | "missed";
 
 export interface DecisionJournalContext {
+  review?: import("@/lib/decisionWorkspace").DecisionReview;
   asset: "btc" | "eth";
   symbol: "BTCUSDT" | "ETHUSDT";
   snapshotId: string;

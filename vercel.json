@@ -25,6 +25,9 @@
     "src/app/api/rapid-move-cron/route.ts": {
       "regions": ["sin1"]
     },
+    "src/app/api/crypto/decision-workspace/route.ts": {
+      "regions": ["sin1"]
+    },
     "src/app/api/macro-sync/route.ts": {
       "regions": ["icn1"]
     },
