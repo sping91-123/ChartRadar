@@ -37,6 +37,7 @@ import { ActionButton, AppSurface, DataRow, MetricRow, PanelCard, SectionHeader,
 import { ProgressiveDetails } from "@/components/ProgressiveDetails";
 import { ConditionWalkthrough } from "@/components/coin/ConditionWalkthrough";
 import { CoinProValueComparison } from "@/components/coin/CoinProValueComparison";
+import { DecisionWorkspace } from "@/components/coin/DecisionWorkspace";
 
 type CheckoutState =
   | { status: "idle" }
@@ -171,8 +172,8 @@ function scopeCopy(scope: BillingPageScope, placement: CoinProPlacement = "direc
               body: "Basic 새 AI 브리핑 1회에서 Coin Pro 하루 24회로 늘리고, 조건 감시·알림·당시 근거 복기로 이어갑니다."
             }
           : {
-              title: "여러 조건을 맡기고, 확인할 때 돌아오세요.",
-              body: "BTC·ETH의 확인·판단 변경 조건을 함께 감시하고, 알림 당시 근거를 다시 봅니다."
+              title: "차트를 다시 볼 기준과 근거를 한곳에.",
+              body: "BTC·ETH의 상위 시간대 신호 가격·시각과 고급 구간을 확인하고, 여러 조건의 추적과 당시 판단 기록을 이어갑니다."
             };
     return {
       eyebrow: "COIN PRO",
@@ -1081,8 +1082,14 @@ export function ProPricingPanel({
       ) : null}
 
       {marketScope === "crypto" ? <>
-        <ConditionWalkthrough />
-        <ActionButton href="/crypto/home" tone="secondary" className="w-full">무료 감시 1개부터 사용하기</ActionButton>
+        <section aria-labelledby="coin-pro-try-own-condition" className="space-y-3 border-t border-ui-line pt-4">
+          <h2 id="coin-pro-try-own-condition" className="text-base font-bold text-ui-text">결제 전에 내 조건으로 확인하세요</h2>
+          <p className="text-sm leading-6 text-ui-muted">분석에서 조건 하나를 저장하고, 검사 상태와 당시 근거를 이어보세요. 다음에 확인할 기준도 같은 판단 기록에 남길 수 있습니다.</p>
+          <ActionButton href="/crypto/perpetual?asset=btc#monitor-condition" tone="secondary" className="w-full">무료 조건 1개 직접 사용하기</ActionButton>
+          <DecisionWorkspace compact />
+          <p className="text-xs leading-5 text-ui-muted">Basic에서도 조건 1개와 내 판단 기록을 사용할 수 있습니다. 여러 조건을 함께 추적하거나 상위 시간대의 신호 가격·시각, 고급 구간과 AI 해설이 필요할 때 Pro로 넓히세요.</p>
+        </section>
+        <ProgressiveDetails title="사용 흐름을 예시로 미리 보기"><ConditionWalkthrough /></ProgressiveDetails>
         <ProgressiveDetails title="판단 기준과 알림의 한계 확인">
           <p className="text-sm leading-6 text-ui-muted">Binance USDT-M BTC·ETH의 시장 자료를 사용합니다. 공식 방향은 확정된 캔들 기준이며, 진행 중인 가격만으로 확정 방향을 뒤집지 않습니다. 각 분석의 기준 시각과 데이터 상태를 화면에서 확인할 수 있습니다.</p>
           <p className="text-sm leading-6 text-ui-muted">조건은 최대 5분 간격으로 평가합니다. 데이터가 늦거나 앱 알림 권한이 꺼져 있으면 확인·수신이 지연될 수 있습니다. 조건 충족은 매매 지시가 아니며 이후 위험과 판단 변경 기준을 다시 확인해야 합니다.</p>
