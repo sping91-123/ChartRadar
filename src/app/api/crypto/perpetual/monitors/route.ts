@@ -19,6 +19,7 @@ import { isPerpetualRevenueCoreUserEnabled } from "@/lib/server/perpetualRevenue
 import { entitlementRateKey, getRequestEntitlement, type RequestEntitlement } from "@/lib/server/requestEntitlement";
 import { rateLimit, readJsonBodyLimited } from "@/lib/server/rateLimit";
 import { isSupabaseAdminConfigured } from "@/lib/server/supabaseAdmin";
+import { isWatchIntent, personalPriceCondition, personalWatchContext } from "@/lib/personalMonitor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -137,7 +138,7 @@ export async function POST(request: Request) {
   });
   if (!limited.allowed) return privateJson({ error: "조건 저장 요청이 많습니다." }, { status: 429 });
 
-  const parsed = await readJsonBodyLimited<{ snapshotId?: unknown; conditionId?: unknown } | null>(request, 1_024);
+  const parsed = await readJsonBodyLimited<{ snapshotId?: unknown; conditionId?: unknown; watchIntent?: unknown; personalPrice?: unknown } | null>(request, 1_024);
   if (!parsed.ok && parsed.tooLarge) {
     return privateJson({ error: "조건 감시 요청이 너무 큽니다.", code: "request_too_large" }, { status: 413 });
   }
@@ -146,10 +147,12 @@ export async function POST(request: Request) {
     !body ||
     typeof body !== "object" ||
     Array.isArray(body) ||
-    Object.keys(body).some((key) => key !== "snapshotId" && key !== "conditionId") ||
+    Object.keys(body).some((key) => !["snapshotId", "conditionId", "watchIntent", "personalPrice"].includes(key)) ||
+    (body.watchIntent !== undefined && !isWatchIntent(body.watchIntent)) ||
     !isUuid(body.snapshotId) ||
-    typeof body.conditionId !== "string" ||
-    body.conditionId.length > 180
+    (body.personalPrice === undefined
+      ? typeof body.conditionId !== "string" || body.conditionId.length > 180
+      : body.conditionId !== undefined || !isWatchIntent(body.watchIntent))
   ) {
     return privateJson({ error: "분석과 조건을 다시 확인해 주세요.", code: "invalid_monitor_request" }, { status: 400 });
   }
@@ -170,8 +173,14 @@ export async function POST(request: Request) {
     }, { status: 409 });
   }
 
-  const condition = findSnapshotCondition(snapshot, body.conditionId, entitlement.isPaid);
+  if (body.personalPrice !== undefined && !entitlement.isPaid) {
+    return privateJson({ error: "내가 정한 가격 감시는 Coin Pro에서 사용할 수 있습니다.", code: "condition_not_available" }, { status: 403 });
+  }
+  const condition = body.personalPrice !== undefined
+    ? personalPriceCondition(snapshot, body.personalPrice)
+    : findSnapshotCondition(snapshot, body.conditionId as string, entitlement.isPaid);
   if (!condition) {
+    if (body.personalPrice !== undefined) return privateJson({ error: "확인 가격과 위·아래 방향을 다시 입력해 주세요.", code: "invalid_personal_price" }, { status: 400 });
     return privateJson({
       error: entitlement.isPaid ? "이 분석에 없는 조건입니다." : "Basic에서는 현재 확인 조건 1개만 저장할 수 있습니다.",
       code: "condition_not_available"
@@ -192,6 +201,12 @@ export async function POST(request: Request) {
   if (currentSnapshot.engineVersion !== perpetualDecisionEngineVersion || currentSnapshot.quality !== "ready") {
     return privateJson({ error: "최신 데이터가 정상화된 뒤 조건 감시를 저장해 주세요.", code: "snapshot_not_actionable" }, { status: 409 });
   }
+  if (body.personalPrice !== undefined) {
+    const closedPrice = currentSnapshot.pro?.multiTimeframeEvidence.find(item => item.timeframe === "15m")?.closedPrice;
+    if (typeof closedPrice !== "number" || !Number.isFinite(closedPrice) || closedPrice <= 0) {
+      return privateJson({ error: "확정된 15분봉 가격을 확인하지 못해 감시를 저장하지 않았습니다.", code: "snapshot_not_actionable" }, { status: 409 });
+    }
+  }
   if (isMonitorConditionMet(condition, currentSnapshot)) {
     return privateJson({ error: "이미 충족된 조건은 감시로 저장할 수 없습니다.", code: "condition_already_met" }, { status: 422 });
   }
@@ -200,7 +215,7 @@ export async function POST(request: Request) {
     const monitor = await createPerpetualMonitor({
       userId: entitlement.userId!,
       snapshotId: snapshot.id,
-      condition,
+      condition: { ...condition, ...(isWatchIntent(body.watchIntent) ? { watchContext: personalWatchContext(snapshot, body.watchIntent) } : {}) },
       monitorLimit: cryptoAlertConditionLimit(entitlement.plan)
     });
     if (!monitor) throw new Error("monitor_create_empty");

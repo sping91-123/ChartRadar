@@ -81,7 +81,7 @@ const payload = {
 };
 assert.equal(
   resolvePushTargetPath(payload),
-  "/crypto/perpetual?asset=btc&snapshot=70000000-0000-4000-8000-000000000001&source=alert"
+  "/crypto/perpetual?asset=btc&snapshot=70000000-0000-4000-8000-000000000001&source=alert&monitor=70000000-0000-4000-8000-000000000002"
 );
 assert.deepEqual(perpetualAlertContextFromPushData(payload), {
   asset: "btc",

@@ -92,7 +92,7 @@ export function plainConditionBasis(basis: string | undefined) {
 export function monitorConditionDisplayLabel(condition: MonitorCondition) {
   const isPriceCondition = condition.kind === "price_cross_above" || condition.kind === "price_cross_below";
   if (isPriceCondition && typeof condition.threshold === "number" && Number.isFinite(condition.threshold)) {
-    const price = condition.threshold.toLocaleString("ko-KR", { maximumFractionDigits: 4 });
+    const price = condition.threshold.toLocaleString("ko-KR", { maximumFractionDigits: condition.id.includes(":user-price:") ? 8 : 4 });
     const side = condition.kind === "price_cross_above" ? "이상으로" : "이하로";
     return `${conditionTimeframeCopy[condition.timeframe]}봉이 ${price} ${side} 마감하는지 확인`;
   }
@@ -104,7 +104,7 @@ export function monitorConditionDisplayLabel(condition: MonitorCondition) {
 export function monitorAlertCopy(condition: MonitorCondition) {
   if ((condition.kind === "price_cross_above" || condition.kind === "price_cross_below") &&
       typeof condition.threshold === "number" && Number.isFinite(condition.threshold)) {
-    const price = condition.threshold.toLocaleString("ko-KR", { maximumFractionDigits: 4 });
+    const price = condition.threshold.toLocaleString("ko-KR", { maximumFractionDigits: condition.id.includes(":user-price:") ? 8 : 4 });
     const side = condition.kind === "price_cross_above" ? "이상으로" : "이하로";
     const closing = `${conditionTimeframeCopy[condition.timeframe]}봉이 ${price} ${side} 마감하면`;
     return {

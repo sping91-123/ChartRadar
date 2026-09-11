@@ -27,6 +27,7 @@ import {
 } from "@/lib/server/perpetualRevenueCore";
 import { supabaseAdminAuth, supabaseAdminRestAll, supabaseAdminRpc } from "@/lib/server/supabaseAdmin";
 import type { SupabaseUser } from "@/lib/supabase";
+import { readWatchContext } from "@/lib/personalMonitor";
 
 export interface PerpetualMonitorScanResult {
   enabled: boolean;
@@ -322,7 +323,8 @@ export async function runPerpetualMonitorScan(options: PerpetualMonitorScanOptio
         asset,
         snapshotId: snapshot.id,
         monitorId: row.id,
-        conditionId: row.condition_id
+        conditionId: row.condition_id,
+        watchContext: readWatchContext(row.condition)
       };
       const claimed = await claimPerpetualMonitorTrigger({
         monitorId: row.id,

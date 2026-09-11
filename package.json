@@ -40,6 +40,7 @@
     "test:push-usefulness": "node scripts/test-push-usefulness.mjs",
     "test:rapid-price-move": "node scripts/test-rapid-price-move.mjs",
     "test:decision-workspace": "node scripts/test-decision-workspace.mjs",
+    "test:personal-monitors": "node scripts/test-personal-monitors.mjs",
     "test:news-sources": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-news-sources.js",
     "test:news-runtime": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-news-runtime.js",
     "test:macro-calendar": "npx tsc -p tsconfig.verify.json && node .verify-dist/scripts/test-macro-calendar.js",

@@ -6,6 +6,7 @@ import {
   type PerpetualScenarioMonitor
 } from "@/lib/perpetualMonitor";
 import { supabaseAdminRest, supabaseAdminRestAll, supabaseAdminRpc } from "@/lib/server/supabaseAdmin";
+import { monitorCurrentBrief, type PersonalMonitorCondition } from "@/lib/personalMonitor";
 
 const monitorSelect = [
   "id",
@@ -67,11 +68,12 @@ export async function listUserPerpetualMonitors(
     quality: PerpetualDecisionSnapshot["quality"];
     generated_at: string;
     headline: string | null;
-  }>>(`perpetual_decision_snapshots?select=id,quality,generated_at,headline:public_payload->summary->>headline&id=in.(${ids.map(encodeURIComponent).join(",")})`).catch(() => []);
+    public_payload: PerpetualDecisionSnapshot;
+  }>>(`perpetual_decision_snapshots?select=id,quality,generated_at,headline:public_payload->summary->>headline,public_payload&id=in.(${ids.map(encodeURIComponent).join(",")})`).catch(() => []);
   const byId = new Map(evaluations.map(item => [item.id, item]));
   return monitors.map(monitor => {
     const evaluation = monitor.lastSnapshotId ? byId.get(monitor.lastSnapshotId) : null;
-    return { ...monitor, lastEvaluation: evaluation ? { quality: evaluation.quality, generatedAt: evaluation.generated_at, headline: evaluation.headline ?? "저장한 조건을 계속 확인합니다." } : null };
+    return { ...monitor, lastEvaluation: evaluation ? { quality: evaluation.quality, generatedAt: evaluation.generated_at, headline: evaluation.headline ?? "저장한 조건을 계속 확인합니다.", ...(evaluation.public_payload?.summary ? { brief: monitorCurrentBrief(evaluation.public_payload) } : {}) } : null };
   });
 }
 
@@ -115,7 +117,7 @@ export async function sharedCryptoConditionUsage(userId: string) {
 export async function createPerpetualMonitor(params: {
   userId: string;
   snapshotId: string;
-  condition: MonitorCondition;
+  condition: PersonalMonitorCondition;
   monitorLimit: number;
 }) {
   const rows = await supabaseAdminRpc<PerpetualMonitorRow[]>("create_perpetual_monitor", {
@@ -125,6 +127,13 @@ export async function createPerpetualMonitor(params: {
     p_condition: params.condition,
     p_monitor_limit: params.monitorLimit
   });
+  return rows[0] ? toPerpetualScenarioMonitor(rows[0]) : null;
+}
+
+export async function getUserPerpetualMonitor(userId: string, monitorId: string) {
+  const rows = await supabaseAdminRest<PerpetualMonitorRow[]>(
+    `perpetual_scenario_monitors?select=${monitorSelect}&user_id=eq.${encodeURIComponent(userId)}&id=eq.${encodeURIComponent(monitorId)}&limit=1`
+  );
   return rows[0] ? toPerpetualScenarioMonitor(rows[0]) : null;
 }
 

@@ -7,6 +7,7 @@ import { monitorAlertCopy, monitorConditionDisplayLabel } from "@/lib/perpetualD
 import type { PerpetualMonitorCapabilities, PerpetualScenarioMonitor } from "@/lib/perpetualMonitor";
 import { monitorEvaluationStatus } from "@/lib/perpetualMonitoringStatus";
 import { startVisiblePolling } from "@/lib/visiblePolling";
+import { readWatchContext, watchIntentLabels } from "@/lib/personalMonitor";
 
 type ManagerState =
   | { status: "idle" | "loading"; monitors: PerpetualScenarioMonitor[]; history: PerpetualScenarioMonitor[] }
@@ -204,6 +205,7 @@ export function PerpetualMonitorManager({
                     <StatusPill tone={status.tone}>{status.label}</StatusPill>
                   </div>
                   <p className="mt-1 text-xs font-semibold leading-5 text-ui-muted [word-break:keep-all]">{monitorConditionDisplayLabel(monitor.condition)}</p>
+                  {readWatchContext(monitor.condition) ? <p className="mt-1 text-xs font-semibold text-ui-brand">등록한 상황: {watchIntentLabels[readWatchContext(monitor.condition)!.intent]}</p> : null}
                   <p className="mt-1 text-xs leading-5 text-ui-text [word-break:keep-all]">알림 기준 · {monitorAlertCopy(monitor.condition).trigger}</p>
                   <p className="mt-0.5 text-[10.5px] leading-4 text-ui-subtle">조건 충족 시 알림함에 1회 기록 후 감시 종료 · 앱 알림 연결 시 푸시</p>
                   <p className="mt-1 text-[10.5px] text-ui-subtle">{expiryCopy(monitor.expiresAt)}</p>
@@ -214,6 +216,7 @@ export function PerpetualMonitorManager({
                     {evaluation.nextAt ? <p className="text-ui-subtle">다음 확인: 약 {historyTimeCopy(evaluation.nextAt)} KST · 최대 5분 간격</p> : null}
                   </div>
                   <div className="mt-2 flex flex-wrap gap-2">
+                    <ActionButton tone="secondary" href={`/crypto/tracking?asset=${monitor.asset}&monitor=${monitor.id}`}>당시와 현재 비교</ActionButton>
                     {monitor.status === "active" ? (
                       <ActionButton tone="secondary" disabled={busy} onClick={() => void updateMonitor(monitor, "pause")}>
                         {busy ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Pause size={14} aria-hidden />} 일시 정지

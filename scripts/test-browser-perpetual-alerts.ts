@@ -24,5 +24,5 @@ assert.equal(parseBrowserAlertLedger(JSON.stringify({ ...ledger, checkedAt: now 
 assert.notEqual(browserAlertStorageKey("account-a"), browserAlertStorageKey("account-b"));
 const restored = parseBrowserAlertLedger(JSON.stringify({ ...ledger, delivered: [...ledger.delivered, event.id] }), now);
 assert.deepEqual(freshBrowserPerpetualAlerts([event], restored, now), [], "reload and other tabs do not deliver twice");
-assert.equal(resolvePushTargetPath(event.payload), "/crypto/perpetual?asset=btc&snapshot=bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb&source=alert");
+assert.equal(resolvePushTargetPath(event.payload), "/crypto/perpetual?asset=btc&snapshot=bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb&source=alert&monitor=cccccccc-cccc-4ccc-8ccc-cccccccccccc");
 console.log("PASS browser alerts: fresh unread server events, age/baseline, duplicate/reload, account isolation, safe historical target");

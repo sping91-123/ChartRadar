@@ -7,6 +7,7 @@ import type {
   PerpetualSymbol
 } from "@/lib/perpetualDecisionSnapshot";
 import { decisionStateLabel, plainDecisionText } from "./perpetualDecisionCopy";
+import { monitorCurrentBrief, readWatchContext, watchIntentLabels, type MonitorCurrentBrief, type PersonalMonitorCondition } from "./personalMonitor";
 
 export type PerpetualMonitorStatus =
   | "active"
@@ -21,7 +22,7 @@ export interface PerpetualScenarioMonitor {
   snapshotId: string;
   lastSnapshotId: string | null;
   conditionId: string;
-  condition: MonitorCondition;
+  condition: PersonalMonitorCondition;
   asset: PerpetualAsset;
   symbol: PerpetualSymbol;
   timeframe: MonitorCondition["timeframe"];
@@ -33,7 +34,7 @@ export interface PerpetualScenarioMonitor {
   triggeredAt: string | null;
   createdAt: string;
   updatedAt: string;
-  lastEvaluation?: { quality: PerpetualDecisionSnapshot["quality"]; generatedAt: string; headline: string } | null;
+  lastEvaluation?: { quality: PerpetualDecisionSnapshot["quality"]; generatedAt: string; headline: string; brief?: MonitorCurrentBrief } | null;
 }
 
 export interface PerpetualMonitorRow {
@@ -42,7 +43,7 @@ export interface PerpetualMonitorRow {
   snapshot_id: string;
   last_snapshot_id: string | null;
   condition_id: string;
-  condition: MonitorCondition;
+  condition: PersonalMonitorCondition;
   asset: PerpetualAsset;
   symbol: PerpetualSymbol;
   timeframe: MonitorCondition["timeframe"];
@@ -105,10 +106,11 @@ export function toPerpetualScenarioMonitor(row: PerpetualMonitorRow): PerpetualS
 }
 
 export function monitorNotificationCopy(condition: MonitorCondition, snapshot: PerpetualDecisionSnapshot) {
+  const context = readWatchContext(condition);
   const kind = condition.role === "invalidation" ? "시나리오 무효화"
     : condition.kind === "decision_state_change" || condition.kind === "pressure_state_change" ? "판단 변경" : "관찰 조건 충족";
   const time = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(snapshot.generatedAt));
-  const price = (value: number) => value.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  const price = (value: number) => value.toLocaleString("en-US", { maximumFractionDigits: condition.id.includes(":user-price:") ? 8 : 2 });
   let change = plainDecisionText(snapshot.summary.headline);
   if (condition.kind === "decision_state_change" && condition.baselineState) {
     change = `${decisionStateLabel(condition.baselineState)} → ${decisionStateLabel(snapshot.summary.state)}`;
@@ -123,8 +125,8 @@ export function monitorNotificationCopy(condition: MonitorCondition, snapshot: P
     change = `${condition.baselinePressure ? pressure[condition.baselinePressure] : "이전 압력"} → ${current ? pressure[current] : "압력 변화 확인"}`;
   }
   return {
-    title: `${snapshot.asset.toUpperCase()} · ${kind}`,
-    body: `${time} KST · ${change}. 주의: ${plainDecisionText(snapshot.summary.topRisk)} 알림 당시 근거를 확인하세요.`
+    title: `${snapshot.asset.toUpperCase()} · ${context ? `${watchIntentLabels[context.intent]} 기준 확인` : kind}`,
+    body: `${time} KST · ${change}. 주의: ${plainDecisionText(snapshot.summary.topRisk)} ${context ? `다음 확인: ${monitorCurrentBrief(snapshot).nextCheck}` : "알림 당시 근거를 확인하세요."}`
   };
 }
 

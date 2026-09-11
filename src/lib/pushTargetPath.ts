@@ -54,8 +54,8 @@ export function perpetualAlertContextFromPushData(data: PushTargetData): Perpetu
 function perpetualSnapshotTarget(data: PushTargetData) {
   const context = perpetualAlertContextFromPushData(data);
   if (!context) return null;
-  const { asset, snapshotId } = context;
-  const params = new URLSearchParams({ asset, snapshot: snapshotId, source: "alert" });
+  const { asset, snapshotId, monitorId } = context;
+  const params = new URLSearchParams({ asset, snapshot: snapshotId, source: "alert", monitor: monitorId });
   return `/crypto/perpetual?${params.toString()}`;
 }
 

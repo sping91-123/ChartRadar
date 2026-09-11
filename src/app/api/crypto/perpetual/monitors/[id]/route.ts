@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { cryptoAlertConditionLimit } from "@/lib/coinCapabilities";
 import { isUuid } from "@/lib/perpetualMonitor";
 import { perpetualDecisionEngineVersion } from "@/lib/perpetualDecisionSnapshot";
-import { markExpiredPerpetualMonitors, reconcilePerpetualMonitorLimit, setPerpetualMonitorAction } from "@/lib/server/perpetualMonitorStore";
+import { getUserPerpetualMonitor, markExpiredPerpetualMonitors, reconcilePerpetualMonitorLimit, setPerpetualMonitorAction } from "@/lib/server/perpetualMonitorStore";
+import { resolvePerpetualDecisionSnapshot } from "@/lib/server/perpetualDecisionSource";
+import { monitorCurrentBrief } from "@/lib/personalMonitor";
 import { isPerpetualRevenueCoreUserEnabled } from "@/lib/server/perpetualRevenueCore";
 import { entitlementRateKey, getRequestEntitlement } from "@/lib/server/requestEntitlement";
 import { rateLimit, readJsonBodyLimited } from "@/lib/server/rateLimit";
@@ -10,12 +12,35 @@ import { isSupabaseAdminConfigured } from "@/lib/server/supabaseAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const preferredRegion = "sin1";
 
 function privateJson(body: unknown, init?: ResponseInit) {
   const response = NextResponse.json(body, init);
   response.headers.set("Cache-Control", "private, no-store, max-age=0");
   response.headers.set("Vary", "Authorization");
   return response;
+}
+
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
+  const entitlement = await getRequestEntitlement(request, "crypto");
+  if (!entitlement.userId || !entitlement.isAuthenticated) return privateJson({ error: "로그인이 필요합니다." }, { status: 401 });
+  if (entitlement.state === "deletion_pending") return privateJson({ error: "계정 삭제 대기 중입니다." }, { status: 409 });
+  if (entitlement.state === "unavailable") return privateJson({ error: "이용 권한을 확인하지 못했습니다." }, { status: 503 });
+  if (!isPerpetualRevenueCoreUserEnabled(entitlement.userId)) return privateJson({ error: "조건 감시는 아직 활성화되지 않았습니다." }, { status: 409 });
+  if (!isSupabaseAdminConfigured()) return privateJson({ error: "감시 기록을 확인하지 못했습니다." }, { status: 503 });
+  const { id } = await context.params;
+  if (!isUuid(id)) return privateJson({ error: "올바른 감시 기록이 아닙니다." }, { status: 400 });
+  const limited = await rateLimit(request, { key: entitlementRateKey("crypto-personal-monitor-read", entitlement), limit: 60, windowMs: 5 * 60_000 });
+  if (!limited.allowed) return privateJson({ error: "잠시 후 다시 확인해 주세요." }, { status: 429 });
+  try {
+    const monitor = await getUserPerpetualMonitor(entitlement.userId, id);
+    if (!monitor) return privateJson({ error: "이 계정에서 해당 감시 기록을 찾지 못했습니다." }, { status: 404 });
+    // The owned condition may include a Pro condition saved earlier; current data is public summary only.
+    const current = await resolvePerpetualDecisionSnapshot({ asset: monitor.asset }).then(({ snapshot }) => monitorCurrentBrief(snapshot)).catch(() => null);
+    return privateJson({ monitor, current });
+  } catch {
+    return privateJson({ error: "감시 기록을 불러오지 못했습니다." }, { status: 503 });
+  }
 }
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {

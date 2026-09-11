@@ -333,14 +333,17 @@ try {
   await insertSnapshot(db, legacySnapshot, "btc", 7, "ready", new Date(), "perpetual-v2.0.0");
 
   const basicCondition = condition("basic-primary", 100);
+  basicCondition.watchContext = { version: 1, intent: "long", savedAt: new Date().toISOString(), state: "neutral", price: 100, headline: "저장 당시", topRisk: "하단 확인" };
   const first = await asRole(db, "service_role", "select * from public.create_perpetual_monitor($1,$2,$3,$4,$5)", [
     ids.basic, snapshots[0], basicCondition.id, basicCondition, 1
   ]);
   assert.equal(first.rows.length, 1);
+  assert.deepEqual(first.rows[0].condition.watchContext, basicCondition.watchContext, "personal context must survive the actual RPC JSONB write");
   const repeated = await asRole(db, "service_role", "select * from public.create_perpetual_monitor($1,$2,$3,$4,$5)", [
-    ids.basic, snapshots[0], basicCondition.id, basicCondition, 1
+    ids.basic, snapshots[0], basicCondition.id, { ...basicCondition, watchContext: { ...basicCondition.watchContext, intent: "short" } }, 1
   ]);
   assert.equal(repeated.rows[0].id, first.rows[0].id, "duplicate create must return the existing monitor");
+  assert.equal(repeated.rows[0].condition.watchContext.intent, "long", "duplicate create must preserve original situation");
   await asRole(db, "service_role", "select * from public.set_perpetual_monitor_status($1,$2,'pause',1)", [ids.basic, first.rows[0].id]);
   const resumedByCreate = await asRole(db, "service_role", "select * from public.create_perpetual_monitor($1,$2,$3,$4,$5)", [
     ids.basic, snapshots[1], basicCondition.id, basicCondition, 1
