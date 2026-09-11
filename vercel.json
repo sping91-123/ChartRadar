@@ -19,6 +19,9 @@
     "src/app/api/crypto/perpetual/monitors/route.ts": {
       "regions": ["sin1"]
     },
+    "src/app/api/crypto/perpetual/monitors/[id]/route.ts": {
+      "regions": ["sin1"]
+    },
     "src/app/api/push-cron/route.ts": {
       "regions": ["sin1"]
     },
