@@ -1,12 +1,11 @@
 import { isCryptoMajorPushSymbol as isCryptoMajor } from "@/lib/server/push/eligibility";
 import type { PushAlertEvent } from "@/lib/server/push/types";
 import type { RecentPushAlertEventRow } from "@/lib/server/push/duplicateGuard";
+import { liquidationChange } from "@/lib/server/push/liquidationChange";
 
 const cryptoAltMarketScoutCooldownMinutes = 360;
 const setupSymbolCooldownMinutes = 120;
 const liquidationPressureCooldownMinutes = 180;
-const unchangedPressureCooldownMinutes = 24 * 60;
-const materialPressureIncrease = 10;
 const cryptoAltMarketScoutGlobalCooldownMinutes = 60;
 const macroReminderDailyLimit = 3;
 
@@ -76,20 +75,13 @@ export function cooldownDecisionForEvent(recentRows: RecentPushAlertEventRow[], 
     }
   }
   if (event.ruleId === "liquidation-pressure") {
-    const previous = recentRows
-      .filter((row) => recentRowMatchesEventSymbol(row, event) && recentEventAgeMinutes(row) < unchangedPressureCooldownMinutes)
-      .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
-    if (previous) {
-      const previousPressure = Number(recentPayloadValue(previous, "pressure") ?? Number.NaN);
-      const pressure = Number(event.data.pressure ?? Number.NaN);
-      const previousSide = recentPayloadValue(previous, "pressure_side");
-      const sideChanged = Boolean(previousSide && event.data.pressure_side && previousSide !== event.data.pressure_side);
-      const becameExtreme = Number.isFinite(previousPressure) && previousPressure < 75 && pressure >= 75;
-      const increased = Number.isFinite(previousPressure) && pressure >= previousPressure + materialPressureIncrease;
-      if (!sideChanged && !becameExtreme && !increased) {
-        return { blocked: true, reason: "unchanged_pressure", minutes: unchangedPressureCooldownMinutes };
-      }
-    }
+    const change = liquidationChange(recentRows, event);
+    if (change.reason === "unchanged") return { blocked: true, reason: "unchanged_pressure", minutes: 0 };
+    // A confirmed change of risk direction must not be hidden by the old 3-hour timer.
+    const minutes = change.reason === "direction_confirmed" ? 180 : change.reason === "increase" ? 60 : 15;
+    if (change.previousAt && Date.now() - Date.parse(change.previousAt) < minutes * 60000)
+      return { blocked: true, reason: "symbol_cooldown", minutes };
+    return { blocked: false, reason: null, minutes: 0 };
   }
   const symbolCooldownMinutes = cooldownMinutesForEvent(event);
   if (symbolCooldownMinutes > 0) {

@@ -277,6 +277,7 @@ export function RadarAlertList({ market = "crypto" }: { market?: AlertMarket }) 
                     </div>
                     <h3 className={`mt-3 text-sm font-semibold leading-5 ${event.read_at ? "text-ui-muted" : "text-ui-text"}`}>{event.title}</h3>
                     <p className="mt-1 text-sm leading-6 text-ui-muted [word-break:keep-all]">{event.body}</p>
+                    {event.rule_id === "liquidation-pressure" && ["sending", "failed", "partial"].includes(event.delivery_status ?? "") ? <p className="mt-2 text-xs text-ui-muted">{event.delivery_status === "failed" ? "푸시 발송 실패 · 기록만 저장됨" : event.delivery_status === "partial" ? "일부 기기에만 발송 접수" : "발송 결과 확인 중 · 기록은 저장됨"}</p> : null}
                   </div>
                   <div className="shrink-0 text-right text-ui-label font-semibold text-ui-subtle">
                     <Clock3 className="ml-auto mb-1" size={13} aria-hidden />

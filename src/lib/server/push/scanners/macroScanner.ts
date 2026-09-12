@@ -5,6 +5,8 @@ import type { PushAlertEvent } from "@/lib/server/push/types";
 
 function reminderLabel(label: string) {
   const lower = label.toLowerCase();
+  if (lower.includes("michigan") && lower.includes("inflation")) return lower.includes("5") ? "미시간대 5년 기대인플레이션" : "미시간대 기대인플레이션";
+  if (lower.includes("michigan") && /sentiment|confidence/.test(lower)) return "미시간대 소비자심리" + (/prel|prelim/.test(lower) ? " 예비치" : /final/.test(lower) ? " 확정치" : "");
   if (lower.includes("core ppi")) return "근원 생산자물가";
   if (lower.includes("ppi")) return "생산자물가";
   if (lower.includes("core cpi")) return "근원 소비자물가";
@@ -22,6 +24,10 @@ function reminderLabel(label: string) {
   return label.trim();
 }
 
+function valueText(value: unknown) {
+  return typeof value === "string" && /^-?[0-9][0-9,]*(\.[0-9]+)?\s*(%|[KMB])?$/i.test(value.trim()) ? value.trim() : null;
+}
+
 export async function scanMacroCalendarEvent(origin: string, market: SetupAlertMarket = "stocks"): Promise<PushAlertEvent | null> {
   const response = await fetch(`${origin}/api/macro-calendar`, { cache: "no-store" });
   const payload = await readOptionalJson<{
@@ -33,6 +39,11 @@ export async function scanMacroCalendarEvent(origin: string, market: SetupAlertM
       dateKst?: string;
       importance?: number;
       state?: string;
+      forecast?: string;
+      consensusValue?: string;
+      previous?: string;
+      previousValue?: string;
+      unit?: string;
     }>;
   }>(response, "macro-calendar");
   if (!payload || payload.isStale) return null;
@@ -54,14 +65,23 @@ export async function scanMacroCalendarEvent(origin: string, market: SetupAlertM
     timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", hourCycle: "h23"
   }).format(new Date(releaseAt));
   const eventLabel = `${labels.slice(0, 3).join("·")}${labels.length > 3 ? ` 외 ${labels.length - 3}개` : ""}`;
+  const sameRelease = upcoming.filter(item => Math.floor(Date.parse(item.releaseAt ?? "") / 60000) === releaseMinute);
+  const metricKeys = new Set(sameRelease.map(item => (item.label ?? "").trim().toLowerCase().replace(/\s+/g, " ") + "|" + (item.unit ?? "")));
+  const forecasts = Array.from(new Set(sameRelease.map(item => valueText(item.consensusValue ?? item.forecast)).filter(Boolean)));
+  const previous = Array.from(new Set(sameRelease.map(item => valueText(item.previousValue ?? item.previous)).filter(Boolean)));
+  // With multiple metrics at one release, do not attach one metric's number to another label.
+  const values = labels.length === 1 && metricKeys.size === 1 ? [
+    forecasts.length === 1 ? "예상 " + forecasts[0] : null,
+    previous.length === 1 ? "이전 " + previous[0] : null
+  ].filter(Boolean).join(" · ") : "";
 
   return {
     market,
     ruleId: "macro-event-reminder",
     alertKind: "macro",
     eventKey: `macro-event-reminder:release:${releaseMinute}`,
-    title: `${timeKst} 주요 일정 · 발표 전 확인`,
-    body: `${eventLabel} 발표 예정(한국시간). 일정에서 발표 내용과 예상치를 확인하고 가격 반응을 함께 보세요.`,
+    title: `${timeKst} ${labels.length === 1 ? eventLabel : "주요 일정"} · 발표 전 확인`,
+    body: `${eventLabel} 발표 예정(한국시간).${values ? " " + values + "." : ""} 발표값과 예상치의 차이를 확인하고 가격 반응을 함께 보세요.`,
     auditEvidence: {
       version: 1,
       capturedAt: new Date(now).toISOString(),
@@ -75,7 +95,8 @@ export async function scanMacroCalendarEvent(origin: string, market: SetupAlertM
         items: upcoming
           .filter((item) => Math.floor(Date.parse(item.releaseAt ?? "") / 60000) === releaseMinute)
           .slice(0, 12)
-          .map((item) => ({ label: item.label, releaseAt: item.releaseAt, importance: item.importance, state: item.state ?? null }))
+          .map((item) => ({ label: item.label, releaseAt: item.releaseAt, importance: item.importance, state: item.state ?? null,
+            forecast: item.consensusValue ?? item.forecast ?? null, previous: item.previousValue ?? item.previous ?? null, unit: item.unit ?? null }))
       }
     },
     data: {

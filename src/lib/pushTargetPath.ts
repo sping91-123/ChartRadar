@@ -1,4 +1,5 @@
 // 앱 푸시 알림 데이터에서 안전한 내부 이동 경로를 결정합니다.
+import { isLiquidationAlertKey } from "./liquidationAlert";
 export type PushTargetData = Record<string, unknown>;
 
 const allowedPushTargetPaths = new Set([
@@ -127,6 +128,11 @@ function routeFromPushMetadata(data: PushTargetData) {
 
 export function resolvePushTargetPath(data: PushTargetData | null | undefined) {
   const payload = data ?? {};
+  if (normalizedValue(payload.destination) === "liquidation_alert") {
+    return isLiquidationAlertKey(payload.event_key)
+      ? "/crypto/liquidation-alert?event=" + encodeURIComponent(payload.event_key)
+      : "/crypto/alertlist";
+  }
   if (normalizedValue(payload.destination) === "rapid_price_move" || normalizedValue(payload.type) === "rapid_price_move") {
     return typeof payload.event_key === "string" && /^rapid-price-move:(BTCUSDT|ETHUSDT):(up|down):\d{10}$/.test(payload.event_key)
       ? `/crypto/price-alert?event=${encodeURIComponent(payload.event_key)}`

@@ -52,10 +52,10 @@ export const radarAlertRules: RadarAlertRule[] = [
     tier: "pro",
     title: "포지션 압력 확대",
     shortTitle: "포지션 압력",
-    description: "상방/하방 포지션 쏠림, OI 변화, 체결 쏠림이 함께 과열될 때 알려줍니다.",
-    trigger: "포지션 압력 레이더가 과열 또는 극단 구간에 들어서면 리스크 확인 알림을 보냅니다.",
-    cadence: "15분 단위 확인",
-    value: "추격 주의와 고변동성 구간을 더 빨리 확인할 수 있습니다.",
+    description: "BTC 포지션 압력의 새 감지·증가·위험 방향 전환과 당시 확인할 가격을 알려줍니다.",
+    trigger: "정상 자료로 과열을 확인하고, 직전 발송보다 10점 이상 증가하거나 매우 높음 구간 진입·위험 방향 반전이 있을 때 알립니다.",
+    cadence: "최대 5분 간격 검사 · 확정 15분봉 기준 · 같은 경고 반복 제한",
+    value: "알림 당시 봉, 직전 1시간 고가·저가와 다음 확인 기준을 이어봅니다.",
     defaultEnabled: true
   },
   {

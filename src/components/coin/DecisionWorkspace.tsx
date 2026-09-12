@@ -102,7 +102,7 @@ export function DecisionWorkspace({ compact = false, reviewId = null }: { compac
   if (refreshError && !data) return refreshError;
   if (!data) return <p className="p-3 text-xs text-ui-muted" role="status">저장한 조건과 판단을 불러오는 중입니다.</p>;
   const summary = workspaceSummary(data);
-  if (compact) return <section className="rounded-xl border border-ui-line bg-ui-panel px-3 py-3" aria-label="내 조건 이어보기"><div className="flex items-center justify-between gap-3"><div><h2 className="text-sm font-bold">내 조건·판단 기록</h2><p className="mt-1 text-xs leading-5 text-ui-muted">{refreshError ? "기록 갱신 지연 · 다시 확인해 주세요" : `${summary.running}개 추적 중 · 저장한 판단 ${summary.pending}개 확인 대기`}</p></div><Link href="/crypto/tracking" className={`${button} shrink-0 text-ui-brand`}>이어보기</Link></div></section>;
+  if (compact) return <section className="rounded-xl border border-ui-line bg-ui-panel px-3 py-3" aria-label="내 조건 이어보기"><div className="flex items-center justify-between gap-3"><div><h2 className="text-sm font-bold">내 조건·판단 기록</h2><p className="mt-1 text-xs leading-5 text-ui-muted">{refreshError ? "기록 갱신 지연 · 다시 확인해 주세요" : summary.running === 0 ? "지금 감시 중인 개인 조건이 없습니다. 만료·종료된 조건은 새로 선택해 주세요." : `${summary.running}개 추적 중 · 저장한 판단 ${summary.pending}개 확인 대기`}</p></div><Link href={summary.running === 0 && !refreshError ? "/crypto/perpetual?asset=btc#monitor-condition" : "/crypto/tracking"} className={`${button} shrink-0 text-ui-brand`}>{summary.running === 0 && !refreshError ? "조건 설정" : "이어보기"}</Link></div></section>;
   const journals = [...(data.focusedJournal ? [data.focusedJournal] : []), ...data.journals.filter(j => j.id !== data.focusedJournal?.id)];
   const pending = journals.filter(j => !j.review);
   const reviewed = journals.filter(j => j.review);

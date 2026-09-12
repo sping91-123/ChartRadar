@@ -2,12 +2,18 @@ import { sendFcmMessage } from "@/lib/server/firebaseMessaging";
 import { alreadySent, recordSentEvent } from "@/lib/server/push/duplicateGuard";
 import { tokenWants } from "@/lib/server/push/preferences";
 import type { PushAlertEvent, PushTokenRow } from "@/lib/server/push/types";
+import { deliverLiquidationEvent } from "@/lib/server/push/liquidationDelivery";
 
 export async function sendEventToUser(userId: string, tokens: PushTokenRow[], event: PushAlertEvent) {
   const targetTokens = tokens.filter((token) => tokenWants(token, event));
   const preferenceSkipped = Math.max(0, tokens.length - targetTokens.length);
   if (targetTokens.length === 0) {
     return { sent: 0, skipped: 0, failed: 0, preferenceSkipped, duplicateSkipped: 0, targetTokens: 0 };
+  }
+  if (event.ruleId === "liquidation-pressure") {
+    const result = await deliverLiquidationEvent(userId, targetTokens, event);
+    return { sent: result.sent, failed: result.failed, skipped: result.duplicate,
+      preferenceSkipped, duplicateSkipped: result.duplicate, targetTokens: targetTokens.length };
   }
   if (await alreadySent(userId, event.eventKey)) {
     return {

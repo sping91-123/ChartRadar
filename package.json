@@ -38,6 +38,7 @@
     "test:push-entitlements": "node scripts/test-push-entitlements.mjs",
     "test:push-candidates": "node scripts/test-push-candidate-selection.mjs",
     "test:push-usefulness": "node scripts/test-push-usefulness.mjs",
+    "test:liquidation-alerts": "node scripts/test-liquidation-alerts.mjs",
     "test:rapid-price-move": "node scripts/test-rapid-price-move.mjs",
     "test:decision-workspace": "node scripts/test-decision-workspace.mjs",
     "test:personal-monitors": "node scripts/test-personal-monitors.mjs",

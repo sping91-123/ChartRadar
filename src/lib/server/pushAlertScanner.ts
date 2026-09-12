@@ -1,6 +1,7 @@
 // 서버 크론에서 알림 조건을 스캔하고 Android FCM 푸시를 발송한다.
 import { cooldownDecisionForEvent, eventToRecentRow, type CooldownDecision } from "@/lib/server/push/cooldown";
-import { alreadySent, duplicateBucket, recentSentEvents, type RecentPushAlertEventRow } from "@/lib/server/push/duplicateGuard";
+import { alreadySent, duplicateBucket, recentSentEvents, latestLiquidationSentEvent, type RecentPushAlertEventRow } from "@/lib/server/push/duplicateGuard";
+import { withLiquidationChange } from "@/lib/server/push/liquidationChange";
 import { emptyDiagnostics, eventDiagnostic, eventDiagnosticSample, pushPreferenceSkippedSample, pushSample } from "@/lib/server/push/diagnostics";
 import { asArray, passesSetupPushQuality } from "@/lib/server/push/eligibility";
 import { ruleAllowed, userPlan } from "@/lib/server/push/entitlements";
@@ -199,11 +200,15 @@ export async function runPushAlertScan(context: ScanContext) {
       const recentSinceIso = new Date(Date.now() - maxRecentEventLookbackHours * 60 * 60000).toISOString();
       const recentRows = await recentSentEvents(userId, recentSinceIso);
       const recentRowsForUser = [...recentRows];
+      if (genericEvents.some(event => event.ruleId === "liquidation-pressure" && userTokens.some(token => tokenPreferenceDecision(token, event).allowed))) {
+        const previous = await latestLiquidationSentEvent(userId);
+        for (const row of previous) if (!recentRowsForUser.some(recent => recent.event_key === row.event_key)) recentRowsForUser.push(row);
+      }
       const plan = await userPlan(subscriptionsByUser, userId);
       if (plan === null) continue;
       const userPresets = presetsByUser.get(userId) ?? [];
 
-      const userGenericEvents = genericEvents.map((event) => personalizeEventForUser(event, userPresets));
+      const userGenericEvents = genericEvents.map((event) => withLiquidationChange(personalizeEventForUser(event, userPresets), recentRowsForUser));
       const allUserEvents = [...userGenericEvents, ...buildUserPresetEvents(userPresets, cryptoSetups, stockPresetSetups)];
       candidateEventCount += allUserEvents.length;
       for (const event of allUserEvents) {

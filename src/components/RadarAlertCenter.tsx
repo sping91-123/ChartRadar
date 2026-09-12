@@ -729,6 +729,7 @@ export function RadarAlertCenter({ compact = false, market = "crypto", newsImpac
         }
       />
 
+      {market === "crypto" ? <p className="text-xs leading-5 text-ui-muted">이 기기의 급등·급락 알림 선택: <strong className="text-ui-text">{displayEnabledRuleIds.includes("rapid-price-move") ? "켜짐" : "꺼짐"}</strong>{!displayEnabledRuleIds.includes("rapid-price-move") ? " · 아래 BTC·ETH 급등·급락 항목에서 켤 수 있습니다." : " · 앱 푸시 연결 상태도 함께 확인해 주세요."}</p> : null}
       {!isPaid ? (
         <AppSurface tone="inset" variant="flat" padding="none" className="border-y border-ui-line py-3">
           <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

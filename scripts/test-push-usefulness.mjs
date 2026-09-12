@@ -9,8 +9,14 @@ const releaseAt = new Date(Math.floor((now + 30 * 60000) / 60000) * 60000).toISO
 let calendar = { items: [] };
 let report = {
   symbol: "BTCUSDT", period: "15m", grade: "heated", dominantSide: "downsideLongs",
-  upsideShortPressure: 23, downsideLongPressure: 59, globalLongShort: { longPercent: 67.4, shortPercent: 32.6 }
+  upsideShortPressure: 23, downsideLongPressure: 59, globalLongShort: { longPercent: 67.4, shortPercent: 32.6 },
+  topAccountLongShort: { longPercent: 65, shortPercent: 35 }, topPositionLongShort: { longPercent: 68, shortPercent: 32 },
+  takerFlow: { buyPercent: 55, sellPercent: 45 }, fundingRatePercent: 0.01, fundingRateSource: "Binance", openInterestChangePercent: 1,
+  evidenceObservedAt: Object.fromEntries(["fundingRate", "openInterest", "globalLongShort", "topAccountLongShort", "topPositionLongShort", "takerFlow"].map(k => [k, now - 15 * 60000]))
 };
+const initialReport = structuredClone(report);
+const lastOpen = Math.floor((now - 1000) / 900000) * 900000 - 900000;
+const klines = Array.from({ length: 6 }, (_, i) => [lastOpen + (i - 4) * 900000, "80000", "81000", "79000", "80000", "10", lastOpen + (i - 3) * 900000 - 1]);
 let recordingEnabled = false;
 const recordedEvents = [];
 const fcmCalls = [];
@@ -44,8 +50,9 @@ function load(path) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
   }).outputText;
   vm.runInNewContext(code, {
-    exports: module.exports, module, Date, Intl, Map, Set, URL, URLSearchParams,
+    exports: module.exports, module, Date, Intl, Map, Set, URL, URLSearchParams, AbortSignal,
     fetch: async url => {
+      if (url.startsWith("https://fapi.binance.com/fapi/v1/klines")) return { ok: true, json: async () => klines };
       assert.equal(url, "https://fixture.invalid/api/macro-calendar");
       return { ok: true, headers: { get: () => "application/json" }, json: async () => calendar };
     },
@@ -78,22 +85,22 @@ const recent = (event, minutes, patch = {}) => ({
 const pressureEvent = await scanLiquidationEvent();
 await check("pressure copy names the vulnerable side, observed evidence and next check", () => {
   assert.match(pressureEvent.title, /하락 시 롱 청산 주의/);
-  assert.match(pressureEvent.body, /67.4%.*추정 59\/100.*15분봉.*지지 유지/);
+  assert.match(pressureEvent.body, /추정 59\/100.*15분봉.*79,000/);
   assert.equal(pressureEvent.data.pressure_side, "downsideLongs");
 });
 await check("unchanged pressure is not repeated after the old three-hour timer", () => {
   assert.equal(cooldownDecisionForEvent([recent(pressureEvent, 240, { pressure: "57" })], pressureEvent).reason, "unchanged_pressure");
   const legacy = recent(pressureEvent, 240, { pressure: "55" });
   delete legacy.payload.pressure_side;
-  assert.equal(cooldownDecisionForEvent([legacy], pressureEvent).blocked, true);
+  assert.equal(cooldownDecisionForEvent([legacy], pressureEvent).blocked, false);
 });
 await check("material increase, extreme transition and a changed side remain eligible", () => {
   const higher = { ...pressureEvent, data: { ...pressureEvent.data, pressure: "69" } };
   assert.equal(cooldownDecisionForEvent([recent(pressureEvent, 240)], higher).blocked, false);
   assert.equal(cooldownDecisionForEvent([recent(pressureEvent, 240, { pressure: "74" })], { ...higher, data: { ...higher.data, pressure: "75" } }).blocked, false);
   assert.equal(cooldownDecisionForEvent([recent(pressureEvent, 240, { pressure_side: "upsideShorts" })], pressureEvent).blocked, false);
-  assert.equal(cooldownDecisionForEvent([recent(pressureEvent, 60)], higher).reason, "symbol_cooldown");
-  assert.equal(cooldownDecisionForEvent([recent(pressureEvent, 24 * 60 + 1)], pressureEvent).blocked, false);
+  assert.equal(cooldownDecisionForEvent([recent(pressureEvent, 30)], higher).reason, "symbol_cooldown");
+  assert.equal(cooldownDecisionForEvent([recent(pressureEvent, 24 * 60 + 1)], pressureEvent).blocked, true);
   assert.equal(cooldownDecisionForEvent([], pressureEvent).blocked, false);
 });
 await check("normal pressure does not generate an alert; short-side copy uses resistance", async () => {
@@ -101,7 +108,7 @@ await check("normal pressure does not generate an alert; short-side copy uses re
   assert.equal(await scanLiquidationEvent(), null);
   report = { ...report, grade: "heated", dominantSide: "upsideShorts", upsideShortPressure: 60, downsideLongPressure: 23 };
   const shortEvent = await scanLiquidationEvent();
-  assert.match(shortEvent.body, /숏 계정 32.6%.*저항 돌파/);
+  assert.match(shortEvent.body, /다음 15분봉.*81,000.*위에서 마감/);
   assert.match(shortEvent.title, /상승 시 숏 청산 주의/);
   assert.doesNotMatch(shortEvent.title, /쏠림/);
 });
@@ -132,6 +139,18 @@ await check("the macro daily limit counts sends older than six hours", () => {
   const rows = [8, 12, 20].map((hours, i) => recent(macroEvent, hours * 60, { releaseAt: new Date(now - (i + 1) * 3600000).toISOString() }));
   assert.equal(cooldownDecisionForEvent(rows, macroEvent).reason, "macro_daily_limit");
 });
+await check("Michigan reminders use Korean labels and only the same metric's supplied numeric values", async () => {
+  calendar = { items: [{ ...item("Michigan Consumer Sentiment Prel"), forecast: "51", previous: "51.7" }] };
+  const event = await scanMacroCalendarEvent("https://fixture.invalid", "crypto");
+  assert.match(event.title, /미시간대 소비자심리 예비치/);
+  assert.match(event.body, /예상 51 · 이전 51.7/);
+  calendar.items.push({ ...item("Initial Jobless Claims"), forecast: "250K", previous: "230K" });
+  assert.doesNotMatch((await scanMacroCalendarEvent("https://fixture.invalid", "crypto")).body, /예상 51|이전 51.7|250K/);
+  calendar = { items: [{ ...item("Michigan Consumer Sentiment Prel"), forecast: "확인 예정" }] };
+  assert.doesNotMatch((await scanMacroCalendarEvent("https://fixture.invalid", "crypto")).body, /예상 확인 예정|이전 undefined/);
+  calendar = { items: [{ ...item("PPI MoM"), forecast: "0.2%" }, item("PPI YoY")] };
+  assert.doesNotMatch((await scanMacroCalendarEvent("https://fixture.invalid", "crypto")).body, /예상 0.2/);
+});
 const setup = {
   symbol: "BNBUSDT.P", timeframe: "1h", score: 90, status: "active", plan: { side: "long", quality: "A" },
   analysis: { timeframeAnalyses: [{ timeframe: "1h", msb: "bullish", condition: { volumeState: "high", volatilityState: "normal" } }] }
@@ -160,7 +179,7 @@ await check("pressure evidence preserves the inputs needed to reproduce its esti
     topAccountLongShort: { longPercent: 65, shortPercent: 35, ratio: 65 / 35 },
     topPositionLongShort: { longPercent: 67, shortPercent: 33, ratio: 67 / 33 },
     takerFlow: { buyPercent: 55, sellPercent: 45, buyVolume: 55, sellVolume: 45 },
-    evidenceObservedAt: { globalLongShort: observedAt }, updatedAt: observedAt
+    fundingRateSource: "Binance", evidenceObservedAt: initialReport.evidenceObservedAt, updatedAt: observedAt
   });
   const event = await scanLiquidationEvent();
   const stored = JSON.parse(JSON.stringify(event.auditEvidence));

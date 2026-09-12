@@ -8,6 +8,7 @@ export interface RecentPushAlertEventRow {
   rule_id: string;
   payload: Record<string, unknown> | null;
   created_at: string;
+  delivery_status?: string | null;
 }
 
 export function eventBucket(minutes: number) {
@@ -28,7 +29,17 @@ export async function alreadySent(userId: string, eventKey: string) {
 
 export async function recentSentEvents(userId: string, sinceIso: string) {
   return supabaseAdminRest<RecentPushAlertEventRow[]>(
-    `push_alert_events?select=event_key,market,rule_id,payload,created_at&user_id=eq.${encodeURIComponent(userId)}&created_at=gte.${encodeURIComponent(sinceIso)}&order=created_at.desc&limit=100`
+    `push_alert_events?select=event_key,market,rule_id,payload,created_at,delivery_status&user_id=eq.${encodeURIComponent(userId)}&created_at=gte.${encodeURIComponent(sinceIso)}&order=created_at.desc&limit=100`
+  );
+}
+
+// Read the last accepted pressure alert independently of the 24h/100-row generic history.
+// Legacy senders stored success in payload while leaving delivery_status as pending.
+export async function latestLiquidationSentEvent(userId: string) {
+  return supabaseAdminRest<RecentPushAlertEventRow[]>(
+    "push_alert_events?select=event_key,market,rule_id,payload,created_at,delivery_status&user_id=eq." + encodeURIComponent(userId) +
+    "&rule_id=eq.liquidation-pressure&payload->>symbol=eq.BTCUSDT" +
+    "&or=(delivery_status.in.(sent,partial),payload->>sentCount.gt.0)&order=created_at.desc&limit=1"
   );
 }
 
