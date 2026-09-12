@@ -118,7 +118,12 @@ export async function sendFcmMessage(params: FcmMessageParams) {
   const serviceAccount = getFirebaseServiceAccount();
   if (!serviceAccount) throw new Error("Firebase 서비스 계정 환경변수가 설정되지 않았습니다.");
 
-  const accessToken = await getFirebaseAccessToken();
+  let accessToken: string;
+  try { accessToken = await getFirebaseAccessToken(); }
+  catch {
+    console.warn("[fcm] authorization unavailable", { code: "AUTH_UNAVAILABLE" });
+    throw new Error("FCM authorization unavailable");
+  }
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FIREBASE_REQUEST_TIMEOUT_MS);
   let response: Response;
@@ -153,13 +158,26 @@ export async function sendFcmMessage(params: FcmMessageParams) {
       cache: "no-store",
       signal: controller.signal
     });
+  } catch {
+    const code = controller.signal.aborted ? "REQUEST_TIMEOUT" : "TRANSPORT_ERROR";
+    console.warn("[fcm] transport failed", { code });
+    throw new Error("FCM " + code);
   } finally {
     clearTimeout(timeout);
   }
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || "FCM 발송에 실패했습니다.");
+    // Provider responses may contain identifiers. Log only fixed error codes, never raw text or tokens.
+    const allowedCodes = new Set(["UNREGISTERED", "INVALID_ARGUMENT", "SENDER_ID_MISMATCH", "QUOTA_EXCEEDED", "UNAVAILABLE", "INTERNAL", "THIRD_PARTY_AUTH_ERROR", "UNAUTHENTICATED", "PERMISSION_DENIED", "NOT_FOUND", "RESOURCE_EXHAUSTED"]);
+    let code = "UNKNOWN";
+    try {
+      const error = (JSON.parse(text) as { error?: { status?: string; details?: Array<{ errorCode?: string }> } }).error;
+      const providerCode = error?.details?.find(detail => allowedCodes.has(detail.errorCode ?? ""))?.errorCode;
+      code = providerCode ?? (allowedCodes.has(error?.status ?? "") ? error!.status! : "UNKNOWN");
+    } catch { /* Keep malformed or unrecognized provider text out of logs. */ }
+    console.warn("[fcm] delivery rejected", { httpStatus: response.status, code });
+    throw new Error("FCM HTTP " + response.status + " " + code);
   }
 
   return (await response.json()) as { name?: string };
